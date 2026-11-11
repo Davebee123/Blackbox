@@ -7067,6 +7067,911 @@ export default {
         }
       ],
       "flavour": "The last stretch of cable before the bedrock, and the slowest."
+    },
+    {
+      "id": "regular",
+      "name": "Regular",
+      "base": "cron-job",
+      "level": 6,
+      "primary": {
+        "damage": 4,
+        "signal": 19,
+        "payload": 2
+      },
+      "effect": [
+        {
+          "when": "always",
+          "do": "stat+",
+          "stat": "echo",
+          "value": 5
+        },
+        {
+          "when": "custom",
+          "do": "echo-first"
+        }
+      ],
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 1
+        }
+      ],
+      "flavour": "Same corner of SPRAWL-00 every night. The street hits back with you."
+    },
+    {
+      "id": "dead-end",
+      "name": "Dead End",
+      "set": "switchback",
+      "base": "socks-tunnel",
+      "level": 8,
+      "primary": {
+        "signal": 50,
+        "reduction": 1
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 2
+        }
+      ]
+    },
+    {
+      "id": "one-way",
+      "name": "One Way",
+      "set": "switchback",
+      "base": "dropper",
+      "level": 11,
+      "primary": {
+        "damage": 6,
+        "signal": 28,
+        "payload": 2.9
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 4,
+        "text": "+4% Clock Speed"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 2
+        }
+      ]
+    },
+    {
+      "id": "turnout",
+      "name": "Turnout",
+      "set": "switchback",
+      "base": "root-shell",
+      "level": 14,
+      "primary": {
+        "signal": 38,
+        "regen": 8.1,
+        "restore": 22
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 4,
+        "text": "+4% damage"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 2
+        }
+      ]
+    },
+    {
+      "id": "honeycomb",
+      "name": "Honeycomb",
+      "base": "root-shell",
+      "level": 16,
+      "primary": {
+        "signal": 40,
+        "regen": 8.6,
+        "restore": 23
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat%",
+        "stat": "reduction",
+        "value": 100,
+        "if": "early",
+        "text": "Your Block counts double for the first 3 cycles of a fight."
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 3
+        }
+      ],
+      "flavour": "Six walls to a cell, and every cell holds."
+    },
+    {
+      "id": "ice-pick",
+      "name": "Ice Pick",
+      "set": "coldstart",
+      "base": "zero-click",
+      "level": 19,
+      "primary": {
+        "damage": [
+          23,
+          29
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 4,
+        "text": "+4% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 4
+        }
+      ]
+    },
+    {
+      "id": "rime",
+      "name": "Rime",
+      "set": "coldstart",
+      "base": "implant",
+      "level": 22,
+      "primary": {
+        "damage": 7,
+        "signal": 35
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 4
+        }
+      ]
+    },
+    {
+      "id": "thaw",
+      "name": "Thaw",
+      "set": "coldstart",
+      "base": "onion-circuit",
+      "level": 25,
+      "primary": {
+        "signal": 117,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 4
+        }
+      ]
+    },
+    {
+      "id": "sapper",
+      "name": "Sapper",
+      "base": "wormable",
+      "level": 28,
+      "primary": {
+        "damage": [
+          33,
+          42
+        ]
+      },
+      "effect": [
+        {
+          "when": "hit",
+          "do": "shatter",
+          "limit": "fight",
+          "text": "Once a fight, a hit on an armored part breaks 2 ◆."
+        },
+        {
+          "when": "hit",
+          "if": "target-bare",
+          "do": "damage%",
+          "value": 10
+        }
+      ],
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 5
+        }
+      ],
+      "flavour": "Two specials to every server on Deep Core, and a charge for each."
+    },
+    {
+      "id": "grub",
+      "name": "Grub",
+      "set": "bootloader",
+      "base": "polymorphic-engine",
+      "level": 31,
+      "primary": {
+        "damage": 14,
+        "signal": 61,
+        "payload": 5.9
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 4,
+        "text": "+4% Clock Speed"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 6
+        }
+      ]
+    },
+    {
+      "id": "chainload",
+      "name": "Chainload",
+      "set": "bootloader",
+      "base": "bootkit",
+      "level": 34,
+      "primary": {
+        "damage": 12.5,
+        "signal": 62
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 6
+        }
+      ]
+    },
+    {
+      "id": "post",
+      "name": "POST",
+      "set": "bootloader",
+      "base": "ring-zero-shell",
+      "level": 37,
+      "primary": {
+        "signal": 120,
+        "regen": 25.8,
+        "restore": 52
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 4,
+        "text": "+4% damage"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 6
+        }
+      ]
+    },
+    {
+      "id": "culvert",
+      "name": "Culvert",
+      "base": "bootkit",
+      "level": 40,
+      "primary": {
+        "damage": 13.8,
+        "signal": 68
+      },
+      "effect": {
+        "when": "custom",
+        "do": "spill",
+        "value": 40
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 7
+        }
+      ],
+      "flavour": "Everything on the Sink runs downhill, and it takes the next thing with it."
+    },
+    {
+      "id": "lagoon",
+      "name": "Lagoon",
+      "set": "atoll",
+      "base": "firmware-shell",
+      "level": 43,
+      "primary": {
+        "signal": 184,
+        "regen": 40,
+        "restore": 79
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 4,
+        "text": "+4% damage"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 8
+        }
+      ]
+    },
+    {
+      "id": "reef",
+      "name": "Reef",
+      "set": "atoll",
+      "base": "covert-channel",
+      "level": 46,
+      "primary": {
+        "signal": 384,
+        "reduction": 11
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 8
+        }
+      ]
+    },
+    {
+      "id": "causeway",
+      "name": "Causeway",
+      "set": "atoll",
+      "base": "hypervisor-escape",
+      "level": 49,
+      "primary": {
+        "damage": [
+          92,
+          115
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 4,
+        "text": "+4% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 8
+        }
+      ]
+    },
+    {
+      "id": "plumb-line",
+      "name": "Plumb Line",
+      "set": "fullcoverage",
+      "base": "wormable",
+      "level": 26,
+      "primary": {
+        "damage": [
+          35,
+          44
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 6,
+        "text": "+6% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 5
+        }
+      ]
+    },
+    {
+      "id": "field-book",
+      "name": "Field Book",
+      "set": "fullcoverage",
+      "base": "polymorphic-engine",
+      "level": 29,
+      "primary": {
+        "damage": 15,
+        "signal": 64,
+        "payload": 6.3
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 8,
+        "text": "+8% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 5
+        }
+      ]
+    },
+    {
+      "id": "hi-vis",
+      "name": "Hi-Vis",
+      "set": "fullcoverage",
+      "base": "ghost-shell",
+      "level": 33,
+      "primary": {
+        "signal": 88,
+        "regen": 19,
+        "restore": 38
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 3,
+        "text": "+3 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 6
+        }
+      ]
+    },
+    {
+      "id": "datum",
+      "name": "Datum",
+      "set": "fullcoverage",
+      "base": "bootkit",
+      "level": 37,
+      "primary": {
+        "damage": 14.5,
+        "signal": 72
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 8,
+        "text": "+8% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 3,
+        "text": "+3 Block"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 6
+        }
+      ]
+    },
+    {
+      "id": "waybill",
+      "name": "Waybill",
+      "set": "longhaul",
+      "base": "cron-job",
+      "level": 10,
+      "primary": {
+        "damage": 5,
+        "signal": 23,
+        "payload": 3
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 8,
+        "text": "+8% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ]
+    },
+    {
+      "id": "dray",
+      "name": "Dray",
+      "set": "longhaul",
+      "base": "vpn-cascade",
+      "level": 17,
+      "primary": {
+        "signal": 90,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 8,
+        "text": "+8% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 6,
+        "text": "+6% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ]
+    },
+    {
+      "id": "tailgate",
+      "name": "Tailgate",
+      "set": "longhaul",
+      "base": "restricted-shell-escape",
+      "level": 24,
+      "primary": {
+        "signal": 63,
+        "regen": 13,
+        "restore": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 3,
+        "text": "+3 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ]
+    },
+    {
+      "id": "freehold",
+      "name": "Freehold",
+      "set": "tenure",
+      "base": "implant",
+      "level": 33,
+      "primary": {
+        "damage": 10,
+        "signal": 48
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 8,
+        "text": "+8% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 3,
+        "text": "+3 Block"
+      },
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ]
+    },
+    {
+      "id": "deed",
+      "name": "Deed",
+      "set": "tenure",
+      "base": "ring-zero-shell",
+      "level": 40,
+      "primary": {
+        "signal": 138,
+        "regen": 29.7,
+        "restore": 59
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 3,
+        "text": "+3 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ]
+    },
+    {
+      "id": "sitting-tenant",
+      "name": "Sitting Tenant",
+      "set": "tenure",
+      "base": "covert-channel",
+      "level": 48,
+      "primary": {
+        "signal": 434,
+        "reduction": 12
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 8,
+        "text": "+8% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 6,
+        "text": "+6% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ]
+    },
+    {
+      "id": "sampler",
+      "name": "Sampler",
+      "base": "loader",
+      "level": 20,
+      "primary": {
+        "damage": 10,
+        "signal": 46,
+        "payload": 4.4
+      },
+      "effect": [
+        {
+          "when": "custom",
+          "do": "warn-early",
+          "value": 1
+        },
+        {
+          "when": "hit",
+          "if": "target-winding",
+          "do": "damage%",
+          "value": 10
+        }
+      ],
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ],
+      "flavour": "One of everything on the board, and the knack of each."
+    },
+    {
+      "id": "field-guide",
+      "name": "Field Guide",
+      "base": "wormable",
+      "level": 28,
+      "primary": {
+        "damage": [
+          37,
+          46
+        ]
+      },
+      "effect": [
+        {
+          "when": "hit",
+          "if": "strain-fight",
+          "do": "damage%",
+          "value": 8
+        },
+        {
+          "when": "hit",
+          "if": "strain-fight",
+          "do": "crit%",
+          "value": 5
+        }
+      ],
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ],
+      "flavour": "Twenty strains drawn from life, each with a note on where it bites."
+    },
+    {
+      "id": "no-rest",
+      "name": "No Rest",
+      "base": "restricted-shell-escape",
+      "level": 22,
+      "primary": {
+        "signal": 60,
+        "regen": 12,
+        "restore": 29
+      },
+      "effect": [
+        {
+          "when": "always",
+          "if": "unrested",
+          "do": "max-signal%",
+          "value": 6
+        },
+        {
+          "when": "always",
+          "if": "unrested",
+          "do": "stat+",
+          "stat": "regen",
+          "value": 1
+        }
+      ],
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ],
+      "flavour": "Five servers in one sitting each, and no chair."
+    },
+    {
+      "id": "long-shot",
+      "name": "Long Shot",
+      "base": "bootkit",
+      "level": 40,
+      "primary": {
+        "damage": 15.2,
+        "signal": 75
+      },
+      "effect": [
+        {
+          "when": "always",
+          "do": "stat+",
+          "stat": "crit",
+          "value": 5
+        },
+        {
+          "when": "hit",
+          "if": "above-75",
+          "do": "damage%",
+          "value": 10
+        }
+      ],
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ],
+      "flavour": "Found them all from a distance, before anyone stood next to them."
     }
   ]
 };

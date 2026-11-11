@@ -917,6 +917,285 @@ export default {
       }
     },
     {
+      "id": "switchback",
+      "name": "Switchback",
+      "levels": [
+        8,
+        14
+      ],
+      "pieces": [
+        "dead-end",
+        "one-way",
+        "turnout"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% Stealth.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "stealth",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "On the cycle after one of your delays lands, your hits deal 15% more.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 15,
+              "if": "after-delay"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "coldstart",
+      "name": "Cold Start",
+      "levels": [
+        19,
+        26
+      ],
+      "pieces": [
+        "ice-pick",
+        "rime",
+        "thaw"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+8% damage to a part that hasn't attacked yet this fight.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 8,
+              "if": "target-unacted"
+            }
+          ]
+        },
+        "3": {
+          "text": "Your first damaging skill each fight is a critical strike.",
+          "fx": [
+            {
+              "when": "start",
+              "do": "first-skill-crit",
+              "value": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bootloader",
+      "name": "Bootloader",
+      "levels": [
+        31,
+        38
+      ],
+      "pieces": [
+        "grub",
+        "chainload",
+        "post"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% Clock Speed.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "clock",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "Cooldowns start each fight 1 cycle shorter.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "cd-start",
+              "value": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "atoll",
+      "name": "Atoll",
+      "levels": [
+        43,
+        50
+      ],
+      "pieces": [
+        "lagoon",
+        "reef",
+        "causeway"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+6% max Signal.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "signal%",
+              "value": 6
+            }
+          ]
+        },
+        "3": {
+          "text": "While one part is left, it takes 15% more from you, and when it becomes the last its next attack comes a cycle later.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 15,
+              "if": "target-last"
+            },
+            {
+              "when": "break",
+              "do": "delay-last",
+              "value": 1,
+              "if": "one-left"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "fullcoverage",
+      "name": "Full Coverage",
+      "levels": [
+        25,
+        38
+      ],
+      "pieces": [
+        "plumb-line",
+        "field-book",
+        "hi-vis",
+        "datum"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+2 Regen.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "regen",
+              "value": 2
+            }
+          ]
+        },
+        "3": {
+          "text": "A room's first clear pays 25% of a kill's XP.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "clear-xp",
+              "value": 25
+            }
+          ]
+        },
+        "4": {
+          "text": "Your first fight in each room starts with a ◆, and you deal 10% more damage.",
+          "fx": [
+            {
+              "when": "start",
+              "do": "chit",
+              "value": 1,
+              "if": "room-new"
+            },
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 10
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "longhaul",
+      "name": "Long Haul",
+      "levels": [
+        10,
+        24
+      ],
+      "pieces": [
+        "waybill",
+        "dray",
+        "tailgate"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "Contracts pay 10% more XP.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "contract-xp%",
+              "value": 10
+            }
+          ]
+        },
+        "3": {
+          "text": "Delivering a contract fills your Signal, and kills pay 10% more XP.",
+          "fx": [
+            {
+              "when": "deliver",
+              "do": "fill-signal"
+            },
+            {
+              "when": "custom",
+              "do": "kill-xp%",
+              "value": 10
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tenure",
+      "name": "Tenure",
+      "levels": [
+        33,
+        48
+      ],
+      "pieces": [
+        "freehold",
+        "deed",
+        "sitting-tenant"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+8% max Signal on a server you hold.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "signal%",
+              "value": 8,
+              "if": "server-held"
+            }
+          ]
+        },
+        "3": {
+          "text": "Kills on a server you hold roll for an item twice.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "held-roll",
+              "value": 1
+            }
+          ]
+        }
+      }
+    },
+    {
       "id": "bedrock",
       "name": "Bedrock",
       "levels": [

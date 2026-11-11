@@ -11,6 +11,7 @@ import { ARCHETYPES, BOSSES } from './data.mjs';
 import { FACTIONS, FACTION_IDS, rep, REP_TIERS, hubFound, commissionOf, stanceLine } from './factions.mjs';
 import { PIECES } from './faction-gear.mjs';
 import { SETS, piecesOf, isPiece } from './sets.mjs';
+import EARN from './content/earned.mjs';
 import { profileOf as simOf, online, peopleOn, isPerson, whereText } from './presence.mjs';
 import { uniqueItem, seeded } from './gear.mjs';
 import { tickAchievements, rewardStickers, bannersOf, pointsOf, shownAchievements, achievements, DEED_STICKERS } from './achievements.mjs';
@@ -232,7 +233,8 @@ export function tickProfile(s) {
 export function stickersOf(s) {
   const out = [];
   for (const f of FACTION_IDS) if ((s.standing?.[f] ?? -1) >= REP_TIERS[3]) out.push({ id: 'f-' + f, kind: 'faction', label: FACTIONS[f].tiers[3], color: FACTIONS[f].color, glyph: 'f-' + f, tip: `${FACTIONS[f].tiers[3]} with ${FACTIONS[f].name}` });
-  for (const id of setsDone(s)) out.push({ id: 'set-' + id, kind: 'set', label: SETS[id].name, color: '#7ee787', glyph: 'item', tip: `Every piece of ${SETS[id].name}` });
+  // An earned set's sticker would be no achievement's reward (achievements.mjs), so it has none.
+  for (const id of setsDone(s).filter((x) => !piecesOf(x).every((p) => EARN[p]))) out.push({ id: 'set-' + id, kind: 'set', label: SETS[id].name, color: '#7ee787', glyph: 'item', tip: `Every piece of ${SETS[id].name}` });
   for (let n = 2; n <= (s.floors?.reached || 1); n++) out.push({ id: 'floor-' + n, kind: 'floor', label: `F${n}`, color: '#9aa7b4', glyph: 'node', tip: `Reached floor ${n}` });
   for (const b of natives().filter((k) => won(s, k))) out.push({ id: 'lair-' + b, kind: 'lair', label: BOSSES[b].name, color: '#ff8a5c', glyph: 'kill', tip: `Beat ${BOSSES[b].name} in its lair` });
   // And every sticker an achievement you've earned brought (achievements.mjs), its own few among them: kept for good,

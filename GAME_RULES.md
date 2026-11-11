@@ -1739,6 +1739,13 @@ five slot kinds, so a general set's 2-piece can go beside it.
 | **Hot Spare** | 28–36: Resident takeovers | Standby (shell, 28): +6% max Signal [+2 Block] · Failback (implant, 32): +2 Block [+5% damage] | The first time a fight drops you below 30% Signal, heal 20% of max and deal 10% more for 3 cycles | | |
 | **Mesh** | 31–38: crew bosses | Node (proxy, 31): +6% max Signal [+2 Block] · Link (script, 34): heals you cast are 5% larger [+6% max Signal] · Hub (implant, 37): +4% damage [+5% Clock Speed] | +5% damage and healing per crewmate in the fight, up to 3 | Heals and shields you put on a crewmate also land on you at 25% | |
 | **Deep Archive** | 37–44: vaults on floors 7 and 8 | Index (script, 37): +4% Clock Speed [+5% damage] · Spine (shell, 39): +2 Block [+6% max Signal] · Folio (exploit, 41): +5% damage [+5% crit] · Vellum (implant, 43): +6% max Signal [+2 Block] | +8% max Signal | +8% damage | Every 4th cycle, your next skill repeats at 40% |
+| **Long Haul** | 10–24: earned, contracts delivered (10 · 25 · 50) | Waybill (script, 10): +5% Clock Speed [+8% max Signal] · Dray (proxy, 17): +8% max Signal [+6% crit] · Tailgate (shell, 24): +3 Block [+5% damage] | Contracts pay 10% more XP | Delivering a contract fills your Signal, and kills pay 10% more XP | |
+| **Switchback** | 8–14: earned, Hunter chase boards won on Backhaul (5 · 10 · 15) | Dead End (proxy, 8): +6% max Signal [+5% crit] · One Way (script, 11): +4% Clock Speed [+6% max Signal] · Turnout (shell, 14): +2 Block [+4% damage] | +5% Stealth | On the cycle after one of your delays lands, your hits deal 15% more | |
+| **Cold Start** | 19–26: earned, fights on Cold storage servers won before cycle 6 (10 · 25 · 50) | Ice Pick (exploit, 19): +4% damage [+5% crit] · Rime (implant, 22): +6% max Signal [+2 Block] · Thaw (proxy, 25): +6% max Signal [+5% crit] | +8% damage to a part that hasn't attacked yet this fight | Your first damaging skill each fight is a critical strike | |
+| **Full Coverage** | 25–38: earned, servers Mapped (Plumb Line 8 on Deep Core, Field Book all of it; Hi-Vis 8 on Kernel Space, Datum all of it) | Plumb Line (exploit, 26): +5% damage [+6% crit] · Field Book (script, 29): +5% Clock Speed [+8% max Signal] · Hi-Vis (shell, 33): +3 Block [+5% damage] · Datum (implant, 37): +8% max Signal [+3 Block] | +2 Regen | A room's first clear pays 25% of a kill's XP | Your first fight in each room starts with a ◆, and you deal 10% more damage |
+| **Bootloader** | 31–38: earned, respawned rooms cleared on servers you hold on Kernel Space (40 · 80 · 120) | Grub (script, 31): +4% Clock Speed [+6% max Signal] · Chainload (implant, 34): +6% max Signal [+2 Block] · POST (shell, 37): +2 Block [+4% damage] | +5% Clock Speed | Cooldowns start each fight 1 cycle shorter | |
+| **Tenure** | 33–48: earned, servers you hold at Root 5, any floor (1 · 3 · 5) | Freehold (implant, 33): +8% max Signal [+3 Block] · Deed (shell, 40): +3 Block [+5% damage] · Sitting Tenant (proxy, 48): +8% max Signal [+6% crit] | +8% max Signal on a server you hold | Kills on a server you hold roll for an item twice | |
+| **Atoll** | 43–50: earned, Bedrock's four islands with a server Mapped on each (1 · 3 · 4) | Lagoon (shell, 43): +2 Block [+4% damage] · Reef (proxy, 46): +6% max Signal [+5% crit] · Causeway (exploit, 49): +4% damage [+5% crit] | +6% max Signal | While one part is left, it takes 15% more from you, and when it becomes the last its next attack comes a cycle later | |
 | **Bedrock** | 43–50: the floor 8 lair boss | Bedrock Plate (shell, 43): +2 Block [+6% max Signal] · Core Sample (implant, 45): +6% max Signal [+5% Clock Speed] · Pick (exploit, 47): +5% damage [+5% crit] · Survey (proxy, 49): +5% crit [+5% damage] | +5% damage, +5% max Signal | +10% Clock Speed. Cooldowns start each fight 1 cycle shorter | Once a fight, a hit that would drop you to 0 leaves you at 1 and shields you for 20% of max |
 
 - **What the words mean** (`SET_HOOKS`): a set's *damage* is all your damage (skill hits, burns, helpers); *+X% max
@@ -1773,11 +1780,18 @@ five slot kinds, so a general set's 2-piece can go beside it.
 
 ### Earned pieces
 
-One unique a floor comes from that floor's **feat**, never a roll (`earned.mjs`; the counts in one table,
-`content/earned.mjs`, to tune after play). The count starts when you reach the floor's band; when it fills, the piece
-arrives once, at your level, through the usual *New in collection* row. Outside the one-an-hour rate.
+Pieces that come from finishing something, never a roll (`earned.mjs`; every count in one table,
+`content/earned.mjs`, to tune after play): a feat each floor, a floor's own uniques and sets, and cross-floor ones. The
+count starts at the piece's band (its floor's first level); when it fills, the piece arrives once, at your level,
+through the usual *New in collection* row. Outside the one-an-hour rate. The sets (marked *earned* in *Sets*) have no
+find-every-piece achievement, the count being the goal. Every drop set keeps its roll.
 
-| Unique (slot, level) | Feat | Effect |
+- **A floor's own** (a sidegrade, its slot's stats): the feats below; Regular, Honeycomb, Sapper and Culvert; the
+  Switchback, Cold Start, Bootloader and Atoll sets.
+- **Cross-floor** (a reason to build around: its slot's stats ×1.1, bigger bonuses, two effects a unique): Sampler,
+  Field Guide, No Rest and Long Shot; the Full Coverage, Long Haul and Tenure sets.
+
+| Floor feat (slot, level) | Feat | Effect |
 |---|---|---|
 | **Street Atlas** (script, 8) | Map every server on The Sprawl | +10% damage in a room you haven't cleared |
 | **Quiet Hours** (shell, 13) | Bank 3 Router vaults on Backhaul, the Tracker never reaching you that visit | +6% Stealth |
@@ -1788,11 +1802,24 @@ arrives once, at your level, through the usual *New in collection* row. Outside 
 | **Bottleneck** (exploit, 42) | Clear every elite room on The Sink, every server located | +4% damage for each tell you answered this fight, up to 12% |
 | **Last Mile** (proxy, 48) | Map every server on Bedrock | +5% damage for each part in the fight past two |
 
-- **Counted:** bait caches and Router vaults as events from the band on (`s.earned`), Mixed Bag's different specials
-  too; the rest read the floor as it is, checked every second. A server cleared is a server Mapped; *every server* is
-  the lair too. An elite room counts once, for good; a server you haven't located counts as one until you do.
-- **Shown from the start:** the Ledger names it under its floor, muted, a cell a count and its goal (*Bait caches on
-  Honeypots 4/12*). The tooltip: *Sweetener: Unique implant, level 18. ▸ Take 8 more bait caches on Honeypots.*
+| Unique (slot, level) | Count | Effect |
+|---|---|---|
+| **Regular** (script, 6) | 150 kills in SPRAWL-00 | +5% Echo; your first echo on each part hits for full damage |
+| **Honeycomb** (shell, 16) | 5 Honeypots Mapped | Your Block counts double for the first 3 cycles of a fight |
+| **Sampler** (script, 20; across) | A board won of each of the 8 kinds | Tells are announced a cycle earlier; +10% damage to a part winding up |
+| **No Rest** (shell, 22; across) | 5 servers Mapped in a visit you don't rest | +6% max Signal and +1 Regen while you haven't rested this visit |
+| **Sapper** (exploit, 28) | 6 Cores beaten on Rich or Hardened servers on Deep Core | Once a fight, a hit on an armored part breaks 2 ◆; +10% damage to a part with no ◆ |
+| **Field Guide** (exploit, 28; across) | 20 different strains beaten | +8% damage and +5% crit against a strain |
+| **Culvert** (implant, 40) | 12 ★ rare spawns on The Sink | Up to 40 damage left over from a break carries onto the next part to attack |
+| **Long Shot** (implant, 40; across) | 10 servers on floors 5–8 located by tracing (not a Mapped server's gift) | +5% crit; +10% damage while above 75% Signal |
+
+- **Counted:** events from the band on (`s.earned`): kills, boards, fights, Cores, respawned rooms, rare spawns,
+  contracts, bait caches, Router vaults; Mixed Bag, Sampler and Field Guide count different ones. The rest read the
+  floor as it is, checked every second. A server cleared is a server Mapped; *every server* is the lair too. An elite
+  room counts once, for good; a server you haven't located counts as one until you do.
+- **Shown from the start:** the Ledger names it under its floor (a cross-floor one under Elsewhere, *Feats*), muted, a
+  cell a count (past 8, a cell for two or more, at most 12 cells) and its goal (*Bait caches on Honeypots 4/12*); a set's datasheet keeps each missing piece's line with
+  its count. The tooltip: *Sweetener: Unique implant, level 18. ▸ Take 8 more bait caches on Honeypots.*
 - **Pins:** up to 3 (`pin <piece>`, `unpin`; the pin on its Ledger line), kept in `s.pins`. The map lists them under
   Contracts, **Pinned n/3**: a tracker row each, *Floor feat* over its name, its cells and its goal in the Ledger's
   words, on its own line when long; a click opens its Ledger entry. On a phone, one chip. An earned piece drops off.

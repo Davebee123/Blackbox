@@ -405,6 +405,8 @@ export function openProc(s, kind, extra = {}) {
 // waiting, a Sleeper) and a breach's head start, set before the fight (breach.mjs), don't. The cycles it moved the
 // attack: 0 if it was held.
 export const delayHeld = (p) => p?.attack?.late != null && p.attack.late.due === p.attack.due;
+// Regular (earned.mjs): your first echo on each part hits for full damage, the part marked once it has.
+const echoFirst = (s, p) => { const e = s.encounter; if (!e || !fxHas(s, 'echo-first')) return false; const seen = (e.echoFull ||= {}); if (seen[p.id]) return false; seen[p.id] = true; return true; };
 export function delayAttack(s, p, n, { extend = false } = {}) {
   const e = s.encounter, atk = p?.attack;
   if (!atk || !(n > 0) || atk.due >= 900) return 0;
@@ -412,6 +414,7 @@ export function delayAttack(s, p, n, { extend = false } = {}) {
   if (delayHeld(p) && !(extend && by && atk.late.by === by)) return 0;
   atk.due += n;
   atk.late = { due: atk.due, by };
+  if (e) e.delayedAt = e.cycle; // Switchback (3): the cycle after a delay lands (fxCond after-delay)
   return n;
 }
 // A skill whose delay found the attack held says so (the other sources just don't move it).
@@ -1009,6 +1012,12 @@ function fxCond(s, fx, ctx = {}) {
     // The floor feats' uniques (earned.mjs): a room you haven't cleared (Street Atlas), a server you hold (Superuser).
     case 'room-new': return !!e?.rooms && !!s.rooms?.cleared && !s.rooms.cleared[e.rooms.room];
     case 'server-held': return heldRun(s);
+    // The earned pieces' (earned.mjs, content/earned.mjs).
+    case 'after-delay': return !!e && e.delayedAt === e.cycle - 1; // Switchback (3)
+    case 'early': return !!e && e.cycle <= 3; // Honeycomb
+    case 'target-unacted': return !!p && p.lastLanded == null; // Cold Start (2)
+    case 'strain-fight': return !!e?.virus?.strain; // Field Guide
+    case 'unrested': { const v = s.rooms?.at ? s.rooms.visit : null; return !!v && !v.rested && !Object.keys(v.bays || {}).length; } // No Rest
     default: return false;
   }
 }
@@ -2139,9 +2148,11 @@ function payKill(s, e, base, why) {
   // LOWLIGHT Kit (2): the kill after a delivered contract pays more (s.killXp, a percentage; setDeliver).
   const kit = s.killXp ? Math.max(1, Math.round((xp * s.killXp) / 100)) : 0;
   if (kit) { emit(s, 'set-xp', `${s.killXpFrom || 'Set bonus'}: +${kit} XP.`, { amount: kit }); delete s.killXp; delete s.killXpFrom; }
+  const haul = Math.round((xp * fxPct(s, 'kill-xp%')) / 100); // Long Haul (3)
+  if (haul) emit(s, 'set-xp', `Long Haul: +${haul} XP.`, { amount: haul });
   const obj = bonusXp(e, xp); // a met objective (objectives.mjs)
   if (obj) emit(s, 'objective-xp', `Objective: +${obj} XP.`, { amount: obj });
-  gainXp(s, xp + bonus + hot + read + rested + kit + obj, why, 'fight', e.xpKind || 'fight'); // xpKind: what it tallies as (a held server's respawns: build, netrooms.mjs)
+  gainXp(s, xp + bonus + hot + read + rested + kit + haul + obj, why, 'fight', e.xpKind || 'fight'); // xpKind: what it tallies as (a held server's respawns: build, netrooms.mjs)
 }
 
 // A room fight won on the network (netrooms.mjs, GAME_RULES.md "Runs: servers as rooms"): what the kill pays besides its XP. wild: SPRAWL-00
@@ -2163,6 +2174,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
   // Everywhere else a trace comes from first clears (netrooms.mjs), the vault's record and the rest (hidden.mjs).
   if (sprawl && !guard && FAMILIES[family]) addLead(s, family, leadOf(s, lvl, !!v.strain && v.strain === hotStrain(s)), '', { id: CONFIG.zone.id });
   if (wild) {
+    if (sprawl) hooks.earnEvent?.(s, { kind: 'sprawl' }); // Regular's count (earned.mjs)
     gainCode(s, codeFrom(s, family, lvl, 'home'), 'Code: ');
     const ctx = { kind: sprawl ? 'sprawl' : 'rogue', id: loc?.rogue?.kind, layer: layerOf(loc?.depth || 1), floor: loc?.depth || null, family, strain: v.strain, elite: !!v.elite || guard, boss: v.boss || null, rare, rolls: bounty ? LOOT.rolls.bounty : undefined };
     const item = rollDrop(s, ctx, lvl);
@@ -2175,7 +2187,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
   if (!s.run) return {};
   const tag = `${e.room}/#${e.seed}-${s.serial}`, src = guard ? 'guard' : 'home';
   // A Honeytoken on the server (sockets.mjs): its kills roll for loot once more.
-  for (let i = programsOn(loc).includes('honeytoken') ? 2 : 1, n = 0; n < i; n++) {
+  for (let i = (programsOn(loc).includes('honeytoken') ? 2 : 1) + (heldLoc(loc) && fxPct(s, 'held-roll') ? 1 : 0), n = 0; n < i; n++) { // Tenure (3): a held server's kills roll once more
     const item = rollDrop(s, { kind: guard ? 'guard' : 'home', id: e.key, layer: layerOf(loc?.depth || 1), floor: loc?.depth || null, family: loc?.family || family, elite: !!v.elite, boss: v.boss || null, rare }, lvl);
     if (item) { s.run.pack.push({ path: `${tag}/drop${n || ''}`, name: 'protocol.bin', kind: 'gear', size: '32k', item }); emit(s, 'drop', `${v.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true }); }
   }
@@ -3245,6 +3257,7 @@ function breakPart(s, p) {
   for (const x of fxFire(s, 'break', { crit: e.lastCrit, target: p })) {
     const who = x.name || x.it.name;
     if (x.fx.do === 'chit-fade') fadingChit(s, x); // Bitrot Ward: down to the last part
+    if (x.fx.do === 'delay-last') { const last = livingParts(s)[0]; if (last && delayAttack(s, last, x.value)) emit(s, 'status', `${who}: ${last.name}'s next attack comes a cycle later.`, { target: last.id }); } // Atoll (3)
     // Kill Chain (a native unique): the next part to attack is Open, as if you'd read it.
     if (x.fx.do === 'break-open') { const t = soonestAttacker(s, p.id); if (alive(t) && t !== p && t.kind === 'system') { t.openUntil = Math.max(t.openUntil || 0, e.cycle + x.value); emit(s, 'read', `${who} leaves the ${t.name} Open.`, { target: t.id, open: true }); } }
     if (x.fx.do === 'refund') { for (const k of Object.keys(e.readyAt)) e.readyAt[k] = Math.max(e.cycle, e.readyAt[k] - x.value); emit(s, 'status', `${who} reduces your cooldowns by ${x.value}.`); }
@@ -3505,7 +3518,7 @@ function useAbility(s, intent, auto = false) {
   const res = base ? hit(s, target, base, { mine: true, crit, chits: a.chits, pierce: ignoresArmor(s, id) || rootkit, unlock: !!a.unlock, by: rootkit && target.armor > 0 ? 'Rootkit' : undefined }) : null;
   if (id === 'overload' && hasTalent(s, 'piercing')) e.once.pierced = true;
   // Echo: the hit may repeat for half (on armor, it breaks another chit).
-  if (base && alive(target) && gearStat(s, 'echo') && rand(s) * 100 < gearStat(s, 'echo')) hit(s, target, Math.max(1, Math.round(base * (fxHas(s, 'echo-full') ? 1 : ECHO.share))), { mine: true, by: 'Echo' });
+  if (base && alive(target) && gearStat(s, 'echo') && rand(s) * 100 < gearStat(s, 'echo')) hit(s, target, Math.max(1, Math.round(base * (fxHas(s, 'echo-full') || echoFirst(s, target) ? 1 : ECHO.share))), { mine: true, by: 'Echo' });
   // Init Vector (repeat): armed every few cycles (cycleClose), your next damaging skill hits again for its share.
   const rep = base && alive(target) && e.fxs?.repeat;
   if (rep) { e.fxs.repeat = null; hit(s, target, Math.max(1, Math.round((base * rep.share) / 100)), { mine: true, by: rep.name }); }

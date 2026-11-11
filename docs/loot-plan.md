@@ -54,7 +54,13 @@ map completion pays. Built as GAME_RULES.md *Earned pieces* (`earned.mjs`, the c
   roll and its source. Earned pieces are new items of their own, kept few: one unique a floor.
 - **A guarantee on completion,** counted from the floor's band, outside the one-an-hour rate.
 - **Shown from the start:** named in the Ledger with its count, never ???; up to 3 pinned to the map.
-- **Cut:** moving the nine activity sets to counts, and the Full Coverage set (floors 5–6, mapping).
+- **Cut:** moving the nine activity sets to counts.
+- **More, built (the designer, November 2026):** each floor's own (a sidegrade: Regular, Honeycomb, Sapper, Culvert; the
+  Switchback, Cold Start, Bootloader and Atoll sets), and cross-floor ones, stronger since they take hours over several
+  floors (stats ×1.1, bigger bonuses, two effects a unique: Sampler, Field Guide, No Rest, Long Shot; the Full Coverage,
+  Long Haul and Tenure sets). GAME_RULES.md *Earned pieces* and *Sets* list them. Effects and counts are first guesses.
+- **Cold Start** counts Cold storage fights won before cycle 6 (a sleeper hit wakes, so none dies asleep). **Sapper**'s
+  extra ◆ is once a fight, not once a part. **Culvert** carries a break's leftover damage on (the game's spill).
 
 ### One unique feat a floor
 

@@ -56,6 +56,14 @@ const PLAN = {
   hotspare: ['Hot Spare', { Standby: 'shell', Failback: 'implant' }, [2]],
   mesh: ['Mesh', { Node: 'proxy', Link: 'script', Hub: 'implant' }, [2, 3]],
   deeparchive: ['Deep Archive', { Index: 'script', Spine: 'shell', Folio: 'exploit', Vellum: 'implant' }, [2, 3, 4]],
+  // The earned sets (earned.mjs): pieces on a count, never a roll.
+  switchback: ['Switchback', { 'Dead End': 'proxy', 'One Way': 'script', Turnout: 'shell' }, [2, 3]],
+  coldstart: ['Cold Start', { 'Ice Pick': 'exploit', Rime: 'implant', Thaw: 'proxy' }, [2, 3]],
+  bootloader: ['Bootloader', { Grub: 'script', Chainload: 'implant', POST: 'shell' }, [2, 3]],
+  atoll: ['Atoll', { Lagoon: 'shell', Reef: 'proxy', Causeway: 'exploit' }, [2, 3]],
+  fullcoverage: ['Full Coverage', { 'Plumb Line': 'exploit', 'Field Book': 'script', 'Hi-Vis': 'shell', Datum: 'implant' }, [2, 3, 4]],
+  longhaul: ['Long Haul', { Waybill: 'script', Dray: 'proxy', Tailgate: 'shell' }, [2, 3]],
+  tenure: ['Tenure', { Freehold: 'implant', Deed: 'shell', 'Sitting Tenant': 'proxy' }, [2, 3]],
   bedrock: ['Bedrock', { 'Bedrock Plate': 'shell', 'Core Sample': 'implant', Pick: 'exploit', Survey: 'proxy' }, [2, 3, 4]],
 };
 const SUBS_OF = { breaker: ['demolitionist', 'overclocker'], bastion: ['warden', 'sysop'], infiltrator: ['phantom', 'payload'], operator: ['herder', 'hijacker'] };
@@ -662,7 +670,7 @@ test('every piece has a source that rolls; a source rolls the pieces you lack fi
     ['strain', { lineage: 'ransomware' }], ['strain', { lineage: 'worm' }], ['strain', { lineage: 'ghostroot' }], ['author', { id: 'glassjaw' }], ['courier', {}], ['takeover', {}],
     ...PUZZLE_KINDS.map((id) => ['puzzle', { id }])];
   const reach = new Set(ROLLS.flatMap(([kind, x]) => setDropPool({ kind, layer: 9, ...x }).map((u) => u.id)));
-  for (const id of Object.values(SETS).flatMap((x) => x.pieces).filter((p) => !UNIQUES[p].sources.every((x) => x.kind === 'story'))) assert.ok(reach.has(id), `${id} drops from somewhere`);
+  for (const id of Object.values(SETS).flatMap((x) => x.pieces).filter((p) => !UNIQUES[p].sources.every((x) => x.kind === 'story' || x.kind === 'feat'))) assert.ok(reach.has(id), `${id} drops from somewhere`); // an earned set's pieces come on a count (earned.test.mjs)
   for (const [kind, o] of Object.entries(SET_LOOT)) assert.ok(o.chance > 0 && o.pity > 0 && o.found > 0 && o.found <= o.chance, kind);
   // The floor 3 lair boss: On-Call's alone (the class sets are the level-50 tier sets now).
   assert.deepEqual(setDropPool({ kind: 'lair', floor: 3 }, 20).map((u) => u.id).sort(), []); // the Pager moved to SHOULDER SURFER, the Runbook to NIGHT DESK, Failover to BYZANTINE (docs/floor-items.md)

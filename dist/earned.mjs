@@ -16,7 +16,8 @@ import { hooks, emit, warn, addItem, hackerLevel, rand, UNIQUES } from './combat
 import { FLOORS } from './data.mjs';
 import { uniqueItem } from './gear.mjs';
 import { setOf, fromHere } from './sets.mjs';
-import { floorGraph, floorSeed, locAt, serverSlot, floorName } from './floors.mjs';
+import { floorGraph, floorSeed, locAt, serverSlot, floorName, islandsOf } from './floors.mjs';
+import { PUZZLES } from './puzzles.mjs';
 import { owned, rootOf } from './root.mjs';
 import { sizeOf } from './sockets.mjs';
 import { specialsOf } from './specials.mjs';
@@ -24,8 +25,8 @@ import { specialsOf } from './specials.mjs';
 export const EARNED = Object.values(UNIQUES).filter((u) => u.earn);
 export const isEarned = (id) => !!UNIQUES[id]?.earn;
 export const PIN_MAX = 3;
-// A count past this many draws one cell for two (the Ledger's and the map's cells).
-export const CELLS = 8;
+// A count past this many draws one cell for two or more, never more than CELL_MAX cells (the Ledger's and the map's).
+export const CELLS = 8, CELL_MAX = 12;
 
 const plural = (k, one, many = one + 's') => `${k} ${k === 1 ? one : many}`;
 // Its band: its floor's first level.
@@ -36,12 +37,27 @@ const onOf = (u) => u.earn.on || [];
 // the tooltip's answer (Win 2 more Cascade boards).
 function goalOf(u) {
   const E = u.earn, src = onOf(u)[0] || {}, F = E.floor && floorName(E.floor);
+  if (E.state === 'mapped' && E.kind) return { text: `${E.kind}s mapped`, short: 'Mapped', todo: (k) => `Map ${plural(k, `more ${E.kind}`)} on ${F}` };
   if (E.state === 'mapped') return { text: `Servers mapped on ${F}`, short: 'Mapped', todo: (k) => `Map ${plural(k, 'more server')} on ${F}` };
+  if (E.state === 'islands') return { text: `Islands mapped on ${F}`, short: 'Islands', todo: (k) => `Map a server on ${plural(k, 'more island')} of ${F}` };
+  if (E.state === 'root' && E.all) return { text: `Servers at Root ${E.root}`, short: `Root ${E.root}`, todo: (k) => `Reach Root ${E.root} on ${plural(k, 'more server')} you hold` };
   if (E.state === 'held') return { text: `Servers held on ${F}`, short: 'Held', todo: (k) => `Hold ${plural(k, 'more server')} on ${F}` };
   if (E.state === 'root') return { text: `Root 3 servers on ${F}`, short: 'Root 3', todo: (k) => `Reach Root 3 on ${plural(k, 'more server')} on ${F}` };
   if (E.state === 'elites') return { text: `Elite rooms on ${F}`, short: 'Elites', todo: (k) => `Clear ${plural(k, 'more elite room')} on ${F}, on every server there` };
   if (E.state === 'located') return { text: `Servers located on ${F}`, short: 'Located', todo: (k) => `Locate ${plural(k, 'more server')} on ${F}` };
+  const on = src.floor ? ` on ${Array.isArray(src.floor) ? `floors ${src.floor[0]}–${src.floor[1]}` : floorName(src.floor)}` : '';
+  if (E.distinct === 'id') return { text: 'Board kinds won', short: 'Board kinds', todo: (k) => `Win a board of ${plural(k, 'more kind')}` };
+  if (E.distinct === 'strain') return { text: 'Strains beaten', short: 'Strains', todo: (k) => `Beat ${plural(k, 'more strain')} you haven't beaten since` };
   switch (src.kind) {
+    case 'sprawl': return { text: 'Kills in SPRAWL-00', short: 'SPRAWL kills', todo: (k) => `Win ${plural(k, 'more fight')} in SPRAWL-00` };
+    case 'puzzle': { const P = PUZZLES[src.id]?.name || 'puzzle'; return { text: `${P} boards${on}`, short: P, todo: (k) => `Win ${plural(k, `more ${P} board`)}${on}` }; }
+    case 'cold-quick': return { text: `Cold storage fights won before cycle 6`, short: 'Cold fights', todo: (k) => `Win ${plural(k, 'more fight')} on Cold storage servers before their viruses wake at cycle 6` };
+    case 'armored-core': return { text: `Armored Cores beaten${on}`, short: 'Armored Cores', todo: (k) => `Beat ${plural(k, 'more Core')}${on} on a Rich or Hardened server` };
+    case 'root-clear': return { text: `Rooms cleared on held servers${on}`, short: 'Held rooms', todo: (k) => `Clear ${plural(k, 'more respawned room')} on servers you hold${on}` };
+    case 'rare': return { text: `★ rare spawns${on}`, short: '★ rares', todo: (k) => `Kill ${plural(k, 'more ★ rare spawn')}${on}` };
+    case 'contract': return { text: 'Contracts delivered', short: 'Contracts', todo: (k) => `Deliver ${plural(k, 'more contract')}` };
+    case 'map-norest': return { text: 'Servers mapped without resting', short: 'No rest', todo: (k) => `Map ${plural(k, 'more server')} in a visit you don't rest` };
+    case 'locate': return { text: `Servers located by tracing${on}`, short: 'Traced', todo: (k) => `Locate ${plural(k, 'more server')}${on} by tracing` };
     case 'takeover': return { text: `Specials taken on ${floorName(src.floor)}`, short: 'Specials', todo: (k) => `Take over servers on ${floorName(src.floor)} with ${plural(k, 'more special')}` };
     case 'router-vault': return { text: 'Router vaults banked unseen', short: 'Routers', todo: (k) => `Bank ${plural(k, 'more Router vault')}, the Tracker never reaching you` };
     case 'bait': return { text: 'Bait caches on Honeypots', short: 'Bait', todo: (k) => `Take ${plural(k, 'more bait cache')} on Honeypots` };
@@ -70,7 +86,10 @@ export function floorElites(s, f) {
 export const floorHeld = (s, f, root = 1) => slotsOn(s, f).filter((id) => rootOf(locAt(s, id)) >= root && owned(locAt(s, id))).length;
 function stateOf(s, u) {
   const E = u.earn, ids = slotsOn(s, E.floor), at = (id) => locAt(s, id);
+  if (E.state === 'mapped' && E.kind) return { n: ids.filter((id) => at(id)?.floorplan?.mapped && at(id).floorplan.kind === E.kind).length, of: E.n };
   if (E.state === 'mapped') return { n: ids.filter((id) => at(id)?.floorplan?.mapped).length, of: E.n || ids.length };
+  if (E.state === 'islands') { const isl = islandsOf(E.floor), got = isl.filter((xs) => xs.some((id) => at(id)?.floorplan?.mapped)).length; return { n: got, of: E.n || isl.length }; }
+  if (E.state === 'root' && E.all) return { n: (s.locations || []).filter((l) => owned(l) && rootOf(l) >= E.root).length, of: E.n };
   if (E.state === 'held') return { n: floorHeld(s, E.floor), of: E.n || ids.length };
   if (E.state === 'root') return { n: floorHeld(s, E.floor, E.root || 3), of: E.n || ids.length };
   if (E.state === 'located') return { n: ids.filter((id) => at(id)).length, of: E.n || ids.length };
@@ -89,7 +108,7 @@ export function earnedOf(s, id) {
   return { id, n: got ? st.of : n, of: st.of, from, open, got, full, text: g.text, short: g.short, todo: g.todo(Math.max(1, st.of - n)), set: setOf(id)?.id || null };
 }
 // The cells a count draws: one a count, past CELLS one for two. [lit, all].
-export const cellsOf = (n, of) => { const k = of > CELLS ? 2 : 1; return [Math.floor(n / k), Math.ceil(of / k)]; };
+export const cellsOf = (n, of) => { const k = of > CELLS ? Math.max(2, Math.ceil(of / CELL_MAX)) : 1; return [Math.floor(n / k), Math.ceil(of / k)]; };
 
 function pay(s, u, why) {
   if (s.collection?.[u.id]) return null;

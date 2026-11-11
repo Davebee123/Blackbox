@@ -189,6 +189,11 @@ export const FX_IF = {
   // The floor feats' uniques (earned.mjs).
   'room-new': "you fight in a room you haven't cleared",
   'server-held': 'you fight on a server you hold',
+  'after-delay': 'one of your delays landed last cycle',
+  early: 'the fight is in its first 3 cycles',
+  'target-unacted': "it hasn't attacked yet this fight",
+  'strain-fight': 'you fight a strain',
+  unrested: "you haven't rested this visit",
 };
 // What each block does, which "when" it fits, and what it needs (value, stat). label: the effect, a verb phrase in the
 // tooltip style ("heals you for X"); fxText adds its trigger and condition after it. own: the label already says when.
@@ -298,6 +303,7 @@ export const FX_DO = {
   unveil: { when: ['custom'], label: "shows a Veiled part's next attack once it is X cycles away", value: true },
   'explore-xp%': { when: ['custom'], label: 'increases the XP from Mapped servers by X%', value: true },
   'cache%': { when: ['custom'], label: 'increases the credits caches pay by X%', value: true },
+  'echo-first': { when: ['custom'], label: 'makes your first echo on each part hit for full damage' },
   'cache-heal%': { when: ['custom'], label: 'heals X% of your max Signal when you take a cache', value: true, own: true },
   // Set pieces (sets.mjs runs them): a piece's own bonus and its green line, the line that counts with two or more of
   // its set worn. Each piece writes its own text, in the plan's words.

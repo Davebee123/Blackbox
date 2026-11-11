@@ -256,6 +256,8 @@ export const setSignal = (s) => total(custom(s, 'signal%', {}, active(s) && sxOf
 // What the outside-a-fight bonuses give: credits from caches or vaults (Lantern Route), how much faster Signal rests
 // back (Night Shift), and whether a server's map card shows its rare spawn (the Antenna).
 export const setCredits = (s, of) => pct(total(custom(s, 'credits%', {}, gearFx(s)).filter((x) => (x.fx.of || []).includes(of))));
+// Full Coverage (3): a room's first clear pays this share of a kill's XP (floorplan.mjs clear).
+export const clearXp = (s) => total(custom(s, 'clear-xp', {}, gearFx(s)));
 export const restFast = (s) => pct(total(custom(s, 'rest-fast', {}, gearFx(s))));
 export const seesRare = (s) => custom(s, 'see-rare', {}, gearFx(s)).length > 0;
 // Heals you cast (combat.mjs healScaled): larger with Link, and with Mesh for each crewmate in the fight.

@@ -18,7 +18,7 @@ import { RESEARCH } from './research.mjs';
 // Where a floor's uniques come from, as its ledger line says it.
 export const FLOOR_KIND = { vault: 'Vaults', rare: '★ Rare spawns', thread: 'Threads', lair: 'Lair boss', feat: 'Floor feat' }; // feat: an earned piece's (earned.mjs)
 // The sources that are neither a virus nor a floor, each one entry under Elsewhere.
-export const OTHER = { trophy: 'Strain trophies', sprawl: 'SPRAWL-00', rogue: 'Rogue servers', story: 'Storyline', contract: 'Contracts', invasion: 'Invasions', courier: 'Couriers', author: 'Authors', puzzle: 'Puzzle boards', farm: 'KESSLER-FARM-00', store: 'Halcyon store', feud: 'Feuds', takeover: 'Takeovers', crew: 'Crew bosses', raid: 'Crew bosses', vault: 'Vaults', rare: 'Rare spawns', thread: 'Threads', lair: 'Lair bosses' };
+export const OTHER = { trophy: 'Strain trophies', sprawl: 'SPRAWL-00', rogue: 'Rogue servers', story: 'Storyline', contract: 'Contracts', invasion: 'Invasions', courier: 'Couriers', author: 'Authors', puzzle: 'Puzzle boards', farm: 'KESSLER-FARM-00', store: 'Halcyon store', feud: 'Feuds', takeover: 'Takeovers', feat: 'Feats', crew: 'Crew bosses', raid: 'Crew bosses', vault: 'Vaults', rare: 'Rare spawns', thread: 'Threads', lair: 'Lair bosses' };
 // An entry's feats: the achievements that are about it (a set's under each entry that drops a piece of it).
 export const BOSS_FEATS = { relayking: ['c-relayking'], repoman: ['c-repoman'], choir: ['c-choir'] };
 export const floorFeat = (n) => (n >= 2 ? ['x-floor-' + n] : []);

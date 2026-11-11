@@ -19,6 +19,9 @@ import { ARCHETYPES, BOSSES, SUBS, DAEMONS, FLOORS } from './data.mjs';
 import { FACTIONS, FACTION_IDS, REP_TIERS, hubFound } from './factions.mjs';
 import { PIECES } from './faction-gear.mjs';
 import { SETS, piecesOf } from './sets.mjs';
+import EARN from './content/earned.mjs';
+// An earned set (earned.mjs): its count is its goal already, so it gets no find-every-piece achievement of its own.
+const earnedSet = (x) => (x.pieces || []).every((p) => EARN[p]);
 import { titleById, myProfile } from './profile.mjs';
 import { masteredN, keyOnesN, kitBest } from './mastery.mjs';
 
@@ -124,7 +127,7 @@ const listed = () => (LIST ||= [ // the list as written; achievements() (below, 
   A('k-log-entry', 'collect', 'Full Page', 'Fill an entry in the collection log.', 10, { group: 'Log', has: (s) => filled(s).length > 0, reward: { title: 'thorough' } }),
   A('k-log-family', 'collect', 'Family Album', "Fill Ransomware's, Worm's or Ghostroot's entry in the collection log.", 25, { group: 'Log', has: (s) => filled(s).some((k) => ['family:ransomware', 'family:worm', 'family:ghostroot'].includes(k)), reward: { sticker: 'log-family' } }),
   A('k-log-floor', 'collect', 'Floor Plan', "Fill a floor's entry in the collection log.", 25, { group: 'Log', has: (s) => filled(s).some((k) => k.startsWith('floor:')), reward: { sticker: 'log-floor' } }),
-  ...Object.values(SETS).filter((x) => !x.tier).map((x) => A('k-set-' + x.id, 'collect', x.name, `Find every piece of ${x.name}.`, BIG_SETS.has(x.id) ? 25 : 10, { group: 'Sets', progress: (s) => of(piecesOf(x.id).filter((p) => s.collection?.[p]).length, piecesOf(x.id).length), has: (s) => setDone(s, x.id), reward: { sticker: 'set-' + x.id } })),
+  ...Object.values(SETS).filter((x) => !x.tier && !earnedSet(x)).map((x) => A('k-set-' + x.id, 'collect', x.name, `Find every piece of ${x.name}.`, BIG_SETS.has(x.id) ? 25 : 10, { group: 'Sets', progress: (s) => of(piecesOf(x.id).filter((p) => s.collection?.[p]).length, piecesOf(x.id).length), has: (s) => setDone(s, x.id), reward: { sticker: 'set-' + x.id } })),
   // ---------- Factions ----------
   ...FACTION_IDS.map((f) => A('f-' + f, 'faction', FACTION_ACH[f], `Reach ${FACTIONS[f].tiers[3]} with ${FACTIONS[f].name}.`, 25, { has: (s) => top(s, f) || titled(s, 'of-' + f), reward: { title: 'of-' + f, sticker: 'f-' + f, casing: f } })),
   A('f-couriers', 'faction', "Courier's Bane", 'Intercept 10 couriers.', 10, { progress: (s) => of(deeds(s).couriers || 0, 10), has: (s) => titleHas(s, 'couriersbane'), reward: { title: 'couriersbane' } }),

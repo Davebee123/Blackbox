@@ -2,13 +2,13 @@
 // band, the piece once when it fills, never a roll; the floor goals; pins.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, hackerOf, command, restore, uniqueFrom, guardedUnique, hooks, UNIQUES } from './dist/combat.mjs';
+import { fresh, hackerOf, command, restore, uniqueFrom, guardedUnique, hooks, UNIQUES, selectEncounter, livingParts, delayAttack, fxHolds, addItem, gearStat } from './dist/combat.mjs';
 import './dist/netrooms.mjs';
 import { EARNED, earnedOf, earnEvent, earnTick, pinsOf, bandOf, cellsOf, floorElites, PIN_MAX } from './dist/earned.mjs';
 import { SETS, isPiece } from './dist/sets.mjs';
 import { graphOf, serverSlot } from './dist/floors.mjs';
 import { fxText, fxList, checkItems } from './dist/content.mjs';
-import { BASES, STATS } from './dist/gear.mjs';
+import { BASES, STATS, uniqueItem, seeded } from './dist/gear.mjs';
 import ITEMS from './dist/content/items.mjs';
 import EARN from './dist/content/earned.mjs';
 import { collectionPageMarkup } from './dist/collection-view.mjs';
@@ -24,12 +24,17 @@ const place = (s, f, n, more = () => ({})) => { s.locations ||= []; for (const [
 
 const FEATS = ['street-atlas', 'quiet-hours', 'sweetener', 'ring-main', 'mixed-bag', 'superuser', 'bottleneck', 'last-mile'];
 
-test('one earned unique a floor, its floor\'s feat, never in a roll; the sets keep their rolls', () => {
-  assert.deepEqual(EARNED.map((u) => u.id).sort(), [...FEATS].sort());
-  assert.deepEqual(Object.keys(EARN).sort(), [...FEATS].sort(), 'every count in one table');
+test('the earned pieces: the floor feats, the floors\' own and the cross-floor ones, never in a roll; the drop sets keep theirs', () => {
+  assert.deepEqual(EARNED.map((u) => u.id).sort(), Object.keys(EARN).sort(), 'every count in one table');
+  assert.equal(EARNED.length, 38);
+  for (const id of FEATS) assert.ok(EARN[id], id);
   assert.deepEqual(FEATS.map((id) => [UNIQUES[id].level, UNIQUES[id].sources[0].floor]), [[8, 1], [13, 2], [18, 3], [24, 4], [30, 5], [36, 6], [42, 7], [48, 8]]);
-  for (const id of Object.values(SETS).flatMap((x) => x.pieces)) assert.ok(!UNIQUES[id].earn, `${id} rolls`);
-  for (const u of EARNED) { assert.ok(!isPiece(u.id)); assert.ok(fxList(u).length && fxText(fxList(u)), `${u.id}: a rule`); }
+  for (const set of Object.values(SETS)) { const earned = set.pieces.filter((p) => UNIQUES[p].earn).length; assert.ok(earned === 0 || earned === set.pieces.length, `${set.id}: all earned or none`); }
+  assert.deepEqual(Object.values(SETS).filter((x) => x.pieces.every((p) => UNIQUES[p].earn)).map((x) => x.id).sort(), ['atoll', 'bootloader', 'coldstart', 'fullcoverage', 'longhaul', 'switchback', 'tenure']);
+  for (const u of EARNED) assert.ok(fxList(u).length && fxText(fxList(u)), `${u.id}: a rule`);
+  // A cross-floor piece is stronger: its slot's stats ×1.1 (a floor's own ×1).
+  const main = (u) => [].concat(Object.values(u.primary)[0])[0];
+  assert.ok(main(UNIQUES['field-book']) > main(UNIQUES.grub) * 0.9 && UNIQUES.sampler.sources[0].floor == null && UNIQUES.regular.sources[0].floor === 1);
   const s = at(50);
   for (let f = 1; f <= 8; f++) for (let i = 0; i < 300; i++) assert.ok(!guardedUnique(s, f, 50)?.earn, `a Guarded vault on floor ${f}`);
   for (let i = 0; i < 300; i++) assert.ok(!uniqueFrom(s, { kind: 'vault', layer: 9, floor: 7 }, 50)?.earn);
@@ -154,4 +159,64 @@ test('the floor feats\' effects read as their rules', () => {
   assert.equal(fxText(fxList(UNIQUES['mixed-bag'])), "Increases your damage by 3% for each of the server's specials.");
   assert.equal(fxText(fxList(UNIQUES['ring-main'])), 'Adds 1 Block for every 5 servers you hold, up to 4.');
   assert.equal(fxText(fxList(UNIQUES.sweetener)), 'Heals 5% of your max Signal when you take a cache.');
+});
+
+// The event counts, table-driven: each piece counted by events pays at its n, not before, from its band.
+test('every event-counted piece pays at its count: the floors\' own and the cross-floor ones', () => {
+  for (const u of EARNED.filter((x) => x.earn.on)) {
+    const s = at(50), src = u.earn.on[0], E = u.earn;
+    const ctx = (i) => ({ ...src, floor: Array.isArray(src.floor) ? src.floor[0] : src.floor ?? 1, ...(src.kind === 'takeover' ? { special: ['rich', 'hostile', 'legacy', 'stable', 'volatile', 'backbone'].slice(i, i + 1) } : {}), ...(E.distinct === 'id' ? { id: ['quarantine', 'chase', 'cascade', 'sweep', 'routing', 'deadlock', 'cryptogram', 'terminal'][i] } : {}), ...(E.distinct === 'strain' ? { strain: 'strain-' + i } : {}) });
+    for (let i = 0; i < E.n - 1; i++) earnEvent(s, ctx(i));
+    assert.equal(got(s, u.id), 0, `${u.id}: not before ${E.n}`);
+    assert.equal(earnedOf(s, u.id).n, E.n - 1, `${u.id}: counted`);
+    earnEvent(s, ctx(E.n - 1));
+    assert.equal(got(s, u.id), 1, `${u.id}: at ${E.n}`);
+  }
+  // A floor's own counts on that floor only: Switchback's Hunter chase boards on Backhaul.
+  const t = at(12);
+  earnEvent(t, { kind: 'puzzle', id: 'chase', floor: 3 });
+  earnEvent(t, { kind: 'puzzle', id: 'cascade', floor: 2 });
+  assert.equal(earnedOf(t, 'dead-end').n, 0);
+  assert.equal(earnedOf(t, 'sampler').n, 0, 'before its band');
+});
+
+test('the new floor goals: Honeypots mapped, Bedrock\'s islands, Root 5 anywhere', () => {
+  const h = at(16);
+  place(h, 3, 6, (i) => ({ floorplan: { mapped: 1, kind: i < 4 ? 'Honeypot' : 'Mirror' } }));
+  assert.deepEqual([earnedOf(h, 'honeycomb').n, earnedOf(h, 'honeycomb').text], [4, 'Honeypots mapped']);
+  earnTick(h);
+  assert.equal(got(h, 'honeycomb'), 0);
+  h.locations[4].floorplan.kind = 'Honeypot'; earnTick(h);
+  assert.equal(got(h, 'honeycomb'), 1);
+  const b = at(45);
+  place(b, 8, 18);
+  for (const id of ['f8-0', 'f8-5', 'f8-10']) b.locations.find((l) => l.slot === id).floorplan = { mapped: 1 };
+  earnTick(b);
+  assert.deepEqual([got(b, 'lagoon'), got(b, 'reef'), got(b, 'causeway')], [1, 1, 0], 'three of the four islands');
+  assert.equal(earnedOf(b, 'causeway').of, 4);
+  const r = at(40);
+  place(r, 4, 2, () => ({ takenOver: 1, root: { level: 5 } }));
+  place(r, 7, 1, () => ({ takenOver: 1, root: { level: 5 } }));
+  place(r, 2, 1, () => ({ takenOver: 1, root: { level: 4 } }));
+  earnTick(r);
+  assert.deepEqual([got(r, 'freehold'), got(r, 'deed'), earnedOf(r, 'sitting-tenant').text], [1, 1, 'Servers at Root 5']);
+});
+
+test('the new effects read and hold: echo, delays, the first cycles, held servers, contracts', () => {
+  assert.equal(fxText(fxList(UNIQUES.regular)), 'Adds 5% Echo. Makes your first echo on each part hit for full damage.');
+  assert.equal(fxText(fxList(UNIQUES.honeycomb)), 'Your Block counts double for the first 3 cycles of a fight.');
+  assert.equal(fxText(fxList(UNIQUES['no-rest'])), "Increases your max Signal by 6% while you haven't rested this visit. Adds 1 Regen while you haven't rested this visit.");
+  // Switchback (3): the cycle after a delay lands.
+  const s = at(30);
+  for (const id of ['honeycomb', 'late-pass']) { const it = addItem(s, uniqueItem(UNIQUES[id], 30, seeded(1))); command(s, 'load ' + it.id); } // Late Pass: a proxy with Block
+  selectEncounter(s, 'cryptjack', 3, { level: 14, mutation: null }); command(s, 'engage');
+  const e = s.encounter, p = livingParts(s).find((x) => x.attack);
+  e.cycle = 4; delayAttack(s, p, 1);
+  assert.equal(e.delayedAt, 4);
+  e.cycle = 5; assert.ok(fxHolds(s, { if: 'after-delay' }));
+  e.cycle = 6; assert.ok(!fxHolds(s, { if: 'after-delay' }));
+  assert.ok(!fxHolds(s, { if: 'early' }) && (e.cycle = 3, fxHolds(s, { if: 'early' })));
+  // Honeycomb doubles your Block in the first 3 cycles.
+  e.cycle = 2; const early = gearStat(s, 'reduction'); e.cycle = 5; const late = gearStat(s, 'reduction');
+  assert.ok(late > 0 && early === late * 2, `${early} against ${late}`);
 });

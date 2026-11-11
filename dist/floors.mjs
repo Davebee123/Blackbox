@@ -178,8 +178,11 @@ function funnel(r, N) { // floor 7: wide at the top, narrow at the exits
   const low = idx.at(-1);
   return { pts, links, entry: { x: 0, y: -320, to: top }, far: [[low[0], low[1]], [low[2]]] };
 }
+// Bedrock's islands: the servers on each, in slot order (islands() lays them out in these sizes). Atoll (earned.mjs).
+const ISLANDS = [4, 5, 4, 5];
+export const islandsOf = (n) => (n !== 8 ? [] : ISLANDS.map((k, i) => Array.from({ length: k }, (_, j) => `f8-${ISLANDS.slice(0, i).reduce((a, b) => a + b, 0) + j}`)));
 function islands(r, N) { // floor 8: scattered islands
-  const sizes = [4, 5, 4, 5], pts = [], links = [], isl = [];
+  const sizes = ISLANDS, pts = [], links = [], isl = [];
   sizes.forEach((n, k) => {
     const cx = -420 + k * 280, cy = (k % 2 ? 95 : -95) + jit(r, 20), ids = [];
     pts.push({ x: cx, y: cy }); ids.push(pts.length - 1);

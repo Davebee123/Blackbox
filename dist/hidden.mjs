@@ -13,7 +13,7 @@
 // Relays: an item you install on a server you've taken over. It pings that server's ? neighbours (their family shows);
 // the one carrying a contract's signal is flagged.
 import { FAMILIES, CONFIG, xpScale } from './data.mjs';
-import { emit, warn, rand, addLocation, hackerLevel } from './combat.mjs';
+import { emit, warn, rand, addLocation, hackerLevel, hooks } from './combat.mjs';
 import { isLive } from './memory.mjs';
 import { pickSender } from './specials.mjs';
 import { quietAtRoot } from './root.mjs';
@@ -63,7 +63,7 @@ export function hiddenLead(s, n, amount, why = '') {
   n.lead = Math.min(100, n.lead + amount);
   const known = n.pinged || n.seen;
   emit(s, 'lead', `${why}Unknown ${known ? `${FAMILIES[n.family]?.name.toLowerCase() || ''} ` : ''}server past ${viaName(s, n)}: ${n.lead}%.`, { family: known ? n.family : null, hidden: n.id });
-  if (n.lead >= 100) locate(s, n);
+  if (n.lead >= 100 && locate(s, n) && why !== 'Mapped: ') hooks.earnEvent?.(s, { kind: 'locate', floor: n.depth }); // Long Shot's count: by tracing, not a Mapped neighbour's gift
 }
 // A place's trace along its links (floors.mjs hiddenNear): every ? linked to it, or one (one: the most traced, so they
 // come one at a time; then its family's, then the lowest level). Until you've found a server, the lowest level comes

@@ -2277,7 +2277,7 @@ function pinnedTracker(s) {
   const ids = pinsOf(s);
   if (!ids.length) return '';
   const rows = ids.map((id) => {
-    const u = UNIQUES[id], p = earnedOf(s, id), over = setOf(id)?.name || 'Floor feat';
+    const u = UNIQUES[id], p = earnedOf(s, id), over = setOf(id)?.name || (u.sources?.[0]?.floor ? 'Floor feat' : 'Feat');
     return `<button type="button" class="ct-row pin-row${p.set ? ' set' : ''}" data-go="${esc(logGo(homeOfUnique(id)))}" title="${esc(earnTip(s, id))}">${glyph(SLOT_GLYPH[BASES[u.base]?.slot] || 'item')}<span class="ct-txt"><small class="ct-for">${esc(over)}</small><b>${esc(u.name)}</b></span><span class="ct-prog">${earnCells(p)}<small class="pin-goal">${esc(p.text)} ${p.n}/${p.of}</small></span></button>`;
   }).join('');
   return `<section class="ctrack pins" aria-label="Pinned"><h3 class="ct-head">${glyph('pin')}Pinned<small>${ids.length}/${PIN_MAX}</small></h3>${rows}</section>`;
