@@ -52,14 +52,24 @@ function crusher(ctx, amount = 12) {
   w.curve = curve;
   return w;
 }
+// A feedback loop never falls silent to the browser: it renders every loop still wired to the speakers, every
+// block, for good, so each hit left one more running until the audio thread fell behind and crackled. Cut the loop
+// once its ring has died, timed by a silent oscillator on the audio clock (a paused tab, an offline render keep time).
+function retire(ctx, t, { time, fb, input = 1.5 }, nodes) {
+  const ring = time * Math.log(1000) / -Math.log(fb); // seconds to fall 60 dB
+  const clock = ctx.createOscillator(), mute = ctx.createGain();
+  mute.gain.value = 0;
+  clock.connect(mute).connect(nodes[0]);
+  clock.onended = () => { for (const n of [clock, mute, ...nodes]) n.disconnect(); };
+  clock.start(t); clock.stop(t + input + ring + 0.5);
+}
 // A short echo for chimes: they ring a little, like a terminal bell in a room.
-function echo(ctx, out, { time = 0.13, feedback = 0.28, wet = 0.35 }) {
+function echo(ctx, out, t, { time = 0.13, feedback = 0.28, wet = 0.35 }) {
   const input = ctx.createGain(), d = ctx.createDelay(1), fb = ctx.createGain(), w = ctx.createGain(), lp = ctx.createBiquadFilter();
   d.delayTime.value = time; fb.gain.value = feedback; w.gain.value = wet; lp.type = 'lowpass'; lp.frequency.value = 3200;
   input.connect(out);
   input.connect(d); d.connect(lp).connect(fb).connect(d); lp.connect(w).connect(out);
-  // A live context would keep the loop around forever: cut it once the ring has died.
-  if (typeof OfflineAudioContext === 'undefined' || !(ctx instanceof OfflineAudioContext)) setTimeout(() => { for (const n of [input, d, fb, w, lp]) n.disconnect(); }, 3000);
+  retire(ctx, t, { time, fb: feedback }, [input, d, fb, w, lp]);
   return input;
 }
 // One chime note: a sine with a soft triangle an octave up and a tiny attack click.
@@ -213,23 +223,23 @@ export const VOICES = {
   // A daemon acted for you: a soft blip, a little like a modem chirp.
   daemon(ctx, out, t) { osc(ctx, out, t, { type: 'triangle', f0: 740, f1: 1100, glide: 0.06, a: 0.004, peak: 0.2, d: 0.08 }); },
   // Small good news (trace, scan, a lead, equipping): one warm note.
-  good(ctx, out, t) { const e = echo(ctx, out, {}); chime(ctx, e, t, 81, { d: 0.35, peak: 0.36 }); },
+  good(ctx, out, t) { const e = echo(ctx, out, t, {}); chime(ctx, e, t, 81, { d: 0.35, peak: 0.36 }); },
   // Unlocking (a vault, a door, an upgrade) and loot: a rising pair that resolves.
   unlock(ctx, out, t) {
-    const e = echo(ctx, out, {});
+    const e = echo(ctx, out, t, {});
     noise(ctx, out, t, { type: 'bandpass', f0: 1800, q: 4, a: 0.001, peak: 0.12, d: 0.03 }); // the latch
     chime(ctx, e, t + 0.04, 76, { d: 0.35, peak: 0.42 });
     chime(ctx, e, t + 0.13, 83, { d: 0.6, peak: 0.46 });
   },
   // You took something: a quick bright pickup.
   pickup(ctx, out, t) {
-    const e = echo(ctx, out, { wet: 0.25 });
+    const e = echo(ctx, out, t, { wet: 0.25 });
     chime(ctx, e, t, 84, { d: 0.18, peak: 0.38 });
     chime(ctx, e, t + 0.06, 88, { d: 0.3, peak: 0.38 });
   },
   // A fight won or a level gained: a major arpeggio with a shimmer.
   win(ctx, out, t) {
-    const e = echo(ctx, out, { feedback: 0.35, wet: 0.4 });
+    const e = echo(ctx, out, t, { feedback: 0.35, wet: 0.4 });
     [72, 76, 79, 84].forEach((m, i) => chime(ctx, e, t + i * 0.09, m, { d: i === 3 ? 1.0 : 0.4, peak: 0.5 }));
     noise(ctx, e, t + 0.27, { type: 'highpass', f0: 7000, a: 0.08, peak: 0.05, d: 0.6 });
   },
@@ -585,10 +595,11 @@ function fm(ctx, out, t, { fc = 220, f1 = fc, ratio = 2, i0 = 8, i1 = 0.5, dur =
   c.connect(g).connect(out); c.start(t); m.start(t); c.stop(t + dur + 0.05); m.stop(t + dur + 0.05);
 }
 // A dark, repeating echo: everything sent in gets a crushed tail.
-function echoBus(ctx, out, { time = 0.085, fb = 0.5, wet = 0.5, lp = 2600 } = {}) {
+function echoBus(ctx, out, t, { time = 0.085, fb = 0.5, wet = 0.5, lp = 2600 } = {}) {
   const input = ctx.createGain(), d = ctx.createDelay(1), f = ctx.createGain(), l = ctx.createBiquadFilter(), w = ctx.createGain();
   d.delayTime.value = time; f.gain.value = fb; l.type = 'lowpass'; l.frequency.value = lp; w.gain.value = wet;
   input.connect(out); input.connect(d); d.connect(l).connect(f).connect(d); l.connect(w).connect(out);
+  retire(ctx, t, { time, fb }, [input, d, f, l, w]);
   return input;
 }
 // Ring modulation: a carrier multiplied by a low tone, the metallic buzz of old electronics.
@@ -614,7 +625,7 @@ function impact(ctx, b, t, k, c) {
 // Impact, then the falling cascade into an FM growl, then digital pings (a console rejecting the packet)
 // over a ringing tail through crushed echoes. k is how big the hit is (0–1); c is a crit.
 function digitalHit(ctx, out, t, k, c) {
-  const fx = echoBus(ctx, out, { time: 0.09, fb: 0.55, wet: 0.5 }), b = crushBus(ctx, fx, 12, 2.8);
+  const fx = echoBus(ctx, out, t, { time: 0.09, fb: 0.55, wet: 0.5 }), b = crushBus(ctx, fx, 12, 2.8);
   impact(ctx, b, t, k, c);
   const w = cascade(ctx, b, t + 0.015, c ? 28 : 12 + Math.round(10 * k));
   const t0 = t + 0.015 + w;
@@ -634,7 +645,7 @@ function shards(ctx, out, t, { n = 7, hi = 7000, lo = 2200, peak = 0.09, span = 
 // ---- chit, break, patch and interrupt (picked by Dave from synthesized candidates, 2026-10-02) ----
 // Chit A: a crushed snap and a spray of glassy data shards, with a ringing ping.
 function chitShatter(ctx, out, t) {
-  const fx = echoBus(ctx, out, { time: 0.06, fb: 0.35, wet: 0.35, lp: 5000 }), b = crushBus(ctx, fx, 10, 2.4);
+  const fx = echoBus(ctx, out, t, { time: 0.06, fb: 0.35, wet: 0.35, lp: 5000 }), b = crushBus(ctx, fx, 10, 2.4);
   noise(ctx, b, t, { type: 'highpass', f0: 6000, a: 0.0005, peak: 0.4, d: 0.01 });
   zap(ctx, b, t, { dur: 0.035, peak: 0.35, f0: 8000, f1: 2500 });
   shards(ctx, b, t + 0.006, { n: 9 });
@@ -642,7 +653,7 @@ function chitShatter(ctx, out, t) {
 }
 // Break A: the big digital hit's impact, a long cascade into a falling FM drop, shards flying, a crushed sub.
 function partBreak(ctx, out, t) {
-  const fx = echoBus(ctx, out, { time: 0.11, fb: 0.55, wet: 0.55, lp: 2200 }), b = crushBus(ctx, fx, 10, 3);
+  const fx = echoBus(ctx, out, t, { time: 0.11, fb: 0.55, wet: 0.55, lp: 2200 }), b = crushBus(ctx, fx, 10, 3);
   impact(ctx, b, t, 1, true);
   const w = cascade(ctx, b, t + 0.01, 30, 6000);
   fm(ctx, b, t + 0.02 + w, { fc: 90, f1: 28, ratio: 1.41, i0: 10, i1: 0.3, dur: 0.45, peak: 0.42 });
@@ -651,7 +662,7 @@ function partBreak(ctx, out, t) {
 }
 // Patch B: static swells in reverse and snaps into a lock; an FM tone rises under it.
 function patchLock(ctx, out, t) {
-  const fx = echoBus(ctx, out, { time: 0.07, fb: 0.3, wet: 0.3, lp: 2400 }), b = crushBus(ctx, fx, 10, 2.4);
+  const fx = echoBus(ctx, out, t, { time: 0.07, fb: 0.3, wet: 0.3, lp: 2400 }), b = crushBus(ctx, fx, 10, 2.4);
   const src = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
   src.buffer = sahBuf(ctx, 6); f.type = 'bandpass'; f.Q.value = 1.2; f.frequency.setValueAtTime(400, t); f.frequency.exponentialRampToValueAtTime(3500, t + 0.22);
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.28, t + 0.22); g.gain.setValueAtTime(0.0001, t + 0.225);
@@ -662,11 +673,35 @@ function patchLock(ctx, out, t) {
 }
 // Interrupt A: a deflection: a rising zap, a ringing metallic clang, bouncing echoes.
 function deflect(ctx, out, t) {
-  const fx = echoBus(ctx, out, { time: 0.1, fb: 0.45, wet: 0.5, lp: 3500 }), b = crushBus(ctx, fx, 12, 2.4);
+  const fx = echoBus(ctx, out, t, { time: 0.1, fb: 0.45, wet: 0.5, lp: 3500 }), b = crushBus(ctx, fx, 12, 2.4);
   zap(ctx, b, t, { dur: 0.07, peak: 0.3, f0: 900, f1: 5000 });
   ringmod(ctx, fx, t + 0.05, { fc: 1400, fmod: 333, dur: 0.25, peak: 0.12, type: 'triangle' });
   ringmod(ctx, fx, t + 0.05, { fc: 2100, fmod: 177, dur: 0.18, peak: 0.07, type: 'square' });
   noise(ctx, b, t + 0.05, { type: 'highpass', f0: 5000, a: 0.0005, peak: 0.3, d: 0.01 });
+}
+
+// The last stage before the speakers, one per context: effects, music, place beds and the room tone all meet here.
+// A fast limiter under 0 dBFS, then a ceiling that rounds off whatever slips past it, so a loud beat over the
+// music never hard-clips. Below the threshold it passes the mix untouched (its make-up gain is trimmed back out).
+const outs = new WeakMap();
+export function outputOf(ctx) {
+  if (!ctx.createDynamicsCompressor) return ctx.destination;
+  if (!outs.has(ctx)) {
+    const lim = ctx.createDynamicsCompressor(), trim = ctx.createGain(), ceil = ctx.createWaveShaper();
+    lim.threshold.value = -4; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.12;
+    // Undo the compressor's automatic make-up gain (the spec's 0.6 × the gain it takes off a full-scale signal),
+    // and halve into the ceiling: a shaper's curve always spans -1…1 in, so this gives it 6 dB over full scale to round.
+    trim.gain.value = 0.5 * Math.pow(10, -(0.6 * (4 - 4 / 20)) / 20);
+    const n = 4097, c = new Float32Array(n), knee = 0.9;
+    for (let i = 0; i < n; i++) {
+      const x = (i / (n - 1)) * 4 - 2, a = Math.abs(x); // the signal before the halving
+      c[i] = Math.sign(x) * (a <= knee ? a : knee + (1 - knee) * Math.tanh((a - knee) / (1 - knee)));
+    }
+    ceil.curve = c;
+    lim.connect(trim).connect(ceil).connect(ctx.destination);
+    outs.set(ctx, lim);
+  }
+  return outs.get(ctx);
 }
 
 // The chain everything plays into: a little headroom and a gentle compressor, with the room beside it.
@@ -674,7 +709,7 @@ function chain(ctx) {
   const g = ctx.createGain(), c = ctx.createDynamicsCompressor();
   g.gain.value = 0.55;
   c.threshold.value = -18; c.ratio.value = 4; c.attack.value = 0.003; c.release.value = 0.15;
-  g.connect(c).connect(ctx.destination);
+  g.connect(c).connect(outputOf(ctx));
   const room = ctx.createConvolver(), wet = ctx.createGain();
   room.buffer = roomIR(ctx); wet.gain.value = 0.9;
   room.connect(wet).connect(g);
@@ -751,7 +786,7 @@ export function createSound() {
   function ready() {
     try {
       ctx ||= new AudioContext();
-      if (!ch) { ch = chain(ctx); hum = ctx.createGain(); hum.connect(ctx.destination); applyVol(); }
+      if (!ch) { ch = chain(ctx); hum = ctx.createGain(); hum.connect(outputOf(ctx)); applyVol(); }
       if (ctx.state === 'suspended') ctx.resume();
       loadBank(ctx);
       if (wantHum && !stopHum) stopHum = ambience(ctx, hum);
@@ -798,7 +833,7 @@ export function createSound() {
     // An output at the effects volume for a scene with its own mix (the cold open): { ctx, out }, or null.
     out() {
       if (!ready()) return null;
-      const g = ctx.createGain(); g.gain.value = vol.sfx / 0.8; g.connect(ctx.destination);
+      const g = ctx.createGain(); g.gain.value = vol.sfx / 0.8; g.connect(outputOf(ctx));
       return { ctx, out: g };
     },
     // The shared context, for the soundtrack (null if audio can't start).
@@ -821,7 +856,7 @@ export async function renderBoard(names = Object.keys(RECIPES), gap = 1.3, { syn
   const sr = 44100, ctx = new OfflineAudioContext(1, Math.ceil(sr * (Math.max(...cues.map((c) => c[1])) + 2)), sr);
   if (!synth) await loadBank(ctx, base);
   const ch = chain(ctx);
-  if (hum) ambience(ctx, ctx.destination, { seeks: false });
+  if (hum) ambience(ctx, outputOf(ctx), { seeks: false });
   for (const [n, t, o = {}] of cues) {
     if (n.startsWith('key:')) (KEYS[n.slice(4)] || KEYS.char)((s, at, x) => sample(ctx, ch.master, t, s, { ...x, at }));
     else voiceAt(ctx, ch, n, t, o);
