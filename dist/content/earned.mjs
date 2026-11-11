@@ -45,5 +45,5 @@ export default {
   "mixed-bag": { floor: 5, n: 6, distinct: "special", on: [{ kind: "takeover", floor: 5 }] },
   "superuser": { floor: 6, state: "root", n: 3, root: 3 },
   "bottleneck": { floor: 7, state: "elites" },
-  "last-mile": { floor: 8, state: "located" },
+  "last-mile": { floor: 8, state: "mapped" },
 };

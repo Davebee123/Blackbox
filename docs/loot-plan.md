@@ -102,7 +102,7 @@ Each leans on what its floor is known for; no two ask for the same kind of play.
 | 5 Deep Core | Take over a server of each special | Mixed Bag (script, 30) | +3% damage for each special on the server |
 | 6 Kernel Space | Root 3 on three servers | Superuser (implant, 36) | +6% damage and max Signal on a server you hold |
 | 7 The Sink | Clear every elite room once | Bottleneck (exploit, 42) | Each tell answered in a fight: +4% damage, up to 3 |
-| 8 Bedrock | Locate every server | Last Mile (proxy, 48) | +5% damage for each part in the fight past two |
+| 8 Bedrock | Map every server | Last Mile (proxy, 48) | +5% damage for each part in the fight past two |
 
 Floors 3 and 6 fall in the thin bands (15–20, 33–38).
 
@@ -120,8 +120,9 @@ Floors 3 and 6 fall in the thin bands (15–20, 33–38).
 
 - **Counters added:** bait caches taken on Honeypots, Router vaults banked unseen, elite rooms cleared a floor and
   servers held a floor (the last two read from the floor).
-- **Cleared, asked of the designer:** Full Coverage, Street Atlas and Last Mile were raised to servers *cleared*. A
-  server's cleared state is Mapped (every counted room cleared once), so for now they count Mapped (Last Mile: located).
+- **Cleared is Mapped** (the designer, November 2026): Full Coverage, Street Atlas and Last Mile count servers Mapped
+  (every counted room cleared once). Last Mile moved from located to Mapped.
+- **Pinned rows** say the goal in the Ledger's words with its count (*Cascade boards 4/15*), on its own line when long.
 - **Mixed Bag** asks for 6 different specials, not all 7: a floor's servers don't always carry every one.
 - **Bottleneck:** every server on The Sink located; one not yet located counts as one elite room.
 - **The Sink's and Bedrock's activity uniques** (threads, vaults, boards) stay on their rolls until this has been played.

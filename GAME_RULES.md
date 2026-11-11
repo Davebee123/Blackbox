@@ -1784,18 +1784,19 @@ usual *New in collection* row. They sit outside the one-an-hour rate. A piece al
 | **Mixed Bag** (script, 30) | Take over Deep Core servers with 6 different specials (Guarded aside) | +3% damage for each of the server's specials |
 | **Superuser** (implant, 36) | Root 3 on three servers on Kernel Space | +6% damage and max Signal on a server you hold |
 | **Bottleneck** (exploit, 42) | Clear every elite room on The Sink, every server located | +4% damage for each tell you answered this fight, up to 12% |
-| **Last Mile** (proxy, 48) | Locate every server on Bedrock | +5% damage for each part in the fight past two |
+| **Last Mile** (proxy, 48) | Map every server on Bedrock | +5% damage for each part in the fight past two |
 
 - **Counted:** an event count (a kill, a board, a vault, a thread, a courier, a takeover, a bait cache, a Router vault)
   from the band on, kept in `s.earned`; Seam's and Mixed Bag's count different strains or specials. A floor's goals
-  (mapped, held, Root 3, elite rooms, located) read the floor as it is, checked every second. *Map all* is every server
-  and the lair. An elite room counts once, for good; a server you haven't located counts as one until you do.
+  (mapped, held, Root 3, elite rooms) read the floor as it is, checked every second. A server cleared is a server
+  Mapped; *map all* is every server and the lair. An elite room counts once, for good; a server you haven't located counts as one until you do.
 - **Shown from the start:** the Ledger names the piece, muted, with a cell a count and its goal (*Cascade boards 4/15*);
   the datasheet's set lines keep its line with the count (*Cascade 4/15*). The tooltip: *Time Clock: Implant from the
   Overtime set, level 24. ▸ Win 11 more Cascade boards.*
 - **Pins:** up to 3 (`pin <piece>`, `unpin`; the pin on its Ledger line), kept in `s.pins`. The map lists them under
-  Contracts, **Pinned n/3**: a tracker row each (set green's edge for a set piece, amber's for a unique), its set or floor
-  over its name, its cells and n/N; a click opens its Ledger entry. On a phone, one chip. An earned piece drops off.
+  Contracts, **Pinned n/3**: a tracker row each (set green's edge for a set piece, amber's for a unique), its set (or
+  *Floor feat*) over its name, its cells and its goal in the Ledger's words (*Vaults on Coldline 9/24*), on its own
+  line when long; a click opens its Ledger entry. On a phone, one chip. An earned piece drops off.
 - **The Sink's and Bedrock's** activity uniques (threads, vaults, boards) stay on their rolls.
 
 ### Faction gear

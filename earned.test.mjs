@@ -55,6 +55,7 @@ test('a count starts at the band and the piece arrives once, through New in coll
   earnEvent(s, { kind: 'puzzle', id: 'quarantine' });
   const p = earnedOf(s, 'time-clock');
   assert.deepEqual([p.n, p.of, p.text, p.short, p.todo], [14, 15, 'Cascade boards', 'Cascade', 'Win 1 more Cascade board']);
+  assert.deepEqual(['freezer', 'kestrel-badge', 'plumb-line', 'index', 'sweetener'].map((id) => earnedOf(s, id).text), ['Vaults on Coldline', 'Bouncer kills', 'Servers mapped on Deep Core', 'Vaults on floors 7–8', 'Bait caches on Honeypots']);
   assert.equal(earnedOf(s, 'punch-card').n, 1, 'a board of its own kind');
   earnEvent(s, { kind: 'puzzle', id: 'cascade' });
   assert.equal(got(s, 'time-clock'), 1);
@@ -107,7 +108,7 @@ test('the activity counters: Honeypot bait, Router vaults banked unseen', () => 
   assert.equal(got(s, 'quiet-hours'), 1);
 });
 
-test('the floor goals read the floor: mapped, held, Root 3, elite rooms, located; paid on the tick in band', () => {
+test('the floor goals read the floor: mapped, held, Root 3, elite rooms; paid on the tick in band', () => {
   const s = at(8);
   place(s, 1, 9, () => ({ floorplan: { mapped: 1 } }));
   assert.deepEqual([earnedOf(s, 'street-atlas').n, earnedOf(s, 'street-atlas').of], [9, 10]);
@@ -143,9 +144,13 @@ test('the floor goals read the floor: mapped, held, Root 3, elite rooms, located
   assert.ok(e.all && e.n === e.of);
   earnTick(b);
   assert.equal(got(b, 'bottleneck'), 1);
-  // Last Mile: every server on Bedrock located; not before its band.
+  // Last Mile: every server on Bedrock mapped (cleared); located isn't enough, nor before its band.
   const l = at(40);
   place(l, 8, slots(l, 8).length);
+  hackerOf(l).level = 43; earnTick(l);
+  assert.equal(got(l, 'last-mile'), 0, 'located, not mapped');
+  hackerOf(l).level = 40;
+  for (const x of l.locations) x.floorplan = { mapped: 1 };
   earnTick(l);
   assert.equal(got(l, 'last-mile'), 0, 'before the band');
   hackerOf(l).level = 43; earnTick(l);
@@ -164,8 +169,8 @@ test('pins: up to three from the Ledger, on the map under Contracts and in a pho
   assert.equal(pinsOf(s).length, 2);
   const map = mapMarkup(s, 'server', 'mine');
   assert.match(map, /<section class="ctrack pins" aria-label="Pinned"><h3 class="ct-head">.*Pinned<small>2\/3<\/small><\/h3>/);
-  assert.match(map, /class="ct-row pin-row set" data-go="log:other:puzzle"[^>]*>.*<small class="ct-for">Overtime<\/small><b>Time Clock<\/b>.*<span class="ecells set"[^>]*>(<i class="on"><\/i>){2}(<i><\/i>){6}<\/span><small class="ct-n">4\/15<\/small>/);
-  assert.match(map, /class="ct-row pin-row" data-go="log:floor:1"[^>]*>.*<small class="ct-for">Floor 1 feat<\/small><b>Street Atlas<\/b>/, 'a floor unique\'s row: amber, its floor\'s feat over it');
+  assert.match(map, /class="ct-row pin-row set" data-go="log:other:puzzle"[^>]*>.*<small class="ct-for">Overtime<\/small><b>Time Clock<\/b>.*<span class="ecells set"[^>]*>(<i class="on"><\/i>){2}(<i><\/i>){6}<\/span><small class="pin-goal">Cascade boards 4\/15<\/small>/, 'the goal in words, as the Ledger says it');
+  assert.match(map, /class="ct-row pin-row" data-go="log:floor:1"[^>]*>.*<small class="ct-for">Floor feat<\/small><b>Street Atlas<\/b>.*<small class="pin-goal">Servers mapped on The Sprawl 0\/10<\/small>/, 'a floor unique\'s row: amber, Floor feat over it, its goal in words');
   assert.match(mapChips(s), /class="ph-chip pin" data-phone="pins"[^>]*>.*<b>2<\/b><small>pinned<\/small>/);
   const r = restore(structuredClone(s));
   assert.deepEqual([pinsOf(r), r.earned['time-clock']], [['time-clock', 'street-atlas'], 4]);

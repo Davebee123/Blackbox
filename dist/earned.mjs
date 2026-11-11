@@ -38,13 +38,13 @@ const onOf = (u) => u.earn.on || u.sources || [];
 // the tooltip's answer (Win 2 more Cascade boards).
 function goalOf(u) {
   const E = u.earn, src = onOf(u)[0] || {}, F = E.floor && floorName(E.floor);
-  if (E.state === 'mapped') return { text: `${F} mapped`, short: 'Mapped', todo: (k) => `Map ${plural(k, 'more server')} on ${F}` };
-  if (E.state === 'held') return { text: `${F} held`, short: 'Held', todo: (k) => `Hold ${plural(k, 'more server')} on ${F}` };
-  if (E.state === 'root') return { text: 'Root 3 servers', short: 'Root 3', todo: (k) => `Reach Root 3 on ${plural(k, 'more server')} on ${F}` };
-  if (E.state === 'elites') return { text: 'Elite rooms', short: 'Elites', todo: (k) => `Clear ${plural(k, 'more elite room')} on ${F}, on every server there` };
-  if (E.state === 'located') return { text: `${F} located`, short: 'Located', todo: (k) => `Locate ${plural(k, 'more server')} on ${F}` };
+  if (E.state === 'mapped') return { text: `Servers mapped on ${F}`, short: 'Mapped', todo: (k) => `Map ${plural(k, 'more server')} on ${F}` };
+  if (E.state === 'held') return { text: `Servers held on ${F}`, short: 'Held', todo: (k) => `Hold ${plural(k, 'more server')} on ${F}` };
+  if (E.state === 'root') return { text: `Root 3 servers on ${F}`, short: 'Root 3', todo: (k) => `Reach Root 3 on ${plural(k, 'more server')} on ${F}` };
+  if (E.state === 'elites') return { text: `Elite rooms on ${F}`, short: 'Elites', todo: (k) => `Clear ${plural(k, 'more elite room')} on ${F}, on every server there` };
+  if (E.state === 'located') return { text: `Servers located on ${F}`, short: 'Located', todo: (k) => `Locate ${plural(k, 'more server')} on ${F}` };
   switch (src.kind) {
-    case 'thread': return { text: 'Threads', short: 'Threads', todo: (k) => `Finish ${plural(k, 'more thread')} on ${floors(src.floor)}` };
+    case 'thread': return { text: `Threads on ${floors(src.floor)}`, short: 'Threads', todo: (k) => `Finish ${plural(k, 'more thread')} on ${floors(src.floor)}` };
     case 'guard': { const g = GUARDS[src.id]?.name || src.id; return { text: `${g} kills`, short: g, todo: (k) => `Beat the ${g} ${plural(k, 'more time')}` }; }
     case 'strain': {
       if (E.distinct) return { text: 'Strains', short: 'Strains', todo: (k) => `Kill ${plural(k, 'more strain')} you haven't killed since` };
@@ -52,14 +52,14 @@ function goalOf(u) {
       return { text: `${f} strains`, short: f, todo: (k) => `Kill ${plural(k, `more ${f.toLowerCase()} strain`)}` };
     }
     case 'courier': return { text: 'Couriers', short: 'Couriers', todo: (k) => `Intercept ${plural(k, 'more courier')}` };
-    case 'vault': { const w = !Array.isArray(src.floor) ? floorName(src.floor) : null; return { text: w ? `${w} vaults` : 'Vaults', short: 'Vaults', todo: (k) => `Open ${plural(k, 'more vault')} on ${w || floors(src.floor)}` }; }
+    case 'vault': { const w = !Array.isArray(src.floor) ? floorName(src.floor) : null; return { text: `Vaults on ${w || floors(src.floor)}`, short: 'Vaults', todo: (k) => `Open ${plural(k, 'more vault')} on ${w || floors(src.floor)}` }; }
     case 'puzzle': { const p = PUZZLES[src.id]?.name || src.id; return { text: `${p} boards`, short: p, todo: (k) => `Win ${plural(k, `more ${p} board`)}` }; }
-    case 'rare': return { text: '★ rare spawns', short: '★ rares', todo: (k) => `Kill ${plural(k, 'more ★ rare spawn')} on floor ${Array.isArray(src.floor) ? src.floor[0] : src.floor} or deeper` };
+    case 'rare': return { text: `★ rare spawns, floor ${Array.isArray(src.floor) ? src.floor[0] : src.floor} down`, short: '★ rares', todo: (k) => `Kill ${plural(k, 'more ★ rare spawn')} on floor ${Array.isArray(src.floor) ? src.floor[0] : src.floor} or deeper` };
     case 'takeover': return E.distinct
-      ? { text: 'Specials taken', short: 'Specials', todo: (k) => `Take over servers on ${floorName(src.floor)} with ${plural(k, 'more special')}` }
-      : { text: 'Takeovers', short: 'Takeovers', todo: (k) => `Take over ${plural(k, 'more server')} on ${floors(src.floor)}` };
-    case 'router-vault': return { text: 'Router vaults', short: 'Routers', todo: (k) => `Bank ${plural(k, 'more Router vault')}, the Tracker never reaching you` };
-    case 'bait': return { text: 'Honeypot bait', short: 'Bait', todo: (k) => `Take ${plural(k, 'more bait cache')} on Honeypots` };
+      ? { text: `Specials taken on ${floorName(src.floor)}`, short: 'Specials', todo: (k) => `Take over servers on ${floorName(src.floor)} with ${plural(k, 'more special')}` }
+      : { text: `Takeovers on ${floors(src.floor)}`, short: 'Takeovers', todo: (k) => `Take over ${plural(k, 'more server')} on ${floors(src.floor)}` };
+    case 'router-vault': return { text: 'Router vaults banked unseen', short: 'Routers', todo: (k) => `Bank ${plural(k, 'more Router vault')}, the Tracker never reaching you` };
+    case 'bait': return { text: 'Bait caches on Honeypots', short: 'Bait', todo: (k) => `Take ${plural(k, 'more bait cache')} on Honeypots` };
     default: return { text: '', short: '', todo: () => '' };
   }
 }

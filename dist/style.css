@@ -2915,7 +2915,8 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 /* Pinned (earned.mjs): an earned piece's row, set green's edge for a set piece, amber's for a unique; its cells and n/N. */
 .ct-row.pin-row.set { border-left-color: var(--r-set); }
 .ct-row.pin-row.set > .glyph { color: var(--r-set); }
-.ct-row.pin-row .ct-prog .ecells { flex: 0 1 auto; overflow: hidden; }
+.ct-row.pin-row .ct-prog { flex-wrap: wrap; row-gap: 3px; }
+.pin-goal { font: 10px var(--mono); color: var(--muted); white-space: normal; line-height: 1.35; font-variant-numeric: tabular-nums; } /* its goal in words: wraps under the cells, never cut */
 .ct-row > .glyph { width: 14px; height: 14px; color: var(--amber-soft); align-self: start; margin-top: 2px; }
 .ct-txt { display: grid; min-width: 0; }
 .ct-txt b { font-size: 12px; font-weight: 600; color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
