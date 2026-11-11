@@ -752,6 +752,16 @@ export function createChipFx() {
   };
 }
 
+// When a strike does what, in ms from the chip going off, for the strikes with a sound of their own (virussound.mjs, timed
+// by this; the strikes below read it too). impact: it lands on your bar. zap: the bolt strobes again. lock: n padlocks
+// clamp shut a step apart. heat: it catches (lift), and its flames run along your bar (tail). clock: its hand winds a
+// turn, and it stops after the hit.
+export const STRIKE_PLAN = {
+  zap: { impact: 40, again: [90, 150, 210] },
+  lock: { impact: 640, step: 35, n: 7 },
+  heat: { lift: 110, impact: 500, tail: 820 },
+  clock: { wind: [70, 330], impact: 450, stop: 250 },
+};
 // The shared themes' strikes, each (r, to, bar): true, as each stands in for the ghost.
 const STRIKE_FX = {
   // Heat: the chip flares, a fireball with a comet's tail arcs to your bar shedding embers, bursts with a ring along the
@@ -759,11 +769,11 @@ const STRIKE_FX = {
   heat(r, to, bar) {
     const x0 = r.left + r.width * 0.5, y0 = r.top + r.height * 0.45, cx = (x0 + to.x) / 2 + (to.x > x0 ? -1 : 1) * 40, cy = Math.min(y0, to.y) - 55;
     const P = (u) => [(1 - u) ** 2 * x0 + 2 * (1 - u) * u * cx + u * u * to.x, (1 - u) ** 2 * y0 + 2 * (1 - u) * u * cy + u * u * to.y];
-    const IGN = 110, T = 500, bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, base = to.y, n = Math.max(10, Math.round(bw / 9)), ph = Array.from({ length: n + 2 }, () => rnd(0, 60)), hist = [];
+    const { lift: IGN, impact: T, tail: TAIL } = STRIKE_PLAN.heat, bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, base = to.y, n = Math.max(10, Math.round(bw / 9)), ph = Array.from({ length: n + 2 }, () => rnd(0, 60)), hist = [];
     burst(x0, y0, r.height * 2.4, 0, 320);
     sparks(x0, r.top, 5, 10, 0, -Math.PI / 2, 1.6);
     let hit = false;
-    stage(T + 820, (g, t) => {
+    stage(T + TAIL, (g, t) => {
       let html = '';
       if (t >= IGN && t < T) {
         const u = ((t - IGN) / (T - IGN)) ** 1.5, [x, y] = P(u);
@@ -781,7 +791,7 @@ const STRIKE_FX = {
           ring.animate([{ transform: 'scale(.3, .1)', opacity: 1 }, { transform: 'scale(2.4, .7)', opacity: 0 }], { duration: 460, easing: 'cubic-bezier(.15,.7,.3,1)' }).onfinish = () => ring.remove();
           for (let i = 0; i < 20; i++) ember(to.x + rnd(-8, 8), to.y, { vx: rnd(-110, 110), vy: -rnd(70, 190), g: 420, life: rnd(500, 850) });
         }
-        const k = (t - T) / 820, front = bw * 0.6 * clamp((t - T) / 200), decay = 1 - k ** 1.6, hs = [], hc = [], sw = [];
+        const k = (t - T) / TAIL, front = bw * 0.6 * clamp((t - T) / 200), decay = 1 - k ** 1.6, hs = [], hc = [], sw = [];
         for (let i = 0; i < n; i++) {
           const x = bl + (i + 0.5) * bw / n, d = Math.abs(x - to.x), f = 0.5 + 0.5 * noise(t / 1000 * 4 + ph[i]);
           const H = d > front ? 0 : 17 * decay * (1 - 0.6 * d / (bw * 0.6)) * (0.4 + 0.8 * f) * clamp((front - d) / 14);
@@ -919,7 +929,7 @@ const STRIKE_FX = {
   // marks ratchet out along the bar from the hit, and it stops with a flash and a chime of rings.
   clock(r, to, bar) {
     const cx = r.left + r.width * 0.56, cy = r.top + r.height / 2, R = r.height * 0.4, L = Math.hypot(to.x - cx, to.y - cy), aim = Math.atan2(to.x - cx, cy - to.y) * 180 / Math.PI;
-    const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8, n = Math.max(12, Math.round(bw / 9)), WIND = [70, 330], OUT = 450, STOP = 700;
+    const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8, n = Math.max(12, Math.round(bw / 9)), { wind: WIND, impact: OUT } = STRIKE_PLAN.clock, STOP = OUT + STRIKE_PLAN.clock.stop;
     burst(cx, cy, R * 4, 0, 300);
     stage(1150, (g, t) => {
       let html = '';
@@ -1204,7 +1214,7 @@ export function chipStrike(th, r, to, bar, end) {
       }
       g.innerHTML = html + '</g>';
     };
-    [[0, 1], [45, 0.5], [90, 1], [150, 0.7], [210, 0.35]].forEach(([d, op]) => setTimeout(() => strike(op), d));
+    [[0, 1], [45, 0.5], ...STRIKE_PLAN.zap.again.map((d, i) => [d, [1, 0.7, 0.35][i]])].forEach(([d, op]) => setTimeout(() => strike(op), d));
     setTimeout(() => g.remove(), 280);
     setTimeout(() => {
       const b = fly('cfx-burst', to.x - 22, to.y - 22, 44, 44);
@@ -1214,11 +1224,12 @@ export function chipStrike(th, r, to, bar, end) {
       for (let i = 0; i < 8; i++) { const an = rnd(0, Math.PI * 2), L = rnd(8, 18); html += `<g class="cfx-arc"><polyline class="mid" points="${pts(fractal([to.x, to.y], [to.x + Math.cos(an) * L, to.y + Math.sin(an) * L], 2, 0.35))}" style="stroke-width:1"/></g>`; }
       sp.innerHTML = html;
       sp.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: 'ease-in' }).onfinish = () => sp.remove();
-    }, 40);
+    }, STRIKE_PLAN.zap.impact);
     return true;
   }
   if (th === 'lock') {
-    for (let i = 0; i < 7; i++) {
+    const { impact: SHUT, step: STEP, n: LOCKS } = STRIKE_PLAN.lock;
+    for (let i = 0; i < LOCKS; i++) {
       const x0 = r.left + rnd(8, r.width - 18), y0 = r.top + rnd(0, r.height - 14), x1 = to.x - 48 + i * 15, y1 = to.y - 7;
       const cx = (x0 + x1) / 2 + rnd(-30, 30), cy = Math.min(y0, y1) - rnd(20, 45);
       const path = [];
@@ -1227,13 +1238,13 @@ export function chipStrike(th, r, to, bar, end) {
       const frames = [...path.map((f) => ({ ...f, opacity: 1 })), { transform: end + ' scale(1.45)', opacity: 1, offset: 0.7 }, { transform: end, opacity: 1, offset: 0.78 }, { transform: end, opacity: 1, offset: 0.9 }, { transform: end + ' scale(.8)', opacity: 0 }];
       [0.25, 0.5, 1].forEach((op, k) => { // two trails, then the lock itself
         const m = fly(`cfx-lk ${k === 2 ? 'near' : ''}`, 0, 0, 12, 13.5); m.innerHTML = LOCK;
-        const delay = i * 35 + (2 - k) * 28;
+        const delay = i * STEP + (2 - k) * 28;
         m.animate(k === 2 ? frames : frames.map((f) => ({ ...f, opacity: f.offset > 0.62 ? 0 : op })), { duration: 1000, delay, easing: 'linear', fill: 'both' }).onfinish = () => m.remove();
         if (k === 2) setTimeout(() => {
           m.classList.add('shut');
           const ring = fly('cfx-clamp', x1 - 4, y1 - 3, 20, 20);
           ring.animate([{ transform: 'scale(.4)', opacity: 1 }, { transform: 'scale(1.6)', opacity: 0 }], { duration: 360, easing: 'ease-out' }).onfinish = () => ring.remove();
-        }, delay + 640);
+        }, delay + SHUT);
       });
     }
     return true;

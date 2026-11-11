@@ -40,7 +40,8 @@ import { tierOf as masteryTier } from './mastery.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
 import { recapMarkup } from './recap.mjs';
 import { createLash, shakeOf, SHAKE } from './lash.mjs';
-import { createChipFx, chipStrike, chipTheme, STRIKES } from './chipfx.mjs';
+import { createChipFx, chipStrike, chipTheme, STRIKES, STRIKE_PLAN } from './chipfx.mjs';
+import { ATTACKS } from './virussound.mjs';
 import { online, peopleOn } from './presence.mjs';
 import { runnerFloor } from './runners-view.mjs';
 import { matesOf } from './crew.mjs';
@@ -4185,6 +4186,22 @@ if (playtest === 'fx') import('./abilityfx-playtest.mjs').then(({ mountFxPlaytes
       if (plan) { window.__fxPlan = { travel: plan.travel, hold: plan.hold, impact: plan.impact, stop: plan.stop, dur: plan.dur, from: plan.from }; return stand && keyEl ? 'stand-in' : 'fx'; } // the playtest's last plan, for review captures
       if (row) hitfx.strike(row, { kind: 'you', result });
       return 'plain';
+    },
+    // A virus attack on you (virussound.mjs: the style round's four): its chip's strike (chipfx.mjs) from the part's chip
+    // to your bar, its number on the strike's impact, and its sound: today's voice for the result, or its own in a style.
+    attack: (key, id, { result, power, sound = 'off' }) => {
+      const A = ATTACKS[key], plan = STRIKE_PLAN[A.theme], drawn = fxLevel() !== 'minimal' && canMove(), land = drawn ? plan.impact : 0, frac = power / 5;
+      const chip = (fxRow(id)?.querySelector('[data-k]') || document.querySelector('#board [data-k]') || fxRow(id))?.getBoundingClientRect(), barEl = document.querySelector(BAR), bar = barEl?.getBoundingClientRect();
+      if (drawn && chip?.width && bar?.width) chipStrike(A.theme, chip, { x: bar.left + bar.width / 2, y: bar.top + bar.height / 2 }, bar, barEl.firstElementChild?.getBoundingClientRect().right ?? null);
+      if (sound !== 'off' && !(sound !== 'today' && feel.attackPreview(sound, key, plan, { result, power }, drawn))) feel.preview({ crit: 'hurtcrit', blocked: 'interrupt', evaded: 'evade' }[result] || 'hurt', { frac }, land / 1000);
+      feel.beat(land);
+      if (result === 'evaded' || result === 'blocked') feel.add(result === 'evaded' ? 'evade' : 'interrupt', MINE, result.toUpperCase(), { silent: true });
+      else {
+        feel.add(() => shake(power, result === 'crit'));
+        feel.add(result === 'crit' ? 'hurtcrit' : 'hurt', MINE, `−${Math.max(1, Math.round(frac * (defender(campaign).max || 100)))}`, { frac, size: 1 + power * 0.8 + (result === 'crit' ? 0.3 : 0), silent: true, noEdge: drawn, softEdge: !drawn, noFlash: drawn, floatAt: BAR, x: 0.5 });
+      }
+      feel.beat(0); feel.flush();
+      return drawn ? 'fx' : 'none';
     },
   });
 });

@@ -76,3 +76,30 @@ Operator's comes in three beats.
    crewmate's at half level, two a batch, none on your beat. At most four ability sounds start within a quarter
    second (`sound.mjs` ABILITY_CAP); one more falls back to its result's voice. The winning break sounds your class's
    flourish over the break as it slows (winSound). Burn ticks keep today's voice.
+
+## Virus attacks
+
+The same workflow for what the virus does to you. Today every attack that lands plays one `hurt` (a crit `hurtcrit`),
+whatever it is; Encrypt and Scramble have a voice each. A fight plays today's until the designer picks.
+
+Yours is bright and rings out; theirs is dull and falls: no crack on top, a lower boom, dark echoes.
+
+| Layer | When | From |
+|---|---|---|
+| Launch | its chip goes off | its theme (the bolt's snap, the padlocks lifting, the fire catching, the hand winding) |
+| Travel | the strike's flight | its theme's strike (`chipfx.mjs` STRIKE_PLAN) |
+| Contact | it lands on your bar, the number's beat | the result: a hit by its size, a crit, blocked (a glance off your wall, no weight), evaded (nothing: the travel passes on) |
+| Tail | what the strike leaves on your bar | its theme (sparks, the last hasps, flames dying down, ticks running out) |
+
+Screen effects off or Motion off: contact and tail on the beat. The family's one-shots stay. Levels match today's hurt
+(`virussound.mjs` TRIM, measured through `renderBoard`).
+
+1. **Style** (built, waiting on the designer's ear): Surge (Pulse Node, at once), Encrypt (Encryptor, seven clamps
+   one after another), Hash (Rig, a lob) and Discharge (Accumulator, a wind-up), as a hit small, medium and big, a
+   crit, blocked and evaded, in A Body (today's hurt in pieces, air and thuds), B Corrupt (your signal breaking up: a
+   crushed drop, a stuck buffer, the carrier cutting out) and C Chassis (your machine taking it: the rack struck, the
+   power sagging, relays tripping) beside today's. `?playtest=fx` has them under Virus attacks.
+2. **Every attack**: each chip theme's strike (18) and the lash, built from its theme; Scramble, Replicate and Patch.
+3. **Charges and bosses**: a tell landing, a boss's signature.
+4. **Land**: a fight plays the pick in place of `hurt`: one contact a batch, the number on the strike's impact (today
+   the two are timed apart), a cap shared with yours.

@@ -81,7 +81,7 @@ function curve(key, fn) {
   return curves.get(key);
 }
 
-function kit(ctx, buf) {
+export function kit(ctx, buf) {
   const K = {};
   K.g = (v = 1, dest) => { const g = ctx.createGain(); g.gain.value = v; if (dest) g.connect(dest); return g; };
   K.f = (type, freq, q = 0.707, dest) => { const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = freq; b.Q.value = q; if (dest) b.connect(dest); return b; };
