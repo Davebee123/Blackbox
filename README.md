@@ -6,6 +6,9 @@ eight floors of a network, and climb one of four hacker classes to level 50.
 **Play:** [davebee123.github.io/Blackbox](https://davebee123.github.io/Blackbox/) (GitHub Pages deploys `dist/` on
 every push to main). The game saves in your browser.
 
+**Website:** [`site/`](site/) is the game's website (static, no build step), deployed by Cloudflare Pages on every push
+to main (build command: none; build output directory: `site`).
+
 ## Run locally
 
 Needs Node.js. No packages, no build step.
@@ -231,7 +234,7 @@ comment saying what it does.
 | `dist/style.css` | Tokens and every shared component (docs/ui.md). Each page has its own stylesheet beside its view. |
 | `dist/shell.mjs`, `dist/poweron.mjs` | The CRT shell, boot lines and status line; the power-up. |
 | `dist/screenfx.mjs`, `dist/screenfx.css` | Screen effects: light on the glass around the game, never on it. |
-| `dist/bootfx.mjs`, `dist/bootfx.css` | A new fight: the screen boots into it, the virus first; leaving a won one, a channel cut; connecting to a server, the dial-up; jacking out, the hang-up. |
+| `dist/bootfx.mjs`, `dist/bootfx.css` | A new fight: the screen boots into it, the virus first; leaving a won one, a channel cut; connecting to a server, the carrier; jacking out, the hang-up. |
 | `dist/window.mjs`, `dist/districts.mjs` | The slum outside the window behind the monitor, and its weather (loaded only on a desktop); its districts as data. |
 | `dist/abilityfx.mjs`, `dist/abilityfx-table.mjs`, `dist/abilityfx-playtest.mjs` | Ability effects on the board, the table of every ability's effect, and its playtest. |
 | `dist/abilitylight.mjs` | What an ability effect does where it lands, drawn in light: flashes, shock rings, cracks, sparks, flames, the comet, a status cashing in. |

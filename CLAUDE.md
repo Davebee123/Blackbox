@@ -83,6 +83,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - a boss's act break: the *Strip* (the ♛'s tick bursts into red 1s and 0s; after a breath the board's strip flares in
     with the act's name, holds about 4 s and fades out blurred; the boss's emote types under its bar; the clock holds; the *Tritone*: a heavy break, then a low G against its
     tritone droning under the strip);
+  - connecting to a server: the *Carrier* (a teal line from HOME to its node, the rooms open in a circle from there;
+    eased, no black screen, no readout);
   - network map servers: the *Glyph* (each server its kind's glyph, a bar of what's cleared, a ring round a new one);
   - network map ground: the *Chart* (faint crosshairs and hairlines that pan and zoom with the map);
   - rooms map: each room kind its own outline and hue (the *Hues*: magenta elite, orange socket, green rest, gold

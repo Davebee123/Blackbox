@@ -82,7 +82,7 @@ import * as PGV from './pager-view.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
-import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, connectLines, whenConnected, playHangup, stopHangup, hangupLines, whenHome } from './bootfx.mjs';
+import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, whenConnected, playHangup, stopHangup, hangupLines, whenHome } from './bootfx.mjs';
 let bootFor = null; // the fight the screen last booted into (go)
 import { startTraffic } from './traffic.mjs';
 import { postFound } from './scanner.mjs';
@@ -1691,21 +1691,19 @@ function go(name, quiet = false) {
   focusPrompt();
   if (boot) { bootFor = campaign.encounter; playBoot($('app'), held, bootLines(bootInfo())); }
 }
-// Connecting to a server: the screen dials it (bootfx.mjs, Handshake); from the map, its node locks on first. Screen
-// effects off or Motion off: straight in.
+// Connecting to a server (bootfx.mjs, Carrier): from the map, your signal runs from HOME to its node and the rooms
+// open in a circle from there. Screen effects off or Motion off: straight in.
 const dialFx = () => canMove() && fxLevel() !== 'minimal' && !shell.booting;
 function connectTo(e) {
   const sel = e.location && `[data-select="${CSS.escape(e.location)}"]`, shown = (q) => [...$('page-view').querySelectorAll(q)].find((g) => g.getBoundingClientRect().width);
-  const node = dialFx() && module === 'map' && sel ? shown(`${sel} .ring`) || shown(sel) : null; // its node on the map (or its row on the list)
+  const node = dialFx() && module === 'map' && sel ? shown(`${sel} .mhit`) || shown(sel) : null; // its node on the map (or its row on the list)
   const held = node ? bootHold($('page-view'), node) : null;
   go('net', true);
   if (!dialFx() || module !== 'rooms') return;
-  const q = (sel) => $('page-view').querySelector(sel)?.textContent.trim() || '';
-  const name = q('.fp-hud .fp-id b') || campaign.locations?.find((l) => l.id === e.location)?.name || '';
-  playConnect($('app'), held, name, connectLines({ name, level: q('.fp-hud .fp-id small').match(/lv ([\d–-]+)/)?.[1] || '', rooms: Number(q('.fp-hud .fp-prog b').split('/')[1]) || 0 }));
+  playConnect($('app'), held);
 }
-// Jacking out: the dial-up backwards (bootfx.mjs, Hang-up): from the rooms page your room locks teal and the rooms go
-// dark toward it, the hang-up's readout holds the dark, then the map comes up with the server's node ringed. Screen
+// Jacking out (bootfx.mjs, Hang-up): from the rooms page your room locks teal and the rooms go dark toward it,
+// the hang-up's readout holds the dark, then the map comes up with the server's node ringed. Screen
 // effects off or Motion off: straight to the map.
 function hangUp(events) {
   const e = events.findLast((x) => x.type === 'jacked-out'), shown = (q) => [...$('page-view').querySelectorAll(q)].find((g) => g.getBoundingClientRect().width);
