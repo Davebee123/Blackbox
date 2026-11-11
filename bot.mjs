@@ -14,7 +14,7 @@
 // Fresh, kills an hour) on real play. pacing.mjs prints both.
 // node bot.mjs [class] [targetLevel] [seed]
 import { UNIQUES, topUpCost, tickServices, fresh, command, resolveCycle, active, hooks, hackerLevel, subWaiting, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
-import { RARITY_ORDER, SLOT_KINDS, groupOf, LOOT } from './dist/gear.mjs';
+import { meetsReq, RARITY_ORDER, SLOT_KINDS, groupOf, LOOT } from './dist/gear.mjs';
 import { play, layoutOf, currentLocation, signalNow, takeable, CORE, residentBonus } from './dist/run.mjs';
 import { relockLeft, relocks } from './dist/rogue.mjs';
 import { joinCost, memoryCost, isLive } from './dist/memory.mjs';
@@ -170,6 +170,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
       const slots = SLOT_KINDS.slice(0, slotCount(s)).map((k, i) => (k === kind ? i : -1)).filter((i) => i >= 0);
       if (!slots.length) { command(s, 'deconstruct ' + it.id); continue; }
       const worst = slots.map((i) => [i, rigOf(s)[i] && stashItem(s, rigOf(s)[i])]).sort((a, b) => (a[1] ? value(a[1]) : -1) - (b[1] ? value(b[1]) : -1))[0];
+      if (!meetsReq(s, it, hackerLevel(s))) continue; // it waits in the stash for its level
       if (!worst[1]) command(s, 'load ' + it.id);
       else if (value(it) > value(worst[1])) { command(s, 'unload ' + worst[1].id); command(s, 'load ' + it.id); }
       else command(s, 'deconstruct ' + it.id);

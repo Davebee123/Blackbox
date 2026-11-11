@@ -20,6 +20,7 @@ import STORY from './dist/content/story.mjs';
 import ITEMS from './dist/content/items.mjs';
 
 CONFIG.baseCrit = 0; CONFIG.enemyCrit = 0; CONFIG.misses = false;
+CONFIG.gearReq = 99; // these tests hand out gear of any level (the requirement has its own test in gear.test.mjs)
 const T0 = 2_000_000;
 hooks.now = () => T0;
 const KESTREL = ['kestrel-badge', 'kestrel-token', 'kestrel-lanyard'];

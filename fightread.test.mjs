@@ -11,6 +11,7 @@ import { tellTip, gearLive, cycleGear, partTip, partCue, partRead, partLinks } f
 import { tellIntents } from './dist/tells.mjs';
 
 Object.assign(CONFIG, { enemyCrit: 0, misses: false });
+CONFIG.gearReq = 99; // these tests hand out gear of any level (the requirement has its own test in gear.test.mjs)
 const at = (level = 12) => { const s = fresh(); s.hackers = { breaker: { level, xp: 0 } }; syncServer(s); s.server.integrity = s.server.max = 5000; return s; };
 // A fight with no seed given is the family's Pulse Node and signature (the parts roll, dist/parts.mjs, would pick its
 // basic); a seed given rolls the virus as the game does (the searches below look for a third part that way).

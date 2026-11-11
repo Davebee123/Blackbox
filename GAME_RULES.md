@@ -1493,7 +1493,9 @@ stat the fill, its rarity the colour; uniques flicker now and then; `protocol-gl
 **Exploit** (weapon: Damage), **Proxy** (chest: Signal + Block), **Shell** (helm: Signal + Regen + Restore), **Script**
 (ring: Damage + Signal + Payload), and an **Implant** slot at level 15 and another at 30 (Implants drop from item level
 15). `load <id>` puts an item in its slot (a full slot swaps), `unload <id|slot#>`; loadouts change at home only. Each
-class loads its own. One of each unique and each Zero-day a loadout. The stash holds 40; a drop into a full stash is
+class loads its own. One of each unique and each Zero-day a loadout. **An item loads from 3 levels under its own**
+(`CONFIG.gearReq`, `reqLevel`): below that its datasheet says *Requires Level N* in red and Load is off. One already
+loaded stays on. The breach campaign has none. The stash holds 40; a drop into a full stash is
 deconstructed.
 
 ### An item: a base, affixes and a rule

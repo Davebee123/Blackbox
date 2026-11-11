@@ -8,6 +8,7 @@ import { checkItems } from './dist/content.mjs';
 import ITEMS from './dist/content/items.mjs';
 
 CONFIG.baseCrit = 0; CONFIG.enemyCrit = 0; CONFIG.misses = false;
+CONFIG.gearReq = 99; // these tests hand out gear of any level (the requirement has its own test in gear.test.mjs)
 const wear = (s, id, level = 30) => { const it = addItem(s, uniqueItem(UNIQUES[id], level, seeded(1))); command(s, 'load ' + it.id); assert.ok(loaded(s).some((x) => x.id === it.id), `${id} loaded`); return it; };
 const fight = (s, key = 'cryptjack') => { selectEncounter(s, key, 7, { level: 30, mutation: null }); command(s, 'engage'); return s; };
 const vet = () => { const s = fresh(); s.hackers = { breaker: { level: 30, xp: 0 } }; return s; };

@@ -66,6 +66,7 @@ export const CONFIG = {
   tickRef: 50,
   dotRef: 28,
   // Reshaped with the floor tiers: more at a floor's first levels where gear carries little (7), less by the late floors' tops.
+  gearReq: 3, // an item loads from this many levels under its own (gear.mjs reqLevel)
   gearFill: [[6, 1], [7, 2.2], [12, 1.45], [15, 1.75], [25, 1.95], [30, 1.66], [37, 1.6], [42, 1.35], [50, 1.25]],
   // Floors as tiers (docs/scaling.md step 4): a mob takes its floor's step on top of its level, mob a floor, compounding
   // (mobPower). Gear takes a bigger step, gear a floor, and its fill drifts down drift a level inside its floor
