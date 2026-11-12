@@ -68,6 +68,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 ## Decisions so far (don't undo these without asking)
 
 - **Picked looks:**
+  - the power-up: the *Horizon* (a line of light across the screen, the black box standing on it with its light
+    leaking round the edges, the name small and low; poweron.mjs);
   - quest window: the *Transmission*;
   - level-up: the *Firmware update*;
   - wick's tips (the guided path's, tips.mjs `wick`): the *Transmission* (his face, the kicker, his lowercase line);
