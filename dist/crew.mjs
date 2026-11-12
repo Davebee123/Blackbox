@@ -20,7 +20,7 @@ import { ARCHETYPES, SKILLS, SUBS, SUBCLASS, defaultSub } from './data.mjs';
 import { planner } from './planner.mjs';
 import { raidDef, crewHp } from './raid.mjs';
 import { playerFrom } from './coop-char.mjs';
-import { runnerOf, levelOf as runnerLevel, sigOf as runnerSig, setSig as setRunnerSig, helped as runnerHelped, cantHire, feeOf, feePaid, cutOf, runnersOf } from './runners.mjs';
+import { runnerOf, levelOf as runnerLevel, sigOf as runnerSig, setSig as setRunnerSig, helped as runnerHelped, cantHire, feeOf, feePaid, cutOf, runnersOf, know } from './runners.mjs';
 
 export const CREW = {
   max: 3, // crewmates besides you
@@ -216,13 +216,14 @@ function dropCrew(s, h) {
 // Hire a runner you know (runners.mjs): the fee the first time, their bar from a preset of theirs.
 export function hireRunner(s, h, preset = 'rotation') {
   const r = runnerOf(s, h);
-  if (!r || !runnersOf(s).known[h]) return warn(s, `You don't know a runner called ${h}.`);
+  if (!r) return warn(s, `No runner called ${h} on your net.`);
   if (active(s)) return warn(s, 'Finish the fight first.');
   const no = cantHire(s, r);
   if (no) return warn(s, `You can't hire ${h}: ${no}.`);
   const sub = runnerLevel(s, r) >= SUBCLASS.from ? r.sub : null, presets = Object.keys(SUBS[sub]?.presets || { rotation: 1 });
   if (!presets.includes(preset)) return warn(s, `${h} has no ${preset} preset. Theirs: ${presets.join(', ')}.`);
   const fee = feePaid(s, h) ? 0 : feeOf(s, r);
+  know(s, h, 'met');
   if (fee) { s.server.credits -= fee; runnersOf(s).known[h].paid = true; }
   (s.crewSim ||= []).push({ cls: r.cls, ...(sub ? { sub } : {}), name: h, level: runnerLevel(s, r), runner: true, preset });
   if (s.run) (s.run.crew ||= {})[h] = { cwd: s.run.cwd, link: 'you' };

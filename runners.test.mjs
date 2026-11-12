@@ -89,7 +89,8 @@ import * as FP from './dist/floorplan.mjs';
 import './dist/netrooms.mjs';
 import { matesOf } from './dist/crew.mjs';
 import { STANDING, HIRE, tierOf, standingOf, raiseStanding, meetingOf, feeOf, cutOf, sigOf, setSig, busyOf, cantHire, gainOf } from './dist/runners.mjs';
-import { runnerCard, tierBar } from './dist/runners-view.mjs';
+import { runnerCard, tierBar, runnersMap } from './dist/runners-view.mjs';
+import { listed } from './dist/presence.mjs';
 import { roomsMarkup } from './dist/floorplan-view.mjs';
 import { RIVAL } from './dist/rivals.mjs';
 
@@ -162,12 +163,14 @@ test('meeting: a runner at work on your server fights in one of its rooms; Help,
   assert.ok(!s.crewSim?.length, 'helping never hires');
 });
 
-test('hiring: from Friend, a fee once and a cut of each run; hired, they are crew and level with you', () => {
+test('hiring: anyone, a fee once (smaller the better you know them) and a cut of each run; hired, they are crew and level with you', () => {
   const { s, r, loc } = onTheirServer();
   s.server.credits = 10_000;
-  assert.match(cantHire(s, r), /at Friend/);
-  raiseStanding(s, r.handle, STANDING.hire);
-  assert.equal(cantHire(s, r), null);
+  assert.equal(cantHire(s, r), null, 'a stranger can be hired');
+  const stranger = feeOf(s, r);
+  raiseStanding(s, r.handle, 50);
+  assert.ok(feeOf(s, r) < stranger, 'a Friend costs less than a stranger');
+  assert.equal(Math.round(stranger / HIRE.byTier[0] * HIRE.byTier[2]), feeOf(s, r));
   // The runner card, then the crew card Hire turns it into: traits, Pay as two icons, the bar's presets as tiles.
   assert.match(runnerCard(s, r.handle), /data-runner-hire="1"/);
   const crew = runnerCard(s, r.handle, { mode: 'crew' });
@@ -197,7 +200,7 @@ test('hiring: from Friend, a fee once and a cut of each run; hired, they are cre
 
 test('a hire\'s Signal carries over; at 0 they disconnect and are busy until it refills on logged-on time', () => {
   const { s, r } = onTheirServer();
-  raiseStanding(s, r.handle, STANDING.hire); s.server.credits = 10_000;
+  s.server.credits = 10_000;
   play(s, `hire ${r.handle}`);
   setSig(s, r.handle, 0.4);
   const m = matesOf(s)[0]; m.encounter = { cycle: 0 }; m.run.integrity = 0; // down in a fight
@@ -221,4 +224,21 @@ test('crew invite is gone: crews come from hiring runners', () => {
   const out = play(s, 'crew invite nyx').map((e) => e.message).join(' ');
   assert.match(out, /hire <runner>/);
   assert.ok(!s.crewSim?.length);
+});
+
+test('the map: every runner on the floor a diamond you can click; the Rail\'s section folds; the people list leaves runners out', () => {
+  const s = world(4242, 6);
+  runnersOf(s).ms = 2_000_000;
+  const on1 = castOf(s).filter((r) => stateOf(s, r).floor === 1);
+  const svg = runnersMap(s, 1);
+  assert.equal((svg.match(/<g class="mrun[ "]/g) || []).length, on1.length, 'one diamond each');
+  for (const r of on1) assert.match(svg, new RegExp(`data-runner="${r.handle}"`));
+  assert.doesNotMatch(runnersMap(s, 1, on1[0].handle), new RegExp(`data-runner="${on1[0].handle}"`), 'the picked one is drawn by its mark');
+  know(s, on1[0].handle);
+  assert.match(runnerRail(s), /data-rail-fold[^>]*aria-expanded="true"/);
+  const shut = runnerRail(s, null, true);
+  assert.match(shut, /aria-expanded="false"/); assert.doesNotMatch(shut, /rr-row/, 'folded: the head alone');
+  assert.ok(online(s).some((x) => x.runner) && !listed(s).some((x) => x.runner), 'runners are on the map, not the people list');
+  s.friends = [on1[0].handle];
+  assert.ok(listed(s).some((x) => x.handle === on1[0].handle), 'a runner you befriend is listed');
 });

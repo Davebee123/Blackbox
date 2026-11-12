@@ -74,7 +74,7 @@ export const TIPS = [
 
   // ---------- map ----------
   // Your first move: the one tip on the opening map. It stays until you connect.
-  { id: 'map-start', page: 'map', at: '.mnode.zone', when: (s) => !s.rooms, done: (s) => !!s.rooms, wick: true, text: 'sprawl-00. strays everywhere, nobody owns it. click it and connect.' },
+  { id: 'map-start', page: 'map', at: '.mnode.zone .mhex', when: (s) => !s.rooms, done: (s) => !!s.rooms, wick: true, text: 'sprawl-00. strays everywhere, nobody owns it. click it and connect.' },
   // Your server and its gate wait for the first intrusion; the ? servers, for the first trace on one.
   { id: 'map-server', page: 'map', at: '.mnode.server', when: atGate, joins: ['map-intrusion'], text: 'This is your server. It sits above the net, and viruses attacking it appear next to it.' },
   // ---------- the rooms (the Run tab) ----------
@@ -130,7 +130,7 @@ export const TIPS = [
   // Your first fight: one pause, not four. The board, the keys, armor and the Sync Window are
   // clicked through as steps of one tip, each pointing at its own thing; each still shows alone
   // if it turns up later.
-  { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-ticks', 'fight-armor', 'sync'], wick: true, text: 'this board is what it\'s going to do to you. now is this cycle, each column right is one later. you move first, then whatever\'s in now lands.' },
+  { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-ticks', 'fight-armor', 'sync'], wick: true, text: 'this is the combat console halcyon installed to fight viruses. it shows their attacks: the now column is this cycle, each column right of it one later. you move first, and then the virus attacks back.' },
   { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', wick: true, text: 'type a skill and a part, then enter. or press its number and click the part. let the timer run out and key 1 hits your last target again.' },
   // The interrupt (interrupt.mjs): the ticks, and a tick spent for nothing.
   { id: 'fight-ticks', page: 'combat', pause: true, at: '.board .ptick', under: '#board', when: (s) => s.encounter?.phase === 'active', wick: true, text: 'two marks on each bar, at 50% and 25%. push a part past one on the cycle its attack is due and that attack\'s cancelled. each mark works once.' },

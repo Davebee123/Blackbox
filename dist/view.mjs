@@ -38,8 +38,8 @@ import { eventsAt, eventsOf, eventText, eventMinutes, CARDS as EVENT_CARDS, HUNT
 import { eventCard, leakCard, toldCard, darknetCard, EVENT_ICON, FAM_GLYPH, blipSvg } from './event-cards.mjs';
 import { matesOf, mateUp, mateSignal } from './crew.mjs';
 import { momentumCap } from './classes/breaker.mjs';
-import { online, inSprawl, whereText, simOn, peopleOn, friends, profileOf } from './presence.mjs';
-import { runnerRail, runnerMark, runnerCard } from './runners-view.mjs';
+import { online, listed, inSprawl, whereText, simOn, peopleOn, friends, profileOf } from './presence.mjs';
+import { runnerRail, runnerMark, runnerCard, runnersMap } from './runners-view.mjs';
 import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, rebooting, consortiumWall, alertsOf, tiersOf as conTiers } from './consortium.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, tierIndex, standing, tierOf, nextTier, retainer, retainerWith, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn, xpOf } from './mail.mjs';
 import { commsOf } from './comms.mjs';
@@ -1914,7 +1914,7 @@ const chainMk = (c) => (c.chain ? `<i class="cchain" title="${esc(c.chain)}" rol
 
 // ---------- people (presence.mjs): friends and who's online ----------
 export function peopleMarkup(s, tab = 'friends', now = Date.now()) {
-  const all = online(s, now), crew = (s.crewSim || []).map((x) => x.name);
+  const all = listed(s, now), crew = (s.crewSim || []).map((x) => x.name);
   const c = consortiumOf(s), inv = s.consortiumInvite;
   const row = (x) => `<li class="person${x.friend ? ' friend' : ''}${x.member ? ' member' : ''}"><span class="p-dot${x.place.fighting ? ' fighting' : ''}"></span><b class="p-handle" data-finger="${esc(x.handle)}" title="finger ${esc(x.handle)}">${esc(x.handle)}</b><small>${esc(ARCHETYPES[x.cls].name)} ${x.level}</small><span class="p-where">${esc(whereText(x.place))}</span>
     <span class="p-acts">${c && !x.member && c.founder !== x.handle ? `<button type="button" class="act" data-run="consortium invite ${esc(x.handle)}" title="Merge their server with the consortium">Invite to consortium</button>` : ''}${crew.includes(x.handle) ? `<span class="tag you">crew</span><button type="button" class="act dim" data-run="crew kick ${esc(x.handle)}">Remove from crew</button>` : ''}${x.friend || x.member ? `${x.friend ? `<button type="button" class="act dim" data-run="friend remove ${esc(x.handle)}">Remove</button>` : ''}` : ''}${x.friend ? '' : `<button type="button" class="act" data-run="friend add ${esc(x.handle)}">Add friend</button>`}</span></li>`;
@@ -2300,8 +2300,8 @@ function pinnedTracker(s) {
 const SLOT_GLYPH = { exploit: 'exploit', proxy: 'relay', shell: 'module', script: 'cipher', implant: 'injector' };
 // The map's left column: the threat rail, then the contract tracker under it (the selected server's contract lit), then
 // the pinned earned pieces.
-function mapLeft(s, sel, runner = null) {
-  const col = threatRail(s) + contractTracker(s, sel) + pinnedTracker(s) + runnerRail(s, runner);
+function mapLeft(s, sel, runner = null, railShut = false) {
+  const col = threatRail(s) + contractTracker(s, sel) + pinnedTracker(s) + runnerRail(s, runner, railShut);
   return col ? `<div class="map-lcol">${col}</div>` : '';
 }
 // A phone's map (docs/phone-plan.md P3): the rail and the tracker fold into a row of chips under the floors, a red
@@ -2416,7 +2416,7 @@ export const setMapScale = (z) => { const was = mapScale; mapScale = z; return M
 // Map filters: any mix of mine · targets · threats (none = everything). Old callers pass one string.
 const MAP_FILTERS = [['mine', 'Mine', 'f-mine'], ['targets', 'Targets', 'f-target'], ['threats', 'Threats', 'f-threat']];
 const filterList = (f) => (Array.isArray(f) ? f : !f || f === 'all' ? [] : [f]).filter((k) => MAP_FILTERS.some(([x]) => x === k));
-export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false, filter = 'all', list = false, sort = 'status', pickOpen = false, build = null, floor = null, runner = null, runnerMode = 'runner', runnerPreset = 'rotation', phone = false } = {}) {
+export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false, filter = 'all', list = false, sort = 'status', pickOpen = false, build = null, floor = null, runner = null, runnerMode = 'runner', runnerPreset = 'rotation', railShut = false, phone = false } = {}) {
   const none = !sel; // nothing selected (you clicked away): no reticle, and the side card shows your server
   sel ||= 'server';
   filter = filterList(filter);
@@ -2493,7 +2493,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     }
     if (n.kind === 'zone') {
       const live = liveSpawns(s), here = s.run?.loc === CONFIG.zone.id;
-      return `<g class="mnode zone${here ? ' here' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${CONFIG.zone.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${CONFIG.zone.name}, rogue server"><circle r="18" class="mhit"/><path d="M0 -9 L8 -4.5 L8 4.5 L0 9 L-8 4.5 L-8 -4.5 Z"/>${live ? `<circle r="2.5" class="zdot"/>` : ''}${pick}${label(n, 10, CONFIG.zone.name, (here ? 'you are here' : live ? `rogue server · ${live} ${live === 1 ? 'virus' : 'viruses'}` : 'rogue server · quiet') + (peopleOn(s) && inSprawl(s).length ? ` · ${inSprawl(s).length} online` : ''))}</g>`;
+      return `<g class="mnode zone${here ? ' here' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${CONFIG.zone.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${CONFIG.zone.name}, rogue server"><circle r="18" class="mhit"/><path class="mhex" d="M0 -9 L8 -4.5 L8 4.5 L0 9 L-8 4.5 L-8 -4.5 Z"/>${live ? `<circle r="2.5" class="zdot"/>` : ''}${pick}${label(n, 10, CONFIG.zone.name, (here ? 'you are here' : live ? `rogue server · ${live} ${live === 1 ? 'virus' : 'viruses'}` : 'rogue server · quiet') + (peopleOn(s) && inSprawl(s).length ? ` · ${inSprawl(s).length} online` : ''))}</g>`;
     }
     if (n.kind === 'roamer') {
       const r = n.roamer, ang = Math.atan2(n.ty - n.y, n.tx - n.x) * 180 / Math.PI;
@@ -2548,7 +2548,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   // twice the size, so they stay about 40px on screen.
   const W = maxX - minX, Hh = maxY - minY, C = CHART * ((mapScale || 1) < 0.5 ? 2 : 1), c2 = C / 2;
   const chart = `<defs><pattern id="mchart" width="${C}" height="${C}" patternUnits="userSpaceOnUse"><path class="mchart-line" d="M0 ${c2}H${C}M${c2} 0V${C}"/><path class="mchart-tick" d="M${c2 - 4} ${c2}H${c2 + 4}M${c2} ${c2 - 4}V${c2 + 4}"/></pattern></defs><rect class="mchart" x="${minX - 2 * W}" y="${minY - 2 * Hh}" width="${5 * W}" height="${5 * Hh}" fill="url(#mchart)"/>`;
-  const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter.length ? ' mf' + filter.map((k) => ' mf-' + k).join('') : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${con ? 'Map of your consortium' : `Floor ${fl}, ${esc(floorName(fl))}`}">${chart}${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${con ? '' : trails}${draw}${con ? '' : runnerMark(s, runner, fl, mapPortrait)}</svg>`;
+  const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter.length ? ' mf' + filter.map((k) => ' mf-' + k).join('') : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${con ? 'Map of your consortium' : `Floor ${fl}, ${esc(floorName(fl))}`}">${chart}${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${con ? '' : trails}${draw}${con ? '' : runnersMap(s, fl, runner, mapPortrait) + runnerMark(s, runner, fl, mapPortrait)}</svg>`;
   // Top corner: which map, and the map's own controls (names on hover, zoom back out).
   const tabs = `<div class="map-tools"><div class="map-left">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters map-mode" role="group" aria-label="View"><button type="button" data-maplist="0" aria-pressed="${!list}">Map</button><button type="button" data-maplist="1" aria-pressed="${list}">List</button></div><details class="map-pick${filter.length ? ' on' : ''}"${pickOpen ? ' open' : ''}><summary data-mapfilter-toggle aria-label="Show">${filter.length ? filter.map((k) => MAP_FILTERS.find(([x]) => x === k)[1]).join(' + ') : 'All'}</summary><div class="map-pick-menu">${MAP_FILTERS.map(([k, l]) => `<label><input type="checkbox" data-mapfilter-check="${k}"${filter.includes(k) ? ' checked' : ''}><span>${l}</span></label>`).join('')}${filter.length ? '<button type="button" data-mapfilter-clear>Show all</button>' : ''}</div></details></div><div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover. Click to always show them.' : 'Show names only on hover'}">Aa</button><button type="button" data-locate="__sel" title="Zoom to the selected one">${glyph('trace')}</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
   // pop: the selected node's card, popped up beside the node (app.js places it once the map is drawn).
@@ -2558,7 +2558,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   // A phone (docs/phone-plan.md P3): the floors as a segmented row, the rail and the tracker as chips under it; the
   // selected one's card is the sheet's (app.js lifts #map-pop into it), in List mode too.
   if (list && !con) return `<div class="map-page map-list-page"><section class="panel map-canvas map-list">${tabs}${serverList(s, sel, filter, sort)}${phone ? card : ''}</section>${phone ? '' : `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>`}</div>`;
-  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : phone ? floorLift(s, fl) + mapChips(s, runner) : mapLeft(s, none ? null : sel, runner)}${con || phone ? '' : floorLift(s, fl)}${svg}${card}${runner && !con ? runnerCard(s, runner, { mode: runnerMode, preset: runnerPreset }) : ''}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
+  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : phone ? floorLift(s, fl) + mapChips(s, runner) : mapLeft(s, none ? null : sel, runner, railShut)}${con || phone ? '' : floorLift(s, fl)}${svg}${card}${runner && !con ? runnerCard(s, runner, { mode: runnerMode, preset: runnerPreset }) : ''}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
 }
 // The floor panel, a lift's buttons down the side of the map: the floors you've reached lit (the one on the map marked),
 // the next one dim with its band, the rest dark. A teal pip on the floor you're connected to.

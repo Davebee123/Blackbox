@@ -2525,23 +2525,30 @@ no attaching, detaching or memory pips.
   pays (+25), and **Help** (`assist`) in place of Engage. They fight beside you at the Signal they had, take none of the
   XP, and a win raises their standing; the room's card then shows it. Once a job; they never clear your rooms or take
   anything. Helping isn't a solo win.
-- **Standing**: 0–100 in four tiers: Stranger, Known (25), Friend (50: hire), Close (75). Drawn as the Tier bar, its
-  number and how you met in the tooltip. Known face: half again a raise, and three quarters of the fee.
-- **The runner card**: a Rail row opens it beside their diamond (beside the row when their floor isn't drawn): faction,
+- **Standing**: 0–100 in four tiers: Stranger, Known (25), Friend (50), Close (75), each a smaller fee. Drawn as the
+  Tier bar, its number and how you met in the tooltip. Known face: half again a raise, and three quarters of the fee.
+- **The runner card**: a diamond on the map or a Rail row opens it beside them (beside the row when their floor isn't
+  drawn): faction,
   handle, class and level; Traits (temperament first), Standing, Now (→ a server and its time, or Busy with when they're
   free), After (their trade); their latest #net line; **Hire**, off with the reason (or the clock) until you can.
-- **Hiring** (`hire <runner> [preset]`, from level 5, at Friend, three at most): the crew card shows Pay as two icons, a
-  fee once (20 credits a level, a quarter more a trait and a ★) and a cut of the credits each run banks (10%; Haggler
+- **Hiring** (`hire <runner> [preset]`, anyone on your net, from level 5, three at most): the crew card shows Pay as two
+  icons, a fee once (20 credits a level, a quarter more a trait and a ★; a Stranger ×2, Known ×1.5, Friend ×1, Close
+  ×0.75) and a cut of the credits each run banks (10%; Haggler
   half, ★ a quarter), and their bar as preset tiles (their subclass's shipped presets). Hired, they're crew (violet),
   level with you, and come on every run; `crew kick <name>` lets them go, and hiring again costs no fee.
 - **A hire's Signal** carries from fight to fight and run to run (a share of their max, refilling over 10 minutes of
   logged-on time). At 0 they disconnect (*Signal's going. I'm out.*) and are Busy until full. If you drop to 0 you both
   jack out, the hire at whatever Signal they had.
-- **The Rail**: under Contracts on the map, the runners you know (heard on #net), last heard first, six at most:
-  handle, class and level, where (`→` a server on the road). Click one to draw it on its floor: a paper-white diamond
-  with the handle, a dotted route through the servers passed, a dashed ring where it's heading. Again to drop it.
+- **On the map**: every runner on the floor drawn is a small paper-white diamond under the server they're at (side by
+  side), hollow on the road between servers; your crew isn't drawn. Its tooltip says who and what they're doing; a
+  click opens their card.
+- **The Rail**: under Contracts on the map, the runners you know (heard on #net, or met), last heard first, six at most:
+  handle, class and level, where (`→` a server on the road). Its head folds the section away (kept per browser). Click
+  one (or a diamond) to pick it: its handle, a dotted route through the servers passed, a dashed ring where it's
+  heading, and its card. Again to drop it.
 - **People**: the people button on the top bar (how many are on; violet when a friend is) opens **Friends** and
-  **Online**: handle, class and level, where. On a network the people are its runners and your consortium's members;
+  **Online**: handle, class and level, where. On a network that's your friends, your consortium's members and your crew
+  (the other runners are on the map);
   a save with no network seed keeps the old simulated pool behind `?dev` `online sim`. `friend add|remove <handle>`,
   `friends`, `who`. SPRAWL-00 is shared: `ls` and arriving in a room say who else is there.
 - **#net** (channel.mjs), the net talking to itself like WoW's General chat. Its latest line sits over the prompt; click

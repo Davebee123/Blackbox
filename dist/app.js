@@ -44,7 +44,7 @@ import { createLash, shakeOf, SHAKE } from './lash.mjs';
 import { createChipFx, chipStrike, chipTheme, STRIKES, STRIKE_PLAN } from './chipfx.mjs';
 import { ATTACKS, OWN_PLAN } from './virussound.mjs';
 import { voices as voicesOf, todayOf } from './virusvoice.mjs';
-import { online, peopleOn } from './presence.mjs';
+import { online, listed, peopleOn } from './presence.mjs';
 import { runnerFloor } from './runners-view.mjs';
 import { matesOf } from './crew.mjs';
 import { tickPlay } from './progression.mjs';
@@ -2140,7 +2140,9 @@ let mapPop = false;
 let mapList = false, mapSort = 'status', pendingLocate = null; // the map's List mode (MOO2's planets list), its sort column, and a Locate waiting for the map to draw
 let mapFilter = []; // the map's Show picker: any of mine · targets · threats (none = all; the rest dims)
 let mapRunner = null; // the runner picked on the Rail (runners-view.mjs): the map draws them, their card beside them
-let runnerMode = 'runner', runnerPreset = 'rotation'; // their card: the runner card, or the crew card Hire turns it into
+let runnerMode = 'runner', runnerPreset = 'rotation';
+let railShut = false; // the Rail's Runners section folded (kept per viewer)
+try { railShut = localStorage.getItem('bb-rail-runners') === 'shut'; } catch { /* storage unavailable */ } // their card: the runner card, or the crew card Hire turns it into
 let mapFloor = null; // the floor the map shows (floors.mjs): the floor panel's pick; a selection on another floor shows that one
 let mapPickOpen = false; // whether the picker's menu is open (it survives redraws)
 let leadsOpen = false; // a run's Leads panel (the run header's toggle)
@@ -2311,7 +2313,7 @@ function render(force = false) {
   } else if (combatLike && (campaign.breach || CAMP)) {
     return go(campaign.breach ? 'breach' : 'campaign', true); // a breach fight that's over: back to its page, never the old map
   } else if (combatLike) {
-    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, phone: F.isPhone() }));
+    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, railShut, phone: F.isPhone() }));
     applyMapZoom();
   } else if (module === 'net') {
     const before = cache.get('page-view');
@@ -2322,7 +2324,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, phone: F.isPhone() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, railShut, phone: F.isPhone() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -3087,6 +3089,7 @@ document.addEventListener('click', (e) => {
     if (cmd.classList.contains('ability') && !cmd.classList.contains('script')) { $('command-input').value = cmd.dataset.command; focusPrompt(); return; } // a script runs at once: it takes no cycle
     return run(cmd.dataset.command);
   }
+  if (e.target.closest('[data-rail-fold]')) { railShut = !railShut; try { localStorage.setItem('bb-rail-runners', railShut ? 'shut' : 'open'); } catch { /* storage unavailable */ } dirty = true; return; }
   if (e.target.closest('[data-runner-close]')) { mapRunner = null; runnerMode = 'runner'; dirty = true; return; }
   const rh = e.target.closest('[data-runner-hire]');
   if (rh) { runnerMode = rh.dataset.runnerHire === '1' ? 'crew' : 'runner'; runnerPreset = 'rotation'; dirty = true; return; }
@@ -3658,7 +3661,7 @@ function peopleUi() {
   const on = peopleOn(campaign);
   $('people').hidden = !on;
   if (!on) { peopleOpen = false; $('people-panel').hidden = true; return; }
-  const list = online(campaign);
+  const list = listed(campaign);
   $('people-count').textContent = String(list.length);
   $('people').classList.toggle('friends-on', list.some((x) => x.friend));
   $('people').setAttribute('aria-expanded', String(peopleOpen));
