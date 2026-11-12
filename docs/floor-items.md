@@ -52,54 +52,56 @@ Past the bar, so nothing new.
 **Set sources →** *Built.* On-Call's **Runbook** (22) → NIGHT DESK, and **Failover** (26) → BYZANTINE. The *on-call desk*
 and *failover against a faulty node* are the bosses' own stories.
 
-## Floor 5 · Deep Core (25–32) · 2 → 5 sets · 12 → 20 uniques
+## Floor 5 · Deep Core (25–32) · 5 sets ✓ · 20 uniques ✓
 
 **Sets** (Burst Buffer ✓, Hot Spare ✓)
 
 | Set | Source | Pieces | 2 | 3 | 4 |
 |---|---|---|---|---|---|
-| **Fine Print** ✚ | Underwriting desk: its vaults and Core | Rider (proxy 26): +2 Block [+6% max Signal] · Deductible (shell 27): the first hit on you each fight deals 20% less [+2 Block] · Exclusion (script 30): +5% crit [+5% damage] · Premium (implant 32): +6% max Signal [+5% Clock Speed] | +8% max Signal | A tell that lands on you shields you for 5% of your max Signal | While a shield holds, your hits deal 10% more |
-| **Contiguous** ✚ | Defrag boards won | Sector (exploit 27): +4% damage [+5% crit] · Cluster (implant 29): +4% Clock Speed [+6% max Signal] · Allocation Table (script 31): +5% crit [+5% damage] | +5% Clock Speed | Each command in a row on the same part deals 6% more than the last, up to 18% | |
-| **Packer** ✚ | Polymorph kills (its lineage) | Stub (exploit 26): +5% crit [+5% damage] · Junk Code (script 28): +6% damage to a part wearing ◆ [+5% crit] · Decryptor (shell 31): +2 Block [+6% max Signal] | +5% crit | When you break a part's last ◆, your next hit on another part is a critical strike | |
+| **Fine Print** ✓ | Underwriting desk: its vaults and Core (built: the floor 5 lair boss until it is) | Rider (proxy 26): +2 Block [+6% max Signal] · Copay (shell 27; renamed from Deductible, Halcyon's chase line): the first hit on you each fight deals 20% less [+2 Block] · Exclusion (script 30): +5% crit [+5% damage] · Premium (implant 32): +6% max Signal [+5% Clock Speed] | +8% max Signal | A tell that lands on you shields you for 5% of your max Signal | While a shield holds, your hits deal 10% more |
+| **Contiguous** ✓ | Defrag boards won (built: the floor 5 lair boss until they are) | Sector (exploit 27): +4% damage [+5% crit] · Cluster (implant 29): +4% Clock Speed [+6% max Signal] · Allocation Table (script 31): +5% crit [+5% damage] | +5% Clock Speed | Each command in a row on the same part deals 6% more than the last, up to 18% | |
+| **Crypter** ✓ (renamed from Packer, the gene and its part) | Polymorph kills (its lineage; built: the floor 5 lair boss until they are) | Stub (exploit 26): +5% crit [+5% damage] · Junk Code (script 28): +6% damage to a part wearing ◆ [+5% crit] · Decryptor (shell 31): +2 Block [+6% max Signal] | +5% crit | When you break a part's last ◆, your next hit on another part is a critical strike | |
 
 **Uniques**
 
 | Unique | Slot · Lv | Source | Effect | |
 |---|---|---|---|---|
-| Installment | implant 28 | GRACE PERIOD | Your first hit on each part every 3 cycles deals 10% more. | ✚ |
-| Late Fee | exploit 28 | GRACE PERIOD | Increases your damage by 15% on a part whose ◆ came back this fight. | ✚ |
-| Antibody, Tourniquet | 32 | PARASITE | docs/genome.md 7.4 | ◇ |
-| Hidden Service | implant 30 | EXIT NODE | Every 6 cycles, the next attack on you deals half. | ✎ (it named Front End layers) |
-| Tail Circuit | exploit 30 | EXIT NODE | Increases your damage by 10% on a part with more Integrity than it had 2 cycles ago. | ✚ replaces Guard Relay (Onion Routing is gone from the fight) |
-| Moral Hazard, Reinsurance | 40 | ACTUARY | docs/genome.md 7.4 (UNDERWRITER's two) | ◇ |
+| Installment | implant 28 | GRACE PERIOD | Your first hit on each part every 3 cycles deals 10% more. | ✓ |
+| Late Fee | exploit 28 | GRACE PERIOD | Increases your damage by 15% on a part whose ◆ came back this fight. | ✓ |
+| Antibody, Tourniquet | 32 | PARASITE | docs/genome.md 7.4 | ✓ |
+| Hidden Service | implant 30 | EXIT NODE | Every 6 cycles, the next attack on you deals half. | ✓ (it named Front End layers) |
+| Tail Circuit | exploit 30 | EXIT NODE | Increases your damage by 10% on a part with more Integrity than it had 2 cycles ago. | ✓ replaces Guard Relay (Onion Routing is gone from the fight) |
+| Moral Hazard, Reinsurance | 40 | ACTUARY | docs/genome.md 7.4 (UNDERWRITER's two) | ✓ |
 
-ACTUARY's pair is level 40, so it counts on floor 5 only by where it drops. Without it, floor 5 has 18.
+ACTUARY's pair is level 40, so it counts on floor 5 only by where it drops. Without it, floor 5 has 18. **Built** (November
+2026): every unique drops from its floor's lair boss until its boss or family is built (ACTUARY's pair once the lair
+boss is 38 or more); GAME_RULES.md *Uniques*.
 
-## Floor 6 · Kernel Space (31–38) · 1 → 5 sets · 9 → 20 uniques
+## Floor 6 · Kernel Space (31–38) · 5 sets ✓ · 20 uniques ✓
 
 **Sets** (Mesh ✓, crew only)
 
 | Set | Source | Pieces | 2 | 3 | 4 |
 |---|---|---|---|---|---|
-| **Domain Admin** ✚ | Domain Controller vaults | Ticket (implant 32): +6% max Signal [+5% damage] · Group Policy (proxy 33): +2 Block [+5% Clock Speed] · Schema (shell 35): +5% Restore [+2 Block] · Admin Rights (exploit 37): +5% damage [+5% crit] | +5% damage, +5% max Signal | When you strip a part's last ◆, your shortest cooldown drops by 1 | From the third part you break in a fight, your cooldowns are 1 cycle shorter |
-| **Semaphore** ✚ | Deep Deadlock boards | Spinlock (script 33): +4% Clock Speed [+5% damage] · Semaphore (implant 35): +6% max Signal [+5% Clock Speed] · Critical Section (shell 37): +2 Block [+6% max Signal] | +5% Clock Speed | An attack you delay leaves its part Open for 1 cycle | |
-| **Hidden Process** ✚ | Rootkit kills | Unlink (exploit 32): +5% crit [+5% damage] · Hollow (script 34): your burns deal 5% more [+5% crit] · Driver (implant 36): +5% Stealth [+6% max Signal] | +6% damage | Your burns keep ticking on a part that can't be hit | |
-| **Watertight** ✚ | Kestrel ICE on floor 6 | Hatch (proxy 34): +2 Block [+6% max Signal] · Seal Plate (shell 36): +6% max Signal [+2 Block] · Pressure Door (implant 38): +2 Block [+5% damage] | +3 Block | When a hit takes more than 15% of your max, the next hit on you within 2 cycles deals 20% less | |
+| **Domain Admin** ✓ | Domain Controller vaults (built: the floor 6 lair boss until they are) | Ticket (implant 32): +6% max Signal [+5% damage] · Group Policy (proxy 33): +2 Block [+5% Clock Speed] · Schema (shell 35): +5% Restore [+2 Block] · Admin Rights (exploit 37): +5% damage [+5% crit] | +5% damage, +5% max Signal | When you strip a part's last ◆, your shortest cooldown drops by 1 | From the third part you break in a fight, your cooldowns are 1 cycle shorter |
+| **Semaphore** ✓ | Deep Deadlock boards (built: Deadlock boards won on floor 6) | Spinlock (script 33): +4% Clock Speed [+5% damage] · Semaphore (implant 35): +6% max Signal [+5% Clock Speed] · Critical Section (shell 37): +2 Block [+6% max Signal] | +5% Clock Speed | An attack you delay leaves its part Open for 1 cycle | |
+| **Hidden Process** ✓ | Rootkit kills (built: the floor 6 lair boss until they are) | Unlink (exploit 32): +5% crit [+5% damage] · Hollow (script 34): your burns deal 5% more [+5% crit] · Driver (implant 36): +5% Stealth [+6% max Signal] | +6% damage | Your burns keep ticking on a part that can't be hit | |
+| **Watertight** ✓ | Kestrel ICE on floor 6 (built: the floor 6 lair boss until it is) | Hatch (proxy 34): +2 Block [+6% max Signal] · Seal Plate (shell 36): +6% max Signal [+2 Block] · Pressure Door (implant 38): +2 Block [+5% damage] | +3 Block | When a hit takes more than 15% of your max, the next hit on you within 2 cycles deals 20% less | |
 
 **Uniques**
 
 | Unique | Slot · Lv | Source | Effect | |
 |---|---|---|---|---|
-| Syscall Table | script 34 | RING ZERO | docs/genome.md 7.4 | ◇ |
-| Ring Minus One | implant 34 | RING ZERO | A skill fired after waiting ready for 2 cycles deals 15% more. | ✎ (the old text shut hooks off, and fights no longer shut skills off) |
-| Load Path | exploit 36 | BRICKWALL | A hit that breaks a ◆ still deals 15% of its damage to the part. | ✚ replaces Firmware Flash (Hard Brick is gone) |
-| Recovery Mode | script 36 | BRICKWALL | docs/genome.md 7.4 | ◇ |
-| Notice Period | script 36 | BULKHEAD | When a part starts a tell, your shortest cooldown drops by 1. | ✚ |
-| Pressure Relief | shell 36 | BULKHEAD | An attack you delayed deals 20% less when it lands. | ✚ |
-| Generator, UPS | 34 | BLACKOUT | docs/genome.md 7.4 | ◇ |
-| DKOM | script 33 | Rootkit kills | Your first hit on a part that just became hittable deals 25% more. | ✚ |
-| Golden Ticket | implant 36 | Domain Controller, the Core's vault | +6% max Signal. Your first shield each fight is doubled. | ✚ |
-| Pass the Hash | exploit 35 | Domain Controller vaults | A critical strike makes your next hit on a different part a critical strike too. Works once every 3 cycles. | ✚ |
+| Syscall Table | script 34 | RING ZERO | docs/genome.md 7.4 | ✓ |
+| Ring Minus One | implant 34 | RING ZERO | A skill fired after waiting ready for 2 cycles deals 15% more. | ✓ (the old text shut hooks off, and fights no longer shut skills off) |
+| Load Path | exploit 36 | BRICKWALL | A hit that breaks a ◆ still deals 15% of its damage to the part. | ✓ replaces Firmware Flash (Hard Brick is gone) |
+| Recovery Mode | script 36 | BRICKWALL | docs/genome.md 7.4 | ✓ |
+| Notice Period | script 36 | BULKHEAD | When a part starts a tell, your shortest cooldown drops by 1. | ✓ |
+| Pressure Relief | shell 36 | BULKHEAD | An attack you delayed deals 20% less when it lands. | ✓ |
+| Generator, UPS | 34 | BLACKOUT | docs/genome.md 7.4 | ✓ |
+| DKOM | script 33 | Rootkit kills | Your first hit on a part that just became hittable deals 25% more. | ✓ |
+| Golden Ticket | implant 36 | Domain Controller, the Core's vault | +6% max Signal. Your first shield each fight is doubled. | ✓ |
+| Pass the Hash | exploit 35 | Domain Controller vaults | A critical strike makes your next hit on a different part a critical strike too. Works once every 3 cycles. | ✓ |
 
 ## Floor 7 · The Sink (37–44) · 1 → 5 sets · 33 → 35 uniques, the lair's eight re-homed
 

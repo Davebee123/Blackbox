@@ -33,6 +33,8 @@ Each break takes cooldowns off, and Total Loss turns one break into several.
 | Total Loss (Zero-day) | Halcyon shop | A break hits every other part for 25% of its max; a part it breaks goes off again |
 | Buffer Overflow (Zero-day) + Hot Reload or Race Window | vault · implant 30 · yellow | A break makes the next hit crit; the crit readies that skill |
 | Log4Shell / Daisy Chain | exploit 24 · yellow | A break hits the part winding up a tell |
+| Domain Admin (3, 4) | set 32–37, floor 6 | A last ◆ stripped: −1 on the nearest cooldown; from the third break, every cooldown 1 shorter |
+| Load Path | exploit 36, floor 6 | A hit a ◆ takes still deals 15% to the part |
 
 Talents: Cascade Failure, Flashpoint, Exposed Wiring. At 50: Wrecking Crew 4 (+1 Momentum a break as an Overclocker),
 Hot Reload or Cold Aisle in the implant, the proxy free. Catch: the refund uniques are low level; the endgame version
@@ -47,10 +49,12 @@ A crit readies the skill, and the same skill again climbs Crescendo.
 | Hot Reload | implant 30, layer 4 vaults | A crit readies that skill (−10 Signal). Race Window is the same and doesn't stack |
 | Crescendo (Unsigned) | implant, NULL CHOIR shop | The same skill in a row: +15% a repeat, up to +60% |
 | Chorus implicit, Refrain, Round | NULL CHOIR items | The repeat hits again for 28–44%; the second use's cooldown halves; Chorus spills to another part |
-| Crit sources | | Setuid (every hit in Sudo crits), Exploit Kit, Feedback Loop, Preempt (script 32, +40% on a part winding up a tell), POST Code (exploit 45) |
+| Crit sources | | Setuid (every hit in Sudo crits), Exploit Kit, Feedback Loop, Preempt (script 32, +40% on a part winding up a tell), POST Code (exploit 45), Crypter (3: a stripped ◆ crits the next hit elsewhere), Pass the Hash (exploit 35: a crit passes to another part) |
+| Same target | | Contiguous (3): commands in a row on one part, +6% each to 18% |
 | Crit payoffs | | Root of Trust (exploit 50) and Mews (shell, faction): 2% heal a crit each, stacking; Bit Flip (exploit 47); Burst Buffer (2) |
 
-Both implants are the build. Catch: Patchwork (4) and Outfall reward the opposite (different skills).
+Both implants are the build. Catch: Patchwork (4), Outfall and Syscall Table (script 34) reward the opposite (different
+skills); Ring Minus One (implant 34) rewards holding one back.
 
 ### Read the room (any class; the designer's "watching wins")
 
@@ -66,6 +70,8 @@ Damage on a part winding up multiplies, and every answer pays.
 | Carrier Wave (faction) | exploit, LANTERN feuds | An answer: −1 on every cooldown, at your level |
 | Bottleneck or Rubber Hose | exploit 42, earned · exploit 38, native | +4% an answer (to 12%) · +6 a read (to 30) |
 | Kestrel Badge, Choirbook (2), Interrupt Vector | proxy 7 · set · script 32 | An answer shields you |
+| Notice Period | script 36, floor 6 | A tell starting: −1 on the nearest cooldown, before you answer it |
+| Fine Print (3) or Moral Hazard | set 26–32 · exploit 40, floor 5 | The tells you miss pay: a shield, or +3% each to 30% |
 
 Talents: Clock Glitch, Flow Control, Rebroadcast, IRQ Chain, Timing Attack, Shock Front. Catch: Ctrl-C, Preempt,
 Sampler, Policy Engine and Interrupt Vector are all scripts; pick one (Tide Table is the implant that eases it).
@@ -79,6 +85,7 @@ Sampler, Policy Engine and Interrupt Vector are all scripts; pick one (Tide Tabl
 | Siphon Tube, Hotfix, Sump Pump, Depth Gauge | script 44, shell 5, shell 41, shell 41 | Leech +50%, Regen ×2, heals +10%, +4 Regen below half |
 | Signal Floor, Brownout, Strata | proxy 50, shell 47, shell 49 | Regen ×2 and −15% taken below 25%; up to −10% as you drop |
 | Umbrella Policy (faction), Last Known Good, Hot Spare (2) | proxy · script 48 · set | The floor under you |
+| Recovery Mode, Reinsurance | script 36 · proxy 40 | Below half a hit capped at 15% every 6 cycles; a big hit's excess back as a shield |
 
 Talents: Kernel Panic (Warden), Critical Path (Sysop). Catch: never with the Glass Jaw implicit, which hurts below 25%.
 
@@ -100,7 +107,7 @@ Fault). Catch: Dead Air counts a blocked hit, so Block doesn't feed it. Two diff
 
 ### Plague (Payload; NULL CHOIR's Descant)
 
-Burn damage multiplies: Banked Fire (shell 43: +12%), Flue (proxy 48: a shield each tick), Descant (script, faction, +10% at your level), Thread Pool (+15%) or the Hive Mind unique
+Burn damage multiplies: Hollow and Hidden Process (32–36: +5%, and burns tick on a part out of reach), Banked Fire (shell 43: +12%), Flue (proxy 48: a shield each tick), Descant (script, faction, +10% at your level), Thread Pool (+15%) or the Hive Mind unique
 (+25%, −10 Signal), all scripts, so one. Then Fan Curve (shell 8: burns grow +2 a tick), Slammer (script 22: burns jump
 on a break) or Tail Call (exploit 19: a break ticks the rest), Burn-In (proxy 46: tick at once), Brackish (script 41),
 Bilge (proxy 43: each burn cuts its part's damage to you 3%, to 9%), Slow Drip (exploit 4: +15% crit on a burning part).
@@ -114,7 +121,8 @@ Load Balanced (4: every third helper arrives as two), Spawning Run (exploit 42: 
 a cut takes a cycle off every cooldown), Weir (implant 44: a helper takes the first hit), Load Order
 (script 49: a helper hits as it arrives), Watchdog Timer (script 46: a free helper every 6 cycles), Backwash and Ebb
 (scripts), Descant. Hijacker: Riptide (proxy 42: helpers +8% on Jammed parts), Bus Fault (implant 47: Jams push the
-attack back), Choirbook (3: Jams a cycle longer). Catch: nearly every Operator deep unique is a script, as is Cron;
+attack back), Choirbook (3: Jams a cycle longer), Semaphore (3: a delayed part is Open) and Pressure Relief (shell 36: a
+delayed attack deals 20% less). Catch: nearly every Operator deep unique is a script, as is Cron;
 Load Balanced (3) plus Load Order may beat the 4.
 
 ### Bulwark (Warden)
@@ -129,7 +137,8 @@ Honeycomb and Ring Main (earned). Strongbox leaves the implant free for Siltston
 Bigger shields: Cutoff Wall (script 47: a shield on a cut), Strongbox (3: +15%), Combination (+10%), Bedrock Seal (proxy 47: +15%), Anchor Chain (implant 43:
 +10% after a hit), Warm Reset (shell 50: start shielded). Paid on a shield: Breakwater (exploit 41: +5% damage, stacking 3), Pre-Authorization (script 24: next command
 +10%), Cofferdam or Pressure Hull, and the *shielded* talents (Bounce Buffer, Cold Plate, Health Probe, Heat Sink, Hot
-Swap, Cover Traffic, Shim, Reactive Plating). Raised by Interrupt Vector, Kestrel Badge, Exception Handler, On-Call (3).
+Swap, Cover Traffic, Shim, Reactive Plating), Fine Print (4: +10% behind a shield). Raised by Interrupt Vector, Kestrel
+Badge, Exception Handler, On-Call (3), Golden Ticket (implant 36: the first shield doubled), Fine Print (3).
 
 ### Opening act (Infiltrator; short fights)
 
@@ -168,12 +177,12 @@ Survey) fills all six slots with four bonuses.
 The build ideas are there; the pieces don't carry most of them to level 50.
 
 **Built (Batch 2, November 2026):** ten pieces at 41–48 for the enablers, the empty class slots and the four events
-(GAME_RULES.md *Uniques*), and Catchment, the general 4-piece. Left: the thin middle (floors 5–6 as designed in
-docs/floor-items.md) and the flat sidegrades (the designer: keep the items players own as they are).
+(GAME_RULES.md *Uniques*), and Catchment, the general 4-piece. **Floors 5–6** (docs/floor-items.md): seven sets and
+19 uniques at 26–40. Left: the flat sidegrades (the designer: keep the items players own as they are).
 
 | Gap | Today | Fix, in order |
 |---|---|---|
-| Thin middle | Non-set uniques by level: 66 at 1–14, 38 at 15–26, 19 at 27–38, 65 at 39–50 | A 27–38 batch built on the builds above, not on stats |
+| Thin middle | Built: non-set uniques by level 66 at 1–14, 38 at 15–26, 36 at 27–38 (was 19), 77 at 39–50 | Floors 5–6's batch, on the builds above |
 | Enablers stop at low levels | Break refunds 4–24, burn multipliers 4–22, Hive Mind set 6–15; only faction pieces, Zero-days and chase protocols reach 50 | 39–50 versions of the enablers: a break refund, a burn multiplier, a helper multiplier |
 | Class pieces share a slot | Of the 39–50 uniques, Operator's are mostly scripts, Bastion's 9 of 13 shells; the tell pieces all scripts | Spread each class's deep pieces over every slot |
 | Endgame funnels | A tier set takes four slots with a generic 4-piece, and only one 4-piece counts: tier set, implant, one flex | One general 4-piece set at 39–50 that competes with the tier sets |

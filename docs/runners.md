@@ -24,7 +24,7 @@ be on the net, like Guild Wars 1's heroes and Starsector's officers and fleets.
   work is kept on the runner; a server's state stays yours. Rivals racing you to a vault stay as built.
 - **No entropy.** Factions are fixed backdrops. A runner works for one, and nothing a runner does moves a faction's
   power, territory or prices. Feuds stay director cards; runners appear in them by name.
-- **A stable cast.** A few dozen per network, from its seed. Their levels keep to a band around yours. A crashed
+- **A stable cast.** Eight per network, from its seed (a pool of 60 handles, so each new game has its own). Their levels keep to a band around yours. A crashed
   runner is pulled out and comes back. No permanent death; none quits on you.
 - **Cheap to run.** Each runner is a loop (hub, job, travel, work), worked out from the seed and logged-on time the
   way presence.mjs places people today. Off-screen outcomes are rolled from a runner's level against the server's,
@@ -40,18 +40,26 @@ be on the net, like Guild Wars 1's heroes and Starsector's officers and fleets.
 ## On the map: the *Diamonds* and the *Rail* (picked)
 
 - **The rail:** a Runners list under Contracts, the runners you know: handle, class and level, and where they are
-  (`→` a server for one travelling).
-- **The map** draws every runner on the floor (the *Diamonds*, picked November 2026 over a list in the server card and
-  named diamonds behind a toggle): a small paper-white diamond under the server they're at, hollow on the road; a click
-  opens their card, where you hire them. The one you pick also gets their handle, a dotted route through the servers
-  they've passed, a dashed ring on where they're heading.
+  (`→` a server for one travelling). A server you haven't located is only its floor (*F1*, *→ F1*).
+- **The map** draws the runners in places you've revealed (the *Diamonds*, picked November 2026 over a list in the
+  server card and named diamonds behind a toggle): one small paper-white diamond under a place with runners, how many
+  beside it from two up (*◆ 6*), and a hollow diamond each on the road. A lone diamond opens their card, where you
+  hire them. A counted one opens the list of who's there beside it (rows like the Rail's: handle, class and level); a
+  row opens that runner's card. The one you pick also gets their handle, a dotted route through the servers they've
+  passed, a dashed ring on where they're heading, and leaves the count.
+- **Only where you've revealed** (the designer's rule, November 2026): located servers, SPRAWL-00 and the up-links,
+  hubs you've found and exits on your map. A `?` doesn't count. No diamond under a `?`, at a server or hub off your
+  map, or on a road with an unrevealed end. The picked runner's route stops at the first unrevealed place, their ring
+  is drawn only on a revealed one, and out of sight they have no mark: their card opens beside their Rail row.
 - **The Rail folds** to its head; runners stay off the Online list (it keeps friends, members and crew).
-- **Tooltip:** the handle; *Runner · <faction>*; class, level and what they're doing; then, muted, how you know them
-  and what they're after.
+- **Tooltip:** the handle; *Runner · <faction>*; class, level and what they're doing (*working a server on floor 1*
+  where you haven't located it); then, muted, how you know them and what they're after. Their own #net lines keep the
+  server's kind (*on a Lab on floor 1 now*).
 - **Colour:** paper white (`--bright`). Teal, red, amber, violet and steel keep their meanings; a runner hunting you is
   the one red.
 
-Rejected: a count tag per server with travelling dashes (*Counts*); runners in the Online list.
+Rejected: a count tag per server with travelling dashes (*Counts*); a diamond for every runner, side by side under a
+server; runners in the Online list.
 
 ## Meeting and hiring (picked)
 
@@ -97,7 +105,7 @@ make a dearer fee. No drawbacks for now.
 - **Party, never self.** Every trait helps the crew (you included) or the run. A runner's own power is their level and
   gear.
 - **Once per crew.** Two runners with the same trait don't stack; the crew gets its best version.
-- **The pool:** a few dozen runners per network, new ones arriving and old ones moving on over weeks. Runners with
+- **The pool:** eight runners per network, new ones arriving and old ones moving on over weeks. Runners with
   several starred traits are rare.
 
 | Trait | Does (MOO2) |

@@ -79,10 +79,11 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - player card: the *NET ID badge*;
   - collection log: the *Ledger*;
   - journals: one Ledger entry, a timeline over the writers, a document card on the first find (docs/journals.md);
-  - runners on the map: the *Diamonds* (every runner on the floor a small paper-white diamond under the server they're
-    at, hollow on the road; a click opens their card to hire them) and the *Rail* (a Runners list under Contracts that
-    folds away; the runner you pick gets their route and where they're heading); runners stay off the Online list
-    (docs/runners.md);
+  - runners on the map: the *Diamonds* (one small paper-white diamond under a place you've revealed that has runners,
+    how many beside it from two up, a hollow one each on the road; none under a ? or anywhere else you haven't
+    revealed; a lone diamond opens their card to hire them, a counted one the list of who's there) and the *Rail* (a
+    Runners list under Contracts that folds away; the runner you pick gets their route and where they're heading, as
+    far as you've revealed); runners stay off the Online list (docs/runners.md);
   - meeting and hiring runners: a paper-white tab on the room, Help / Step back on its card; cards with rows split by
     hairlines; traits as named chips, temperament first; standing as the *Tier bar* (the tier, a bar to the next); a
     hired runner's bar picked from their *Presets* (a tile each: name and how it plays, keys in its tooltip);
@@ -107,7 +108,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - the *View* background behind the monitor; keep the original city, with more detail at the same size;
   - card-first clicks on the rooms map; one click walks;
   - Roomy, the extra monitor size;
-  - a count of runners on every server; runners listed in the Online panel;
+  - a diamond for every runner, side by side under a server (one diamond and a count instead); runners listed in the
+    Online panel;
   - runner standing as pips or as the steps each tier opens; a runner's bar set in their Toolkit or key by key; traits
     as bare icons.
 - **The monitor** takes up most of the screen. UI scale is a setting, 100% by default.

@@ -1,7 +1,8 @@
 // The Rail (docs/runners.md, picked): the runners you know as a list under Contracts on the map, and the one you pick
 // drawn on it: a paper-white diamond with the handle, a dotted route through the servers they've passed, a dashed ring
 // on where they're heading. Paper white throughout (--bright); a runner hunting you (R3) is the one red.
-import { castOf, knownOf, runnerOf, stateOf, clsLabel, doing, shortPlace, headingOf, hash, TRAITS, standingOf, tierOf, busyOf, cantHire, feeOf, feePaid, cutOf, hired, clockOf, gainOf, PRESET_PLAY, PRESET_TIP } from './runners.mjs';
+// The map draws a runner only where you've revealed (runners.mjs revealed, inSight); the Rail gives the rest a floor.
+import { castOf, knownOf, runnerOf, stateOf, clsLabel, doing, shortPlace, headingOf, revealed, inSight, hash, TRAITS, standingOf, tierOf, busyOf, cantHire, feeOf, feePaid, cutOf, hired, clockOf, gainOf, PRESET_PLAY, PRESET_TIP } from './runners.mjs';
 import { FACTIONS } from './factions.mjs';
 import { glyph } from './glyphs.mjs';
 import { SUBS, SUBCLASS, ABILITIES, presetBar } from './data.mjs';
@@ -32,33 +33,52 @@ export function runnerRail(s, pick = null, shut = false) {
   return `<section class="rrail${shut ? ' shut' : ''}" aria-label="Runners"><h3 class="ct-head rr-head"><button type="button" class="rr-fold" data-rail-fold aria-expanded="${!shut}" title="${shut ? 'Show the runners you know' : 'Fold the runners away'}"><i class="rr-dia" aria-hidden="true"></i>Runners<small>${knownOf(s).length}</small><i class="rr-chev" aria-hidden="true">${shut ? '▸' : '▾'}</i></button></h3>${shut ? '' : rows}</section>`;
 }
 // The picked runner on the map, on the floor drawn (fl), in its map units (portrait: x and y swapped, as mapLayout).
+// Nothing while they're out of sight; the route runs back only as far as the first place you haven't revealed, and the
+// ring is drawn only on a revealed one.
 export function runnerMark(s, handle, fl, portrait = false) {
   const r = handle && runnerOf(s, handle);
   if (!r) return '';
   const st = stateOf(s, r);
-  if (st.floor !== fl) return '';
+  if (st.floor !== fl || !inSight(s, st)) return '';
   const g = st.g, P = (id) => { const n = g.nodes[id]; return n ? (portrait ? { x: n.y, y: n.x } : { x: n.x, y: n.y }) : null; };
   const a = P(st.pos.at), b = st.pos.next && P(st.pos.next), me = b ? { x: a.x + (b.x - a.x) * st.pos.f, y: a.y + (b.y - a.y) * st.pos.f } : a;
-  const pts = st.pos.passed.map(P).filter(Boolean).concat(b ? [me] : []), to = headingOf(st), ring = to ? P(to) : null;
+  const passed = st.pos.passed, from = passed.findLastIndex((id) => !revealed(s, g, id)) + 1;
+  const pts = passed.slice(from).map(P).filter(Boolean).concat(b ? [me] : []), to = headingOf(st), ring = to && revealed(s, g, to) ? P(to) : null;
   const f = (v) => Math.round(v * 10) / 10;
   const route = pts.length > 1 ? `<polyline class="mr-route" points="${pts.map((p) => `${f(p.x)},${f(p.y)}`).join(' ')}"/>` : '';
   return `<g class="mrunner${st.stage === 'down' ? ' down' : ''}" data-runner-mark="${esc(r.handle)}">${route}${ring ? `<circle class="mr-ring" cx="${f(ring.x)}" cy="${f(ring.y)}" r="22"/>` : ''}<g transform="translate(${f(me.x)} ${f(me.y - (b ? 0 : 16))})"><title>${esc(runnerTip(s, r, st).replace(/\n▸ /, ' '))}</title><path class="mr-dia" d="M0 -7 L7 0 L0 7 L-7 0 Z"/><text class="mr-name" y="-12" text-anchor="middle">${esc(r.handle)}</text></g></g>`;
 }
-// Every runner on the floor drawn (the picked one has runnerMark): a small paper-white diamond under the server they're
-// at, side by side; hollow on the road between servers. A click opens their card (app.js data-runner). Your crew is with
-// you, so isn't drawn.
-export function runnersMap(s, fl, pick = null, portrait = false) {
-  const here = castOf(s).filter((r) => r.handle !== pick && !hired(s, r.handle)).map((r) => ({ r, st: stateOf(s, r) })).filter((x) => x.st.floor === fl);
+// The runners the map draws on a floor: those in sight, less your crew (they're with you) and the picked one (runnerMark).
+export const runnersOn = (s, fl, pick = null) => castOf(s).filter((r) => r.handle !== pick && !hired(s, r.handle)).map((r) => ({ r, st: stateOf(s, r) })).filter((x) => x.st.floor === fl && inSight(s, x.st));
+// Those standing at one place (a slot of the floor's diagram), by handle.
+export const runnersAt = (s, fl, slot, pick = null) => runnersOn(s, fl, pick).filter((x) => !x.st.pos.next && x.st.pos.at === slot).sort((a, b) => a.r.handle.localeCompare(b.r.handle));
+// The runners in sight on the floor drawn (the picked one has runnerMark): one small paper-white diamond under a place
+// with runners, and how many beside it from two up; hollow, one each, on the road between two places. None where you
+// haven't revealed: under a ?, at a server or hub that isn't on your map, or on a road to one. A lone diamond opens
+// their card, a counted one the list of who's there (app.js data-runner, data-runners-at; open: the place whose list
+// is up). Your crew is with you, so isn't drawn.
+const DIA = 'M0 -4.5 L4.5 0 L0 4.5 L-4.5 0 Z';
+export function runnersMap(s, fl, pick = null, portrait = false, open = null) {
+  const here = runnersOn(s, fl, pick);
   if (!here.length) return '';
   const g = here[0].st.g, P = (id) => { const n = g.nodes[id]; return n ? (portrait ? { x: n.y, y: n.x } : { x: n.x, y: n.y }) : null; };
   const at = {};
   for (const x of here) if (!x.st.pos.next) (at[x.st.pos.at] ||= []).push(x);
   const f = (v) => Math.round(v * 10) / 10;
-  const dia = (x, p, road) => `<g class="mrun${road ? ' road' : ''}${x.st.stage === 'down' ? ' down' : ''}" data-runner="${esc(x.r.handle)}" role="button" tabindex="0" aria-label="${esc(x.r.handle)}" transform="translate(${f(p.x)} ${f(p.y)})"><title>${esc(runnerTip(s, x.r, x.st).replace(/\n▸ /, ' '))}</title><circle class="mrun-hit" r="7"/><path d="M0 -4.5 L4.5 0 L0 4.5 L-4.5 0 Z"/></g>`;
+  const dia = (x, p, road) => `<g class="mrun${road ? ' road' : ''}${x.st.stage === 'down' ? ' down' : ''}" data-runner="${esc(x.r.handle)}" role="button" tabindex="0" aria-label="${esc(x.r.handle)}" transform="translate(${f(p.x)} ${f(p.y)})"><title>${esc(runnerTip(s, x.r, x.st).replace(/\n▸ /, ' '))}</title><circle class="mrun-hit" r="7"/><path d="${DIA}"/></g>`;
+  const crowd = (id, list, p) => { const tip = `${list.length} runners at ${shortPlace(s, g, id)}: ${list.map((x) => x.r.handle).sort().join(', ')}.`; return `<g class="mrun crowd${id === open ? ' on' : ''}" data-runners-at="${esc(id)}" role="button" tabindex="0" aria-label="${esc(tip)}" transform="translate(${f(p.x)} ${f(p.y)})"><title>${esc(tip)}</title><rect class="mrun-hit" x="-13" y="-8" width="32" height="16"/><path transform="translate(-6 0)" d="${DIA}"/><text class="mrun-n" x="2">${list.length}</text></g>`; };
   let out = '';
-  for (const [id, list] of Object.entries(at)) { const c = P(id); if (c) list.forEach((x, i) => { out += dia(x, { x: c.x + (i - (list.length - 1) / 2) * 13, y: c.y + 30 }, false); }); }
+  for (const [id, list] of Object.entries(at)) { const c = P(id); if (c) out += list.length > 1 ? crowd(id, list, { x: c.x, y: c.y + 30 }) : dia(list[0], { x: c.x, y: c.y + 30 }, false); }
   for (const x of here.filter((y) => y.st.pos.next)) { const a = P(x.st.pos.at), b = P(x.st.pos.next); if (a && b) out += dia(x, { x: a.x + (b.x - a.x) * x.st.pos.f, y: a.y + (b.y - a.y) * x.st.pos.f }, true); }
   return `<g class="mruns">${out}</g>`;
+}
+// Who's at a place (a counted diamond opens it beside itself): the place and how many, then each runner a row (handle,
+// class and level); a click on one opens their card. Nothing once fewer than two are left there.
+export function runnersList(s, fl, slot) {
+  const list = slot ? runnersAt(s, fl, slot) : [];
+  if (list.length < 2) return '';
+  const rows = list.map(({ r, st }) => `<button type="button" class="rr-row${st.stage === 'down' ? ' down' : ''}" data-runner="${esc(r.handle)}" title="${esc(runnerTip(s, r, st))}" data-tt-kind="${esc(`Runner · ${FACTIONS[r.faction].short}`)}"><i class="rr-dia" aria-hidden="true"></i><span class="rr-txt"><b>${esc(r.handle)}</b></span><small class="rr-at">${esc(clsLabel(r, st.level))} ${st.level}</small></button>`).join('');
+  return `<section class="rcard rcrowd" id="crowd-pop" data-crowd="${esc(slot)}" aria-label="Runners at ${esc(shortPlace(s, list[0].st.g, slot))}"><button type="button" class="btn small rc-x" data-crowd-close title="Close">×</button><h3 class="ct-head rr-head"><i class="rr-dia" aria-hidden="true"></i>${esc(shortPlace(s, list[0].st.g, slot))}<small>${list.length}</small></h3>${rows}</section>`;
 }
 export const runnerFloor = (s, handle) => { const r = runnerOf(s, handle); return r ? stateOf(s, r).floor : null; };
 

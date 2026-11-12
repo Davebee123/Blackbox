@@ -36,7 +36,7 @@
 //   tier  the level tier's numbers (count, live, lead, mult, cap, dot, after, burn, hang), with an elite's or a
 //         boss's extra cap
 import { screened, sellingGavel, fbSlowed, callingNow, stopCall } from './floorbosses.mjs';
-import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, alliesOf, fxAnswer, fxOn, cooldownOf, armorTakes, ignoresArmor } from './combat.mjs';
+import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, alliesOf, fxAnswer, fxOn, cooldownOf, armorTakes, ignoresArmor, tellStarted } from './combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES } from './data.mjs';
 import { previewDamage, delayAttack, blocked, scaled, gearDamage } from './combat.mjs';
 import { raidDef } from './raid.mjs';
@@ -228,6 +228,7 @@ function say(s, t, p, next, n) {
   logTell(s.host || s, t); // the Codex tab: this tell, by name
   emit(s, 'telegraph', sayOf(s, t, p), { source: p.id, tell: t.id, kind: t.kind, at: next, name: label(t) });
   daemonsOn(s, 'told', { part: p.id }); // Lookout
+  if (t.kind !== 'mimic') tellStarted(s); // Notice Period (combat.mjs)
   if (t.kind === 'charge') daemonsOn(s, 'charge', { part: p.id }); // Lightning Rod
   const w = windowOf(s, t);
   if (w && w.from <= e.cycle) t.opened = e.cycle; // said inside its window: the line above says so
@@ -744,7 +745,7 @@ function landCopy(s, t, p, c) {
     return say('status', `Throttles you for ${cycles(c.cycles)}, so your hits deal ${Math.round(TELL.copy.throttled * 100)}%.`, { mark: 'throttled', missed: true });
   }
   if (c.kind === 'gift') {
-    p.armor = (p.armor || 0) + c.gift; p.maxArmor = Math.max(p.maxArmor || 0, p.armor); p.patchAt = null;
+    p.armor = (p.armor || 0) + c.gift; p.maxArmor = Math.max(p.maxArmor || 0, p.armor); p.patchAt = null; p.repatched = true; // Late Fee
     return say('patch', `re-arms to ${p.armor} ◆.`, { target: p.id, missed: true });
   }
   if (c.kind === 'heal') {
