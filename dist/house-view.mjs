@@ -6,8 +6,9 @@ import { W, H, YW, LADDER, WINDOW, SHACK, floorById, floorsOpen, nextFloor, plac
 import { achById } from './achievements.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-export const M = YW; // the yard either side of the walls
-const TW = W + 2 + 2 * M;
+const FENCE = 2; // the lot's chain-link fence, west of it
+export const M = FENCE + YW, MR = 10; // west of the walls: the fence and the lot; east: the pavement and its lamp
+const TW = M + W + 2 + MR;
 const IN = M + 1; // the first column inside the walls
 
 const grid = (rows) => Array.from({ length: rows }, () => Array(TW).fill(' '));
@@ -40,7 +41,12 @@ function floorLines(id, lowest) {
   if (id === 'subnet') for (let i = 0; i < 4; i++) put(g, 0, IN + 8 + i * 6, '[: :]');
   for (let c = M; c <= IN + W; c++) g[H][c] = '=';
   if (!lowest) g[H].splice(IN + LADDER.x, 3, '|', ' ', '|'); // the ladder's hole down
-  if (id === 'street') { const gravel = '.:'.repeat(M).slice(0, M); put(g, H, 0, gravel); put(g, H, IN + W + 1, gravel); }
+  if (id === 'street') {
+    put(g, H, 0, '.:'.repeat(M).slice(0, M)); // the lot's gravel
+    put(g, 1, 0, '.'); for (let r = 2; r < H; r++) put(g, r, 0, r % 2 ? '|/' : '|\\'); // its fence
+    put(g, H, IN + W + 1, '_'.repeat(MR)); // the pavement, and a street lamp on it
+    const lx = IN + W + 5; put(g, 0, lx - 1, '.-.'); put(g, 1, lx - 1, "'-'"); for (let r = 2; r < H; r++) put(g, r, lx, '|'); put(g, H - 1, lx - 1, '_|_');
+  }
   return text(g);
 }
 
@@ -52,7 +58,7 @@ const at = (b) => `--x:${b.x};--y:${b.y}`;
 function pieceMarkup(s, id, x, held) {
   return `<pre class="hs-piece${held ? ' held' : ''}" data-hs-piece="${id}" style="${at(boxOf(id, x))}" title="${esc(tipOf(s, id))}" data-tt-kind="${kindOf(id)}">${art(id)}</pre>`;
 }
-// Where pieces go on a floor (or a yard): its pieces, and the one in hand where it would land.
+// Where pieces go on a floor (or the lot): its pieces, and the one in hand where it would land.
 function spotMarkup(s, id, left, width, ui) {
   const here = Object.entries(placedOf(s)).filter(([p, [f]]) => f === id && FURNITURE[p]);
   const pieces = here.map(([p, [, x]]) => pieceMarkup(s, p, x, ui.held === p)).join('');
@@ -61,7 +67,7 @@ function spotMarkup(s, id, left, width, ui) {
   return `<div class="hs-in${ui.held ? ' hs-aim' : ''}" data-hs-floor="${id}" style="left:${left}ch;width:${width}ch" aria-label="${esc(floorById(id).name)}">${pieces}${ghost}</div>`;
 }
 function floorMarkup(s, id, lowest, ui) {
-  const yard = id === 'street' ? spotMarkup(s, 'west', 0, YW, ui) + spotMarkup(s, 'east', IN + W + 1, YW, ui) : '';
+  const yard = id === 'street' ? spotMarkup(s, 'west', FENCE, YW, ui) : '';
   return `<div class="hs-floor" data-floor="${id}"><pre class="hs-shell" aria-hidden="true">${esc(floorLines(id, lowest))}</pre>${spotMarkup(s, id, IN, W, ui)}${yard}</div>`;
 }
 const nextMarkup = (f) => `<div class="hs-next" style="margin-left:${M}ch;width:${W + 2}ch" title="${esc(`???: \n▸ Earn ${f.at.toLocaleString('en-US')} achievement points.`)}" data-tt-kind="Floor"></div>`;

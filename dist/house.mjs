@@ -2,9 +2,9 @@
 // only: nothing here touches play. Every piece comes from an achievement (content/furniture.mjs); a floor opens at a
 // number of achievement points (FLOORS). Pure functions of state; the page is house-view.mjs.
 //
-// Each floor is the same grid: W columns by H rows inside its walls (a yard YW columns), row 0 under its ceiling, the floor under row
+// Each floor is the same grid: W columns by H rows inside its walls (the lot YW columns), row 0 under its ceiling, the floor under row
 // H - 1. A floor piece stands on the floor (its bottom row on row H - 1); a wall piece hangs from row 1. Nothing
-// overlaps another piece, a window or the ladder (blockers). A yard piece stands only in the yard; a floor piece may
+// overlaps another piece, a window or the ladder (blockers). A yard piece stands only in the lot; a floor piece may
 // go out there too. The geometry never depends on which floors are open, so a
 // piece placed stays valid.
 //
@@ -30,9 +30,10 @@ export const STACK = ['shack', 'loft', 'street', 'cellar', 'bunker', 'subnet'];
 export const LADDER = { x: W - 4, w: 3 };
 export const WINDOW = { x: 6, y: 1, w: 8, h: 3 };
 export const SHACK = 26; // the shack's right wall; the terrace beyond it has no back wall
-// The yard: open ground either side of the street floor, there from the start. YW columns each, H rows over the gravel.
-export const YW = 16;
-export const YARDS = [{ id: 'west', name: 'Yard', yard: true }, { id: 'east', name: 'Yard', yard: true }];
+// The lot: open ground west of the street floor, there from the start, a chain-link fence at its far side. YW columns,
+// H rows over the gravel. East of the walls is the pavement, where nothing goes.
+export const YW = 32;
+export const YARDS = [{ id: 'west', name: 'Lot', yard: true }];
 export const widthOf = (floor) => (YARDS.some((y) => y.id === floor) ? YW : W);
 
 export const floorsOpen = (s) => FLOORS.filter((f) => pointsOf(s) >= f.at);
@@ -42,6 +43,13 @@ export const isOpen = (s, id) => YARDS.some((f) => f.id === id) || floorsOpen(s)
 export function houseOf(s) {
   const h = (s.house ||= {});
   if (!h.placed) h.placed = { mattress: ['street', 2] };
+  // A piece left on a ground that's gone (the east yard, before the lot): into the lot where it fits, else put away.
+  for (const [id, [floor]] of Object.entries(h.placed)) {
+    if (floorById(floor) && FURNITURE[id]) continue;
+    delete h.placed[id];
+    const x = FURNITURE[id] && Array.from({ length: YW }, (_, i) => i).find((i) => fits(s, id, 'west', i));
+    if (x != null) h.placed[id] = ['west', x];
+  }
   return h;
 }
 export const owns = (s, id) => !!FURNITURE[id] && (!FURNITURE[id].from || earned(s, FURNITURE[id].from));
