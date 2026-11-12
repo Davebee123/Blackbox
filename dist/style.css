@@ -81,6 +81,8 @@ code { font-family: var(--mono); color: var(--amber); }
 .modules { display: flex; gap: 2px; }
 .modules button { color: var(--muted); position: relative; }
 .modules button[aria-current='page'] { color: var(--bright); border-bottom: 2px solid var(--amber); border-radius: 0; }
+/* A faint slash between the tabs that are showing (desktop; the phone's tabs have their own layout). */
+@media (min-width: 901px) { .modules { gap: 9px; } .modules button:not([hidden]) ~ button:not([hidden])::before { content: '/'; position: absolute; left: -8px; top: 50%; transform: translateY(-50%); font: 400 12px var(--mono); color: rgba(241, 185, 47, 0.3); pointer-events: none; } }
 .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--hot); margin-left: 6px; vertical-align: middle; }
 .meters { display: flex; gap: 22px; margin-left: auto; align-items: center; }
 .meter { display: flex; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums; }
