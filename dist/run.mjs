@@ -30,6 +30,7 @@ import { masteryCommand, developerMastery } from './mastery.mjs';
 import { developerPager } from './pager.mjs';
 import { casingCommand, districtCommand } from './casing.mjs';
 import { terminalCommand } from './terminal.mjs';
+import { houseCommand } from './house.mjs';
 import { say, muted } from './channel.mjs';
 import { consortiumCommand, isGround, arrive, memberServers } from './consortium.mjs';
 import { isLive, joinCost, liveCount, memoryCap, memoryCommand } from './memory.mjs';
@@ -758,6 +759,7 @@ export function play(s, input) {
   if (word === 'casing' && rest !== 'on' && rest !== 'off') { const first = s.serial; casingCommand(s, text); return since(s, first); } // casing.mjs: colourway, plate, stickers (casing on|off is app.js's)
   if (word === 'district') { const first = s.serial; districtCommand(s, text); return since(s, first); } // casing.mjs: the window's district
   if (word === 'terminal' && !/^preview\b/.test(rest)) { const first = s.serial; terminalCommand(s, text); return since(s, first); } // terminal.mjs: boot, prompt, cursor (terminal preview is app.js's)
+  if (word === 'house') { const first = s.serial; houseCommand(s, text); return since(s, first); } // house.mjs: place and store furniture (in the game, house alone opens the page: app.js)
   if (word === 'achievements' || word === 'achieve') { const first = s.serial; achieveCommand(s, text); return since(s, first); } // achievements.mjs
   if (word === 'mastery') { const first = s.serial; masteryCommand(s, text, { emit, warn, classOf }); return since(s, first); } // mastery.mjs: an ability effect's tier
   if (/^developer mastery /.test(text)) { const first = s.serial; developerMastery(s, text, { emit, warn, classOf }); return since(s, first); }

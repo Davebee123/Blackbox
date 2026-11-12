@@ -212,6 +212,7 @@ comment saying what it does.
 | `dist/comms.mjs`, `dist/pager.mjs`, `dist/pager-view.mjs`, `dist/pager.css` | The pager: world events as entries, which ones ask something of you, and the tray. |
 | `dist/casing.mjs`, `dist/casing-view.mjs`, `dist/casing.css` | Casing cosmetics: the monitor's colourway and plate, stickers anywhere on its plastic, props on the desk or on top. |
 | `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on Rig → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |
+| `dist/house.mjs`, `dist/house-view.mjs`, `dist/house.css`, `dist/content/furniture.mjs` | Your house on Rig → **House**: floors opened by achievement points, furniture from achievements, placed by click. |
 | `dist/recap.mjs` | The death recap on the Disconnected card. |
 | `dist/uiscale.mjs` | UI scale: the whole screen drawn larger or smaller. |
 | `dist/form.mjs`, `dist/phone-shell.mjs`, `dist/sheet.mjs`, `dist/phone.css` | The phone: the one "is this a phone" answer (`<html data-form>`), its tab bar and More, the one bottom sheet (every pop-up on a phone: app.js `phPops` lifts each into it), every phone rule, the fight on one screen, the maps full bleed (docs/phone-plan.md). |
@@ -318,7 +319,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/floor-items.md`](docs/floor-items.md) | Floors 2–8's sets and uniques, boss by boss (designed). |
 | [`docs/builds.md`](docs/builds.md) | Builds: skill affixes on gear and combos (design, not built). |
 | [`docs/item-builds.md`](docs/item-builds.md) | Item builds: combos the uniques and sets already make, what doesn't stack, loops to watch. |
-| [`docs/house.md`](docs/house.md) | Your house and its furniture (decided, not built). |
+| [`docs/house.md`](docs/house.md) | Your house and its furniture (built: GAME_RULES.md "Your house"). |
 | [`docs/leanings.md`](docs/leanings.md) | Leanings: a server's one positive rule (built: GAME_RULES.md "Server kinds, specials and quirks"). |
 | [`docs/server-specials.md`](docs/server-specials.md) | Server specials: an upside, a cost and the programs for each (picked, not built). |
 | [`docs/threads.md`](docs/threads.md), [`docs/director.md`](docs/director.md) | Threads, and the event director. |

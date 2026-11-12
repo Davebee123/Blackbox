@@ -17,6 +17,7 @@ import { uniqueItem, seeded } from './gear.mjs';
 import { tickAchievements, rewardStickers, bannersOf, pointsOf, shownAchievements, achievements, DEED_STICKERS } from './achievements.mjs';
 import { masteredN } from './mastery.mjs';
 import { syncSlots } from './collection.mjs';
+import { tickHouse } from './house.mjs';
 
 export const PROFILE = { rows: 4, cols: 24, plan: 60 };
 const clock = () => hooks.now?.() ?? Date.now();
@@ -224,6 +225,7 @@ export function tickProfile(s) {
   hooks.earnTick?.(s); // the earned pieces' floor goals (earned.mjs), paid before the log stamps them
   (hooks.syncCollection || syncSlots)(s); // the collection log's new slots and full entries (collection-log.mjs), before the achievements that read them
   tickAchievements(s);
+  tickHouse(s); // a floor of your house the points just opened (house.mjs)
   p.seen = s.serial || 0;
 }
 

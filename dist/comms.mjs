@@ -69,6 +69,8 @@ const MAP = {
   title: (e) => ({ kind: 'standing', label: 'Title', from: 'Profile', text: e.message.replace(/^New titles?: /, ''), go: 'profile', beep: false }),
   // An achievement earned (achievements.mjs): a quiet line, no beep, like a title. It opens the achievement.
   achievement: (e) => ({ kind: 'standing', label: 'Achievement', from: 'Profile', text: e.message.replace(/^Achievements?: /, ''), go: e.achievements?.length ? `achieve:${e.achievements[0]}` : 'achieve', beep: false }),
+  // A floor of your house opened (house.mjs): a quiet line, like an achievement. It opens the house.
+  house: (e) => ({ kind: 'standing', label: 'House', from: 'Rig', text: e.message.replace(/^House: /, ''), go: 'house', beep: false }),
   // The collection log's first time for a slot (collection.mjs, combat.mjs): a quiet line. It opens the log on its entry.
   collected: (e) => ({ kind: 'standing', label: 'Collection', from: 'Codex', text: e.message.replace(/^Collection: /, ''), go: e.go || 'log', beep: false }),
   logged: (e) => ({ kind: 'standing', label: 'Collection', from: 'Codex', text: e.message.replace(/^Collection: /, ''), go: e.go || 'log', beep: false }),

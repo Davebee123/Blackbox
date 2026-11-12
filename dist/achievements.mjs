@@ -24,6 +24,7 @@ import EARN from './content/earned.mjs';
 const earnedSet = (x) => (x.pieces || []).every((p) => EARN[p]);
 import { titleById, myProfile } from './profile.mjs';
 import { masteredN, keyOnesN, kitBest } from './mastery.mjs';
+import { FURNITURE, furnitureFrom } from './content/furniture.mjs';
 
 const clock = () => hooks.now?.() ?? Date.now();
 export const POINTS = [5, 10, 25, 50];
@@ -38,7 +39,7 @@ export const CATEGORIES = [
   { id: 'feat', name: 'Feats' },
 ];
 // What a fight counts toward (fightOver) and what the log does (tickAchievements).
-const COUNTERS = ['elites', 'daemon', 'crew', 'contracts', 'takeovers'];
+const COUNTERS = ['elites', 'daemon', 'crew', 'contracts', 'takeovers', 'cascade', 'quarantine', 'traced'];
 // The few stickers an achievement brings of its own (the rest come from profile.mjs stickersOf, as before).
 const AMBER = '#f1b92f';
 
@@ -60,6 +61,9 @@ const setDone = (s, id) => piecesOf(id).length > 0 && piecesOf(id).every((p) => 
 const mappedN = (s) => (s.locations || []).filter((l) => l.floorplan?.mapped && !l.member).length;
 const takenN = (s) => Math.max(s.achievements?.n?.takeovers || 0,(s.locations || []).filter((l) => l.takenOver && !l.member).length);
 const floor = (s) => s.floors?.reached || 1;
+// Servers traced: the log's count since this was kept, or the servers on your map, whichever is more.
+const tracedN = (s) => Math.max(s.achievements?.n?.traced || 0, (s.locations || []).filter((l) => !l.member && !l.zone).length);
+const hours = (s) => Math.floor((s.pace?.ms || 0) / 3600000);
 const top = (s, f) => (s.standing?.[f] ?? -1) >= REP_TIERS[3];
 const level = (s, c) => s.hackers?.[c]?.level || 0;
 // A class's subclass, read without touching the save (combat.mjs subOf makes a class's record on first look).
@@ -104,6 +108,8 @@ const listed = () => (LIST ||= [ // the list as written; achievements() (below, 
   A('c-elites', 'combat', 'Big Game', 'Beat 25 ◆ CREW elites.', 10, { progress: (s) => of(count('elites')(s), 25) }),
   A('c-relayking', 'combat', 'Uncrowned', 'Beat RELAY-KING.', 10, { has: (s) => titleHas(s, 'uncrowner'), reward: { title: 'uncrowner' } }),
   A('c-repoman', 'combat', 'Repossessed', 'Beat REPO MAN.', 10, { has: (s) => titleHas(s, 'repossessor'), reward: { title: 'repossessor' } }),
+  A('c-heatsink', 'combat', 'Heat Death', 'Beat HEATSINK.', 10, { has: (s) => won(s, 'heatsink') }),
+  A('c-coldwallet', 'combat', 'Hot Wallet', 'Beat COLDWALLET.', 10, { has: (s) => won(s, 'coldwallet') }),
   A('c-choir', 'combat', 'Dead Air', 'Silence the HOLLOW CHOIR.', 25, { hidden: true, hint: 'Something on the net is singing.', has: (s) => titleHas(s, 'lastnote'), reward: { title: 'lastnote' } }),
   A('c-crowns', 'combat', 'Every Crown', 'Beat RELAY-KING, REPO MAN, THE FOREMAN, HEATSINK and COLDWALLET.', 25, { progress: (s) => of(CROWNS.filter((b) => won(s, b)).length, CROWNS.length), reward: { banner: 'crown' } }),
   A('c-lairborn', 'combat', 'Lair-born', 'Beat a lair boss.', 10, { group: 'Lairs', has: (s) => titleHas(s, 'lairborn'), reward: { title: 'lairborn' } }),
@@ -114,6 +120,10 @@ const listed = () => (LIST ||= [ // the list as written; achievements() (below, 
   A('x-taken', 'explore', 'Change of Hands', 'Take over a server.', 10, { has: (s) => takenN(s) >= 1 }),
   A('x-taken-10', 'explore', 'Landlord', 'Take over 10 servers.', 25, { progress: (s) => of(takenN(s), 10) }),
   A('x-hubs', 'explore', 'Five Points', 'Find every faction hub.', 10, { progress: (s) => of(FACTION_IDS.filter((f) => hubFound(s, f)).length, FACTION_IDS.length) }),
+  A('x-traced', 'explore', 'Bloodhound', 'Trace 100 servers.', 25, { progress: (s) => of(tracedN(s), 100) }),
+  A('x-hours', 'explore', "Squatter's Rights", 'Play for 100 hours.', 25, { progress: (s) => of(hours(s), 100) }),
+  A('x-cascade', 'explore', 'Rack Down', 'Win Cascade 25 times.', 10, { group: 'Boards', progress: (s) => of(count('cascade')(s), 25) }),
+  A('x-quarantine', 'explore', 'Contained', 'Win Quarantine 25 times.', 10, { group: 'Boards', progress: (s) => of(count('quarantine')(s), 25) }),
   A('x-threads', 'explore', 'Loose Ends', 'Finish 5 threads.', 10, { progress: (s) => of((s.threads?.list || []).filter((t) => t.state === 'done').length, 5) }),
   ...Object.entries(FLOOR_ACH).map(([n, [name, pts]]) => A('x-floor-' + n, 'explore', name, `Reach floor ${n}, ${FLOORS[n - 1].name}.`, pts, { group: 'Floors', has: (s) => floor(s) >= Number(n) || (n === '5' && titled(s, 'deepwalker')), reward: { sticker: 'floor-' + n, ...(n === '5' ? { title: 'deepwalker' } : {}), ...(n === '8' ? { casing: 'matte' } : {}) } })),
   // ---------- Collection ----------
@@ -133,6 +143,7 @@ const listed = () => (LIST ||= [ // the list as written; achievements() (below, 
   A('f-couriers', 'faction', "Courier's Bane", 'Intercept 10 couriers.', 10, { progress: (s) => of(deeds(s).couriers || 0, 10), has: (s) => titleHas(s, 'couriersbane'), reward: { title: 'couriersbane' } }),
   A('f-hunts', 'faction', 'Tracker', 'Collect 5 bounty hunts.', 10, { progress: (s) => of(deeds(s).hunts || 0, 5), has: (s) => titleHas(s, 'tracker'), reward: { title: 'tracker' } }),
   A('f-feuds', 'faction', 'Feudbreaker', 'Win 5 feuds.', 25, { progress: (s) => of(deeds(s).feuds || 0, 5), has: (s) => titleHas(s, 'feudbreaker'), reward: { title: 'feudbreaker' } }),
+  A('f-firstjob', 'faction', 'Clocked In', 'Finish a LOWLIGHT job.', 5, { has: (s) => (s.mail?.jobs || []).some((j) => j.done && j.story !== undefined) }),
   A('f-contracts', 'faction', 'On Retainer', 'Deliver 25 contracts.', 10, { progress: (s) => of(count('contracts')(s), 25) }),
   // ---------- Classes ----------
   A('cl-sub', 'class', 'Specialist', 'Pick a subclass.', 5, { has: (s) => Object.keys(ARCHETYPES).some((c) => picked(s, c)) }),
@@ -165,6 +176,7 @@ const listed = () => (LIST ||= [ // the list as written; achievements() (below, 
   A('t-solo', 'feat', 'Lone Wolf', 'Beat a ◆ CREW elite with no crew beside you.', 25, { has: flag('t-solo'), reward: { sticker: 'a-solo' } }),
   A('t-norest', 'feat', 'No Rest', 'Map a server on a visit in which you never rest.', 25, { has: (s) => (s.locations || []).some((l) => l.floorplan?.mapped && l.floorplan.mappedRest === false) }),
   A('t-thread', 'feat', 'By a Thread', 'Win a fight with under 5% of your health left.', 10, { hidden: true, hint: 'Closer than it looked.', has: flag('t-thread'), reward: { sticker: 'a-thread' } }),
+  A('t-onesignal', 'feat', 'Hang In There', 'Win a fight with 1 Signal left.', 25, { hidden: true, hint: 'Closer than a thread.', has: flag('t-onesignal') }),
 ].map((a) => ({ ...a, has: a.has || ((s) => { const [n, N] = a.progress(s); return n >= N; }) })));
 export const achById = (id) => achievements().find((a) => a.id === id) || null;
 export const pointsOf = (s) => achievements().reduce((n, a) => n + (earned(s, a.id) ? a.pts : 0), 0);
@@ -182,6 +194,8 @@ export function rewardText(a) {
   if (r.district) out.push(`the window district ${DISTRICT_NAMES[r.district] || r.district}`);
   if (r.prop) out.push(`a desk prop, the ${PROP_NAMES[r.prop] || r.prop}`);
   out.push(...terminalRewardWords(a.id)); // a boot sequence, a prompt, a cursor: the block at the end of this file
+  const piece = furnitureFrom(a.id); // a piece for your house (content/furniture.mjs)
+  if (piece) out.push(`${FURNITURE[piece].name.replace(/^(?!The )/, 'the ').replace(/^The /, 'the ')} for your house`);
   return out.length ? `Rewards ${out.length > 1 ? `${out.slice(0, -1).join(', ')} and ${out.at(-1)}` : out[0]}.` : '';
 }
 // The deed stickers you've earned (profile.mjs stickersOf adds them to the rest).
@@ -240,6 +254,8 @@ export function tickAchievements(s, now = clock()) {
     if (e.id <= S.seen) continue;
     if (e.type === 'contract-done') S.n.contracts++;
     if (e.type === 'takeover') S.n.takeovers++;
+    if (e.type === 'puzzle-end' && e.won && (e.kind === 'cascade' || e.kind === 'quarantine')) S.n[e.kind]++;
+    if (e.type === 'located' && !e.hub) S.n.traced++;
   }
   S.seen = s.serial || 0;
   if (S.record) { const n = S.record; delete S.record; S.seen = emit(s, 'achievement', `Achievements: ${n} earned from your record.`, { achievements: [], record: n }).id; }
@@ -274,6 +290,7 @@ function noteFight(s, e, result) {
   if (e.virus.elite && party === 1 && !e.runners) F['t-solo'] = 1; // a runner you helped was beside you
   const d = defender(s);
   if (d?.max && d.integrity > 0 && d.integrity / d.max < 0.05) F['t-thread'] = 1;
+  if (d?.max && d.integrity > 0 && Math.ceil(d.integrity) <= 1) F['t-onesignal'] = 1;
   // A routine you made or confirmed for this virus (routines.mjs confirmed), that fired and never threw.
   const body = e.virus.strain || e.virus.family, key = picked(s, classOf(s)) || classOf(s);
   if ((m.program || 0) >= 5 && s.programs?.by?.[key]?.routines?.[body]?.confirmed && !Object.keys(e.program?.thrown || {}).length) F['t-program'] = 1;

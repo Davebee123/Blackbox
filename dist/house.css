@@ -1,0 +1,34 @@
+/* Rig → House (house-view.mjs): the cutaway, dim; the furniture in the text colour; the picker's tiles. */
+.hs-page { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 420px); gap: var(--s5); align-items: start; }
+.hs-card { overflow: hidden; }
+.hs-scroll { overflow-x: auto; }
+.hs-house { --hs-lh: 1.25em; margin: 0 auto; padding: var(--s4) 0; font: 500 15px/1.25 var(--mono); user-select: none; }
+.hs-house pre { margin: 0; font: inherit; line-height: var(--hs-lh); background: none; border: 0; padding: 0; white-space: pre; }
+.hs-shell { overflow: visible; color: var(--dim); }
+.hs-floor { position: relative; }
+.hs-in { position: absolute; top: 0; height: calc(6 * var(--hs-lh)); }
+.hs-in.hs-aim { cursor: crosshair; }
+.hs-piece { position: absolute; left: calc(var(--x) * 1ch); top: calc(var(--y) * var(--hs-lh)); overflow: visible; color: var(--text); cursor: grab; touch-action: none; }
+.hs-piece:hover { color: var(--text); text-shadow: 0 0 6px color-mix(in srgb, var(--text) 35%, transparent); }
+.hs-in.hs-aim .hs-piece { pointer-events: none; } /* a piece in hand: no tooltips under it, and a click is the spot */
+.hs-piece.held { opacity: 0.3; }
+.hs-ghost { opacity: 0.6; pointer-events: none; }
+.hs-ghost.no { opacity: 0.18; }
+.hs-next { height: calc(7 * var(--hs-lh)); border: 1px dashed var(--line); border-radius: 2px; box-sizing: border-box; cursor: help; }
+
+.hs-pick h2 { display: flex; align-items: baseline; gap: var(--s3); }
+.hs-count { font: 600 12px var(--mono); color: var(--muted); }
+.hs-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: var(--s3); }
+.hs-tile { display: grid; align-content: space-between; justify-items: start; gap: var(--s2, 4px); min-height: 84px; padding: 8px; background: var(--inset); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-card); font: 600 11px var(--mono); text-align: left; cursor: grab; user-select: none; }
+.hs-tile[aria-pressed='true'] { border-color: var(--amber); color: var(--amber); }
+.hs-tile.out:not([aria-pressed='true']) { color: var(--muted); }
+.hs-tile.out .hs-mini { opacity: 0.45; }
+.hs-tile.locked { cursor: help; border-style: dashed; color: var(--dim); }
+.hs-tile.locked small { font: 500 10px/13px var(--mono); color: var(--dim); }
+.hs-mini { margin: 0; max-width: 100%; overflow: hidden; font: 500 8px/9px var(--mono); white-space: pre; color: inherit; background: none; border: 0; padding: 0; }
+.hs-tile.locked .hs-mini { opacity: 0.4; }
+
+@media (max-width: 900px) {
+  .hs-page { grid-template-columns: minmax(0, 1fr); }
+  .hs-house { font-size: clamp(6px, calc((100vw - 56px) / 47), 15px); }
+}

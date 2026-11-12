@@ -2573,31 +2573,47 @@ from the handle and when you've been on since. Explanations are tooltips.
 
 ### Achievements (achievements.mjs)
 
-What you've done, kept for good, WoW style: **94 achievements, 1,740 points** (5, 10, 25 or 50 each) in eight
+What you've done, kept for good, WoW style: **105 achievements, 1,920 points** (5, 10, 25 or 50 each) in eight
 categories. Every cosmetic reward comes from one: titles, stickers, banners, casing colourways, window districts, desk
-props, boots, prompts and cursors. None changes a number.
+props, boots, prompts, cursors and the house's furniture. None changes a number.
 
 - **Checked cheaply:** every second, only the ones not yet earned, each a look at state the game already keeps; what
   only a fight knows is noted as the fight ends. A loss counts for nothing. Nothing is time-limited or missable.
 - **Earning one** is a quiet pager line and a #net line naming it (and the title it brings). No new sound.
 - **The page:** Rig → **Achievements** (`achievements`): the categories down the left with their bars, *Summary*
   first; each achievement's points on a medal, its bar while under way, what it brings shown as itself, and once earned
-  the date and **Pin** (up to three on your card; `achieve pin|unpin <name>`). Its rule is its tooltip. Three are
+  the date and **Pin** (up to three on your card; `achieve pin|unpin <name>`). Its rule is its tooltip. Four are
   **hidden** (*???* and a hint).
 - An older save gets what it has already done on load, quietly, in one pager line.
 
 | Category | Achievements (points): deed → reward |
 |---|---|
-| Combat (17) | Process Killer (10): win 100 fights → casing Beige box. Long Uptime (10): win a fight of 20+ cycles → title *the Patient*, boot POST, desk prop Coffee mug. Big Game (10): beat 25 ◆ CREW elites. Uncrowned (10): beat RELAY-KING → *Uncrowner*. Repossessed (10): beat REPO MAN → *Repossessor*. Dead Air (25, hidden): silence the HOLLOW CHOIR → *of the Last Note*. Every Crown (25): beat RELAY-KING, REPO MAN and the farm's three → banner Crown, window Tar Beach. **Lairs:** Lair-born (10): beat a lair boss → *Lair-born*; then 10 each for each of the nine lair bosses → its sticker |
-| Exploration (13) | Cartographer (5): Map a server → cursor Underline. Mapper (25): Map 20 → *Mapper*, window The Stacks. Change of Hands (10), Landlord (25): take over 1 / 10 servers. Five Points (10): find every hub → desk prop Keycard. Loose Ends (10): finish 5 threads. **Floors:** reach floors 2 to 8 → stickers F2–F8 (Down the Line also window Backhaul; Core Sample, floor 5, *Deepwalker*; Rock Bottom, floor 8, 50 points and casing Matte black) |
+| Combat (19) | Process Killer (10): win 100 fights → casing Beige box, Car on blocks. Long Uptime (10): win a fight of 20+ cycles → title *the Patient*, boot POST, desk prop Coffee mug. Big Game (10): beat 25 ◆ CREW elites. Uncrowned (10): beat RELAY-KING → *Uncrowner*, Relay throne. Repossessed (10): beat REPO MAN → *Repossessor*, Repossessed armchair. Heat Death (10): beat HEATSINK → Hashboard heater. Hot Wallet (10): beat COLDWALLET → Cold-safe planter. Dead Air (25, hidden): silence the HOLLOW CHOIR → *of the Last Note*. Every Crown (25): beat RELAY-KING, REPO MAN and the farm's three → banner Crown, window Tar Beach. **Lairs:** Lair-born (10): beat a lair boss → *Lair-born*; then 10 each for each of the nine lair bosses → its sticker |
+| Exploration (17) | Cartographer (5): Map a server → cursor Underline, Milk-crate desk. Bloodhound (25): trace 100 servers → Mystery toilet. Squatter's Rights (25): play for 100 hours → the cat. **Boards:** Rack Down (10), Contained (10): win Cascade / Quarantine 25 times → CRT aquarium / Quarantine lamp. Mapper (25): Map 20 → *Mapper*, window The Stacks. Change of Hands (10), Landlord (25): take over 1 / 10 servers → Mailbox / TO LET sign. Five Points (10): find every hub → desk prop Keycard. Loose Ends (10): finish 5 threads → Washing line. **Floors:** reach floors 2 to 8 → stickers F2–F8 (Down the Line also window Backhaul; Core Sample, floor 5, *Deepwalker*; Rock Bottom, floor 8, 50 points and casing Matte black) |
 | Collection (26) | Full Page (10): fill an entry in the collection log → *the Thorough*. Family Album (25): Ransomware's, Worm's or Ghostroot's → sticker. Floor Plan (25): a floor's → sticker. Gold Star (5): find a unique. Collector (25): find 25 → *Collector*, desk prop Floppy stack. Curator (50): find 100 → banner Vault door. Assembled (10): assemble a faction piece → *the Assembler*. Five of a Kind (50): all five. Matched (10): complete a set → *the Matched*, prompt Titled. **Sets:** complete each general set → its sticker (10; Mesh, Deep Archive and Bedrock 25) |
-| Factions (9) | Reach each faction's top tier (25 each) → *of Halcyon* (and so on), its sticker, its casing colourway, its boot and the Root prompt (On the Signal also window Coldline). Courier's Bane (10): intercept 10 couriers. Tracker (10): collect 5 bounty hunts. Feudbreaker (25): win 5 feuds. On Retainer (10): deliver 25 contracts |
+| Factions (10) | Reach each faction's top tier (25 each) → *of Halcyon* (and so on), its sticker, its casing colourway, its boot and the Root prompt (On the Signal also window Coldline; Preferred Customer also Claims cabinet, Cantor Choir pew). Clocked In (5): finish a LOWLIGHT job → Crew couch. Courier's Bane (10): intercept 10 couriers → Courier's bike. Tracker (10): collect 5 bounty hunts. Feudbreaker (25): win 5 feuds. On Retainer (10): deliver 25 contracts |
 | Classes (14) | Specialist (5): pick a subclass → prompt Two-line. Polyglot (25): all four classes to 10. Each class to 50 (50 each) → *the Hammer*, *the Wall*, *the Quiet*, *the Conductor*. **Mastery:** Second Nature (10): an ability at Mastery 3 → sticker Mastery 3; Muscle Memory (25): five → *the Virtuoso*; First Principles (25): Bash, Ban, Poke and Ping → banner Key one; Full Repertoire (50): key 1, the core and a whole subclass line → sticker Repertoire. **Tier sets:** complete each (25) → its sticker |
 | Daemons (5) | Process Table (10): find 10 → cursor Beam. Pandemonium (50): find all → banner Pandemonium. Full House (10): slot 4 at once. Background Process (10): daemons act 500 times. Unattended (10): win a fight in which they act 10 times |
-| Co-op (5) | Party Line (5), Full Stack (10): win with a crewmate / a crew of 3 beside you. Drop-in (10): win a fight a consortium member dropped into. Farmhand (25): beat the farm's three → *Farmhand*. On the Grid (25): a consortium of 12 servers → banner The grid |
-| Feats (8) | Untouchable (10): win 8+ cycles without damage → casing Smoked, desk prop Cactus. Short Circuit (10): interrupt 3 moves in a fight → prompt Arrow. Open Book (25): read every tell in a fight of 4+. Chain Reaction (25, hidden): break every part of a 3+ part virus in one cycle → sticker Chain. Zero Exceptions (25): win with a routine of yours that never threw → sticker 0 exceptions, prompt Lambda, desk prop Rubber duck. Lone Wolf (25): beat a ◆ CREW elite solo → sticker Solo. No Rest (25): Map a server on a visit you never rest → boot Minimal. By a Thread (10, hidden): win under 5% health → sticker <5%, boot Corrupted, desk prop Lucky die |
+| Co-op (5) | Party Line (5), Full Stack (10): win with a crewmate / a crew of 3 beside you (Party Line → Oil-drum grill). Drop-in (10): win a fight a consortium member dropped into. Farmhand (25): beat the farm's three → *Farmhand*. On the Grid (25): a consortium of 12 servers → banner The grid |
+| Feats (9) | Untouchable (10): win 8+ cycles without damage → casing Smoked, desk prop Cactus. Short Circuit (10): interrupt 3 moves in a fight → prompt Arrow. Open Book (25): read every tell in a fight of 4+. Chain Reaction (25, hidden): break every part of a 3+ part virus in one cycle → sticker Chain. Zero Exceptions (25): win with a routine of yours that never threw → sticker 0 exceptions, prompt Lambda, desk prop Rubber duck. Lone Wolf (25): beat a ◆ CREW elite solo → sticker Solo. No Rest (25): Map a server on a visit you never rest → boot Minimal. By a Thread (10, hidden): win under 5% health → sticker <5%, boot Corrupted, desk prop Lucky die. Hang In There (25, hidden): win on 1 Signal → HANG IN THERE |
 
 `developer achieve <id|all|reset>` (developer mode).
+
+### Your house (house.mjs)
+
+Rig → **House** (`house`): a cutaway of a tenement, floors stacked, a yard either side, and ASCII furniture to put in
+it. Cosmetic only (docs/house.md).
+
+- **Floors** open with achievement points: the street floor and the roof from the start, then the Loft (50), the
+  Cellar (200), the Shack on the roof, its right part a terrace (450), the Bunker (800) and the Subnet (1,200). The next
+  floor is a dotted outline where it will go; its tooltip says the points. A floor opening is one quiet pager line.
+- **The yard:** the ground either side of the street floor, open from the start. Yard pieces stand only there; a
+  floor piece can go out too, a wall piece can't.
+- **Furniture:** 20 pieces (6 for the yard), each from an achievement (the bare mattress is yours from the start, already out). The
+  picker shows a tile a piece with the count; one not yet yours is solid blocks, *???* and what brings it.
+- **Placing:** drag a tile or a placed piece onto a spot (onto the picker puts it away), or click it, then a spot: the piece stands on that floor under the pointer, a wall piece hangs on its back
+  wall (never on the terrace). Nothing overlaps another piece, a window or the ladder. Click a placed piece to pick it
+  up; Esc puts it back; its tile clicked again puts it away. `house place <piece> <floor> <x>`, `house store <piece>`.
 
 ### Consortium (consortium.mjs)
 
