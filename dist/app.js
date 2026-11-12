@@ -577,7 +577,8 @@ function firstCampaign() {
     notice('SPRAWL-00 is open. Breach it.');
   });
 }
-// Your first class: four cards. Click (or 1–4, or the arrows) chooses one; Start, Enter or a double-click takes it.
+// Your first class: four squares (view.mjs classPickMarkup). A click (or 1–4, the arrows) opens one as a drawer and
+// narrows the rest; a click on the open one, or Esc, closes it. The Start command (or Enter, or a double-click) takes it.
 // Switching stays free for a while (see LOADOUT.trialUntil).
 function pickClass() {
   return new Promise((done) => {
@@ -585,18 +586,24 @@ function pickClass() {
     el.className = 'class-pick';
     el.innerHTML = V.classPickMarkup(campaign);
     document.body.append(el);
-    const cards = [...el.querySelectorAll('[data-pick-class]')], go = el.querySelector('.pk-go');
-    let pick = null;
-    const choose = (b) => {
-      pick = b.dataset.pickClass;
-      for (const c of cards) c.setAttribute('aria-checked', String(c === b));
-      go.disabled = false;
-      go.textContent = `Start as ${b.querySelector('.pk-name').textContent}`;
-      b.focus();
+    const deck = el.querySelector('.pk-deck'), cards = [...el.querySelectorAll('[data-pick-class]')], go = el.querySelector('.pk-go');
+    let pick = null, typing = 0;
+    const choose = (k) => {
+      pick = k === pick ? null : k;
+      for (const c of cards) c.setAttribute('aria-checked', String(c.dataset.pickClass === pick));
+      deck.classList.toggle('picked', !!pick);
+      go.disabled = !pick;
+      go.innerHTML = V.pkGoMarkup();
+      clearInterval(typing);
+      const card = cards.find((c) => c.dataset.pickClass === pick), word = card ? card.querySelector('.pk-name').textContent.toLowerCase() : '', name = go.querySelector('b');
+      let n = 0;
+      if (word) typing = setInterval(() => { name.textContent = word.slice(0, ++n); if (n >= word.length) clearInterval(typing); }, 32); // the class types itself into the command
+      card?.focus();
       feel.key('char');
     };
     const start = () => {
       if (!pick) return;
+      clearInterval(typing);
       removeEventListener('keydown', keys, true);
       command(campaign, `archetype ${pick}`);
       feel.add('unlock', null);
@@ -604,18 +611,19 @@ function pickClass() {
       done();
     };
     const keys = (e) => {
-      const i = cards.findIndex((c) => c.dataset.pickClass === pick);
-      if (/^[1-4]$/.test(e.key)) choose(cards[+e.key - 1]);
-      else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') choose(cards[(i + 1) % cards.length]);
-      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') choose(cards[(i - 1 + cards.length) % cards.length]);
+      const i = cards.findIndex((c) => c.dataset.pickClass === pick), at = (j) => cards[(j + cards.length) % cards.length].dataset.pickClass;
+      if (/^[1-4]$/.test(e.key)) choose(cards[+e.key - 1].dataset.pickClass);
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') choose(at(i + 1));
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') choose(at(i < 0 ? -1 : i - 1));
+      else if (e.key === 'Escape' && pick) choose(pick);
       else if (e.key === 'Enter' && pick) start();
       else return;
       e.preventDefault();
       e.stopPropagation();
     };
     addEventListener('keydown', keys, true);
-    el.addEventListener('click', (e) => { const b = e.target.closest('[data-pick-class]'); if (b) choose(b); else if (e.target.closest('.pk-go')) start(); });
-    el.addEventListener('dblclick', (e) => { if (e.target.closest('[data-pick-class]')) start(); });
+    el.addEventListener('click', (e) => { if (e.target.closest('.pk-go')) return start(); if (e.target.closest('.pk-drawer')) return; const c = e.target.closest('[data-pick-class]'); if (c) choose(c.dataset.pickClass); });
+    el.addEventListener('dblclick', (e) => { const c = e.target.closest('.pk-sq')?.parentElement; if (!c) return; if (pick !== c.dataset.pickClass) choose(c.dataset.pickClass); start(); }); // its two clicks opened and closed it
   });
 }
 // Screen effects (screenfx.mjs): light on the glass around the game (the backdrop, the tube's edge, the lamps, the
