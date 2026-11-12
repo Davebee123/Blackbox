@@ -2553,7 +2553,10 @@ no attaching, detaching or memory pips.
 
 ### People and #net
 
-- **Runners** (runners.mjs, docs/runners.md R1): 8 people per network, drawn from its seed (60 handles), so each new game has its own. Each has a handle, a class
+- **Runners** (runners.mjs, docs/runners.md R1): 8 on a network at once, drawn from its seed out of 60 handles, so each
+  new game has its own. They rotate on logged-on time: each stays 2–4 hours, then the next in their slot's queue takes
+  over, and they come back later as the same person, standing kept (`castOf`, `leavesAt`). A hire stays while they're
+  with you. Known runners who are away drop off the Rail until they're back. Each has a handle, a class
   (and subclass from 10), a level 4 below to 4 above yours, a faction, a temperament (Careful, Steady, Bold), one to
   four traits (shown on their cards; only Known face and Haggler in play yet) and a trade: a payment frozen on a floor
   one to three below where they work.

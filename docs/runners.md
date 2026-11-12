@@ -24,8 +24,10 @@ be on the net, like Guild Wars 1's heroes and Starsector's officers and fleets.
   work is kept on the runner; a server's state stays yours. Rivals racing you to a vault stay as built.
 - **No entropy.** Factions are fixed backdrops. A runner works for one, and nothing a runner does moves a faction's
   power, territory or prices. Feuds stay director cards; runners appear in them by name.
-- **A stable cast.** Eight per network, from its seed (a pool of 60 handles, so each new game has its own). Their levels keep to a band around yours. A crashed
-  runner is pulled out and comes back. No permanent death; none quits on you.
+- **A rotating cast.** Eight on a network at once, from its seed and a pool of 60 handles, so each new game has its
+  own. Each stays 2–4 hours of logged-on time, then moves on and the next takes their place; they come back later in
+  the playthrough as the same person, standing kept. A hire stays while they're with you. Their levels keep to a band
+  around yours. A crashed runner is pulled out and comes back. No permanent death.
 - **Cheap to run.** Each runner is a loop (hub, job, travel, work), worked out from the seed and logged-on time the
   way presence.mjs places people today. Off-screen outcomes are rolled from a runner's level against the server's,
   never fought. Saved: standing with you, goal progress.
@@ -105,8 +107,8 @@ make a dearer fee. No drawbacks for now.
 - **Party, never self.** Every trait helps the crew (you included) or the run. A runner's own power is their level and
   gear.
 - **Once per crew.** Two runners with the same trait don't stack; the crew gets its best version.
-- **The pool:** eight runners per network, new ones arriving and old ones moving on over weeks. Runners with
-  several starred traits are rare.
+- **The pool:** eight runners on a network at once, rotating (*A rotating cast*, above). Runners with several starred
+  traits are rare.
 
 | Trait | Does (MOO2) |
 |---|---|

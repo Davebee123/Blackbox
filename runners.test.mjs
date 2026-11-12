@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh } from './dist/combat.mjs';
-import { castOf, stateOf, tickRunners, runnersOf, know, knownOf, RUNNERS, TRAITS, TEMPERS, levelOf } from './dist/runners.mjs';
+import { castOf, stateOf, tickRunners, runnersOf, know, knownOf, RUNNERS, TRAITS, TEMPERS, levelOf, leavesAt, runnerOf } from './dist/runners.mjs';
 import { runnerRail, runnerMark } from './dist/runners-view.mjs';
 import { addLocation } from './dist/combat.mjs';
 import { graphOf, floorsOf } from './dist/floors.mjs';
@@ -14,7 +14,7 @@ const world = (seed = 4242, level = 14) => { const s = fresh(); s.netSeed = seed
 // The first logged-on time (on a minute) the runners on floor fl fit: the save's clock set there.
 function moment(s, fl, fits) {
   for (let t = 0; t < 4 * RUNNERS.cycleMs[1]; t += 60000) {
-    const on = castOf(s).map((r) => ({ r, st: stateOf(s, r, t) })).filter((x) => x.st.floor === fl);
+    const on = castOf(s, t).map((r) => ({ r, st: stateOf(s, r, t) })).filter((x) => x.st.floor === fl);
     if (fits(on)) { runnersOf(s).ms = t; return on; }
   }
   throw new Error('no moment fits');
@@ -48,6 +48,31 @@ test('the cast: the same seed draws the same people, eight of them, each with a 
   assert.deepEqual(castOf(fresh()), [], 'no network seed, no runners');
 });
 
+test('rotation: runners move on after 2–4 hours logged on and others take their place; a hire stays; one who left comes back as the same person', () => {
+  const s = world(), H = 3600000;
+  const at = (t) => castOf(s, t).map((r) => r.handle);
+  for (let t = 0; t < 200 * H; t += H / 4) assert.equal(new Set(at(t)).size, RUNNERS.cast, 'always eight, no one twice');
+  const first = at(0);
+  assert.notDeepEqual(at(24 * H).sort(), [...first].sort(), 'a day logged on: other people');
+  assert.ok(castOf(s, 0).every((r) => leavesAt(s, r.handle, 0) > 0 && leavesAt(s, r.handle, 0) <= RUNNERS.stay[1]), 'each moves on within their stay');
+  // How long one stays: from when they arrive to when they leave, 2–4 hours.
+  const h = first[0], left = leavesAt(s, h, 0);
+  assert.ok(!at(left).includes(h), 'gone once their stay ends');
+  let back = left; while (!at(back).includes(h)) back += H / 4;
+  const stay = leavesAt(s, h, back) - back;
+  assert.ok(stay <= RUNNERS.stay[1] && leavesAt(s, h, back) - left >= RUNNERS.stay[0], `back later (${Math.round((back - left) / H)} hours on)`);
+  assert.deepEqual(castOf(s, back).find((r) => r.handle === h), castOf(s, 0).find((r) => r.handle === h), 'the same person');
+  // A hire stays on the net while they're with you, past their stay.
+  s.crewSim = [{ name: h, runner: true }];
+  assert.ok(at(left).includes(h) && at(left).length === RUNNERS.cast + 1, 'hired: still here, beside the eight');
+  assert.equal(leavesAt(s, h, 0), null);
+  // Standing is kept by handle while they're away.
+  s.crewSim = [];
+  raiseStanding(s, h, 30);
+  runnersOf(s).ms = left;
+  assert.equal(runnerOf(s, h), null); assert.equal(standingOf(s, h), 30, 'away, standing kept');
+});
+
 test('the loop: worked out from the seed and logged-on time alone; nothing moves while logged off', () => {
   const s = world(), r = castOf(s)[0];
   const t = 3_600_000;
@@ -74,8 +99,8 @@ test('#net: runners speak about their real turns, and speaking is how you come t
   for (let i = 0; i < 3600; i++) tickChannel(s, 1000);
   const lines = channelOf(s).lines.filter((l) => l.kind === 'sim');
   assert.ok(lines.length >= 5, `${lines.length} lines`);
-  const cast = new Set(castOf(s).map((r) => r.handle));
-  assert.ok(lines.every((l) => cast.has(l.from)), 'every speaker is a runner on this net');
+  const cast = new Set(); for (let t = 0; t <= runnersOf(s).ms; t += 60000) for (const r of castOf(s, t)) cast.add(r.handle);
+  assert.ok(lines.every((l) => cast.has(l.from)), 'every speaker was a runner on this net when they spoke');
   assert.ok(lines.some((l) => /cleared|crashed|pulled out|paid|working|on .+ now/.test(l.text)), 'a line from a turn of their loop');
   assert.ok(knownOf(s).length > 0 && knownOf(s).every((r) => lines.some((l) => l.from === r.handle)));
 });
@@ -295,7 +320,7 @@ import { mapLayout } from './dist/view.mjs';
 
 // The first moment a runner's state fits: the save's clock set there. { r, st }.
 function when(s, fits) {
-  for (const r of castOf(s)) for (let t = 0; t < r.cycle * 3; t += 5000) {
+  for (let t = 0; t < RUNNERS.cycleMs[1] * 3; t += 5000) for (const r of castOf(s, t)) {
     const st = stateOf(s, r, t);
     if (fits(st, r)) { runnersOf(s).ms = t; return { r, st }; }
   }

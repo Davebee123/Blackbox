@@ -19,7 +19,8 @@ import { FACTIONS, FACTION_IDS, hubsOf } from './factions.mjs';
 import { graphOf, locAt, floorsOf, exitOpen } from './floors.mjs';
 
 export const RUNNERS = {
-  cast: 8, // runners a network (few enough that a floor's map stays quiet)
+  cast: 8, // runners on a network at once (few enough that a floor's map stays quiet)
+  stay: [2 * 3600000, 4 * 3600000], // how long a runner stays before moving on, in logged-on time (castOf)
   band: [-4, 4], // their levels, around yours
   cycleMs: [6 * 60000, 14 * 60000], // one loop: hub, out, work, back
   stages: [['hub', 0.15], ['out', 0.2], ['work', 0.45], ['back', 0.2]],
@@ -53,28 +54,58 @@ export function hash(text, n) {
 const between = (x, [lo, hi]) => lo + Math.floor(x * (hi - lo + 1));
 
 // ---------- the cast ----------
+// RUNNERS.cast runners on a network at once, rotating on logged-on time: the network's seed deals the 60 handles into
+// RUNNERS.cast queues, one a slot, and each slot's runner stays RUNNERS.stay (its own length, its own start) before the
+// next in its queue takes over. A runner who moves on comes back once their queue comes round again, their standing
+// kept (it's saved by handle). A hire stays on the net while they're with you. Who someone is (class, faction,
+// traits, their loop) comes from the seed and their handle alone, so a runner is the same person each time they're on.
 export const runnerSeed = (s) => (s.netSeed >>> 0) || 0;
-const CAST = new Map();
-// A network's cast, from its seed: the same seed, the same people. A save with no network seed has none.
-export function castOf(s) {
+const PEOPLE = new Map(), QUEUES = new Map();
+// A runner on this network, by handle: the same seed and handle, the same person.
+function personOf(seed, h) {
+  const key = `${seed}:${h}`;
+  if (PEOPLE.has(key)) return PEOPLE.get(key);
+  const classes = Object.keys(ARCHETYPES), traitIds = Object.keys(TRAITS);
+  const r = (n) => hash(h, seed ^ (n * 2654435761));
+  const cls = classes[Math.floor(r(1) * classes.length)], subs = Object.keys(ARCHETYPES[cls].subs);
+  const n = 1 + Math.floor(r(6) ** 2 * 4); // one to four traits, most have one or two
+  const traits = traitIds.map((t, i) => [r(20 + i), t]).sort((a, b) => a[0] - b[0]).slice(0, n).map(([, t], i) => ({ id: t, star: r(50 + i) < RUNNERS.star }));
+  const p = {
+    handle: h, cls, sub: subs[Math.floor(r(2) * subs.length)], off: between(r(3), RUNNERS.band), faction: FACTION_IDS[Math.floor(r(4) * FACTION_IDS.length)],
+    temper: TEMPERS[Math.floor(r(5) * TEMPERS.length)], traits, cycle: between(r(7), RUNNERS.cycleMs), phase: Math.floor(r(8) * RUNNERS.cycleMs[1]),
+    need: between(r(9), RUNNERS.trade), tradeAt: Math.floor(r(10) * RUNNERS.trade[1]),
+  };
+  PEOPLE.set(key, p);
+  return p;
+}
+// The network's slots: each a queue of handles, how long each stays and where in its turn the slot starts.
+function queuesOf(seed) {
+  if (QUEUES.has(seed)) return QUEUES.get(seed);
+  const order = HANDLES.map((h) => [hash(h, seed), h]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+  const q = Array.from({ length: RUNNERS.cast }, (_, i) => {
+    const stay = between(hash(`slot${i}`, seed), RUNNERS.stay);
+    return { handles: order.filter((_, j) => j % RUNNERS.cast === i), stay, at: Math.floor(hash(`slot${i}`, seed ^ 77) * stay) };
+  });
+  QUEUES.set(seed, q);
+  return q;
+}
+// Who holds slot q at logged-on time t, and when their stay ends.
+const turnAt = (q, t) => { const k = Math.floor((t + q.at) / q.stay); return { h: q.handles[k % q.handles.length], until: (k + 1) * q.stay - q.at }; };
+// A network's runners at logged-on time t (now by default): one a slot, and your hires wherever their slot has got to.
+// A save with no network seed has none.
+export function castOf(s, t = clockOf(s)) {
   const seed = runnerSeed(s);
   if (!seed) return [];
-  if (CAST.has(seed)) return CAST.get(seed);
-  const order = HANDLES.map((h) => [hash(h, seed), h]).sort((a, b) => a[0] - b[0]).slice(0, RUNNERS.cast).map((x) => x[1]);
-  const classes = Object.keys(ARCHETYPES), traitIds = Object.keys(TRAITS);
-  const cast = order.map((h) => {
-    const r = (n) => hash(h, seed ^ (n * 2654435761));
-    const cls = classes[Math.floor(r(1) * classes.length)], subs = Object.keys(ARCHETYPES[cls].subs);
-    const n = 1 + Math.floor(r(6) ** 2 * 4); // one to four traits, most have one or two
-    const traits = traitIds.map((t, i) => [r(20 + i), t]).sort((a, b) => a[0] - b[0]).slice(0, n).map(([, t], i) => ({ id: t, star: r(50 + i) < RUNNERS.star }));
-    return {
-      handle: h, cls, sub: subs[Math.floor(r(2) * subs.length)], off: between(r(3), RUNNERS.band), faction: FACTION_IDS[Math.floor(r(4) * FACTION_IDS.length)],
-      temper: TEMPERS[Math.floor(r(5) * TEMPERS.length)], traits, cycle: between(r(7), RUNNERS.cycleMs), phase: Math.floor(r(8) * RUNNERS.cycleMs[1]),
-      need: between(r(9), RUNNERS.trade), tradeAt: Math.floor(r(10) * RUNNERS.trade[1]),
-    };
-  });
-  CAST.set(seed, cast);
-  return cast;
+  const on = queuesOf(seed).map((q) => turnAt(q, t).h);
+  for (const x of s.crewSim || []) if (x.runner && HANDLES.includes(x.name) && !on.includes(x.name)) on.push(x.name);
+  return on.map((h) => personOf(seed, h));
+}
+// When a runner on the net now moves on (logged-on time), or null for a hire (with you until you let them go).
+export function leavesAt(s, h, t = clockOf(s)) {
+  const seed = runnerSeed(s);
+  if (!seed || hired(s, h)) return null;
+  for (const q of queuesOf(seed)) { const x = turnAt(q, t); if (x.h === h) return x.until; }
+  return null;
 }
 export const runnerOf = (s, h) => castOf(s).find((x) => x.handle === h) || null;
 export const levelOf = (s, r) => Math.max(1, Math.min(50, hackerLevel(s) + r.off));
