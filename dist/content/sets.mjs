@@ -1304,6 +1304,285 @@ export default {
           ]
         }
       }
+    },
+    {
+      "id": "fineprint",
+      "name": "Fine Print",
+      "levels": [
+        26,
+        32
+      ],
+      "pieces": [
+        "rider",
+        "copay",
+        "exclusion",
+        "premium"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+8% max Signal.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "signal%",
+              "value": 8
+            }
+          ]
+        },
+        "3": {
+          "text": "A tell that lands on you shields you for 5% of your max Signal.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "tell-shield",
+              "value": 5
+            }
+          ]
+        },
+        "4": {
+          "text": "While a shield holds, your hits deal 10% more.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 10,
+              "if": "shielded"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "contiguous",
+      "name": "Contiguous",
+      "levels": [
+        27,
+        31
+      ],
+      "pieces": [
+        "sector",
+        "cluster",
+        "allocation-table"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% Clock Speed.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "clock",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "Each command in a row on the same part deals 6% more than the last, up to 18%.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "row%",
+              "value": 6,
+              "cap": 18
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "crypter",
+      "name": "Crypter",
+      "levels": [
+        26,
+        31
+      ],
+      "pieces": [
+        "stub",
+        "junk-code",
+        "decryptor"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% crit.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "crit",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "When you break a part's last ◆, your next hit on another part is a critical strike.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "strip-crit"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "domainadmin",
+      "name": "Domain Admin",
+      "levels": [
+        32,
+        37
+      ],
+      "pieces": [
+        "ticket",
+        "group-policy",
+        "schema",
+        "admin-rights"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% damage, +5% max Signal.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 5
+            },
+            {
+              "when": "always",
+              "do": "signal%",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "When you strip a part's last ◆, your shortest cooldown drops by 1.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "strip-cd",
+              "value": 1
+            }
+          ]
+        },
+        "4": {
+          "text": "From the third part you break in a fight, your cooldowns are 1 cycle shorter.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "late-cd",
+              "value": 1,
+              "n": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "semaphore",
+      "name": "Semaphore",
+      "levels": [
+        33,
+        37
+      ],
+      "pieces": [
+        "spinlock",
+        "semaphore",
+        "critical-section"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% Clock Speed.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "clock",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "An attack you delay leaves its part Open for 1 cycle.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "delay-open",
+              "value": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "hiddenprocess",
+      "name": "Hidden Process",
+      "levels": [
+        32,
+        36
+      ],
+      "pieces": [
+        "unlink",
+        "hollow",
+        "driver"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+6% damage.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 6
+            }
+          ]
+        },
+        "3": {
+          "text": "Your burns keep ticking on a part that can't be hit.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "burn-through"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "watertight",
+      "name": "Watertight",
+      "levels": [
+        34,
+        38
+      ],
+      "pieces": [
+        "hatch",
+        "seal-plate",
+        "pressure-door"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+3 Block.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "reduction",
+              "value": 3
+            }
+          ]
+        },
+        "3": {
+          "text": "When a hit takes more than 15% of your max Signal, the next hit on you within 2 cycles deals 20% less.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "big-guard",
+              "value": 20,
+              "over": 15,
+              "cycles": 2
+            }
+          ]
+        }
+      }
     }
   ]
 };
