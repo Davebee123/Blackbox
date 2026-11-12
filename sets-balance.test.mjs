@@ -63,8 +63,9 @@ test('Kestrel Clearance (3) keeps every band, and moves the average no more than
 const AT50 = BRACKETS.find((b) => b.level === 50);
 const bracket = (L) => (L <= 10 ? 10 : L <= 18 ? 18 : L <= 32 ? 30 : 50);
 // Held until the designer has played it: Bootloader (an earned set, 31–38, measured at Lv 50) takes the Overclocker to
-// 19 wins of 24 there, and Hidden Process (32–36, measured at Lv 50 in place of level-50 blues) both Breakers.
-const HOLD = { bootloader: { overclocker: 0.79 }, hiddenprocess: { demolitionist: 0.79, overclocker: 0.79 } };
+// 19 wins of 24 there, Hidden Process (32–36, measured at Lv 50 in place of level-50 blues) both Breakers, and Payroll
+// (39–43) the Overclocker.
+const HOLD = { bootloader: { overclocker: 0.79 }, hiddenprocess: { demolitionist: 0.79, overclocker: 0.79 }, payroll: { overclocker: 0.79 } };
 // Crypter (floor 5, 26–31) measured 12.0 easier at Lv 30 (November 2026): its crits, and the 3-piece's crit after each
 // stripped ◆. Held at 12.5 there until the designer has played it.
 const EASIEST = { crypter: -12.5 };

@@ -17,16 +17,16 @@ CONFIG.baseCrit = 0; CONFIG.enemyCrit = 0; CONFIG.misses = false;
 
 // The plan's two tables: id, name, slot, level, source (kind, floor), lean.
 const SINK1 = [
-  ['seawall', 'Seawall', 'proxy', 39, 'lair', 7, 'bastion'], ['undertow', 'Undertow', 'exploit', 39, 'rare', 7, null], ['drain-plug', 'Drain Plug', 'shell', 39, 'vault', 7, 'bastion'],
-  ['backwash', 'Backwash', 'script', 40, 'lair', 7, 'operator'], ['siltstone', 'Siltstone', 'implant', 40, 'vault', 7, null], ['low-tide', 'Low Tide', 'proxy', 40, 'thread', 7, 'infiltrator'],
-  ['brine', 'Brine', 'script', 40, 'rare', 7, null], ['sump-pump', 'Sump Pump', 'shell', 41, 'strain', null, 'bastion'], ['floodgate', 'Floodgate', 'exploit', 41, 'lair', 7, 'breaker'],
+  ['seawall', 'Seawall', 'proxy', 39, 'lair', 7, 'bastion', 'BIT BUCKET'], ['undertow', 'Undertow', 'exploit', 39, 'rare', 7, null], ['drain-plug', 'Drain Plug', 'shell', 39, 'vault', 7, 'bastion'],
+  ['backwash', 'Backwash', 'script', 40, 'lair', 7, 'operator', 'Sinkhole Residents'], ['siltstone', 'Siltstone', 'implant', 40, 'vault', 7, null], ['low-tide', 'Low Tide', 'proxy', 40, 'thread', 7, 'infiltrator'],
+  ['brine', 'Brine', 'script', 40, 'rare', 7, null], ['sump-pump', 'Sump Pump', 'shell', 41, 'strain', null, 'bastion'], ['floodgate', 'Floodgate', 'exploit', 41, 'lair', 7, 'breaker', 'GOLDEN PARACHUTE'],
   ['brackish', 'Brackish', 'script', 41, 'puzzle', 7, 'infiltrator'], ['mooring', 'Mooring', 'implant', 41, 'rare', 7, null], ['depth-gauge', 'Depth Gauge', 'shell', 41, 'thread', 7, null],
-  ['riptide', 'Riptide', 'proxy', 42, 'lair', 7, 'operator', 'GOLDEN PARACHUTE'], ['pressure-hull', 'Pressure Hull', 'shell', 42, 'vault', 7, 'bastion'], ['ballast', 'Ballast', 'implant', 42, 'vault', 7, 'breaker'],
+  ['riptide', 'Riptide', 'proxy', 42, 'lair', 7, 'operator', 'Sinkhole Residents'], ['pressure-hull', 'Pressure Hull', 'shell', 42, 'vault', 7, 'bastion'], ['ballast', 'Ballast', 'implant', 42, 'vault', 7, 'breaker'],
   ['deepwater', 'Deepwater', 'exploit', 42, 'rare', 7, null], ['silt-map', 'Silt Map', 'script', 42, 'thread', 7, null], ['bilge', 'Bilge', 'proxy', 43, 'strain', null, 'infiltrator'],
-  ['anchor-chain', 'Anchor Chain', 'implant', 43, 'lair', 7, 'bastion'], ['wake', 'Wake', 'exploit', 43, 'raid', null, null], ['ebb', 'Ebb', 'script', 43, 'puzzle', 7, 'operator'],
-  ['flotsam', 'Flotsam', 'shell', 43, 'rare', 7, null], ['outfall', 'Outfall', 'exploit', 43, 'lair', 7, null, 'GOLDEN PARACHUTE'], ['pumphouse', 'Pumphouse', 'proxy', 44, 'lair', 7, 'breaker', 'GOLDEN PARACHUTE'],
+  ['anchor-chain', 'Anchor Chain', 'implant', 43, 'lair', 7, 'bastion', 'SUMP'], ['wake', 'Wake', 'exploit', 43, 'raid', null, null], ['ebb', 'Ebb', 'script', 43, 'puzzle', 7, 'operator'],
+  ['flotsam', 'Flotsam', 'shell', 43, 'rare', 7, null], ['outfall', 'Outfall', 'exploit', 43, 'lair', 7, null, 'PAY RUN'], ['pumphouse', 'Pumphouse', 'proxy', 44, 'lair', 7, 'breaker', 'BIT BUCKET'],
   ['sounding-line', 'Sounding Line', 'implant', 44, 'thread', 7, 'infiltrator'], ['cofferdam', 'Cofferdam', 'shell', 44, 'vault', 7, 'bastion'], ['siphon-tube', 'Siphon Tube', 'script', 44, 'strain', null, null],
-  ['spillway', 'Spillway', 'exploit', 44, 'lair', 7, 'breaker'], ['turbidity', 'Turbidity', 'proxy', 44, 'rare', 7, 'infiltrator'], ['weir', 'Weir', 'implant', 44, 'vault', 7, 'operator'],
+  ['spillway', 'Spillway', 'exploit', 44, 'lair', 7, 'breaker', 'GOLDEN PARACHUTE'], ['turbidity', 'Turbidity', 'proxy', 44, 'rare', 7, 'infiltrator'], ['weir', 'Weir', 'implant', 44, 'vault', 7, 'operator'],
 ];
 const BEDROCK1 = [
   ['post-code', 'POST Code', 'exploit', 45, 'rare', 8, null], ['bootstrap', 'Bootstrap', 'script', 45, 'lair', 8, null, 'flash ranks'], ['bedframe', 'Bedframe', 'shell', 45, 'vault', 8, 'bastion'],
@@ -572,7 +572,7 @@ test('a floor\'s lair boss: The Sink\'s own uniques join its network\'s natives 
     for (const id of sink) assert.ok(got.includes(id), `${id} from The Sink's lair boss`);
     assert.ok(got.some((id) => natives.includes(id)), 'and the natives still');
     assert.ok(!got.some((id) => deep.includes(id)), "never Bedrock's");
-    assert.ok(got.every((id) => natives.includes(id) || sink.includes(id) || UNIQUES[id].set), 'nothing else (set pieces come from their own roll)');
+    assert.ok(got.every((id) => natives.includes(id) || sink.includes(id) || UNIQUES[id].set || ['headcount', 'check-valve'].includes(id)), 'nothing else (set pieces come from their own roll; floor 7\'s two of floor-items.md, floor7.test.mjs)');
     assert.equal(s.pity['lair:you'], 0);
   } finally { BOSS_LOOT.chance = was; }
 });

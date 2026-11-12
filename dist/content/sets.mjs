@@ -1583,6 +1583,115 @@ export default {
           ]
         }
       }
+    },
+    {
+      "id": "smashandgrab",
+      "name": "Smash and Grab",
+      "levels": [
+        38,
+        42
+      ],
+      "pieces": [
+        "grabber",
+        "clipper",
+        "dropzone"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+6% damage.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 6
+            }
+          ]
+        },
+        "3": {
+          "text": "When your hit breaks a part's shield, a third of it shields you for 2 cycles.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "shield-steal",
+              "value": 33,
+              "cycles": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "payroll",
+      "name": "Payroll",
+      "levels": [
+        39,
+        43
+      ],
+      "pieces": [
+        "pay-slip",
+        "direct-deposit",
+        "year-end"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+8% max Signal.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "signal%",
+              "value": 8
+            }
+          ]
+        },
+        "3": {
+          "text": "Every 4th cycle, heals you for 4% of your max Signal.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "heal-every",
+              "value": 4,
+              "every": 4
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "backbone",
+      "name": "Backbone",
+      "levels": [
+        38,
+        44
+      ],
+      "pieces": [
+        "hop",
+        "crc",
+        "broadcast-storm"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% Clock Speed.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "clock",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "A hit that reaches several parts deals 8% more for each part past the first, up to 24%.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "reach%",
+              "value": 8,
+              "cap": 24
+            }
+          ]
+        }
+      }
     }
   ]
 };

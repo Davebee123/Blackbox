@@ -1040,7 +1040,7 @@ const fxScale = (s, fx) => {
   const d = () => defender(s) || { integrity: 1, max: 1 };
   const k = fx.scale === 'cycles' ? Math.max(0, (e?.cycle || 1) - 1) : fx.scale === 'contracts' ? (s.mail?.jobs || []).filter((j) => !j.done).length : fx.scale === 'broken' ? e?.breaks || 0 : fx.scale === 'reads' ? e?.metrics?.reads || 0
     : fx.scale === 'chits' ? e?.chits || 0 : fx.scale === 'crew' ? (e ? alliesOf(s).length : 0) : fx.scale === 'missing' ? Math.max(0, Math.floor((1 - d().integrity / Math.max(1, d().max)) * 10 + 1e-9)) : fx.scale === 'sets' ? setBonusCount(s)
-    : fx.scale === 'tells' ? tellsLanded(e) : fx.scale === 'specials' ? specialsHere(s) : fx.scale === 'parts' ? (e ? Math.max(0, parts(s).length - 2) : 0) : fx.scale === 'held' ? Math.floor((s.locations || []).filter(heldLoc).length / 5) : 1; // the floor feats' (earned.mjs)
+    : fx.scale === 'tells' ? tellsLanded(e) : fx.scale === 'standing' ? (e && active(s) ? livingParts(s).length : 0) : fx.scale === 'specials' ? specialsHere(s) : fx.scale === 'parts' ? (e ? Math.max(0, parts(s).length - 2) : 0) : fx.scale === 'held' ? Math.floor((s.locations || []).filter(heldLoc).length / 5) : 1; // the floor feats' (earned.mjs)
   const v = (Number(fx.value) || 0) * k;
   return fx.cap ? Math.min(fx.cap, v) : v;
 };
@@ -1090,7 +1090,7 @@ function fxSpend(s, fx, id) {
 // kept while the rig is the same).
 const DEEP = new Set(['stat+', 'stat%', 'max-signal%', 'heal%', 'stack', 'buff', 'taken%', 'hit-cap', 'helper-soak', 'next-boost', 'shield%', 'shield-absorb', 'block-dot', 'burn%', 'helper%', 'crit-damage%', 'crit-double', 'first-skill-crit', 'first-pierce', 'spill', 'repeat', 'burn-now', 'burn-sap', 'helper-long', 'helper-now', 'helper-cd', 'free-helper', 'jam-delay', 'first-cd', 'shortest-cd', 'chit-fade', 'clock-start', 'momentum', 'spend%', 'momentum-cleave', 'momentum-safe', 'unveil', 'explore-xp%', 'cache%', 'cache-heal%', 'rewind',
   // Floors 5 and 6 (docs/floor-items.md), and Hidden Process (3).
-  'part-first%', 'varied%', 'ready-wait%', 'surfaced%', 'armor-bleed', 'crit-pass', 'reach', 'halve-every', 'cap-every', 'siphon-less', 'delayed-less', 'reinsure', 'tell-cd', 'first-shield-x2', 'burn-through']);
+  'part-first%', 'varied%', 'ready-wait%', 'surfaced%', 'armor-bleed', 'crit-pass', 'reach', 'halve-every', 'cap-every', 'siphon-less', 'delayed-less', 'reinsure', 'tell-cd', 'first-shield-x2', 'burn-through', 'break-less']);
 const KINDS = new WeakMap();
 function fxKinds(s) {
   const key = hooks.extraFx ? null : `${classOf(s)}|${hackerLevel(s)}|${rigOf(s).join(',')}|${(s.stash || []).length}|${s.equipN || 0}|${Object.keys(SETS).length}`; // what is loaded, and the sets
@@ -3098,6 +3098,7 @@ export function hit(s, p, base, opts = {}) {
     lockWas = p.bufHp; lockLost = soak;
     p.bufHp -= soak; dealt -= soak; soaked = soak;
     notes.push(`buffer: ${soak} held`);
+    if (!p.bufHp) classEach('shieldBroke', s, p, p.bufMax || soak); // Smash and Grab (3) (sets.mjs)
   }
   // A crew boss (raid.mjs): a firewall phase's shield takes the hit first, a priority add's ward cuts it.
   if (dealt > 0 && e.virus.raid) { const was = dealt; dealt = raidShield(s, p, dealt); if (dealt < was && !dealt) notes.push('shielded'); }
@@ -4561,7 +4562,8 @@ function cycleStart(s) {
   // the fight.
   for (const z of parts(s).filter((x) => x.fuseAt && x.fuseAt <= e.cycle && !x.fused)) {
     z.fused = true;
-    const n = Math.max(1, Math.round(defender(s).max * CONFIG.zipbomb.share));
+    const cv = fxHas(s, 'break-less'), n = Math.max(1, Math.round(defender(s).max * CONFIG.zipbomb.share * (cv ? 1 - fxVal(cv) / 100 : 1))); // Check Valve
+    if (cv) emit(s, 'blocked', `${fxWho(cv)}: the ${z.name}'s blast deals ${fxVal(cv)}% less to you.`, { source: z.id, ...firedOf([cv]) });
     if (e.chits > 0) { e.chits--; emit(s, 'blocked', `The ${z.name} goes off on your ◆ and does nothing to you${e.chits ? ` (${e.chits} left)` : ''}.`, { source: z.id, fuse: true }); }
     else {
       const soak = Math.min(e.shield || 0, n);

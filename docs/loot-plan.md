@@ -1,7 +1,7 @@
 # Loot plan: sets and uniques
 
 What's still to add to the item pool. Built: the sets, Batch 1 (the 60 uniques for levels 39–50), Batch 2 (ten build pieces for 41–48, docs/item-builds.md
-*Gaps*), Catchment, floors 5 and 6 (seven sets, 19 uniques) and faction gear,
+*Gaps*), Catchment, floors 5 and 6 (seven sets, 19 uniques), floor 7 (three sets, two uniques) and faction gear,
 all in GAME_RULES.md "Items". Left: 15–20, and the pool toward about 240. Floors 2–8 to
 five sets and 20 uniques each: docs/floor-items.md (designed).
 
@@ -28,7 +28,7 @@ Non-set uniques by band, against where players spend their hours:
 | 15–20 | 8 | **the thin middle: a batch** |
 | 21–32 | 30 | floors 5 and 6, built |
 | 33–38 | 17 | floors 5 and 6, built |
-| 39–44 | 38 | Batches 1 and 2, built; ACTUARY's two |
+| 39–44 | 40 | Batches 1 and 2, built; ACTUARY's two; floor 7's two |
 | 45–50 | 35 | Batches 1 and 2, built |
 
 Batch 1 leans thin on the Breaker, Infiltrator and Operator at 45–50 (3 each); the next batches even it out.

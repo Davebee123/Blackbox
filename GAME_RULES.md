@@ -1632,13 +1632,17 @@ unique** leans to a class or subclass: three times as likely for it, twice for t
   Blue Pill (shell 34): a tell landing on you deals half; Shellshock (exploit 38): a hit on a part wearing ◆ breaks two.
 - **Deep uniques, levels 39–50** (docs/loot-plan.md): sidegrades, The Sink's (floor 7) and Bedrock's (floor 8), each
   dropping only where its source names. Bedrock's are the strongest uniques and still below a full set. Bosses not
-  built yet (GOLDEN PARACHUTE, INIT, Bedrock's others, the flash ranks) drop theirs from the floor's lair boss.
-  - **The Sink's lair boss:** Seawall (proxy 39): each hit your Block reduces adds 1 Block for the fight, up to 5;
+  built yet (The Sink's four, INIT, Bedrock's others, the flash ranks) drop theirs from the floor's lair boss.
+  - **The Sink's lair boss** (each piece's `planned`: GOLDEN PARACHUTE Floodgate and Spillway, PAY RUN Outfall and
+    Headcount, BIT BUCKET Pumphouse and Seawall, SUMP Anchor Chain and Check Valve, the Sinkhole Resident Backwash and
+    Riptide): Seawall (proxy 39): each hit your Block reduces adds 1 Block for the fight, up to 5;
     Backwash (script 40): when a helper expires, your next helper skill cools a cycle faster; Floodgate (exploit 41):
     breaking a part gives +6% damage for 3 cycles, stacking twice; Riptide (proxy 42): helpers deal 8% more to Jammed
     parts; Anchor Chain (implant 43): when an attack lands on you, your next heal or shield is 10% larger; Outfall
     (exploit 43): each skill's first use in a fight deals 10% more; Pumphouse (proxy 44): +5% to a skill for each
-    Momentum stack it spends; Spillway (exploit 44): a breaking hit carries up to 15 of its leftover onto the next part.
+    Momentum stack it spends; Spillway (exploit 44): a breaking hit carries up to 15 of its leftover onto the next part;
+    Headcount (proxy 40): +1 Block for each part standing, up to 4; Check Valve (proxy 44): a part's blast as it breaks
+    (a Zip Bomb's) deals you 40% less.
   - **The Sink's rare spawns:** Undertow (exploit 39): +10% to a part that attacked last cycle; Brine (script 40): +8%
     to the part with the most Integrity left; Mooring (implant 41): no single attack takes more than 35% of your max;
     Deepwater (exploit 42): crits deal 10% more to armored parts; Flotsam (shell 43): +10% Scavenge, +2 Regen; Turbidity
@@ -1789,6 +1793,9 @@ five slot kinds, so a general set's 2-piece can go beside it.
 | **Hidden Process** | 32–36: the floor 6 lair boss (planned: Rootkit kills) | Unlink (exploit, 32): +5% crit [+5% damage] · Hollow (script, 34): your burns deal 5% more [+5% crit] · Driver (implant, 36): +5% Stealth [+6% max Signal] | +6% damage | Your burns keep ticking on a part that can't be hit | |
 | **Watertight** | 34–38: the floor 6 lair boss (planned: Kestrel ICE on floor 6) | Hatch (proxy, 34): +2 Block [+6% max Signal] · Seal Plate (shell, 36): +6% max Signal [+2 Block] · Pressure Door (implant, 38): +2 Block [+5% damage] | +3 Block | When a hit takes more than 15% of your max, the next hit on you within 2 cycles deals 20% less | |
 | **Catchment** | 37–44: the floor 7 lair boss | Gully (exploit, 37): +5% damage [+5% crit] · Storm Drain (proxy, 39): +2 Block [+6% max Signal] · Basin (shell, 42): +6% max Signal [+2 Block] · Reservoir (implant, 44): +4% Clock Speed [+5% damage] | +5% damage, +5% max Signal | Breaking a part heals 3% of max Signal | Each part you break adds 5% damage for the fight, up to 20% |
+| **Smash and Grab** | 38–42: the floor 7 lair boss (planned: Stealer kills) | Grabber (exploit, 38): +5% crit [+5% damage] · Clipper (script, 40): +5% Scavenge [+5% crit] · Dropzone (implant, 42): +6% max Signal [+5% Clock Speed] | +6% damage | When your hit breaks a part's shield, a third of it shields you for 2 cycles | |
+| **Payroll** | 39–43: threads on floor 7 | Pay Slip (script, 39): +5% Restore [+6% max Signal] · Direct Deposit (proxy, 41): +6% max Signal [+2 Block] · Year End (shell, 43): +2 Block [+5% Clock Speed] | +8% max Signal | Every 4th cycle, heals you for 4% of your max Signal | |
+| **Backbone** | 38–44: Packet routing boards won on floor 7 | Hop (script, 38): +4% Clock Speed [+5% damage] · CRC (implant, 41): +5% crit [+6% max Signal] · Broadcast Storm (exploit, 44): +5% damage [+5% crit] | +5% Clock Speed | A hit that reaches several parts deals 8% more for each part past the first, up to 24% | |
 | **Deep Archive** | 37–44: vaults on floors 7 and 8 | Index (script, 37): +4% Clock Speed [+5% damage] · Spine (shell, 39): +2 Block [+6% max Signal] · Folio (exploit, 41): +5% damage [+5% crit] · Vellum (implant, 43): +6% max Signal [+2 Block] | +8% max Signal | +8% damage | Every 4th cycle, your next skill repeats at 40% |
 | **Long Haul** | 10–24: earned, contracts delivered (10 · 25 · 50) | Waybill (script, 10): +5% Clock Speed [+8% max Signal] · Dray (proxy, 17): +8% max Signal [+6% crit] · Tailgate (shell, 24): +3 Block [+5% damage] | Contracts pay 10% more XP | Delivering a contract fills your Signal, and kills pay 10% more XP | |
 | **Switchback** | 8–14: earned, Hunter chase boards won on Backhaul (5 · 10 · 15) | Dead End (proxy, 8): +6% max Signal [+5% crit] · One Way (script, 11): +4% Clock Speed [+6% max Signal] · Turnout (shell, 14): +2 Block [+4% damage] | +5% Stealth | On the cycle after one of your delays lands, your hits deal 15% more | |
@@ -1805,7 +1812,8 @@ five slot kinds, so a general set's 2-piece can go beside it.
   full, Leech included; a cap like *a hit that would take more than 30%* applies before Block and shield; *a hit for
   more than 15%* is what reached your Signal; *your shortest cooldown* is the one nearest done; *commands in a row*
   are one a cycle on the same part, a cycle without one starting it over; *a part that can't be hit* is frozen or out
-  of phase.
+  of phase; *a part's shield* is a Buffer's or a Bodyguard's; *a hit that reaches several parts* is one command,
+  its extra paid on each part it hit once the command is done.
 - **Where the pieces drop** (`SET_LOOT`, `setDrop`): one roll an event of a source, at its chance plus its pity for each
   event without one while you lack a piece it drops; once you've found them all, a small flat chance. A piece you lack
   comes first, and a Listening Post listening for one lifts it. After a miss the log gives the next chance. The random
@@ -1826,7 +1834,7 @@ five slot kinds, so a general set's 2-piece can go beside it.
 
 - **Sources not built yet** drop from their floor's lair boss, each piece naming the source it moves to (`planned`):
   Fine Print, Contiguous and Crypter from floor 5's, Domain Admin, Hidden Process and Watertight from floor 6's,
-  Catchment from floor 7's, Bedrock and the tier sets from floor 8's. Their own source rows (SET_LOOT) wait on the
+  Catchment and Smash and Grab from floor 7's, Bedrock and the tier sets from floor 8's. Their own source rows (SET_LOOT) wait on the
   planner's clock (docs/floor-items.md).
 - **The LOWLIGHT Badge** comes with wick's last letter at level 22 (Mail), with wick's Old Toolkit rebuilt at your level. The Toolkit can't be deconstructed, and a full stash still takes it.
 - **The tooltip** reads in WoW's grammar under the piece's effect: its green line (set green once on, grey until then),

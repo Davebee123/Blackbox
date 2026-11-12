@@ -347,11 +347,13 @@ export const FX_DO = {
   reinsure: { when: ['struck'], label: 'gives back what a hit takes past X% of your max health as a shield over N cycles', value: true, own: true },
   'tell-cd': { when: ['custom'], label: 'takes X cycles off your shortest cooldown when a part starts a tell', value: true },
   'first-shield-x2': { when: ['custom'], label: 'doubles your first shield each fight' },
+  // Floor 7 (docs/floor-items.md).
+  'break-less': { when: ['custom'], label: 'makes damage from a part breaking deal X% less to you', value: true },
 };
 export const FX_SCALE = { '': 'flat', cycles: 'for each cycle the fight has lasted', contracts: 'for each contract you hold', broken: 'for each part broken this fight', reads: 'for each tell you answered this fight',
   chits: 'for each ◆ you hold', crew: 'for each crewmate in the fight', missing: 'for each 10% of your health you are missing', sets: 'for each set bonus you have active',
   specials: "for each of the server's specials", parts: 'for each part in the fight past two', held: 'for every 5 servers you hold',
-  tells: 'for each tell that landed on you this fight' };
+  tells: 'for each tell that landed on you this fight', standing: 'for each part standing' };
 export const FX_LIMIT = { '': 'every time', fight: 'once per fight', run: 'once per run', cooldown: 'then a real-time cooldown' };
 // A unique can lean toward a class: it drops three times as often for that class (combat.mjs uniqueFrom).
 export const CLASSES = { '': 'Any class', breaker: 'Breaker', bastion: 'Bastion', infiltrator: 'Infiltrator', operator: 'Operator',
