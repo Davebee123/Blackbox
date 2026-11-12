@@ -1062,10 +1062,26 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .tip-off[hidden] { display: none; }
 .tip-off { background: none; border: 0; color: var(--muted); font: 12px var(--mono); cursor: pointer; padding: 0; }
 .tip-off:hover { color: var(--text); }
+/* wick's tips (tips.mjs wick): the Transmission, the quest window's look in small. His face left, then the kicker, his
+   name and his line in mono; amber, his channel's colour. */
+.tip.wick { width: min(400px, calc((100vw - 24px) / var(--ui, 1))); border: 1px solid var(--amber); border-top-width: 2px; border-radius: var(--r-card); }
+.tip.wick::before { border-color: var(--amber); }
+.tip.wick .tip-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s5); align-items: start; margin-bottom: var(--s4); }
+.tip.wick .tip-body p { margin: 0; font: 13px/1.55 var(--mono); color: var(--text); }
+.tip-face:empty { display: none; }
+.tip .q-face { font-size: 4.2px; line-height: 4.2px; padding: var(--s2); margin: 0; border: 1px solid var(--line); }
+.tip-from { display: flex; flex-direction: column; gap: 2px; margin: -2px 0 var(--s3); }
+.tip-from[hidden] { display: none; }
+.tip-kick { font: var(--kicker); font-size: 10px; letter-spacing: var(--kicker-track); color: var(--amber); }
+.tip-from b { font: 700 13px var(--mono); color: var(--text); }
 .tip.show { animation: tip-in 0.25s ease-out both; }
 @keyframes tip-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .tip-target { outline: 2px solid var(--you); outline-offset: 3px; box-shadow: 0 0 18px rgba(127, 209, 199, 0.3); }
-.mnode.tip-target, .fp-room.tip-target { outline: none; box-shadow: none; filter: drop-shadow(0 0 7px rgba(127, 209, 199, 0.9)); }
+.fp-room.tip-target { outline: none; box-shadow: none; filter: drop-shadow(0 0 7px rgba(127, 209, 199, 0.9)); }
+/* A map node a tip points at: its shapes glow, never its name and line, which a glow smears. */
+.mnode.tip-target, .mnode .tip-target { outline: none; box-shadow: none; }
+.mnode.tip-target > :not(text), .mnode .tip-target { filter: drop-shadow(0 0 5px rgba(127, 209, 199, 0.95)); }
+.mnode .mhex.tip-target { stroke: var(--you); stroke-width: 2; filter: drop-shadow(0 0 3px var(--you)) drop-shadow(0 0 9px rgba(127, 209, 199, 0.8)); }
 .no-motion .tip.show { animation: none; }
 /* Victory: the fight's gains, until you close it. Under the CRT glass (z 70), over everything else. */
 @media (max-width: 1440px) { .meter-level { min-width: 0; } .meter-level .meter-bar { width: 40px; } }
