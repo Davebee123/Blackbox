@@ -103,27 +103,28 @@ boss is 38 or more); GAME_RULES.md *Uniques*.
 | Golden Ticket | implant 36 | Domain Controller, the Core's vault | +6% max Signal. Your first shield each fight is doubled. | ✓ |
 | Pass the Hash | exploit 35 | Domain Controller vaults | A critical strike makes your next hit on a different part a critical strike too. Works once every 3 cycles. | ✓ |
 
-## Floor 7 · The Sink (37–44) · 1 → 5 sets · 33 → 35 uniques, the lair's eight re-homed
+## Floor 7 · The Sink (37–44) · 5 sets ✓ · 35 uniques ✓, the lair's eight re-homed ✓
 
 **Sets** (Deep Archive ✓)
 
 | Set | Source | Pieces | 2 | 3 | 4 |
 |---|---|---|---|---|---|
 | **Catchment** ✓ | Sinkhole Residents (built: the floor 7 lair boss until they are) | Gully (exploit 37): +5% damage [+5% crit] · Storm Drain (proxy 39; renamed from Culvert, an earned unique's name): +2 Block [+6% max Signal] · Basin (shell 42): +6% max Signal [+2 Block] · Reservoir (implant 44): +4% Clock Speed [+5% damage] | +5% damage, +5% max Signal | Heals you for 3% of your max Signal when you break a part | Each part you break adds 5% damage for the fight, up to 20% |
-| **Exfil** ✚ | Stealer kills | Grabber (exploit 38): +5% crit [+5% damage] · Clipper (script 40): +5% Scavenge [+5% crit] · Dropzone (implant 42): +6% max Signal [+5% Clock Speed] | +6% damage | When your hit breaks a part's shield, a third of it shields you for 2 cycles | |
-| **Payroll** ✚ | Threads on The Sink | Pay Slip (script 39): +5% Restore [+6% max Signal] · Direct Deposit (proxy 41): +6% max Signal [+2 Block] · Year End (shell 43): +2 Block [+5% Clock Speed] | +8% max Signal | Every 4th cycle, heals you for 4% of your max Signal | |
-| **Backbone** ✚ | The Sink's puzzle rooms (deep Packet routing) | Hop (script 38): +4% Clock Speed [+5% damage] · Checksum (implant 41): +5% crit [+6% max Signal] · Multicast (exploit 44): +5% damage [+5% crit] | +5% Clock Speed | A hit that reaches several parts deals 8% more for each part past the first, up to 24% | |
+| **Smash and Grab** ✓ (renamed from Exfil, a family and an objective) | Stealer kills (built: the floor 7 lair boss until they are) | Grabber (exploit 38): +5% crit [+5% damage] · Clipper (script 40): +5% Scavenge [+5% crit] · Dropzone (implant 42): +6% max Signal [+5% Clock Speed] | +6% damage | When your hit breaks a part's shield, a third of it shields you for 2 cycles | |
+| **Payroll** ✓ | Threads on The Sink | Pay Slip (script 39): +5% Restore [+6% max Signal] · Direct Deposit (proxy 41): +6% max Signal [+2 Block] · Year End (shell 43): +2 Block [+5% Clock Speed] | +8% max Signal | Every 4th cycle, heals you for 4% of your max Signal | |
+| **Backbone** ✓ | The Sink's puzzle rooms (deep Packet routing) | Hop (script 38): +4% Clock Speed [+5% damage] · CRC (implant 41; renamed from Checksum, a Sysop skill): +5% crit [+6% max Signal] · Broadcast Storm (exploit 44; renamed from Multicast, a Sysop skill): +5% damage [+5% crit] | +5% Clock Speed | A hit that reaches several parts deals 8% more for each part past the first, up to 24% | |
 
 **Boss uniques**, from the lair's eight (✓ built, → re-homed) and two new ones
 
 | Boss (what it teaches) | Its two |
 |---|---|
 | GOLDEN PARACHUTE (break them close together, before it jacks out) | → Floodgate (a break gives +6% damage, stacking), → Spillway (a breaking hit carries 15 onto the next part) |
-| PAY RUN (every part standing adds to the payday) | → Outfall (each skill's first use deals 10% more), ✚ **Headcount** (proxy 40): +1 Block for each part standing, up to 4 |
+| PAY RUN (every part standing adds to the payday) | → Outfall (each skill's first use deals 10% more), ✓ **Headcount** (proxy 40): +1 Block for each part standing, up to 4 |
 | BIT BUCKET (big hits get through, and the flush comes back) | → Pumphouse (+5% a Momentum stack spent), → Seawall (Block grows as it reduces hits) |
-| SUMP (break the Sump when you can take the flush) | → Anchor Chain (a hit on you makes your next heal or shield 10% larger), ✚ **Check Valve** (proxy 44): damage from a part breaking deals 40% less to you |
+| SUMP (break the Sump when you can take the flush) | → Anchor Chain (a hit on you makes your next heal or shield 10% larger), ✓ **Check Valve** (proxy 44): damage from a part breaking deals 40% less to you |
 
-**Backwash** and **Riptide** (helper lines) → the Sinkhole's Resident, beside Catchment.
+**Backwash** and **Riptide** (helper lines) → the Sinkhole's Resident, beside Catchment. **Built** (November 2026): the
+re-homing is each piece's `planned`; all ten still drop from the floor 7 lair boss until their bosses are built.
 
 ## Floor 8 · Bedrock (43–50) · 5 sets ✓ · 43 → 44 uniques, the lair's eighteen re-homed
 

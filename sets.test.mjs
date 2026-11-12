@@ -65,6 +65,10 @@ const PLAN = {
   semaphore: ['Semaphore', { Spinlock: 'script', Semaphore: 'implant', 'Critical Section': 'shell' }, [2, 3]],
   hiddenprocess: ['Hidden Process', { Unlink: 'exploit', Hollow: 'script', Driver: 'implant' }, [2, 3]],
   watertight: ['Watertight', { Hatch: 'proxy', 'Seal Plate': 'shell', 'Pressure Door': 'implant' }, [2, 3]],
+  // Floor 7.
+  smashandgrab: ['Smash and Grab', { Grabber: 'exploit', Clipper: 'script', Dropzone: 'implant' }, [2, 3]],
+  payroll: ['Payroll', { 'Pay Slip': 'script', 'Direct Deposit': 'proxy', 'Year End': 'shell' }, [2, 3]],
+  backbone: ['Backbone', { Hop: 'script', CRC: 'implant', 'Broadcast Storm': 'exploit' }, [2, 3]],
   // The earned sets (earned.mjs): pieces on a count, never a roll.
   switchback: ['Switchback', { 'Dead End': 'proxy', 'One Way': 'script', Turnout: 'shell' }, [2, 3]],
   coldstart: ['Cold Start', { 'Ice Pick': 'exploit', Rime: 'implant', Thaw: 'proxy' }, [2, 3]],
@@ -677,7 +681,7 @@ test('every piece has a source that rolls; a source rolls the pieces you lack fi
   const ROLLS = [['guard', { id: 'bouncer' }], ['guard', { id: 'tracer' }], ['guard', { id: 'sentinel' }], ['boss', { id: 'relayking' }], ['boss', { id: 'choir' }], ['boss', { id: 'repoman' }], ['boss', { id: 'shouldersurfer' }], ['boss', { id: 'nightdesk' }], ['boss', { id: 'byzantine' }], ['crew', { id: 'foreman' }],
     ...[1, 2, 3, 4, 5, 6, 7, 8].flatMap((f) => [['lair', { floor: f }], ['rare', { floor: f }], ['vault', { floor: f }], ['thread', { floor: f }]]),
     ['strain', { lineage: 'ransomware' }], ['strain', { lineage: 'worm' }], ['strain', { lineage: 'ghostroot' }], ['author', { id: 'glassjaw' }], ['courier', {}], ['takeover', {}],
-    ...PUZZLE_KINDS.map((id) => ['puzzle', { id }]), ['puzzle', { id: 'deadlock', floor: 6 }]];
+    ...PUZZLE_KINDS.map((id) => ['puzzle', { id }]), ['puzzle', { id: 'deadlock', floor: 6 }], ['puzzle', { id: 'routing', floor: 7 }]];
   const reach = new Set(ROLLS.flatMap(([kind, x]) => setDropPool({ kind, layer: 9, ...x }).map((u) => u.id)));
   for (const id of Object.values(SETS).flatMap((x) => x.pieces).filter((p) => !UNIQUES[p].sources.every((x) => x.kind === 'story' || x.kind === 'feat'))) assert.ok(reach.has(id), `${id} drops from somewhere`); // an earned set's pieces come on a count (earned.test.mjs)
   for (const [kind, o] of Object.entries(SET_LOOT)) assert.ok(o.chance > 0 && o.pity > 0 && o.found > 0 && o.found <= o.chance, kind);

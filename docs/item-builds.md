@@ -85,7 +85,7 @@ Sampler, Policy Engine and Interrupt Vector are all scripts; pick one (Tide Tabl
 | Siphon Tube, Hotfix, Sump Pump, Depth Gauge | script 44, shell 5, shell 41, shell 41 | Leech +50%, Regen ×2, heals +10%, +4 Regen below half |
 | Signal Floor, Brownout, Strata | proxy 50, shell 47, shell 49 | Regen ×2 and −15% taken below 25%; up to −10% as you drop |
 | Umbrella Policy (faction), Last Known Good, Hot Spare (2) | proxy · script 48 · set | The floor under you |
-| Recovery Mode, Reinsurance | script 36 · proxy 40 | Below half a hit capped at 15% every 6 cycles; a big hit's excess back as a shield |
+| Recovery Mode, Reinsurance, Payroll (3) | script 36 · proxy 40 · set 39–43 | Below half a hit capped at 15% every 6 cycles; a big hit's excess back as a shield; 4% healed every 4th cycle |
 
 Talents: Kernel Panic (Warden), Critical Path (Sysop). Catch: never with the Glass Jaw implicit, which hurts below 25%.
 
@@ -128,13 +128,14 @@ Load Balanced (3) plus Load Order may beat the 4.
 ### Bulwark (Warden)
 
 Siltstone (implant 40: +1 Block for each ◆ you hold) with Harden and Write Protect, Squatter's Rights or Air Gap, Full
-Coverage (4) and Bitrot Ward for ◆. Seawall (proxy 39: +1 Block a reduced hit, to 5), Cold Iron (shell 48: +3, and Block
+Coverage (4) and Bitrot Ward for ◆. Seawall (proxy 39: +1 Block a reduced hit, to 5), Headcount (proxy 40: +1 Block a part
+standing, to 4), Cold Iron (shell 48: +3, and Block
 works on burns), Pressure Hull (shell 42: +25% while shielded), Bulletproof Host (proxy 28: ×2 while a tell winds up),
 Honeycomb and Ring Main (earned). Strongbox leaves the implant free for Siltstone.
 
 ### Shield battery (Bastion)
 
-Bigger shields: Cutoff Wall (script 47: a shield on a cut), Strongbox (3: +15%), Combination (+10%), Bedrock Seal (proxy 47: +15%), Anchor Chain (implant 43:
+Bigger shields: Smash and Grab (3: a third of a part's shield you break, for 2 cycles), Cutoff Wall (script 47: a shield on a cut), Strongbox (3: +15%), Combination (+10%), Bedrock Seal (proxy 47: +15%), Anchor Chain (implant 43:
 +10% after a hit), Warm Reset (shell 50: start shielded). Paid on a shield: Breakwater (exploit 41: +5% damage, stacking 3), Pre-Authorization (script 24: next command
 +10%), Cofferdam or Pressure Hull, and the *shielded* talents (Bounce Buffer, Cold Plate, Health Probe, Heat Sink, Hot
 Swap, Cover Traffic, Shim, Reactive Plating), Fine Print (4: +10% behind a shield). Raised by Interrupt Vector, Kestrel
@@ -177,12 +178,12 @@ Survey) fills all six slots with four bonuses.
 The build ideas are there; the pieces don't carry most of them to level 50.
 
 **Built (Batch 2, November 2026):** ten pieces at 41–48 for the enablers, the empty class slots and the four events
-(GAME_RULES.md *Uniques*), and Catchment, the general 4-piece. **Floors 5–6** (docs/floor-items.md): seven sets and
-19 uniques at 26–40. Left: the flat sidegrades (the designer: keep the items players own as they are).
+(GAME_RULES.md *Uniques*), and Catchment, the general 4-piece. **Floors 5–7** (docs/floor-items.md): ten sets and
+21 uniques at 26–44. Left: the flat sidegrades (the designer: keep the items players own as they are).
 
 | Gap | Today | Fix, in order |
 |---|---|---|
-| Thin middle | Built: non-set uniques by level 66 at 1–14, 38 at 15–26, 36 at 27–38 (was 19), 77 at 39–50 | Floors 5–6's batch, on the builds above |
+| Thin middle | Built: non-set uniques by level 66 at 1–14, 38 at 15–26, 36 at 27–38 (was 19), 79 at 39–50 | Floors 5–6's batch, on the builds above |
 | Enablers stop at low levels | Break refunds 4–24, burn multipliers 4–22, Hive Mind set 6–15; only faction pieces, Zero-days and chase protocols reach 50 | 39–50 versions of the enablers: a break refund, a burn multiplier, a helper multiplier |
 | Class pieces share a slot | Of the 39–50 uniques, Operator's are mostly scripts, Bastion's 9 of 13 shells; the tell pieces all scripts | Spread each class's deep pieces over every slot |
 | Endgame funnels | A tier set takes four slots with a generic 4-piece, and only one 4-piece counts: tier set, implant, one flex | One general 4-piece set at 39–50 that competes with the tier sets |

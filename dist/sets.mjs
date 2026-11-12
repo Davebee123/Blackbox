@@ -226,6 +226,9 @@ export function setsRestore(s, was) {
 //   late-cd                cooldowns shorter from your Nth break      delay-open  a part you delay is Open
 //   big-guard              a big hit: the next one within some cycles deals less
 //   burn-through           your burns tick on a part out of reach (combat.mjs hit)
+// Floor 7's:
+//   shield-steal           a part's shield broken by your hit: a share of it shields you for some cycles
+//   heal-every             every Nth cycle, a heal                    reach%    a command that hits several parts
 const who = (s) => s.who || '';
 const pct = (n) => 1 + n / 100;
 // Your set state in this fight (e.sx), made the first time a hook asks, and again at every start (a crewmate's
@@ -365,6 +368,7 @@ export const SET_HOOKS = {
     if (!x || !(res?.dealt > 0)) return;
     const skill = !!opts.mine && !opts.dot && !opts.by;
     if (skill) x.first[p.id] = true;
+    if (opts.mine && !opts.dot && !opts.reach && e.commanding && custom(s, 'reach%').length) ((x.reach ||= {})[p.id] = (x.reach[p.id] || 0) + res.dealt); // Backbone (3): what this command dealt, part by part
     if (res.crit && skill && mineOn(p, 'sxCrit', s)) delete p.sxCrit[who(s)];
     else if (res.crit && skill && x.stripCrit && x.stripCrit !== p.id) x.stripCrit = null; // Crypter (3), spent
     // Palemask (4): the hit that takes a part below half.
@@ -442,6 +446,8 @@ export const SET_HOOKS = {
       if (cooling.length) emit(s, 'status', `${f.name}: your cooldowns tick one extra cycle.`, gear(f));
     }
     for (const f of custom(s, 'repeat-every')) if (e.cycle % (f.fx.every || 4) === 0) x.repeat = true;
+    for (const f of custom(s, 'heal-every')) if (e.cycle % (f.fx.every || 4) === 0) heal(s, pctOf(s, f.value), f.name); // Payroll (3)
+    if (x.stolen && e.cycle >= x.stolen.until) { const n = Math.min(e.shield || 0, x.stolen.n); e.shield = (e.shield || 0) - n; x.stolen = null; if (n) emit(s, 'status', `The shield you took fades (${e.shield} left).`, { mark: 'shield' }); } // Smash and Grab (3)
   },
   // A part's last ◆ broken (combat.mjs stripMark): Crypter (3) arms a crit for another part, Domain Admin (3) takes a
   // cycle off your nearest cooldown.
@@ -451,6 +457,17 @@ export const SET_HOOKS = {
     const f = custom(s, 'strip-crit')[0];
     if (f) { x.stripCrit = p.id; emit(s, 'status', `${f.name}: your next hit on another part is a critical strike.`, { target: p.id, mark: 'buff', ...gear(f) }); }
     for (const g of custom(s, 'strip-cd')) shortestOff(s, g.value || 1, g.name, g);
+  },
+  // A part's shield broken by your hit (combat.mjs hit, a Buffer's or a Bodyguard's): Smash and Grab (3) takes a share.
+  shieldBroke(s, p, size) {
+    const e = s.encounter, x = sxOf(s);
+    if (!x) return;
+    for (const f of custom(s, 'shield-steal')) {
+      const n = Math.max(1, Math.round((size * f.value) / 100)), was = x.stolen && e.cycle < x.stolen.until ? x.stolen.n : 0;
+      e.shield = (e.shield || 0) + n;
+      x.stolen = { n: was + n, until: e.cycle + (f.fx.cycles || 2) };
+      emit(s, 'status', `${f.name}: you take ${n} of the ${p.name}'s shield for ${f.fx.cycles || 2} cycles (${e.shield}).`, { target: p.id, mark: 'shield', ...gear(f) });
+    }
   },
   // An attack you delayed (combat.mjs delayAttack): Semaphore (3) leaves its part Open.
   delayed(s, p) {
@@ -465,6 +482,13 @@ export const SET_HOOKS = {
     if (!x || !before) return;
     x.n++;
     if (!x.skills.includes(id)) x.skills.push(id);
+    // Backbone (3): a command that reached several parts deals more on each, after the fact.
+    const reach = x.reach || {}, hitN = Object.keys(reach).length;
+    x.reach = null;
+    if (hitN > 1) for (const f of custom(s, 'reach%')) {
+      const more = Math.min(f.fx.cap || 99, f.value * (hitN - 1));
+      for (const [pid, n] of Object.entries(reach)) { const q = parts(s).find((y) => y.id === pid); if (alive(q) && n > 0) hit(s, q, Math.max(1, Math.round((n * more) / 100)), { by: f.name, flat: true, pierce: true, reach: true, noHook: true }); }
+    }
     if (target) x.row = { target: target.id, cycle: e.cycle, k: rowOf(e, x, target) }; // Contiguous (3): this command's place in its row
     x.used[id] = true;
     if (x.splashArm) { x.splashArm = false; x.splash = true; }

@@ -144,7 +144,7 @@ boss exists.
 |---|---:|---|---|---|---|---|
 | CENTRIFUGE | 14 | Floor 2's floor job | Surge, Encrypt, SYN Flood on the Pulse Node, Full Disk, Double Extortion, Re-key | **Spin-up.** The Pulse Node's interval drops by one each time its Surge lands (4, 3, 2). Any delay or Throttle spins it back to 4. | 50% re-arm | Governor (proxy): an attack that lands within 2 cycles of its part's last one deals 25% less. Cascade Failure (exploit): when you delay or Throttle an attack, its part takes 20. |
 | BYZANTINE | 26 | Throne of floor 4's Pits | Surge, Replicate, Stateless, Mass Mailer, Self-Update, Re-key (three Nodes) | **Byzantine Fault.** Every 4 cycles (two ahead) the three Nodes vote and the most damaged is restored to the average of the three. Spread your damage, then burst. | 50% re-arm | Majority Attack (exploit): +8% damage for each part below half, up to +32%. Quorum Sensor (proxy): when two attacks land on the same cycle, the second deals 30% less. |
-| GOLDEN PARACHUTE | 38 | Lair, floor 7 | Surge, Encrypt, Exfiltrate, ACL, Cycle tax, Full Disk, Double Extortion, Re-key | **Severance.** When a part breaks, every surviving part gains a ◆ and its next attack (two or more cycles away) becomes a charge. | 60% re-arm | Its three are built and drop from the Sink's lair boss until it exists (GAME_RULES *Items*). |
+| GOLDEN PARACHUTE | 38 | Lair, floor 7 | Surge, Encrypt, Exfiltrate, ACL, Cycle tax, Full Disk, Double Extortion, Re-key | **Severance.** When a part breaks, every surviving part gains a ◆ and its next attack (two or more cycles away) becomes a charge. | 60% re-arm | Floodgate and Spillway (docs/floor-items.md), built: the Sink's lair boss drops them until it exists. |
 
 **ACTUARY**
 

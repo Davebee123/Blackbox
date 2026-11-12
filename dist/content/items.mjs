@@ -4679,7 +4679,8 @@ export default {
       "sources": [
         {
           "kind": "lair",
-          "floor": 7
+          "floor": 7,
+          "planned": "BIT BUCKET"
         }
       ],
       "flavour": "Every wave that breaks on it leaves it a little higher."
@@ -4767,7 +4768,8 @@ export default {
       "sources": [
         {
           "kind": "lair",
-          "floor": 7
+          "floor": 7,
+          "planned": "Sinkhole Residents"
         }
       ],
       "flavour": "What flows out comes back in."
@@ -4909,7 +4911,8 @@ export default {
       "sources": [
         {
           "kind": "lair",
-          "floor": 7
+          "floor": 7,
+          "planned": "GOLDEN PARACHUTE"
         }
       ],
       "flavour": "Open one and the rest follow."
@@ -5022,7 +5025,7 @@ export default {
         {
           "kind": "lair",
           "floor": 7,
-          "planned": "GOLDEN PARACHUTE"
+          "planned": "Sinkhole Residents"
         }
       ],
       "flavour": "It drags anything that stops moving."
@@ -5190,7 +5193,8 @@ export default {
       "sources": [
         {
           "kind": "lair",
-          "floor": 7
+          "floor": 7,
+          "planned": "SUMP"
         }
       ],
       "flavour": "Every pull on it sets it deeper."
@@ -5317,7 +5321,7 @@ export default {
         {
           "kind": "lair",
           "floor": 7,
-          "planned": "GOLDEN PARACHUTE"
+          "planned": "PAY RUN"
         }
       ],
       "flavour": "The first rush out is the strongest."
@@ -5345,7 +5349,7 @@ export default {
         {
           "kind": "lair",
           "floor": 7,
-          "planned": "GOLDEN PARACHUTE"
+          "planned": "BIT BUCKET"
         }
       ],
       "flavour": "It runs on what you have built up."
@@ -5465,7 +5469,8 @@ export default {
       "sources": [
         {
           "kind": "lair",
-          "floor": 7
+          "floor": 7,
+          "planned": "GOLDEN PARACHUTE"
         }
       ],
       "flavour": "When it overflows, it goes somewhere."
@@ -9657,6 +9662,358 @@ export default {
         }
       ],
       "flavour": "Nobody asked for the password. The hash was enough."
+    },
+    {
+      "id": "grabber",
+      "name": "Grabber",
+      "set": "smashandgrab",
+      "base": "sandbox-escape",
+      "level": 38,
+      "primary": {
+        "damage": [
+          55,
+          68
+        ]
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7,
+          "planned": "Stealer kills"
+        }
+      ]
+    },
+    {
+      "id": "clipper",
+      "name": "Clipper",
+      "set": "smashandgrab",
+      "base": "living-off-the-land",
+      "level": 40,
+      "primary": {
+        "damage": 26,
+        "signal": 112,
+        "payload": 13
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "scavenge",
+        "value": 5,
+        "text": "+5% Scavenge"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7,
+          "planned": "Stealer kills"
+        }
+      ]
+    },
+    {
+      "id": "dropzone",
+      "name": "Dropzone",
+      "set": "smashandgrab",
+      "base": "firmware-rootkit",
+      "level": 42,
+      "primary": {
+        "damage": 17,
+        "signal": 83
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7,
+          "planned": "Stealer kills"
+        }
+      ]
+    },
+    {
+      "id": "pay-slip",
+      "name": "Pay Slip",
+      "set": "payroll",
+      "base": "living-off-the-land",
+      "level": 39,
+      "primary": {
+        "damage": 26,
+        "signal": 112,
+        "payload": 13
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "restore",
+        "value": 5,
+        "text": "+5% Restore"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": [
+            7,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-deposit",
+      "name": "Direct Deposit",
+      "set": "payroll",
+      "base": "domain-front",
+      "level": 41,
+      "primary": {
+        "signal": 256,
+        "reduction": 7
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": [
+            7,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "id": "year-end",
+      "name": "Year End",
+      "set": "payroll",
+      "base": "firmware-shell",
+      "level": 43,
+      "primary": {
+        "signal": 154,
+        "regen": 33,
+        "restore": 66
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": [
+            7,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hop",
+      "name": "Hop",
+      "set": "backbone",
+      "base": "living-off-the-land",
+      "level": 38,
+      "primary": {
+        "damage": 22,
+        "signal": 94,
+        "payload": 10
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 4,
+        "text": "+4% Clock Speed"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "id": "routing",
+          "floor": 7
+        }
+      ]
+    },
+    {
+      "id": "crc",
+      "name": "CRC",
+      "set": "backbone",
+      "base": "bootkit",
+      "level": 41,
+      "primary": {
+        "damage": 16,
+        "signal": 79
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "id": "routing",
+          "floor": 7
+        }
+      ]
+    },
+    {
+      "id": "broadcast-storm",
+      "name": "Broadcast Storm",
+      "set": "backbone",
+      "base": "hypervisor-escape",
+      "level": 44,
+      "primary": {
+        "damage": [
+          75,
+          93
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "id": "routing",
+          "floor": 7
+        }
+      ]
+    },
+    {
+      "id": "headcount",
+      "name": "Headcount",
+      "base": "domain-front",
+      "level": 40,
+      "primary": {
+        "signal": 256,
+        "reduction": 7
+      },
+      "secondary": {
+        "signal": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 1,
+        "scale": "standing",
+        "cap": 4,
+        "text": "+1 Block for each part standing, up to 4."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7,
+          "planned": "PAY RUN"
+        }
+      ],
+      "flavour": "Everyone on the floor at nine, and everyone paid at five."
+    },
+    {
+      "id": "check-valve",
+      "name": "Check Valve",
+      "base": "covert-channel",
+      "level": 44,
+      "primary": {
+        "signal": 324,
+        "reduction": 9
+      },
+      "secondary": {
+        "reduction": 3
+      },
+      "effect": {
+        "when": "custom",
+        "do": "break-less",
+        "value": 40,
+        "text": "Damage from a part breaking deals 40% less to you."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7,
+          "planned": "SUMP"
+        }
+      ],
+      "flavour": "Water goes one way through it, and the flap stays shut on the backwash."
     }
   ]
 };
