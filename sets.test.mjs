@@ -56,6 +56,7 @@ const PLAN = {
   hotspare: ['Hot Spare', { Standby: 'shell', Failback: 'implant' }, [2]],
   mesh: ['Mesh', { Node: 'proxy', Link: 'script', Hub: 'implant' }, [2, 3]],
   deeparchive: ['Deep Archive', { Index: 'script', Spine: 'shell', Folio: 'exploit', Vellum: 'implant' }, [2, 3, 4]],
+  catchment: ['Catchment', { Gully: 'exploit', 'Storm Drain': 'proxy', Basin: 'shell', Reservoir: 'implant' }, [2, 3, 4]],
   // The earned sets (earned.mjs): pieces on a count, never a roll.
   switchback: ['Switchback', { 'Dead End': 'proxy', 'One Way': 'script', Turnout: 'shell' }, [2, 3]],
   coldstart: ['Cold Start', { 'Ice Pick': 'exploit', Rime: 'implant', Thaw: 'proxy' }, [2, 3]],

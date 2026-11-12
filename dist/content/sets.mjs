@@ -1251,6 +1251,59 @@ export default {
           ]
         }
       }
+    },
+    {
+      "id": "catchment",
+      "name": "Catchment",
+      "levels": [
+        37,
+        44
+      ],
+      "pieces": [
+        "gully",
+        "storm-drain",
+        "basin",
+        "reservoir"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% damage, +5% max Signal.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 5
+            },
+            {
+              "when": "always",
+              "do": "signal%",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "Breaking a part heals you for 3% of your max Signal.",
+          "fx": [
+            {
+              "when": "break",
+              "do": "break-heal%",
+              "value": 3
+            }
+          ]
+        },
+        "4": {
+          "text": "Each part you break adds 5% damage for the fight, up to 20%.",
+          "fx": [
+            {
+              "when": "break",
+              "do": "buff",
+              "value": 5,
+              "cycles": 99,
+              "stacks": 4
+            }
+          ]
+        }
+      }
     }
   ]
 };

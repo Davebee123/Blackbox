@@ -7972,6 +7972,411 @@ export default {
         }
       ],
       "flavour": "Found them all from a distance, before anyone stood next to them."
+    },
+    {
+      "id": "breakwater",
+      "name": "Breakwater",
+      "base": "sandbox-escape",
+      "level": 41,
+      "lean": "bastion",
+      "primary": {
+        "damage": [
+          66,
+          83
+        ]
+      },
+      "secondary": {
+        "crit": 6,
+        "reduction": 2
+      },
+      "effect": {
+        "when": "shielded",
+        "do": "buff",
+        "value": 5,
+        "cycles": 2,
+        "stacks": 3,
+        "text": "Increases your damage by 5% for 2 cycles when you gain a shield or your shield absorbs a hit. Stacks up to 3 times."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7
+        }
+      ],
+      "flavour": "The sea hits it all night and builds it a little higher."
+    },
+    {
+      "id": "riprap",
+      "name": "Riprap",
+      "base": "firmware-shell",
+      "level": 42,
+      "lean": "breaker",
+      "primary": {
+        "signal": 150,
+        "regen": 32,
+        "restore": 65
+      },
+      "secondary": {
+        "crit": 5
+      },
+      "effect": {
+        "when": "cut",
+        "do": "buff",
+        "value": 8,
+        "cycles": 2,
+        "stacks": 2,
+        "text": "Increases your damage by 8% for 2 cycles when you cut a part's move. Stacks up to 2 times."
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 7
+        }
+      ],
+      "flavour": "Broken stone, dumped where the current cuts deepest."
+    },
+    {
+      "id": "spawning-run",
+      "name": "Spawning Run",
+      "base": "hypervisor-escape",
+      "level": 42,
+      "lean": "operator",
+      "primary": {
+        "damage": [
+          69,
+          86
+        ]
+      },
+      "secondary": {
+        "clock": 4
+      },
+      "effect": {
+        "when": "hit",
+        "do": "helper%",
+        "value": 15,
+        "text": "Increases the damage of your helpers by 15%."
+      },
+      "sources": [
+        {
+          "kind": "rare",
+          "floor": 7
+        }
+      ],
+      "flavour": "Thousands go upstream. Enough of them arrive."
+    },
+    {
+      "id": "tide-table",
+      "name": "Tide Table",
+      "base": "firmware-rootkit",
+      "level": 42,
+      "primary": {
+        "damage": 17,
+        "signal": 83
+      },
+      "secondary": {
+        "crit": 4
+      },
+      "effect": {
+        "when": "answer",
+        "do": "refund",
+        "value": 1,
+        "text": "Reduces all your cooldowns by 1 cycle when you answer a tell."
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "floor": 7
+        }
+      ],
+      "flavour": "High water at 03:12. It is never wrong."
+    },
+    {
+      "id": "banked-fire",
+      "name": "Banked Fire",
+      "base": "firmware-shell",
+      "level": 43,
+      "lean": "infiltrator",
+      "primary": {
+        "signal": 150,
+        "regen": 32,
+        "restore": 65
+      },
+      "secondary": {
+        "payload": 6
+      },
+      "effect": {
+        "when": "hit",
+        "do": "burn%",
+        "value": 12,
+        "text": "Increases the damage of your burns by 12%."
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": 7
+        }
+      ],
+      "flavour": "Ash on top. Red underneath until morning."
+    },
+    {
+      "id": "rockfall",
+      "name": "Rockfall",
+      "base": "metamorphic-engine",
+      "level": 45,
+      "lean": "breaker",
+      "primary": {
+        "damage": 35,
+        "signal": 145,
+        "payload": 18
+      },
+      "secondary": {
+        "crit": 5
+      },
+      "effect": {
+        "when": "break",
+        "do": "refund",
+        "value": 1,
+        "text": "Reduces all your cooldowns by 1 cycle when you break a part."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8
+        }
+      ],
+      "flavour": "One stone lets go, and the slope follows it."
+    },
+    {
+      "id": "relief-valve",
+      "name": "Relief Valve",
+      "base": "firmware-shell",
+      "level": 45,
+      "lean": "operator",
+      "primary": {
+        "signal": 185,
+        "regen": 40,
+        "restore": 80
+      },
+      "secondary": {
+        "clock": 4
+      },
+      "effect": {
+        "when": "cut",
+        "do": "refund",
+        "value": 1,
+        "text": "Reduces all your cooldowns by 1 cycle when you cut a part's move."
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 8
+        }
+      ],
+      "flavour": "Set to lift at nine bar. It has lifted every night this week."
+    },
+    {
+      "id": "cutoff-wall",
+      "name": "Cutoff Wall",
+      "base": "metamorphic-engine",
+      "level": 47,
+      "lean": "bastion",
+      "primary": {
+        "damage": 37,
+        "signal": 157,
+        "payload": 19
+      },
+      "secondary": {
+        "reduction": 2
+      },
+      "effect": {
+        "when": "cut",
+        "do": "shield",
+        "value": 16,
+        "text": "Shields you for 16 when you cut a part's move."
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 8
+        }
+      ],
+      "flavour": "Grout pumped down to the bedrock, so nothing seeps under the dam."
+    },
+    {
+      "id": "bench-mark",
+      "name": "Bench Mark",
+      "base": "firmware-rootkit",
+      "level": 48,
+      "lean": "infiltrator",
+      "primary": {
+        "damage": 22,
+        "signal": 110
+      },
+      "secondary": {
+        "crit": 5
+      },
+      "effect": {
+        "when": "tagged",
+        "do": "heal",
+        "value": 5,
+        "text": "Heals you for 5 when you hit a Tagged part."
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": 8
+        }
+      ],
+      "flavour": "A brass disc in the rock. Every survey starts from it."
+    },
+    {
+      "id": "flue",
+      "name": "Flue",
+      "base": "covert-channel",
+      "level": 48,
+      "primary": {
+        "signal": 385,
+        "reduction": 11
+      },
+      "secondary": {
+        "payload": 6
+      },
+      "effect": {
+        "when": "burn",
+        "do": "shield",
+        "value": 2,
+        "text": "Shields you for 2 when one of your burns ticks."
+      },
+      "sources": [
+        {
+          "kind": "rare",
+          "floor": 8
+        }
+      ],
+      "flavour": "The heat goes up the stack and keeps the room warm on the way."
+    },
+    {
+      "id": "gully",
+      "name": "Gully",
+      "set": "catchment",
+      "base": "sandbox-escape",
+      "level": 37,
+      "primary": {
+        "damage": [
+          60,
+          76
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7
+        }
+      ]
+    },
+    {
+      "id": "storm-drain",
+      "name": "Storm Drain",
+      "set": "catchment",
+      "base": "domain-front",
+      "level": 39,
+      "primary": {
+        "signal": 271,
+        "reduction": 8
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7
+        }
+      ]
+    },
+    {
+      "id": "basin",
+      "name": "Basin",
+      "set": "catchment",
+      "base": "firmware-shell",
+      "level": 42,
+      "primary": {
+        "signal": 150,
+        "regen": 32,
+        "restore": 65
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7
+        }
+      ]
+    },
+    {
+      "id": "reservoir",
+      "name": "Reservoir",
+      "set": "catchment",
+      "base": "firmware-rootkit",
+      "level": 44,
+      "primary": {
+        "damage": 18,
+        "signal": 90
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 4,
+        "text": "+4% Clock Speed"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7
+        }
+      ]
     }
   ]
 };

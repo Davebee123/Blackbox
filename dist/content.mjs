@@ -206,7 +206,7 @@ export const FX_DO = {
   refund: { when: ['break', 'answer', 'cut'], label: 'reduces all your cooldowns by X cycles', value: true },
   'refund-skill': { when: ['break', 'crit'], label: 'resets the cooldown of the skill you used' },
   heal: { when: ['break', 'crit', 'answer', 'burn', 'shielded', 'tagged', 'cut'], label: 'heals you for X', value: true },
-  shield: { when: ['start', 'answer', 'cut'], label: 'shields you for X', value: true },
+  shield: { when: ['start', 'answer', 'cut', 'burn'], label: 'shields you for X', value: true },
   'break-hit': { when: ['break'], label: 'deals X damage to the part winding up a tell, or else to the next part to attack,', value: true },
   shatter: { when: ['hit'], label: 'makes each hit on an armored part break 2 ◆' },
   'tell-hits': { when: ['always'], label: 'leaves a part Open when you cut its move' },
@@ -262,7 +262,7 @@ export const FX_DO = {
   'max-signal%': { when: ['always'], label: 'increases your max Signal by X%', value: true },
   'heal%': { when: ['always'], label: 'increases the healing you receive by X%', value: true },
   stack: { when: ['struck'], label: 'adds X to your stat for the rest of the fight', value: true, stat: true },
-  buff: { when: ['break', 'crit'], label: 'increases your damage by X% for N cycles', value: true },
+  buff: { when: ['break', 'crit', 'shielded', 'cut'], label: 'increases your damage by X% for N cycles', value: true },
   // The hits you take.
   'taken%': { when: ['always', 'struck'], label: 'reduces the damage you take by X%', value: true },
   rewind: { when: ['struck'], label: 'resets your Signal to what it was X cycles earlier', value: true },
