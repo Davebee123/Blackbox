@@ -1317,8 +1317,10 @@ changing nothing.
 
 ### Classes and loadout
 
-You choose your first class after you log in, on a full screen of four cards (each with its emblem, role, passive,
-sync, first two skills and its two subclasses). Change class on the Loadout page (`archetype <id>`). **Trying classes is
+You choose your first class after you log in, from four squares (emblem, name, roles). Picking one (a click, 1–4 or
+the arrows) opens a drawer from it: its passive and sync, its first two skills, its two subclasses, each rule in a
+tooltip; the others narrow to strips, and Esc or a second click closes it. Start is the command `> start --as <class>`
+(Enter or a double-click). Change class on the Loadout page (`archetype <id>`). **Trying classes is
 free:** until any class reaches level 5, switching to a class you haven't played takes your level with it.
 
 | Class | Role | Passive | Core skills (levels 1, 3, 5, 7) |

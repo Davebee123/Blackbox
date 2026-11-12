@@ -3410,27 +3410,36 @@ function marketMarkup(s, f, now) {
 }
 const GLYPH_OF_GOOD = { shelf: 'protocol', chase: 'protocol', relay: 'relay', cracker: 'cracker', injector: 'injector', signal: 'signal', repair: 'repair', cipher: 'cipher', worm: 'worm', kernel: 'kernel', exploit: 'exploit', salvage: 'salvage', crate: 'crate', blueprint: 'blueprint' };
 
-// Your first class, picked right after you log in: a choice of four on the screen, each with its emblem, its archetype,
-// its passive and Sync, the two skills it starts with and the subclasses it opens. Pick one, then start
-// (app.js pickClass). Switching is free until a class reaches LOADOUT.trialUntil (your level comes along).
+// Your first class, picked right after you log in (docs/ui.md The class picker): four squares, each its emblem, name and
+// roles. A pick opens a drawer from its square (traits, the two skills it starts with, its subclasses; rules in
+// tooltips) and narrows the rest to strips; the picked square's border plays its class's effect (.pk-fx). Never a
+// slogan. Start is a command line (pkGoMarkup). app.js pickClass drives it. Switching is free until LOADOUT.trialUntil.
+const PK_KIND = { hit: 'Hit', burn: 'Burn', stun: 'Stun', debuff: 'Debuff', shield: 'Shield', heal: 'Heal', buff: 'Buff' };
+const pkTip = (name, body, kind) => ` tabindex="0" title="${esc(`${name}: ${body}`)}" data-tt-kind="${esc(kind)}"`;
+const pkRow = (mark, name, sub, tip, cls = '') => `<span class="pk-row"${tip}><span class="pk-fr${cls}">${mark}</span><span class="pk-txt">${name}${sub}</span></span>`;
+const pkIco = (name) => `<span class="sk-ico" style="--icon:url('ui/icons/${name}.svg')" aria-hidden="true"></span>`;
+export const pkGoMarkup = (name = '') => `<span class="pk-cmd"><span class="pk-dim">&gt;</span> start <span class="pk-dim">--as</span> <b>${esc(name)}</b><i class="pk-cur"></i></span>`;
 export function classPickMarkup() {
   const cards = Object.entries(ARCHETYPES).map(([k, a], i) => {
-    const first = a.skills.slice(0, 2).map((x) => `<li title="${esc(x.rule || '')}"><b>${esc(x.name)}</b><small>${ruleHtml(ABILITIES[x.id]?.short || '')}</small></li>`).join('');
-    const subs = Object.values(a.subs || {}).map((x) => esc(x.name)).join(' <i>or</i> ');
-    return `<button type="button" class="pk-card" data-pick-class="${k}" role="radio" aria-checked="false" style="--i:${i}">
-      <span class="pk-num">0${i + 1}</span>
-      <span class="pk-plate"><pre class="pk-art" aria-hidden="true">${esc(EMBLEMS[k].join('\n'))}</pre></span>
-      <span class="pk-name">${esc(a.name)}</span>
-      <span class="pk-role">${a.role.map((r) => `<span>${esc(r)}</span>`).join('')}</span>
-      <span class="pk-sec"><span class="pk-k">Passive</span><b>${esc(a.passive.name)}</b><small>${ruleHtml(a.passive.rule)}</small></span>
-      <span class="pk-sec"><span class="pk-k">Sync</span><small>${ruleHtml(SYNC[k].rule)}</small></span>
-      <span class="pk-sec"><span class="pk-k">Starts with</span><ul class="pk-skills">${first}</ul></span>
-      <span class="pk-sec pk-later"><span class="pk-k" title="${esc(`From level ${SUBCLASS.from}`)}">Subclass</span><small>${subs}</small></span>
-    </button>`;
+    const traits = pkRow(glyph('damage'), `<small class="pk-lb">Passive</small><b>${esc(a.passive.name)}</b>`, '', pkTip(a.passive.name, a.passive.rule, 'Passive'), ' gl')
+      + pkRow(glyph('sync'), `<small class="pk-lb">Sync</small><b>${ruleHtml(SYNC[k].tag)}</b>`, '', pkTip('Sync bonus', `Fired in a Sync Window, your command deals ${Math.round(CONFIG.sync.bonus * 100)}% more damage and ${SYNC[k].rule.replace(/^./, (c) => c.toLowerCase())}`, 'Sync bonus'), ' gl');
+    const skills = a.skills.slice(0, 2).map((x) => { const ab = ABILITIES[x.id] || {}; return pkRow(pkIco(ab.icon || 'command'), `<b>${esc(x.name)}</b>`, `<small>${ruleHtml(ab.short || '')}</small>`, pkTip(x.name, x.rule || '', `${PK_KIND[ab.verb] || 'Utility'} · ${ab.cooldown || 0} cycle cooldown`)); }).join('');
+    const subs = Object.entries(a.subs || {}).map(([id, x]) => pkRow(pkIco(`sub-${id}`), `<b>${esc(x.name)}</b>`, `<small>${esc(x.role.join(' · '))}</small>`, pkTip(x.name, x.solo, `Subclass · Level ${SUBCLASS.from}`), ' gl')).join('');
+    return `<div class="pk-card" data-pick-class="${k}" role="radio" aria-checked="false" tabindex="0">
+      <span class="pk-fx" aria-hidden="true">${'<i></i>'.repeat(14)}</span>
+      <span class="pk-sq"><kbd class="pk-key">${i + 1}</kbd><span class="pk-plate"><pre class="pk-art" aria-hidden="true">${esc(EMBLEMS[k].join('\n'))}</pre></span>
+        <span class="pk-id"><span class="pk-name">${esc(a.name)}</span><span class="pk-roles">${a.role.map((r) => `<span>${esc(r)}</span>`).join('')}</span></span>
+        <span class="pk-v" aria-hidden="true">${esc(a.name)}</span></span>
+      <span class="pk-drawer"><span class="pk-dt">
+        <span class="pk-col"><span class="pk-k">Traits</span>${traits}</span>
+        <span class="pk-col"><span class="pk-k">Starts with</span>${skills}</span>
+        <span class="pk-col"><span class="pk-k">Subclass · Lv ${SUBCLASS.from}</span>${subs}</span>
+      </span></span>
+    </div>`;
   }).join('');
   return `<div class="pk-scene" role="dialog" aria-label="Choose your class">
-    <header class="pk-head"><span class="bb-logo pk-logo" aria-hidden="true"></span><h2>Choose your class</h2><p>Switch freely on the Loadout page until level ${LOADOUT.trialUntil}. Your level comes with you.</p></header>
-    <div class="pk-grid" role="radiogroup" aria-label="Classes">${cards}</div>
-    <footer class="pk-foot"><span class="pk-hint">Press 1–4 or click a class to choose it. Press Enter to start.</span><button type="button" class="btn primary pk-go" disabled>Choose a class</button></footer>
+    <header class="pk-head"><span class="bb-logo pk-logo" aria-hidden="true"></span><h2>Choose your class</h2><p title="${esc(`Free to switch: Change class on the Loadout page until level ${LOADOUT.trialUntil}. Your level comes with you.`)}">Switch freely until level ${LOADOUT.trialUntil}</p></header>
+    <div class="pk-deck" role="radiogroup" aria-label="Classes">${cards}</div>
+    <footer class="pk-foot"><button type="button" class="btn primary pk-go" disabled>${pkGoMarkup()}</button></footer>
   </div>`;
 }

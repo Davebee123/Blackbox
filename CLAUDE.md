@@ -58,6 +58,7 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **No intrusion metaphors** (keyhole, way in, backdoor).
 - **No canvas or PixiJS for new UI.** Screen effects never cover or interfere with the UI, and there is no rain on
   the screen.
+- **No slogans on a class**, anywhere (its `idea`, `solo` and `crew` lines stay off the screen).
 - **Busy designs get rejected.** Improve by aligning and spacing, not by adding decoration. Keep the original map.
 - **Sounds:** the designer hears a sound before it is added.
 - **Design choices:** for a look with real alternatives, show two or three options as screenshots and let the
@@ -92,6 +93,9 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - network map ground: the *Chart* (faint crosshairs and hairlines that pan and zoom with the map);
   - rooms map: each room kind its own outline and hue (the *Hues*: magenta elite, orange socket, green rest, gold
     vault, white entry and den), thick borders. The one place a colour means a kind.
+  - class picker: the *Drawer* (four squares; the picked one slides its traits, starting skills and subclasses out of
+    its side, the rest narrow to strips) with a class border each (Breaker *Fracture*, Bastion *Deflect*, Infiltrator
+    *Trace*, Operator *Threads*) and Start as a lit command, `> start --as <class>` (docs/ui.md);
   - phone shell (docs/phone-plan.md): five tabs at the bottom (Map, Mail, Loadout, Server, More); in a fight no top
     strip, the HUD as one line (*C*: your bar left, the virus's right with its ◆, its window at the end; the rest in
     the bars' cards; it slides out beside the board in its half, covering no chip),
