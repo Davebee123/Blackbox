@@ -30,5 +30,5 @@
 
 @media (max-width: 900px) {
   .hs-page { grid-template-columns: minmax(0, 1fr); }
-  .hs-house { font-size: clamp(6px, calc((100vw - 56px) / 47), 15px); }
+  .hs-house { font-size: clamp(6px, calc((100vw - 56px) / 55), 15px); }
 }
