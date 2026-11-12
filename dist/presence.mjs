@@ -87,6 +87,8 @@ export function online(s, now = clock()) {
     .filter((x) => x.place)
     .sort((a, b) => b.friend - a.friend || b.member - a.member || a.handle.localeCompare(b.handle));
 }
+// The people panel's list: runners only once they're a friend, a member or your crew (the map shows the rest).
+export const listed = (s, now = clock()) => { const crew = (s.crewSim || []).map((x) => x.name); return online(s, now).filter((x) => !x.runner || x.friend || x.member || crew.includes(x.handle)); };
 // The shared places: SPRAWL-00 (key 'sprawl') and the consortium's ground (key: the server's id).
 const placeKey = (p) => (p.kind === 'sprawl' ? 'sprawl' : p.kind === 'consortium' ? p.loc : null);
 // Who's in a folder of a shared place (deep: or anywhere inside it, as ls shows next to a folder).

@@ -74,8 +74,10 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - player card: the *NET ID badge*;
   - collection log: the *Ledger*;
   - journals: one Ledger entry, a timeline over the writers, a document card on the first find (docs/journals.md);
-  - runners on the map: the *Rail* (a Runners list under Contracts; the map draws only the runner you pick, its route
-    and where it's heading; docs/runners.md);
+  - runners on the map: the *Diamonds* (every runner on the floor a small paper-white diamond under the server they're
+    at, hollow on the road; a click opens their card to hire them) and the *Rail* (a Runners list under Contracts that
+    folds away; the runner you pick gets their route and where they're heading); runners stay off the Online list
+    (docs/runners.md);
   - meeting and hiring runners: a paper-white tab on the room, Help / Step back on its card; cards with rows split by
     hairlines; traits as named chips, temperament first; standing as the *Tier bar* (the tier, a bar to the next); a
     hired runner's bar picked from their *Presets* (a tile each: name and how it plays, keys in its tooltip);
@@ -97,7 +99,7 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - the *View* background behind the monitor; keep the original city, with more detail at the same size;
   - card-first clicks on the rooms map; one click walks;
   - Roomy, the extra monitor size;
-  - runner pips or counts on every server (the Rail instead);
+  - a count of runners on every server; runners listed in the Online panel;
   - runner standing as pips or as the steps each tier opens; a runner's bar set in their Toolkit or key by key; traits
     as bare icons.
 - **The monitor** takes up most of the screen. UI scale is a setting, 100% by default.

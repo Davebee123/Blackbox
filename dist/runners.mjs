@@ -9,8 +9,8 @@
 // toward their trade) comes from the seed and ms.
 //
 // R2: meeting, standing and hiring. A runner working a server you're on is fighting in one of its rooms (meetingOf):
-// walk in and Help, win, and their standing rises a tier. Standing 0–100 in four tiers; from Friend you can hire them
-// (hire): a fee the first time, a cut of each run's credits, their bar from their presets. Hired, they're crew
+// walk in and Help, win, and their standing rises a tier. Standing 0–100 in four tiers. Anyone can be hired (hire): a fee
+// the first time (smaller the better you know them), a cut of each run's credits, their bar from their presets. Hired, they're crew
 // (crew.mjs, s.crewSim with runner: true); their Signal carries over (sig, a share of their max, refilling on logged-on
 // time), at 0 they disconnect and are hireable again once full.
 import { hackerLevel } from './combat.mjs';
@@ -197,13 +197,13 @@ export function placeOf(s, r, t = clockOf(s)) {
 
 // ---------- standing (R2) ----------
 export const STANDING = {
-  tiers: [['Stranger', 0], ['Known', 25], ['Friend', 50], ['Close', 75]], // Known: leads (R3); Friend: hire; Close: consortium (R4)
+  tiers: [['Stranger', 0], ['Known', 25], ['Friend', 50], ['Close', 75]], // Known: leads (R3); Close: consortium (R4); each tier a smaller fee
   help: 25, // a room you win together: a tier
   knownFace: 1.5, // Known face: standing rises half again as fast
-  hire: 50, // Friend
 };
 export const HIRE = {
   fee: 20, // credits a level, once, the first time you hire them
+  byTier: [2, 1.5, 1, 0.75], // and by standing: a stranger twice that, Known half again, Close three quarters
   perTrait: 0.25, perStar: 0.25, // and a quarter more for each trait, a quarter more for each ★
   knownFace: 0.75, // Known face: a smaller fee
   cut: 0.1, // of the credits each run banks, while they're with you
@@ -238,10 +238,10 @@ export function raiseStanding(s, h, n, met = '') {
 }
 
 // ---------- pay ----------
-// The fee, once: credits by level, a quarter more a trait and a ★. Known face takes a quarter off.
+// The fee, once: credits by level, a quarter more a trait and a ★, by standing (HIRE.byTier). Known face takes a quarter off.
 export function feeOf(s, r) {
   const kf = has(r, 'knownface'), stars = r.traits.filter((x) => x.star).length;
-  return Math.round(HIRE.fee * levelOf(s, r) * (1 + HIRE.perTrait * r.traits.length + HIRE.perStar * stars) * (kf ? HIRE.knownFace : 1));
+  return Math.round(HIRE.fee * levelOf(s, r) * (1 + HIRE.perTrait * r.traits.length + HIRE.perStar * stars) * HIRE.byTier[tierOf(standingOf(s, r.handle)).i] * (kf ? HIRE.knownFace : 1));
 }
 // Their cut of each run's banked credits (0–1). Haggler halves it (★: a quarter of it).
 export function cutOf(r) { const hg = has(r, 'haggler'); return HIRE.cut * (hg ? (hg.star ? HIRE.haggler / 2 : HIRE.haggler) : 1); }
@@ -309,7 +309,6 @@ export function helped(s, h) {
 export function cantHire(s, r) {
   if (hired(s, r.handle)) return 'already in your crew';
   if (hackerLevel(s) < HIRE.from) return `from level ${HIRE.from}`;
-  if (standingOf(s, r.handle) < STANDING.hire) return `at ${STANDING.tiers.find(([, n]) => n === STANDING.hire)[0]}`;
   const b = busyOf(s, r);
   if (b) return b.why === 'recovering' ? 'recovering' : 'crashed out';
   if ((s.crewSim || []).length >= 3) return 'crew full';

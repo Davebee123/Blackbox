@@ -183,7 +183,7 @@ export function openFarm(s) {
   const loc = Object.assign(createLocation('worm', seed, 1), { id: FARM.id, name: FARM.name, level: hackerLevel(s), farm: true, slot: 'f1farm', rogue: { kind: 'farm' }, template: 'rogue', quirk: null, special: null,
     password: FARM.words[Math.floor(r() * FARM.words.length)] + String(10 + Math.floor(r() * 90)), state: { cleared: {}, unlocked: {}, taken: {} }, runs: 0, spawns: {}, serial: 0 });
   s.locations.push(loc);
-  emit(s, 'located', `${FARM.name} is on your map: a crew dungeon. Bring a crew: hire a runner you're Friends with.`, { location: loc.id });
+  emit(s, 'located', `${FARM.name} is on your map: a crew dungeon. Bring a crew: hire a runner from the map.`, { location: loc.id });
   return loc;
 }
 function farmSpawns(s, loc, now) {

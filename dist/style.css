@@ -2959,6 +2959,14 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .mrunner .mr-dia { fill: var(--bright); stroke: var(--bg); stroke-width: 1.5; }
 .mrunner .mr-name { fill: var(--bright); font-size: calc(12px / var(--z, 1)); font-weight: 600; letter-spacing: 1px; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
 .mrunner.down .mr-dia { fill: none; stroke: var(--bright); }
+.mrun { cursor: pointer; }
+.mrun path { fill: var(--bright); stroke: var(--bg); stroke-width: 1.2; }
+.mrun.road path, .mrun.down path { fill: none; stroke: var(--bright); stroke-width: 1.2; }
+.mrun .mrun-hit { fill: transparent; }
+.mrun:hover path, .mrun:focus-visible path { stroke: var(--bright); stroke-width: 2; }
+.rr-fold { display: flex; align-items: center; gap: 6px; width: 100%; padding: 0; background: none; border: 0; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
+.rr-fold small { margin-left: auto; }
+.rr-chev { font-style: normal; color: var(--muted); }
 /* The runner card and the crew card (runners-view.mjs R2): beside the picked runner's diamond. Paper white; rows split
    by hairlines, each label level with its row's first line. A hired runner is crew: violet. */
 .rcard { position: absolute; z-index: 6; width: 300px; padding: 12px 14px; background: var(--panel, #120f0a); border: 1px solid rgba(255, 242, 200, 0.35); border-top: 2px solid var(--bright); border-radius: var(--r-btn); filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.65)); visibility: hidden; }
