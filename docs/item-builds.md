@@ -25,6 +25,7 @@ Each break takes cooldowns off, and Total Loss turns one break into several.
 | Piece | Slot, level, source | Part in it |
 |---|---|---|
 | Sinkhole or Eviction Notice | exploit 24, invasion · exploit 4, Resident | A break: −2 / −1 on every cooldown |
+| Rockfall | script 45, Bedrock's lair boss | A break: −1 on every cooldown, at endgame |
 | Cryptominer | proxy 5, Hashrat strain | A break: −1 on every cooldown (−5% Accuracy) |
 | Hashboard | script 7, KESSLER-FARM packs | A break: that skill is ready again |
 | Fork on Break (yellow rule) | any | A break: −2 on every cooldown |
@@ -61,12 +62,13 @@ Damage on a part winding up multiplies, and every answer pays.
 | Policy Engine | script 18, native | Rules count 50% more: Deep Inspection to about +68% (−3% crit) |
 | Preempt, or Sampler | script 32, native · script 20, earned | +40% crit there, or a cycle's more warning and +10% |
 | Ctrl-C | script 20, vaults, the Tracer | An answer: −2 on every cooldown |
+| Tide Table | implant 42, The Sink's boards | An answer: −1 on every cooldown, in an implant |
 | Carrier Wave (faction) | exploit, LANTERN feuds | An answer: −1 on every cooldown, at your level |
 | Bottleneck or Rubber Hose | exploit 42, earned · exploit 38, native | +4% an answer (to 12%) · +6 a read (to 30) |
 | Kestrel Badge, Choirbook (2), Interrupt Vector | proxy 7 · set · script 32 | An answer shields you |
 
 Talents: Clock Glitch, Flow Control, Rebroadcast, IRQ Chain, Timing Attack, Shock Front. Catch: Ctrl-C, Preempt,
-Sampler, Policy Engine and Interrupt Vector are all scripts; pick one.
+Sampler, Policy Engine and Interrupt Vector are all scripts; pick one (Tide Table is the implant that eases it).
 
 ### Redline (low Signal)
 
@@ -98,7 +100,7 @@ Fault). Catch: Dead Air counts a blocked hit, so Block doesn't feed it. Two diff
 
 ### Plague (Payload; NULL CHOIR's Descant)
 
-Burn damage multiplies: Descant (script, faction, +10% at your level), Thread Pool (+15%) or the Hive Mind unique
+Burn damage multiplies: Banked Fire (shell 43: +12%), Flue (proxy 48: a shield each tick), Descant (script, faction, +10% at your level), Thread Pool (+15%) or the Hive Mind unique
 (+25%, −10 Signal), all scripts, so one. Then Fan Curve (shell 8: burns grow +2 a tick), Slammer (script 22: burns jump
 on a break) or Tail Call (exploit 19: a break ticks the rest), Burn-In (proxy 46: tick at once), Brackish (script 41),
 Bilge (proxy 43: each burn cuts its part's damage to you 3%, to 9%), Slow Drip (exploit 4: +15% crit on a burning part).
@@ -108,7 +110,8 @@ Contagion, Superspreader, Third-Party Cookie.
 
 ### Swarm (Operator)
 
-Load Balanced (4: every third helper arrives as two), Weir (implant 44: a helper takes the first hit), Load Order
+Load Balanced (4: every third helper arrives as two), Spawning Run (exploit 42: helpers +15%), Relief Valve (shell 45:
+a cut takes a cycle off every cooldown), Weir (implant 44: a helper takes the first hit), Load Order
 (script 49: a helper hits as it arrives), Watchdog Timer (script 46: a free helper every 6 cycles), Backwash and Ebb
 (scripts), Descant. Hijacker: Riptide (proxy 42: helpers +8% on Jammed parts), Bus Fault (implant 47: Jams push the
 attack back), Choirbook (3: Jams a cycle longer). Catch: nearly every Operator deep unique is a script, as is Cron;
@@ -123,8 +126,8 @@ Honeycomb and Ring Main (earned). Strongbox leaves the implant free for Siltston
 
 ### Shield battery (Bastion)
 
-Bigger shields: Strongbox (3: +15%), Combination (+10%), Bedrock Seal (proxy 47: +15%), Anchor Chain (implant 43:
-+10% after a hit), Warm Reset (shell 50: start shielded). Paid on a shield: Pre-Authorization (script 24: next command
+Bigger shields: Cutoff Wall (script 47: a shield on a cut), Strongbox (3: +15%), Combination (+10%), Bedrock Seal (proxy 47: +15%), Anchor Chain (implant 43:
++10% after a hit), Warm Reset (shell 50: start shielded). Paid on a shield: Breakwater (exploit 41: +5% damage, stacking 3), Pre-Authorization (script 24: next command
 +10%), Cofferdam or Pressure Hull, and the *shielded* talents (Bounce Buffer, Cold Plate, Health Probe, Heat Sink, Hot
 Swap, Cover Traffic, Shim, Reactive Plating). Raised by Interrupt Vector, Kestrel Badge, Exception Handler, On-Call (3).
 
@@ -163,6 +166,10 @@ Survey) fills all six slots with four bonuses.
 ## Gaps (for the deeper floors' itemization, after the fights and the floor bosses)
 
 The build ideas are there; the pieces don't carry most of them to level 50.
+
+**Built (Batch 2, November 2026):** ten pieces at 41–48 for the enablers, the empty class slots and the four events
+(GAME_RULES.md *Uniques*), and Catchment, the general 4-piece. Left: the thin middle (floors 5–6 as designed in
+docs/floor-items.md) and the flat sidegrades (the designer: keep the items players own as they are).
 
 | Gap | Today | Fix, in order |
 |---|---|---|

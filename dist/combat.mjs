@@ -1126,7 +1126,7 @@ export function fxAnswer(s, p = null) {
 // What talents and gear fire on: hit, crit, break, answer, struck (FX_WHEN's own), and burn (one of your burns ticks),
 // shielded (you gain a shield, or your shield absorbs a hit), tagged (you hit a Tagged part, whoever Tagged it) and cut
 // (you cut a part's move). Each counts in e.metrics.events, runs the class modules' event hook (talents), and for the
-// four new ones your gear's heal, shield and refund blocks. ctx.part: the part it happened on. An event its own effects
+// four new ones your gear's heal, shield, refund and timed-buff blocks. ctx.part: the part it happened on. An event its own effects
 // set off doesn't fire again inside it.
 const NEW_EVENTS = new Set(['burn', 'shielded', 'tagged', 'cut']);
 export function fireEvent(s, when, ctx = {}) {
@@ -1142,6 +1142,7 @@ export function fireEvent(s, when, ctx = {}) {
       if (x.fx.do === 'heal') heal(s, x.value, who, firedOf([x]));
       if (x.fx.do === 'shield') { e.shield = (e.shield || 0) + x.value; emit(s, 'status', `${who} raises your shield to ${e.shield}.`, { mark: 'shield', ...firedOf([x]) }); }
       if (x.fx.do === 'refund') { for (const k of Object.keys(e.readyAt)) e.readyAt[k] = Math.max(e.cycle, e.readyAt[k] - x.value); emit(s, 'status', `${who} reduces your cooldowns by ${x.value}.`, firedOf([x])); }
+      if (x.fx.do === 'buff') addBuff(s, x); // Breakwater (shielded), Riprap (cut)
     }
   } finally { delete e.firing[when]; }
 }

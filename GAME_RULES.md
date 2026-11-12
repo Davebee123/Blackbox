@@ -1409,7 +1409,8 @@ nearly full.
   skill, the third fires on a shared event.
 - **Shared events** (`combat.mjs fireEvent`): crit, break, answer, struck, and **burn** (one of your burns ticks),
   **shielded** (you gain a shield, or your shield absorbs a hit), **Tagged** (you hit a Tagged part, whoever Tagged it)
-  and **cut** (you cut a part's move). Gear can heal on any of the four new ones, and shield or lower cooldowns on a cut.
+  and **cut** (you cut a part's move). Gear can heal on any of the four new ones, shield on a burn tick or a cut, lower
+  cooldowns on a cut, and add timed damage on a shield or a cut.
   An event doesn't fire again inside its own effects. *Works once per cycle* is once per fight cycle.
 - **Readings:** Cook-Off counts a tick its part's armor took whole; Flashpoint's crit is your next command's hit;
   Third-Party Cookie and Web Beacon fire when you use Tag; Heat Sink's target is the part your last command hit;
@@ -1674,6 +1675,15 @@ unique** leans to a class or subclass: three times as likely for it, twice for t
     Clock Speed meter starts half full.
   - **Threads on Bedrock:** Brownout (shell 47): below 25% Signal you take 15% less; Dead Reckoning (proxy 48): your
     first hit on each part goes through its ◆.
+- **Batch 2** (docs/item-builds.md *Gaps*): build pieces for the class slots the deep uniques left empty, late enablers
+  and the shared events. The Sink: Breakwater (exploit 41, lair boss; Bastion): a shield gained or absorbing a hit gives
+  +5% damage for 2 cycles, stacking 3 times; Riprap (shell 42, vaults; Breaker): a cut gives +8% damage for 2 cycles,
+  stacking twice; Spawning Run (exploit 42, rare spawns; Operator): helpers deal 15% more; Tide Table (implant 42,
+  puzzle boards): answering a tell takes 1 cycle off every cooldown; Banked Fire (shell 43, threads; Infiltrator):
+  burns deal 12% more. Bedrock: Rockfall (script 45, lair boss; Breaker): a break takes 1 cycle off every cooldown;
+  Relief Valve (shell 45, vaults; Operator): so does a cut; Cutoff Wall (script 47, vaults; Bastion): a cut shields you
+  for 16; Bench Mark (implant 48, threads; Infiltrator): a hit on a Tagged part heals 5; Flue (proxy 48, rare spawns):
+  a burn tick shields you for 2.
 - **Boss uniques** (two each; The Resident and bosses), **native uniques** (Networks), **invasion-only uniques**
   (Tripwire, Honeynet, Sinkhole: Captures) and **strain trophies** (1 in 10,000 kills of a strain drops its own, Keylogger
   → Logger Spool and so on; a slayer streak's reward rolls for it outright).
@@ -1749,6 +1759,7 @@ five slot kinds, so a general set's 2-piece can go beside it.
 | **Burst Buffer** | 25–32: ★ rare spawns | Cache Line (exploit, 25): +5% crit [+5% damage] · Prefetch (script, 28): your first skill each fight deals 8% more [+5% crit] · Flush (implant, 31): +4% Clock Speed [+6% max Signal] | Critical strikes deal 8% more | Your first two skills each fight deal 20% more | |
 | **Hot Spare** | 28–36: Resident takeovers | Standby (shell, 28): +6% max Signal [+2 Block] · Failback (implant, 32): +2 Block [+5% damage] | The first time a fight drops you below 30% Signal, heal 20% of max and deal 10% more for 3 cycles | | |
 | **Mesh** | 31–38: crew bosses | Node (proxy, 31): +6% max Signal [+2 Block] · Link (script, 34): heals you cast are 5% larger [+6% max Signal] · Hub (implant, 37): +4% damage [+5% Clock Speed] | +5% damage and healing per crewmate in the fight, up to 3 | Heals and shields you put on a crewmate also land on you at 25% | |
+| **Catchment** | 37–44: the floor 7 lair boss | Gully (exploit, 37): +5% damage [+5% crit] · Storm Drain (proxy, 39): +2 Block [+6% max Signal] · Basin (shell, 42): +6% max Signal [+2 Block] · Reservoir (implant, 44): +4% Clock Speed [+5% damage] | +5% damage, +5% max Signal | Breaking a part heals 3% of max Signal | Each part you break adds 5% damage for the fight, up to 20% |
 | **Deep Archive** | 37–44: vaults on floors 7 and 8 | Index (script, 37): +4% Clock Speed [+5% damage] · Spine (shell, 39): +2 Block [+6% max Signal] · Folio (exploit, 41): +5% damage [+5% crit] · Vellum (implant, 43): +6% max Signal [+2 Block] | +8% max Signal | +8% damage | Every 4th cycle, your next skill repeats at 40% |
 | **Long Haul** | 10–24: earned, contracts delivered (10 · 25 · 50) | Waybill (script, 10): +5% Clock Speed [+8% max Signal] · Dray (proxy, 17): +8% max Signal [+6% crit] · Tailgate (shell, 24): +3 Block [+5% damage] | Contracts pay 10% more XP | Delivering a contract fills your Signal, and kills pay 10% more XP | |
 | **Switchback** | 8–14: earned, Hunter chase boards won on Backhaul (5 · 10 · 15) | Dead End (proxy, 8): +6% max Signal [+5% crit] · One Way (script, 11): +4% Clock Speed [+6% max Signal] · Turnout (shell, 14): +2 Block [+4% damage] | +5% Stealth | On the cycle after one of your delays lands, your hits deal 15% more | |
@@ -1782,7 +1793,7 @@ five slot kinds, so a general set's 2-piece can go beside it.
 | A ★ rare spawn (by floor) | 0.08% · +0.003% · 0.03% | 205 kills |
 | A strain kill (by its lineage) | 0.2% · +0.05% · 0.05% | 53 kills |
 
-- **Sources not built yet** drop from their floor's lair boss (Bedrock and the tier sets
+- **Sources not built yet** drop from their floor's lair boss (Catchment from floor 7's, Bedrock and the tier sets
   from floor 8's). Floors 5 and 6 have no set of their own yet.
 - **The LOWLIGHT Badge** comes with wick's last letter at level 22 (Mail), with wick's Old Toolkit rebuilt at your level. The Toolkit can't be deconstructed, and a full stash still takes it.
 - **The tooltip** reads in WoW's grammar under the piece's effect: its green line (set green once on, grey until then),
