@@ -85,6 +85,7 @@ import { skillsTabMarkup } from './skills-view.mjs';
 import { achievementsMarkup } from './achievements-view.mjs';
 import { casingPageMarkup } from './casing-view.mjs';
 import { terminalPageMarkup } from './terminal-view.mjs';
+import { housePageMarkup } from './house-view.mjs';
 import { objectiveText, objectiveTip, backupAims } from './objectives.mjs';
 import { pointsOf } from './achievements.mjs';
 export { toolkitMarkup, subPromptDue } from './skills-view.mjs';
@@ -2940,10 +2941,12 @@ function paceCard(s) {
 // wire, fight reports, the log).
 const systemTabs = (tab, dev) => dev ? `<nav class="ltabs sys-tabs" role="tablist" aria-label="Settings">${[['settings', 'Settings'], ['dev', 'Dev']].map(([k, l]) => `<button type="button" role="tab" data-stab="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</nav>` : '';
 // The Rig page: Achievements (achievements-view.mjs), and what they unlock for your machine: Casing (casing-view.mjs:
-// the monitor's colourway, plate and stickers) and Terminal (terminal-view.mjs: the boot, the prompt and the cursor).
-export const RIG_TABS = [['achievements', 'Achievements'], ['casing', 'Casing'], ['terminal', 'Terminal']];
+// the monitor's colourway, plate and stickers), Terminal (terminal-view.mjs: the boot, the prompt and the cursor) and
+// House (house-view.mjs: your house and its furniture).
+export const RIG_TABS = [['achievements', 'Achievements'], ['casing', 'Casing'], ['terminal', 'Terminal'], ['house', 'House']];
 const rigTabs = (s, tab) => `<nav class="ltabs sys-tabs" role="tablist" aria-label="Rig">${RIG_TABS.map(([k, l]) => `<button type="button" role="tab" data-rtab="${k}" aria-selected="${tab === k}">${esc(l)}${k === 'achievements' ? `<small class="sys-pts">${glyph('medal')}${pointsOf(s)}</small>` : ''}</button>`).join('')}</nav>`;
-export function rigMarkup(s, { tab = 'achievements', ach = {} } = {}) {
+export function rigMarkup(s, { tab = 'achievements', ach = {}, house = {} } = {}) {
+  if (tab === 'house') return rigTabs(s, tab) + housePageMarkup(s, house);
   if (tab === 'casing') return rigTabs(s, tab) + casingPageMarkup(s);
   if (tab === 'terminal') return rigTabs(s, tab) + terminalPageMarkup(s);
   return rigTabs(s, 'achievements') + achievementsMarkup(s, ach);

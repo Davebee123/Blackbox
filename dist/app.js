@@ -70,6 +70,7 @@ import { setBanner, setPlan, handleOf } from './profile.mjs';
 import { achById } from './achievements.mjs';
 import { casingLook, decalMarkup, districtOf, propsLook, propMarkup, stickerSpot, stickerAt, propSpot, propAt, placeSticker, placeProp } from './casing.mjs';
 import { promptLabel, cursorOf, bootOf, bootIds, BOOT_LOOKS, lookOpen } from './terminal.mjs';
+import * as HOUSE from './house.mjs';
 import * as BK from './bench-key.mjs';
 import * as F from './form.mjs';
 import * as PH from './phone-shell.mjs';
@@ -134,6 +135,7 @@ let tkDrag = null; // what's being dragged in it: { id, from: a key's index or n
 let loadoutTab = 'protocols'; // Loadout page: 'protocols' or 'skills' (skills and talents)
 let systemTab = 'settings'; // Settings page (nav id 'system'): 'settings', or 'dev' with ?dev
 let rigTab = 'achievements'; // Rig page: a view.mjs RIG_TABS key
+let houseUi = { held: null, hover: null }; // Rig → House (house-view.mjs): the piece in hand, and where it would go
 let achUi = { cat: 'summary', focus: null }; // the Achievements page (achievements-view.mjs): the category shown, an achievement to light
 const pd = { id: null, anchor: null, el: null, scrim: null, tap: false, html: '', mine: false, timer: 0 }; // the Loadout's item datasheet popover (pdShow)
 let pdTouch = 0; // when a touch last came down: the click after it is a tap
@@ -1572,8 +1574,9 @@ function run(raw) {
   const page = ALIAS[text] || text;
   // Daemons live on the Loadout page now (a tab beside Protocols).
   if (page === 'daemons' && !(fighting && ABILITIES[text])) { loadoutTab = 'daemons'; return go('loadout'); }
-  if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; if (page === 'system') systemTab = text === 'logs' && DEV ? 'dev' : 'settings'; if (page === 'rig') rigTab = ['casing', 'terminal'].includes(text) ? text : 'achievements'; return go(page); }
+  if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; if (page === 'system') systemTab = text === 'logs' && DEV ? 'dev' : 'settings'; if (page === 'rig') rigTab = ['casing', 'terminal', 'house'].includes(text) ? text : 'achievements'; return go(page); }
   if (text === 'achievements') return goTo('achieve'); // the page; achieve pin <name> and the rest go to the engine
+  if (text === 'house') return goTo('house'); // the page; house place and store go to the engine (house.mjs)
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
   if (text === 'terminal preview' || text.startsWith('terminal preview ')) return bootPreview(text.slice(17).trim()); // the rest of terminal … is the engine's (terminal.mjs)
   { const said = screenFxCommand(campaign, text); if (said) { save(); dirty = true; return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
@@ -2332,7 +2335,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, railShut, phone: F.isPhone() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, railShut, phone: F.isPhone() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi, house: houseUi }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2924,6 +2927,62 @@ function movePackets(at) {
   }
   if (pktHover) placePktTip();
 }
+// Rig → House (house-view.mjs): drag a tile or a placed piece onto a spot (on the picker, a placed one is put away), or
+// click it and then a spot. The piece lands centred on the pointer. Esc puts a piece in hand back where it was.
+let hsDrag = null; // a press on a tile or a placed piece: { id, x, y, moved }
+let hsDropAt = 0; // the click after a drop is the drop's own
+const hsUnder = (x, y) => document.elementFromPoint(x, y)?.closest?.('.hs-in, .hs-pick') || null;
+function houseAim(inEl, x) {
+  const floor = inEl.dataset.hsFloor, r = inEl.getBoundingClientRect(), col = Math.floor(((x - r.left) / r.width) * HOUSE.widthOf(floor));
+  return { floor, x: HOUSE.leftFor(houseUi.held, col, floor) };
+}
+function housePlace(inEl, x) {
+  const at = houseAim(inEl, x);
+  if (!HOUSE.fits(campaign, houseUi.held, at.floor, at.x)) { feel.add('nope', null); return false; }
+  run(`house place ${houseUi.held} ${at.floor} ${at.x}`);
+  return true;
+}
+function houseClick(e) {
+  if (Date.now() - hsDropAt < 400) return true;
+  const tile = e.target.closest('[data-hs-pick]');
+  if (tile) {
+    const id = tile.dataset.hsPick;
+    if (houseUi.held === id && HOUSE.placedOf(campaign)[id]) run(`house store ${id}`);
+    houseUi = { held: houseUi.held === id ? null : id, hover: null };
+    dirty = true; return true;
+  }
+  const inEl = e.target.closest('.hs-in');
+  if (houseUi.held && inEl) {
+    if (housePlace(inEl, e.clientX)) houseUi = { held: null, hover: null };
+    dirty = true; return true;
+  }
+  const piece = e.target.closest('[data-hs-piece]');
+  if (piece && !houseUi.held) { houseUi = { held: piece.dataset.hsPiece, hover: null }; dirty = true; return true; }
+  return false;
+}
+document.addEventListener('pointerdown', (e) => {
+  if (module !== 'rig' || rigTab !== 'house' || e.button !== 0 || houseUi.held) return; // a piece in hand: a press is a click
+  const el = e.target.closest?.('[data-hs-piece], button[data-hs-pick]');
+  if (el) hsDrag = { id: el.dataset.hsPiece || el.dataset.hsPick, x: e.clientX, y: e.clientY, moved: false };
+});
+document.addEventListener('pointermove', (e) => {
+  if (hsDrag && !hsDrag.moved && Math.hypot(e.clientX - hsDrag.x, e.clientY - hsDrag.y) > 5) { hsDrag.moved = true; houseUi = { held: hsDrag.id, hover: null }; ttHide(); dirty = true; }
+  if (module !== 'rig' || rigTab !== 'house' || !houseUi.held) return;
+  const u = hsUnder(e.clientX, e.clientY), inEl = u?.matches('.hs-in') ? u : null, at = inEl ? houseAim(inEl, e.clientX) : null, was = houseUi.hover;
+  if (at?.floor === was?.floor && at?.x === was?.x) return;
+  houseUi.hover = at; dirty = true;
+});
+document.addEventListener('pointerup', (e) => {
+  const d = hsDrag; hsDrag = null;
+  if (!d?.moved) return;
+  hsDropAt = Date.now();
+  const u = hsUnder(e.clientX, e.clientY);
+  if (u?.matches('.hs-in')) housePlace(u, e.clientX);
+  else if (u?.matches('.hs-pick') && HOUSE.placedOf(campaign)[d.id]) run(`house store ${d.id}`);
+  houseUi = { held: null, hover: null }; dirty = true;
+});
+document.addEventListener('pointercancel', () => { if (hsDrag?.moved) { houseUi = { held: null, hover: null }; dirty = true; } hsDrag = null; });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && module === 'rig' && houseUi.held) { houseUi = { held: null, hover: null }; dirty = true; } });
 // Hovering a moving file: a card with what it is, following it along its route.
 let pktHover = null;
 function pktTipData(d) {
@@ -3123,7 +3182,8 @@ document.addEventListener('click', (e) => {
   const st = e.target.closest('[data-stab]'); // the Settings page's tabs (Settings, and Dev with ?dev)
   if (st) { systemTab = st.dataset.stab; feel.add('channel', null); dirty = true; return; }
   const rt = e.target.closest('[data-rtab]'); // the Rig page's tabs (view.mjs RIG_TABS)
-  if (rt) { rigTab = rt.dataset.rtab; achUi.focus = null; feel.add('channel', null); dirty = true; return; }
+  if (rt) { rigTab = rt.dataset.rtab; achUi.focus = null; houseUi = { held: null, hover: null }; feel.add('channel', null); dirty = true; return; }
+  if (module === 'rig' && rigTab === 'house' && houseClick(e)) return;
   const ac = e.target.closest('[data-ach-cat]'); // a category on the Achievements page
   if (ac) { achUi = { cat: ac.dataset.achCat, focus: null }; dirty = true; return; }
   // The Daemons tab (daemons-view.mjs): the party or the roster, a daemon for the panel (× clears it), a cycle's order.
@@ -3822,6 +3882,7 @@ function goTo(target) {
   else if (where === 'jack') run('jack in');
   else if (where === 'profile') { setComms(false); openProfile(what || null); pf.tab = 'title'; profileUi(); } // a title just earned: your card, on its titles
   else if (where === 'log') { setComms(false); codexTab = 'log'; if (what && sub) logSel = `${what}:${sub}`; codexIdx = false; go('codex'); dirty = true; } // the collection log (a pager line): on its entry
+  else if (where === 'house') { setComms(false); if (profileOn) { profileOn = null; profileUi(); } rigTab = 'house'; houseUi = { held: null, hover: null }; go('rig'); dirty = true; } // a floor opened (a pager line): Rig → House
   else if (where === 'achieve') { // an achievement (a pager line, a chip on your card): Rig → Achievements, on its category, lit
     setComms(false);
     if (profileOn) { profileOn = null; profileUi(); }
