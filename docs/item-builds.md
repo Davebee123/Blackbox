@@ -159,3 +159,16 @@ Survey) fills all six slots with four bonuses.
   clear every cooldown.
 - **Deep Inspection under Policy Engine with Interrupt Handler:** about ×2.3 on a part winding up before Preempt's
   crits. Earned by reading, so within the rule.
+
+## Gaps (for the deeper floors' itemization, after the fights and the floor bosses)
+
+The build ideas are there; the pieces don't carry most of them to level 50.
+
+| Gap | Today | Fix, in order |
+|---|---|---|
+| Thin middle | Non-set uniques by level: 66 at 1–14, 38 at 15–26, 19 at 27–38, 65 at 39–50 | A 27–38 batch built on the builds above, not on stats |
+| Enablers stop at low levels | Break refunds 4–24, burn multipliers 4–22, Hive Mind set 6–15; only faction pieces, Zero-days and chase protocols reach 50 | 39–50 versions of the enablers: a break refund, a burn multiplier, a helper multiplier |
+| Class pieces share a slot | Of the 39–50 uniques, Operator's are mostly scripts, Bastion's 9 of 13 shells; the tell pieces all scripts | Spread each class's deep pieces over every slot |
+| Endgame funnels | A tier set takes four slots with a generic 4-piece, and only one 4-piece counts: tier set, implant, one flex | One general 4-piece set at 39–50 that competes with the tier sets |
+| Flat sidegrades | About half the 39–50 uniques are flat damage, Block, Regen or Signal | Rework some into build pieces |
+| Talent events unused | Talents fire on burn tick, shielded, Tagged and cut; items almost only on hit, crit, break and answer | Deep uniques on those four events, so off-class item builds exist |
