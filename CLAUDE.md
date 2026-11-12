@@ -69,7 +69,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 
 - **Picked looks:**
   - the power-up: the *Horizon* (a line of light across the screen, the black box standing on it with its light
-    leaking round the edges, the name small and low; poweron.mjs);
+    leaking round the edges, the name small and low; poweron.mjs), and the same box on a short line as the small mark
+    (the top bar, the class pick, the favicon);
   - quest window: the *Transmission*;
   - level-up: the *Firmware update*;
   - wick's tips (the guided path's, tips.mjs `wick`): the *Transmission* (his face, the kicker, his lowercase line);

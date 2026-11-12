@@ -73,13 +73,11 @@ code { font-family: var(--mono); color: var(--amber); }
 /* ---------- top bar ---------- */
 .topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 20px; padding: 8px 20px; border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--bright); font-weight: 700; letter-spacing: 3px; }
-/* The mark: a black square eclipsing an amber light, its corona showing round the edges (the favicon is the same). */
+/* The mark: the power-up's Horizon in small, a black box on a line of light, its light round the edges (the favicon is the same). */
 .brand-mark, .bb-logo { --lg: 18px; position: relative; flex: none; width: var(--lg); height: var(--lg); isolation: isolate; }
-.brand-mark { margin: 0 3px; }
-.brand-mark::before, .bb-logo::before { content: ''; position: absolute; inset: -45%; z-index: 0; border-radius: 50%; pointer-events: none; background: conic-gradient(from 12deg, transparent 0 6%, rgba(255, 220, 130, 0.2) 7.5%, transparent 9%, transparent 22%, rgba(255, 220, 130, 0.14) 23.2%, transparent 24.5%, transparent 39%, rgba(255, 220, 130, 0.22) 40.5%, transparent 42%, transparent 58%, rgba(255, 220, 130, 0.12) 59.2%, transparent 60.5%, transparent 74%, rgba(255, 220, 130, 0.18) 75.5%, transparent 77%, transparent 91%, rgba(255, 220, 130, 0.14) 92.2%, transparent 93.5%), radial-gradient(circle closest-side, rgba(255, 226, 150, 0.3) 40%, rgba(241, 185, 47, 0.1) 62%, transparent 100%); -webkit-mask: radial-gradient(circle closest-side, #000 50%, transparent 92%); mask: radial-gradient(circle closest-side, #000 50%, transparent 92%); animation: bb-corona 9s ease-in-out infinite; }
-.brand-mark::after, .bb-logo::after { content: ''; position: absolute; inset: 0; z-index: 1; background: #030201; box-shadow: 0 0 0 1px rgba(255, 238, 196, 0.5), 0 0 3px 0.5px rgba(255, 226, 150, 0.7), 0 0 10px 1px rgba(241, 185, 47, 0.28); }
-@keyframes bb-corona { 0%, 100% { opacity: 0.8; transform: rotate(0deg) scale(1); } 50% { opacity: 1; transform: rotate(6deg) scale(1.03); } }
-@media (prefers-reduced-motion: reduce) { .brand-mark::before, .bb-logo::before { animation: none; } }
+.brand-mark { margin: 0 14px; }
+.brand-mark::before, .bb-logo::before { content: ''; position: absolute; inset: -70% -120%; z-index: 0; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(241, 185, 47, 0.25) 18%, rgba(255, 214, 120, 0.8) 38%, #fff1cc 50%, rgba(255, 214, 120, 0.8) 62%, rgba(241, 185, 47, 0.25) 82%, transparent) center / 100% 1px no-repeat, radial-gradient(calc(var(--lg) * 1.2) circle at center, rgba(241, 185, 47, 0.34), transparent); }
+.brand-mark::after, .bb-logo::after { content: ''; position: absolute; inset: 0; z-index: 1; background: #030201; box-shadow: 0 0 0 1px rgba(255, 242, 210, 0.7), 0 0 calc(var(--lg) * 0.14) calc(var(--lg) * 0.05) rgba(255, 230, 166, 0.85); }
 .modules { display: flex; gap: 2px; }
 .modules button { color: var(--muted); position: relative; }
 .modules button[aria-current='page'] { color: var(--bright); border-bottom: 2px solid var(--amber); border-radius: 0; }
