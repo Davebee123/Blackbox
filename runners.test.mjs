@@ -11,6 +11,14 @@ import { online } from './dist/presence.mjs';
 import { tickChannel, channelOf } from './dist/channel.mjs';
 
 const world = (seed = 4242, level = 14) => { const s = fresh(); s.netSeed = seed; s.tutorialCompleted = true; s.hackers = { breaker: { level, xp: 0 } }; return s; };
+// The first logged-on time (on a minute) the runners on floor fl fit: the save's clock set there.
+function moment(s, fl, fits) {
+  for (let t = 0; t < 4 * RUNNERS.cycleMs[1]; t += 60000) {
+    const on = castOf(s).map((r) => ({ r, st: stateOf(s, r, t) })).filter((x) => x.st.floor === fl);
+    if (fits(on)) { runnersOf(s).ms = t; return on; }
+  }
+  throw new Error('no moment fits');
+}
 // Revealing the map: a server located on a slot, a floor's hubs found, a floor with everything on it revealed.
 const locate = (s, slot) => addLocation(s, 'ransomware', 1, null, slot);
 const findHubs = (s, g) => { s.mail = { ...s.mail, boardOpen: true }; s.hubFound = { ...s.hubFound, ...Object.fromEntries(Object.keys(g.hubs).map((f) => [f, true])) }; };
@@ -22,7 +30,7 @@ function revealFloor(s, fl) {
   return g;
 }
 
-test('the cast: the same seed draws the same people, a few dozen of them, each with a class, faction, temperament, traits and trade', () => {
+test('the cast: the same seed draws the same people, eight of them, each with a class, faction, temperament, traits and trade', () => {
   const a = castOf(world(4242)), b = castOf(world(4242)), c = castOf(world(777));
   assert.equal(a.length, RUNNERS.cast);
   assert.deepEqual(a.map((r) => r.handle), b.map((r) => r.handle));
@@ -103,7 +111,7 @@ import * as FP from './dist/floorplan.mjs';
 import './dist/netrooms.mjs';
 import { matesOf } from './dist/crew.mjs';
 import { STANDING, HIRE, tierOf, standingOf, raiseStanding, meetingOf, feeOf, cutOf, sigOf, setSig, busyOf, cantHire, gainOf } from './dist/runners.mjs';
-import { runnerCard, tierBar, runnersMap } from './dist/runners-view.mjs';
+import { runnerCard, tierBar, runnersMap, runnersOn, runnersAt, runnersList } from './dist/runners-view.mjs';
 import { listed } from './dist/presence.mjs';
 import { roomsMarkup } from './dist/floorplan-view.mjs';
 import { RIVAL } from './dist/rivals.mjs';
@@ -240,22 +248,45 @@ test('crew invite is gone: crews come from hiring runners', () => {
   assert.ok(!s.crewSim?.length);
 });
 
-test('the map: every runner in sight on the floor a diamond you can click; the Rail\'s section folds; the people list leaves runners out', () => {
+test('the map: one diamond under a place with runners, how many from two up and a list of who is there; the Rail\'s section folds; the people list leaves runners out', () => {
   const s = world(4242, 6);
-  runnersOf(s).ms = 2_000_000;
   revealFloor(s, 1);
-  const on1 = castOf(s).filter((r) => stateOf(s, r).floor === 1);
+  // A moment with two or more at one place, one alone at another, and one on the road.
+  const on1 = moment(s, 1, (on) => { const c = {}; for (const x of on) if (!x.st.pos.next) c[x.st.pos.at] = (c[x.st.pos.at] || 0) + 1; const n = Object.values(c); return n.some((k) => k > 1) && n.some((k) => k === 1) && on.some((x) => x.st.pos.next); });
   const svg = runnersMap(s, 1);
-  assert.equal((svg.match(/<g class="mrun[ "]/g) || []).length, on1.length, 'the whole floor revealed: one diamond each');
-  for (const r of on1) assert.match(svg, new RegExp(`data-runner="${r.handle}"`));
-  assert.doesNotMatch(runnersMap(s, 1, on1[0].handle), new RegExp(`data-runner="${on1[0].handle}"`), 'the picked one is drawn by its mark');
-  know(s, on1[0].handle);
+  assert.deepEqual(runnersOn(s, 1).map((x) => x.r.handle).sort(), on1.map((x) => x.r.handle).sort(), 'the whole floor revealed: everyone on it');
+  // A place: one diamond, alone for one runner (it opens their card), a count beside it for more. The road: a hollow one each.
+  const places = {}, road = on1.filter((x) => x.st.pos.next);
+  for (const x of on1) if (!x.st.pos.next) (places[x.st.pos.at] ||= []).push(x.r.handle);
+  const inG = '(?:(?!</g>)[^])*';
+  for (const [slot, list] of Object.entries(places)) {
+    if (list.length === 1) { assert.match(svg, new RegExp(`<g class="mrun( down)?" data-runner="${list[0]}"`)); continue; }
+    assert.match(svg, new RegExp(`<g class="mrun crowd" data-runners-at="${slot}"${inG}<text class="mrun-n"[^>]*>${list.length}</text>`), `${slot}: one diamond and ${list.length}`);
+    for (const h of list) assert.doesNotMatch(svg, new RegExp(`data-runner="${h}"`), 'counted, not drawn one by one');
+  }
+  for (const x of road) assert.match(svg, new RegExp(`<g class="mrun road" data-runner="${x.r.handle}"`));
+  assert.equal((svg.match(/<g class="mrun[ "]/g) || []).length, Object.keys(places).length + road.length, 'one mark a place, one a traveller');
+  // A counted diamond opens the list of who's there: a row each (handle, class and level), which opens their card.
+  const [slot, list] = Object.entries(places).find(([, l]) => l.length > 1);
+  const pop = runnersList(s, 1, slot);
+  assert.match(pop, new RegExp(`id="crowd-pop" data-crowd="${slot}"`)); assert.match(pop, new RegExp(`<small>${list.length}</small></h3>`));
+  assert.deepEqual([...pop.matchAll(/class="rr-row[^"]*" data-runner="([^"]+)"/g)].map((m) => m[1]), [...list].sort((x, y) => x.localeCompare(y)), 'everyone there, by handle');
+  assert.match(pop, /data-crowd-close/);
+  assert.match(runnersMap(s, 1, null, false, slot), new RegExp(`<g class="mrun crowd on" data-runners-at="${slot}"`), 'its diamond is lit while the list is up');
+  const lone = Object.entries(places).find(([, l]) => l.length === 1);
+  if (lone) assert.equal(runnersList(s, 1, lone[0]), '', 'one runner: no list');
+  assert.equal(runnersList(s, 1, null), '');
+  // The picked one is drawn by their mark, so leaves the count.
+  assert.equal(runnersAt(s, 1, slot, list[0]).length, list.length - 1);
+  assert.doesNotMatch(runnersMap(s, 1, road[0].r.handle), new RegExp(`data-runner="${road[0].r.handle}"`), 'the picked one is drawn by its mark');
+  const h0 = on1[0].r.handle;
+  know(s, h0);
   assert.match(runnerRail(s), /data-rail-fold[^>]*aria-expanded="true"/);
   const shut = runnerRail(s, null, true);
   assert.match(shut, /aria-expanded="false"/); assert.doesNotMatch(shut, /rr-row/, 'folded: the head alone');
   assert.ok(online(s).some((x) => x.runner) && !listed(s).some((x) => x.runner), 'runners are on the map, not the people list');
-  s.friends = [on1[0].handle];
-  assert.ok(listed(s).some((x) => x.handle === on1[0].handle), 'a runner you befriend is listed');
+  s.friends = [h0];
+  assert.ok(listed(s).some((x) => x.handle === h0), 'a runner you befriend is listed');
 });
 
 // ---------- runners show only where you've revealed (the designer's rule, November 2026) ----------
@@ -270,7 +301,7 @@ function when(s, fits) {
   }
   throw new Error('no runner fits');
 }
-const drawn = (svg, h) => new RegExp(`data-runner="${h}"`).test(svg);
+const drawn = (s, h) => runnersOn(s, 1).some((x) => x.r.handle === h); // on the map: their own diamond, or counted at a place
 const kindOf = (st, id) => st.g.nodes[id].kind;
 
 test('revealed: what your map draws, less its ?s (located servers, the entry, hubs you have found, exits on your map)', () => {
@@ -305,29 +336,38 @@ test('revealed: what your map draws, less its ?s (located servers, the entry, hu
 test('the map: no runner where you have not revealed (under a ?, at a hub off your map, on the road to either)', () => {
   // A fresh save: the runners at SPRAWL-00 and nobody else.
   const s = world(4242, 6), g = graphOf(s, 1);
-  runnersOf(s).ms = 2_000_000;
-  const on1 = castOf(s).map((r) => ({ r, st: stateOf(s, r) })).filter((x) => x.st.floor === 1);
-  const fresh1 = runnersMap(s, 1), home = on1.filter((x) => x.st.pos.at === g.entry && !x.st.pos.next);
-  assert.ok(home.length && home.length < on1.length);
-  for (const x of on1) assert.equal(drawn(fresh1, x.r.handle), home.includes(x), `${x.r.handle}, ${x.st.stage} at ${x.st.pos.at}`);
+  const atHome = (x) => x.st.pos.at === g.entry && !x.st.pos.next;
+  const on1 = moment(s, 1, (on) => on.filter(atHome).length > 1 && on.some((x) => !atHome(x))); // two or more at SPRAWL-00, others elsewhere
+  const home = on1.filter(atHome);
+  assert.ok(home.length > 1 && home.length < on1.length);
+  for (const x of on1) assert.equal(drawn(s, x.r.handle), home.includes(x), `${x.r.handle}, ${x.st.stage} at ${x.st.pos.at}`);
+  const fresh1 = runnersMap(s, 1);
+  assert.equal((fresh1.match(/<g class="mrun[ "]/g) || []).length, 1, 'one mark on the whole map');
+  assert.match(fresh1, new RegExp(`<g class="mrun crowd" data-runners-at="${g.entry}"[^]*>${home.length}</text>`), 'SPRAWL-00, and how many are there');
   // At work on a server you haven't located (a ? or nothing on your map): no diamond until you locate it.
   const w = when(s, (st) => st.floor === 1 && st.stage === 'work');
-  assert.ok(!inSight(s, w.st) && !drawn(runnersMap(s, 1), w.r.handle), 'at an unlocated server: not drawn');
+  assert.ok(!inSight(s, w.st) && !drawn(s, w.r.handle), 'at an unlocated server: not drawn');
+  assert.doesNotMatch(runnersMap(s, 1), new RegExp(`data-runners-at="${w.st.target}"|data-runner="${w.r.handle}"`));
   locate(s, w.st.target);
-  assert.ok(inSight(s, w.st));
-  assert.match(runnersMap(s, 1), new RegExp(`<g class="mrun" data-runner="${w.r.handle}"`), 'located: their diamond is under it');
+  assert.ok(inSight(s, w.st) && drawn(s, w.r.handle));
+  const there = runnersAt(s, 1, w.st.target);
+  assert.ok(there.some((x) => x.r.handle === w.r.handle), 'located: they are under it');
+  assert.match(runnersMap(s, 1), there.length > 1 ? new RegExp(`<g class="mrun crowd" data-runners-at="${w.st.target}"[^]*?>${there.length}</text>`) : new RegExp(`<g class="mrun" data-runner="${w.r.handle}"`));
   // On the road: only between two revealed places.
   const s2 = world(4242, 6);
   const t = when(s2, (st) => st.floor === 1 && st.pos.next && [st.pos.at, st.pos.next].includes(st.g.entry) && [st.pos.at, st.pos.next].some((id) => kindOf(st, id) === 'server'));
-  assert.ok(!drawn(runnersMap(s2, 1), t.r.handle), 'a road with one end unrevealed: not drawn');
+  assert.ok(!drawn(s2, t.r.handle), 'a road with one end unrevealed: not drawn');
+  assert.doesNotMatch(runnersMap(s2, 1), new RegExp(`data-runner="${t.r.handle}"`));
   locate(s2, [t.st.pos.at, t.st.pos.next].find((id) => id !== t.st.g.entry));
   assert.match(runnersMap(s2, 1), new RegExp(`<g class="mrun road" data-runner="${t.r.handle}"`), 'both ends revealed: hollow on the road');
   // At a hub that isn't on your map.
   const s3 = world(4242, 6);
   const h = when(s3, (st) => st.floor === 1 && st.stage === 'hub' && kindOf(st, st.base) === 'hub');
-  assert.ok(!drawn(runnersMap(s3, 1), h.r.handle), 'a hub you have not found: not drawn');
+  assert.ok(!drawn(s3, h.r.handle), 'a hub you have not found: not drawn');
+  assert.doesNotMatch(runnersMap(s3, 1), new RegExp(`data-runners-at="${h.st.base}"|data-runner="${h.r.handle}"`));
   findHubs(s3, h.st.g);
-  assert.ok(drawn(runnersMap(s3, 1), h.r.handle), 'found: drawn');
+  assert.ok(drawn(s3, h.r.handle), 'found: drawn');
+  assert.match(runnersMap(s3, 1), new RegExp(`data-runners-at="${h.st.base}"|data-runner="${h.r.handle}"`));
 });
 
 test('the picked runner: no mark out of sight; the route stops at the first unrevealed place; the ring only on a revealed one', () => {

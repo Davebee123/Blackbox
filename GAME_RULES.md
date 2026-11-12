@@ -2553,7 +2553,7 @@ no attaching, detaching or memory pips.
 
 ### People and #net
 
-- **Runners** (runners.mjs, docs/runners.md R1): 32 people per network, drawn from its seed. Each has a handle, a class
+- **Runners** (runners.mjs, docs/runners.md R1): 8 people per network, drawn from its seed (60 handles), so each new game has its own. Each has a handle, a class
   (and subclass from 10), a level 4 below to 4 above yours, a faction, a temperament (Careful, Steady, Bold), one to
   four traits (shown on their cards; only Known face and Haggler in play yet) and a trade: a payment frozen on a floor
   one to three below where they work.
@@ -2570,8 +2570,8 @@ no attaching, detaching or memory pips.
   anything. Helping isn't a solo win.
 - **Standing**: 0–100 in four tiers: Stranger, Known (25), Friend (50), Close (75), each a smaller fee. Drawn as the
   Tier bar, its number and how you met in the tooltip. Known face: half again a raise, and three quarters of the fee.
-- **The runner card**: a diamond on the map or a Rail row opens it beside them (beside the row when the map doesn't
-  draw them): faction, handle, class and level; Traits (temperament first), Standing, Now (→ a server and its time, or
+- **The runner card**: a lone diamond on the map, a row of a counted one's list or a Rail row opens it beside them
+  (beside the Rail row when the map doesn't draw them): faction, handle, class and level; Traits (temperament first), Standing, Now (→ a server and its time, or
   Busy with when they're free), After (their trade); their latest #net line; **Hire**, off with the reason (or the
   clock) until you can.
 - **Hiring** (`hire <runner> [preset]`, anyone on your net, from level 5, three at most): the crew card shows Pay as two
@@ -2582,9 +2582,11 @@ no attaching, detaching or memory pips.
 - **A hire's Signal** carries from fight to fight and run to run (a share of their max, refilling over 10 minutes of
   logged-on time). At 0 they disconnect (*Signal's going. I'm out.*) and are Busy until full. If you drop to 0 you both
   jack out, the hire at whatever Signal they had.
-- **On the map**: every runner in a place you've revealed on the floor drawn is a small paper-white diamond under it
-  (side by side), hollow on the road between two; your crew isn't drawn. Its tooltip says who and what they're doing; a
-  click opens their card.
+- **On the map**: a place you've revealed on the floor drawn has one small paper-white diamond under it while runners
+  are there, and how many beside it from two up; a runner on the road between two is a hollow diamond of their own;
+  your crew isn't drawn. A lone diamond's tooltip says who and what they're doing, and a click opens their card. A
+  counted one's names who's there, and a click opens the list beside it (handle, class and level; again, or ×, shuts
+  it); a row opens that runner's card. The picked runner has their own mark and leaves the count.
 - **Revealed** (`runners.mjs` `revealed`, `inSight`): a located server, SPRAWL-00 or an up-link, a hub you've found, an
   exit on your map. A `?` isn't. A runner under a `?`, at a server or hub off your map, or on a road with an unrevealed
   end isn't drawn; they appear once you locate the server.

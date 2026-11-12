@@ -19,7 +19,7 @@ import { FACTIONS, FACTION_IDS, hubsOf } from './factions.mjs';
 import { graphOf, locAt, floorsOf, exitOpen } from './floors.mjs';
 
 export const RUNNERS = {
-  cast: 32, // runners a network
+  cast: 8, // runners a network (few enough that a floor's map stays quiet)
   band: [-4, 4], // their levels, around yours
   cycleMs: [6 * 60000, 14 * 60000], // one loop: hub, out, work, back
   stages: [['hub', 0.15], ['out', 0.2], ['work', 0.45], ['back', 0.2]],
