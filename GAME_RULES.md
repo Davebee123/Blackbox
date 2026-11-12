@@ -7,8 +7,9 @@ Design plans live in `docs/`; the code map is README.md.
 
 ### First launch
 
-Every session opens with the power-up: the monitor comes on, the BLACKBOX mark (a black square eclipsing an amber
-light) rises, and **Press any key to start** waits (a tap on a phone). A new game first plays the cold open (about
+Every session opens with the power-up (the Horizon): the monitor comes on, a line of light spreads across it, the
+black box stands on it with its light leaking round the edges, BLACKBOX settles low on the screen, and **Press any key**
+waits (a tap on a phone). A new game first plays the cold open (about
 55 s; any key or tap skips it, and Motion off leaves it out): KESSLER's clearing house over fifty years, its process table
 filling until the frame sticks and NETWORK OFFLINE, then a colder machine recovering. Then a bare terminal:
 `blackbox login:` asks for a handle (2–16 letters, numbers, dots, dashes or underscores) and a password (4+
