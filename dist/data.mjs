@@ -1118,7 +1118,7 @@ export const BOSSES = {
       ['Surge', 'The Gavel hits you, from every 3 cycles. Each Surge that lands brings the next one sooner, down to every 2. Its ticks never cut it.'],
       ['Bid', 'While the Rotor stands, each one-part command you aim at the Gavel spins it one cycle faster. Delays and Throttles are the exception.'],
       ['Withdraw', 'A delay or Throttle on the Gavel resets it to every 4. SIGINT cuts a selling Surge and does the same.'],
-      ['Sold', 'A Surge that lands at every 2 adds the buyer named on the Gavel as a part, and the Rotor ♛ heals 10% of its max. The Gavel then drops to every 3, and its Surge is 50% harder for the fight. Nothing sells once the Rotor breaks.'],
+      ['Sold', 'A Surge that lands at every 2 adds the buyer named on the Gavel as a part, and the Rotor ♛ heals 10% of its max. The Gavel then drops to every 4, and its Surge is 30% harder for the fight. Nothing sells once the Rotor breaks.'],
       ['Buyers', 'TOLLGATE\'s Lockbox wards the Rotor. SWARMLINE\'s Mirror twins the Gavel. PALEMASK\'s Veil hides its timers.']],
       phases: [[['Reserve price', 'A delay or Throttle steps the Gavel back one interval only, from every 2 to every 3.']], [['Second lot', 'Each sale adds two buyers.']]] },
     signature: { name: 'Bidding', rule: 'The Gavel starts at every 3 cycles. Each Surge it lands, and each command you aim at it, spins it faster. A delay or Throttle withdraws it to every 4, and SIGINT cuts a selling Surge. A Surge at every 2 sells, and the named buyer joins.' },

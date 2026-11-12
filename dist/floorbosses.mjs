@@ -5,7 +5,7 @@
 //                   withdraws it to every 4. A Surge at every 2 sells: the buyer named on the Gavel joins as a part with
 //                   its crew's rule (TOLLGATE a Lockbox warding the Rotor, SWARMLINE a Mirror twinned with the Gavel,
 //                   PALEMASK a Veil whose timers hide), the Rotor heals 10% of its max, and the Gavel drops back to
-//                   every 3. Act 2 (Reserve price): a withdraw steps it back one. Act 3 (Second lot): each sale brings
+//                   every 4. Act 2 (Reserve price): a withdraw steps it back one. Act 3 (Second lot): each sale brings
 //                   two buyers.
 //   SHAKEDOWN       Ransom Clock: 12 cycles; at 0 it leaks 30% of your max and restarts at 6. A Deadline that lands pays
 //                   the ransom (+3); one called off (its wind-up, a cut, SIGINT) buys nothing. Leverage: while a Demand
@@ -48,7 +48,7 @@ import { BOSSES, CONFIG } from './data.mjs';
 import { mimicHit, copyKind } from './tells.mjs';
 
 export const FB = {
-  bid: { slow: 4, fast: 2, after: 3, sold: 0.5, heal: 0.1, buyers: ['tollgate', 'swarmline', 'palemask'] }, // sold: each sale makes the Gavel's Surge that much harder, for the fight; heal: what each sale gives the Rotor ♛ back, of its max
+  bid: { slow: 4, fast: 2, after: 4, sold: 0.3, heal: 0.1, buyers: ['tollgate', 'swarmline', 'palemask'] }, // sold: each sale makes the Gavel's Surge that much harder, for the fight; heal: what each sale gives the Rotor ♛ back, of its max
   ransom: { clock: 10, restart: 5, pay: 3, leak: 0.35, grow: 0.15, most: 0.65, lever: 0.15 }, // lever: the most the Collector ♛ loses a cycle while a Demand stands, of its max; a leak takes 35% of your max, 15 more each leak after, up to 65%
   surf: { log: 2, again: 4, echo: 0.4, grow: 0.5 }, // grow: each Dump that lands makes the next one that much bigger, for the fight; // echo: an Again note's share of its hit (40%: at half, a burst sung back took 95% of a reader's bar in three cycles)
   stack: { call: 5, push: 0.6, act: 0.25, under: 0.25, overflow: 5, ret: 1.5, cap: 7, deeper: 0.35, sooner: 1, soonest: 3 }, // sooner: each Call let through brings the next one a cycle sooner, down to every soonest; // deeper: each Call let through makes every frame hit that much harder

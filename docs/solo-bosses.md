@@ -25,20 +25,20 @@ family virus at 1.6× Integrity with one stock phase: the kit player (blind to t
 
 Cycles an act, the planner on every subclass, 12 seeds, each boss at its floor (10 where it has none): genesim.mjs
 `bossFight`'s loop, noting the cycle each phase starts. Acts 2 and 3 over won fights only. The first eleven rows are
-with "Working the ♛" built; the natives are as they were.
+with "Working the ♛" built and the ♛ held at its tick (below); the natives are as they were.
 
 | Boss | ♛ ticks | Act 1 | Act 2 | Act 3 |
 |---|---|---|---|---|
-| Resident (worm, ransomware) | 60 / 30 | 23.2 | 5.3 | 4.7 |
+| Resident (worm, ransomware) | 60 / 30 | 23.2 | 5.4 | 4.8 |
 | RELAY-KING | 60 / 30 | 19.3 | 4.7 | 2.8 |
-| REPO MAN | 60 / 30 | 10.1 | 2.9 | 2.9 |
-| HOLLOW CHOIR | 60 / 30 | 6.9 | 2.3 | 8.8 |
+| REPO MAN | 60 / 30 | 10.1 | 3.9 | 2.8 |
+| HOLLOW CHOIR | 60 / 30 | 6.9 | 2.5 | 8.4 |
 | CENTRIFUGE | 60 / 30 | 7.5 | 4.8 | 9.7 |
-| SHAKEDOWN | 60 / 30 | 8.0 | 4.4 | 7.9 |
+| SHAKEDOWN | 60 / 30 | 8.0 | 4.4 | 7.8 |
 | SHOULDER SURFER | 60 / 30 | 15.8 | 4.0 | 4.0 |
-| RECURSION | 60 / 30 | 13.1 | 6.3 | 4.9 |
-| NIGHT DESK | 60 / 30 | 8.4 | 6.2 | 8.8 |
-| BYZANTINE | 60 / 30 | 11.2 | 7.9 | 9.0 |
+| RECURSION | 60 / 30 | 13.1 | 6.4 | 5.2 |
+| NIGHT DESK | 60 / 30 | 8.4 | 6.5 | 8.9 |
+| BYZANTINE | 60 / 30 | 11.2 | 7.6 | 9.2 |
 | CAMSWARM | 60 / 30 | 20.0 | 6.5 | 8.2 |
 | DEADBOLT | 60 / 30 | 19.2 | 5.5 | 8.7 |
 | TRIPMINE (one phase) | 60 / 30 | 24.8 | 9.0 | |
@@ -52,6 +52,14 @@ with "Working the ♛" built; the natives are as they were.
 
 - Moving the built bosses from 50 / 25 to 60 / 30 took about a cycle off act 1 and added it to acts 2 and 3; their win
   rates moved inside the noise (HASHLORD's reader 59% → 68%).
+- **Held at the tick** (November 12): damage takes a ♛ to its next act tick and no further until that act begins,
+  on every boss with a ♛ (acts.mjs `actCap`). Before, a second hit in the same cycle went on to the next tick, and act
+  2 lasted no cycles in 19% of HOLLOW CHOIR's fights and 10% of REPO MAN's; the natives and the ghostroot Resident had
+  no cap at all. RELAY-KING's Crown Hop could land its ♛ on a part already under 30% (6% of its fights): it now hops
+  only to a part above 30%, and stays put when none is. No act 2 is skipped. A tick no hit crossed (Integrity set some other way) holds nothing.
+  CENTRIFUGE's Phantom had won by carrying the Rotor through 30% to 0 in one cycle; made to play act 3, its reader fell
+  to 59%. After a sale the Gavel now drops to every 4 (it was 3), and each sale makes its Surge 30% harder (50%): read
+  63%, misread 52%, blind 39%.
 - **No boss meets the aim yet**, with "Working the ♛" built (below). NIGHT DESK (8.4 / 6.2 / 8.8) and SHAKEDOWN
   (8.0 / 4.4 / 7.9) are closest: a third act as long as the first, a second still short.
 
@@ -103,7 +111,7 @@ fresh ticks, as a phase line.
 
 | Boss | Its part | Act 1 | Act 2 (60%) | Act 3 (30%) | The read |
 |---|---|---|---|---|---|
-| RELAY-KING | Relay: Broadcast every 4, +its hit per fragment | Broadcast | **Crown Hop**: the ♛ moves to the healthiest part; the old one heals 25% | **Flood**: Replicate every 2, Broadcast every 3 | Clear fragments before a Broadcast; pace the parts so the ♛ hops where you want it |
+| RELAY-KING | Relay: Broadcast every 4, +its hit per fragment | Broadcast | **Crown Hop**: the ♛ moves to the healthiest part above 30% (none: it stays); the old one heals 25% | **Flood**: Replicate every 2, Broadcast every 3 | Clear fragments before a Broadcast; pace the parts so the ♛ hops where you want it |
 | REPO MAN | Ledger: Collection every 5, +its hit per Lien | **Liens**: each command a ◆ absorbs adds one; a Collection, landed or cut, clears them | Re-arms every part; a Collection in 3 | **Interest**: each Lien counts twice; a Collection in 3 | Strip with strips, burns or helpers; cut the Collection; cross a tick with the ledger clear |
 | HOLLOW CHOIR | A Mimic (its third) | One voice: a beat every 4 | **Second voice**: a second Mimic at the ♛'s full size, beating 2 behind | **Round**: each beat plays back your last three commands | Cut a voice before 30%; hold or fire small in the two cycles before a beat |
 

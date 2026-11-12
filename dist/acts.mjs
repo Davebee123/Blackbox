@@ -9,7 +9,8 @@
 //   the acts     act n deals tell n (charge, cast, then the third); act 2 quickens the beat (every), act 3 speeds every
 //                attack a cycle (BOSSES phases).
 //   the one to leave  the ♛ must stand above its next tick until this act's beat has played (ACTS.leave), or nothing else
-//                stands. Taken under it sooner, every part re-arms (to its full ◆). A hit takes it under one tick at most.
+//                stands. Taken under it sooner, every part re-arms (to its full ◆). It holds at its next tick until that
+//                act has begun (actCap).
 import { BOSSES } from './data.mjs';
 import { emit, alive, part, livingParts, strikeWith, attackAmount, landingsOf } from './combat.mjs';
 import { tellsOf } from './tells.mjs';
@@ -96,11 +97,11 @@ export function crossed(s, p) {
   emit(s, 'phase', `Too soon: ${v.name}'s ${p.name} went under before its beat played. Every part re-arms.`, { boss: v.boss, target: p.id, early: true });
   return true;
 }
-// The most a hit takes off the ♛ (combat.mjs hit): down to just under its next tick, and no further, so each act is
-// played (none skipped by one big hit). Past its last tick, the rest of it.
+// The most a hit takes off the ♛ (combat.mjs hit): down to its next act tick, and nothing more until that act has begun
+// (at the cycle's end), so no act is skipped, by one big hit or by several in a cycle. Every boss with a ♛ (interrupt.mjs
+// rule a), in acts or not. Past its last act's tick, the rest of it.
 export function actCap(s, p) {
-  if (!actsOf(s.encounter?.virus)) return Infinity;
-  const t = (p.ticks || []).find((x) => !x.spent && Math.floor(x.at * p.max) < p.integrity); // a tick it is already under holds nothing
+  const v = s.encounter?.virus, t = (p.ticks || []).find((x) => x.phase != null && v?.phases?.[x.phase] && !v.phases[x.phase].done && (x.spent || Math.floor(x.at * p.max) < p.integrity)); // a tick it was put under some other way (no hit crossed it) holds nothing
   return t ? Math.max(0, p.integrity - Math.floor(t.at * p.max)) : Infinity;
 }
 // A hit from your command on a part (combat.mjs hit): on the Backlash's beat, it lashes back this cycle unless it breaks.

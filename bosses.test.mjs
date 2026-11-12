@@ -53,6 +53,16 @@ test("RELAY-KING's Crown Hop: at 60% the ♛ moves to its healthiest part with t
   assert.equal(of(s, 'replicator').attack.interval, 2, 'the Flood');
   assert.equal(of(s, 'relay').attack.interval, 3);
 });
+test("RELAY-KING's Crown Hop never lands on a part under its 30% tick: with none above it, the ♛ stays", () => {
+  const s = boss('relayking'), was = crown(s);
+  for (const p of livingParts(s)) if (p !== was) p.integrity = Math.floor(0.3 * p.max);
+  under(s, 0.6);
+  const ev = resolveCycle(s);
+  assert.equal(crown(s), was, 'it stays');
+  assert.equal(s.encounter.virus.phases.filter((x) => x.done).length, 1, 'act 2 only: none skipped');
+  assert.ok(ev.some((x) => /No part can take its ♛/.test(x.message || '')));
+  assert.deepEqual(was.ticks.filter((t) => !t.spent).map((t) => t.at), [0.3]);
+});
 
 test("REPO MAN's Liens: a command a ◆ absorbs adds one and grows the Collection; a Collection clears them", () => {
   const s = boss('repoman'), v = s.encounter.virus, l = of(s, 'ledger'), p = of(s, 'pulse');

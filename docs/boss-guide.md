@@ -23,7 +23,7 @@ you spend keeping it slow.
 - **Surge** (Gavel): 34 damage. Each one that lands makes the next come sooner: every 4 cycles, then 3, then 2.
 - **Withdraw** (your move): a delay or Throttle on the Gavel's Surge resets it to every 4.
 - **Sold** (Gavel, at every 2): if its Surge lands while it is at every 2, the buyer named on the Gavel joins as a new
-  part, the Rotor ♛ heals 10% of its max, and the Gavel drops back to every 3.
+  part, the Rotor ♛ heals 10% of its max, and the Gavel drops back to every 4.
   - TOLLGATE: a Ward. The Rotor loses at most 25% of its max a cycle while it stands.
   - SWARMLINE: a Twin of the Gavel. Break one and the other reboots unless both go down within 3 cycles.
   - PALEMASK: a Veil. One part's timers are hidden.

@@ -2974,7 +2974,7 @@ export function hit(s, p, base, opts = {}) {
   const marks = [crit && on(s, p, 'exposed') && 'exposed', opts.dot && !opts.flat && on(s, p, 'tagged') && 'tagged', !opts.flat && on(s, p, 'quarantined') && 'quarantined'].filter(Boolean);
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) notes.push('weak point');
   if (dealt > 0 && holdsPart(e, p)) dealt = Math.min(dealt, Math.max(0, p.integrity - 1)); // Uptime: the virus can't be broken (objectives.mjs)
-  if (dealt > 0 && p.core) dealt = Math.min(dealt, actCap(s, p)); // a P4 boss's ♛: one tick a hit, so no act is skipped (acts.mjs)
+  if (dealt > 0 && p.core) { const cap = actCap(s, p); if (dealt > cap) { notes.push(`held at its tick: ${dealt - cap} lost`); dealt = cap; } } // a boss's ♛ holds at its next act tick until that act begins (acts.mjs)
   const above = p.integrity >= p.max / 4;
   p.integrity -= dealt;
   if (above && p.integrity > 0 && p.integrity < p.max / 4) daemonsOn(s, 'low', { part: p.id }); // Reaper
@@ -3105,21 +3105,21 @@ function watchdog(s) {
   emit(s, got.length ? 'patch' : 'blocked', got.length ? `WATCHDOG. The ♛ still stands above its tick: ${got.map((p) => `the ${p.name}`).join(', ')} ${got.length === 1 ? 'patches' : 'patch'} a ◆.` : 'WATCHDOG. No part has a ◆ to patch.', { boss: v.boss, watchdog: true, ...(got[0] ? { target: got[0].id } : {}) });
 }
 
-// RELAY-KING's Crown Hop: its ♛ (and the phase ticks still to come) moves to its healthiest other part, and the part it
-// leaves heals a quarter of its max and takes plain ticks. A phase tick the new part is already under starts at once.
+// RELAY-KING's Crown Hop: its ♛ (and the phase ticks still to come) moves to its healthiest other part above its next
+// act tick, and the part it leaves heals a quarter of its max and takes plain ticks. With no part above it, the ♛ stays
+// (so no act is skipped).
 export const CROWN = { heal: 0.25 };
 function crownHop(s) {
   const v = s.encounter.virus, old = livingParts(s).find((x) => x.core);
   if (!old) return null;
-  const to = livingParts(s).filter((x) => x !== old && x.kind === 'system' && !x.mimic).sort((a, b) => b.integrity / b.max - a.integrity / a.max)[0];
-  if (!to) return `${v.name}'s ♛ has nowhere to hop.`;
-  const left = (old.ticks || []).filter((t) => t.phase != null && !t.spent), was = old.integrity;
+  const left = (old.ticks || []).filter((t) => t.phase != null && !t.spent), was = old.integrity, next = left[0]?.at ?? 0;
+  const to = livingParts(s).filter((x) => x !== old && x.kind === 'system' && !x.mimic && x.integrity > Math.floor(next * x.max)).sort((a, b) => b.integrity / b.max - a.integrity / a.max)[0];
+  if (!to) return `${v.name} tries to reroute. No part can take its ♛, so it stays on the ${old.name}.`;
   old.core = false;
   old.integrity = Math.min(old.max, old.integrity + Math.round(old.max * CROWN.heal));
   old.ticks = TICKS.at.map((at) => ({ at, spent: old.integrity <= at * old.max }));
   to.core = true;
-  to.ticks = left.map((t) => ({ ...t, spent: to.integrity <= t.at * to.max }));
-  for (const t of to.ticks) if (t.spent && v.phases?.[t.phase] && !v.phases[t.phase].done) v.phases[t.phase].at = 2;
+  to.ticks = left.map((t) => ({ ...t, spent: false }));
   return `${v.name} reroutes. Its ♛ hops to the ${to.name}, and the ${old.name} heals ${old.integrity - was}.`;
 }
 // HOLLOW CHOIR's second voice: a Mimic at the ♛'s full size (fork:mimic before it), beating 2 cycles behind the first.
