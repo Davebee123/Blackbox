@@ -214,3 +214,21 @@ test('every tip points at something the game draws', async () => {
   }
   assert.deepEqual(missing, []);
 });
+
+// wick narrates the guided path (tips.mjs wick): the opening pointer, the rooms tour, the first fight and a few firsts.
+// His lines are lowercase, as he writes, and the rest of the tips keep the plain voice.
+test('wick narrates the guided path, in his own voice, and nothing else', async () => {
+  const guided = ['map-start', 'tour-walk', 'tour-engage', 'tour-scan', 'tour-cache', 'tour-hunter', 'tour-rest', 'tour-jackout',
+    'fight-timeline', 'fight-keys', 'fight-ticks', 'fight-armor', 'sync', 'run-signal', 'run-rival', 'room-vault', 'room-core', 'fight-crown'];
+  assert.deepEqual(TIPS.filter((t) => t.wick).map((t) => t.id).sort(), [...guided].sort());
+  for (const t of TIPS.filter((x) => x.wick)) assert.equal(t.text, t.text.toLowerCase(), `${t.id} is in wick's lowercase`);
+  // A rival's tip opens with wick's line on that rival.
+  const FP = await import('./dist/floorplan.mjs');
+  const RV = await import('./dist/rivals.mjs');
+  const s = fresh(); s.tutorialCompleted = true;
+  FP.startRooms(s, { seed: 7, size: 'medium', floor: 3, level: 12 }); FP.connect(s);
+  RV.spawnRival(s, 99, 'kudzu');
+  const t = nextTip(s, 'rooms', (sel) => sel === '.fp-rvstat');
+  assert.equal(t.id, 'run-rival');
+  assert.ok(t.text.startsWith(RV.wickLine(s, RV.rivalOf(s)) + ' '), t.text);
+});

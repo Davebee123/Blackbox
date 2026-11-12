@@ -70,6 +70,7 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **Picked looks:**
   - quest window: the *Transmission*;
   - level-up: the *Firmware update*;
+  - wick's tips (the guided path's, tips.mjs `wick`): the *Transmission* (his face, the kicker, his lowercase line);
   - pager: the *Tray*;
   - player card: the *NET ID badge*;
   - collection log: the *Ledger*;
