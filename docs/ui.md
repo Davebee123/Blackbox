@@ -209,6 +209,11 @@ short vibration on phones that have it.
   zooms (up to 5×), drag pans, double-click or ⤢ fits. A **Show** picker (**Mine**, **Targets**, **Threats**) dims the
   rest. **Map · List** toggles a sortable list of every server (name, family, level, floor, explored, status), then hubs
   and leads, each with a **locate** button.
+- **The class picker** (`view.mjs` classPickMarkup, app.js pickClass): four translucent squares (emblem, name, roles).
+  The picked one opens a drawer from its side (Traits, Starts with, Subclass; rules in tooltips) and the rest narrow to
+  strips (small emblem, name up the side). Its border plays its class, always amber: Breaker cracks and shatters,
+  Bastion deflects shots off a standing barrier, Infiltrator dims to one light tracing the edge, Operator circles three
+  processes. Start is a lit command line, the class typed in. A phone stacks rows that open downward. No slogans.
 - **The threat rail** (down the map's left): everything coming for you, hottest first, then soonest; red for what's
   hitting you, amber for what's on its way. Under it the contract tracker.
 - **Map cards** pop up beside the node you click (never over it): the server card (level, Integrity, the wall as one
