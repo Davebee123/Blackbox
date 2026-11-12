@@ -130,7 +130,7 @@ export const TIPS = [
   // Your first fight: one pause, not four. The board, the keys, armor and the Sync Window are
   // clicked through as steps of one tip, each pointing at its own thing; each still shows alone
   // if it turns up later.
-  { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-ticks', 'fight-armor', 'sync'], wick: true, text: 'this board is what it\'s going to do to you. the now column is this cycle, and each column right of it is one later. you move first, then whatever\'s in that column lands.' },
+  { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-ticks', 'fight-armor', 'sync'], wick: true, text: 'this is the combat console halcyon installed for fighting viruses. it shows their attacks: the now column is this cycle, each column right of it one later. you move first, then what\'s in now lands.' },
   { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', wick: true, text: 'type a skill and a part, then enter. or press its number and click the part. let the timer run out and key 1 hits your last target again.' },
   // The interrupt (interrupt.mjs): the ticks, and a tick spent for nothing.
   { id: 'fight-ticks', page: 'combat', pause: true, at: '.board .ptick', under: '#board', when: (s) => s.encounter?.phase === 'active', wick: true, text: 'two marks on each bar, at 50% and 25%. push a part past one on the cycle its attack is due and that attack\'s cancelled. each mark works once.' },
