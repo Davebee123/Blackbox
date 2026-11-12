@@ -2659,14 +2659,14 @@ props, boots, prompts, cursors and the house's furniture. None changes a number.
 
 ### Your house (house.mjs)
 
-Rig → **House** (`house`): a cutaway of a tenement, floors stacked, a yard either side, and ASCII furniture to put in
+Rig → **House** (`house`): a cutaway of a tenement, floors stacked, a lot beside it, and ASCII furniture to put in
 it. Cosmetic only (docs/house.md).
 
 - **Floors** open with achievement points: the street floor and the roof from the start, then the Loft (50), the
   Cellar (200), the Shack on the roof, its right part a terrace (450), the Bunker (800) and the Subnet (1,200). The next
   floor is a dotted outline where it will go; its tooltip says the points. A floor opening is one quiet pager line.
-- **The yard:** the ground either side of the street floor, open from the start. Yard pieces stand only there; a
-  floor piece can go out too, a wall piece can't.
+- **The lot:** 32 columns of gravel west of the street floor, fenced, open from the start; east is the pavement, where
+  nothing goes. Yard pieces stand only in the lot; a floor piece can go out too, a wall piece can't.
 - **Furniture:** 20 pieces (6 for the yard), each from an achievement (the bare mattress is yours from the start, already out). The
   picker shows a tile a piece with the count; one not yet yours is solid blocks, *???* and what brings it.
 - **Placing:** drag a tile or a placed piece onto a spot (onto the picker puts it away), or click it, then a spot: the piece stands on that floor under the pointer, a wall piece hangs on its back

@@ -26,8 +26,9 @@ A funny little ASCII house of your own, and ASCII furniture you collect for it. 
 - **Rules:** every piece comes from an achievement (a new one where none exists yet), never a server floor, a shop or
   a timer. No effect on play, and kept for good.
 
-- **The yard:** open ground either side of the street floor, on the gravel, from the start. Yard pieces stand only
-  there; floor pieces can go out too.
+- **The lot:** 32 columns of gravel west of the street floor, a chain-link fence at its far side, from the start; east
+  of the walls, the pavement and a street lamp. Yard pieces stand only in the lot; floor pieces can go out too. Picked
+  over a yard either side (too narrow for two pieces) and the same with a picket fence (busy once full).
 - **Where it lives:** Rig → House, a tab beside Casing and Terminal.
 - **The fifth floor:** the Subnet, under the bunker; rack lights along its ceiling.
 

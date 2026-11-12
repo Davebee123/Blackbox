@@ -104,21 +104,34 @@ test('placing: on the floor or the wall, never over a window, the ladder, the sh
   assert.match(said(play(t, 'house')), /1 of 6 floors, 1 of 1 pieces out/);
 });
 
-test('the yard: either side of the street floor, open from the start; yard pieces stay out, wall pieces stay in', () => {
+test('the lot: west of the street floor, open from the start; yard pieces stay out, wall pieces stay in', () => {
   const s = all();
-  assert.ok(H.isOpen(fresh(), 'west') && H.isOpen(fresh(), 'east'));
-  assert.ok(H.fits(s, 'car', 'west', 0) && H.fits(s, 'car', 'east', H.YW - 13));
-  assert.ok(!H.fits(s, 'car', 'west', H.YW - 12), 'past the yard');
+  assert.ok(H.isOpen(fresh(), 'west') && !H.isOpen(fresh(), 'east'));
+  assert.ok(H.fits(s, 'car', 'west', 0) && H.fits(s, 'car', 'west', H.YW - 13));
+  assert.ok(!H.fits(s, 'car', 'west', H.YW - 12), 'past the lot');
   assert.ok(!H.fits(s, 'car', 'street', 15), 'a yard piece stays out');
-  assert.ok(H.fits(s, 'cat', 'east', 4), 'the cat can go out');
+  assert.ok(H.fits(s, 'cat', 'west', 20), 'the cat can go out');
   assert.ok(!H.fits(s, 'poster', 'west', 0), 'no wall out there');
-  assert.equal(H.leftFor('car', 99, 'east'), H.YW - 13);
+  assert.equal(H.leftFor('car', 99, 'west'), H.YW - 13);
   assert.ok(!warned(play(s, 'house place car west 1')));
   assert.ok(warned(play(s, 'house place grill west 1')), 'one piece over another');
+  assert.ok(!warned(play(s, 'house place grill west 16')), 'two side by side');
   const html = houseMarkup(s);
   assert.match(html, /data-hs-floor="west"[^>]*>.*data-hs-piece="car"/);
-  assert.match(html, /data-hs-floor="east"/);
+  assert.doesNotMatch(html, /data-hs-floor="east"/);
   assert.match(housePageMarkup(s), /data-hs-pick="car"[^>]*data-tt-kind="Furniture, yard"|data-tt-kind="Furniture, yard"/);
+  // A save from the two yards: what stood in the east one moves into the lot, or is put away when it can't fit.
+  const t = all();
+  t.house = { placed: { mattress: ['street', 2], car: ['west', 0], washing: ['west', 14], grill: ['east', 2] } };
+  t.house.placed.bike = ['east', 10];
+  H.houseOf(t);
+  assert.deepEqual(t.house.placed.car, ['west', 0]);
+  assert.equal(t.house.placed.grill, undefined, 'no room left in the lot');
+  assert.equal(t.house.placed.bike, undefined);
+  const u = all();
+  u.house = { placed: { grill: ['east', 2] } };
+  assert.deepEqual(H.houseOf(u).placed.grill, ['west', 0]);
+  assert.deepEqual(H.houseOf(u).placed.grill, ['west', 0], 'safe to run twice');
 });
 
 test('the house survives a save and a load', () => {
