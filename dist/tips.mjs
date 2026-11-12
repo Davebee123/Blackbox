@@ -9,6 +9,7 @@
 import { keyMap } from './combat.mjs';
 import { MUTATIONS, QUIRKS, STRAINS, GUARDS, ARCHETYPES, SYNC } from './data.mjs';
 import { GENES } from './genes.mjs';
+import { rivalOf, wickLine } from './rivals.mjs';
 import { ROOM_RULES } from './families.mjs';
 import { hackerLevel, loadedOn, classOf } from './combat.mjs';
 const spare = (s) => (s.stash || []).some((it) => !loadedOn(s, it.id)); // something you could load
@@ -31,23 +32,23 @@ const movesOf = (s) => s.rooms?.stats?.moves || 0;
 const scansOf = (s) => s.run?.scans || 0; // scans on this run (run.mjs scanRoom)
 const TOUR_STEPS = [
   { id: 'tour-walk', at: '.fp-room.reach', when: (s) => !!visitOf(s) && !s.rooms.screen, mark: movesOf, done: (s, m) => movesOf(s) > m,
-    text: 'Click a room with a number on its corner to walk in. The number is the Signal your first step costs.' },
+    wick: true, text: 'pick a room with a number on its corner. that\'s the signal it costs to walk in.' },
   { id: 'tour-engage', at: '#fp-pop [data-rooms="engage"]', also: '#fp-pop [data-rooms="back"]', after: ['tour-walk'], when: (s) => s.rooms?.screen?.kind === 'virus', done: (s) => s.rooms?.screen?.kind !== 'virus',
-    text: 'A virus holds this room. Engage to fight it, or Step back the way you came.' },
+    wick: true, text: 'something\'s living in there. engage, or step back the way you came.' },
   // Scan: the first time a room next to you that scan reads is on the map, its chip's SCAN (floorplan-view.mjs; it shows
   // on hover, and while the step points at it). Walking into a room instead closes it too.
   { id: 'tour-scan', at: '.fp-scanbtn:not([aria-disabled])', also: '.fp-room.reach', after: ['tour-walk'], when: (s) => !!visitOf(s) && !!s.run?.rooms, mark: scansOf, done: (s, m) => scansOf(s) > m,
-    text: 'Scan a room next to you to read its virus before you walk in.', more: (s) => (classOf(s) === 'infiltrator' ? 'As an Infiltrator, you scan free and read deeper.' : 'It costs 1 Signal.') },
+    wick: true, text: 'scan a room next to you to see what\'s in it before you walk in.', more: (s) => (classOf(s) === 'infiltrator' ? 'you scan free, and you read deeper.' : 'costs 1 signal.') },
   { id: 'tour-cache', at: '#fp-pop [data-rooms="pull"]', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'cache' && !s.rooms.screen,
     mark: (s) => `${s.rooms.at}:${s.rooms.taken[s.rooms.at] ?? ''}`, done: (s, m) => `${s.rooms?.at}:${s.rooms?.taken[s.rooms?.at] ?? ''}` !== m,
-    text: 'A cache holds credits and code. One in four is bait, and its card says which: take it, or leave it.' },
+    wick: true, text: 'a cache: credits and code. one in four is bait, and its card says which.' },
   { id: 'tour-hunter', at: '.fp-hunt:not(.out)', after: ['tour-walk'], when: (s) => !!visitOf(s) && !s.rooms.screen, mark: movesOf, done: (s, m) => movesOf(s) > m,
-    text: 'The hunter moves only when you walk or wait, and this shows when it moves next.', more: (s) => (classOf(s) === 'infiltrator' ? 'If it reaches you, slip past it or fight it.' : 'If it reaches you, you fight it.') },
+    wick: true, text: 'that\'s the hunter: it moves when you walk or wait, and this says when.', more: (s) => (classOf(s) === 'infiltrator' ? 'if it reaches you, slip past it or fight it.' : 'if it reaches you, you fight it.') },
   { id: 'tour-rest', at: '#fp-pop [data-rooms="rest"]:not([disabled])', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'rest',
     mark: (s) => s.rooms.at, done: (s, m) => !!s.rooms?.visit?.rested || s.rooms?.at !== m,
-    text: 'Rest gives back some of your Signal, once a visit. The hunter never comes in here.' },
+    wick: true, text: 'rest here once a visit for some signal back. the hunter never comes in.' },
   { id: 'tour-jackout', at: '.fp-acts [data-rooms="jackout"]:not([disabled])', after: ['tour-engage'], when: (s) => !!visitOf(s) && !s.rooms.screen && (s.rooms.stats?.won || 0) > 0, done: (s) => !s.rooms?.at,
-    text: 'Jack out to bank your pack and go home. The server takes you back 30 seconds later.' },
+    wick: true, text: 'jack out and the pack\'s banked. the server lets you back in 30 seconds later.' },
 ];
 export const TOUR = TOUR_STEPS.map((t) => ({ ...t, page: 'rooms', tour: true }));
 export const tourIds = TOUR.map((t) => t.id);
@@ -73,18 +74,18 @@ export const TIPS = [
 
   // ---------- map ----------
   // Your first move: the one tip on the opening map. It stays until you connect.
-  { id: 'map-start', page: 'map', at: '.mnode.zone', when: (s) => !s.rooms, done: (s) => !!s.rooms, text: 'Your work starts here. Click SPRAWL-00, then Connect.' },
+  { id: 'map-start', page: 'map', at: '.mnode.zone', when: (s) => !s.rooms, done: (s) => !!s.rooms, wick: true, text: 'sprawl-00. strays everywhere, nobody owns it. click it and connect.' },
   // Your server and its gate wait for the first intrusion; the ? servers, for the first trace on one.
   { id: 'map-server', page: 'map', at: '.mnode.server', when: atGate, joins: ['map-intrusion'], text: 'This is your server. It sits above the net, and viruses attacking it appear next to it.' },
   // ---------- the rooms (the Run tab) ----------
   { id: 'socket', page: 'rooms', at: '.fp-room.k-socket', text: 'This is a socket room. Clear its guard once and you can build here. A program in a socket changes this server\'s rules, and only this server\'s.' },
   // A server's takeover path, the first time you see each step: the vault, its key, the sealed Core.
-  { id: 'room-vault', page: 'rooms', at: '.fp-room.k-vault', text: 'This is the vault. It holds the server\'s files. Open it with the key the guard post\'s elite carries, or force it for Signal. Opening it unseals the Core.' },
-  { id: 'room-core', page: 'rooms', at: '.fp-room.k-core', text: 'The Resident waits in the Core, a boss. It stays sealed until the vault is open. Beat it to take this server over.' },
+  { id: 'room-vault', page: 'rooms', at: '.fp-room.k-vault', wick: true, text: 'the vault. the server\'s files are in there. the elite on the guard post has the key, or you force it and pay in signal.' },
+  { id: 'room-core', page: 'rooms', at: '.fp-room.k-core', wick: true, text: 'the core. the resident lives there, sealed till the vault\'s open. beat it and the server\'s yours.' },
   { id: 'room-elite', page: 'rooms', at: '.fp-room.k-elite', text: `An elite room. Its virus is tougher and brings one more tell, and it enrages from cycle ${ROOM_RULES.enrage.elite}. It drops a blue or better.` },
   { id: 'room-thread', page: 'rooms', at: '.fp-quest.m-start', text: 'Someone in this room has work for you. Walk in to talk. Threads you take are tracked in Mail.' },
-  { id: 'run-signal', page: 'rooms', at: '.fp-sig.mid, .fp-sig.low', after: ['tour-walk'], text: 'Your Signal is running down. Steps and hits spend it, and at 0 you go home and lose your pack. Rest rooms refill some, and it all comes back at home.' },
-  { id: 'run-rival', page: 'rooms', at: '.fp-rvstat', text: 'A rival runner is racing you to the vault. If it reaches you, you fight its whole lineup. Beat it for its pack, or it leaves with the vault\'s files.' },
+  { id: 'run-signal', page: 'rooms', at: '.fp-sig.mid, .fp-sig.low', after: ['tour-walk'], wick: true, text: 'your signal\'s getting thin. at 0 you\'re home and the pack stays here. find a rest room or jack out.' },
+  { id: 'run-rival', page: 'rooms', at: '.fp-rvstat', wick: true, lead: (s) => (rivalOf(s) ? wickLine(s, rivalOf(s)) : ''), text: 'it\'s racing you to the vault. if it reaches you, you fight the lot. beat it and its pack is yours.' },
   { id: 'exfil', page: 'rooms', at: '.fp-exfil', text: 'An Exfil is uploading a stolen archive from this server, and it runs from you. Corner it and break its Uplink before the upload finishes.' },
   // A puzzle room's board, the first time you see each one (puzzle-view.mjs). One go a board: played to its end, it refills in two hours.
   { id: 'pz-quarantine', page: 'rooms', at: '.pz-panel.k-quarantine .pz-well', text: 'After each firewall you place, the worm copies into the marked node. Wall it in early, against an edge. Every node it never reaches pays this server\'s code.' },
@@ -129,13 +130,13 @@ export const TIPS = [
   // Your first fight: one pause, not four. The board, the keys, armor and the Sync Window are
   // clicked through as steps of one tip, each pointing at its own thing; each still shows alone
   // if it turns up later.
-  { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-ticks', 'fight-armor', 'sync'], text: 'This board shows the virus\'s attacks. The Now column is this cycle, and each column to the right is one cycle later. Each cycle you get one move, and it happens before the attacks in Now hit you.' },
-  { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', text: 'To make a move, type a skill and a part, then press Enter. Or press a skill\'s number, click a part and press Enter. If time runs out, key 1 hits your last target again.' },
+  { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-ticks', 'fight-armor', 'sync'], wick: true, text: 'this board is what it\'s going to do to you. now is this cycle, each column right is one later. you move first, then whatever\'s in now lands.' },
+  { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', wick: true, text: 'type a skill and a part, then enter. or press its number and click the part. let the timer run out and key 1 hits your last target again.' },
   // The interrupt (interrupt.mjs): the ticks, and a tick spent for nothing.
-  { id: 'fight-ticks', page: 'combat', pause: true, at: '.board .ptick', under: '#board', when: (s) => s.encounter?.phase === 'active', text: 'The two marks on each bar are ticks, at 50% and 25%. Push a part past a tick on the cycle its attack is due, and that attack is cancelled. Each tick works once a fight.' },
+  { id: 'fight-ticks', page: 'combat', pause: true, at: '.board .ptick', under: '#board', when: (s) => s.encounter?.phase === 'active', wick: true, text: 'two marks on each bar, at 50% and 25%. push a part past one on the cycle its attack is due and that attack\'s cancelled. each mark works once.' },
   { id: 'fight-wasted', page: 'combat', pause: true, at: '.board .ptick.spent', under: '#board', when: (s) => (s.encounter?.metrics?.wasted || 0) > 0, text: 'You crossed that tick when no attack was due, so it\'s spent for nothing. Save big hits for the cycle an attack lands.' },
-  { id: 'fight-armor', page: 'combat', pause: true, at: '.board .chits', under: '#board', text: 'The ◆ next to a part is armor. A hit on an armored part removes one ◆ but deals no damage, so strip the armor with weaker skills before using your strongest one.' },
-  { id: 'sync', page: 'combat', at: '#sync-win', pause: true, text: 'The bar under Now fills as the cycle runs. Press Enter while it\'s inside the bright window, and your move deals 10% more damage.', more: (s) => `As ${/^[AEIOU]/.test(ARCHETYPES[classOf(s)].name) ? 'an' : 'a'} ${ARCHETYPES[classOf(s)].name}, it also ${SYNC[classOf(s)].rule.replace(/^./, (c) => c.toLowerCase())}` },
+  { id: 'fight-armor', page: 'combat', pause: true, at: '.board .chits', under: '#board', wick: true, text: 'see the ◆? armor. each hit knocks one off and does nothing else. chip it bare with the small stuff, then hit it hard.' },
+  { id: 'sync', page: 'combat', at: '#sync-win', pause: true, wick: true, text: 'the bar under now fills as the cycle runs. hit enter inside the bright window and you deal 10% more.', more: (s) => `as ${/^[AEIOU]/.test(ARCHETYPES[classOf(s)].name) ? 'an' : 'a'} ${ARCHETYPES[classOf(s)].name.toLowerCase()}, it also ${SYNC[classOf(s)].rule.replace(/^./, (c) => c.toLowerCase())}` },
   { id: 'fight-patch', page: 'combat', pause: true, at: '.board .intent.patch', under: '#board', text: 'A part with no ◆ left grows one back five cycles later, unless you break it first.' },
   { id: 'fight-veiled', page: 'combat', pause: true, at: '.board .intent.hidden', under: '#board', text: 'This part hides when it will attack. Strip its ◆ to see its timer.' },
   // The parts plan's P3 families (families.mjs).
@@ -154,7 +155,7 @@ export const TIPS = [
   { id: 'fight-mimic', page: 'combat', pause: true, at: '.board .intent.tell.t-mimic', under: '#board', text: 'The Mimic copies the command you use that cycle and hits you with it. Use something that deals no damage then: a debuff, an armor strip, a burn or a shield.' },
   { id: 'fight-lock', page: 'combat', pause: true, at: '.board .intent.tell.t-lock', under: '#board', text: 'When this lands, the next skill you fire is locked for 3 cycles. Break the part first, or feed it a skill that is already cooling down.' },
   // Bosses: the ♛ part's ticks start acts (interrupt.mjs rule a).
-  { id: 'fight-crown', page: 'combat', pause: true, at: '.board .tag.crown', under: '#board', text: 'The ♛ part is the boss\'s signature. Its ticks start the boss\'s next act instead of cutting an attack. Each act changes the fight.' },
+  { id: 'fight-crown', page: 'combat', pause: true, at: '.board .tag.crown', under: '#board', wick: true, text: 'the ♛ part is the boss. push it past a mark and it starts its next act, and the fight changes.' },
   // Levers (docs/puzzle-levers.md): an elite's clash, then a plain fight's one lever, from level 6.
   { id: 'fight-clash', page: 'combat', pause: true, at: '.board .tag.clash', under: '#board', text: 'This elite\'s two rules pull against each other, so answering one makes the other harder. Hover ⇄ to see the pull and the answer.' },
   { id: 'fight-lever', page: 'combat', pause: true, at: '.board .bpart.lever', under: '#board', text: 'This part has a rule that makes your usual move the wrong one. Hover the red tag on its row to read it before you hit.' },
@@ -246,7 +247,8 @@ export function nextTip(s, page, visible, pace = {}) {
     if (kind === 'opening' && (!s.encounter?.paused || pace.told)) continue;
     if (t.when && !t.when(s, page)) continue;
     if (!visible(t.at)) continue;
-    const own = (x) => x.more ? { ...x, text: `${x.text} ${x.more(s)}` } : x; // more: a sentence that depends on you (your class)
+    // lead and more: a sentence before or after that depends on you (your class, the rival on you).
+    const own = (x) => (x.more || x.lead ? { ...x, text: [x.lead?.(s), x.text, x.more?.(s)].filter(Boolean).join(' ') } : x);
     if (!t.joins) return own(t);
     const more = t.joins.map((id) => TIPS.find((x) => x.id === id))
       .filter((x) => x && !seen[x.id] && (!x.when || x.when(s, page)) && visible(x.at)).map(own);

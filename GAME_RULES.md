@@ -2665,8 +2665,10 @@ How it looks is docs/ui.md; these are the rules the player meets.
 
 Screens carry names, numbers and state, never how-to text. Rules live in **hovers** (every stat, tag, skill, talent,
 mutation and wall band shows its rule, in WoW's tooltip grammar) and in **first-time tips**: the first time something
-is on screen, a small tip points at it and says how it works, once, one at a time. The opening map has one: click
-SPRAWL-00, then Connect. Your server's tip waits for the first intrusion, a ?'s for the first trace on one.
+is on screen, a small tip points at it and says how it works, once, one at a time. **wick** narrates the guided path
+(the opening map, the rooms tour, your first fight, low Signal, a rival, the vault, the Core, a boss's ♛) in his own
+lowercase, in a small Transmission: his face, *INCOMING · LOWLIGHT*, his line. The rest keep the plain voice. The
+opening map has one tip: click SPRAWL-00, then Connect. Your server's tip waits for the first intrusion, a ?'s for the first trace on one.
 
 **Pacing** (tips.mjs `paceOf`). A map, room or menu tip shows at most once a screen visit, and 2 minutes after the last
 one closed. A fight tip about what the fight opened with shows only while it's paused (a room fight opens paused until

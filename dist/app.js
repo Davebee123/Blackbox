@@ -28,6 +28,7 @@ import { createIntro } from './intro.mjs';
 import { coldOpen } from './coldopen.mjs';
 import * as SC from './scenes.mjs';
 import { sceneMarkup } from './scenes-view.mjs';
+import { portraitMarkup } from './portraits.mjs';
 import { journalCardMarkup } from './journals-view.mjs';
 import { JOURNAL_BY } from './journals.mjs';
 import { powerOn } from './poweron.mjs';
@@ -2743,6 +2744,11 @@ function checkTips(now) {
 function showStep() {
   const steps = tip.t.steps;
   tip.cur = steps ? steps[tip.step] : tip.t;
+  // wick narrates the guided path (tips.mjs wick): the Transmission, his face beside his line.
+  const wick = !!tip.cur.wick;
+  $('tip').classList.toggle('wick', wick);
+  $('tip-from').hidden = !wick;
+  $('tip-face').innerHTML = wick ? portraitMarkup('wick', 'npc') : '';
   $('tip-text').textContent = tip.cur.text;
   $('tip-step').textContent = steps ? `${tip.step + 1}/${steps.length}` : tip.t.tour ? `${tourDone(campaign) + 1}/${TOUR.length}` : '';
   $('tip-ok').textContent = steps && tip.step < steps.length - 1 ? 'Next' : 'Got it';

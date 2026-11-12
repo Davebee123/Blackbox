@@ -197,7 +197,7 @@ test('the rooms tour\'s scan step: after the walk step, at SCAN on the first roo
   markSeen(s, 'tour-walk'); markSeen(s, 'tour-engage');
   const t = nextTip(s, 'rooms', shows(html));
   assert.equal(t.id, 'tour-scan');
-  assert.equal(t.text, 'Scan a room next to you to read its virus before you walk in. It costs 1 Signal.');
+  assert.equal(t.text, "scan a room next to you to see what's in it before you walk in. costs 1 signal.");
   // No room it reads: no step.
   const down = restore(JSON.parse(JSON.stringify(s)));
   Object.assign(down.zone.spawns[room.path0], { alive: false, respawnAt: Date.now() + 3600000 });
@@ -209,7 +209,7 @@ test('the rooms tour\'s scan step: after the walk step, at SCAN on the first roo
   // An Infiltrator's: free.
   const i = sprawl('infiltrator');
   markSeen(i.s, 'tour-walk'); markSeen(i.s, 'tour-engage');
-  assert.equal(nextTip(i.s, 'rooms', shows(roomsMarkup(i.s))).text, 'Scan a room next to you to read its virus before you walk in. As an Infiltrator, you scan free and read deeper.');
+  assert.equal(nextTip(i.s, 'rooms', shows(roomsMarkup(i.s))).text, "scan a room next to you to see what's in it before you walk in. you scan free, and you read deeper.");
 });
 
 test('SPRAWL-00 from a fresh connect: the scan step never comes before the walk step', () => {
