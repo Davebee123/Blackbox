@@ -37,18 +37,21 @@ be on the net, like Guild Wars 1's heroes and Starsector's officers and fleets.
 | **Work** | The table is filling again. Paymasters pay per process ended: Halcyon pays crews like LOWLIGHT; the factions run contracts. A runner does your job for their own paymaster | Hub → a server near their level → work it → back to the hub to be paid |
 | **Someone's money** | In 2091 nearly everyone has a payment frozen in the table: a pension, a shop that died mid-trade. Each runner is after one trade, on a fixed floor | Over weeks they climb toward it (#net shows it). Arriving is a story beat: a letter, or a request to help with the last server |
 
-## On the map: the *Rail* (picked)
+## On the map: the *Diamonds* and the *Rail* (picked)
 
 - **The rail:** a Runners list under Contracts, the runners you know: handle, class and level, and where they are
   (`→` a server for one travelling).
-- **The map** draws only the runner you pick: a paper-white diamond with their handle, a dotted route through the
-  servers they've passed, a dashed ring on where they're heading.
+- **The map** draws every runner on the floor (the *Diamonds*, picked November 2026 over a list in the server card and
+  named diamonds behind a toggle): a small paper-white diamond under the server they're at, hollow on the road; a click
+  opens their card, where you hire them. The one you pick also gets their handle, a dotted route through the servers
+  they've passed, a dashed ring on where they're heading.
+- **The Rail folds** to its head; runners stay off the Online list (it keeps friends, members and crew).
 - **Tooltip:** the handle; *Runner · <faction>*; class, level and what they're doing; then, muted, how you know them
   and what they're after.
 - **Colour:** paper white (`--bright`). Teal, red, amber, violet and steel keep their meanings; a runner hunting you is
   the one red.
 
-Rejected: a pip under each server per runner (*Pips*), and a count tag per server with travelling dashes (*Counts*).
+Rejected: a count tag per server with travelling dashes (*Counts*); runners in the Online list.
 
 ## Meeting and hiring (picked)
 
@@ -60,7 +63,8 @@ Rejected: a pip under each server per runner (*Pips*), and a count tag per serve
 - **The room's card:** the virus, then the runner's row (handle, faction mark, class and level, their Signal), their
   line, the standing it pays as an icon, and **Help** / **Step back**. Win, and it shows the room cleared and their
   standing up a tier.
-- **Standing:** 0–100 in four tiers: Stranger, Known (leads), Friend (hire), Close (consortium). Drawn as the tier's
+- **Standing:** 0–100 in four tiers: Stranger, Known (leads), Friend, Close (consortium); anyone can be hired, and each
+  tier makes the fee smaller (a stranger's is double). Drawn as the tier's
   name, a bar to the next and the next one's name (the *Tier bar*); the number and how you met are its tooltip.
 - **The runner card** (a Rail row opens it beside their diamond): *Runner · faction*, the handle, class glyph, class
   and level; rows, split by hairlines and each label level with its row's first line, for Traits (temperament first, dashed, then the traits as named chips, ★ on a

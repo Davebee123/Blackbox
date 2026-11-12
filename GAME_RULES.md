@@ -7,8 +7,9 @@ Design plans live in `docs/`; the code map is README.md.
 
 ### First launch
 
-Every session opens with the power-up: the monitor comes on, the BLACKBOX mark (a black square eclipsing an amber
-light) rises, and **Press any key to start** waits (a tap on a phone). A new game first plays the cold open (about
+Every session opens with the power-up (the Horizon): the monitor comes on, a line of light spreads across it, the
+black box stands on it with its light leaking round the edges, BLACKBOX settles low on the screen, and **Press any key**
+waits (a tap on a phone). A new game first plays the cold open (about
 55 s; any key or tap skips it, and Motion off leaves it out): KESSLER's clearing house over fifty years, its process table
 filling until the frame sticks and NETWORK OFFLINE, then a colder machine recovering. Then a bare terminal:
 `blackbox login:` asks for a handle (2–16 letters, numbers, dots, dashes or underscores) and a password (4+
@@ -591,7 +592,7 @@ and REPO MAN's ♛ holds 45% of the boss, taken from its other parts (`BOSSES` w
 
 | Boss | Its part | Act 1 | Act 2 (♛ at 60%) | Act 3 (♛ at 30%) |
 |---|---|---|---|---|
-| RELAY-KING | **Relay**: Broadcast every 4 cycles, its hit bigger by its base for each fragment on the board | Broadcast | **Crown Hop**: the ♛ (and its 30% tick) moves to the healthiest other part; the part it leaves heals 25% of its max and takes plain ticks | **Flood**: the Replicator hatches every 2 cycles, the Relay broadcasts every 3 |
+| RELAY-KING | **Relay**: Broadcast every 4 cycles, its hit bigger by its base for each fragment on the board | Broadcast | **Crown Hop**: the ♛ (and its 30% tick) moves to the healthiest other part above 30% (none: it stays); the part it leaves heals 25% of its max and takes plain ticks | **Flood**: the Replicator hatches every 2 cycles, the Relay broadcasts every 3 |
 | REPO MAN | **Ledger**: Collection every 5 cycles, its hit bigger by its base for each Lien | **Liens**: each of your commands a ◆ absorbs puts one on the Ledger (strips, piercing hits, burns and helpers don't); a Collection that lands or is cut clears them | Re-arms every part; a Collection 3 cycles out | **Interest**: each Lien counts twice; a Collection 3 cycles out |
 | HOLLOW CHOIR | A **Mimic**, its third part | One voice: the Mimic's beat every 4 cycles | **Second voice**: a second Mimic at the ♛'s full size, beating 2 cycles behind the first | **Round**: each beat also plays back the two commands before it, at half (only those fired since the Round began); a cycle you hold adds nothing |
 
@@ -603,7 +604,7 @@ own, a tell an act from their set (floor 4's deal none: their rule is the fight)
 
 | Boss | Where | Lv | Its rule (on its row) | Act 2 (♛ at 60%) | Act 3 (♛ at 30%) |
 |---|---|---|---|---|---|
-| CENTRIFUGE (GLASSJAW) | Floor 2's floor job: its Boss step's server's Core | 14 | **Bidding**, on the Gavel (no ticks, so never cut): from every 3 cycles, each Surge it lands takes it one sooner, down to 2. Each one-part command you aim at it while the Rotor stands is a bid, one faster too (a delay or a Throttle isn't). A delay or Throttle on it withdraws it to 4, and SIGINT cuts a selling Surge. A Surge at every 2 sells to the buyer it names, whose part joins (TOLLGATE's Lockbox wards the Rotor ♛, SWARMLINE's Mirror twins the Gavel, PALEMASK's Veil hides its timers); the Gavel drops to every 3, each sale makes its Surge 50% harder for the fight, and (**Sold**) heals the Rotor ♛ 10% of its max. Nothing sells once the Rotor breaks. The Rotor's Encrypt comes every 7 cycles; no beat holds its ticks | **Reserve price**: a withdraw steps it back one | **Second lot**: two buyers a sale |
+| CENTRIFUGE (GLASSJAW) | Floor 2's floor job: its Boss step's server's Core | 14 | **Bidding**, on the Gavel (no ticks, so never cut): from every 3 cycles, each Surge it lands takes it one sooner, down to 2. Each one-part command you aim at it while the Rotor stands is a bid, one faster too (a delay or a Throttle isn't). A delay or Throttle on it withdraws it to 4, and SIGINT cuts a selling Surge. A Surge at every 2 sells to the buyer it names, whose part joins (TOLLGATE's Lockbox wards the Rotor ♛, SWARMLINE's Mirror twins the Gavel, PALEMASK's Veil hides its timers); the Gavel drops to every 4, each sale makes its Surge 30% harder for the fight, and (**Sold**) heals the Rotor ♛ 10% of its max. Nothing sells once the Rotor breaks. The Rotor's Encrypt comes every 7 cycles; no beat holds its ticks | **Reserve price**: a withdraw steps it back one | **Second lot**: two buyers a sale |
 | SHAKEDOWN (TOLLGATE) | The last room of every floor-2 Pit; back an hour after it falls | 12 | **Ransom Clock**, run by the Collector ♛ (it stops when the Collector breaks): 10 cycles; at 0 it leaks 35% of your max, 15% more each leak after (up to 65%), and restarts at 5. A Demand broken while the Collector stands halves the time left (*missed payment*). A Deadline (the Demand's, a wind-up) that lands adds 3; one called off buys nothing. Its Lockbox wards the Demand. **Leverage**: while a Demand stands, the Collector loses at most 15% of its max a cycle, and the rest of a hit is lost | **Second demand**, its Deadline on the same cycle; the Lockbox wards it too | **Final notice**: a leak re-arms the Demands and brings the Lockbox back |
 | SHOULDER SURFER (NULL CHOIR) | Floor 3's floor job: its Boss step's server's Core | 18 | **Replay**, on the Logger ♛ (half the boss): a Sync Window on even cycles only. The Logger takes damage only from commands fired in it; each one outside is logged, and at 2 (or every 6 cycles) its Dump (each one that plays your command back makes the next 50% bigger) plays your last logged command back at its full hit (a flat Dump if it wasn't a hit). The Pulse Node lands on the shut cycles | **Again**: every 4 cycles it plays your last three commands back, each at 40% | **From the top**: the log never clears, and the Dump plays the biggest command logged |
 | RECURSION (NULL CHOIR) | The last room of every floor-3 Gauntlet; back an hour after it falls | 19 | **Call**: frames stack over main() ♛. A one-part command at a lower frame lands on the top one; burns, helpers and area hits reach every frame. Every 5 cycles the top frame pushes a new one at 60% of its max, unless it is under a quarter of its own, or SIGINT stops it on its cycle; each Call let through makes every frame hit 35% harder and brings the next Call a cycle sooner, down to every 3 | **Return**: the top frame pushes a frame at 25% of its max as the act starts (it hardens nothing); a frame that breaks makes the one beneath attack a cycle sooner, 50% harder | **Overflow**: one more frame pushed; at 5 frames every frame attacks at once, the cycle after the Call |
@@ -629,7 +630,8 @@ A P4 boss (docs/puzzle-fights.md 7) plays in **three acts**: the first from the 
 ticks at 60% and 30%. Built: the worm and ransomware Residents, the three solo
 bosses and the four floor bosses.
 
-- **One tick a hit.** A hit takes the ♛ under its next tick and no further, so no act is skipped.
+- **Held at the tick.** Damage takes the ♛ to its next act tick and no further until that act begins, at the cycle's
+  end; the rest of each hit is lost. Every boss with a ♛, in acts or not, so no act is skipped.
 - **The act break** (actbreak.mjs). As the hit crosses the ♛'s tick, the tick bursts into red 1s and 0s. A breath
   later the board's strip flares red with the act, *ACT 2 / 3 · TRAITOR*, for about 4 seconds, and the boss's emote
   (its phase's `emote`) types out under its bar. The fight's clock holds meanwhile. Its sound is the *Tritone*: a heavy break as
@@ -2535,23 +2537,30 @@ no attaching, detaching or memory pips.
   pays (+25), and **Help** (`assist`) in place of Engage. They fight beside you at the Signal they had, take none of the
   XP, and a win raises their standing; the room's card then shows it. Once a job; they never clear your rooms or take
   anything. Helping isn't a solo win.
-- **Standing**: 0–100 in four tiers: Stranger, Known (25), Friend (50: hire), Close (75). Drawn as the Tier bar, its
-  number and how you met in the tooltip. Known face: half again a raise, and three quarters of the fee.
-- **The runner card**: a Rail row opens it beside their diamond (beside the row when their floor isn't drawn): faction,
+- **Standing**: 0–100 in four tiers: Stranger, Known (25), Friend (50), Close (75), each a smaller fee. Drawn as the
+  Tier bar, its number and how you met in the tooltip. Known face: half again a raise, and three quarters of the fee.
+- **The runner card**: a diamond on the map or a Rail row opens it beside them (beside the row when their floor isn't
+  drawn): faction,
   handle, class and level; Traits (temperament first), Standing, Now (→ a server and its time, or Busy with when they're
   free), After (their trade); their latest #net line; **Hire**, off with the reason (or the clock) until you can.
-- **Hiring** (`hire <runner> [preset]`, from level 5, at Friend, three at most): the crew card shows Pay as two icons, a
-  fee once (20 credits a level, a quarter more a trait and a ★) and a cut of the credits each run banks (10%; Haggler
+- **Hiring** (`hire <runner> [preset]`, anyone on your net, from level 5, three at most): the crew card shows Pay as two
+  icons, a fee once (20 credits a level, a quarter more a trait and a ★; a Stranger ×2, Known ×1.5, Friend ×1, Close
+  ×0.75) and a cut of the credits each run banks (10%; Haggler
   half, ★ a quarter), and their bar as preset tiles (their subclass's shipped presets). Hired, they're crew (violet),
   level with you, and come on every run; `crew kick <name>` lets them go, and hiring again costs no fee.
 - **A hire's Signal** carries from fight to fight and run to run (a share of their max, refilling over 10 minutes of
   logged-on time). At 0 they disconnect (*Signal's going. I'm out.*) and are Busy until full. If you drop to 0 you both
   jack out, the hire at whatever Signal they had.
-- **The Rail**: under Contracts on the map, the runners you know (heard on #net), last heard first, six at most:
-  handle, class and level, where (`→` a server on the road). Click one to draw it on its floor: a paper-white diamond
-  with the handle, a dotted route through the servers passed, a dashed ring where it's heading. Again to drop it.
+- **On the map**: every runner on the floor drawn is a small paper-white diamond under the server they're at (side by
+  side), hollow on the road between servers; your crew isn't drawn. Its tooltip says who and what they're doing; a
+  click opens their card.
+- **The Rail**: under Contracts on the map, the runners you know (heard on #net, or met), last heard first, six at most:
+  handle, class and level, where (`→` a server on the road). Its head folds the section away (kept per browser). Click
+  one (or a diamond) to pick it: its handle, a dotted route through the servers passed, a dashed ring where it's
+  heading, and its card. Again to drop it.
 - **People**: the people button on the top bar (how many are on; violet when a friend is) opens **Friends** and
-  **Online**: handle, class and level, where. On a network the people are its runners and your consortium's members;
+  **Online**: handle, class and level, where. On a network that's your friends, your consortium's members and your crew
+  (the other runners are on the map);
   a save with no network seed keeps the old simulated pool behind `?dev` `online sim`. `friend add|remove <handle>`,
   `friends`, `who`. SPRAWL-00 is shared: `ls` and arriving in a room say who else is there.
 - **#net** (channel.mjs), the net talking to itself like WoW's General chat. Its latest line sits over the prompt; click

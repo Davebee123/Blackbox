@@ -1,5 +1,6 @@
-// The power-up: the monitor comes on (a line of light opens into the screen), the mark rises behind its
-// square, the name settles, and the screen waits for a key. The first key (or tap) while it's still
+// The power-up (the Horizon): the monitor comes on (a line of light opens into the screen), a horizon of
+// light spreads across it, the black box stands on it with its light leaking round the edges, the name
+// settles low on the screen, and the screen waits for a key. The first key (or tap) while it's still
 // coming on finishes it; the next one starts. Then the login (first launch) or the boot lines follow.
 //
 // powerOn({ sound, reducedMotion }) → Promise that resolves when the player starts.
@@ -13,10 +14,12 @@ export function powerOn({ sound = () => {}, reducedMotion = () => false } = {}) 
   el.setAttribute('aria-label', 'BLACKBOX');
   el.innerHTML = `<div class="po-flash" aria-hidden="true"></div>
     <div class="po-stage">
-      <span class="bb-logo po-logo" aria-hidden="true"></span>
+      <div class="po-haze" aria-hidden="true"></div>
+      <div class="po-horizon" aria-hidden="true"></div>
+      <div class="po-box" aria-hidden="true"><b></b></div>
       <h1 class="po-word">BLACKBOX</h1>
-      <p class="po-sub">Model 7 · BLACKBOX/OS 0.9.4</p>
-      <p class="po-press">${tap ? 'Tap to start' : 'Press any key to start'}</p>
+      <p class="po-sub">Model 7 · OS 0.9.4</p>
+      <p class="po-press">${tap ? 'Tap to start' : 'Press any key'}</p>
     </div>`;
   document.body.appendChild(el);
   return new Promise((resolve) => {

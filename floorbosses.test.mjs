@@ -54,7 +54,7 @@ test("CENTRIFUGE's Bidding: each Surge that lands spins the Gavel up; at every 2
   landNow(s, g);
   const buyer = FB.bid.buyers[who % 3], spec = BOSSES.centrifuge.buyers[buyer];
   assert.ok(of(s, spec.id)?.buyer === buyer, `the ${spec.name} joined`);
-  assert.equal(g.attack.interval, 3, 'back to every 3 after a sale');
+  assert.equal(g.attack.interval, FB.bid.after, 'back to every 4 after a sale');
   assert.equal(v.bid.sold, 1);
   assert.equal(fbPower(s, g, g.attack), 1 + FB.bid.sold, 'each sale, a harder Surge');
   if (buyer === 'tollgate') assert.equal(of(s, 'lockbox').ward, 'rotor');
@@ -396,6 +396,7 @@ test("CAMSWARM's Telnet Sweep: a part under half hatches a shielded fragment, ne
   hit(s, hive, 50, { mine: true, pierce: true });
   assert.equal(hive.integrity, hh, 'locked while a Camera stands');
   for (const cam of camerasOf(s)) cam.integrity = 0;
+  for (const ph of v.phases) ph.done = true; // the Lockout is act 3: the ♛ no longer holds at a tick
   hit(s, hive, 50, { mine: true, pierce: true });
   assert.ok(hive.integrity < hh);
 });

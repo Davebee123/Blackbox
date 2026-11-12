@@ -53,14 +53,16 @@ test('a hit that breaks the part on the beat is safe', () => {
   assert.ok(!resolveCycle(s).some((x) => x.tell === 'backlash'));
 });
 
-test('the ♛ holds at its next tick: one tick a hit, so no act is skipped', () => {
+test('the ♛ holds at its next tick until that act begins: no act is skipped', () => {
   const s = boss('resident', 'worm'), c = core(s);
   c.armor = 0;
   assert.deepEqual(c.ticks.map((t) => t.at), [0.6, 0.3], 'its act ticks');
   assert.equal(actCap(s, c), c.integrity - Math.floor(0.6 * c.max));
   c.integrity = Math.floor(0.6 * c.max);
   c.ticks[0].spent = true;
-  assert.equal(actCap(s, c), c.integrity - Math.floor(0.3 * c.max));
+  assert.equal(actCap(s, c), 0, 'under the tick, its act not begun yet: nothing more this cycle');
+  s.encounter.virus.phases[0].done = true;
+  assert.equal(actCap(s, c), c.integrity - Math.floor(0.3 * c.max), 'the act begun: down to the next tick');
 });
 
 test('the one to leave: the ♛ taken under its tick before the beat plays re-arms every part', () => {
@@ -129,4 +131,39 @@ test("a part's own attack as the beat: it counts as played once it has landed, s
 
 test('a fresh save is untouched: no boss state outside a fight', () => {
   assert.equal(fresh().encounter, null);
+});
+
+// Every boss with a ♛ (rule a), in acts or not: hits piled into one cycle from just above 60% leave it at its tick, and
+// the next cycle, its act begun, down to the next one. Its last act's tick passed, it breaks.
+test('no act is skipped: hits piled into one cycle hold the ♛ at its tick on every boss, natives too', async () => {
+  const { hit, attackers } = await import('./dist/combat.mjs');
+  const FP = await import('./dist/floorplan.mjs');
+  const solo = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid).flatMap((k) => (k === 'resident' ? ['worm', 'ransomware', 'ghostroot'].map((f) => [k, f]) : [[k, BOSSES[k].family]]));
+  for (const [id, family] of solo) {
+    const s = fresh(), L = Math.max(BOSSES[id].floor || 14, 14);
+    FP.outfit(s, { cls: 'breaker', level: L });
+    selectEncounter(s, 'random', 7, { level: L, mutation: null, family, boss: id });
+    command(s, 'engage');
+    s.server.max = s.server.integrity = 1e6;
+    for (const p of attackers(s)) p.attack.due = 999;
+    for (const t of tellsOf(s)?.list || []) { t.told = false; t.after = 999; }
+    const c = core(s), v = s.encounter.virus, name = `${id} ${family}`;
+    for (const p of livingParts(s)) if (p !== c) { p.ward = null; p.wardsToo = null; } // a ward of its own is another rule
+    c.armor = 0; c.limit = 0; c.syncOnly = false;
+    c.integrity = Math.floor(0.61 * c.max);
+    for (const o of [{ mine: true }, { mine: true }, { dot: true }, { server: true }]) hit(s, c, c.max, { ...o, pierce: true });
+    assert.equal(c.integrity, Math.floor(0.6 * c.max), `${name}: held at 60% this cycle`);
+    command(s, 'hold'); resolveCycle(s);
+    assert.ok(v.phases[0].done, `${name}: its act began`);
+    if (!v.phases[1] || v.phases[1].done) continue; // one more act only (or RELAY-KING's ♛ hopped under its 30% tick)
+    const c2 = core(s); // RELAY-KING's Crown Hop moves it
+    c2.armor = 0; c2.limit = 0; c2.integrity = Math.floor(0.31 * c2.max);
+    for (let i = 0; i < 3; i++) hit(s, c2, c2.max, { mine: true, pierce: true });
+    assert.equal(c2.integrity, Math.floor(0.3 * c2.max), `${name}: held at 30%`);
+    command(s, 'hold'); resolveCycle(s);
+    c2.armor = 0; c2.lockHp = 0; // DEADBOLT's Mutex is another rule
+    for (const d of livingParts(s).filter((p) => p.deadline || p.role === 'camera')) d.integrity = 0; // SHAKEDOWN's Leverage and CAMSWARM's Lockout are other rules
+    hit(s, c2, c2.max, { mine: true, pierce: true });
+    assert.ok(c2.integrity <= 0, `${name}: its last act begun, it breaks`);
+  }
 });

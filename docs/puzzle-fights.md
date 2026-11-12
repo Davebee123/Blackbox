@@ -177,7 +177,7 @@ The designer, October 2026:
 
 ### 7.1 P4's first four
 
-One shape for every boss (acts.mjs): three acts on the ♛'s ticks, one tick a hit, a tell an act, a beat that act 2
+One shape for every boss (acts.mjs): three acts on the ♛'s ticks, held at each tick until its act begins, a tell an act, a beat that act 2
 quickens, and the ♛ left above its tick until its act's beat has played (else every part re-arms).
 
 | Boss | Why it shows the pattern | The beat | The routine answer |

@@ -1,7 +1,7 @@
 // The Rail (docs/runners.md, picked): the runners you know as a list under Contracts on the map, and the one you pick
 // drawn on it: a paper-white diamond with the handle, a dotted route through the servers they've passed, a dashed ring
 // on where they're heading. Paper white throughout (--bright); a runner hunting you (R3) is the one red.
-import { knownOf, runnerOf, stateOf, clsLabel, doing, shortPlace, headingOf, hash, TRAITS, standingOf, tierOf, busyOf, cantHire, feeOf, feePaid, cutOf, hired, clockOf, gainOf, PRESET_PLAY, PRESET_TIP } from './runners.mjs';
+import { castOf, knownOf, runnerOf, stateOf, clsLabel, doing, shortPlace, headingOf, hash, TRAITS, standingOf, tierOf, busyOf, cantHire, feeOf, feePaid, cutOf, hired, clockOf, gainOf, PRESET_PLAY, PRESET_TIP } from './runners.mjs';
 import { FACTIONS } from './factions.mjs';
 import { glyph } from './glyphs.mjs';
 import { SUBS, SUBCLASS, ABILITIES, presetBar } from './data.mjs';
@@ -21,14 +21,15 @@ export function railWhere(s, st) {
   return st.stage === 'out' || st.stage === 'back' ? `→ ${shortPlace(s, g, to)}` : shortPlace(s, g, st.pos.at);
 }
 // The Rail: the runners you know, the last heard first (RAIL.rows at most), the picked one lit.
-export function runnerRail(s, pick = null) {
+// shut: the section folded to its head (app.js keeps it per viewer).
+export function runnerRail(s, pick = null, shut = false) {
   const R = s.runners?.known || {}, list = knownOf(s).sort((a, b) => (R[b.handle].at || 0) - (R[a.handle].at || 0) || a.handle.localeCompare(b.handle)).slice(0, RAIL.rows);
   if (!list.length) return '';
   const rows = list.map((r) => {
     const st = stateOf(s, r);
     return `<button type="button" class="rr-row${r.handle === pick ? ' on' : ''}${st.stage === 'down' ? ' down' : ''}" data-runner="${esc(r.handle)}" title="${esc(runnerTip(s, r, st))}" data-tt-kind="${esc(`Runner · ${FACTIONS[r.faction].short}`)}"><i class="rr-dia" aria-hidden="true"></i><span class="rr-txt"><b>${esc(r.handle)}</b><small>${esc(clsLabel(r, st.level))} ${st.level}</small></span><small class="rr-at">${esc(railWhere(s, st))}</small></button>`;
   }).join('');
-  return `<section class="rrail" aria-label="Runners"><h3 class="ct-head rr-head"><i class="rr-dia" aria-hidden="true"></i>Runners<small>${knownOf(s).length}</small></h3>${rows}</section>`;
+  return `<section class="rrail${shut ? ' shut' : ''}" aria-label="Runners"><h3 class="ct-head rr-head"><button type="button" class="rr-fold" data-rail-fold aria-expanded="${!shut}" title="${shut ? 'Show the runners you know' : 'Fold the runners away'}"><i class="rr-dia" aria-hidden="true"></i>Runners<small>${knownOf(s).length}</small><i class="rr-chev" aria-hidden="true">${shut ? '▸' : '▾'}</i></button></h3>${shut ? '' : rows}</section>`;
 }
 // The picked runner on the map, on the floor drawn (fl), in its map units (portrait: x and y swapped, as mapLayout).
 export function runnerMark(s, handle, fl, portrait = false) {
@@ -42,6 +43,22 @@ export function runnerMark(s, handle, fl, portrait = false) {
   const f = (v) => Math.round(v * 10) / 10;
   const route = pts.length > 1 ? `<polyline class="mr-route" points="${pts.map((p) => `${f(p.x)},${f(p.y)}`).join(' ')}"/>` : '';
   return `<g class="mrunner${st.stage === 'down' ? ' down' : ''}" data-runner-mark="${esc(r.handle)}">${route}${ring ? `<circle class="mr-ring" cx="${f(ring.x)}" cy="${f(ring.y)}" r="22"/>` : ''}<g transform="translate(${f(me.x)} ${f(me.y - (b ? 0 : 16))})"><title>${esc(runnerTip(s, r, st).replace(/\n▸ /, ' '))}</title><path class="mr-dia" d="M0 -7 L7 0 L0 7 L-7 0 Z"/><text class="mr-name" y="-12" text-anchor="middle">${esc(r.handle)}</text></g></g>`;
+}
+// Every runner on the floor drawn (the picked one has runnerMark): a small paper-white diamond under the server they're
+// at, side by side; hollow on the road between servers. A click opens their card (app.js data-runner). Your crew is with
+// you, so isn't drawn.
+export function runnersMap(s, fl, pick = null, portrait = false) {
+  const here = castOf(s).filter((r) => r.handle !== pick && !hired(s, r.handle)).map((r) => ({ r, st: stateOf(s, r) })).filter((x) => x.st.floor === fl);
+  if (!here.length) return '';
+  const g = here[0].st.g, P = (id) => { const n = g.nodes[id]; return n ? (portrait ? { x: n.y, y: n.x } : { x: n.x, y: n.y }) : null; };
+  const at = {};
+  for (const x of here) if (!x.st.pos.next) (at[x.st.pos.at] ||= []).push(x);
+  const f = (v) => Math.round(v * 10) / 10;
+  const dia = (x, p, road) => `<g class="mrun${road ? ' road' : ''}${x.st.stage === 'down' ? ' down' : ''}" data-runner="${esc(x.r.handle)}" role="button" tabindex="0" aria-label="${esc(x.r.handle)}" transform="translate(${f(p.x)} ${f(p.y)})"><title>${esc(runnerTip(s, x.r, x.st).replace(/\n▸ /, ' '))}</title><circle class="mrun-hit" r="7"/><path d="M0 -4.5 L4.5 0 L0 4.5 L-4.5 0 Z"/></g>`;
+  let out = '';
+  for (const [id, list] of Object.entries(at)) { const c = P(id); if (c) list.forEach((x, i) => { out += dia(x, { x: c.x + (i - (list.length - 1) / 2) * 13, y: c.y + 30 }, false); }); }
+  for (const x of here.filter((y) => y.st.pos.next)) { const a = P(x.st.pos.at), b = P(x.st.pos.next); if (a && b) out += dia(x, { x: a.x + (b.x - a.x) * x.st.pos.f, y: a.y + (b.y - a.y) * x.st.pos.f }, true); }
+  return `<g class="mruns">${out}</g>`;
 }
 export const runnerFloor = (s, handle) => { const r = runnerOf(s, handle); return r ? stateOf(s, r).floor : null; };
 
@@ -72,7 +89,7 @@ export const roomLine = (r, k) => { const L = ROOM_LINES[r.temper]; return L[Mat
 export function tierBar(s, h) {
   const n = standingOf(s, h), t = tierOf(n), k = s.runners?.known?.[h];
   const how = k?.met || (k?.by === 'net' ? 'You know them from #net.' : 'You have met them.');
-  const tip = `Standing\n${n} of 100. Known opens their leads, Friend lets you hire them, Close brings them into your consortium.\n▸ ${how}`;
+  const tip = `Standing\n${n} of 100. Each tier makes their fee smaller; Close brings them into your consortium.\n▸ ${how}`;
   return `<span class="rc-tier" title="${esc(tip)}"><b>${esc(t.name)}</b><i class="rc-tierbar" style="--f:${Math.round(t.f * 100) / 100}"></i><small>${esc(t.next || '')}</small></span>`;
 }
 // Traits as named chips, temperament first (dashed); ★ on a starred one.

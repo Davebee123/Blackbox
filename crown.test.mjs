@@ -155,6 +155,7 @@ test("NIGHT DESK's Night shift clocks in the Night Clerk: a third trader holding
   assert.equal(hitServer(s, clerk, 50).dealt, 0);
   const desk = crown(s);
   desk.integrity = 1; delete desk.limit;
+  for (const ph of s.encounter.virus.phases) ph.done = true; // past its acts: the ♛ holds at no tick
   hitServer(s, desk, 5);
   assert.equal(clerk.integrity, 0);
 });
