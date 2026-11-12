@@ -15,8 +15,8 @@
 // time), at 0 they disconnect and are hireable again once full.
 import { hackerLevel } from './combat.mjs';
 import { ARCHETYPES, FLOORS, floorFor } from './data.mjs';
-import { FACTIONS, FACTION_IDS } from './factions.mjs';
-import { graphOf, locAt } from './floors.mjs';
+import { FACTIONS, FACTION_IDS, hubsOf } from './factions.mjs';
+import { graphOf, locAt, floorsOf, exitOpen } from './floors.mjs';
 
 export const RUNNERS = {
   cast: 32, // runners a network
@@ -133,8 +133,22 @@ function posOf(st) {
 // Where they're heading (the dashed ring): the job going out and working it, the hub coming back. Null at the hub.
 export const headingOf = (st) => (st.stage === 'out' || st.stage === 'work' ? st.target : st.stage === 'back' ? st.base : null);
 
+// ---------- what you've revealed ----------
+// A place your map shows revealed (view.mjs mapLayout draws the same): a located server, the floor's entry (SPRAWL-00,
+// an up-link), a hub you've found, an exit on your map. A ? isn't, nor anything on a floor you haven't reached.
+export function revealed(s, g, id) {
+  const n = g.nodes[id];
+  if (!n || g.n > floorsOf(s).reached) return false;
+  if (n.kind === 'entry') return true;
+  if (n.kind === 'hub') return hubsOf(s).some((h) => h.faction === n.hub);
+  if (n.kind === 'exit') return exitOpen(s, id) || n.to <= floorsOf(s).reached;
+  return !!locAt(s, id);
+}
+// A runner shows on the map only where you've revealed: at a revealed place, or on a road with both ends revealed.
+export const inSight = (s, st) => revealed(s, st.g, st.pos.at) && (!st.pos.next || revealed(s, st.g, st.pos.next));
+
 // ---------- names ----------
-// A node's name as you'd know it: a server you've located by its name, else its kind and floor.
+// A node's name in a runner's own words (#net): a server you've located by its name, else its kind and floor.
 export function nodeName(s, g, id) {
   const n = g.nodes[id];
   if (!n) return 'the net';
@@ -143,22 +157,24 @@ export function nodeName(s, g, id) {
   return locAt(s, id)?.name || `a ${KINDS[n.template] || 'server'} on floor ${g.n}`;
 }
 export const kindName = (g, id) => KINDS[g.nodes[id]?.template] || 'server';
-// The Rail's short place: a located server's name, else the kind and floor; a hub by its faction.
+// The Rail's short place: a located server's name, a hub by its faction; a server you haven't located is only its floor.
 export function shortPlace(s, g, id) {
   const n = g.nodes[id];
   if (n?.kind === 'hub') return FACTIONS[n.hub]?.short || 'Hub';
   if (n?.kind === 'entry') return g.n === 1 ? 'SPRAWL-00' : `▲ F${g.n - 1}`;
-  return locAt(s, id)?.name || `${KINDS[n?.template] || 'Server'} · F${g.n}`;
+  return locAt(s, id)?.name || `F${g.n}`;
 }
+// A node as you know it (the tooltip and the card): a server you haven't located is only a server on its floor.
+const knownName = (s, g, id) => { const n = g.nodes[id]; return n && n.kind !== 'hub' && n.kind !== 'entry' && !locAt(s, id) ? `a server on floor ${g.n}` : nodeName(s, g, id); };
 export const clsLabel = (r, L) => (L >= 10 ? ARCHETYPES[r.cls].subs[r.sub]?.name : null) || ARCHETYPES[r.cls].name;
 // What they're doing, in a few words.
 export function doing(s, st) {
   const g = st.g;
-  if (st.stage === 'hub') return `between jobs at ${nodeName(s, g, st.base)}`;
-  if (st.stage === 'down') return `crashed out, recovering at ${nodeName(s, g, st.base)}`;
-  if (st.stage === 'work') return `working ${nodeName(s, g, st.target)}`;
-  if (st.stage === 'out') return `heading for ${nodeName(s, g, st.target)}`;
-  return `heading back to ${nodeName(s, g, st.base)}`;
+  if (st.stage === 'hub') return `between jobs at ${knownName(s, g, st.base)}`;
+  if (st.stage === 'down') return `crashed out, recovering at ${knownName(s, g, st.base)}`;
+  if (st.stage === 'work') return `working ${knownName(s, g, st.target)}`;
+  if (st.stage === 'out') return `heading for ${knownName(s, g, st.target)}`;
+  return `heading back to ${knownName(s, g, st.base)}`;
 }
 
 // ---------- events, on logged-on time ----------

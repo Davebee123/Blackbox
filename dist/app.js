@@ -1922,21 +1922,26 @@ function placeMapPop() {
   popAt = { key, left: pop.style.left, top: pop.style.top };
 }
 // The runner card (runners-view.mjs) beside the picked runner's diamond: to its right, or its left when there's no room;
-// beside their Rail row when they're on a floor the map isn't drawing.
+// beside their Rail row when the map doesn't draw them (another floor, or somewhere you haven't revealed); with no row
+// either (a runner you don't know who walked out of sight), where it last was.
+let runnerPopAt = null; // { h, left, top }: the card's last spot
 function placeRunnerPop() {
   if (F.isPhone()) return;
   const pop = $('runner-pop'), canvas = pop?.closest('.map-canvas');
   if (!pop || !canvas) return;
   const c = zr(canvas.getBoundingClientRect()), d = canvas.querySelector('.mrunner .mr-dia'), w = pop.offsetWidth, h = pop.offsetHeight, gap = 16;
-  const row = canvas.querySelector('.rr-row.on'); // on a floor not drawn: beside their row on the Rail
+  const row = canvas.querySelector('.rr-row.on'), who = pop.dataset.runnerCard; // not drawn: beside their row on the Rail
   let left = 8, top = 8;
   if (!d && row) { const n = zr(row.getBoundingClientRect()); left = n.right - c.left + 8; top = n.top - c.top - 8; }
+  else if (!d && runnerPopAt?.h === who) ({ left, top } = runnerPopAt);
   if (d) {
     const n = zr(d.getBoundingClientRect()), cx = n.left + n.width / 2 - c.left, cy = n.top + n.height / 2 - c.top;
     left = cx + gap; if (left + w > c.width - 8) left = cx - gap - w;
     top = cy - 40;
   }
-  pop.style.left = Math.round(Math.max(8, Math.min(c.width - w - 8, left))) + 'px'; pop.style.top = Math.round(Math.max(8, Math.min(c.height - h - 8, top))) + 'px'; pop.style.visibility = 'visible';
+  left = Math.round(Math.max(8, Math.min(c.width - w - 8, left))); top = Math.round(Math.max(8, Math.min(c.height - h - 8, top)));
+  runnerPopAt = { h: who, left, top };
+  pop.style.left = left + 'px'; pop.style.top = top + 'px'; pop.style.visibility = 'visible';
 }
 function applyMapZoom() {
   const svg = mapSvg();

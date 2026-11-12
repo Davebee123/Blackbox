@@ -2126,7 +2126,7 @@ export function mapLayout(s, floor = null, portrait = mapPortrait) {
     nodes.push({ id: 'invader', kind: 'invader', inv, x: Math.round(start.x + (wall.x - start.x) * p), y: Math.round(start.y + (wall.y - start.y) * p) });
     links.push({ from: src.id, to: 'invader', hot: inv.state === 'breach', ghost: inv.state === 'travel' });
   }
-  return { nodes, links, floor: n };
+  return { nodes, links, floor: n, slots: idOf }; // slots: the floor's slot → the node drawn on it (runners.mjs revealed agrees with it)
 }
 
 // The consortium's network: your home server in the middle, a trunk line out to each member's

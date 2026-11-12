@@ -1,7 +1,8 @@
 // The Rail (docs/runners.md, picked): the runners you know as a list under Contracts on the map, and the one you pick
 // drawn on it: a paper-white diamond with the handle, a dotted route through the servers they've passed, a dashed ring
 // on where they're heading. Paper white throughout (--bright); a runner hunting you (R3) is the one red.
-import { castOf, knownOf, runnerOf, stateOf, clsLabel, doing, shortPlace, headingOf, hash, TRAITS, standingOf, tierOf, busyOf, cantHire, feeOf, feePaid, cutOf, hired, clockOf, gainOf, PRESET_PLAY, PRESET_TIP } from './runners.mjs';
+// The map draws a runner only where you've revealed (runners.mjs revealed, inSight); the Rail gives the rest a floor.
+import { castOf, knownOf, runnerOf, stateOf, clsLabel, doing, shortPlace, headingOf, revealed, inSight, hash, TRAITS, standingOf, tierOf, busyOf, cantHire, feeOf, feePaid, cutOf, hired, clockOf, gainOf, PRESET_PLAY, PRESET_TIP } from './runners.mjs';
 import { FACTIONS } from './factions.mjs';
 import { glyph } from './glyphs.mjs';
 import { SUBS, SUBCLASS, ABILITIES, presetBar } from './data.mjs';
@@ -32,23 +33,27 @@ export function runnerRail(s, pick = null, shut = false) {
   return `<section class="rrail${shut ? ' shut' : ''}" aria-label="Runners"><h3 class="ct-head rr-head"><button type="button" class="rr-fold" data-rail-fold aria-expanded="${!shut}" title="${shut ? 'Show the runners you know' : 'Fold the runners away'}"><i class="rr-dia" aria-hidden="true"></i>Runners<small>${knownOf(s).length}</small><i class="rr-chev" aria-hidden="true">${shut ? '▸' : '▾'}</i></button></h3>${shut ? '' : rows}</section>`;
 }
 // The picked runner on the map, on the floor drawn (fl), in its map units (portrait: x and y swapped, as mapLayout).
+// Nothing while they're out of sight; the route runs back only as far as the first place you haven't revealed, and the
+// ring is drawn only on a revealed one.
 export function runnerMark(s, handle, fl, portrait = false) {
   const r = handle && runnerOf(s, handle);
   if (!r) return '';
   const st = stateOf(s, r);
-  if (st.floor !== fl) return '';
+  if (st.floor !== fl || !inSight(s, st)) return '';
   const g = st.g, P = (id) => { const n = g.nodes[id]; return n ? (portrait ? { x: n.y, y: n.x } : { x: n.x, y: n.y }) : null; };
   const a = P(st.pos.at), b = st.pos.next && P(st.pos.next), me = b ? { x: a.x + (b.x - a.x) * st.pos.f, y: a.y + (b.y - a.y) * st.pos.f } : a;
-  const pts = st.pos.passed.map(P).filter(Boolean).concat(b ? [me] : []), to = headingOf(st), ring = to ? P(to) : null;
+  const passed = st.pos.passed, from = passed.findLastIndex((id) => !revealed(s, g, id)) + 1;
+  const pts = passed.slice(from).map(P).filter(Boolean).concat(b ? [me] : []), to = headingOf(st), ring = to && revealed(s, g, to) ? P(to) : null;
   const f = (v) => Math.round(v * 10) / 10;
   const route = pts.length > 1 ? `<polyline class="mr-route" points="${pts.map((p) => `${f(p.x)},${f(p.y)}`).join(' ')}"/>` : '';
   return `<g class="mrunner${st.stage === 'down' ? ' down' : ''}" data-runner-mark="${esc(r.handle)}">${route}${ring ? `<circle class="mr-ring" cx="${f(ring.x)}" cy="${f(ring.y)}" r="22"/>` : ''}<g transform="translate(${f(me.x)} ${f(me.y - (b ? 0 : 16))})"><title>${esc(runnerTip(s, r, st).replace(/\n▸ /, ' '))}</title><path class="mr-dia" d="M0 -7 L7 0 L0 7 L-7 0 Z"/><text class="mr-name" y="-12" text-anchor="middle">${esc(r.handle)}</text></g></g>`;
 }
-// Every runner on the floor drawn (the picked one has runnerMark): a small paper-white diamond under the server they're
-// at, side by side; hollow on the road between servers. A click opens their card (app.js data-runner). Your crew is with
-// you, so isn't drawn.
+// Every runner in sight on the floor drawn (the picked one has runnerMark): a small paper-white diamond under the place
+// they're at, side by side; hollow on the road between two. None where you haven't revealed: under a ?, at a server or
+// hub that isn't on your map, or on a road to one. A click opens their card (app.js data-runner). Your crew is with you,
+// so isn't drawn.
 export function runnersMap(s, fl, pick = null, portrait = false) {
-  const here = castOf(s).filter((r) => r.handle !== pick && !hired(s, r.handle)).map((r) => ({ r, st: stateOf(s, r) })).filter((x) => x.st.floor === fl);
+  const here = castOf(s).filter((r) => r.handle !== pick && !hired(s, r.handle)).map((r) => ({ r, st: stateOf(s, r) })).filter((x) => x.st.floor === fl && inSight(s, x.st));
   if (!here.length) return '';
   const g = here[0].st.g, P = (id) => { const n = g.nodes[id]; return n ? (portrait ? { x: n.y, y: n.x } : { x: n.x, y: n.y }) : null; };
   const at = {};
