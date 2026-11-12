@@ -57,6 +57,14 @@ const PLAN = {
   mesh: ['Mesh', { Node: 'proxy', Link: 'script', Hub: 'implant' }, [2, 3]],
   deeparchive: ['Deep Archive', { Index: 'script', Spine: 'shell', Folio: 'exploit', Vellum: 'implant' }, [2, 3, 4]],
   catchment: ['Catchment', { Gully: 'exploit', 'Storm Drain': 'proxy', Basin: 'shell', Reservoir: 'implant' }, [2, 3, 4]],
+  // Floors 5 and 6 (docs/floor-items.md).
+  fineprint: ['Fine Print', { Rider: 'proxy', Copay: 'shell', Exclusion: 'script', Premium: 'implant' }, [2, 3, 4]],
+  contiguous: ['Contiguous', { Sector: 'exploit', Cluster: 'implant', 'Allocation Table': 'script' }, [2, 3]],
+  crypter: ['Crypter', { Stub: 'exploit', 'Junk Code': 'script', Decryptor: 'shell' }, [2, 3]],
+  domainadmin: ['Domain Admin', { Ticket: 'implant', 'Group Policy': 'proxy', Schema: 'shell', 'Admin Rights': 'exploit' }, [2, 3, 4]],
+  semaphore: ['Semaphore', { Spinlock: 'script', Semaphore: 'implant', 'Critical Section': 'shell' }, [2, 3]],
+  hiddenprocess: ['Hidden Process', { Unlink: 'exploit', Hollow: 'script', Driver: 'implant' }, [2, 3]],
+  watertight: ['Watertight', { Hatch: 'proxy', 'Seal Plate': 'shell', 'Pressure Door': 'implant' }, [2, 3]],
   // The earned sets (earned.mjs): pieces on a count, never a roll.
   switchback: ['Switchback', { 'Dead End': 'proxy', 'One Way': 'script', Turnout: 'shell' }, [2, 3]],
   coldstart: ['Cold Start', { 'Ice Pick': 'exploit', Rime: 'implant', Thaw: 'proxy' }, [2, 3]],
@@ -669,7 +677,7 @@ test('every piece has a source that rolls; a source rolls the pieces you lack fi
   const ROLLS = [['guard', { id: 'bouncer' }], ['guard', { id: 'tracer' }], ['guard', { id: 'sentinel' }], ['boss', { id: 'relayking' }], ['boss', { id: 'choir' }], ['boss', { id: 'repoman' }], ['boss', { id: 'shouldersurfer' }], ['boss', { id: 'nightdesk' }], ['boss', { id: 'byzantine' }], ['crew', { id: 'foreman' }],
     ...[1, 2, 3, 4, 5, 6, 7, 8].flatMap((f) => [['lair', { floor: f }], ['rare', { floor: f }], ['vault', { floor: f }], ['thread', { floor: f }]]),
     ['strain', { lineage: 'ransomware' }], ['strain', { lineage: 'worm' }], ['strain', { lineage: 'ghostroot' }], ['author', { id: 'glassjaw' }], ['courier', {}], ['takeover', {}],
-    ...PUZZLE_KINDS.map((id) => ['puzzle', { id }])];
+    ...PUZZLE_KINDS.map((id) => ['puzzle', { id }]), ['puzzle', { id: 'deadlock', floor: 6 }]];
   const reach = new Set(ROLLS.flatMap(([kind, x]) => setDropPool({ kind, layer: 9, ...x }).map((u) => u.id)));
   for (const id of Object.values(SETS).flatMap((x) => x.pieces).filter((p) => !UNIQUES[p].sources.every((x) => x.kind === 'story' || x.kind === 'feat'))) assert.ok(reach.has(id), `${id} drops from somewhere`); // an earned set's pieces come on a count (earned.test.mjs)
   for (const [kind, o] of Object.entries(SET_LOOT)) assert.ok(o.chance > 0 && o.pity > 0 && o.found > 0 && o.found <= o.chance, kind);
@@ -747,9 +755,11 @@ test('the class sets are the end-game tier sets: every piece level 50, the best 
   }
   assert.deepEqual(setDropPool({ kind: 'lair', floor: 8 }, 50).map((u) => u.id).filter((p) => !tierIds.includes(p)).sort(), ['bedrock-plate', 'core-sample', 'pick', 'survey']);
   assert.deepEqual(setDropPool({ kind: 'lair', floor: 8 }, 50).filter((u) => setOf(u.id).tier).map((u) => u.id).sort(), tierIds);
-  // Floors 3 to 6 no longer drop them: their lair bosses keep their other pieces (On-Call on 3 and 4), and 5 and 6 none.
+  // Floors 3 to 6 no longer drop them: their lair bosses keep their other pieces (On-Call on 3 and 4), and 5 and 6 their
+  // own sets' until those sources are built (docs/floor-items.md).
   for (const floor of [3, 4, 5, 6]) assert.ok(setDropPool({ kind: 'lair', floor }, 50).every((u) => !setOf(u.id).tier), `floor ${floor}`);
-  assert.deepEqual([3, 4, 5, 6].map((floor) => setDropPool({ kind: 'lair', floor }, 50).map((u) => u.id).sort()), [[], ['pager'], [], []]);
+  const own = (...ids) => ids.flatMap((id) => SETS[id].pieces).sort();
+  assert.deepEqual([3, 4, 5, 6].map((floor) => setDropPool({ kind: 'lair', floor }, 50).map((u) => u.id).sort()), [[], ['pager'], own('fineprint', 'contiguous', 'crypter'), own('domainadmin', 'hiddenprocess', 'watertight')]);
   // No other source reaches them.
   for (const [kind, ctx] of [['vault', { floor: 8 }], ['rare', { floor: 8 }], ['thread', { floor: 8 }], ['boss', { id: 'relayking' }], ['strain', {}], ['takeover', {}], ['courier', {}]]) assert.ok(setDropPool({ kind, ...ctx }, 50).every((u) => !setOf(u.id).tier), kind);
 });

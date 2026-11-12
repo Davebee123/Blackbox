@@ -1688,6 +1688,24 @@ unique** leans to a class or subclass: three times as likely for it, twice for t
   Relief Valve (shell 45, vaults; Operator): so does a cut; Cutoff Wall (script 47, vaults; Bastion): a cut shields you
   for 16; Bench Mark (implant 48, threads; Infiltrator): a hit on a Tagged part heals 5; Flue (proxy 48, rare spawns):
   a burn tick shields you for 2.
+- **Floors 5 and 6** (docs/floor-items.md; levels 28–40), each from its floor's lair boss until its planned source is
+  built (`planned`: the boss, family or server kind named). Deep Core, GRACE PERIOD's: Installment (implant 28): your
+  first hit on each part every 3 cycles deals 10% more; Late Fee (exploit 28): +15% to a part whose ◆ came back this
+  fight. EXIT NODE's: Hidden Service (implant 30): every 6 cycles the next attack on you deals half; Tail Circuit
+  (exploit 30): +10% to a part with more Integrity than 2 cycles ago. PARASITE's: Antibody (exploit 32): +40% to a part
+  that healed since your last turn; Tourniquet (proxy 32): siphons deal you 50% less and heal half as much. ACTUARY's
+  (level 40, so the lair boss can't drop them until it is 38): Moral Hazard (exploit): +3% for each tell that landed on
+  you this fight, up to 30%; Reinsurance (proxy): the first hit each fight over 30% of your max gives the excess back as
+  a shield over 2 cycles. Kernel Space, RING ZERO's: Syscall Table (script 34): +5% for each different skill fired in a
+  row before this one, up to 25% (a skill already in the run starts it over); Ring Minus One (implant 34): a skill ready
+  for 2 cycles or more deals 15% more. BRICKWALL's: Load Path (exploit 36): a hit a ◆ takes still deals 15% of itself to
+  the part; Recovery Mode (script 36): below half, the next hit on you once every 6 cycles is capped at 15% of your max.
+  BULKHEAD's: Notice Period (script 36): a part starting a tell takes a cycle off the cooldown nearest done; Pressure
+  Relief (shell 36): an attack landing late from a delay deals 20% less. BLACKOUT's: Generator (implant 34): a command
+  at a part out of reach (frozen, or a Flicker out of phase) hits the next part to attack instead, at full; UPS (shell
+  34): hits on you deal 20% less in the first 3 cycles. Rootkit kills': DKOM (script 33): +25% on your first hit on a
+  part out of reach last cycle. Domain Controller's: Golden Ticket (implant 36): +6% max Signal, your first shield each
+  fight doubled; Pass the Hash (exploit 35): a crit makes your next hit on another part a crit, once every 3 cycles.
 - **Boss uniques** (two each; The Resident and bosses), **native uniques** (Networks), **invasion-only uniques**
   (Tripwire, Honeynet, Sinkhole: Captures) and **strain trophies** (1 in 10,000 kills of a strain drops its own, Keylogger
   → Logger Spool and so on; a slayer streak's reward rolls for it outright).
@@ -1760,9 +1778,16 @@ five slot kinds, so a general set's 2-piece can go beside it.
 | **On-Call** | 18–30: SHOULDER SURFER and floor 4's lair boss (the Pager), NIGHT DESK (the Runbook), BYZANTINE (Failover) | Pager (proxy, 18): +5% Restore [+2 Block] · Runbook (script, 22): your first heal each fight is 15% larger [+6% max Signal] · Failover (shell, 26, floor 4): +2 Block [+5% Clock Speed] | +10% Restore | Healing past full becomes a shield, up to 10% of max Signal | |
 | **Cold Storage** | 19–26: vaults | Freezer (shell, 19): +2 Block [+6% max Signal] · Cold Cache (implant, 22): +6% max Signal [+5% damage] · Frost Line (proxy, 25): +1 Block while above 75% Signal [+5% crit] | +2 Block | Above 75% Signal, you take 8% less damage | |
 | **Overtime** | 22–30: puzzle boards won, a piece a kind | Punch Card (script, 22, Quarantine): +4% Clock Speed [+5% damage] · Time Clock (implant, 24, Cascade): +6% max Signal [+5% Clock Speed] · Late Pass (proxy, 26, Ping sweep): +2 Block [+5% crit] · Coffee Run (exploit, 28, Hunter chase): +4% damage [+6% max Signal] | +5% Clock Speed | From a fight's 6th cycle, +8% damage | From the 6th cycle, cooldowns tick an extra cycle every other cycle |
+| **Fine Print** | 26–32: the floor 5 lair boss (planned: the Underwriting desk's vaults and Core) | Rider (proxy, 26): +2 Block [+6% max Signal] · Copay (shell, 27): the first hit on you each fight deals 20% less [+2 Block] · Exclusion (script, 30): +5% crit [+5% damage] · Premium (implant, 32): +6% max Signal [+5% Clock Speed] | +8% max Signal | A tell that lands on you shields you for 5% of your max Signal | While a shield holds, your hits deal 10% more |
+| **Contiguous** | 27–31: the floor 5 lair boss (planned: Defrag boards) | Sector (exploit, 27): +4% damage [+5% crit] · Cluster (implant, 29): +4% Clock Speed [+6% max Signal] · Allocation Table (script, 31): +5% crit [+5% damage] | +5% Clock Speed | Each command in a row on the same part deals 6% more than the last, up to 18% | |
+| **Crypter** | 26–31: the floor 5 lair boss (planned: Polymorph kills) | Stub (exploit, 26): +5% crit [+5% damage] · Junk Code (script, 28): +6% damage to a part wearing ◆ [+5% crit] · Decryptor (shell, 31): +2 Block [+6% max Signal] | +5% crit | When you break a part's last ◆, your next hit on another part is a critical strike | |
 | **Burst Buffer** | 25–32: ★ rare spawns | Cache Line (exploit, 25): +5% crit [+5% damage] · Prefetch (script, 28): your first skill each fight deals 8% more [+5% crit] · Flush (implant, 31): +4% Clock Speed [+6% max Signal] | Critical strikes deal 8% more | Your first two skills each fight deal 20% more | |
 | **Hot Spare** | 28–36: Resident takeovers | Standby (shell, 28): +6% max Signal [+2 Block] · Failback (implant, 32): +2 Block [+5% damage] | The first time a fight drops you below 30% Signal, heal 20% of max and deal 10% more for 3 cycles | | |
 | **Mesh** | 31–38: crew bosses | Node (proxy, 31): +6% max Signal [+2 Block] · Link (script, 34): heals you cast are 5% larger [+6% max Signal] · Hub (implant, 37): +4% damage [+5% Clock Speed] | +5% damage and healing per crewmate in the fight, up to 3 | Heals and shields you put on a crewmate also land on you at 25% | |
+| **Domain Admin** | 32–37: the floor 6 lair boss (planned: Domain Controller vaults) | Ticket (implant, 32): +6% max Signal [+5% damage] · Group Policy (proxy, 33): +2 Block [+5% Clock Speed] · Schema (shell, 35): +5% Restore [+2 Block] · Admin Rights (exploit, 37): +5% damage [+5% crit] | +5% damage, +5% max Signal | When you strip a part's last ◆, your shortest cooldown drops by 1 | From the third part you break in a fight, your cooldowns are 1 cycle shorter |
+| **Semaphore** | 33–37: Deadlock boards won on floor 6 | Spinlock (script, 33): +4% Clock Speed [+5% damage] · Semaphore (implant, 35): +6% max Signal [+5% Clock Speed] · Critical Section (shell, 37): +2 Block [+6% max Signal] | +5% Clock Speed | An attack you delay leaves its part Open for 1 cycle | |
+| **Hidden Process** | 32–36: the floor 6 lair boss (planned: Rootkit kills) | Unlink (exploit, 32): +5% crit [+5% damage] · Hollow (script, 34): your burns deal 5% more [+5% crit] · Driver (implant, 36): +5% Stealth [+6% max Signal] | +6% damage | Your burns keep ticking on a part that can't be hit | |
+| **Watertight** | 34–38: the floor 6 lair boss (planned: Kestrel ICE on floor 6) | Hatch (proxy, 34): +2 Block [+6% max Signal] · Seal Plate (shell, 36): +6% max Signal [+2 Block] · Pressure Door (implant, 38): +2 Block [+5% damage] | +3 Block | When a hit takes more than 15% of your max, the next hit on you within 2 cycles deals 20% less | |
 | **Catchment** | 37–44: the floor 7 lair boss | Gully (exploit, 37): +5% damage [+5% crit] · Storm Drain (proxy, 39): +2 Block [+6% max Signal] · Basin (shell, 42): +6% max Signal [+2 Block] · Reservoir (implant, 44): +4% Clock Speed [+5% damage] | +5% damage, +5% max Signal | Breaking a part heals 3% of max Signal | Each part you break adds 5% damage for the fight, up to 20% |
 | **Deep Archive** | 37–44: vaults on floors 7 and 8 | Index (script, 37): +4% Clock Speed [+5% damage] · Spine (shell, 39): +2 Block [+6% max Signal] · Folio (exploit, 41): +5% damage [+5% crit] · Vellum (implant, 43): +6% max Signal [+2 Block] | +8% max Signal | +8% damage | Every 4th cycle, your next skill repeats at 40% |
 | **Long Haul** | 10–24: earned, contracts delivered (10 · 25 · 50) | Waybill (script, 10): +5% Clock Speed [+8% max Signal] · Dray (proxy, 17): +8% max Signal [+6% crit] · Tailgate (shell, 24): +3 Block [+5% damage] | Contracts pay 10% more XP | Delivering a contract fills your Signal, and kills pay 10% more XP | |
@@ -1778,7 +1803,9 @@ five slot kinds, so a general set's 2-piece can go beside it.
   Signal* is a share of your whole max; *your first hit on each part*, *your first skill* and *each different skill*
   count your commands; *the part beside it* is the next living part; *healing past full* counts any heal landing at
   full, Leech included; a cap like *a hit that would take more than 30%* applies before Block and shield; *a hit for
-  more than 15%* is what reached your Signal.
+  more than 15%* is what reached your Signal; *your shortest cooldown* is the one nearest done; *commands in a row*
+  are one a cycle on the same part, a cycle without one starting it over; *a part that can't be hit* is frozen or out
+  of phase.
 - **Where the pieces drop** (`SET_LOOT`, `setDrop`): one roll an event of a source, at its chance plus its pity for each
   event without one while you lack a piece it drops; once you've found them all, a small flat chance. A piece you lack
   comes first, and a Listening Post listening for one lifts it. After a miss the log gives the next chance. The random
@@ -1797,8 +1824,10 @@ five slot kinds, so a general set's 2-piece can go beside it.
 | A ★ rare spawn (by floor) | 0.08% · +0.003% · 0.03% | 205 kills |
 | A strain kill (by its lineage) | 0.2% · +0.05% · 0.05% | 53 kills |
 
-- **Sources not built yet** drop from their floor's lair boss (Catchment from floor 7's, Bedrock and the tier sets
-  from floor 8's). Floors 5 and 6 have no set of their own yet.
+- **Sources not built yet** drop from their floor's lair boss, each piece naming the source it moves to (`planned`):
+  Fine Print, Contiguous and Crypter from floor 5's, Domain Admin, Hidden Process and Watertight from floor 6's,
+  Catchment from floor 7's, Bedrock and the tier sets from floor 8's. Their own source rows (SET_LOOT) wait on the
+  planner's clock (docs/floor-items.md).
 - **The LOWLIGHT Badge** comes with wick's last letter at level 22 (Mail), with wick's Old Toolkit rebuilt at your level. The Toolkit can't be deconstructed, and a full stash still takes it.
 - **The tooltip** reads in WoW's grammar under the piece's effect: its green line (set green once on, grey until then),
   the set's name and count (*Kestrel Clearance (2/3)*), its pieces (??? until found), and each bonus as *(2) Set: …*.

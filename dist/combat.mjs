@@ -330,6 +330,7 @@ export function damageMultiplier(s, p, opts = {}) {
     if (e.synced) m *= 1 + CONFIG.sync.bonus;
     for (const x of fxFire(s, 'hit', { target: p, do: 'damage%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null })) m *= 1 + x.value / 100;
     m *= buffMult(s); // a timed buff from a break (Floodgate, Fuse Map)
+    if (!opts.dot && !opts.by && !opts.server) m *= midDealt(s, p); // Installment, Syscall Table, Ring Minus One, DKOM
     m *= fbDealt(s, opts); // Muscle Memory (floorbosses.mjs)
     if (!opts.dot && e.throttledUntil >= e.cycle) m *= TELL.copy.throttled; // a debuff the Mimic copied onto you (tells.mjs): your hits deal half
   }
@@ -415,6 +416,7 @@ export function delayAttack(s, p, n, { extend = false } = {}) {
   atk.due += n;
   atk.late = { due: atk.due, by };
   if (e) e.delayedAt = e.cycle; // Switchback (3): the cycle after a delay lands (fxCond after-delay)
+  if (e) classEach('delayed', s, p, n); // Semaphore (3): the part is Open (sets.mjs)
   return n;
 }
 // A skill whose delay found the attack held says so (the other sources just don't move it).
@@ -1017,6 +1019,11 @@ function fxCond(s, fx, ctx = {}) {
     case 'early': return !!e && e.cycle <= 3; // Honeycomb
     case 'target-unacted': return !!p && p.lastLanded == null; // Cold Start (2)
     case 'strain-fight': return !!e?.virus?.strain; // Field Guide
+    // Floors 5 and 6 (docs/floor-items.md).
+    case 'target-wearing': return !!p && p.armor > 0; // Junk Code
+    case 'target-repatched': return !!p?.repatched; // Late Fee
+    case 'target-healed': return !!p && !!e && p.healedAt >= e.cycle - 1; // Antibody: you act first in a cycle, the virus heals after
+    case 'target-grew': return !!p && (p.hpWas?.length || 0) > 1 && p.integrity > p.hpWas[1]; // Tail Circuit
     case 'unrested': { const v = s.rooms?.at ? s.rooms.visit : null; return !!v && !v.rested && !Object.keys(v.bays || {}).length; } // No Rest
     default: return false;
   }
@@ -1033,7 +1040,7 @@ const fxScale = (s, fx) => {
   const d = () => defender(s) || { integrity: 1, max: 1 };
   const k = fx.scale === 'cycles' ? Math.max(0, (e?.cycle || 1) - 1) : fx.scale === 'contracts' ? (s.mail?.jobs || []).filter((j) => !j.done).length : fx.scale === 'broken' ? e?.breaks || 0 : fx.scale === 'reads' ? e?.metrics?.reads || 0
     : fx.scale === 'chits' ? e?.chits || 0 : fx.scale === 'crew' ? (e ? alliesOf(s).length : 0) : fx.scale === 'missing' ? Math.max(0, Math.floor((1 - d().integrity / Math.max(1, d().max)) * 10 + 1e-9)) : fx.scale === 'sets' ? setBonusCount(s)
-    : fx.scale === 'specials' ? specialsHere(s) : fx.scale === 'parts' ? (e ? Math.max(0, parts(s).length - 2) : 0) : fx.scale === 'held' ? Math.floor((s.locations || []).filter(heldLoc).length / 5) : 1; // the floor feats' (earned.mjs)
+    : fx.scale === 'tells' ? tellsLanded(e) : fx.scale === 'specials' ? specialsHere(s) : fx.scale === 'parts' ? (e ? Math.max(0, parts(s).length - 2) : 0) : fx.scale === 'held' ? Math.floor((s.locations || []).filter(heldLoc).length / 5) : 1; // the floor feats' (earned.mjs)
   const v = (Number(fx.value) || 0) * k;
   return fx.cap ? Math.min(fx.cap, v) : v;
 };
@@ -1081,17 +1088,128 @@ function fxSpend(s, fx, id) {
 // The deep uniques' effect kinds (content.mjs FX_DO, levels 39-50): their hooks run on every hit, heal and cycle, and
 // nearly every fight carries none of them, so a kind you don't wear answers at once (fxKinds: the kinds on your rig,
 // kept while the rig is the same).
-const DEEP = new Set(['stat+', 'stat%', 'max-signal%', 'heal%', 'stack', 'buff', 'taken%', 'hit-cap', 'helper-soak', 'next-boost', 'shield%', 'shield-absorb', 'block-dot', 'burn%', 'helper%', 'crit-damage%', 'crit-double', 'first-skill-crit', 'first-pierce', 'spill', 'repeat', 'burn-now', 'burn-sap', 'helper-long', 'helper-now', 'helper-cd', 'free-helper', 'jam-delay', 'first-cd', 'shortest-cd', 'chit-fade', 'clock-start', 'momentum', 'spend%', 'momentum-cleave', 'momentum-safe', 'unveil', 'explore-xp%', 'cache%', 'cache-heal%', 'rewind']);
+const DEEP = new Set(['stat+', 'stat%', 'max-signal%', 'heal%', 'stack', 'buff', 'taken%', 'hit-cap', 'helper-soak', 'next-boost', 'shield%', 'shield-absorb', 'block-dot', 'burn%', 'helper%', 'crit-damage%', 'crit-double', 'first-skill-crit', 'first-pierce', 'spill', 'repeat', 'burn-now', 'burn-sap', 'helper-long', 'helper-now', 'helper-cd', 'free-helper', 'jam-delay', 'first-cd', 'shortest-cd', 'chit-fade', 'clock-start', 'momentum', 'spend%', 'momentum-cleave', 'momentum-safe', 'unveil', 'explore-xp%', 'cache%', 'cache-heal%', 'rewind',
+  // Floors 5 and 6 (docs/floor-items.md), and Hidden Process (3).
+  'part-first%', 'varied%', 'ready-wait%', 'surfaced%', 'armor-bleed', 'crit-pass', 'reach', 'halve-every', 'cap-every', 'siphon-less', 'delayed-less', 'reinsure', 'tell-cd', 'first-shield-x2', 'burn-through']);
 const KINDS = new WeakMap();
 function fxKinds(s) {
   const key = hooks.extraFx ? null : `${classOf(s)}|${hackerLevel(s)}|${rigOf(s).join(',')}|${(s.stash || []).length}|${s.equipN || 0}|${Object.keys(SETS).length}`; // what is loaded, and the sets
   const was = key !== null && KINDS.get(s);
   if (was && was.key === key) return was.kinds;
-  const kinds = new Set(uniqueFx(s).map((x) => x.fx.do));
+  const kinds = new Set(uniqueFx(s).flatMap((x) => (x.fx.if ? [x.fx.do, 'if:' + x.fx.if] : [x.fx.do]))); // and the conditions, as 'if:<condition>'
   if (key !== null) KINDS.set(s, { key, kinds });
   return kinds;
 }
 const wears = (s, what) => !DEEP.has(what) || fxKinds(s).has(what);
+
+// ---------- floors 5 and 6 (docs/floor-items.md: levels 25-40) ----------
+const fxVal = (x) => Number(x?.fx?.value) || 0;
+const fxWho = (x) => x?.name || x?.it?.name || '';
+// Out of reach: frozen (Cold Store), or out of phase (a Flicker's odd cycle). Generator sends a command past it, DKOM
+// pays on the first hit once it is back, and Hidden Process (3) keeps your burns ticking on it.
+const outOfReach = (s, p) => frozenNow(s, p) || (!!p?.phase && s.encounter.cycle % 2 === 1);
+// The tells that landed in this fight (tells.mjs tallies them): Moral Hazard's scale.
+const tellsLanded = (e) => Object.values(e?.metrics?.tells || {}).reduce((n, t) => n + (t.landed || 0), 0);
+const instReady = (e, p, x) => { const at = e.fxs?.inst?.[p.id]; return at == null || e.cycle - at >= (Number(x.fx.every) || 3); };
+const surfaced = (e, p) => p.surfacedAt != null && e.cycle - p.surfacedAt <= 1 && !(e.fxs?.dkom?.[p.id] >= p.surfacedAt);
+// Your skill hit's multiplier: Installment (first hit on a part every few cycles), Syscall Table (a run of different
+// skills, read as the skill fired: midUse), Ring Minus One (a skill that waited ready), DKOM (a part just back in reach).
+const MID_DEALT = ['part-first%', 'varied%', 'ready-wait%', 'surfaced%'];
+function midDealt(s, p) {
+  const e = s.encounter, st = e.fxs || {}, k = fxKinds(s);
+  if (!MID_DEALT.some((x) => k.has(x))) return 1; // one look at the rig: nearly every fight wears none
+  let m = 1;
+  const inst = fxHas(s, 'part-first%');
+  if (inst && instReady(e, p, inst)) m *= 1 + fxVal(inst) / 100;
+  const now = st.sysNow;
+  if (now && now.cycle === e.cycle && e.commanding?.id === now.id && fxHas(s, 'varied%')) m *= 1 + now.pct / 100;
+  const r = st.rested, rest = fxHas(s, 'ready-wait%');
+  if (rest && r && r.cycle === e.cycle && e.commanding?.id === r.id) m *= 1 + fxVal(rest) / 100;
+  const dk = fxHas(s, 'surfaced%');
+  if (dk && surfaced(e, p)) m *= 1 + fxVal(dk) / 100;
+  return m;
+}
+// After your hit lands: Installment's and DKOM's marks spent; a crit arms Pass the Hash.
+function midHit(s, p, crit, opts) {
+  const e = s.encounter, skill = !opts.dot && !opts.by, k = fxKinds(s);
+  if (!k.has('part-first%') && !k.has('surfaced%') && !k.has('crit-pass')) return;
+  if (skill) {
+    const inst = fxHas(s, 'part-first%');
+    if (inst && instReady(e, p, inst)) (fxState(e).inst ||= {})[p.id] = e.cycle;
+    if (fxHas(s, 'surfaced%') && surfaced(e, p)) (fxState(e).dkom ||= {})[p.id] = p.surfacedAt;
+  }
+  const ph = crit && skill ? fxHas(s, 'crit-pass') : null, st = fxState(e);
+  if (ph && !st.pass && !(st.passAt > e.cycle)) { st.pass = { from: p.id }; st.passAt = e.cycle + (fxVal(ph) || 3); emit(s, 'status', `${fxWho(ph)}: your next hit on another part is a critical strike.`, { target: p.id, mark: 'buff', ...firedOf([ph]) }); }
+}
+// A skill fired (useAbility, before its cooldown starts): Syscall Table's run of different skills (repeating one in the
+// run starts it again from that one) and Ring Minus One's wait (ready for its cycles or more).
+function midUse(s, id) {
+  const e = s.encounter;
+  const sys = fxHas(s, 'varied%');
+  if (sys) {
+    const st = fxState(e), run = st.sysRun || [], again = run.includes(id);
+    st.sysNow = { cycle: e.cycle, id, pct: again ? 0 : Math.min(Number(sys.fx.cap) || 25, fxVal(sys) * run.length) };
+    st.sysRun = again ? [id] : [...run, id];
+  }
+  const rest = fxHas(s, 'ready-wait%');
+  if (rest) {
+    const st = fxState(e), since = Math.max(e.readyAt[id] ?? 1, (st.usedAt?.[id] ?? 0) + 1); // ready from its cooldown's end, and never on the cycle it was last used
+    if (e.cycle - since >= (Number(rest.fx.cycles) || 2)) st.rested = { cycle: e.cycle, id };
+    (st.usedAt ||= {})[id] = e.cycle;
+  }
+}
+// The cycle's end (cycleFx): a part's Integrity kept for Antibody (a heal since your last hit on it) and Tail Circuit
+// (what it had 2 cycles ago), and Reinsurance's shield coming back.
+function midCycle(s) {
+  const e = s.encounter, k = fxKinds(s);
+  if (k.has('if:target-healed') || k.has('if:target-grew')) for (const p of livingParts(s)) {
+    if (p.hpSeen != null && p.integrity > p.hpSeen) p.healedAt = e.cycle;
+    p.hpSeen = p.integrity;
+    p.hpWas = [p.integrity, ...(p.hpWas || []).slice(0, 1)];
+  }
+  const r = e.fxs?.reins;
+  if (r?.left > 0) { r.left--; e.shield = (e.shield || 0) + r.each; emit(s, 'status', `${r.name} raises your shield to ${e.shield}.`, { mark: 'shield', gear: [{ id: r.id, name: r.name }] }); }
+}
+// DKOM: which parts were out of reach this cycle, seen as it closes (before a thaw), and the next cycle's start sees a
+// part back in reach.
+function midSeen(s) {
+  if (fxHas(s, 'surfaced%')) for (const p of livingParts(s)) p.outLast = outOfReach(s, p);
+}
+function midTurn(s) {
+  if (!fxHas(s, 'surfaced%')) return;
+  for (const p of livingParts(s)) if (p.outLast && !outOfReach(s, p)) p.surfacedAt = s.encounter.cycle;
+}
+// Recovery Mode (cap-every): below half, the next hit on you once every few cycles is capped.
+function capEvery(s, n) {
+  const x = fxHas(s, 'cap-every'), e = s.encounter, d = defender(s);
+  if (!x || !e || !(d.integrity < d.max / 2) || e.cycle < (e.fxs?.capAt || 0)) return n;
+  fxState(e).capAt = e.cycle + (Number(x.fx.every) || 6);
+  const cap = Math.max(1, Math.floor((d.max * fxVal(x)) / 100));
+  if (n > cap) emit(s, 'blocked', `${fxWho(x)}: the hit is capped at ${cap}.`, { mark: 'shield', ...firedOf([x]) });
+  return Math.min(n, cap);
+}
+// Reinsurance: once a fight, what a hit took past its share of your max comes back as a shield over the next cycles.
+function reinsure(s, dealt) {
+  const e = s.encounter, d = defender(s), x = fxFire(s, 'struck', { do: 'reinsure' }, false)[0], line = x && Math.floor((d.max * x.value) / 100);
+  if (!x || dealt <= line) return;
+  fxSpend(s, x.fx, x.id);
+  const over = dealt - line, n = Math.max(1, Number(x.fx.cycles) || 2);
+  fxState(e).reins = { left: n, each: Math.ceil(over / n), name: fxWho(x), id: x.id };
+  emit(s, 'status', `${fxWho(x)}: ${over} comes back as a shield over the next ${n} cycles.`, firedOf([x]));
+}
+// One cycle off the cooldown nearest done (Notice Period, Domain Admin (3)): the skill's id, or null with none cooling.
+export function shortestOff(s, n, who, gear = null) {
+  const e = s.encounter, k = Object.keys(e?.readyAt || {}).filter((id) => e.readyAt[id] > e.cycle).sort((a, b) => e.readyAt[a] - e.readyAt[b])[0];
+  if (!k) return null;
+  e.readyAt[k] = Math.max(e.cycle, e.readyAt[k] - n);
+  emit(s, 'status', `${who}: ${ABILITIES[k]?.name || k} cools ${n} ${n === 1 ? 'cycle' : 'cycles'} sooner.`, gear ? firedOf([gear]) : {});
+  return k;
+}
+// A part starts a tell (tells.mjs say): Notice Period.
+export function tellStarted(s) {
+  const x = s.encounter && fxHas(s, 'tell-cd');
+  if (x) shortestOff(s, fxVal(x) || 1, fxWho(x), x);
+}
 // Effects firing now: [{ fx, it, id, value }]. spend: use up their limits.
 export function fxFire(s, when, ctx = {}, spend = true) {
   const out = [];
@@ -1152,7 +1270,11 @@ export function shieldWatch(s) {
   const e = s.encounter;
   if (!e) return;
   const now = e.shield || 0;
-  if (now > (e.shieldSeen || 0)) { e.shieldSeen = now; fireEvent(s, 'shielded', { gained: true }); }
+  if (now > (e.shieldSeen || 0)) {
+    const gt = !e.fxs?.shieldX2 && fxHas(s, 'first-shield-x2'); // Golden Ticket: your first shield each fight, doubled
+    if (gt) { fxState(e).shieldX2 = true; e.shield = now + (now - (e.shieldSeen || 0)); emit(s, 'status', `${fxWho(gt)}: your first shield is doubled, to ${e.shield}.`, { mark: 'shield', ...firedOf([gt]) }); }
+    e.shieldSeen = e.shield; fireEvent(s, 'shielded', { gained: true });
+  }
   e.shieldSeen = e.shield || 0;
 }
 // How much one command counts toward calling off a tell (Double Tap, Spectre: twice).
@@ -2468,7 +2590,7 @@ export function validate(s, intent) {
   const wait = intent.ignoreCooldown ? 0 : readyIn(s, intent.ability);
   if (wait) return `${a.name} is ready in ${wait} ${wait === 1 ? 'cycle' : 'cycles'}.`;
   if (a.target !== 'none' && !alive(part(s, intent.target))) return 'That part is already broken.';
-  if (intent.target && frozenNow(s, part(s, intent.target))) { const p = part(s, intent.target), n = p.thawAt - e.cycle + 1; return `The ${p.name} is frozen. It thaws in ${n} ${n === 1 ? 'cycle' : 'cycles'}.`; }
+  if (intent.target && frozenNow(s, part(s, intent.target)) && !fxHas(s, 'reach')) { const p = part(s, intent.target), n = p.thawAt - e.cycle + 1; return `The ${p.name} is frozen. It thaws in ${n} ${n === 1 ? 'cycle' : 'cycles'}.`; }
   if (a.proc === 'stripped' && procOpen(s, a.proc) && e.procs.stripped.part && e.procs.stripped.part !== intent.target && alive(part(s, e.procs.stripped.part))) return `${a.name} is usable only on the ${part(s, e.procs.stripped.part).name}, the part you just stripped.`;
   if (a.proc && !procOpen(s, a.proc)) return `${a.name} isn't usable yet. ${a.proc === 'stripped' ? 'Break a part\'s last ◆ first.' : a.proc === 'struck' ? 'It becomes usable after an attack reaches you.' : 'It becomes usable after an attack misses you or is delayed.'}`;
   if (a.once && e.once?.[intent.ability]) return `${a.name} is used up for this fight.`;
@@ -2787,6 +2909,7 @@ export const implanted = (s, p) => (s.encounter?.burns || []).some((b) => b.id =
 // A part's last ◆ broke under your command: who did it (a seal that fails then readies that skill, tells.mjs).
 export function stripMark(s, p) {
   daemonsOn(s, 'stripped', { part: p.id }); // Crowbar
+  if (s.encounter) classEach('stripped', s, p); // Crypter (3), Domain Admin (3) (sets.mjs)
   const c = s.encounter?.commanding;
   if (c && c.id && !c.auto && c.target === p.id) p.strippedBy = { who: s.who || '', id: c.id, cycle: c.at ?? s.encounter.cycle };
 }
@@ -2800,8 +2923,14 @@ const srcOf = (e, opts) => ({
 export function hit(s, p, base, opts = {}) {
   const e = s.encounter;
   if (!alive(p)) return { dealt: 0, overflow: 0 };
+  // Generator (reach): your command at a part out of reach hits the next part instead, at full.
+  if (opts.mine && !opts.dot && !opts.by && !opts.server && !opts.reached && base > 0 && outOfReach(s, p)) {
+    const g = fxHas(s, 'reach'), t = g && livingParts(s).filter((x) => x !== p && !outOfReach(s, x)).sort((a, b) => (a.attack?.due ?? 999) - (b.attack?.due ?? 999))[0];
+    if (t) { emit(s, 'status', `${fxWho(g)}: the ${p.name} is out of reach. Your command hits the ${t.name}.`, { target: t.id, from: p.id, ...firedOf([g]) }); return hit(s, t, base, { ...opts, reached: true }); }
+  }
+  const through = !!opts.burn && !!fxHas(s, 'burn-through'); // Hidden Process (3): your burns tick on a part that can't be hit
   // Cold Store: frozen, nothing reaches it (it isn't on the timeline either) until it thaws.
-  if (frozenNow(s, p)) {
+  if (frozenNow(s, p) && !through) {
     if (base > 0 && (opts.mine || opts.dot)) emit(s, 'status', `${opts.by ? opts.by + ': ' : ''}the ${p.name} is frozen. Nothing gets through until it thaws.`, { target: p.id, frozen: true });
     return { dealt: 0, overflow: 0, absorbed: true };
   }
@@ -2836,7 +2965,7 @@ export function hit(s, p, base, opts = {}) {
   }
   // Flicker: the Shade is only there on even cycles; on odd ones everything passes through it, and
   // your own command's static bounces back at you (a quarter of the hit; never your last point).
-  if (p.phase && e.cycle % 2 === 1 && base > 0) {
+  if (p.phase && e.cycle % 2 === 1 && base > 0 && !through) {
     const back = opts.mine && !opts.dot ? Math.min(Math.max(1, Math.round(base * CONFIG.phaseBounce)), defender(s).integrity - 1) : 0;
     const took = back > 0 ? takeDamage(s, back, p.id, `${p.name} static`) : 0;
     emit(s, 'status', `${opts.by ? opts.by + ': ' : ''}passes through the ${p.name}. It is out of phase until next cycle.`, { target: p.id });
@@ -2893,6 +3022,9 @@ export function hit(s, p, base, opts = {}) {
     if (cmd) lien(s, p);
     if (cmd) emit(s, 'armor', `${cmd === 'spike' ? spikeName(s) : ABILITIES[cmd].name}: absorbed by ${p.name}'s ◆ (${n} broken${p.armor ? `, ${p.armor} left` : ''}).${p.armor ? '' : ` ${patchNote}.`}`, { target: p.id, left: p.armor, absorbed: true, ability: cmd, broke: n });
     else emit(s, 'armor', `${opts.by ? opts.by + ': ' : ''}${p.name} ${heavy ? 'two ◆ broken' : '◆ broken'}${p.armor ? ` (${p.armor} left)` : `. ${patchNote}`}.`, { target: p.id, left: p.armor, broke: n });
+    // Load Path (armor-bleed): a share of the hit still reaches the part.
+    const lp = opts.mine && !opts.server && !opts.bled && base > 0 ? fxHas(s, 'armor-bleed') : null;
+    if (lp && alive(p)) hit(s, p, Math.max(1, Math.round((base * fxVal(lp)) / 100)), { ...opts, pierce: true, bled: true, by: fxWho(lp), noHook: true });
     return { dealt: 0, overflow: 0, absorbed: true };
   }
   // Flat gear: Damage on your skill hits, Payload on burn ticks and helper hits.
@@ -2916,7 +3048,10 @@ export function hit(s, p, base, opts = {}) {
   // POST Code (first-skill-crit): every hit of your first damaging skill each fight.
   const first = raw > 0 && opts.mine && !opts.dot && !opts.server && !!e.commanding && !!e.fxs?.critSkill;
   if (first) e.fxs.critHit = true;
-  const forced = raw > 0 && !opts.server && (weak || e.forceCrit || opts.crit || first);
+  // Pass the Hash (crit-pass): a crit of yours made your next skill hit on a different part a crit too.
+  const passed = raw > 0 && opts.mine && !opts.dot && !opts.by && !opts.server && !!e.fxs?.pass && e.fxs.pass.from !== p.id;
+  if (passed) e.fxs.pass = null;
+  const forced = raw > 0 && !opts.server && (weak || e.forceCrit || opts.crit || first || passed);
   if (forced && e.forceCrit) e.forceCrit = false;
   // Exposed: every hit on it, from anyone, has a better crit chance.
   const chance = critChance(s) + (opts.server ? 0 : classSum('crit', s, p, opts)) + (on(s, p, 'exposed') ? SKILLS.exposed : 0) + (opts.mine ? fxFire(s, 'hit', { target: p, do: 'crit%' }).reduce((n, x) => n + x.value, 0) : 0);
@@ -3033,6 +3168,8 @@ export function hit(s, p, base, opts = {}) {
     for (const x of rest) if (alive(x)) hit(s, x, n, { by: wrap.name, overkill: true, noHook: true });
   }
   const out = { dealt, overflow: Math.max(0, raw - dealt), crit, broke: p.integrity === 0 };
+  p.hpSeen = p.integrity; // a heal shows against it at the cycle's end (Antibody)
+  if (opts.mine && !opts.server && dealt > 0) midHit(s, p, crit, opts);
   if (!opts.server) classEach('hit', s, p, out, opts);
   // Shared events (fireEvent): a crit of yours (a burn's and a helper's too), and your hit on a Tagged part.
   if (!opts.server && dealt > 0) {
@@ -3496,6 +3633,7 @@ function useAbility(s, intent, auto = false) {
   noteUse(s, id, auto, classOf(s)); // ability mastery (mastery.mjs): yours, not a daemon's or a crewmate's
   if (auto === 'daemon') e.metrics.daemon = (e.metrics.daemon || 0) + 1;
   else if (auto) e.metrics.auto++;
+  midUse(s, id); // Syscall Table's run, Ring Minus One's wait: before the cooldown starts
   if (!intent.ignoreCooldown) e.readyAt[id] = e.cycle + fxCooldown(s, id, a);
   if (a.once) e.once[id] = true;
   emit(s, 'resolved', `${auto === 'daemon' ? `Daemon ${intent.daemon}: ` : auto === 'program' ? '⟳ ' : ''}${said(s, intent.text)}${auto && auto !== 'daemon' && auto !== 'program' ? ' (timer ran out)' : ''}.`, { ability: id, target: intent.target, auto });
@@ -3890,7 +4028,8 @@ export const c2Gnaw = (s, p) => { const c = p.kind === 'fragment' ? livingParts(
 export const drawingFire = (s) => (s.encounter?.buffs?.sinkhole >= s.encounter?.cycle ? s : null);
 
 // Mooring (hit-cap): no single attack takes more than its share of your max.
-const hitCapped = (s, n) => { const x = fxHas(s, 'hit-cap'); return x ? Math.min(n, Math.max(1, Math.floor((defender(s).max * (Number(x.fx.value) || 100)) / 100))) : n; };
+const hitCapped = (s, n) => capEvery(s, hitCap(s, n));
+const hitCap = (s, n) => { const x = fxHas(s, 'hit-cap'); return x ? Math.min(n, Math.max(1, Math.floor((defender(s).max * (Number(x.fx.value) || 100)) / 100))) : n; };
 // Bilge (burn-sap): each burn you started on a part this fight takes a share off its hits on you, up to the cap.
 const sapOf = (s, p) => { const x = fxHas(s, 'burn-sap'), n = s.encounter?.fxs?.burned?.[p.id] || 0; return x && n ? 1 - Math.min(x.fx.cap || 100, n * (Number(x.fx.value) || 0)) / 100 : 1; };
 // After an attack reaches you, hit or soaked: what your gear stacks or banks on it (Seawall's Block, Anchor Chain's next heal).
@@ -4016,16 +4155,20 @@ function landAttack(s, p) {
     const lands = Math.max(0, blocked(s, pre) - (e.shield || 0));
     let half = fxFire(s, 'struck', { do: 'halve', atk, amount: pre, lands })[0];
     if (half) emit(s, 'blocked', `${half.name || half.it.name}: ${atk.name} deals half damage.`, { source: p.id, ...firedOf([half]) });
+    if (!half) { const hs = fxHas(s, 'halve-every'), st = fxState(e); if (hs && e.cycle >= (st.halveAt || 0)) { half = hs; st.halveAt = e.cycle + fxVal(hs); } } // Hidden Service: once every few cycles
+    if (half?.fx.do === 'halve-every') emit(s, 'blocked', `${fxWho(half)}: ${atk.name} deals half damage.`, { source: p.id, ...firedOf([half]) });
     let cut = half ? 0.5 : 1;
     if (!half && e.hardened > 0) { e.hardened--; cut = 1 - SKILLS.hardenedCut; emit(s, 'blocked', `Hardened: ${atk.name} deals ${Math.round(SKILLS.hardenedCut * 100)}% less damage.`, { source: p.id }); }
     for (const x of fxFire(s, 'struck', { do: 'taken%', atk, amount: pre, lands })) { cut *= Math.max(0, 1 - x.value / 100); emit(s, 'blocked', `${x.name || x.it.name}: ${atk.name} deals ${x.value}% less damage.`, { source: p.id, ...firedOf([x]) }); } // Read-Only
+    // Pressure Relief: an attack you delayed, landing late. Tourniquet: a siphon.
+    for (const x of [atk.late?.due === e.cycle && fxHas(s, 'delayed-less'), atk.siphon && fxHas(s, 'siphon-less')].filter(Boolean)) { cut *= Math.max(0, 1 - fxVal(x) / 100); emit(s, 'blocked', `${fxWho(x)}: ${atk.name} deals ${fxVal(x)}% less damage.`, { source: p.id, ...firedOf([x]) }); }
     cut *= exposedCut(s); // Exposed (a Prober, mechanics.mjs): this hit deals more, and the status clears
     const brown = leanTaken(e, p); // Brownout (leanings.mjs): your command aimed at its part this cycle
     if (brown < 1) { leanPaid(e, p, Math.round(pre * cut * (1 - brown))); cut *= brown; }
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
     const dealt = takeDamage(s, absorbed(s, hitCapped(s, Math.round(hitPower * sap * (crit ? CRIT.multiplier : 1) * cut * took * (e.virus.raid ? raidTaken(s) : 1))), atk, p), p.id, atk.name);
     struckFx(s, atk);
-    if (dealt) { classEach('struck', s, atk, dealt, p); fireEvent(s, 'struck', { atk, dealt, part: p }); }
+    if (dealt) { classEach('struck', s, atk, dealt, p); fireEvent(s, 'struck', { atk, dealt, part: p }); reinsure(s, dealt); }
     if (p.mech) mechLanded(s, p, atk); // the status it leaves on you, or what it cashes in (mechanics.mjs)
     if (p.scrape && (e.shield > 0 || timedBuffs(s).length)) scrapeYou(s, p, atk, { shield: e.shield, buffs: timedBuffs(s) });
     // Bad Block: your next heals lose up to its share of your max (a fresh pool each time it lands, not a bigger one).
@@ -4045,7 +4188,7 @@ function landAttack(s, p) {
     if (dealt && atk.siphon) {
       const hurt = livingParts(s).filter((x) => !implanted(s, x)).sort((a, b) => a.integrity / a.max - b.integrity / b.max)[0];
       if (hurt) {
-        const got = Math.min(dealt, hurt.max - hurt.integrity);
+        const got = Math.min(fxHas(s, 'siphon-less') ? Math.round(dealt / 2) : dealt, hurt.max - hurt.integrity); // Tourniquet: half the heal
         hurt.integrity += got;
         const b = e.burns.findIndex((x) => x.target === hurt.id && !(e.stickyUntil >= e.cycle)); // Outbreak: nothing clears your burns
         if (b >= 0) e.burns.splice(b, 1);
@@ -4514,17 +4657,20 @@ function cycleFx(s) {
     e.helpers.push({ target: t.id, damage: dmg, left: n, synced: false, sent: e.cycle, by: x.name || x.it.name });
     emit(s, 'status', `${x.name || x.it.name}: a helper joins you on the ${t.name}, dealing ${dmg} every cycle for ${n} cycles.`, { target: t.id, mark: 'helper', ...firedOf([x]) });
   }
+  midCycle(s);
   noteSignal(s);
 }
 // The end of a cycle once the attacks are in: patches, cooldown effects, the turn over.
 function cycleClose(s, landed) {
   const e = s.encounter;
+  midSeen(s); // DKOM
   // 4. The virus patches itself: a part left without armor too long gets one chit back.
   for (const p of livingParts(s)) {
     if (p.maxArmor > 0 && p.armor === 0 && p.patchAt !== null && e.cycle >= p.patchAt && p.revokedUntil >= e.cycle) { p.patchAt = e.cycle + 1; emit(s, 'status', `${p.name}'s patch is revoked. It cannot sign it.`, { target: p.id }); continue; } // Revoke (Sysop)
     if (p.maxArmor > 0 && p.armor === 0 && p.patchAt !== null && e.cycle >= p.patchAt) {
       p.armor = 1;
       p.patchAt = null;
+      p.repatched = true; // Late Fee (target-repatched)
       emit(s, 'patch', `${p.name} patches 1 ◆ back.`, { target: p.id });
     }
   }
@@ -4639,6 +4785,7 @@ function cycleClose(s, landed) {
 
   e.cycle++;
   e.elapsedMs = 0;
+  midTurn(s);
   rollSync(s);
   if (e.virus.raid) raidCycle(s); // a crew boss: its phase, then what it announces (raid.mjs)
   if (e.virus.tells) { tellCycle(s); flushDaemons(s); } // a solo fight's tells: what it announces now (tells.mjs); a Lookout's hit

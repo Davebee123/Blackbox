@@ -194,6 +194,11 @@ export const FX_IF = {
   'target-unacted': "it hasn't attacked yet this fight",
   'strain-fight': 'you fight a strain',
   unrested: "you haven't rested this visit",
+  // Floors 5 and 6 (docs/floor-items.md).
+  'target-wearing': 'the target wears ◆',
+  'target-repatched': 'its ◆ came back this fight',
+  'target-healed': 'the target healed this cycle', // since your last turn: you act first in a cycle, the virus heals after
+  'target-grew': 'the target has more Integrity than it had 2 cycles ago',
 };
 // What each block does, which "when" it fits, and what it needs (value, stat). label: the effect, a verb phrase in the
 // tooltip style ("heals you for X"); fxText adds its trigger and condition after it. own: the label already says when.
@@ -327,10 +332,26 @@ export const FX_DO = {
   'glass-taken%': { when: ['always'], label: 'increases the damage you take by X%', value: true },
   'clean-signal': { when: ['cycle'], label: 'adds X% to your skills for each cycle no attack lands on you, up to 3 times; an attack that lands clears it', value: true, own: true },
   chorus: { when: ['custom'], label: 'makes a damaging skill used twice in a row hit again for X% of its damage', value: true },
+  // Floors 5 and 6 (docs/floor-items.md: levels 25-40). Each writes its own text.
+  'part-first%': { when: ['custom'], label: 'makes your first hit on each part every N cycles deal X% more', value: true }, // N: every
+  'varied%': { when: ['custom'], label: 'adds X% to each different skill you land in a row, up to its cap; repeating one resets it', value: true },
+  'ready-wait%': { when: ['custom'], label: 'makes a skill fired after waiting ready for N cycles deal X% more', value: true },
+  'surfaced%': { when: ['custom'], label: 'makes your first hit on a part that just became hittable deal X% more', value: true },
+  'armor-bleed': { when: ['custom'], label: 'makes a hit that breaks a ◆ still deal X% of its damage to the part', value: true },
+  'crit-pass': { when: ['custom'], label: 'makes your next hit on a different part a critical strike after you land one, once every X cycles', value: true },
+  reach: { when: ['custom'], label: 'sends a command at a part out of reach to the next part, at full' },
+  'halve-every': { when: ['custom'], label: 'halves the next attack on you every X cycles', value: true },
+  'cap-every': { when: ['custom'], label: 'caps the next hit on you at X% of your max health every N cycles, below half', value: true }, // N: every
+  'siphon-less': { when: ['custom'], label: 'makes siphons that hit you deal X% less and heal half as much', value: true },
+  'delayed-less': { when: ['custom'], label: 'makes an attack you delayed deal X% less when it lands', value: true },
+  reinsure: { when: ['struck'], label: 'gives back what a hit takes past X% of your max health as a shield over N cycles', value: true, own: true },
+  'tell-cd': { when: ['custom'], label: 'takes X cycles off your shortest cooldown when a part starts a tell', value: true },
+  'first-shield-x2': { when: ['custom'], label: 'doubles your first shield each fight' },
 };
 export const FX_SCALE = { '': 'flat', cycles: 'for each cycle the fight has lasted', contracts: 'for each contract you hold', broken: 'for each part broken this fight', reads: 'for each tell you answered this fight',
   chits: 'for each ◆ you hold', crew: 'for each crewmate in the fight', missing: 'for each 10% of your health you are missing', sets: 'for each set bonus you have active',
-  specials: "for each of the server's specials", parts: 'for each part in the fight past two', held: 'for every 5 servers you hold' };
+  specials: "for each of the server's specials", parts: 'for each part in the fight past two', held: 'for every 5 servers you hold',
+  tells: 'for each tell that landed on you this fight' };
 export const FX_LIMIT = { '': 'every time', fight: 'once per fight', run: 'once per run', cooldown: 'then a real-time cooldown' };
 // A unique can lean toward a class: it drops three times as often for that class (combat.mjs uniqueFrom).
 export const CLASSES = { '': 'Any class', breaker: 'Breaker', bastion: 'Bastion', infiltrator: 'Infiltrator', operator: 'Operator',
