@@ -135,7 +135,7 @@ import { play } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import './dist/netrooms.mjs';
 import { matesOf } from './dist/crew.mjs';
-import { STANDING, HIRE, tierOf, standingOf, raiseStanding, meetingOf, feeOf, cutOf, sigOf, setSig, busyOf, cantHire, gainOf } from './dist/runners.mjs';
+import { STANDING, HIRE, tierOf, standingOf, raiseStanding, meetingOf, deadOf, feeOf, cutOf, sigOf, setSig, busyOf, cantHire, gainOf } from './dist/runners.mjs';
 import { runnerCard, tierBar, runnersMap, runnersOn, runnersAt, runnersList } from './dist/runners-view.mjs';
 import { listed } from './dist/presence.mjs';
 import { roomsMarkup } from './dist/floorplan-view.mjs';
@@ -449,4 +449,29 @@ test('the runner card: the Badge head, their bust from the handle, never a named
   assert.match(html, /class="rc-head"><pre class="rc-bust f-bust"/);
   assert.match(html, /rc-head[^]*class="rc-tier"[^]*rc-rows/, 'the Tier bar sits in the head');
   assert.doesNotMatch(html, /<dt>Standing<\/dt>/, 'no Standing row');
+});
+
+test('R3 dead runner rooms: a crash on a server on your map marks one of its rooms; win it and you pull them out', () => {
+  const { s, loc } = onTheirServer();
+  // A runner whose job crashes: put the location on their target, just before they turn back.
+  let hit = null;
+  for (const r of castOf(s)) { for (let k = 0; k < 40 && !hit; k++) { const t = k * r.cycle - r.phase + Math.round(r.cycle * 0.79); const st = stateOf(s, r, t); if (k > 0 && st.stage === 'work' && !st.ok && castOf(s, t).some((x) => x.handle === r.handle) && castOf(s, t + 60000).some((x) => x.handle === r.handle)) hit = { r, t, st }; } if (hit) break; }
+  assert.ok(hit, 'a crash to watch');
+  loc.slot = hit.st.target; runnersOf(s).ms = hit.t;
+  for (let i = 0; i < 200 && !s.runners.down?.[loc.slot]; i++) tickRunners(s, 5000);
+  assert.deepEqual(s.runners.down[loc.slot]?.h, hit.r.handle, 'the crash marks the server');
+  play(s, `connect ${loc.name}`);
+  const d = deadOf(s, FP.isUp);
+  assert.equal(d?.r.handle, hit.r.handle);
+  assert.ok(['process', 'elite'].includes(d.room.kind) && FP.isUp(s, d.room));
+  assert.notEqual(d.room.id, meetingOf(s, FP.isUp)?.room.id, 'never the room a runner is fighting in');
+  const html = roomsMarkup(s);
+  assert.match(html, new RegExp(`class="fp-rn-tab dead"><rect[^>]*/><path class="sk"[^>]*/><text[^>]*>${hit.r.handle}</text>`), 'a skull beside the handle');
+  assert.match(html, new RegExp(`The runner ${hit.r.handle} crashed here\\.\\n▸ Win the room to pull them out\\.`));
+  walkIn(s, { room: d.room });
+  FP.act(s, 'engage');
+  winFight(s);
+  assert.equal(standingOf(s, hit.r.handle), gainOf(hit.r), 'pulled out: their standing, up');
+  assert.equal(s.runners.down[loc.slot], undefined, 'the mark is gone');
+  assert.equal(deadOf(s, FP.isUp), null);
 });
