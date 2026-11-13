@@ -973,6 +973,15 @@ html[data-sfx-floor="8"] .board .bcell + .bcell { border-left: 3px double color-
 html[data-sfx-floor="8"] .board .bhead .bcell, html[data-sfx-floor="8"] .board .bhead .cyc, html[data-sfx-floor="8"] .board .part-name, html[data-sfx-floor="8"] .board .you-top b { font-family: 'Courier Prime', monospace; }
 html[data-sfx-floor="8"] .board .bhead .bcell, html[data-sfx-floor="8"] .board .bhead .cyc { font-style: italic; text-transform: none; letter-spacing: 0.5px; }
 html[data-sfx-floor="8"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-size: 1px 100%; } /* a pen line */
+html[data-sfx-floor="3"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: repeating-linear-gradient(to bottom, var(--band-line) 0 4px, transparent 4px 7px); background-size: 2px 100%; background-position: var(--elapsed) 0; } /* the Stacks: a column of status LEDs */
+html[data-sfx-floor="3"] .board .brow:not(.bhead) { border-top-style: dotted; } /* its rows as rack slots */
+html[data-sfx-floor="5"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: linear-gradient(var(--band-line), var(--band-line)), repeating-linear-gradient(90deg, color-mix(in srgb, var(--amber) 13%, transparent) 0 1px, transparent 1px 5px); background-size: 2px 100%, 100% 100%; background-position: var(--elapsed) 0, 0 0; } /* Deep Core: a grating over the heat */
+html[data-sfx-floor="5"] .board .brow:not(.bhead) { border-top-style: dotted; }
+html[data-sfx-floor="6"] .board .brow:not(.bhead) { border-top-color: transparent; } /* Kernel Space: nothing but the plane */
+html[data-sfx-floor="6"] .board .bcell + .bcell:not(:nth-child(2)) { border-left-color: transparent; }
+html[data-sfx-floor="6"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-size: 1px 100%; }
+html[data-sfx-floor="7"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: radial-gradient(circle, var(--band-line) 0 2.5px, transparent 3px), linear-gradient(var(--band-line), var(--band-line)); background-size: 8px 8px, 2px calc(100% - 6px); background-position: calc(var(--elapsed) - 3px) calc(100% - 1px), var(--elapsed) 0; } /* the Sink: a drop at the playhead's foot */
+
 
 
 /* ---------- levels ---------- */
