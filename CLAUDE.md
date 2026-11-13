@@ -130,8 +130,9 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   about 30% Signal a same-level fight, and gear matters. A boss's signature changes the fight and ties to its lore; shutting a skill off is a side rule at
   most.
 - **Act bars:** every solo boss fights in three acts, each a fresh bar: every part back at full, with the act's rules
-  on top. An act ends when its last part breaks. The acts run equal in length and difficulty; a boss whose acts run
-  uneven gets its behaviour or mechanics changed, never its split (acts.mjs `ACT_BARS`). An act runs 15 to 20 cycles
+  on top. An act ends when its last part breaks. Acts run about even, with no hard ratio: a boss can carry a bit more
+  health, and bosses needn't be perfectly balanced. Uneven acts get behaviour or mechanics changed, never the split
+  (acts.mjs `ACT_BARS`). An act runs 15 to 20 cycles
   and starts from act 1's board and rules, with one rule of its own. The ♛ carries the boss's signature, and its ticks
   are a part's. Parts come back mid-act only where a boss's system fits it.
 

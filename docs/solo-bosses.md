@@ -20,8 +20,9 @@ family virus at 1.6× Integrity with one stock phase: the kit player (blind to t
 - **15 to 20 cycles an act** (the designer, November 13; acts.mjs `ACT_BARS`): each act holds a third of 1.8 of the
   boss's Integrity, times its `bar` (BOSSES), set so the planner's acts land there. Its hits are ×0.55 of one bar's, so
   the longer fight costs about what the short one did, and its rounds and enrage (24 cycles in) start with each act.
-- **Equal acts** is the aim and the bar: a boss whose acts run uneven gets its behaviour or mechanics changed, never
-  its split.
+- **About even acts** is the aim, with no hard ratio (the designer, November 13: a boss can carry a bit more health,
+  and bosses needn't be perfectly balanced). A boss whose acts run far apart gets its behaviour or mechanics changed,
+  never its split.
 
 ### Why acts became bars (the designer, November 2026)
 
