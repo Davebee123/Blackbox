@@ -3999,9 +3999,15 @@ body.no-motion .recap { animation: none; }
    under the picture on the right. Rows are tighter, and if the parts still don't fit, app.js adds .dense and the
    rows tighten again (sub-lines go, chips go to one line). */
 @media (min-width: 901px) {
-  .combat { grid-template-rows: auto minmax(0, 1fr) minmax(96px, 32%); grid-template-areas: 'hud hud' 'board stage' 'board log'; }
+  /* The picture on the left beside the part names, the board on the right: your eyes sit in the middle and see both.
+     The HUD follows: the virus's bar over its picture, yours over the board, your statuses between. */
+  .combat { grid-template-columns: minmax(0, 1fr) minmax(0, 1.55fr); grid-template-rows: auto minmax(0, 1fr) minmax(96px, 32%); grid-template-areas: 'hud hud' 'stage board' 'log board'; }
   .combat .board { max-height: none; min-height: 0; }
-  body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template-areas: 'hud hud' 'log stage'; }
+  body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template-areas: 'hud hud' 'stage log'; }
+  .combat .hud { grid-template-columns: minmax(0, 1fr) minmax(0, 1.55fr); }
+  .combat .hud > .hud-bar.enemy { order: -1; }
+  .combat .hud-left { grid-template-columns: minmax(0, 0.55fr) minmax(0, 1fr); }
+  .combat .hud-left > .hud-you { order: 2; }
 }
 /* The fight log: its newest line until ▴ opens it (app.js setLogOpen), so the render takes the room. A finished fight
    shows it whole. */

@@ -2912,6 +2912,8 @@ Motion off: the place stands still, no entrance, a steady light. Home and Floor 
 **The fight log** shows its newest line, with **▴ N** (the lines above it) to open it whole; it stays as you leave it.
 A finished fight shows it whole.
 
+**On a desktop** the virus's picture sits left of the board, its bar over it, and your Signal over the board.
+
 **A new fight boots in.** The first time you see a fight, the screen goes dark and the virus comes up first, alone
 at the centre, before dropping into its panel; a boot console checks your system and your panels come up. About two
 seconds; any key or click ends it (and still acts). Leaving a won fight, the page folds to a teal line like a tube
