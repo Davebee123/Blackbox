@@ -28,7 +28,7 @@ import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './interrupt.mjs';
-import { actsStart, lashHit, lashLand, actIntents, actBegins, actCap, actInfo } from './acts.mjs';
+import { actsStart, lashHit, lashLand, actIntents, actBegins, actInfo, barsSnap, barsTotal, barsTurn } from './acts.mjs';
 import { FB, fbBid, fbStart, fbPower, fbLanded, fbMisses, fbSlowed, fbBroke, fbAim, fbCommand, fbDealt, fbVerb, FB_VERBS, fbCycle, fbIntents, fbLogged, surfShut, fbCmdHit, fbShrugs, fbTaken, fbCap } from './floorbosses.mjs';
 import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
@@ -170,8 +170,8 @@ export const livingParts = (s) => parts(s).filter(alive);
 export const attackers = (s) => livingParts(s).filter((p) => p.attack);
 
 export function virusIntegrity(s) {
-  const all = parts(s);
-  return { current: all.reduce((n, p) => n + p.integrity, 0), max: all.reduce((n, p) => n + p.max, 0) };
+  const all = parts(s), cur = all.reduce((n, p) => n + p.integrity, 0), max = all.reduce((n, p) => n + p.max, 0);
+  return s.encounter?.actBars ? barsTotal(s, cur, max) : { current: cur, max }; // act bars (acts.mjs): the whole fight, every act to come at full
 }
 
 // Seconds per cycle come from the player's speed setting. Rules count cycles, so balance is unchanged.
@@ -2233,6 +2233,7 @@ function engage(s) {
   actsStart(s); // a P4 boss's beat on its part (acts.mjs)
   { const v = s.encounter.virus, W = BOSSES[v?.boss]?.watchdog; if (W) v.watchdog = { at: s.encounter.cycle + W.every - 1, act: 0 }; } // the Resident's Watchdog counts from the first cycle
   fbStart(s); // the floor 2 and 3 bosses' rules (floorbosses.mjs)
+  barsSnap(s); // act bars: the board act 2 refills (acts.mjs)
   tellStart(s); // a solo fight's tells (tells.mjs)
 }
 
@@ -3111,7 +3112,6 @@ export function hit(s, p, base, opts = {}) {
   const marks = [crit && on(s, p, 'exposed') && 'exposed', opts.dot && !opts.flat && on(s, p, 'tagged') && 'tagged', !opts.flat && on(s, p, 'quarantined') && 'quarantined'].filter(Boolean);
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) notes.push('weak point');
   if (dealt > 0 && holdsPart(e, p)) dealt = Math.min(dealt, Math.max(0, p.integrity - 1)); // Uptime: the virus can't be broken (objectives.mjs)
-  if (dealt > 0 && p.core) { const cap = actCap(s, p); if (dealt > cap) { notes.push(`held at its tick: ${dealt - cap} lost`); dealt = cap; } } // a boss's ♛ holds at its next act tick until that act begins (acts.mjs)
   const above = p.integrity >= p.max / 4;
   p.integrity -= dealt;
   if (above && p.integrity > 0 && p.integrity < p.max / 4) daemonsOn(s, 'low', { part: p.id }); // Reaper
@@ -3185,6 +3185,7 @@ export function hit(s, p, base, opts = {}) {
 function bossPhases(s) {
   const e = s.encounter, v = e.virus;
   if (!v.boss) return;
+  const turned = barsTurn(s); // act bars (acts.mjs): every part broken, the next act's board comes back at full
   const life = virusIntegrity(s), share = life.max ? life.current / life.max : 0;
   for (const ph of v.phases || []) {
     if (ph.done || share > ph.at || !life.current) continue;
@@ -3215,9 +3216,11 @@ function bossPhases(s) {
       if (act === 'doppelganger') say = doppelganger(s);
       if (FB_VERBS.has(act)) say = fbVerb(s, act) || say; // the floor 2 and 3 bosses (floorbosses.mjs)
     }
-    // An act crossed on its ♛'s tick (interrupt.mjs rule a): the act break (actbreak.mjs) bursts that tick and names the act.
+    // The act break (actbreak.mjs) names the act, then the board's parts come back (act bars, acts.mjs).
+    // Act bars: the board refilled (the act break names the act, then the parts come back in).
     const crown = e.bossRule === 'a' && livingParts(s).find((x) => x.core), a = crown && actInfo(v);
-    emit(s, 'phase', `PHASE ${v.phases.filter((x) => x.done).length + 1}. ${say}`, { boss: v.boss, ...(a ? { act: { ...a, part: crown.id, at: TICKS.act[v.phases.indexOf(ph)] ?? null } } : {}) });
+    if (turned === ph) barsSnap(s);
+    emit(s, 'phase', `PHASE ${v.phases.filter((x) => x.done).length + 1}. ${say}`, { boss: v.boss, ...(a ? { act: { ...a, part: crown.id, at: null, refill: true } } : {}) });
   }
   watchdog(s);
   if (v.enrageAt && e.cycle === v.enrageAt - ENRAGE.warn) emit(s, 'warning', `${v.name} enrages in ${ENRAGE.warn} cycles. Then every attack lands every cycle.`);
@@ -3229,9 +3232,9 @@ function bossPhases(s) {
 }
 
 // The Resident's Watchdog (BOSSES watchdog, docs/solo-bosses.md "Working the ♛"): every `every` cycles its ♛ stands
-// above its next tick, every other part patches a ◆ (up to its full). Crossing a tick restarts the count; past its last
-// tick there is none.
-export const watchdogIn = (s) => { const v = s.encounter?.virus, c = v?.watchdog && livingParts(s).find((x) => x.core); return c?.ticks?.some((t) => t.phase != null && !t.spent) ? Math.max(0, v.watchdog.at - s.encounter.cycle) : null; };
+// above its next tick, every other part patches a ◆ (up to its full). Each act restarts the count; past its last tick
+// there is none.
+export const watchdogIn = (s) => { const v = s.encounter?.virus, c = v?.watchdog && livingParts(s).find((x) => x.core); return c?.ticks?.some((t) => (s.encounter.actBars || t.phase != null) && !t.spent) ? Math.max(0, v.watchdog.at - s.encounter.cycle) : null; };
 function watchdog(s) {
   const e = s.encounter, v = e.virus, W = BOSSES[v.boss]?.watchdog;
   if (!W) return;
@@ -3398,7 +3401,8 @@ function breakPart(s, p) {
   const e = s.encounter;
   // +1 research on the part (not a crewmate's break, not a fragment), for its first break in the fight only: a part
   // that comes back (a Trojan's redeployed Courier, a Mirror's rebooted twin) can't be farmed. Cuts and tells still count.
-  if (!p.brokeOnce) gainResearch(s, e.virus, p, 'break');
+  const again = e.actBars && e.metrics.breakOrder.includes(p.id); // act bars (acts.mjs): a part broken in an earlier act pays nothing more
+  if (!p.brokeOnce && !again) gainResearch(s, e.virus, p, 'break');
   p.brokeOnce = true;
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
@@ -3469,13 +3473,13 @@ function breakPart(s, p) {
   if (p.loot) e.lastLoot = p.loot; // a part that drops components broke (a Harvester's and an elite's one more: floorplan.mjs)
   // Components: 60% in a room fight, an elite's always, 35% elsewhere (sockets.mjs); a network rich in components
   // (network.mjs) and a part you've mastered (research.mjs, 25% more) on top.
-  if (p.loot && rand(s) < componentChance(s, e, CONFIG.salvageChance) * richMult(s, fightNet(s), 'salvage') * masteryDrop(s, e.virus, p)) {
+  if (p.loot && !again && rand(s) < componentChance(s, e, CONFIG.salvageChance) * richMult(s, fightNet(s), 'salvage') * masteryDrop(s, e.virus, p)) {
     gainComponents(s, 1);
     e.metrics?.loot?.push(p.loot);
     emit(s, 'loot', 'Component recovered.', { target: p.id });
   }
   // An .exe build (exe.mjs) broken: one more component, and the Codex learns the build (codex-view.mjs).
-  if (p.exe) {
+  if (p.exe && !again) {
     gainComponents(s, 1);
     emit(s, 'loot', `The ${p.name} gives up a component.`, { target: p.id });
     (s.exeSeen ||= {})[p.exe] = true;
@@ -3742,8 +3746,9 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'status', count > 0 ? `${count === 1 ? 'A helper' : count + ' helpers'} on the ${target.name}, dealing ${dmg} every cycle for ${n} cycles.` : `Helper cap reached (${helperCap(s)}).`, { target: target.id, mark: count > 0 ? 'helper' : null, ability: id });
   }
   // Jam and Barrier spend one of your helpers on that part.
-  if (a.recall) {
-    const h = helpersOn(s, target)[0];
+  const recalled = a.recall && helpersOn(s, target)[0]; // gone since you sent the command (its part broke): nothing to recall
+  if (recalled) {
+    const h = recalled;
     e.helpers.splice(e.helpers.indexOf(h), 1);
     if (id === 'barrier') { const amount = h.damage * h.left; e.shield = (e.shield || 0) + amount; emit(s, 'status', `Barrier turns a helper into a ${amount} shield (${e.shield} in all).`, { mark: 'shield', ability: id }); }
   }

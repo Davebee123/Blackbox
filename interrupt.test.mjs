@@ -180,32 +180,26 @@ test('every fight carries ticks now (R1): a home fight cuts too; a crew boss and
 
 // ---------- DEADBOLT under the three boss rules ----------
 const boss = (rule) => roomFight({ kind: 'core', boss: rule });
-test('boss rule (a): the core part\'s ticks are its phases; its other parts interrupt as usual', () => {
-  const s = boss('a'), e = s.encounter, v = e.virus, core = part(s, 'encryptor'), pulse = part(s, 'pulse');
+test('boss rule (a): a boss with phases fights them as act bars; its ♛ interrupts like every other part', () => {
+  const s = boss('a'), e = s.encounter, v = e.virus, core = part(s, 'encryptor');
   assert.equal(e.bossRule, 'a');
-  assert.ok(core.core && core.ticks.every((t) => t.phase != null), 'phase ticks on the ♛ part');
-  assert.ok(pulse.ticks.every((t) => t.phase == null), 'plain ticks on the rest');
+  assert.ok(e.actBars);
+  assert.ok(core.core && core.ticks.every((t) => t.phase == null), 'plain ticks on the ♛ part');
   assert.ok(v.phases.every((ph) => ph.at < 0), 'no phase by total Integrity');
-  park(s); bare(core); bare(pulse);
-  // The total drops well past 60%: nothing.
-  pulse.integrity = 1;
-  command(s, 'hold'); resolveCycle(s);
-  assert.ok(v.phases.every((ph) => !ph.done), 'the total alone starts nothing');
-  // Across its 60% tick, with its move due: the phase starts, and the move isn't cancelled.
+  park(s); bare(core);
+  // Across its half tick with its move due: the move is cancelled, and no act starts.
   core.attack.due = e.cycle;
-  above(core, 0.6);
+  above(core, 0.5);
   core.lockHp = 0;
   strike(s, core, 5);
-  assert.equal(core.attack.due, e.cycle, 'a phase tick cancels nothing');
+  assert.equal(core.attack.due, e.cycle + core.attack.interval, 'cancelled');
+  command(s, 'hold'); resolveCycle(s);
+  assert.ok(v.phases.every((ph) => !ph.done));
+  // Every part broken: the next act.
+  for (const p of v.parts) p.integrity = 0;
   command(s, 'hold'); resolveCycle(s);
   assert.equal(v.phases[0].done, true, 'phase 2: DEADBOLT re-arms');
   assert.ok(s.logs.some((x) => x.type === 'phase'));
-  assert.ok(core.armor > 0, 're-armed');
-  // The pulse still interrupts.
-  const p2 = part(s, 'pulse');
-  p2.integrity = p2.max; p2.ticks.forEach((t) => { t.spent = false; }); bare(p2); p2.attack.due = e.cycle; above(p2, 0.5);
-  strike(s, p2, 5);
-  assert.equal(p2.attack.due, e.cycle + p2.attack.interval);
 });
 
 test('boss rule (b): every part interrupts, phases stay on total Integrity, and it brings one more charge', () => {

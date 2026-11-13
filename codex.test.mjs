@@ -148,9 +148,9 @@ test("bosses are ??? until fought; then their phases, rule and tells' shape", ()
   const html = codexPageMarkup(s, 'boss:nb-deadbolt');
   assert.match(html, /<h1>DEADBOLT<\/h1>/);
   assert.match(html, /<span>Your fights<\/span><strong class="you">1<\/strong>/);
-  // A boss guide (WoW's dungeon journal): its phases named by tick, their mechanics only after research; no signature,
+  // A boss guide (WoW's dungeon journal): its phases by act, their mechanics only after research; no signature,
   // Integrity, enrage or blurb.
-  assert.match(html, /60%<\/b><div><b>Phase 1<\/b>/);
+  assert.match(html, /Act 2<\/b><div><b>Act 2<\/b>/, 'its phases read as acts');
   assert.match(html, /Research 50% to read it\./, 'locked until researched');
   for (const k of ['Signature', '<span>Integrity</span><strong', 'Enrages', BOSSES['nb-deadbolt'].about]) assert.ok(!html.includes(k), `no ${k}`);
   s.research ||= {};
