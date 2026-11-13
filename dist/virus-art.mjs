@@ -10,6 +10,7 @@
 import { bossShape, bossKit, BOSS_BUILD, BOSS_STRIKES } from './boss-art.mjs';
 
 const COLORS = { amber: '#f1b92f', bright: '#fff2c8', hot: '#ff5b3d', dim: '#7e5311', gold: '#ffd85c', deep: '#a8741c' };
+const BASE = { ...COLORS }; // a floor's stage tints the body (stage.mjs colors); hot, a strike, stays red
 const RAMP = ' .,:-=+*#%@'; // dark → lit
 const SHARDS = '#*+=:.01';
 const BITS = '0101010#*';
@@ -540,6 +541,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     const S = stage?.update(now) ? stage : null;
     if (S && v.id !== enteredFor) { enteredFor = v.id; S.enter(now); }
     const shot = S?.cam(now);
+    Object.assign(COLORS, S?.colors() || BASE);
     cam = shot?.dist && !facing ? shot.dist : camBase; // a boss keeps its own distance, fitted to the window
     const motion = canMove();
     const moving = motion && s.encounter.phase === 'active' && !s.encounter.paused;

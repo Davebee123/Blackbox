@@ -44,3 +44,31 @@ export function move(el, kind) {
   const b = kind === 'flap' ? labelOf(el) : null; if (!b) return;
   letters(b).forEach(({ s, ch }, i) => setTimeout(() => flip(s, ch), i * 30));
 }
+
+// ---------- the spoils, the floor's way ----------
+// A won fight's card (app.js showSpoils) arrives as the floor would show it: the Sprawl's lines flicker on like a sign,
+// Backhaul's letters flip in, Coldline's card surfaces, Bedrock's lines type in. Other floors keep the card's own way in.
+export const SPOILS_MOTION = { 1: 'flicker', 2: 'flap', 4: 'surface', 8: 'type' };
+const FLICKER = [{ opacity: 0 }, { opacity: 0.8, offset: 0.1 }, { opacity: 0, offset: 0.2 }, { opacity: 0.6, offset: 0.35 }, { opacity: 0.1, offset: 0.45 }, { opacity: 1, offset: 0.6 }, { opacity: 1 }];
+// The leaf texts of a line, in reading order (what types or flips).
+const textsOf = (r) => [...r.querySelectorAll('*')].filter((x) => !x.children.length && x.textContent.trim() && !/sp-bar|sp-was|sp-now|ico/.test(x.className));
+async function typeLeaf(x) { const text = x.textContent; x.textContent = ''; x.style.visibility = ''; const caret = document.createElement('i'); caret.className = 'bfx-caret'; x.after(caret); for (const c of text) { if (!x.isConnected) return; x.textContent += c; await later(18 + Math.random() * 14); } caret.remove(); }
+async function flapLeaf(x) {
+  x.style.visibility = '';
+  const ls = letters(x); ls.forEach(({ s }) => (s.textContent = ' '));
+  await Promise.all(ls.map(async ({ s, ch }, i) => { await later(Math.min(i * 22, 400)); for (let k = 1 + Math.floor(Math.random() * 2); k > 0; k--) { flip(s, rnd()); await later(120); } flip(s, ch); }));
+}
+export async function spoilsIn(el, floor) {
+  const kind = SPOILS_MOTION[floor]; if (!kind || !el) return;
+  const card = el.querySelector('.sp-card'), lines = [...el.querySelectorAll('.sp-head, .sp-xp, .sp-level, .sp-row, .sp-go')];
+  lines.forEach((r) => { r.style.animation = 'none'; r.style.opacity = '0'; });
+  if (kind === 'surface') card?.animate([{ transform: 'translateY(40px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 700, easing: 'cubic-bezier(.2,.8,.3,1)' });
+  for (const [i, r] of lines.entries()) {
+    await later(i ? 150 : 120);
+    if (!el.isConnected || el.hidden) return;
+    r.style.opacity = '1';
+    if (kind === 'flicker') r.animate(FLICKER, 380);
+    else if (kind === 'surface') r.animate([{ transform: 'translateY(10px)', opacity: 0, clipPath: 'inset(0 0 100% 0)' }, { transform: 'none', opacity: 1, clipPath: 'inset(0 0 0 0)' }], { duration: 420, easing: 'ease-out' });
+    else { const xs = textsOf(r); xs.forEach((x) => (x.style.visibility = 'hidden')); for (const x of xs) await (kind === 'type' ? typeLeaf(x) : flapLeaf(x)); }
+  }
+}

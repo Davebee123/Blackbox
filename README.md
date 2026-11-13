@@ -243,7 +243,8 @@ comment saying what it does.
 | `dist/chipfx.mjs` | Themed timeline chips: a part's theme (docs/chip-themes.md) played faint inside its chips at +1 and in Now, and its strike into your bar when it goes off (STRIKE_PLAN: when a strike does what, for its sound). |
 | `dist/virus-art.mjs` | Each virus as animated 3D ASCII art: each body's core and limbs attack their own ways out of its window (`STRIKE_OF`, `STRIKES`), a broken part dissolves into 1s and 0s. |
 | `dist/stage.mjs` | The floor's place in the render window behind the virus: its scene, light, camera, a new virus's entrance, a broken part's physics, its reflection. |
-| `dist/boardfx.mjs` | The board's floor motion: a new chip's name typed in or flipped in, a moving chip flapping once. |
+| `dist/boardfx.mjs` | The board's floor motion: a new chip's name typed in or flipped in, a moving chip flapping once; the spoils card arriving the floor's way. |
+| `dist/ground.mjs` | The floor's material under the rooms map: a texture in the map's SVG, clear of rooms and links. |
 | `dist/boss-art.mjs` | Each boss's own body for it (`BOSS_SHAPE`, the Resident's by family): its parts are the model's regions, the ones that join mid-fight modelled from the start. A boss faces you (`BOSS_SWING`) and is fitted to the window. |
 | `dist/nocarrier.mjs`, `dist/nocarrier.css` | Losing a fight: static and NO CARRIER, then the Disconnected card. |
 | `dist/class-emblems.mjs` | The class picker's ASCII emblems. |
