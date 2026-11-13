@@ -1234,7 +1234,7 @@ export const BOSSES = {
     phases: [{ at: 0.6, do: ['reinstate'], name: 'Reinstatement', emote: 'Coverage reinstated, at the adjusted rate.', say: 'GRACE PERIOD reinstates. Grace is 2 cycles, and a part that lapses refills its ◆ too.' }, { at: 0.3, do: ['accelerate'], name: 'Acceleration', emote: 'Acceleration clause. The full balance is due.', say: 'GRACE PERIOD accelerates. Grace is 1 cycle.' }] },
   // EXIT NODE: floor 5's floor job (arcs.mjs), PALEMASK hiding ACTUARY's backups. Every 6 cycles it rolls its own bars
   // back to an image taken 2 cycles before.
-  exitnode: { long: { hp: 0.9, dmg: 0.8, enrageAt: 40 }, name: 'EXIT NODE', family: 'ghostroot', author: 'palemask', own: true, crown: 'core', floor: 30, hp: 0.85, dmg: 0.9, enrageAt: 18, acts: { beat: 'none' },
+  exitnode: { long: { hp: 0.9, dmg: 0.8, enrageAt: 40 }, name: 'EXIT NODE', family: 'ghostroot', author: 'palemask', own: true, crown: 'core', floor: 30, hp: 0.8, dmg: 0.75, enrageAt: 18, acts: { beat: 'none' },
     extra: [{ id: 'core', name: 'Core', integrity: 64, armor: 1, loot: 'Relay Descriptor', special: true, role: 'core', attack: { name: 'Surge', effect: 'damage', amount: 16, interval: 3, first: 3 } },
       { id: 'v7', name: 'Backup v7', integrity: 26, armor: 1, loot: 'Snapshot v7', role: 'front', attack: { name: 'Surge', effect: 'damage', amount: 8, interval: 4, first: 2 } },
       { id: 'v6', name: 'Backup v6', integrity: 24, armor: 1, loot: 'Snapshot v6', role: 'backup', attack: { name: 'Surge', effect: 'damage', amount: 7, interval: 4, first: 4 } },

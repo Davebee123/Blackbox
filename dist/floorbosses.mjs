@@ -70,7 +70,7 @@ export const FB = {
   vote: { every: 4, pass: 0.15, harder: 0.3, limit: 0.2 }, // limit: the most one hit takes off a Node while another stands, of its max // pass: how far under the level it is restored to the most damaged Node must be; harder: each vote that passes, every Node's hits
   overdraft: 3, // Overdraft: cycles the rest of the hit lands over
   grace: { days: 3, drain: 1, back: 0.3, fee: 1, lead: 2, rider: 0.15, size: 3.5 }, // days: a part's grace, in cycles; drain: what each act takes off it (3, 2, 1); back: what a part the Reinstatement brings back returns with, of its max; size: a lapse charge's hit against a plain charge's; fee: each lapse charge that landed, every later one that much bigger; lead: a lapse's charge rides its next attack this many cycles away or more; rider: the rest's hits while the Rider stands
-  roll: { every: 6, back: 2, charge: 0.25 }, // a restore every 6 cycles, to the image taken 2 cycles before it; charge: the share of what it restores that lands on you (Chargeback)
+  roll: { every: 6, back: 2, charge: 0.25, remount: 0.5 }, // a restore every 6 cycles, to the image taken 2 cycles before it; charge: the share of what it restores that lands on you (Chargeback)
   swarm: { sweep: 5, soonest: 2, grows: 3, cams: 4, limit: 0.15, gnaw: 2, back: 0.3 }, // back: what a part the Botnet re-infects returns with, of a Camera's max; // soonest: each fragment a sweep hatches brings the next sweep a cycle sooner, down to this; limit: the most one hit takes off a part, of its max // grows: cycles a fragment lives before it is a Camera; cams: Cameras at once
 };
 export const BUYER = { tollgate: 'TOLLGATE', swarmline: 'SWARMLINE', palemask: 'PALEMASK' };
@@ -222,7 +222,7 @@ export const canCall = (p) => !!p && p.integrity >= FB.stack.under * p.max;
 export function fbAim(s, intent, a) {
   const v = s.encounter?.virus;
   // EXIT NODE's Front: while Backup v7 stands, a one-part command at the Core lands on it.
-  if (v?.roll && a && ['part', 'attack'].includes(a.target) && a.verb !== 'burn' && !a.helper) {
+  if (v?.roll && a && ['part', 'attack'].includes(a.target) && a.verb !== 'burn' && !a.helper && !a.recall) { // a recall (Jam, Barrier) spends a helper on its own target
     const t = part(s, intent.target), fr = outerUp(s);
     if (t?.core && fr) { emit(s, 'status', `FRONT. Your ${a.name} at the ${t.name} lands on ${fr.name}.`, { target: fr.id, fronted: true }); return { ...intent, target: fr.id }; }
   }
@@ -345,9 +345,19 @@ export function fbShrugs(s, p, opts, base) {
   if (v?.desk && p.role === 'trader' && base > 0) { if (p.answered !== s.encounter.cycle || opts.dot || opts.by) emit(s, 'status', `${opts.by ? opts.by + ': ' : ''}the ${p.name} takes no damage while the Desk stands.`, { target: p.id, books: true }); return true; }
   // CAMSWARM: a fragment is shielded while the part that hatched it stands.
   if (v?.swarm && base > 0 && !opts.unshield && parentOf(s, p)) { emit(s, 'status', `${opts.by ? opts.by + ': ' : ''}${p.name} is shielded by the ${parentOf(s, p).name}.`, { target: p.id, shielded: true }); return true; }
+  // GRACE PERIOD's Balance due: the Policy takes nothing while a lapse charge is pending.
+  if (v?.grace && p.core && base > 0 && balanceDue(s)) { emit(s, 'status', `${opts.by ? opts.by + ': ' : ''}BALANCE DUE. The ${p.name} takes nothing while a lapse charge is pending.`, { target: p.id, due: true }); return true; }
   if (!v?.swarm?.lockout || !p.core || !(base > 0) || !camerasOf(s).length) return false;
   emit(s, 'status', `${opts.by ? opts.by + ': ' : ''}LOCKOUT. The ${p.name} takes nothing while a Camera stands.`, { target: p.id, lockout: true });
   return true;
+}
+
+// A broken part boots back (GRACE PERIOD's Reinstatement, EXIT NODE's Remount): a share of its max, its
+// ◆ full, fresh ticks, its attack two cycles off.
+function revive(s, p, share) {
+  Object.assign(p, { integrity: Math.max(1, Math.round(p.max * share)), armor: p.maxArmor, patchAt: null, ticks: null });
+  if (p.attack) p.attack.due = s.encounter.cycle + 2;
+  return p;
 }
 
 // ---------- GRACE PERIOD: Grace ----------
@@ -372,6 +382,8 @@ function pay(s, p) {
   const t = (tellsOf(s)?.list || []).find((x) => x.told && x.id === `lapse:${p.id}` && tellNext(s, x) <= s.encounter.cycle);
   if (t) callOff(s, t, `PAID. The ${p.name}'s lapse is called off.`);
 }
+// Balance due (the Acceleration): a lapse charge pending on any part.
+export const balanceDue = (s) => !!s.encounter?.virus?.grace?.due && (tellsOf(s)?.list || []).some((t) => t.told && /^lapse:/.test(t.id) && alive(part(s, t.part)));
 // The Rider stands: the rest hit harder.
 export const riderUp = (s) => livingParts(s).some((x) => x.role === 'rider');
 
@@ -479,7 +491,8 @@ export function fbBroke(s, p) {
   // SHAKEDOWN: a Demand broken while the Collector runs the clock is a missed payment: the time left is halved.
   if (p.deadline && v.ransom && livingParts(s).some((x) => x.core)) { const was = v.ransom.left; v.ransom.left = Math.max(1, Math.ceil(was / 2)); emit(s, 'warning', `MISSED PAYMENT. The ${p.name} is gone: the Ransom Clock drops from ${was} to ${v.ransom.left}.`, { target: p.id, ransom: v.ransom.left }); }
   // EXIT NODE: the image taken as Backup v6 breaks is the Cold image's.
-  if (v.roll && p.id === 'v6' && !v.roll.cold) { v.roll.cold = image(v); if (v.roll.coldOn) emit(s, 'warning', `COLD IMAGE. Every restore now returns to this moment.`, { target: p.id, cold: true }); }
+  if (v.roll && p.id === 'v6') { v.roll.cold = image(v); // its latest break
+    if (v.roll.coldOn) emit(s, 'warning', `COLD IMAGE. Every restore now returns to this moment.`, { target: p.id, cold: true }); }
   // CAMSWARM: the fragments a part hatched drop with it.
   if (v.swarm) { const fr = livingParts(s).filter((x) => x.kind === 'fragment' && x.parent === p.id); for (const x of fr) x.integrity = 0; if (fr.length) emit(s, 'broken', `${fr.length === 1 ? 'Its fragment drops' : `Its ${fr.length} fragments drop`} with the ${p.name}.`, { target: fr[0].id, dropped: true }); }
   // NIGHT DESK: its traders go with the Desk.
@@ -567,15 +580,26 @@ export function fbVerb(s, act) {
   // Each act drains a cycle of grace from every part (the Reinstatement's lapses refill ◆ too).
   if ((act === 'reinstate' || act === 'accelerate') && v.grace) {
     if (act === 'reinstate') v.grace.reinstate = true;
+    if (act === 'accelerate') v.grace.due = true;
     v.grace.days = Math.max(1, v.grace.days - FB.grace.drain);
     for (const p of graceOf(s)) p.grace = Math.min(p.grace, v.grace.days);
     // Reinstatement: every broken part comes back, at a share of its max, its ◆ full, on the new grace.
     const back = act === 'reinstate' && FB.grace.back ? v.parts.filter((p) => p.grace != null && p.integrity <= 0) : [];
-    for (const p of back) { Object.assign(p, { integrity: Math.max(1, Math.round(p.max * FB.grace.back)), armor: p.maxArmor, patchAt: null, ticks: null, grace: v.grace.days }); if (p.attack) p.attack.due = e.cycle + 2; }
+    for (const p of back) { revive(s, p, FB.grace.back); p.grace = v.grace.days; }
     if (back.length) return `GRACE PERIOD reinstates ${back.map((p) => `the ${p.name}`).join(' and ')}, at ${Math.round(FB.grace.back * 100)}%. Grace is ${v.grace.days} cycles now.`;
   }
-  if (act === 'keptcharges' && v.roll) v.roll.kept = true;
-  if (act === 'coldimage' && v.roll) { v.roll.coldOn = true; if (v.roll.cold) return 'EXIT NODE goes cold. Every restore returns to the image taken as Backup v6 broke.'; }
+  // Remount: each act boots its backup back if it broke (v6 Fronts the Core while v7 is down); Kept charges and the Cold
+  // image ride with them.
+  if (act === 'keptcharges' && v.roll) {
+    v.roll.kept = true;
+    const v6 = v.parts.find((p) => p.id === 'v6');
+    if (v6 && v6.integrity <= 0) { revive(s, v6, FB.roll.remount); if (!livingParts(s).some((x) => x.role === 'front')) v6.role = 'front'; return `EXIT NODE mounts v6: Backup v6 boots back at ${v6.integrity}/${v6.max}${v6.role === 'front' ? ', and Fronts the Core' : ''}. A charge cut in the 2 cycles before a restore comes back at it.`; }
+  }
+  if (act === 'coldimage' && v.roll) {
+    v.roll.coldOn = true;
+    const v5 = v.parts.find((p) => p.id === 'v5'), up = v5 && v5.integrity <= 0 ? revive(s, v5, FB.roll.remount) : null;
+    if (up || v.roll.cold) return `EXIT NODE goes cold.${up ? ` Backup v5 boots from cold storage at ${up.integrity}/${up.max}.` : ''}${v.roll.cold ? ' Every restore returns to the image taken as Backup v6 broke.' : ''}`;
+  }
   if (act === 'lockout' && v.swarm) {
     v.swarm.lockout = true;
     const hive = livingParts(s).find((x) => x.core);
