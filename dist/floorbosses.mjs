@@ -43,8 +43,9 @@
 //                   they hit). A part left to run out lapses: its next attack is a charge, 3.5 times a plain one's, and
 //                   your command on it on the cycle it lands calls it off. Each lapse charge that lands makes every later
 //                   one 100% bigger (the balance).
-//                   While the Rider stands the rest hit 15% harder. Act 2 (Reinstatement): a lapse refills the part's ◆
-//                   too. Act 3 (Acceleration): grace is 2, and a lapse takes a cycle off every other part's.
+//                   While the Rider stands the rest hit 15% harder. Each act drains a cycle of grace (3, 2, 1). Act 2
+//                   (Reinstatement): every broken part comes back at 30%, ◆ full, and a lapse refills ◆ too. Act 3
+//                   (Acceleration): grace is 1.
 //   EXIT NODE       Rollback: every 6 cycles it restores its own bars (Integrity and ◆) to an image taken 2 cycles before,
 //                   and a quarter of what it gives back lands on you (Chargeback); a broken part stays broken. After each
 //                   restore the Core charges Glass Cut, in the next window when its timer allows. Front: while Backup v7
@@ -68,7 +69,7 @@ export const FB = {
   desk: { full: 4, half: 0.5, grow: 0.15, margin: 0.25, limit: 0.12, backlog: 0, heal: 0.04 }, // heal: what each trade settled under Finality gives the Desk back, of its max; limit: the most one hit takes off the Desk, of its max; backlog: trades pending as the fight opens, on its traders (none since the Night Clerk brings one with the night shift) // margin: each Table full opens every later trade that much bigger, for the fight
   vote: { every: 4, pass: 0.15, harder: 0.3, limit: 0.2 }, // limit: the most one hit takes off a Node while another stands, of its max // pass: how far under the level it is restored to the most damaged Node must be; harder: each vote that passes, every Node's hits
   overdraft: 3, // Overdraft: cycles the rest of the hit lands over
-  grace: { days: 3, accel: 2, fee: 1, lead: 2, rider: 0.15, size: 3.5 }, // days: a part's grace, in cycles (accel: under the Acceleration); size: a lapse charge's hit against a plain charge's; fee: each lapse charge that landed, every later one that much bigger; lead: a lapse's charge rides its next attack this many cycles away or more; rider: the rest's hits while the Rider stands
+  grace: { days: 3, drain: 1, back: 0.3, fee: 1, lead: 2, rider: 0.15, size: 3.5 }, // days: a part's grace, in cycles; drain: what each act takes off it (3, 2, 1); back: what a part the Reinstatement brings back returns with, of its max; size: a lapse charge's hit against a plain charge's; fee: each lapse charge that landed, every later one that much bigger; lead: a lapse's charge rides its next attack this many cycles away or more; rider: the rest's hits while the Rider stands
   roll: { every: 6, back: 2, charge: 0.25 }, // a restore every 6 cycles, to the image taken 2 cycles before it; charge: the share of what it restores that lands on you (Chargeback)
   swarm: { sweep: 5, soonest: 2, grows: 3, cams: 4, limit: 0.15, gnaw: 2, back: 0.3 }, // back: what a part the Botnet re-infects returns with, of a Camera's max; // soonest: each fragment a sweep hatches brings the next sweep a cycle sooner, down to this; limit: the most one hit takes off a part, of its max // grows: cycles a fragment lives before it is a Camera; cams: Cameras at once
 };
@@ -100,7 +101,7 @@ export function fbStart(s) {
   }
   if (v.boss === 'byzantine') { v.vote = { at: e.cycle + FB.vote.every - 1, passed: 0, traitor: null, fork: false }; for (const p of v.parts) if (p.role === 'node') p.limit = FB.vote.limit; }
   if (v.boss === 'camswarm') { v.swarm = { at: e.cycle + FB.swarm.sweep - 1, every: FB.swarm.sweep, n: 0, botnet: false, lockout: false }; for (const p of v.parts) p.limit = FB.swarm.limit; }
-  if (v.boss === 'graceperiod') { v.grace = { days: FB.grace.days, reinstate: false, accel: false }; v.parts.forEach((p, i) => { p.grace = FB.grace.days + i; }); } // staggered: left alone, one lapses at a time
+  if (v.boss === 'graceperiod') { v.grace = { days: FB.grace.days, reinstate: false }; v.parts.forEach((p, i) => { p.grace = FB.grace.days + i; }); } // staggered: left alone, one lapses at a time
   if (v.boss === 'exitnode') { v.roll = { at: e.cycle + FB.roll.every - 1, images: {}, cold: null, coldOn: false, kept: false, keep: [] }; v.roll.images[e.cycle - 1] = image(v); }
   if (v.boss === 'recursion') v.stack = { callAt: e.cycle + FB.stack.call - 1, n: v.parts.filter((p) => p.frame != null).length, ret: false, overflow: false };
 }
@@ -352,7 +353,7 @@ export function fbShrugs(s, p, opts, base) {
 // ---------- GRACE PERIOD: Grace ----------
 export const graceOf = (s) => livingParts(s).filter((p) => p.grace != null);
 // A part's grace runs out (fbCycle): its next attack is a charge, bigger for each lapse charge that landed before it
-// (unpaid, on any part: the balance), and its grace starts over. Your command on it before the charge lands calls it off (fbCmdHit). Under the Reinstatement
+// (unpaid, on any part: the balance), and its grace starts over. Your command on it as the charge lands calls it off (pay). Under the Reinstatement
 // its ◆ refill too.
 export const feeOf = (v) => FB.grace.size * (1 + FB.grace.fee * (v?.grace?.fees || 0));
 function lapse(s, p) {
@@ -563,8 +564,16 @@ export function fbVerb(s, act) {
     for (const p of v.parts.filter((x) => x.kind === 'system' && x.integrity === 0 && !x.core && x.role !== 'c2' && x.role !== 'camera')) if (camerasOf(s).length < FB.swarm.cams) { const was = p.name; Object.assign(p, { armor: 0, maxArmor: 0, patchAt: null, ticks: null }); camera(s, p, true); p.integrity = Math.max(1, Math.round(p.max * FB.swarm.back)); back.push(`${was} as ${p.name}`); }
     if (back.length) return `CAMSWARM links its Cameras and re-infects: ${back.join(', ')}. Each Camera fires when the Beacon lands.`;
   }
-  if (act === 'reinstate' && v.grace) v.grace.reinstate = true;
-  if (act === 'accelerate' && v.grace) { v.grace.accel = true; v.grace.days = FB.grace.accel; for (const p of graceOf(s)) p.grace = Math.min(p.grace, v.grace.days); }
+  // Each act drains a cycle of grace from every part (the Reinstatement's lapses refill ◆ too).
+  if ((act === 'reinstate' || act === 'accelerate') && v.grace) {
+    if (act === 'reinstate') v.grace.reinstate = true;
+    v.grace.days = Math.max(1, v.grace.days - FB.grace.drain);
+    for (const p of graceOf(s)) p.grace = Math.min(p.grace, v.grace.days);
+    // Reinstatement: every broken part comes back, at a share of its max, its ◆ full, on the new grace.
+    const back = act === 'reinstate' && FB.grace.back ? v.parts.filter((p) => p.grace != null && p.integrity <= 0) : [];
+    for (const p of back) { Object.assign(p, { integrity: Math.max(1, Math.round(p.max * FB.grace.back)), armor: p.maxArmor, patchAt: null, ticks: null, grace: v.grace.days }); if (p.attack) p.attack.due = e.cycle + 2; }
+    if (back.length) return `GRACE PERIOD reinstates ${back.map((p) => `the ${p.name}`).join(' and ')}, at ${Math.round(FB.grace.back * 100)}%. Grace is ${v.grace.days} cycles now.`;
+  }
   if (act === 'keptcharges' && v.roll) v.roll.kept = true;
   if (act === 'coldimage' && v.roll) { v.roll.coldOn = true; if (v.roll.cold) return 'EXIT NODE goes cold. Every restore returns to the image taken as Backup v6 broke.'; }
   if (act === 'lockout' && v.swarm) {
@@ -624,15 +633,8 @@ export function fbCycle(s) {
     }
   }
   if (v.grace) {
-    // Paid parts start over; the rest count down. Then each part at 0 lapses. Under the Acceleration a lapse takes a
-    // cycle off every other part (one at most a cycle each), and one it takes to 0 lapses too: the chain.
-    const due = [], took = new Set();
-    for (const p of graceOf(s)) { if (p.paidAt === e.cycle) p.grace = v.grace.days; else if (--p.grace <= 0) due.push(p); }
-    while (due.length) {
-      const p = due.shift();
-      lapse(s, p);
-      if (v.grace.accel) for (const x of graceOf(s)) if (x !== p && x.lapsedAt !== e.cycle && !due.includes(x) && !took.has(x)) { took.add(x); if (--x.grace <= 0) due.push(x); }
-    }
+    // Paid parts start over; the rest count down, and each at 0 lapses.
+    for (const p of graceOf(s)) { if (p.paidAt === e.cycle) p.grace = v.grace.days; else if (--p.grace <= 0) lapse(s, p); }
   }
   if (v.roll) {
     const R = v.roll;

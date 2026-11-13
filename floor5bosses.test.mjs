@@ -42,7 +42,7 @@ test('the floor 5 bosses: own parts, a ♛, act ticks at 60% and 30% on it and 5
   }
 });
 
-test("GRACE PERIOD's Grace: a command pays a part up; one left alone lapses into a charge your command calls off; each that lands makes the next bigger; the Rider; Reinstatement; Acceleration", () => {
+test("GRACE PERIOD's Grace: a command pays a part up; one left alone lapses into a charge your command calls off; each that lands makes the next bigger; the Rider; each act drains grace; Reinstatement brings parts back", () => {
   const s = boss('graceperiod'), e = s.encounter, v = e.virus, [policy, notice, collector, rider] = ['policy', 'notice', 'collector', 'rider'].map((id) => of(s, id));
   assert.deepEqual([policy, notice, collector, rider].map((p) => p.grace), [3, 4, 5, 6], 'staggered: left alone, one lapses at a time');
   // Your command pays it up, at the cycle's end: any command on it, a Crack that deals nothing too.
@@ -89,21 +89,24 @@ test("GRACE PERIOD's Grace: a command pays a part up; one left alone lapses into
   assert.equal(fbPower(s, rider, rider.attack), 1, 'never its own');
   rider.integrity = 0;
   assert.equal(fbPower(s, policy, atk), 1, 'the Rider broken');
-  // Reinstatement: a lapse refills the part's ◆ too.
-  fbVerb(s, 'reinstate');
-  for (const p of [policy, notice, collector]) p.grace = 9;
+  // Reinstatement: a broken part comes back at 30%, ◆ full; grace drains to 2; a lapse refills the part's ◆ too.
+  const said = fbVerb(s, 'reinstate');
+  assert.equal(rider.integrity, Math.round(rider.max * FB.grace.back), 'the Rider is back');
+  assert.equal(rider.armor, rider.maxArmor);
+  assert.match(said, /reinstates the Rider/);
+  assert.equal(v.grace.days, FB.grace.days - FB.grace.drain);
+  assert.ok(livingParts(s).every((p) => p.grace <= v.grace.days));
+  for (const p of [policy, notice, collector, rider]) p.grace = 9;
   notice.grace = 1; notice.armor = 0; hold(s);
   assert.equal(notice.armor, notice.maxArmor, 'its ◆ refill');
   assert.ok(notice.repatched, 'Late Fee reads it');
-  // Acceleration: grace is 2, and a lapse takes a cycle off every other part's.
+  // Acceleration: grace drains to 1, so every part you don't touch this cycle lapses at its end.
   fbVerb(s, 'accelerate');
-  assert.equal(v.grace.days, FB.grace.accel);
-  assert.ok(livingParts(s).every((p) => p.grace <= FB.grace.accel));
-  policy.grace = 2; notice.grace = 1; collector.grace = 2;
+  assert.equal(v.grace.days, 1);
+  assert.ok(livingParts(s).every((p) => p.grace <= 1));
   command(s, 'spike policy'); resolveCycle(s);
-  assert.equal(notice.lapsedAt, e.cycle - 1);
-  assert.deepEqual([policy.grace, collector.grace], [1, FB.grace.accel], 'a lapse takes a cycle off the rest, the one just paid too (once a cycle); one it takes to 0 lapses: the chain');
-  assert.equal(collector.lapsedAt, e.cycle - 1, 'the Collector lapses with it');
+  assert.ok(policy.lapsedAt !== e.cycle - 1, 'paid');
+  assert.ok([notice, collector, rider].every((p) => p.lapsedAt === e.cycle - 1), 'the rest lapse');
 });
 
 test("EXIT NODE's Rollback: the Front; every 6 cycles its bars go back 2 cycles and a quarter lands on you; a broken part stays broken; Glass Cut; Kept charges; Cold image", () => {
