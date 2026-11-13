@@ -538,9 +538,17 @@ function playColdOpen() {
   feel.ambience(false); feel.soundtrack({ on: false }); feel.places({ on: false });
   return coldOpen({ audio: () => feel.scene(), reducedMotion: () => !canMove() }).then(() => { coldOn = false; dirty = true; });
 }
+// A black cover under the first launch's screens, so the map never shows through their fades between them.
+function coverUp() {
+  const el = document.createElement('div');
+  el.className = 'first-cover';
+  document.body.append(el);
+  return () => el.remove();
+}
 function firstLogin() {
   if (CAMP) return firstCampaign();
   introOn = true;
+  const uncover = coverUp();
   powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() }).then(playColdOpen).then(() => intro.run()).then(({ handle, pwLen }) => {
     campaign.profile = { ...campaign.profile, handle, pwLen, since: Date.now() };
     return pickClass();
@@ -550,6 +558,7 @@ function firstLogin() {
     dirty = true;
     cache.clear();
     go('map', true);
+    uncover();
     feel.add('pager', '#pager');
     SC.queueScene(campaign, 'welcome'); // wick's transmission over the map (scenes.mjs)
     save();
@@ -565,6 +574,7 @@ const CAMPAIGN_LETTER = (handle) => [
 ];
 function firstCampaign() {
   introOn = true;
+  const uncover = coverUp();
   powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() }).then(playColdOpen).then(() => intro.run({ letter: CAMPAIGN_LETTER })).then(({ handle, pwLen }) => {
     campaign.profile = { ...campaign.profile, handle, pwLen, since: Date.now() };
     return pickClass();
@@ -575,6 +585,7 @@ function firstCampaign() {
     dirty = true;
     cache.clear();
     go('campaign', true);
+    uncover();
     feel.add('pager', null);
     notice('SPRAWL-00 is open. Breach it.');
   });
