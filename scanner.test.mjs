@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { fresh, command, hooks } from './dist/combat.mjs';
 import { floorsOf } from './dist/floors.mjs';
 import { priceOf } from './dist/market.mjs';
-import { startHere, chainDef } from './dist/threads.mjs';
+import { startHere, chainDef, threadVerb, activeThreads } from './dist/threads.mjs';
 import { serverMarks } from './dist/threads.mjs';
 import * as SC from './dist/scanner.mjs';
 import { stripMarkup, tapeMarkup, postBanner, postOptions, postTerminalMarkup, postTitle } from './dist/scanner-view.mjs';
@@ -233,15 +233,29 @@ test('the Listening Post: an ssh banner, LANTERN on the line, the menu, ON THE A
   assert.match(page, /\[?0?.*disconnect/);
 });
 
-test('the clue: the post is off the map until the first broadcast is on the air, then found once; an old radio save knows it', () => {
-  const s = fresh(); s.tutorialCompleted = true;
-  const S = SC.scannerOf(s);
+test('the clue: from level 5, the first broadcast starts Four Nine Nine; its end puts the post on the map; an old radio save knows it', () => {
+  const s = setup(); s.scanner.found = false;
+  const S = SC.scannerOf(s), arch = s.loadout.archetype;
   assert.equal(SC.postFound(s), false);
   assert.doesNotMatch(mapMarkup(s, 'server'), /data-select="post"/);
-  assert.equal(SC.findPost(s, clock), false, 'nothing on the air yet');
+  assert.equal(SC.findPost(s, clock), null, 'nothing on the air yet');
   clock = S.next; SC.tickScanner(s, clock);
-  assert.equal(SC.findPost(s, clock), true);
-  assert.equal(SC.findPost(s, clock), false, 'once');
+  s.hackers[arch].level = 4;
+  assert.equal(SC.findPost(s, clock), null, 'under level 5 it waits');
+  s.hackers[arch].level = 6;
+  const loc = SC.findPost(s, clock);
+  assert.ok(loc, 'traced to a server');
+  assert.equal(SC.findPost(s, clock), null, 'once');
+  assert.equal(SC.postFound(s), false, 'the post waits for the thread');
+  const start = startHere(s, loc);
+  assert.equal(start.chain, 'four-nine-nine');
+  assert.equal(serverMarks(s)[loc.id].mark, '!');
+  threadVerb(s, loc, loc.floorplan.graph.rooms[start.room], 'read');
+  const tr = activeThreads(s).find((x) => x.chain === 'four-nine-nine'), p = tr.places.listener, at = s.locations.find((l) => l.id === p.loc);
+  assert.equal(SC.postFound(s), false);
+  threadVerb(s, at, at.floorplan.graph.rooms[p.room], 'talk');
+  assert.equal(tr.state, 'done');
+  assert.equal(SC.postFound(s), true);
   assert.match(mapMarkup(s, 'server'), /data-select="post"/);
   const old = fresh(); old.scanner = { log: {}, tips: [], n: 3, air: null, next: clock };
   assert.equal(SC.postFound(old), false);

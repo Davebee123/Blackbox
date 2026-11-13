@@ -50,6 +50,22 @@ export default {
           text: 'Hand it to her, or sell it.' },
       ],
     },
+    // Never seeded on a server (no floor): the scanner's clue pins it (scanner.mjs findPost), and its last step puts the
+    // Listening Post on your map (post: true).
+    'four-nine-nine': {
+      title: 'Four Nine Nine', giver: 'tap.log', faction: 'lantern', short: true, clue: true,
+      reason: 'Numbers under the radio chatter, read out on a loop. Someone wants them heard.',
+      lore: 'LANTERN gave you a chair at the Listening Post.',
+      places: { start: { label: 'Tap' }, listener: { near: [1, 2], label: 'Listener' } },
+      steps: [
+        { kind: 'talk', at: 'start', who: 'tap.log', icon: 'file', verb: 'Read',
+          lines: ['> tap on carrier 7.415 · looping', '> four. nine. nine. four. nine. nine.', '> relayed from {listener}, {listener.at}'],
+          text: 'Read the tap.' },
+        { kind: 'talk', at: 'listener', who: 'a LANTERN listener', icon: 'npc', verb: 'Talk', post: true,
+          lines: ['You followed the count. Good ears.', 'LANTERN keeps a post beside your home, with a dial and a tape deck.', "It's on your map now. Come by when something's on the air."],
+          text: 'Find who relays the count, on {listener}.' },
+      ],
+    },
     mirror: {
       title: 'Mirror', floor: 3, min: 13, giver: 'mirror.idx',
       reason: "Someone is copying your ground, room for room. The copy's for sale.",

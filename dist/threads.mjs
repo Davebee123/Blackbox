@@ -177,6 +177,15 @@ export function pinDistress(s, loc, chain) {
   if (R) R.seen[st.room] = 'kind';
   return st;
 }
+// The scanner's clue (scanner.mjs findPost) pins Four Nine Nine on a traced server near your level, found, its ! on the
+// map: the nearest level to yours, then by id. null when no server can take it yet.
+export function pinClue(s, chain) {
+  const L = hackerLevel(s), T = threadsOf(s);
+  const xs = located(s).filter((l) => !T.starts[l.id] && (l.level || 1) <= L + 1 && roomsOf(s, l))
+    .sort((a, b) => (a.depth || 1) - (b.depth || 1) || Math.abs((a.level || 1) - L) - Math.abs((b.level || 1) - L) || byIdLoc(a, b));
+  for (const loc of xs) { const st = pinDistress(s, loc, chain); if (st) return { loc, start: st }; }
+  return null;
+}
 export const startHere = (s, loc) => (loc && s.threads?.starts?.[loc.id]) || null;
 
 // ---------- places ----------
@@ -355,6 +364,7 @@ function choose(s, t, st, ch, room, loc) {
 function complete(s, t) {
   const c = chainOf(t), steps = c.steps;
   if (t.step > 0) payStep(s, t, t.step === steps.length - 1);
+  if (steps[t.step]?.post && !s.scanner?.found) { (s.scanner ||= {}).found = true; emit(s, 'rooms-good', 'The Listening Post shows on your map, beside HOME.', { post: true }); } // Four Nine Nine's end
   t.step++;
   t.esc = null;
   if (t.step >= steps.length) return finish(s, t);

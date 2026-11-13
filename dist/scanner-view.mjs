@@ -268,7 +268,7 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
       if (now - lastSched >= 500) {
         lastSched = now;
         const ev = SC.tickScanner(s, now);
-        if (!SC.postFound(s) && !busy() && SC.findPost(s, now)) { found(); changed(); } // the clue: numbers in the chatter
+        let clue; if (!SC.postFound(s) && !busy() && (clue = SC.findPost(s, now))) { found(clue); changed(); } // the clue: numbers in the chatter
         else if (ev === 'start' && SC.postFound(s) && sound() && !busy()) radio.cue(volume());
         if (ev) changed();
       }

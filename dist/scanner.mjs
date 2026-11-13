@@ -8,8 +8,9 @@
 //   distress  a thread starts on the server it names (threads.mjs pinDistress)
 // Radio traffic sits across the band too: transmissions you run into while sweeping, nothing to catch.
 // The post records each broadcast: the tape holds the last one until the next starts, and Play back puts it back on
-// the air once, so the trip to the post never costs you a broadcast. It's found from a clue: the first broadcast
-// on the air outside a fight breaks into the radio chatter as numbers, and the post shows on the map (S.found).
+// the air once, so the trip to the post never costs you a broadcast. It's found from a clue: from level 5, the first broadcast on
+// the air outside a fight breaks into the radio chatter as numbers and starts a thread, Four Nine Nine; its end puts
+// the post on the map (S.found).
 //
 // State: s.scanner (scannerOf, made on first use: the save keys on the field). The needle, the bite and the lock are
 // the view's (scanner-view.mjs), worked by tuneStep here. Times in the save are ms; the rules' clock t is seconds.
@@ -17,7 +18,7 @@ import { emit, hooks, hackerLevel } from './combat.mjs';
 import { seeded } from './gear.mjs';
 import { FACTIONS, hubsOf } from './factions.mjs';
 import { WARES, tipMult } from './market.mjs';
-import { eligible, chainDef, pinDistress } from './threads.mjs';
+import { eligible, chainDef, pinDistress, pinClue } from './threads.mjs';
 import { floorsOf } from './floors.mjs';
 
 export const SCANNER = {
@@ -28,6 +29,7 @@ export const SCANNER = {
   hold: 0.025, // the hold zone either side of the needle
   fill: 5, drain: 8, // seconds for the lock to fill in the zone, and to drain out of it
   faded: 0.3, // a carrier fainter than this (a distress call fading) pauses the lock
+  clue: 5, // the level the clue (Four Nine Nine) waits for
   on: [120, 180], quiet: [900, 1800], first: 300, signoff: 8, ramp: 4, // seconds
   traffic: 0.06, // radio traffic is heard within this
 };
@@ -91,12 +93,16 @@ export function scannerOf(s) {
 }
 // ---------- the Listening Post, found ----------
 export const postFound = (s) => !!s.scanner?.found;
-// The clue: true the first time, while a broadcast is on the air (the view calls it outside a fight).
+// The clue: the first broadcast on the air from level SCANNER.clue (the view calls it outside a fight) starts Four Nine
+// Nine on a traced server (threads.mjs pinClue), its ! on the map; its end puts the post on the map. The server it
+// pinned, once (S.clue), or null.
 export function findPost(s, at = now()) {
   const S = scannerOf(s);
-  if (S.found || !onAir(s, at)) return false;
-  S.found = true;
-  return true;
+  if (S.found || S.clue || !onAir(s, at) || hackerLevel(s) < SCANNER.clue) return null;
+  const got = pinClue(s, 'four-nine-nine');
+  if (!got) return null;
+  S.clue = got.loc.id;
+  return got.loc;
 }
 export const logged = (s, id) => !!s.scanner?.log?.[id];
 // A numbers station pays once; a pirate or a distress call pays each time, once a broadcast.
