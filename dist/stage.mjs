@@ -12,6 +12,8 @@
 //   bit        a broken part's dissolving bit: true when the floor moved and drew it.
 // Motion off: the scene stands still, no entrance, steady light. Reads state; never changes it.
 
+import { hourOf, weatherAt } from './window.mjs';
+
 const ease = (u) => 1 - (1 - Math.min(1, Math.max(0, u))) ** 3;
 const nrm = (v) => { const n = Math.hypot(...v); return v.map((x) => x / n); };
 const dot = (L, nx, ny, nz) => Math.max(0, nx * L[0] + ny * L[1] + nz * L[2]);
@@ -26,7 +28,7 @@ const SIGN_ON = (t) => Math.sin(t * 0.9) > -0.92 || Math.floor(t * 20) % 2 === 0
 const BEAM = (t) => t * 0.45 + 2.2; // Coldline's lighthouse, turning
 const TRAIN = (t) => ((t % 16) - 3) / 7; // Backhaul's train: -1 entering left .. 1 gone right, every 16 s
 export const PLACES = {
-  1: { tag: 'sprawl', // The Sprawl: a street at night. Towers at the edges, one vertical sign, kerbs to a vanishing point, a wet road.
+  1: { tag: 'sprawl', sky: 0.56, // The Sprawl: a street at night. Towers at the edges, one vertical sign, kerbs to a vanishing point, a wet road.
     name: 'a street at night',
     still(put, C, R) {
       const r = rng(11), hr = Math.round(R * 0.56);
@@ -54,7 +56,7 @@ export const PLACES = {
     ground: 0.86,
     mirror: { a: 0.1, wave: 1, squash: 0.5 },
   },
-  2: { tag: 'backhaul', // Backhaul: the rail yards. Rails to the horizon, a signal gantry, a floodlight mast, a slow train behind.
+  2: { tag: 'backhaul', sky: 0.55, // Backhaul: the rail yards. Rails to the horizon, a signal gantry, a floodlight mast, a slow train behind.
     name: 'the rail yards',
     still(put, C, R) {
       const hr = Math.round(R * 0.55), vx = C / 2;
@@ -113,7 +115,7 @@ export const PLACES = {
     reveal(u, c, ch, H) { const front = ease(u) * H * 1.1; return c.y > front ? null : c.y > front - H * 0.05 ? { ch: '▒', a: 0.8 } : {}; }, // scanned in, top down
     ground: 0.86,
   },
-  4: { tag: 'coldline', // Coldline: the harbour. Cranes and containers on the far shore, a lighthouse turning, black water.
+  4: { tag: 'coldline', sky: 0.52, // Coldline: the harbour. Cranes and containers on the far shore, a lighthouse turning, black water.
     name: 'the harbour',
     still(put, C, R) {
       const hr = Math.round(R * 0.52);
@@ -232,9 +234,36 @@ export const PLACES = {
   },
 };
 
+// The virus's tint: every floor but these (the Sink's rose sits near a strike's red, Deep Core's magenta is the elite's).
+export const TINT_SKIP = new Set([5, 7]);
+const mixHex = (a, b, t) => { const h = (x) => [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16)); const A = h(a), B = h(b); return '#' + A.map((v, i) => Math.round(v * (1 - t) + B[i] * t).toString(16).padStart(2, '0')).join(''); };
+// A visit's sky, from the window's clock and weather: fog, a low sun (dawn and dusk), or night (day and rain too: there
+// is never rain on the screen). Fixed when a virus enters, so it never turns mid-fight.
+export function skyOf(ms) {
+  if (weatherAt(ms) === 'fog') return 'fog';
+  const h = hourOf(new Date(ms));
+  return h === 'dawn' || h === 'dusk' ? 'dawn' : 'night';
+}
+// What a sky adds over a place with one (P.sky: its horizon, a share of the height): the low sun and its light along
+// the horizon, or a bank of fog over the far side. Lamps dim by day; fog mutes the scene.
+function skyLive(cond, put, C, R, t, horizon) {
+  const hr = Math.round(R * horizon);
+  if (cond === 'dawn') {
+    for (let k = 1; k <= 8; k++) for (let x = 0; x < C; x++) if ((x * 7 + k * 13) % Math.ceil(k / 2 + 0.5) === 0) put(x, hr - k, k < 3 ? '▁' : k < 5 ? '-' : '.', 0.3 - k * 0.032);
+    const sx = Math.round(C * 0.9);
+    for (let w = -3; w <= 3; w++) put(sx + w, hr - 1, '▄', 0.6 - Math.abs(w) * 0.06, true);
+    for (let w = -2; w <= 2; w++) put(sx + w, hr - 2, '▄', 0.5, true);
+  }
+  if (cond === 'fog') for (let y = hr - 12; y <= hr + 5; y++) for (let x = 0; x < C; x++) {
+    const n = Math.sin(x * 0.21 + t * 0.35 + y * 0.9) + Math.sin(x * 0.07 - t * 0.2 + y * 0.4);
+    if (n > 0.1) put(x, y, n > 0.9 ? '▒' : '░', 0.09 + 0.08 * Math.max(0, 1 - Math.abs(y - hr + 3) / 9));
+  }
+}
+const SKY_LIGHT = { dawn: () => ({ L: nrm([-0.55, 0.15, -0.82]), k: 0.45, base: 0.8 }) }; // the low sun, from in front
+
 // ---------- the stage ----------
 export function createStage({ getFloor, canMove = () => true, doc = typeof document !== 'undefined' ? document : null }) {
-  let floor = null, P = null, col = '#f4b437', bright = '#fff2c8', dim = '#9e814f', t0 = 0, enterAt = -1e9, still = null, stillKey = '';
+  let floor = null, P = null, col = '#f4b437', bright = '#fff2c8', dim = '#9e814f', t0 = 0, enterAt = -1e9, stillKey = '', tint = null, sky = 'night';
   let base = null, baseAt = 0;
   const off = doc ? doc.createElement('canvas') : null, ox = off?.getContext('2d');
   const clock = (now) => (now - t0) / 1000;
@@ -244,14 +273,18 @@ export function createStage({ getFloor, canMove = () => true, doc = typeof docum
       const f = getFloor?.() || null;
       if (f !== floor) {
         floor = f; P = PLACES[f] || null; t0 = now; stillKey = ''; base = null;
-        if (P && doc) { const cs = getComputedStyle(doc.documentElement); col = cs.getPropertyValue('--amber').trim() || col; bright = cs.getPropertyValue('--bright').trim() || bright; dim = cs.getPropertyValue('--dim').trim() || dim; }
+        if (P && doc) { const cs = getComputedStyle(doc.documentElement), bg = cs.getPropertyValue('--bg').trim() || '#000000'; col = cs.getPropertyValue('--amber').trim() || col; bright = cs.getPropertyValue('--bright').trim() || bright; dim = cs.getPropertyValue('--dim').trim() || dim; tint = TINT_SKIP.has(f) ? null : { amber: col, bright, deep: mixHex(col, bg, 0.38), dim: mixHex(col, bg, 0.6) }; }
+        else tint = null;
       }
       return !!P;
     },
     get place() { return P; },
+    // The virus's body in the floor's colour (not where the floor's colour sits near a strike's red or an elite's magenta).
+    colors: () => tint,
+    sky: () => sky,
     tagOf: (f) => (PLACES[f] ? `${PLACES[f].tag}/render` : 'render'),
     // A new virus on this floor: it enters the floor's way (not with Motion off).
-    enter(now) { enterAt = canMove() ? now : -1e9; },
+    enter(now) { enterAt = canMove() ? now : -1e9; sky = skyOf(Date.now()); },
     progress(now) { return P && canMove() ? (now - enterAt) / P.enter : 9; },
     cam(now) {
       if (!P) return null;
@@ -273,12 +306,17 @@ export function createStage({ getFloor, canMove = () => true, doc = typeof docum
       }
       if (off) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(off, 0, 0); ctx.setTransform(m.dpr, 0, 0, m.dpr, 0, 0); }
       ctx.fillStyle = col;
-      P.live((x, y, ch, a, glow) => { ctx.globalAlpha = a; if (glow) { ctx.shadowColor = col; ctx.shadowBlur = 8; } ctx.fillText(ch, x * gx, y * gy); if (glow) ctx.shadowBlur = 0; }, C, R, t);
+      const cond = P.sky ? sky : 'night', hr = P.sky ? Math.round(R * P.sky) : 0;
+      const draw = (x, y, ch, a, glow) => { ctx.globalAlpha = a; if (glow) { ctx.shadowColor = col; ctx.shadowBlur = 8; } ctx.fillText(ch, x * gx, y * gy); if (glow) ctx.shadowBlur = 0; };
+      P.live((x, y, ch, a, glow) => draw(x, y, ch, cond === 'fog' ? a * (y < hr + 2 ? 0.3 : 0.6) : cond === 'dawn' && glow ? a * 0.35 : a, glow), C, R, t);
+      if (cond !== 'night') skyLive(cond, draw, C, R, t, P.sky);
       ctx.restore();
     },
     light(lum, nx, ny, nz, now) {
       if (!P) return lum;
-      const L = P.light(canMove() ? clock(now) : 0);
+      const t = canMove() ? clock(now) : 0, cond = P.sky ? sky : 'night';
+      let L = cond === 'dawn' ? SKY_LIGHT.dawn() : P.light(t);
+      if (cond === 'fog') L = { ...L, k: L.k * 0.6, base: L.base + 0.08 };
       return Math.min(1, lum * L.base + L.k * dot(L.L, nx, ny, nz));
     },
     reveal(c, ch, now, W, H) {

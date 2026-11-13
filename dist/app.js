@@ -419,7 +419,7 @@ const DISSOLVE_MS = 1000; // a broken part's last moment on the board
 
 // The floor's stage in the render (stage.mjs): the fight's floor, as its palette is up (screenFx sets stageFloor).
 let stageFloor = null;
-const stage = createStage({ getFloor: () => (active(shown()) ? stageFloor : null), canMove: () => canMove() });
+const stage = createStage({ getFloor: () => (active(shown()) || document.body.classList.contains('fight-over') ? stageFloor : null), canMove: () => canMove() });
 const art = createArt({
   stage,
   getState: shown,
@@ -892,6 +892,7 @@ function showSpoils(events) {
   el.hidden = false;
   // Each line lands with a small tick; names decode from noise first.
   const motion = campaign.settings.motion !== false;
+  if (canMove()) BFX.spoilsIn(el, stageFloor); // on some floors the card arrives the floor's way (boardfx.mjs)
   el.querySelectorAll('[style*="--i"]').forEach((node) => {
     const i = Number(node.style.getPropertyValue('--i')) || 0;
     setTimeout(() => {

@@ -39,6 +39,7 @@
 // the markup only changes when the server does and a hovered chip keeps its tooltip.
 import { esc, deathMark, sickPct, sickTip, trackedJobs, contractTipRows } from './view.mjs';
 import { glyph } from './glyphs.mjs';
+import { groundSvg } from './ground.mjs';
 import { OBJECTIVES, OBJ, objectiveLine } from './objectives.mjs';
 import { recapMarkup } from './recap.mjs';
 import { GUARDS, BOSSES, CONFIG } from './data.mjs';
@@ -430,7 +431,10 @@ function mapSvg(s, tall, pop = null) {
   const rooms = roomList(s).filter((r) => shown(r.id)).map((room) => roomSvg(s, room, at(room), ctx)).join('');
   const bits = here ? bitsSvg(at(g.rooms[here]), G, here) : '';
   const vw = width + 2 * PAD, vh = height + 2 * PAD, vb = `${-PAD} ${-PAD} ${vw} ${vh}`;
-  return `<svg class="fp-svg ${tall ? 'tall' : 'wide'}" viewBox="${vb}" data-vb="${vb}" width="${vw}" height="${vh}" preserveAspectRatio="xMidYMid meet" style="--w:${vw}px;--h:${vh}px" role="group" aria-label="Room map of ${esc(R.name)}">${lines}${tunnel}${trail}${cardWay}${rooms}${arrow}${bits}</svg>`;
+  // The floor's material under it all (ground.mjs), clear of every room and link shown.
+  const ground = groundSvg(R.floor, { id: tall ? 't' : 'w', rooms: roomList(s).filter((r) => shown(r.id)).map(at), links: linksOf(g).filter(([a, b]) => shown(a) && shown(b)).map(([a, b]) => [at(g.rooms[a]), at(g.rooms[b])]),
+    box: { w: G.nw + 26, h: G.nh + 26, link: 24 }, cx: width / 2, cy: height / 2, rx: width / 2 + G.w * 0.9, ry: height / 2 + G.h * 0.9 });
+  return `<svg class="fp-svg ${tall ? 'tall' : 'wide'}" viewBox="${vb}" data-vb="${vb}" width="${vw}" height="${vh}" preserveAspectRatio="xMidYMid meet" style="--w:${vw}px;--h:${vh}px" role="group" aria-label="Room map of ${esc(R.name)}">${ground}${lines}${tunnel}${trail}${cardWay}${rooms}${arrow}${bits}</svg>`;
 }
 // A dashed arrow, bowed off the trace, from one room into the next (the hunter's red, the Exfil's amber).
 function routeSvg(p, q, G, kind) {

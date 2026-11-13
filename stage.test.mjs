@@ -105,3 +105,25 @@ test('the fight log folds to its newest line, and a button opens it', () => {
   assert.match(html, /id="log-more"/);
   assert.match(css, /body:not\(\.log-open\):not\(\.fight-over\) \.log-lines > li:not\(:last-child\) \{ display: none; \}/);
 });
+
+test('round two: the visit\'s sky, the virus\'s tint, the map\'s material, the spoils', async () => {
+  const { skyOf, TINT_SKIP } = await import('./dist/stage.mjs');
+  const { MATERIALS, tileOf, groundSvg } = await import('./dist/ground.mjs');
+  const { SPOILS_MOTION } = await import('./dist/boardfx.mjs');
+  // the sky: fog, a low sun or night, never rain
+  for (let ms = 0; ms < 48 * 3600e3; ms += 1800e3) assert.ok(['fog', 'dawn', 'night'].includes(skyOf(ms)));
+  assert.ok(Object.values(PLACES).filter((P) => P.sky).length >= 3, 'the floors with a sky');
+  // the tint: never where the floor's colour sits near a strike's red or an elite's magenta
+  assert.deepEqual([...TINT_SKIP].sort(), [5, 7]);
+  // the material: a texture on every floor, faint, and a map's rooms and links cut out of it
+  for (const f of Object.keys(PLACES)) {
+    const t = tileOf(Number(f));
+    assert.ok(t.length && t.every((g) => g.a > 0 && g.a <= 0.3), `floor ${f}'s material is there and faint`);
+    assert.ok(MATERIALS[f]);
+  }
+  const svg = groundSvg(8, { id: 'w', rooms: [{ x: 10, y: 10 }, { x: 100, y: 10 }], links: [[{ x: 10, y: 10 }, { x: 100, y: 10 }]], box: { w: 120, h: 100, link: 24 }, cx: 50, cy: 10, rx: 200, ry: 150 });
+  assert.equal((svg.match(/<rect x="[-\d.]+" y="[-\d.]+" width="120"/g) || []).length, 2, 'a hole for each room');
+  assert.match(svg, /<line x1="10" y1="10" x2="100" y2="10"\/>/, 'and each link');
+  assert.equal(groundSvg(null, { id: 'w', rooms: [], links: [], box: {}, cx: 0, cy: 0, rx: 1, ry: 1 }), '', 'home: nothing');
+  for (const f of Object.keys(SPOILS_MOTION)) assert.ok(PLACES[f]);
+});

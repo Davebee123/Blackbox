@@ -2901,6 +2901,16 @@ stone and ledger figures of Bedrock. The place acts on the virus without touchin
 - **The theme:** on Coldline the fight theme plays through 2071 hardware (fewer bits, a narrower speaker, a light tape
   wobble), on Bedrock through 2041's (6-bit, a small speaker's band, more wobble, hiss and hum).
 
+- **The visit's sky:** where a place has one (the Sprawl, Backhaul, Coldline), each fight takes the window's hour
+  and weather when the virus enters: fog drifts over the far side and mutes the scene, dawn and dusk bring a low sun
+  and light the virus from the front, the rest is night. Rain never shows.
+- **The virus** wears the floor's colour, but on Deep Core and the Sink (whose colours sit near an elite's magenta and a
+  strike's red); a part about to strike stays red.
+- **Winning:** the place stays up behind the spoils card, which arrives the floor's way: flickering on (the Sprawl),
+  flipping in (Backhaul), surfacing (Coldline) or typed in (Bedrock).
+- **The rooms map** has the floor's material under it, faint and clear of every room and link: window dots, sleepers,
+  racks, swell, grating, the plane's dots, sediment, stone grain.
+
 Motion off: the place stands still, no entrance, a steady light. Home and Floor colour off: the picture as before.
 
 **The fight log** shows its newest line, with **▴ N** (the lines above it) to open it whole; it stays as you leave it.

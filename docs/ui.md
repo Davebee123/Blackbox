@@ -340,6 +340,9 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
   reflection where there is water. The board's chips and telegraphs keep their look on every floor; only how a chip
   comes in changes (boardfx.mjs: typed on the old ledgers, flipped on the departure boards).
 - **The fight log** folds to its newest line by default (`▴ N` opens it), so the picture takes the room.
+- **The rooms map** carries the floor as a material (ground.mjs), never a picture: a picture's landmarks fell under rooms
+  (rejected). It sits in the map's SVG under the links, masked clear of rooms and links, fading at the edges.
+- **The virus's tint** follows the floor but on Deep Core and the Sink (stage.mjs `TINT_SKIP`).
 - Prototyped first (picked by the designer, November 2026): *Place* over *Era* for the picture, the era kept for the
   theme's sound.
 
