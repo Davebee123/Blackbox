@@ -182,7 +182,7 @@ comment saying what it does.
 | `dist/threads.mjs`, `dist/threads-view.mjs`, `dist/content/threads.mjs` | Threads: quests found in rooms, their marks and dialogue, and their data. |
 | `dist/scanner.mjs`, `dist/scanner-view.mjs`, `dist/scanner.css` | The scanner: the Listening Post (its map node, card and hub terminal), its radio, the stations, the reel, the tape and what each pays. |
 | `dist/quest-view.mjs`, `dist/quest.css` | The quest window: a thread as an intercepted transmission. |
-| `dist/portraits.mjs` | The speaker's portrait in the quest window: a backlit ASCII silhouette, the cast's own or one from their name. |
+| `dist/portraits.mjs` | Backlit ASCII busts: the quest window's speaker (the cast's own or one from their name) and a runner's on their card (from the handle alone). |
 | `dist/coldopen.mjs` | First launch: the cold open (KESSLER's clearing house crashing), its own sound mix through `feel.scene()`. |
 | `dist/intro.mjs` | First launch: the login, then Halcyon's transmission. |
 | `dist/scenes.mjs`, `dist/scenes-view.mjs`, `dist/scenes.css`, `dist/content/scenes.mjs` | Transmissions: conversations with a contact over the map, their window and their words. |

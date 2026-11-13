@@ -2604,7 +2604,8 @@ no attaching, detaching or memory pips.
 - **Standing**: 0–100 in four tiers: Stranger, Known (25), Friend (50), Close (75), each a smaller fee. Drawn as the
   Tier bar, its number and how you met in the tooltip. Known face: half again a raise, and three quarters of the fee.
 - **The runner card**: a lone diamond on the map, a row of a counted one's list or a Rail row opens it beside them
-  (beside the Rail row when the map doesn't draw them): faction, handle, class and level; Traits (temperament first), Standing, Now (→ a server and its time, or
+  (beside the Rail row when the map doesn't draw them). Its head (the *Badge*): their ASCII bust (from the handle), faction,
+  handle, class and level, and the Tier bar. Then Traits (temperament first), Now (→ a server and its time, or
   Busy with when they're free), After (their trade); their latest #net line; **Hire**, off with the reason (or the
   clock) until you can.
 - **Hiring** (`hire <runner> [preset]`, anyone on your net, from level 5, three at most): the crew card shows Pay as two
