@@ -567,10 +567,10 @@ function firstLogin() {
     save();
     dirty = true;
     cache.clear();
+    SC.queueScene(campaign, 'welcome'); // wick's transmission, up as the map first opens (scenes.mjs)
     go('map', true);
     uncover();
     feel.add('pager', '#pager');
-    SC.queueScene(campaign, 'welcome'); // wick's transmission over the map (scenes.mjs)
     save();
   });
 }
@@ -2780,7 +2780,7 @@ function onScreen(sel) { return !!shownEl(sel); }
 const calm = { module: null, shown: false, until: 0 };
 let toldFight = null;
 function checkTips(now) {
-  if (tip || ending || introOn || lu.showing() || shell.booting || connecting() || playtest || now < tipWait) return;
+  if (tip || ending || introOn || lu.showing() || shell.booting || connecting() || playtest || now < tipWait || !$('scene').hidden) return; // a transmission first
   tipWait = now + 400;
   if (calm.module !== module) { calm.module = module; calm.shown = false; }
   const fight = campaign.encounter?.virus || null;
