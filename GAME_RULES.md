@@ -867,7 +867,7 @@ objective too (it pays its archive, not the bonus).
 ### Walking and fog
 
 - **Walking** into a room for the first time on a visit costs 3% of your max Signal if you've been in it before, 5% if
-  you never have (4% and 6% from floor 5); the cost sits on its chip. Rooms you've walked this visit and `wait` are free.
+  you never have (4% and 6% from floor 5); the cost shows on its chip when you hover it. Rooms you've walked this visit and `wait` are free.
 - **Fog.** Every room is **unknown** until you've been in it: a dashed ghost chip with a ? and its address. You see the
   shape of the rooms next to you and one further (an Infiltrator's two) and the Core's chip. Walk in and it's
   **discovered** for good. A virus in an unknown room still stops you at the door (**Engage** / **Step back**).
@@ -2639,7 +2639,9 @@ no attaching, detaching or memory pips.
   **Online**: handle, class and level, where. On a network that's your friends, your consortium's members and your crew
   (the other runners are on the map);
   a save with no network seed keeps the old simulated pool behind `?dev` `online sim`. `friend add|remove <handle>`,
-  `friends`, `who`. SPRAWL-00 is shared: `ls` and arriving in a room say who else is there.
+  `friends`, `who`. SPRAWL-00 is shared: `ls` and arriving in a room say who else is there. A runner between jobs there
+  stays in one room their whole cycle, a paper-white tab with their handle on its chip (*+1* for more); walking in, you've
+  met them (no standing).
 - **#net** (channel.mjs), the net talking to itself like WoW's General chat. Its latest line sits over the prompt; click
   it for the drawer. `say <text>` (or `'text`) posts, up to 120 characters; `channel off|on` mutes it. Every line comes
   from real game state: the director's events and how they end, faction contacts speaking for their side after a feud
