@@ -210,11 +210,11 @@ function heedFloor(s, move) {
   }
   const one = hits1(id), onto = (p) => first(s, [...(one ? [id] : []), ...HITS, 'spike'].filter(hits1).map((k) => `${k} ${p.id}`));
   if (v.desk) {
-    // NIGHT DESK: only the Desk takes damage, and a hit on it settles its own trade. A trader's is answered from two
-    // pending (Finality: only when the next one would fill the table), the biggest first.
+    // NIGHT DESK: only the Desk takes damage, and a hit on it settles its own trade. A trader's is answered a cycle
+    // before the table would fill (Margin Call: before the Desk's attack settles the table), the biggest first.
     const pend = pendingOf(s), aim = at && part(s, at), desk = livingParts(s).find((p) => p.core), opens = (k) => livingParts(s).filter((p) => p.attack && p.attack.due <= c + k).length;
     const sum = (p) => p.pending.reduce((n, t) => n + tradeOf(s, t), 0), held = livingParts(s).filter((p) => p.pending?.length).sort((a, b) => (b === desk) - (a === desk) || sum(b) - sum(a));
-    const must = pend.length + opens(1) >= FB.desk.full; // a trade can open before your command lands: a cycle ahead of the fourth
+    const must = pend.length + opens(1) >= FB.desk.full || (v.desk.call && desk?.attack?.due <= c + 1 && pend.some((t) => t.part !== desk)); // a trade can open before your command lands: a cycle ahead of the fourth
     if (held.length && must) { const m = one && aim === held[0] ? move : onto(held[0]); if (m) return m; } // the Desk's own first: the hit that settles it also lands
     if (desk && aim && aim !== desk && aim.role === 'trader') { const m = first(s, [`${id} ${desk.id}`]); if (m) return m; }
   }

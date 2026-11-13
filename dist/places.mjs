@@ -15,6 +15,7 @@
 import { CONFIG, GUARDS } from './data.mjs';
 import { active, findLocation } from './combat.mjs';
 import { floorOfSlot } from './floors.mjs';
+import { outputOf } from './mixout.mjs';
 
 export const FLOOR_BEDS = {
   1: 'floors/floor-1-sprawl-r2-a.ogg', // The Sprawl
@@ -131,7 +132,7 @@ export function createPlaces(getCtx, { clip = null, base = new URL('./sfx/', imp
     const c = getCtx?.() || null;
     if (c && c !== ctx) { ctx = c; out = null; ctx.addEventListener?.('statechange', () => { if (ctx.state === 'running') apply(); }); }
     if (!ctx || ctx.state !== 'running') return false; // not unlocked yet: the first click or key brings it here again
-    if (!out) { out = ctx.createGain(); out.gain.value = vol.places / 0.8; out.connect(ctx.destination); }
+    if (!out) { out = ctx.createGain(); out.gain.value = vol.places / 0.8; out.connect(outputOf(ctx)); }
     return true;
   }
   function load(url) {

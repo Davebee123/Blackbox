@@ -28,7 +28,7 @@ import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './interrupt.mjs';
-import { actsStart, lashHit, lashLand, actIntents, actBegins, actInfo, barsSnap, barsTotal, barsTurn } from './acts.mjs';
+import { actsStart, lashHit, lashLand, actIntents, actBegins, actInfo, barsSnap, barsTotal, barsTurn, actEven } from './acts.mjs';
 import { FB, fbBid, fbStart, fbPower, fbLanded, fbMisses, fbSlowed, fbBroke, fbAim, fbCommand, fbDealt, fbVerb, FB_VERBS, fbCycle, fbIntents, fbLogged, surfShut, fbCmdHit, fbShrugs, fbTaken, fbCap } from './floorbosses.mjs';
 import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
@@ -3185,7 +3185,8 @@ export function hit(s, p, base, opts = {}) {
 function bossPhases(s) {
   const e = s.encounter, v = e.virus;
   if (!v.boss) return;
-  const turned = barsTurn(s); // act bars (acts.mjs): every part broken, the next act's board comes back at full
+  const turned = barsTurn(s); // act bars (acts.mjs): every part broken, act 1's board comes back at full
+  if (turned) fbStart(s, true); // with act 1's rules: a floor boss's clock, table or vote starts over (floorbosses.mjs)
   const life = virusIntegrity(s), share = life.max ? life.current / life.max : 0;
   for (const ph of v.phases || []) {
     if (ph.done || share > ph.at || !life.current) continue;
@@ -3219,7 +3220,7 @@ function bossPhases(s) {
     // The act break (actbreak.mjs) names the act, then the board's parts come back (act bars, acts.mjs).
     // Act bars: the board refilled (the act break names the act, then the parts come back in).
     const crown = e.bossRule === 'a' && livingParts(s).find((x) => x.core), a = crown && actInfo(v);
-    if (turned === ph) barsSnap(s);
+    if (turned === ph) actEven(s); // a part the act brought takes a seat: the board holds act 1's Integrity
     emit(s, 'phase', `PHASE ${v.phases.filter((x) => x.done).length + 1}. ${say}`, { boss: v.boss, ...(a ? { act: { ...a, part: crown.id, at: null, refill: true } } : {}) });
   }
   watchdog(s);
@@ -4067,12 +4068,12 @@ function scrapeYou(s, p, atk, { chits = 0, shield = 0, buffs = [] }) {
   emit(s, 'blind', `${atk.name} scrapes off your ${andList(what)}${gain ? `. The ${p.name} wears ${gain} more ◆` : ''}.`, { source: p.id, scrape: true, shield, chits, buffs: buffs.map((b) => b.name), gain });
 }
 // Boss rounds (data.mjs ROUNDS): for a solo boss, the round this cycle is in, its hits' multiple, and the cycles until the
-// next round (null: not a solo boss).
+// next round (null: not a solo boss). In act bars they count from the act's first cycle.
 export function roundOf(v, cycle) {
   const g = BOSSES[v?.boss] && !BOSSES[v.boss].raid ? ROUNDS.grow : 0;
   if (!g) return null;
-  const n = Math.floor((Math.max(1, cycle) - 1) / ROUNDS.every) + 1;
-  return { n, grow: g, mult: (1 + g) ** (n - 1), next: n * ROUNDS.every + 1 - cycle };
+  const from = v.actAt || 1, n = Math.floor((Math.max(1, cycle - from + 1) - 1) / ROUNDS.every) + 1; // act bars: each act's rounds start over (acts.mjs)
+  return { n, grow: g, mult: (1 + g) ** (n - 1), next: from - 1 + n * ROUNDS.every + 1 - cycle };
 }
 function landAttack(s, p) {
   const e = s.encounter;

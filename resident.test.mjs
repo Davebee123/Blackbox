@@ -4,6 +4,7 @@ import { fresh, command, resolveCycle, part, active, hooks } from './dist/combat
 import { play, connect, currentLocation, residentLevel } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { CONFIG, BOSSES } from './dist/data.mjs';
+import { ACT_BARS } from './dist/acts.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
 
 const say = (s, t) => play(s, t);
@@ -71,7 +72,7 @@ test('a boss has phases (GAME_RULES.md "Solo bosses", act bars): breaking every 
   openVault(s);
   toCore(s);
   const e = s.encounter, v = e.virus;
-  assert.ok(v.phases.length && v.enrageAt === BOSSES.resident.long.enrageAt, 'on your Signal it enrages at its long cycle (CONFIG.length)');
+  assert.ok(v.phases.length && v.enrageAt === v.actAt + ACT_BARS.enrage, 'it enrages a set number of cycles into each act (acts.mjs ACT_BARS)');
   assert.equal(e.bossRule, 'a');
   assert.ok(e.actBars, 'its phases are act bars');
   const core = v.parts.find((p) => p.core);

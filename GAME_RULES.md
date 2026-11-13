@@ -82,7 +82,8 @@ factor (`length.drawn`). Adds (fragments, Packages, Droppers), breaches and crew
 | Encryption | Each Encrypt adds to a stack that hits you every cycle. Breaking the Encryptor clears it. A ◆ on you stops an Encrypt; shields soak the stack's damage; Purge and Rollback wipe it. |
 | Scramble | For a couple of cycles, each of your attacks has a 25% chance to hit you instead, at half. A ◆ stops it. |
 
-`jack out` mid-fight is the emergency escape: it resolves on your turn, you keep your pack, and the virus stays.
+`jack out` mid-fight (or the red **Jack out** key at the tray's end, two clicks) is the emergency escape: it resolves on
+your turn, you keep your pack, and the virus stays. Not on a breach, or while a hunter has your trace.
 Leaving the fight screen pauses a live fight.
 
 ### The interrupt
@@ -562,8 +563,8 @@ It remembers `s.dex` (genome.mjs) and `s.research`; crewmates' fights don't writ
 Bosses have phases and an enrage. A solo boss's phases are its **acts**, each a fresh bar (below): its **♛ part** (its
 signature) carries its own rule, and interrupts at 50% and 25% like every other part (interrupt.mjs rule a;
 `developer bossrule b|c` tries the alternatives). A boss brings three tells, every one open at its level. From its
-enrage cycle every attack lands every cycle, a quarter harder, with a warning three cycles before. A phase change
-flashes on screen.
+enrage cycle (24 cycles into each act) every attack lands every cycle, a quarter harder, with a warning three cycles
+before. A phase change flashes on screen.
 
 **The Resident.** Opening a server's vault unseals its **Core**, where the Resident waits: the owner's process, a boss of
 the server's family (all three parts) at the server's level, 1.4× Integrity (1.1× on your first server). Its phase
@@ -573,12 +574,11 @@ every other part patches a ◆ (up to its full). Each act restarts the count; pa
 *watchdog n* on its ♛. Beat it and the server is **taken over**: yours, teal on the map, its Core
 quiet for good. Lose and you're disconnected, and for 6 hours it is a level stronger, up to three levels.
 
-On your Signal each solo boss takes its own Integrity and hits on top of the fight length (`BOSSES` long), so it runs
-30 to 35 cycles, and enrages about 15% past a geared kill: the Resident at 36, the lair bosses at 31 to 40. In a
-breach the Resident keeps its old size and enrages at 18 (24 in acts).
+On your Signal each solo boss takes its own Integrity and hits on top of the fight length (`BOSSES` long). In acts each
+act runs 15 to 20 cycles (below). In a breach the Resident keeps its old size and enrages at 18.
 
 **Rounds** (`ROUNDS`): a solo boss fights in rounds of 4 cycles, and each round every hit it lands is 8% harder than the
-last round's, compounding (×1.4 by round 5, ×1.85 by round 9), its enrage on top. Its bar shows the round and its
+last round's, compounding (×1.4 by round 5, ×1.85 by round 9), its enrage on top. Each act's rounds start over. Its bar shows the round and its
 multiple (R3 ×1.2). A slow kill meets a round it can't survive. Crew bosses have none.
 
 | Boss | Where | From | Integrity | Enrages |
@@ -599,16 +599,16 @@ and REPO MAN's ♛ holds 45% of each act's board, taken from its other parts (`B
 On the board: ♛ on the crown part, ×*n* fragments on the Relay, §*n* Liens on the Ledger, *round* on a Mimic.
 
 **Floor bosses** (floorbosses.mjs, docs/boss-guide.md). Floors 2 to 5 have bosses of their own: parts of their own
-only, every part's ticks at 50% and 25% (its acts are bars, below), the beat on a part of their own, a tell an act from their set (floor 4's and GRACE PERIOD deal none: their rule is the fight), and a verb an act. 0.4× to 0.91× Integrity, with more of it on the ♛; they enrage at cycle 36 to 44. Played blind (no rule answered) each floor 2–4 boss loses most of its fights (floor 5's: GRACE PERIOD read 70%, misread 57%, blind 40%; EXIT NODE 64%, 50%, 34%), and one misread at the wrong cycle makes the rest of the fight harder (a sale, a leak, a Dump or a Call grows the next).
+only, every part's ticks at 50% and 25% (its acts are bars, below), the beat on a part of their own, a tell an act from their set (floor 4's and GRACE PERIOD deal none: their rule is the fight), and a verb an act. 0.4× to 0.91× Integrity, with more of it on the ♛; like every boss in acts they enrage 24 cycles into an act. One misread at the wrong cycle makes the rest of its act harder (a sale, a leak, a Dump or a Call grows the next).
 
 | Boss | Where | Lv | Its rule (on its row) | Act 2 | Act 3 |
 |---|---|---|---|---|---|
-| CENTRIFUGE (GLASSJAW) | Floor 2's floor job: its Boss step's server's Core | 14 | **Bidding**, on the Gavel (no ticks, so never cut): from every 3 cycles, each Surge it lands takes it one sooner, down to 2. Each one-part command you aim at it while the Rotor stands is a bid, one faster too (a delay or a Throttle isn't). A delay or Throttle on it withdraws it to 4, and SIGINT cuts a selling Surge. A Surge at every 2 sells to the buyer it names, whose part joins (TOLLGATE's Lockbox wards the Rotor ♛, SWARMLINE's Mirror twins the Gavel, PALEMASK's Veil hides its timers); the Gavel drops to every 4, each sale makes its Surge 30% harder for the fight, and (**Sold**) heals the Rotor ♛ 10% of its max. Nothing sells once the Rotor breaks. The Rotor's Encrypt comes every 7 cycles; no beat holds its ticks | **Reserve price**: a withdraw steps it back one | **Second lot**: two buyers a sale |
-| SHAKEDOWN (TOLLGATE) | The last room of every floor-2 Pit; back an hour after it falls | 12 | **Ransom Clock**, run by the Collector ♛ (it stops when the Collector breaks): 10 cycles; at 0 it leaks 35% of your max, 15% more each leak after (up to 65%), and restarts at 5. A Demand broken while the Collector stands halves the time left (*missed payment*). A Deadline (the Demand's, a wind-up) that lands adds 3; one called off buys nothing. Its Lockbox wards the Demand. **Leverage**: while a Demand stands, the Collector loses at most 15% of its max a cycle, and the rest of a hit is lost | **Second demand**, its Deadline on the same cycle; the Lockbox wards it too | **Final notice**: a leak re-arms the Demands and brings the Lockbox back |
+| CENTRIFUGE (GLASSJAW) | Floor 2's floor job: its Boss step's server's Core | 14 | **Bidding**, on the Gavel (no ticks, so never cut): from every 3 cycles, each Surge it lands takes it one sooner, down to 2. Each one-part command you aim at it while the Rotor stands is a bid, one faster too (a delay or a Throttle isn't). A delay or Throttle on it withdraws it to 4, and SIGINT cuts a selling Surge. A Surge at every 2 sells to the buyer it names, whose part joins (TOLLGATE's Lockbox wards the Rotor ♛, SWARMLINE's Mirror twins the Gavel, PALEMASK's Veil hides its timers); the Gavel drops to every 4, each sale makes its Surge 30% harder for the act, and (**Sold**) heals the Rotor ♛ 10% of its max. Nothing sells once the Rotor breaks. The Rotor's Encrypt comes every 7 cycles; no beat holds its ticks | **Reserve price**: a withdraw steps it back one | **Second lot**: two buyers a sale |
+| SHAKEDOWN (TOLLGATE) | The last room of every floor-2 Pit; back an hour after it falls | 12 | **Ransom Clock**, one an act, run by the Collector ♛ (it stops when the Collector breaks): 14 cycles; at 0 it leaks 35% of your max, 15% more each leak after in that act (up to 65%), and restarts at 7. A Demand broken while the Collector stands halves the time left (*missed payment*). A Deadline (the Demand's, a wind-up) that lands adds 3; one called off buys nothing. Its Lockbox wards the Demand. **Leverage**: while a Demand stands, the Collector loses at most 10% of its max a cycle, and the rest of a hit is lost | **Second demand** in the Lockbox's seat, its Deadline on the same cycle | **Final notice**: a leak re-arms the Demand and brings the Lockbox back |
 | SHOULDER SURFER (NULL CHOIR) | Floor 3's floor job: its Boss step's server's Core | 18 | **Replay**, on the Logger ♛ (half the boss): a Sync Window on even cycles only. The Logger takes damage only from commands fired in it; each one outside is logged, and at 2 (or every 6 cycles) its Dump (each one that plays your command back makes the next 50% bigger) plays your last logged command back at its full hit (a flat Dump if it wasn't a hit). The Pulse Node lands on the shut cycles | **Again**: every 4 cycles it plays your last three commands back, each at 40% | **From the top**: the log never clears, and the Dump plays the biggest command logged |
 | RECURSION (NULL CHOIR) | The last room of every floor-3 Gauntlet; back an hour after it falls | 19 | **Call**: frames stack over main() ♛. A one-part command at a lower frame lands on the top one; burns, helpers and area hits reach every frame. Every 5 cycles the top frame pushes a new one at 60% of its max, unless it is under a quarter of its own, or SIGINT stops it on its cycle; each Call let through makes every frame hit 35% harder and brings the next Call a cycle sooner, down to every 3 | **Return**: the top frame pushes a frame at 25% of its max as the act starts (it hardens nothing); a frame that breaks makes the one beneath attack a cycle sooner, 50% harder | **Overflow**: one more frame pushed; at 5 frames every frame attacks at once, the cycle after the Call |
-| NIGHT DESK (Kessler's old settlement process) | Floor 4's floor job: its Boss step's server's Core | 24 | **No Timeout**: its attacks never land. Each waits on its part as a pending trade. Your one-part command on a part settles its trades on you at half. At 4 pending, all settle in full and each trade after opens 25% bigger for the fight. Only the Desk ♛ takes damage, 12% of its max a hit at most; the Teller and the Clearing House go when it breaks. SIGINT, delays and Throttles do nothing to a trade | **Night shift**: the Night Clerk clocks in, a third trader holding one trade (it opens none of its own); a pending trade grows 15% a cycle | **Finality**: each trade you settle heals the Desk 4% of its max |
-| BYZANTINE (GLASSJAW) | The last room of every floor-4 Pit; back an hour after it falls | 26 | **Vote**: every 4 cycles, if the most damaged Node is 15% or more under the average of the Nodes standing, it is restored to that average, and every Node hits 30% harder for the fight. A hit takes 20% of a Node's max at most. Node B adds a fragment every 5 cycles | **Traitor**: the most damaged Node turns. While it is not the most damaged, a vote restores the most damaged to the healthiest Node's level | **Hard fork**: every broken Node returns as the act starts, at the standing Nodes' average; a Node that breaks after returns at the next vote, unless every other Node is under half |
+| NIGHT DESK (Kessler's old settlement process) | Floor 4's floor job: its Boss step's server's Core | 24 | **No Timeout**: its attacks never land. Each waits on its part as a pending trade. Your one-part command on a part settles its trades on you at half. At 4 pending, all settle in full and each trade after opens 25% bigger for the act. Only the Desk ♛ takes damage, 10% of its max a hit at most; the Teller and the Clearing House go when it breaks, their trades with them. SIGINT, delays and Throttles do nothing to a trade | **Night shift**: the Night Clerk takes the Teller's seat, holding one trade (it opens none of its own); a pending trade grows 15% a cycle | **Margin Call**: when the Desk's Margin Call comes due, every pending trade settles with it, in full |
+| BYZANTINE (GLASSJAW) | The last room of every floor-4 Pit; back an hour after it falls | 26 | **Vote**: every 4 cycles, if the most damaged Node is 15% or more under the average of the Nodes standing, it is restored to that average, and every Node hits 30% harder for the act. A hit takes 20% of a Node's max at most. Node B adds a fragment every 5 cycles | **Traitor**: the most damaged Node turns. While it is not the most damaged, a vote restores the most damaged to the healthiest Node's level | **Hard fork**: every broken Node returns as the act starts, at the standing Nodes' average; a Node that breaks after returns at the next vote, unless every other Node is under half |
 | CAMSWARM (SWARMLINE) | Floor 4's lair, on networks whose own boss isn't TRIPMINE (about half) | 24 | **Telnet Sweep**: every 5 cycles each part under half (never the Hive ♛) hatches a fragment and shields it: it takes no damage while that part stands, and drops when it breaks. Each fragment hatched brings the next sweep a cycle sooner, down to every 2. A fragment that lives 3 cycles is a Camera, a part with a Surge of its own. A hit takes 15% of a part's max at most; its fragments gnaw twice as hard | **Botnet**: every Camera fires with the C2 Node's Beacon; a broken C2 Node comes back, and each other part you broke returns in its place as a Camera at 30% | **Lockout**: the Hive boots a Camera, and takes no damage while a Camera stands |
 | GRACE PERIOD (TOLLGATE) | Floor 5's lair | 28 | **Grace**, on every part: 3 cycles each, staggered at the start (3, 4, 5, 6). Your command on a part pays it up at the cycle's end; area hits pay every part they hit. A part whose grace runs out lapses: its next attack 2 or more cycles away is a charge 3.5 times a plain one's, and your command on the part on the cycle it lands calls it off (the planner reads this). Each lapse charge that lands makes every later one 100% bigger (the balance, on the ♛). While the Rider stands every other part hits 15% harder | **Reinstatement**: every broken part comes back at 30%, ◆ full; grace is 2, and a lapse refills the part's ◆ too | **Acceleration**: grace is 1 |
 | EXIT NODE (PALEMASK) | Floor 5's floor job: its Boss step's server's Core | 30 | **Rollback**, on the Core ♛: every 6 cycles it restores its own bars (Integrity and ◆) to the image taken 2 cycles before, so damage in those 2 cycles is undone, and a quarter of what it gives back lands on you (**Chargeback**). A broken part stays broken. **Glass Cut**: after each restore the Core charges, landing in the next restore's window when its timer allows. **Front**: while Backup v7 stands, a one-part command at the Core lands on it (burns, helpers and area hits reach the Core) | **Kept charges**: a charge cut in the 2 cycles before a restore comes back at it | **Cold image**: every restore returns to the image taken as Backup v6 broke. The Core is never restored past its last spent act tick |
@@ -631,9 +631,12 @@ A solo boss plays in **three acts, each a fresh bar**: every part back at full w
 ends when its last part breaks; the next begins at the cycle's end. Built: the worm and ransomware Residents, the
 three solo bosses, the floor 2–5 bosses and the natives. A crew boss keeps its own framework (raid.mjs).
 
-- **The split.** A boss's Integrity is cut across its acts (`ACT_BARS.share`), so three acts run about as long as
-  one bar did and each act is about as long and as hard as the others. A board that comes back full attacks for the
-  whole fight, so a longer fight costs more than it did.
+- **Act 1's board and rules, every act.** Each act starts from act 1's board and the rules act 1 began with, then
+  adds its own: an act's rule leaves with it, and what grew in it (a leak, a full table, Liens, a Round) starts over.
+  A part an act brings takes another's seat, and the board holds act 1's Integrity.
+- **The pacing** (`ACT_BARS`): an act runs 15 to 20 cycles. Each holds a third of `share` of the boss's Integrity,
+  times its `bar`; its hits are ×0.55 of one bar's; its rounds and its enrage (24 cycles in) count from its first
+  cycle.
 - **The ♛** carries the boss's signature and its own rule. Its ticks are a part's (50% and 25%), like every other
   part's: it interrupts, and crossing it starts no act. No order is forced, and no order is punished.
 - **The act break** (actbreak.mjs). The board's strip flares red with the act, *ACT 2 / 3 · TRAITOR*, for about 4
@@ -866,7 +869,7 @@ objective too (it pays its archive, not the bonus).
 ### Walking and fog
 
 - **Walking** into a room for the first time on a visit costs 3% of your max Signal if you've been in it before, 5% if
-  you never have (4% and 6% from floor 5); the cost sits on its chip. Rooms you've walked this visit and `wait` are free.
+  you never have (4% and 6% from floor 5); the cost shows on its chip when you hover it (always on a phone). Rooms you've walked this visit and `wait` are free.
 - **Fog.** Every room is **unknown** until you've been in it: a dashed ghost chip with a ? and its address. You see the
   shape of the rooms next to you and one further (an Infiltrator's two) and the Core's chip. Walk in and it's
   **discovered** for good. A virus in an unknown room still stops you at the door (**Engage** / **Step back**).
@@ -2601,6 +2604,10 @@ no attaching, detaching or memory pips.
   pays (+25), and **Help** (`assist`) in place of Engage. They fight beside you at the Signal they had, take none of the
   XP, and a win raises their standing; the room's card then shows it. Once a job; they never clear your rooms or take
   anything. Helping isn't a solo win.
+- **Dead runner rooms** (R3): a runner who crashes on a server on your map marks it (`s.runners.down`, the newest a
+  server; gone when they move on). On your next visit one of its live process or elite rooms (never the room a runner
+  is fighting in) wears a paper-white tab, a dark skull and their handle. Win it as usual and you pull them out: their
+  standing +25, as for Help. The room fights and pays as it would.
 - **Standing**: 0–100 in four tiers: Stranger, Known (25), Friend (50), Close (75), each a smaller fee. Drawn as the
   Tier bar, its number and how you met in the tooltip. Known face: half again a raise, and three quarters of the fee.
 - **The runner card**: a lone diamond on the map, a row of a counted one's list or a Rail row opens it beside them
@@ -2634,7 +2641,9 @@ no attaching, detaching or memory pips.
   **Online**: handle, class and level, where. On a network that's your friends, your consortium's members and your crew
   (the other runners are on the map);
   a save with no network seed keeps the old simulated pool behind `?dev` `online sim`. `friend add|remove <handle>`,
-  `friends`, `who`. SPRAWL-00 is shared: `ls` and arriving in a room say who else is there.
+  `friends`, `who`. SPRAWL-00 is shared: `ls` and arriving in a room say who else is there. A runner between jobs there
+  stays in one room their whole cycle, a paper-white tab with their handle on its chip (*+1* for more); walking in, you've
+  met them (no standing).
 - **#net** (channel.mjs), the net talking to itself like WoW's General chat. Its latest line sits over the prompt; click
   it for the drawer. `say <text>` (or `'text`) posts, up to 120 characters; `channel off|on` mutes it. Every line comes
   from real game state: the director's events and how they end, faction contacts speaking for their side after a feud
@@ -2776,7 +2785,7 @@ mutation and wall band shows its rule, in WoW's tooltip grammar) and in **first-
 is on screen, a small tip points at it and says how it works, once, one at a time. **wick** narrates the guided path
 (the opening map, the rooms tour, your first fight, low Signal, a rival, the vault, the Core, a boss's ♛) in his own
 lowercase, in a small Transmission: his face, *INCOMING · LOWLIGHT*, his line. The rest keep the plain voice. The
-opening map has one tip: click SPRAWL-00, then Connect. Your server's tip waits for the first intrusion, a ?'s for the first trace on one.
+opening map has one tip: click SPRAWL-00, then Connect. Connecting reads it, shown or not. Your server's tip waits for the first intrusion, a ?'s for the first trace on one.
 
 **Pacing** (tips.mjs `paceOf`). A map, room or menu tip shows at most once a screen visit, and 2 minutes after the last
 one closed. A fight tip about what the fight opened with shows only while it's paused (a room fight opens paused until
@@ -2917,12 +2926,12 @@ A finished fight shows it whole.
 **A new fight boots in.** The first time you see a fight, the screen goes dark and the virus comes up first, alone
 at the centre, before dropping into its panel; a boot console checks your system and your panels come up. About two
 seconds; any key or click ends it (and still acts). Leaving a won fight, the page folds to a teal line like a tube
-switching channel and the map opens back out of it, your room ringing. Connecting to a server dials it: its node locks
-teal and pings, the screen dims into black, its name decodes over a dial readout and flies into the server strip, and
-the rooms switch on outward from the entry (about two seconds; a first run's XP waits for it). **Jacking out** hangs
-up: your room locks teal and the rooms go dark toward it, the hang-up's readout holds the dark, then the map comes up
-with the server's node ringed (under two seconds; the Banked card waits for it). None of them flashes or blinks: a
-panel only brightens or only dims, and your chrome dims rather than going out. Screen effects off or Motion off:
+switching channel and the map opens back out of it, your room ringing.
+Connecting to a server, a teal line runs from HOME to its node, the node pings and the rooms open in a circle from
+there (under two seconds; a first run's XP waits for it). **Jacking out** plays it backwards: your room locks teal, the
+rooms close in a circle onto the server's node, the node pings and the line runs back to HOME, which rings (under two
+seconds; the Banked card waits for it). None of them flashes or blinks: a panel only brightens or only dims, and your
+chrome dims rather than going out. Screen effects off or Motion off:
 straight in and out.
 
 ### The monitor casing

@@ -3,7 +3,7 @@
 // the content doesn't meet yet are `todo` tests: they run and report the misfits, like the class band in balance.test.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bossBand, bossFight, actLengths, geneCheck, PROBES, ANSWERED, SUBS, playersAt } from './genesim.mjs';
+import { bossBand, bossFight, geneCheck, PROBES, ANSWERED, SUBS, playersAt } from './genesim.mjs';
 import { BOSSES } from './dist/data.mjs';
 import { GENES, GENE_IDS } from './dist/genes.mjs';
 
@@ -171,21 +171,6 @@ test('per-gene calibration: about 3–4 points a cost point, answers worth 3 or 
 // no act's mechanic. No tick from 55% to 80% moves it. Held at 92% until the designer has played the acts. With the ♛
 // held at its tick until its act begins (no act skipped), 93% on the same seed: held at 94%.
 const HELD_THREE = { choir: 0.94 };
-// Act bars (dist/acts.mjs, docs/solo-bosses.md): every act is a board of its own, so the three run about as long as
-// each other. The planner on every subclass, 12 seeds, won fights (genesim.mjs actLengths); the longest act is at most a third over the
-// shortest (before act bars they ran 19.4 / 4.7 / 2.8). The bosses below miss it because a later act of theirs puts
-// another part on the board, so that act has more to break: the next session gives each one something it pays for the
-// part with, the way the old acts did (docs/solo-bosses.md).
-const ACT_SPREAD = { choir: 'a second voice in act 2', recursion: 'a frame pushed in acts 2 and 3', nightdesk: 'the Night Clerk in act 2, and trades that grow', byzantine: 'the hard fork in act 3', graceperiod: 'Reinstatement brings parts back', 'nb-hashlord': 'the Chain Fork in act 3', 'nb-backorifice': 'a Mirror in act 3' };
-test("every solo boss's acts run within about a quarter of each other", () => {
-  const solo = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid && BOSSES[k].phases?.length);
-  for (const id of solo) {
-    const xs = actLengths(id, BOSSES[id].floor || 10, SEEDS12), line = `${id}: ${xs.map((x) => x.toFixed(1)).join(' / ')}`;
-    assert.ok(xs.length >= 2, line); // the Resident plays its family's acts (BOSSES actPhases)
-    assert.ok(Math.max(...xs) <= Math.min(...xs) * (ACT_SPREAD[id] ? 2.5 : 1.34), `${line}${ACT_SPREAD[id] ? ` (${ACT_SPREAD[id]})` : ''}`);
-  }
-});
-
 test('every solo boss\'s worst three cycles stay under 90% of your max', { todo: "act bars (November 2026, docs/solo-bosses.md 'Act bars, measured'): every boss fights three acts on three boards with rules written for one, and the bands swing both ways; the next session reworks the bosses and this comes back (HOLLOW CHOIR at 18: 1.09 for a Sysop)" }, () => {
   const solo = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid);
   for (const id of solo) for (const L of [10, 18, 30]) for (const [cls, sub] of SUBS) {

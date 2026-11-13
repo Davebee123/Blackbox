@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { BOOT, TUBE_ON, VIRUS_ON, CHROME_LOW, HANGUP, hangupLines, bootLines, CUT, CONNECT, carrierLine, carrierReach } from './dist/bootfx.mjs';
+import { BOOT, TUBE_ON, VIRUS_ON, CHROME_LOW, HANGUP, bootLines, CUT, CONNECT, carrierLine, carrierReach } from './dist/bootfx.mjs';
 
 test('the virus comes on before anything of yours, and it is all over in a little over two seconds', () => {
   for (const k of ['console', 'chrome', 'you', 'youBar', 'board', 'log', 'prompt', 'tray']) assert.ok(BOOT.virus < BOOT[k] && BOOT.enemy < BOOT[k], k);
@@ -70,17 +70,9 @@ test('the circle opens as far as the page\'s farthest corner', () => {
   assert.equal(carrierReach({ x: 150, y: 200 }, 300, 400), 250);
 });
 
-test('jacking out is the dial-up backwards: the rooms go dark toward yours, the readout, then the map and your server ringed', () => {
+test('jacking out is the Carrier backwards: your room locks, the rooms close on the node, the line runs home', () => {
   const H = HANGUP;
-  assert.ok(H.lock < H.out && H.out < H.black && H.black < H.name && H.name < H.lines && H.lines < H.map && H.map < H.mark);
-  assert.ok(H.chrome + TUBE_ON.at(-1)[0] <= H.done && H.mark + 400 <= H.done + 200);
-  assert.ok(H.done <= 1800, 'quicker than the dial-up');
-  assert.deepEqual(hangupLines({ name: 'KESSLER-MIRROR-50', banked: 3 }).map((l) => l.text), [
-    'ath0 kessler-mirror-50 ... ok',
-    'carrier ................. dropped',
-    'pack .................... 3 banked',
-    'HOME_',
-  ]);
-  assert.equal(hangupLines({ name: 'X' })[2].text, 'pack .................... empty');
-  assert.deepEqual(hangupLines({ name: 'X' }).filter((l) => l.you).map((l) => l.text), ['HOME_']);
+  assert.ok(H.lock < H.close && H.close + H.closeFor <= H.ping + 40 && H.ping < H.wire && H.wire + H.runFor <= H.home + 100);
+  assert.ok(H.brightFor <= H.closeFor && H.home + H.homeFor <= H.done);
+  assert.ok(H.done <= CONNECT.done, 'no slower than connecting');
 });
