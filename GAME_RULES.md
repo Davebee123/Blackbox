@@ -2923,6 +2923,10 @@ A finished fight shows it whole.
 
 **On a desktop** the virus's picture sits left of the board, its bar over it, and your Signal over the board.
 
+**The board's frame** carries the floor (Floor colour on); chips and telegraphs never change. The Sprawl's playhead
+glows like a neon tube; Backhaul's carries a lamp on each row, its rows dashed like sleepers; on Coldline the Now cell
+fills like a tide as the cycle runs; Bedrock's board takes the ledger's double column rules and typewriter headings.
+
 **A new fight boots in.** The first time you see a fight, the screen goes dark and the virus comes up first, alone
 at the centre, before dropping into its panel; a boot console checks your system and your panels come up. About two
 seconds; any key or click ends it (and still acts). Leaving a won fight, the page folds to a teal line like a tube

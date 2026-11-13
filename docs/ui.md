@@ -346,6 +346,8 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
 - **The rooms map** carries the floor as a material (ground.mjs), never a picture: a picture's landmarks fell under rooms
   (rejected). It sits in the map's SVG under the links, masked clear of rooms and links, fading at the edges.
 - **The virus's tint** follows the floor but on Deep Core and the Sink (stage.mjs `TINT_SKIP`).
+- **The board's frame** by floor (style.css, keyed on `data-sfx-floor`): the playhead's form, the row and column rules,
+  the headings' type. Never a chip, never the playhead's colours.
 - Prototyped first (picked by the designer, November 2026): *Place* over *Era* for the picture, the era kept for the
   theme's sound.
 
