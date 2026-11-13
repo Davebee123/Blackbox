@@ -1212,6 +1212,13 @@ export function trayMarkup(s, selected = null) {
   cards.push(`<button type="button" class="tk-open" data-toolkit="${classOf(s)}" title="Toolkit: Your abilities and your bar. Keys change between fights." data-tt-kind="Key T" aria-label="Toolkit"><span class="ico" ${icon('command')}></span></button>`);
   return cards.join('');
 }
+// The emergency jack out (combat.mjs flee, run.mjs hooks.flee): a red key at the tray's end, wherever the typed
+// command works. Not on a breach, the rooms playtest, or while a hunter has your trace.
+export function fleeKey(s) {
+  const e = s.encounter;
+  if (!active(s) || e.mode !== 'run' || !s.run || s.roomsPlay || e.breach || (e.hunter && !s.run.rooms)) return '';
+  return `<button type="button" class="ability flee" data-command="jack out" data-confirm="Sure?" title="${esc('Jack out: leave the fight on your turn. You keep your pack, and the virus stays.')}">${keyFace('cancel', 'Jack out')}</button>`;
+}
 
 // ---------- pages ----------
 
