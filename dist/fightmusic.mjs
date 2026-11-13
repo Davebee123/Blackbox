@@ -13,7 +13,9 @@ const noiseOf = (ctx) => {
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   return (noiseBuf = b);
 };
-const curve = (k) => { const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(k * x) / Math.tanh(k); } return c; };
+const curves = new Map(); // one per drive amount: a note no longer builds its own
+const curve = (k) => curves.get(k) || curves.set(k, curveOf(k)).get(k);
+const curveOf = (k) => { const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(k * x) / Math.tanh(k); } return c; };
 
 // A theme's chain: dry and pumped (ducked by the kick) into a hard overdrive with a loud bit-crushed copy under it and a presence lift, plus reverb and a filtered feedback
 // delay, into its fader. A faint tape hiss and a low factory rumble run under it all. On an old floor (ERAS) the theme
@@ -278,7 +280,7 @@ function eraChain(ctx, from, to, E, hold) {
 export const FIGHT_THEMES = Object.fromEntries(THEMES.map((t) => [t.id, t]));
 // Stand-ins until the designer hears their own: the Botnet plays the Worm's, the Logic Bomb the Ransomware's.
 Object.assign(FIGHT_THEMES, { botnet: FIGHT_THEMES.worm, logicbomb: FIGHT_THEMES.ransomware });
-const AHEAD = 0.4; // seconds of notes scheduled ahead: a fight's busy frames hold the timer up past 0.15 s, and the beat stuttered
+const AHEAD = 1; // seconds of notes scheduled ahead: a part breaking holds the page up long enough that 0.4 s ran dry and the music dropped out
 
 // Play a family's theme into dest, fading in over fadeIn seconds. Returns { id, setHeat(0-1), stop(fade) }, or null
 // for a family with no theme. While the page is hidden nothing new is scheduled (timers there run late).
