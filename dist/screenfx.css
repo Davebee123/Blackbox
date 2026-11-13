@@ -86,7 +86,7 @@
 
 /* ---------- static (Bedrock, and Low Signal) ---------- */
 #fx-back .fx-static {
-  inset: -50%;
+  inset: -15%;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   animation: sfx-grain 0.45s steps(3) infinite;
 }
@@ -151,7 +151,8 @@
 @keyframes sfx-sweep { from { transform: translateY(-30%); } to { transform: translateY(30%); } }
 @keyframes sfx-breathe { 0%, 100% { filter: brightness(0.75); } 50% { filter: brightness(1.25); } }
 @keyframes sfx-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
-@keyframes sfx-grain { 0% { transform: translate(0, 0); } 33% { transform: translate(-7%, 4%); } 66% { transform: translate(5%, -6%); } 100% { transform: translate(0, 0); } }
+/* as style.css crt-grain: a layer 1.3x the screen, shifted as far as the old 2x one */
+@keyframes sfx-grain { 0% { transform: translate(0, 0); } 33% { transform: translate(-10.77%, 6.15%); } 66% { transform: translate(7.69%, -9.23%); } 100% { transform: translate(0, 0); } }
 @keyframes sfx-tear { 0% { opacity: 1; transform: translate(-14px, 0); } 30% { opacity: 1; transform: translate(10px, -9%); } 60% { opacity: 0.8; transform: translate(-6px, 14%); } 100% { opacity: 0; transform: none; } }
 @keyframes sfx-tear-shift { 0% { transform: translateX(-18px); clip-path: inset(18% 0 60% 0); } 35% { transform: translateX(14px); clip-path: inset(55% 0 30% 0); } 70% { transform: translateX(-6px); clip-path: inset(0 0 0 0); } 100% { transform: none; clip-path: none; } }
 @keyframes sfx-crit { 0% { filter: url(#sfx-tear-a); } 45% { filter: url(#sfx-tear-b); } 100% { filter: none; } }

@@ -193,7 +193,7 @@ code { font-family: var(--mono); color: var(--amber); }
 .tcol:first-child .tcol-head { color: var(--bright); font-weight: 600; }
 .countdown { font: 600 22px var(--mono); color: var(--bright); line-height: 1; }
 .cyclebar { position: relative; height: 7px; background: var(--inset); border: 1px solid var(--line); }
-.cyclebar span { position: relative; display: block; height: 100%; background: var(--you); }
+.cyclebar span { position: relative; display: block; height: 100%; background: var(--you); transform-origin: left; } /* filled by scaleX (app.js tickUi): no layout each frame */
 .intent { display: flex; align-items: center; gap: 6px; padding: 5px 7px; border: 1px solid var(--line-strong); border-radius: 3px; font-size: 13px; background: var(--panel-2); }
 .intent .ico { width: 14px; height: 14px; flex: none; background: currentColor; -webkit-mask: var(--icon) center/contain no-repeat; mask: var(--icon) center/contain no-repeat; }
 .intent b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: clip; min-width: 0; }
@@ -1143,12 +1143,13 @@ html[data-sfx-floor="7"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.spa
 }
 .shell-on #crt::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 22vh; background: linear-gradient(to bottom, transparent, rgba(255, 230, 160, 0.03) 60%, transparent); animation: crt-roll 11s linear infinite; }
 .shell-on #crt::after {
-  content: ''; position: absolute; inset: -50%; opacity: 0.045;
+  content: ''; position: absolute; inset: -15%; opacity: 0.045;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   animation: crt-grain 0.5s steps(3) infinite;
 }
 @keyframes crt-roll { from { transform: translateY(-25vh); } to { transform: translateY(105vh); } }
-@keyframes crt-grain { 0% { transform: translate(0, 0); } 33% { transform: translate(-7%, 4%); } 66% { transform: translate(5%, -6%); } 100% { transform: translate(0, 0); } }
+/* the grain's layer is 1.3x the screen (inset -15%): these shifts are 14% and 10% of the screen across, 8% and 12% down */
+@keyframes crt-grain { 0% { transform: translate(0, 0); } 33% { transform: translate(-10.77%, 6.15%); } 66% { transform: translate(7.69%, -9.23%); } 100% { transform: translate(0, 0); } }
 /* your health, felt: screenfx.css (#crt-bezel.warn, .low), at the screen's very edge only. */
 
 /* the tube: rounded corners and darker edges */
@@ -4145,9 +4146,10 @@ body.no-motion .recap { animation: none; }
    A Mutex's lock sits on its partner's own bar as an absorb segment (hatched steel, a padlock where hits drain it);
    a Lockbox's ward as a cap line at the most the part can still lose this cycle. ---- */
 
-#board:has(.tether) { --gut: 66px; }
-#board:has(.tether.lane1) { --gut: 80px; }
-@media (max-width: 480px) { #board:has(.tether) { --gut: 56px; } #board:has(.tether.lane1) { --gut: 70px; } }
+/* tt-gut, tt-lane1: the board holds a tether, in two lanes (app.js render; a class, since :has() here restyled the board every frame) */
+#board.tt-gut { --gut: 66px; }
+#board.tt-gut.tt-lane1 { --gut: 80px; }
+@media (max-width: 480px) { #board.tt-gut { --gut: 56px; } #board.tt-gut.tt-lane1 { --gut: 70px; } }
 .tether { --x: 18px; --tt: var(--steel); position: absolute; top: 0; bottom: 0; left: calc(-1 * var(--gut)); width: var(--gut); pointer-events: none; z-index: 1; color: var(--steel); }
 .tether.lane1 { --x: 31px; }
 .tt-line { position: absolute; left: calc(var(--x) - 1px); width: 2px; background: var(--tt); pointer-events: auto; }
@@ -4170,7 +4172,7 @@ body.no-motion .recap { animation: none; }
 .tt-node.clock { width: auto; height: auto; gap: 3px; grid-auto-flow: column; padding: 1px 5px 1px 4px; border-radius: var(--r-tag); }
 .tt-node.clock .tt-ico { width: 11px; height: 11px; }
 .tether:has(.tt-node) { z-index: 2; } /* a node on a row's edge sits over the next row's piece of line */
-#board:has(.tether.lane1) .tt-node.clock { left: 25px; } /* two lanes: every chip in one column, over both lines */
+#board.tt-gut.tt-lane1 .tt-node.clock { left: 25px; } /* two lanes: every chip in one column, over both lines */
 .tt-count { color: var(--bright); font: 700 13px/16px var(--mono); }
 /* Two arms on one row (view.mjs tethers --arm): one a little above the middle, one below, so neither hides the other. */
 .tether .tt-arm.dst { top: calc(50% - 1px + var(--arm, 0px)); }
@@ -4548,7 +4550,7 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .intent.bufup { border-style: dashed; border-color: var(--steel); color: var(--steel); background: transparent; }
 .tag.hotspot { display: inline-flex; align-items: center; gap: 3px; color: var(--amber); border-color: var(--amber); box-shadow: 0 0 6px var(--amber-wash); }
 .tag.hotspot .glyph { width: 10px; height: 10px; margin: 0; }
-.brow.bpart:has(.tag.hotspot) { box-shadow: inset 3px 0 0 var(--amber-soft); }
+.board .brow.bpart.has-hotspot { box-shadow: inset 3px 0 0 var(--amber-soft); }
 .tag.idlepips { display: inline-flex; align-items: center; gap: 2px; letter-spacing: 1px; font-size: 9px; }
 .tag.idlepips .glyph { width: 10px; height: 10px; margin: 0 2px 0 0; }
 .tag.idlepips i { opacity: 0.4; font-style: normal; }

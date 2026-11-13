@@ -2345,6 +2345,8 @@ function render(force = false) {
     for (const k of spentChips) $('board').querySelector(`[data-k="${CSS.escape(k)}"]`)?.classList.add('spent'); // and one that has gone off stays gone
     if (held.size) applyHeld(); // a batch still playing: its bars hold until each hit lands
     $('board').classList.toggle('is-paused', !!(active(s) && s.encounter.paused));
+    // Classes for what style.css once asked of :has() (it restyled the board every frame): a tether's gutter, a hotspot's row.
+    { const bd = $('board'); bd.classList.toggle('tt-gut', !!bd.querySelector('.tether')); bd.classList.toggle('tt-lane1', !!bd.querySelector('.tether.lane1')); for (const r of bd.querySelectorAll('.brow.bpart')) r.classList.toggle('has-hotspot', !!r.querySelector('.tag.hotspot')); }
     // Every part on screen: if the rows overflow the board, tighten them (style.css .dense) for the rest of the fight.
     { const bd = $('board'), key = s.encounter.virus.id; if (fitBoard.key !== key) { fitBoard.key = key; bd.classList.remove('dense'); } if (!bd.classList.contains('dense') && bd.scrollHeight > bd.clientHeight + 2) bd.classList.add('dense'); }
     for (const f of pendingStrikes.splice(0)) f();
@@ -2481,7 +2483,9 @@ function setBand(s) {
   const board = $('board');
   if (!board || !s.encounter) return;
   const e = s.encounter;
-  board.style.setProperty('--elapsed', (active(s) ? (e.elapsedMs / cycleLength(s)) * 100 : 0).toFixed(1) + '%');
+  // Set on the Now cells, its only readers: on the board, the inherited property restyled every row each frame.
+  const el = (active(s) ? (e.elapsedMs / cycleLength(s)) * 100 : 0).toFixed(1) + '%';
+  for (const c of board.querySelectorAll('.brow > .bcell:nth-child(2)')) if (c.style.getPropertyValue('--elapsed') !== el) c.style.setProperty('--elapsed', el);
   const closing = active(s) && !e.paused && cycleLength(s) - e.elapsedMs <= 1500 && intents(s, 1).some((i) => i.col === 0 && !i.hidden);
   board.classList.toggle('closing', closing);
 }
@@ -2691,7 +2695,7 @@ function tickUi() {
   if (!active(s)) return;
   setBand(s);
   const bar = $('cyclebar'), cd = $('countdown');
-  if (bar) bar.style.width = (s.encounter.elapsedMs / cycleLength(s)) * 100 + '%';
+  if (bar) bar.style.transform = `scaleX(${(s.encounter.elapsedMs / cycleLength(s)).toFixed(4)})`;
   // The Sync Window lights while the bar is inside it.
   const sw = $('sync-win');
   if (sw) {

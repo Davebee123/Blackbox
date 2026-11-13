@@ -200,8 +200,8 @@ const STAR = (x, y, s, o = 1) => `<path class="cfx-mk-star" style="opacity:${f1(
 // Each theme: (chip, box, state, dt ms, intensity, cycle progress 0–1).
 const THEMES = {
   // Electric: fractal arcs jump across the chip, a white-hot core over a bloom, hot spots where they touch its edge.
-  zap(el, box, S, dt, lv) {
-    const w = el.offsetWidth, h = el.offsetHeight;
+  zap(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz;
     if (!S.svg) { S.svg = svgIn(box); S.arcs = []; }
     if (lv && Math.random() < dt / 1000 * 9 * lv) {
       const run = Math.random() < (lv > 1.2 ? 0.45 : 0.25), x = rnd(4, w - 4);
@@ -225,8 +225,8 @@ const THEMES = {
     });
   },
   // Locks: padlocks rise through the chip, near ones larger and glowing, far ones small and soft; each shackle snaps shut.
-  lock(el, box, S, dt, lv) {
-    const w = el.offsetWidth, h = el.offsetHeight;
+  lock(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz;
     S.parts ||= [];
     if (lv && Math.random() < dt / 1000 * 7 * lv) {
       const near = Math.random() < 0.4, size = near ? rnd(10, 13) : rnd(6, 8.5);
@@ -246,8 +246,8 @@ const THEMES = {
     });
   },
   // Ciphertext: streams of hex fall through the chip, a bright head over a fading tail, the glyphs changing as they go.
-  cipher(el, box, S, dt, lv) {
-    const w = el.offsetWidth, h = el.offsetHeight;
+  cipher(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz;
     S.st ||= [];
     if (lv && Math.random() < dt / 1000 * 9 * lv) {
       const near = Math.random() < 0.4, n = near ? 4 : 3, fs = near ? 10 : 8;
@@ -266,9 +266,8 @@ const THEMES = {
     });
   },
   // Beacon: rings roll out from the icon, thinning as they spread, over a soft glow that pulses with each ping.
-  ring(el, box, S, dt, lv) {
-    const w = el.offsetWidth, ic = el.querySelector('.ico, .bk-ico');
-    const cx = ic ? ic.offsetLeft + ic.offsetWidth / 2 : 14, cy = ic ? ic.offsetTop + ic.offsetHeight / 2 : el.offsetHeight / 2;
+  ring(el, box, S, dt, lv, p, sz) {
+    const { w, cx, cy } = sz;
     if (!S.svg) { S.svg = svgIn(box); S.rs = []; S.acc = 0; S.core = span(box, 'cfx-glow'); }
     Object.assign(S.core.style, { left: cx + 'px', top: cy + 'px', opacity: lv ? 0.45 : 0 });
     S.acc += dt * lv;
@@ -289,8 +288,8 @@ const THEMES = {
     });
   },
   // Frost: dendrites branch in from the corners as the cycle runs out, over a noisy rime, glints on the tips.
-  frost(el, box, S, dt, lv, p) {
-    const w = el.offsetWidth, h = el.offsetHeight;
+  frost(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz;
     if (S.bw !== w || S.bh !== h) {
       S.bw = w; S.bh = h; box.querySelector('.cfx-svg')?.remove();
       const svg = svgIn(box), branches = [];
@@ -329,8 +328,8 @@ const THEMES = {
     }
   },
   // Wipe: a dither field; in Now the playhead's line eats it, pixels flaking off its edge; at +1 it sheds a pixel now and then.
-  erase(el, box, S, dt, lv, p) {
-    const w = el.offsetWidth, h = el.offsetHeight;
+  erase(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz;
     if (!S.field) { S.field = span(box, 'cfx-dith'); S.edge = span(box, 'cfx-edge'); S.fl = []; }
     const now = lv >= 1, x = now ? p * w : 0;
     S.field.style.clipPath = now ? `inset(0 0 0 ${x}px)` : 'none';
@@ -351,8 +350,8 @@ const THEMES = {
   },
   // Heat: flame tongues lick up from the chip's foot, a white-hot core inside a blooming body, rising with the cycle.
   // Embers break off the tips, near ones bright and big, far ones small and soft; some pop into sparks on the way up.
-  heat(el, box, S, dt, lv, p) {
-    const w = el.offsetWidth, h = el.offsetHeight;
+  heat(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz;
     if (!S.svg) { S.glow = span(box, 'cfx-heat'); S.svg = svgIn(box); S.t = 0; S.H = 0; S.em = []; S.ph = Array.from({ length: 64 }, () => rnd(0, 60)); }
     S.t += dt / 1000 * (lv > 1.2 ? 1.5 : 1);
     const goal = !lv ? 0 : lv < 1 ? 0.22 : 0.36 + 0.46 * p + (lv > 1.2 ? 0.1 : 0);
@@ -388,8 +387,8 @@ const THEMES = {
   // Crumble: glowing fissures branch in from the edges as the cycle runs out, a hot point at each growing tip. Chips
   // of the surface break off and fall (near ones bright, tumbling; far ones dust), and dead pixels flicker by the
   // cracks. In the last 1.5 s the light behind the cracks breathes.
-  crumble(el, box, S, dt, lv, p) {
-    const w = el.offsetWidth, h = el.offsetHeight;
+  crumble(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz;
     if (S.bw !== w) {
       S.bw = w; S.svg?.remove(); S.tips?.forEach((t) => t.remove());
       S.svg = svgIn(box); S.segs = cracks(crackOrigins(0, 0, w, h)); S.ps = []; S.t = 0;
@@ -436,8 +435,8 @@ const THEMES = {
   },
   // Scramble: a field of dim glyphs churns behind the chip; a decoding wave sweeps through it, white at its head, and the
   // glyphs it passes change fast. Rows tear sideways for a moment, and near glyphs pop in large and settle.
-  scramble(el, box, S, dt, lv) {
-    const w = el.offsetWidth, h = el.offsetHeight;
+  scramble(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz;
     if (S.bw !== w) {
       S.bw = w; S.rows?.forEach((r) => { r.back.remove(); r.head.remove(); r.tail.remove(); });
       const R = Math.max(2, Math.floor(h / 8.5)), C = Math.ceil(w / 5.4) + 1;
@@ -488,8 +487,8 @@ const THEMES = {
   // Thorns: a bramble runs along the chip's top and bottom edges and hooked thorns sprout from it in a ripple, springing
   // past their length and settling. Near thorns are large with a white sliver and a glint at the tip; far ones are small
   // and soft. They reach further as the cycle runs out and tremble in its last 1.5 s.
-  thorn(el, box, S, dt, lv, p) {
-    const w = el.offsetWidth, h = el.offsetHeight;
+  thorn(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz;
     if (S.bw !== w) {
       S.bw = w; S.svg?.remove(); S.svg = svgIn(box); S.t = 0;
       const n = Math.max(5, Math.round(w / 15)), ths = [];
@@ -520,8 +519,8 @@ const THEMES = {
   // Clock: a dial ticks in the chip's middle, its hand stepping each half second; in Now it sweeps once round the cycle,
   // filling the dial behind it and lighting each tick it passes, and a ruler along the chip's foot fills with it. In the
   // last 1.5 s the ticks still dark blink and the dial glows.
-  clock(el, box, S, dt, lv, p) {
-    const w = el.offsetWidth, h = el.offsetHeight;
+  clock(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz;
     if (S.bw !== w) {
       S.bw = w; S.svg?.remove(); S.svg = svgIn(box); S.t = 0; S.step = 0; S.since = 999;
       S.R = h * 0.4; S.cx = w * 0.56; S.cy = h / 2; S.n = Math.max(12, Math.round(w / 6));
@@ -546,8 +545,8 @@ const THEMES = {
   // Strobe: soft light columns fire in patterns, a chase across the chip, a burst, or all at once with a flare streaking
   // sideways through it; each flash is short and leaves an afterglow. Near columns wide and bright, far ones thin and
   // soft. It fires faster as the cycle runs out, rapid in its last 1.5 s.
-  strobe(el, box, S, dt, lv, p) {
-    const w = el.offsetWidth;
+  strobe(el, box, S, dt, lv, p, sz) {
+    const { w } = sz;
     if (S.bw !== w) {
       S.bw = w; S.cols?.forEach((c) => c.m.remove()); S.streak?.remove();
       const n = Math.max(5, Math.round(w / 16));
@@ -571,8 +570,8 @@ const THEMES = {
   // Copy: a copier's light bar sweeps across the chip leaving a faint copied dot pattern; at the end of each pass a copy
   // of the chip's outline lifts off and sinks back into it, shrinking and fading, near copies bright, far ones soft.
   // Passes speed up as the cycle runs out.
-  copy(el, box, S, dt, lv, p) {
-    const w = el.offsetWidth, h = el.offsetHeight;
+  copy(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz;
     if (!S.lamp) { S.wake = span(box, 'cfx-cp-wake'); S.lamp = span(box, 'cfx-cp-lamp'); S.x = -12; S.cps = []; S.n = 0; }
     const dur = lv > 1.2 ? 420 : lv >= 1 ? 1050 - 450 * p : 1600;
     if (lv) S.x += dt / dur * (w + 24);
@@ -594,8 +593,8 @@ const THEMES = {
   },
   // Scan: a laser line sweeps back and forth over a faint dot grid, lighting the dots it crosses, their glow fading behind
   // it; now and then it finds one and brackets snap round it. It sweeps faster as the cycle runs out.
-  scan(el, box, S, dt, lv, p) {
-    const w = el.offsetWidth, h = el.offsetHeight;
+  scan(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz;
     if (S.bw !== w) {
       S.bw = w; S.svg?.remove(); S.beam?.remove(); S.svg = svgIn(box); S.t = 0; S.x = 0; S.dir = 1;
       const g = 6, d = [];
@@ -621,8 +620,8 @@ const THEMES = {
   // Plate: a faint hex shield lies behind the chip; armour plates with bright bevels and rivets slide in from both sides
   // and clang shut, a flash at the seam, sparks off it, and a ripple through the shield; then they part. They clang faster
   // as the cycle runs out, and in its last 1.5 s they stay shut and shudder, the seam glowing.
-  plate(el, box, S, dt, lv, p) {
-    const w = el.offsetWidth, h = el.offsetHeight;
+  plate(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz;
     if (S.bw !== w) {
       S.bw = w; S.svg?.remove(); S.seam?.remove(); S.svg = svgIn(box); S.t = 0; S.u = 0; S.rip = 1e9;
       const cells = hexMesh(0, 0, w, h, 4.6);
@@ -653,8 +652,8 @@ const THEMES = {
   },
   // Ledger: a few odometer reels stand behind the chip over faint ruled lines; each ticks over now and then with a snap, its
   // window flashing; as the cycle runs out more of them spin, blurring, and in its last 1.5 s they all roll.
-  ledger(el, box, S, dt, lv, p) {
-    const w = el.offsetWidth, h = el.offsetHeight;
+  ledger(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz;
     if (S.bw !== w) {
       S.bw = w; S.reels?.forEach((r) => { r.m.remove(); r.win.remove(); }); S.lines?.remove();
       S.lines = span(box, 'cfx-lg-lines'); S.t = 0;
@@ -683,8 +682,8 @@ const THEMES = {
   // Mask: a line-drawn mask behind the chip turns now and then like a coin, a glint along its edge as it passes edge-on,
   // and shows its other face; a ghost of that face lies behind it. Its eyes glint. It turns faster as the cycle runs out
   // and flickers between its faces in the last 1.5 s.
-  mask(el, box, S, dt, lv, p) {
-    const w = el.offsetWidth, h = el.offsetHeight;
+  mask(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz;
     if (!S.svg) { S.svg = svgIn(box); S.t = 0; S.face = 0; S.k = 1; S.next = 700; S.eye = 0; }
     S.t += dt;
     const late = lv > 1.2, gap = late ? 260 : lv >= 1 ? 1300 - 700 * p : 1800, dur = late ? 170 : 320;
@@ -701,8 +700,8 @@ const THEMES = {
   },
   // Byte: eight bit cells along the chip's foot, eaten one by one from the right as the cycle runs out, each with a white
   // nibble; in the last 1.5 s the ones left flicker. At +1 the end cell blinks now and then.
-  byte(el, box, S, dt, lv, p) {
-    const w = el.offsetWidth, h = el.offsetHeight, N = 8, gap = 2, x0 = 5, cw = (w - 2 * x0 - (N - 1) * gap) / N, y = h - 4.5;
+  byte(el, box, S, dt, lv, p, sz) {
+    const { w, h } = sz, N = 8, gap = 2, x0 = 5, cw = (w - 2 * x0 - (N - 1) * gap) / N, y = h - 4.5;
     if (!S.svg) { S.svg = svgIn(box); S.eaten = 0; S.pops = []; S.idle = 0; }
     const eaten = lv >= 1 ? Math.min(N - 1, Math.floor(p * N)) : 0;
     for (let i = S.eaten; i < eaten; i++) S.pops.push({ i: N - 1 - i, age: 0 });
@@ -739,15 +738,22 @@ export function createChipFx() {
       for (const [k, rec] of kept) if (now - rec.seen > 3000) { rec.box.remove(); kept.delete(k); }
     },
     // Every frame: dt ms (0 while paused), p the cycle's progress, left its ms to go, k the screen effects' strength (0 is off).
+    // Reads first (each chip's size), then the themes' writes: one layout a frame, not one a chip. Effects off: the boxes
+    // are hidden (opacity 0) and the themes rest.
     tick({ dt, p, left, k }) {
+      const run = [];
       for (const rec of kept.values()) {
         const el = rec.box.parentNode;
         if (!el?.isConnected) continue;
         const cell = el.closest('.bcell'), col = cell ? [...cell.parentNode.children].indexOf(cell) - 1 : 9;
         const [lv, op] = k ? chipLevel(col, left) : [0, 0];
-        rec.box.style.opacity = op * k;
-        if (lv || Object.keys(rec.st).length) THEMES[rec.th]?.(el, rec.box, rec.st, dt, lv, col === 0 ? p : 0);
+        if (rec.op !== op * k) rec.box.style.opacity = rec.op = op * k;
+        if (!k || !(lv || Object.keys(rec.st).length) || !THEMES[rec.th]) continue;
+        const g = { w: el.offsetWidth, h: el.offsetHeight };
+        if (rec.th === 'ring') { const ic = el.querySelector('.ico, .bk-ico'); g.cx = ic ? ic.offsetLeft + ic.offsetWidth / 2 : 14; g.cy = ic ? ic.offsetTop + ic.offsetHeight / 2 : g.h / 2; }
+        run.push([rec, el, lv, col === 0 ? p : 0, g]);
       }
+      for (const [rec, el, lv, pp, g] of run) THEMES[rec.th](el, rec.box, rec.st, dt, lv, pp, g);
     },
   };
 }
