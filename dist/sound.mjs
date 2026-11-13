@@ -726,6 +726,15 @@ function clipAt(ctx, out, t, name) {
   return true;
 }
 
+// A sound's own buses are cut from the chain once it has long rung out (at: a context time). Its echoes are feedback
+// loops, and a live context keeps a loop connected to the speakers rendering forever: a fight's worth of hits used to
+// pile up until the audio stuttered.
+const live = (ctx) => typeof OfflineAudioContext === 'undefined' || !(ctx instanceof OfflineAudioContext);
+function release(ctx, at, nodes) {
+  if (!live(ctx)) return;
+  setTimeout(() => { for (const n of nodes) try { n.disconnect(); } catch { /* already */ } }, Math.max(0, at - ctx.currentTime) * 1000);
+}
+
 // The chain everything plays into: a little headroom and a gentle compressor, with the room beside it.
 function chain(ctx) {
   const g = ctx.createGain(), c = ctx.createDynamicsCompressor();
@@ -756,6 +765,7 @@ const ABILITY_HALL = { b7: 1.2, b8: 2.2, b9: 0.85, b10: 0.85, b11: 0.85, b12: 0.
 // The voice cap: at most ABILITY_CAP ability sounds starting within ABILITY_SPAN s of each other; one more plays nothing
 // (its caller falls back to its result's voice, one short sample).
 const ABILITY_CAP = 4, ABILITY_SPAN = 0.25, recent = new WeakMap();
+const RING_OUT = 12; // s after its contact that a hit's own buses are cut (release): its echoes are long gone
 function abilityAt(ctx, ch, style, key, T) {
   if (!banks.get(ctx)?.ready) return false;
   const live = (recent.get(ctx) || []).filter((t) => Math.abs(t - T.t) < ABILITY_SPAN);
@@ -765,9 +775,11 @@ function abilityAt(ctx, ch, style, key, T) {
   send.gain.value = ABILITY_ROOM[style] ?? 0.1; more.gain.value = 0.6;
   dry.connect(ch.master); dry.connect(send).connect(ch.room);
   room.connect(dry); room.connect(more).connect(ch.room);
-  if (ABILITY_HALL[style]) { const h = ctx.createGain(); h.gain.value = ABILITY_HALL[style]; dry.connect(h).connect(hallOf(ctx, ch)); }
-  if (['b', 'b1', 'b3', 'b4', 'b7', 'b8', 'b9', 'b10', 'b11', 'b12', 'b13'].includes(style)) { const h = ctx.createGain(); h.gain.value = 0.5; room.connect(h).connect(hallOf(ctx, ch)); } // the weighty ones: the bigger space
+  const cut = [dry, send, room, more];
+  if (ABILITY_HALL[style]) { const h = ctx.createGain(); h.gain.value = ABILITY_HALL[style]; dry.connect(h).connect(hallOf(ctx, ch)); cut.push(h); }
+  if (['b', 'b1', 'b3', 'b4', 'b7', 'b8', 'b9', 'b10', 'b11', 'b12', 'b13'].includes(style)) { const h = ctx.createGain(); h.gain.value = 0.5; room.connect(h).connect(hallOf(ctx, ch)); cut.push(h); } // the weighty ones: the bigger space
   const list = (name) => { const l = banks.get(ctx)?.buffers.get(name); return l && take(l, name); };
+  release(ctx, T.hit + T.stop + RING_OUT, cut);
   return playAbility(ctx, { dry, room }, style, key, T, list);
 }
 // A virus attack's sound (virussound.mjs) in a style, timed by T (attackTiming): the same room and hall as yours, a
@@ -781,6 +793,8 @@ function attackAt(ctx, ch, style, key, T) {
   send.gain.value = 0.2; more.gain.value = 0.6; hall.gain.value = 0.6; far.gain.value = 0.5;
   dry.connect(ch.master); dry.connect(send).connect(ch.room); dry.connect(hall).connect(hallOf(ctx, ch));
   room.connect(dry); room.connect(more).connect(ch.room); room.connect(far).connect(hallOf(ctx, ch));
+  const last = Math.max(T.hit, T.stop, ...Object.values(T.post).flat(), ...T.again) + T.tail + T.n * T.step;
+  release(ctx, last + RING_OUT, [dry, send, room, more, hall, far]);
   const list = (name) => { const l = banks.get(ctx)?.buffers.get(name); return l && take(l, name); };
   return playAttack(ctx, { dry, room }, style, key, T, list);
 }
@@ -790,8 +804,9 @@ function voiceAt(ctx, ch, name, t, opts = {}) {
   const r = RECIPES[name], ready = banks.get(ctx)?.ready;
   const v = ctx.createGain();
   v.connect(ch.master);
+  release(ctx, t + 20, [v]); // the longest whole clip (a boss down) is well inside this
   if (r && ready) {
-    const send = ctx.createGain(); send.gain.value = r.room; v.connect(send).connect(ch.room);
+    const send = ctx.createGain(); send.gain.value = r.room; v.connect(send).connect(ch.room); release(ctx, t + 20, [send]);
     r.play(ctx, v, t, opts, (n, at, o) => sample(ctx, v, t, n, { ...o, at }), (n) => clipAt(ctx, v, t, n));
   } else if (VOICES[name]) VOICES[name](ctx, v, t, opts);
   else if (name === 'jackin') VOICES.unlock(ctx, v, t, opts);
