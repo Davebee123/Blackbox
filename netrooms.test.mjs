@@ -33,7 +33,7 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   play(s, 'connect sprawl');
   assert.ok(s.run?.rooms && s.rooms?.world, 'a run on rooms');
   const g = s.rooms.graph;
-  assert.deepEqual(Object.values(g.rooms).filter((r) => r.path0 !== '/').map((r) => r.path0).sort(), ['/net', '/net/relay', '/srv', '/tmp', '/var', '/var/log']);
+  assert.deepEqual(Object.values(g.rooms).filter((r) => r.path0 !== '/').map((r) => r.path0).sort(), ['/dev', '/home', '/home/guest', '/net', '/net/relay', '/srv', '/tmp', '/var', '/var/log', '/var/spool']);
   assert.equal(g.rooms[g.core].path0, KING_ROOM);
   for (const [a, b] of g.links) { const pa = g.rooms[a].path0, pb = g.rooms[b].path0; assert.ok(pb.startsWith(pa === '/' ? '/' : pa + '/'), `${pa} → ${pb}: a folder next to its parent`); }
   assert.deepEqual(sprawlGraph(), g, 'the same graph every time');

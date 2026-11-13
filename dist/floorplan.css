@@ -243,6 +243,9 @@
 .bp-cost .bc .glyph, .bp-cost .bc svg { width: 11px; height: 11px; }
 .fp-virus b { display: block; font: 600 15px var(--sans); color: var(--bright); overflow-wrap: anywhere; }
 .fp-virus small { font: 11px var(--mono); color: var(--muted); }
+.fp-virus small .fp-lv { display: inline; font: 700 12px var(--mono); color: inherit; }
+.fp-virus small .fp-lv.con-red { color: #ff5b3d; } .fp-virus small .fp-lv.con-orange { color: #ff9a3d; } .fp-virus small .fp-lv.con-yellow { color: #f1d02f; } .fp-virus small .fp-lv.con-green { color: #7fd67a; } .fp-virus small .fp-lv.con-gray { color: #8a8174; }
+.fp-virus small .fp-up { font-style: normal; margin-left: 5px; padding: 0 4px; border: 1px solid currentColor; border-radius: 3px; font-size: 11px; }
 .fp-tag-inline { display: inline-flex; align-items: center; height: 16px; padding: 0 4px; border: 1px solid currentColor; border-radius: var(--r-tag); font: 600 10px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
 .fp-tag-inline.hot { color: var(--hot); } .fp-tag-inline.next { color: var(--next); }
 .fp-sec { margin: 0; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--muted); display: flex; gap: var(--s3); align-items: baseline; }
