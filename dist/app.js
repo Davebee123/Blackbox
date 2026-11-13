@@ -2083,6 +2083,7 @@ function renderMeters() {
   document.body.classList.toggle('rooms-page', !!campaign.rooms && module === 'rooms'); // its notices pop up mid-screen
   $('tab-rooms').hidden = !campaign.rooms;
   $('tab-rooms').textContent = campaign.roomsPlay ? 'Server' : 'Run'; // on the network a server's rooms are your run (the Server tab is your home server)
+  $('tab-rooms').dataset.tt = campaign.roomsPlay ? "Server: The rooms of the server you're connected to." : 'Run: The rooms of your run.';
   document.body.classList.toggle('rooms-mode', !!campaign.roomsPlay); // the rooms playtest: the old game's tabs and meters step aside
   $('tab-campaign').hidden = !CAMP;
   $('tab-archive').hidden = !CAMP;

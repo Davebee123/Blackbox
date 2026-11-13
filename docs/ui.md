@@ -195,7 +195,7 @@ short vibration on phones that have it.
 
 ## The pages, at a glance
 
-- **The top bar:** the pages on the left; in the middle your handle · class · level with the class's XP as a thin bar;
+- **The top bar:** the pages on the left, each with a one-line tooltip; in the middle your handle · class · level with the class's XP as a thin bar;
   on the right the people button, the pager, then Integrity (a server tower that drains), Signal (five bars) and
   credits, each with its **+**. At 1440 with the casing the pager's tray tightens so the class name keeps its place.
 - **The map** shows one floor at a time. A server (the *Glyph*, `view.mjs` serverIcon) is its kind's glyph on a dark
