@@ -137,4 +137,5 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 
 - **Enhance, don't add** (the designer, November 2026). In order: the fights (the main loop); then every floor's
   content, its bosses finished (floors 5–8 have none of their own); then itemization on the deeper floors. Every floor
-  should have content. New systems (runners R2+, off-map servers, co-op, crises) wait.
+  should have content. Runners go on slice by slice (R2 built; R3 next, then R4: docs/runners.md). Other new
+  systems (off-map servers, co-op, crises) wait.
