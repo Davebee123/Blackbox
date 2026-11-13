@@ -1,21 +1,18 @@
-// Boss acts (docs/puzzle-fights.md P4): a beat that repeats, three acts, and the one to leave. A P4 boss (BOSSES[id].acts,
-// by family for the Resident) plays in three acts: the first from the start, the next two from its ♛ part's ticks at 60%
-// and 30% (interrupt.mjs rule a, TICKS.act: the same for every boss). Each act deals one more of its tells and quickens its beat; the last speeds every attack.
+// Boss acts (docs/puzzle-fights.md P4): a beat that repeats, and three acts, each on a bar of its own (act bars, below).
+// A boss with a beat (BOSSES[id].acts, by family for the Resident) deals one more of its tells an act and quickens its
+// beat in act 2; the last speeds every attack.
 //
 //   the beat     one move on a fixed rhythm, always on the board: the Backlash (on its beat, a part your command hits
 //                that doesn't break lashes back: its own attack lands at once, doubled), the Mimic's copy (HOLLOW CHOIR),
 //                the Decoy's bend, or a part's own attack (RELAY-KING's Broadcast, REPO MAN's Collection). What you fire
 //                on the beat, and where, is the puzzle.
 //   the acts     act n deals tell n (charge, cast, then the third); act 2 quickens the beat (every), act 3 speeds every
-//                attack a cycle (BOSSES phases).
-//   the one to leave  the ♛ must stand above its next tick until this act's beat has played (ACTS.leave), or nothing else
-//                stands. Taken under it sooner, every part re-arms (to its full ◆). It holds at its next tick until that
-//                act has begun (actCap).
+//                attack a cycle (BOSSES phases). An act ends when its last part breaks (act bars, below).
 import { BOSSES } from './data.mjs';
 import { emit, alive, part, livingParts, strikeWith, attackAmount, landingsOf } from './combat.mjs';
 import { tellsOf } from './tells.mjs';
 
-export const ACTS = { leave: 1, lash: 2 }; // beats an act plays before its ♛ may go on; the Backlash's multiple
+export const ACTS = { lash: 2 }; // the Backlash's multiple
 
 // The boss's acts (its family's, for the Resident), or null: not a P4 boss.
 export function actsOf(v) {
@@ -51,16 +48,6 @@ export function beatOf(s) {
 export const lashBeat = (v, c) => !!v?.backlash && c >= v.backlash.first && (c - v.backlash.first) % v.backlash.every === 0;
 // The Backlash is on now for this part: a command hit on it this cycle lashes back (a part with an attack).
 export const lashOn = (s, p, c = s.encounter?.cycle) => alive(p) && !!p.attack && lashBeat(s.encounter.virus, c);
-// Beats this act has played (cycles before this one, since the act began), and whether the act is done: its beat
-// has played ACTS.leave times, its beat's part is gone, or nothing but the ♛ stands.
-export function beatsPlayed(s) {
-  const e = s.encounter, b = beatOf(s);
-  if (!b) return Infinity;
-  let n = 0;
-  for (let c = e.actFrom || 1; c < e.cycle; c++) if (b.at(c)) n++;
-  return n;
-}
-export const actDone = (s) => beatsPlayed(s) >= ACTS.leave || !livingParts(s).some((x) => !x.core && x.kind === 'system'); // nothing else to work on: go
 // The next cycle the beat falls on, from this one (null: none on the way).
 export function nextBeat(s, from = s.encounter.cycle) { const b = beatOf(s); if (!b) return null; for (let c = from; c < from + 12; c++) if (b.at(c)) return c; return null; }
 
@@ -88,21 +75,6 @@ export function actBegins(s, ph) {
   if (t && A.beat === 'copy') { t.every = every; t.first = first; if (t.told && t.next > first) { t.told = false; t.next = null; } }
   const d = A.beat === 'bend' && livingParts(s).find((x) => x.reflect);
   if (d) { d.reflect = every; d.reflectOff = (every - (first % every)) % every; }
-}
-// The ♛ taken under its next tick (interrupt.mjs onHit): before this act's beat has played, every part re-arms.
-export function crossed(s, p) {
-  const v = s.encounter.virus;
-  if (!actsOf(v) || actDone(s)) return false;
-  for (const x of livingParts(s)) if (x.kind === 'system' && x.maxArmor > 0) { x.armor = x.maxArmor; x.patchAt = null; }
-  emit(s, 'phase', `Too soon: ${v.name}'s ${p.name} went under before its beat played. Every part re-arms.`, { boss: v.boss, target: p.id, early: true });
-  return true;
-}
-// The most a hit takes off the ♛ (combat.mjs hit): down to its next act tick, and nothing more until that act has begun
-// (at the cycle's end), so no act is skipped, by one big hit or by several in a cycle. Every boss with a ♛ (interrupt.mjs
-// rule a), in acts or not. Past its last act's tick, the rest of it.
-export function actCap(s, p) {
-  const v = s.encounter?.virus, t = (p.ticks || []).find((x) => x.phase != null && v?.phases?.[x.phase] && !v.phases[x.phase].done && (x.spent || Math.floor(x.at * p.max) < p.integrity)); // a tick it was put under some other way (no hit crossed it) holds nothing
-  return t ? Math.max(0, p.integrity - Math.floor(t.at * p.max)) : Infinity;
 }
 // A hit from your command on a part (combat.mjs hit): on the Backlash's beat, it lashes back this cycle unless it breaks.
 // A helper's hit counts when your command sent it this cycle, on the beat (docs/puzzle-fights.md 3.2; sent: its cycle).
@@ -136,10 +108,66 @@ export function actIntents(s, columns) {
   for (let col = 0; col < columns; col++) if (lashBeat(v, e.cycle + col)) for (const p of livingParts(s).filter((x) => x.attack)) { out.push({ source: p.id, name: 'Backlash', effect: 'backlash', amount: lashAttack(s, p).amount, also: p.attack.effect !== 'damage' ? p.attack.name : null, col, hidden: false, kind: p.kind }); }
   return out;
 }
-// The ♛'s leave mark (view.mjs): whether it may go on now, and what the next tick takes.
-export function leaveOf(s) {
-  const v = s.encounter?.virus, p = core(s);
-  if (!actsOf(v) || !p || !(p.ticks || []).some((t) => !t.spent)) return null;
-  const done = actDone(s), beat = nextBeat(s);
-  return { part: p, done, beat: beat == null ? null : beat - s.encounter.cycle };
+// ---------- act bars (docs/solo-bosses.md "The shape") ----------
+// A solo boss with phases fights each act on a fresh bar: its Integrity split evenly across its acts, every part back at
+// full as an act begins, with that act's rules on top. An act ends when its last part breaks (fragments too); the next
+// begins at the cycle's end (combat.mjs bossPhases). The board an act starts with (after its verbs) is the next one's.
+// The ♛ carries the boss's signature and plain ticks (interrupt.mjs). Crew bosses keep their own framework (raid.mjs).
+export const barsOn = (s) => !!s.encounter?.actBars;
+// The acts together hold `share` of the boss's Integrity, so each of three is about a quarter of what the boss had on
+// one bar. Every act re-arms its ◆ and spends its ticks afresh, so a full third each runs the fight about 20% longer
+// than one bar did; a quarter each keeps the fight the length it is today (docs/solo-bosses.md "Act bars, measured").
+export const ACT_BARS = { share: 0.72 };
+// As the boss rule is set (interrupt.mjs bossRule a): split its Integrity (and a lock on a part) across its acts (ACT_BARS), and
+// what joins it later (hpPower) too.
+export function barsStart(s) {
+  const e = s.encounter, v = e?.virus;
+  if (!v?.phases?.length || BOSSES[v.boss]?.raid) return false;
+  const n = v.phases.length + 1, cut = (x) => Math.max(1, Math.round((x * ACT_BARS.share) / n));
+  e.actBars = true;
+  v.hpPower = ((v.hpPower || 1) * ACT_BARS.share) / n;
+  for (const p of v.parts) if (p.kind !== 'fragment') { p.max = p.integrity = cut(p.max); if (p.lockMax) p.lockMax = p.lockHp = cut(p.lockMax); }
+  return true;
+}
+// The board as an act begins (combat.mjs engage, bossPhases): what the next act refills.
+export function barsSnap(s) {
+  const e = s.encounter;
+  if (!e?.actBars) return;
+  const board = e.virus.parts.filter((p) => p.integrity > 0 && p.kind !== 'fragment');
+  e.actBoard = { at: e.cycle + 1, parts: structuredClone(board) };
+  e.actMax = board.reduce((n, p) => n + p.max, 0);
+}
+// Acts still to come after this one.
+const actsLeft = (v) => (v?.phases || []).filter((x) => !x.done).length;
+// The fight's bar over every act (combat.mjs virusIntegrity): this act's parts, and a full board for each act to come.
+export function barsTotal(s, cur, max) {
+  const e = s.encounter, left = actsLeft(e.virus) * (e.actMax || 0);
+  return { current: cur + left, max: (e.actMax || 0) * ((e.virus.phases?.length || 0) + 1) };
+}
+// This act's bar (view.mjs): its parts' Integrity, out of its board's.
+export function actBar(s) {
+  const e = s.encounter, ps = e.virus.parts;
+  return { current: ps.reduce((n, p) => n + p.integrity, 0), max: Math.max(e.actMax || 0, ps.reduce((n, p) => n + p.max, 0)) };
+}
+const LATER = /^(due|wake|.+At|.+Until)$/;
+const later = (o, by) => { for (const [k, x] of Object.entries(o || {})) if (LATER.test(k) && typeof x === 'number' && x > 0 && x < 900) o[k] = x + by; };
+// The cycle's end (combat.mjs bossPhases), every part broken and an act to come: the board this act began with comes
+// back at full, its timers where they stood, its ticks fresh. Returns the phase that starts (its verbs run as usual).
+export function barsTurn(s) {
+  const e = s.encounter, v = e.virus;
+  if (!e.actBars || livingParts(s).length || !e.actBoard) return null;
+  const ph = v.phases.find((x) => !x.done);
+  if (!ph) return null;
+  const by = e.cycle + 1 - e.actBoard.at, board = structuredClone(e.actBoard.parts);
+  for (const p of board) {
+    later(p, by); later(p.attack, by);
+    for (const t of p.pending || []) t.at += by;
+    p.ticks = null; p.played = []; p.lastDamaged = 0;
+  }
+  v.parts = board;
+  e.burns = (e.burns || []).filter((b) => !board.some((p) => p.id === b.target));
+  if (!board.some((p) => p.id === v.weakPoint)) { v.weakPoint = board[0]?.id; v.weakKnown = false; }
+  e.actFrom = e.cycle + 1;
+  ph.at = 2;
+  return ph;
 }

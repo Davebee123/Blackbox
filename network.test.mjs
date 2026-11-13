@@ -19,7 +19,7 @@ import { graphOf } from './dist/floors.mjs';
 const at = (level, netSeed = 4242) => { const s = fresh(); s.netSeed = netSeed; s.hackers = { breaker: { level, xp: 0 } }; syncServer(s); s.server.integrity = s.server.max; return s; };
 const wear = (s, id, level = 30) => { const it = addItem(s, uniqueItem(UNIQUES[id], level, seeded(1))); command(s, 'load ' + it.id); assert.ok(loaded(s).some((x) => x.id === it.id), `${id} loaded`); return it; };
 const fight = (s, key = 'cryptjack', level = 30, over = {}) => { selectEncounter(s, key, 7, { level, mutation: null, ...over }); command(s, 'engage'); s.encounter.hardened = 0; return s; };
-const finishOff = (s) => { for (const p of s.encounter.virus.parts) Object.assign(p, { integrity: 0, armor: 0 }); const p = s.encounter.virus.parts[0]; p.integrity = 1; command(s, 'spike ' + p.id); resolveCycle(s); };
+const finishOff = (s) => { for (let n = 0; n < 4 && s.encounter?.phase === 'active'; n++) { for (const p of s.encounter.virus.parts) Object.assign(p, { integrity: 0, armor: 0 }); const p = s.encounter.virus.parts[0]; p.integrity = 1; command(s, 'spike ' + p.id); resolveCycle(s); } }; // every act (act bars)
 
 test('the seed fully decides the signature: same seed, same network; 3 to 5 natives, one from each band', () => {
   for (let k = 1; k <= 200; k++) {

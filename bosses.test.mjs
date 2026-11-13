@@ -25,7 +25,7 @@ const fire = (s, text) => { command(s, text); return resolveCycle(s); };
 const of = (s, id) => livingParts(s).find((p) => p.id === id);
 const crown = (s) => livingParts(s).find((p) => p.core);
 // Take the ♛ part just under a share of its max with a hit of the server's (no command, no Lien, no stagger).
-const under = (s, at) => { const c = crown(s); c.integrity = Math.floor(at * c.max) + 1; c.armor = 0; command(s, 'hold'); resolveCycle(s); hitServer(s, c, 2); };
+const under = (s) => { for (const p of s.encounter.virus.parts) p.integrity = 0; command(s, 'hold'); resolveCycle(s); }; // the act's last part broken: the next act (act bars, acts.mjs)
 const hitServer = (s, p, n) => hit(s, p, n, { pierce: true, server: true });
 
 test("RELAY-KING's Relay broadcasts harder for each fragment on the board", () => {
@@ -38,30 +38,17 @@ test("RELAY-KING's Relay broadcasts harder for each fragment on the board", () =
   assert.match(boardMarkup(s), /×1<\/span>/, 'the Relay shows the fragments it counts');
 });
 
-test("RELAY-KING's Crown Hop: at 60% the ♛ moves to its healthiest part with the 30% tick; the part it leaves heals", () => {
+test("RELAY-KING's Crown Hop: act 2's ♛ moves to its healthiest other part; act 3 floods", () => {
   const s = boss('relayking'), was = crown(s);
   assert.equal(was.id, 'replicator');
-  under(s, 0.6);
-  resolveCycle(s);
+  under(s);
   const now = crown(s);
-  assert.notEqual(now, was, 'the ♛ moved');
-  assert.ok(!was.core && was.integrity > 0.6 * was.max, 'the old crown healed a quarter');
-  assert.deepEqual(now.ticks.map((t) => [t.at, t.phase]), [[0.3, 1]], 'the 30% phase tick went with it');
-  assert.ok(was.ticks.every((t) => t.phase == null), 'the old crown takes plain ticks');
-  under(s, 0.3);
-  resolveCycle(s);
+  assert.notEqual(now.id, was.id, 'the ♛ moved');
+  assert.ok(!of(s, 'replicator').core);
+  assert.ok(now.ticks.every((t) => t.phase == null), 'plain ticks');
+  under(s);
   assert.equal(of(s, 'replicator').attack.interval, 2, 'the Flood');
   assert.equal(of(s, 'relay').attack.interval, 3);
-});
-test("RELAY-KING's Crown Hop never lands on a part under its 30% tick: with none above it, the ♛ stays", () => {
-  const s = boss('relayking'), was = crown(s);
-  for (const p of livingParts(s)) if (p !== was) p.integrity = Math.floor(0.3 * p.max);
-  under(s, 0.6);
-  const ev = resolveCycle(s);
-  assert.equal(crown(s), was, 'it stays');
-  assert.equal(s.encounter.virus.phases.filter((x) => x.done).length, 1, 'act 2 only: none skipped');
-  assert.ok(ev.some((x) => /No part can take its ♛/.test(x.message || '')));
-  assert.deepEqual(was.ticks.filter((t) => !t.spent).map((t) => t.at), [0.3]);
 });
 
 test("REPO MAN's Liens: a command a ◆ absorbs adds one and grows the Collection; a Collection clears them", () => {
@@ -80,38 +67,38 @@ test("REPO MAN's Liens: a command a ◆ absorbs adds one and grows the Collectio
   assert.equal(v.liens, 0, 'the Collection paid them off');
 });
 
-test("REPO MAN's phases call a Collection 3 cycles out, and at 30% each Lien counts twice", () => {
-  const s = boss('repoman'), v = s.encounter.virus, l = of(s, 'ledger');
-  under(s, 0.6);
+test("REPO MAN's acts call a Collection 3 cycles out, and in act 3 each Lien counts twice", () => {
+  const s = boss('repoman'), v = s.encounter.virus, l = () => of(s, 'ledger'); // each act's board is a fresh one
+  under(s);
   resolveCycle(s);
-  assert.ok(l.attack.due <= s.encounter.cycle + 3, 'a Collection is coming');
+  assert.ok(l().attack.due <= s.encounter.cycle + 3, 'a Collection is coming');
   v.liens = 2; liftOf(s);
-  const one = l.attack.lift;
-  l.attack.due = 999;
-  under(s, 0.3);
+  const one = l().attack.lift;
+  l().attack.due = 999;
+  under(s);
   resolveCycle(s);
   liftOf(s);
   assert.equal(v.interest, 2);
-  assert.equal(l.attack.lift, one * 2);
+  assert.equal(l().attack.lift, one * 2);
 });
 
-test('HOLLOW CHOIR: one voice, a second at 60% beating two behind, and at 30% the Round sings back the cycles before the beat', () => {
+test('HOLLOW CHOIR: one voice, a second in act 2 beating two behind, and in act 3 the Round sings back the cycles before the beat', () => {
   const s = boss('choir', { level: 14 }), v = s.encounter.virus;
   assert.equal(livingParts(s).filter((p) => p.mimic).length, 1);
   assert.ok(!livingParts(s).some((p) => p.reflect), 'no Decoy');
-  under(s, 0.6);
+  under(s);
   resolveCycle(s);
   const ms = livingParts(s).filter((p) => p.mimic), beats = tellsOf(s).list.filter((t) => t.kind === 'mimic');
   assert.equal(ms.length, 2, 'a second voice');
   assert.equal(beats.length, 2);
   assert.equal(((beats[1].first - beats[0].first) % 4 + 4) % 4, 2, 'two cycles behind');
-  under(s, 0.3);
+  under(s);
   resolveCycle(s);
   assert.equal(v.round, 3);
   // Fire two hits, then hold on the beat: the beat sings the two back.
-  const m = ms[0], t = beats[0];
+  const m = livingParts(s).find((p) => p.mimic), t = beats[0]; // act 3's board is a fresh one
   const target = livingParts(s).find((p) => !p.mimic && !p.core) || livingParts(s).find((p) => !p.mimic);
-  target.armor = 0;
+  Object.assign(target, { armor: 0, integrity: 1000, max: 1000 }); // two spikes it outlives (an act's parts are small)
   fire(s, `spike ${target.id}`);
   fire(s, `spike ${target.id}`);
   command(s, 'hold');

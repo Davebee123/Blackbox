@@ -1,8 +1,8 @@
 # Boss guide: floors 2 to 8
 
-**Status.** Floors 2, 3 and 4 built (floorbosses.mjs; the numbers below are the prototypes', GAME_RULES.md has the built ones); the rest designed, not built: how each boss in docs/solo-bosses.md plays, written as a raid guide (what it is, its
+**Status.** Floors 2 to 5 built (floor 5's ACTUARY and PARASITE not yet) (floorbosses.mjs; the numbers below are the prototypes', GAME_RULES.md has the built ones); the rest designed, not built: how each boss in docs/solo-bosses.md plays, written as a raid guide (what it is, its
 abilities, each phase, how you die). docs/solo-bosses.md holds the rules; where the two differ, it wins. Prototyped as
-applets with a board a phase (November 2026). Phases start as the ♛ part crosses 60% and 30%; INIT's as its table
+applets with a board a phase (November 2026). Phases are acts, each a fresh board, the next as the last part of one breaks (act bars, docs/solo-bosses.md); INIT's as its table
 crosses 90, 83, 76 and 68. The numbers are the prototypes' placeholders; the boss sessions set the real ones.
 
 Terms: a **charge** is a big attack shown ahead that you can call off. A **cast** builds something on the virus, and

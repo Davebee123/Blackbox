@@ -438,3 +438,15 @@ test('the Rail, the tooltip and the card give a runner at an unlocated server it
   assert.match(runnerRail(s, out.r.handle), new RegExp(`<small class="rr-at">→ ${loc.name}</small>`), 'located: by its name');
   assert.equal(doing(s, out.st), `heading for ${loc.name}`);
 });
+
+test('the runner card: the Badge head, their bust from the handle, never a named character\'s face', async () => {
+  const { faceOf } = await import('./dist/portraits.mjs');
+  assert.equal(faceOf('quill', 'runner').id, null, 'a runner called quill is not Quill');
+  assert.equal(faceOf('quill', 'npc').id, 'quill');
+  assert.deepEqual(faceOf('byte', 'runner'), faceOf('byte', 'runner'), 'the same handle, the same face');
+  const s = fresh(); s.netSeed = 1054899509;
+  const h = castOf(s)[0].handle, html = runnerCard(s, h);
+  assert.match(html, /class="rc-head"><pre class="rc-bust f-bust"/);
+  assert.match(html, /rc-head[^]*class="rc-tier"[^]*rc-rows/, 'the Tier bar sits in the head');
+  assert.doesNotMatch(html, /<dt>Standing<\/dt>/, 'no Standing row');
+});

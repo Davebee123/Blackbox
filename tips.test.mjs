@@ -227,7 +227,7 @@ test('wick narrates the guided path, in his own voice, and nothing else', async 
   const RV = await import('./dist/rivals.mjs');
   const s = fresh(); s.tutorialCompleted = true;
   FP.startRooms(s, { seed: 7, size: 'medium', floor: 3, level: 12 }); FP.connect(s);
-  RV.spawnRival(s, 99, 'kudzu');
+  RV.spawnRival(s, 99, 'sable');
   const t = nextTip(s, 'rooms', (sel) => sel === '.fp-rvstat');
   assert.equal(t.id, 'run-rival');
   assert.ok(t.text.startsWith(RV.wickLine(s, RV.rivalOf(s)) + ' '), t.text);
