@@ -2397,7 +2397,7 @@ function render(force = false) {
   const netTray = module === 'net' && !!campaign.run;
   $('tray').hidden = !(combatLike || netTray);
   $('tray').classList.toggle('net-tray', netTray);
-  { const keys = netTray ? V.netTrayMarkup(nextActions(campaign)) : V.trayMarkup(s, selected) + scriptTray(s); put('tray', keys + (combatLike && F.isPhone() ? phMenuKey(keys) : '')); $('tray').querySelectorAll(':scope > .ability').forEach((k, i) => k.classList.toggle('ph-over', i >= PH_KEYS)); } // a phone: past eight keys, under +n
+  { const keys = netTray ? V.netTrayMarkup(nextActions(campaign)) : V.trayMarkup(s, selected) + scriptTray(s) + V.fleeKey(s); put('tray', keys + (combatLike && F.isPhone() ? phMenuKey(keys) : '')); $('tray').querySelectorAll(':scope > .ability').forEach((k, i) => k.classList.toggle('ph-over', i >= PH_KEYS)); } // a phone: past eight keys, under +n
   phStage();
   phPicked();
   // An ability that just came off cooldown flashes once.
@@ -3170,7 +3170,7 @@ document.addEventListener('click', (e) => {
       return;
     }
     confirmArm = null;
-    if (cmd.classList.contains('ability') && !cmd.classList.contains('script')) { $('command-input').value = cmd.dataset.command; focusPrompt(); return; } // a script runs at once: it takes no cycle
+    if (cmd.classList.contains('ability') && !cmd.classList.contains('script') && !cmd.classList.contains('flee')) { $('command-input').value = cmd.dataset.command; focusPrompt(); return; } // a script runs at once: it takes no cycle; Jack out goes at once too
     return run(cmd.dataset.command);
   }
   if (e.target.closest('[data-rail-fold]')) { railShut = !railShut; try { localStorage.setItem('bb-rail-runners', railShut ? 'shut' : 'open'); } catch { /* storage unavailable */ } dirty = true; return; }

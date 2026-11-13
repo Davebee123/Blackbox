@@ -82,7 +82,8 @@ factor (`length.drawn`). Adds (fragments, Packages, Droppers), breaches and crew
 | Encryption | Each Encrypt adds to a stack that hits you every cycle. Breaking the Encryptor clears it. A ◆ on you stops an Encrypt; shields soak the stack's damage; Purge and Rollback wipe it. |
 | Scramble | For a couple of cycles, each of your attacks has a 25% chance to hit you instead, at half. A ◆ stops it. |
 
-`jack out` mid-fight is the emergency escape: it resolves on your turn, you keep your pack, and the virus stays.
+`jack out` mid-fight (or the red **Jack out** key at the tray's end, two clicks) is the emergency escape: it resolves on
+your turn, you keep your pack, and the virus stays. Not on a breach, or while a hunter has your trace.
 Leaving the fight screen pauses a live fight.
 
 ### The interrupt
