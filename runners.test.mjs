@@ -475,3 +475,20 @@ test('R3 dead runner rooms: a crash on a server on your map marks one of its roo
   assert.equal(s.runners.down[loc.slot], undefined, 'the mark is gone');
   assert.equal(deadOf(s, FP.isUp), null);
 });
+
+test('SPRAWL-00: a runner standing in a room wears a paper-white tab (+n for more); walking in, you have met them', () => {
+  const { s, loc } = onTheirServer();
+  play(s, `connect ${loc.name}`);
+  const room = Object.values(s.rooms.graph.rooms).find((x) => x.id !== s.rooms.at && FP.neighbours(s.rooms.graph, s.rooms.at).includes(x.id));
+  const [a, b] = castOf(s).filter((r) => !meetingOf(s, FP.isUp) || r.handle !== meetingOf(s, FP.isUp).r.handle).map((r) => r.handle);
+  const was = FP.WORLD.people;
+  FP.WORLD.people = (_, x) => (x.id === room.id ? [a, b, 'not-a-runner'] : []);
+  try {
+    if (s.rooms.visit) s.rooms.visit.dead = null;
+    const html = roomsMarkup(s);
+    assert.match(html, new RegExp(`class="fp-rn-tab stand"><rect[^>]*/><text[^>]*>${a} \\+1</text>`));
+    assert.match(html, new RegExp(`${a} and ${b} are here between jobs\\.\\n▸ Walk in to meet them all\\.`));
+    FP.go(s, room.id);
+    assert.equal(runnersOf(s).known[a]?.by, 'met'); assert.equal(runnersOf(s).known[b]?.by, 'met');
+  } finally { FP.WORLD.people = was; }
+});

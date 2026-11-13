@@ -2,7 +2,8 @@
 
 **Status.** R1 and R2 built (the cast, the loop, the Rail, #net lines; meeting, standing and hiring). R3 in part:
 rivals are runners (the *red diamond*, picked; beating one raises their standing), feuds name runners, and dead
-runner rooms (a crash marks an existing room, a skull beside the handle on its tab, picked; win it to pull them out).
+runner rooms (a crash marks an existing room, a skull beside the handle on its tab, picked; win it to pull them out). In
+SPRAWL-00 a runner between jobs wears a paper-white tab on their room's chip (the *Tab*, picked); walk in to meet them.
 R4 to come. R2's follow-ups: trait
 effects in fights (only Known face and Haggler are in play), temperament steering the planner, Known's leads and
 Close's consortium. The looks are picked: the map (the *Rail*), and meeting and hiring (below).

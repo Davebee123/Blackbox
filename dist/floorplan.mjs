@@ -68,7 +68,7 @@ import { GENES } from './genes.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
 import { PUZZLES, PUZZLE_KINDS, isPuzzle, cipherOf, cgOpen, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
 import { spawnRival, rivalOf, rivalAt, rivalMove, rivalMeet, rivalLeave, rivalFight, rivalArm, rivalWon, rivalLost, rivalLine } from './rivals.mjs';
-import { meetingOf, pulledOut } from './runners.mjs';
+import { meetingOf, pulledOut, know, runnerOf } from './runners.mjs';
 import { dealCard, cardLeave, surgeAt, surgeScreen, surgeFight, surgeWon, escortMove, escortArm, escortAfter, packAt, packMove, packFight, packWon } from './runcards.mjs';
 
 // ---------- tuning ----------
@@ -1131,6 +1131,7 @@ function arrive(s, room, opts = {}) {
   const R = s.rooms;
   const people = R.world ? ask('people', s, room) || [] : [];
   if (people.length) say(s, `${people.join(', ')} ${people.length === 1 ? 'is' : 'are'} here.`, 'rooms');
+  for (const h of people) if (runnerOf(s, h)) know(s, h, 'met'); // a runner in the room (SPRAWL-00): you've met them
   if (['junction', 'den', 'empty'].includes(room.kind)) clear(s, room);
   if (room.kind === 'purse' && cacheFull(s, room)) takePurse(s, room); // a rogue server's Stash: taken as you walk in
   if (surgeAt(s, room.id)) { surgeScreen(s, room, opts, virusName(s, room, 'surge')); return; } // a lit surge room: its next wave (runcards.mjs)
