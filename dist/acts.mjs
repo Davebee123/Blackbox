@@ -111,31 +111,61 @@ export function actIntents(s, columns) {
 // ---------- act bars (docs/solo-bosses.md "The shape") ----------
 // A solo boss with phases fights each act on a fresh bar: its Integrity split evenly across its acts, every part back at
 // full as an act begins, with that act's rules on top. An act ends when its last part breaks (fragments too); the next
-// begins at the cycle's end (combat.mjs bossPhases). The board an act starts with (after its verbs) is the next one's.
-// The ♛ carries the boss's signature and plain ticks (interrupt.mjs). Crew bosses keep their own framework (raid.mjs).
+// begins at the cycle's end (combat.mjs bossPhases). Every act starts from act 1's board and act 1's rules: an act's own
+// rule leaves with it (one rule an act), what grew in it starts over, and a part it brings takes a seat, the board
+// holding act 1's Integrity (actEven). The ♛ carries the boss's signature and plain ticks (interrupt.mjs). Crew bosses
+// keep their own framework (raid.mjs).
 export const barsOn = (s) => !!s.encounter?.actBars;
-// The acts together hold `share` of the boss's Integrity, so each of three is about a quarter of what the boss had on
-// one bar. Every act re-arms its ◆ and spends its ticks afresh, so a full third each runs the fight about 20% longer
-// than one bar did; a quarter each keeps the fight the length it is today (docs/solo-bosses.md "Act bars, measured").
-export const ACT_BARS = { share: 0.72 };
-// As the boss rule is set (interrupt.mjs bossRule a): split its Integrity (and a lock on a part) across its acts (ACT_BARS), and
-// what joins it later (hpPower) too.
+// The pacing (the designer, November 2026: an act runs 15 to 20 cycles). share: three acts hold this much of the
+// boss's Integrity, a third each (a boss with two acts holds two thirds), times its own `bar` (BOSSES: how long its
+// acts run against the rest). hit: its hits against one bar's, so a longer act costs about what a short one did.
+// enrage: cycles into an act before it enrages (every attack every cycle, a quarter harder). Its rounds (combat.mjs
+// roundOf) count from the act's start too.
+export const ACT_BARS = { share: 1.8, hit: 0.55, enrage: 24, acts: 3 };
+// An attack's size against one bar's: hits and encryption, never a heal, a hatch or a Scramble's length.
+const HIT = new Set(['damage', 'encrypt']);
+export function actHits(a, by = ACT_BARS.hit) {
+  if (!a) return;
+  if (HIT.has(a.effect)) a.amount = Math.max(1, Math.round(a.amount * by));
+  if (a.hit) a.hit = Math.max(1, Math.round(a.hit * by));
+}
+// Each act's clock: its rounds and its enrage start at its first cycle.
+function actClock(s, at) {
+  const v = s.encounter.virus;
+  v.actAt = at;
+  v.enrageAt = at + ACT_BARS.enrage;
+  v.enraged = false;
+}
+// As the boss rule is set (interrupt.mjs bossRule a): split its Integrity (and a lock on a part) across its acts
+// (ACT_BARS), and what joins it later (hpPower) too; size its hits to the act.
 export function barsStart(s) {
   const e = s.encounter, v = e?.virus;
   if (!v?.phases?.length || BOSSES[v.boss]?.raid) return false;
-  const n = v.phases.length + 1, cut = (x) => Math.max(1, Math.round((x * ACT_BARS.share) / n));
+  const B = BOSSES[v.boss], k = (ACT_BARS.share * (B?.acts?.[v.family]?.bar ?? B?.bar ?? 1)) / ACT_BARS.acts, cut = (x) => Math.max(1, Math.round(x * k));
   e.actBars = true;
-  v.hpPower = ((v.hpPower || 1) * ACT_BARS.share) / n;
-  for (const p of v.parts) if (p.kind !== 'fragment') { p.max = p.integrity = cut(p.max); if (p.lockMax) p.lockMax = p.lockHp = cut(p.lockMax); }
+  v.hpPower = (v.hpPower || 1) * k;
+  v.power = (v.power || 1) * ACT_BARS.hit;
+  for (const p of v.parts) { actHits(p.attack); if (p.kind !== 'fragment') { p.max = p.integrity = cut(p.max); if (p.lockMax) p.lockMax = p.lockHp = cut(p.lockMax); } }
+  actClock(s, e.cycle);
   return true;
 }
-// The board as an act begins (combat.mjs engage, bossPhases): what the next act refills.
+// Act 1's board and rules as the fight engages (combat.mjs engage): what every later act starts from. KEEP: what a
+// boss keeps for the whole fight. Everything else on the virus is its rules', and each act starts them over.
+const KEEP = new Set(['parts', 'phases', 'tells', 'dealt', 'idleHit', 'weakPoint', 'weakKnown', 'enrageAt', 'enraged', 'actAt']);
 export function barsSnap(s) {
   const e = s.encounter;
-  if (!e?.actBars) return;
-  const board = e.virus.parts.filter((p) => p.integrity > 0 && p.kind !== 'fragment');
-  e.actBoard = { at: e.cycle + 1, parts: structuredClone(board) };
+  if (!e?.actBars || e.actBoard) return;
+  const v = e.virus, board = v.parts.filter((p) => p.integrity > 0 && p.kind !== 'fragment');
+  e.actBoard = { at: e.cycle + 1, parts: structuredClone(board), keys: Object.keys(v).filter((k) => !KEEP.has(k)) };
   e.actMax = board.reduce((n, p) => n + p.max, 0);
+}
+// An act's verbs ran (combat.mjs bossPhases): a part the act brought takes a seat, so its board holds act 1's Integrity.
+export function actEven(s) {
+  const e = s.encounter, ps = e?.virus?.parts.filter((p) => p.integrity > 0 && p.kind !== 'fragment') || [];
+  const now = ps.reduce((n, p) => n + p.max, 0);
+  if (!e?.actMax || now <= e.actMax) return;
+  const k = e.actMax / now;
+  for (const p of ps) { p.max = p.integrity = Math.max(1, Math.round(p.max * k)); if (p.lockMax) p.lockMax = p.lockHp = Math.max(1, Math.round(p.lockMax * k)); }
 }
 // Acts still to come after this one.
 const actsLeft = (v) => (v?.phases || []).filter((x) => !x.done).length;
@@ -151,8 +181,9 @@ export function actBar(s) {
 }
 const LATER = /^(due|wake|.+At|.+Until)$/;
 const later = (o, by) => { for (const [k, x] of Object.entries(o || {})) if (LATER.test(k) && typeof x === 'number' && x > 0 && x < 900) o[k] = x + by; };
-// The cycle's end (combat.mjs bossPhases), every part broken and an act to come: the board this act began with comes
-// back at full, its timers where they stood, its ticks fresh. Returns the phase that starts (its verbs run as usual).
+// The cycle's end (combat.mjs bossPhases), every part broken and an act to come: act 1's board comes back at full, its
+// timers where they stood, its ticks fresh, with act 1's rules (combat.mjs runs the floor bosses' fbStart again).
+// Returns the phase that starts (its verbs run as usual).
 export function barsTurn(s) {
   const e = s.encounter, v = e.virus;
   if (!e.actBars || livingParts(s).length || !e.actBoard) return null;
@@ -165,9 +196,12 @@ export function barsTurn(s) {
     p.ticks = null; p.played = []; p.lastDamaged = 0;
   }
   v.parts = board;
+  if (e.actBoard.keys) for (const k of Object.keys(v)) if (!KEEP.has(k) && !e.actBoard.keys.includes(k)) delete v[k]; // what the last act's rules added (Liens, a Round) goes with it; a fight saved before keeps them
   e.burns = (e.burns || []).filter((b) => !board.some((p) => p.id === b.target));
   if (!board.some((p) => p.id === v.weakPoint)) { v.weakPoint = board[0]?.id; v.weakKnown = false; }
   e.actFrom = e.cycle + 1;
+  e.turnedAt = e.cycle;
+  actClock(s, e.cycle + 1);
   ph.at = 2;
   return ph;
 }

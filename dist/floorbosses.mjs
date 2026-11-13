@@ -8,11 +8,11 @@
 //                   PALEMASK a Veil whose timers hide), the Rotor heals 10% of its max, and the Gavel drops back to
 //                   every 4. Act 2 (Reserve price): a withdraw steps it back one. Act 3 (Second lot): each sale brings
 //                   two buyers.
-//   SHAKEDOWN       Ransom Clock: 12 cycles; at 0 it leaks 30% of your max and restarts at 6. A Deadline that lands pays
-//                   the ransom (+3); one called off (its wind-up, a cut, SIGINT) buys nothing. Leverage: while a Demand
-//                   stands, the Collector loses at most 15% of its max a cycle. Act 2: a second Demand,
-//                   its Deadline on the same cycle. Act 3 (Final notice): a leak re-arms the Demands and brings the
-//                   Lockbox back.
+//   SHAKEDOWN       Ransom Clock, one an act: 14 cycles; at 0 it leaks 35% of your max (15% more each leak that act)
+//                   and restarts at 7. A Deadline that lands pays the ransom (+3); one called off (its wind-up, a cut,
+//                   SIGINT) buys nothing. Leverage: while a Demand stands, the Collector loses at most 10% of its max a
+//                   cycle. Act 2 (Second demand): a second Demand takes the Lockbox's seat, its Deadline on the same
+//                   cycle. Act 3 (Final notice): a leak re-arms the Demand and brings the Lockbox back.
 //   SHOULDER SURFER Replay: a Sync Window every other cycle. The Logger takes damage only from commands fired in it;
 //                   each one outside is logged, and at 3 its Dump plays your last logged command back at its full hit.
 //                   Act 2 (Again): on its beat, every 4, it plays your last three commands back in order. Act 3 (From the
@@ -24,12 +24,12 @@
 //                   one more frame, and at 5 frames every frame attacks at once.
 //   NIGHT DESK      No Timeout: its attacks never land. Each waits on its part as a pending trade;
 //                   your one-part command on a part settles its trades on you at half. At 4 pending all settle in full,
-//                   and every later trade opens 25% bigger. Only the Desk takes damage (12% of its max a hit at most);
-//                   its traders go with it. Act 2 (Night shift): the Night Clerk clocks in, a third trader with one
-//                   trade pending, and a pending trade grows 10% a cycle. Act 3 (Finality):
-//                   each trade you settle heals the Desk 4% of its max.
+//                   and every later trade opens 25% bigger. Only the Desk takes damage (10% of its max a hit at most);
+//                   its traders go with it, and their trades with them. Act 2 (Night shift): the Night Clerk takes the
+//                   Teller's seat with one trade pending, and a pending trade grows 15% a cycle. Act 3 (Margin Call):
+//                   the Desk's own attack settles every pending trade with it, in full.
 //   BYZANTINE       Vote: every 4 cycles, if the most damaged Node is 15% or more under the Nodes' average, it is restored
-//                   to the average and every Node hits 30% harder for the fight. A hit takes 20% of a Node's max at most.
+//                   to the average and every Node hits 30% harder for the act. A hit takes 20% of a Node's max at most.
 //                   Act 2 (Traitor): the most damaged Node turns; while it isn't the most damaged, the restore goes to
 //                   the healthiest Node's level. Act 3 (Hard fork): every broken Node returns as the act starts, and a
 //                   Node that breaks returns at the next vote, at the others' average, unless every other Node is
@@ -63,11 +63,11 @@ import { BOSSES, CONFIG } from './data.mjs';
 import { mimicHit, copyKind, forceCharge, tellsOf, callOff, tellNext } from './tells.mjs';
 
 export const FB = {
-  bid: { slow: 4, fast: 2, after: 4, sold: 0.3, heal: 0.1, buyers: ['tollgate', 'swarmline', 'palemask'] }, // sold: each sale makes the Gavel's Surge that much harder, for the fight; heal: what each sale gives the Rotor ♛ back, of its max
-  ransom: { clock: 10, restart: 5, pay: 3, leak: 0.35, grow: 0.15, most: 0.65, lever: 0.15 }, // lever: the most the Collector ♛ loses a cycle while a Demand stands, of its max; a leak takes 35% of your max, 15 more each leak after, up to 65%
-  surf: { log: 2, again: 4, echo: 0.4, grow: 0.5 }, // grow: each Dump that lands makes the next one that much bigger, for the fight; // echo: an Again note's share of its hit (40%: at half, a burst sung back took 95% of a reader's bar in three cycles)
+  bid: { slow: 4, fast: 2, after: 4, sold: 0.3, heal: 0.1, buyers: ['tollgate', 'swarmline', 'palemask'] }, // sold: each sale makes the Gavel's Surge that much harder, for the act; heal: what each sale gives the Rotor ♛ back, of its max
+  ransom: { clock: 14, restart: 7, pay: 3, leak: 0.35, grow: 0.15, most: 0.65, lever: 0.1 }, // lever: the most the Collector ♛ loses a cycle while a Demand stands, of its max; a leak takes 35% of your max, 15 more each leak after in an act, up to 65%
+  surf: { log: 2, again: 4, echo: 0.4, grow: 0.5 }, // grow: each Dump that lands makes the next one that much bigger, for the act; // echo: an Again note's share of its hit (40%: at half, a burst sung back took 95% of a reader's bar in three cycles)
   stack: { call: 5, push: 0.6, act: 0.25, under: 0.25, overflow: 5, ret: 1.5, cap: 7, deeper: 0.35, sooner: 1, soonest: 3 }, // sooner: each Call let through brings the next one a cycle sooner, down to every soonest; // deeper: each Call let through makes every frame hit that much harder
-  desk: { full: 4, half: 0.5, grow: 0.15, margin: 0.25, limit: 0.12, backlog: 0, heal: 0.04 }, // heal: what each trade settled under Finality gives the Desk back, of its max; limit: the most one hit takes off the Desk, of its max; backlog: trades pending as the fight opens, on its traders (none since the Night Clerk brings one with the night shift) // margin: each Table full opens every later trade that much bigger, for the fight
+  desk: { full: 4, half: 0.5, grow: 0.15, margin: 0.25, limit: 0.1, backlog: 0 }, // limit: the most one hit takes off the Desk, of its max; backlog: trades pending as the fight opens, on its traders (none since the Night Clerk brings one with the night shift) // margin: each Table full opens every later trade that much bigger, for the act
   vote: { every: 4, pass: 0.15, harder: 0.3, limit: 0.2 }, // limit: the most one hit takes off a Node while another stands, of its max // pass: how far under the level it is restored to the most damaged Node must be; harder: each vote that passes, every Node's hits
   overdraft: 3, // Overdraft: cycles the rest of the hit lands over
   grace: { days: 3, drain: 1, back: 0.3, fee: 1, lead: 2, rider: 0.15, size: 3.5 }, // days: a part's grace, in cycles; drain: what each act takes off it (3, 2, 1); back: what a part the Reinstatement brings back returns with, of its max; size: a lapse charge's hit against a plain charge's; fee: each lapse charge that landed, every later one that much bigger; lead: a lapse's charge rides its next attack this many cycles away or more; rider: the rest's hits while the Rider stands
@@ -75,7 +75,7 @@ export const FB = {
   swarm: { sweep: 5, soonest: 2, grows: 3, cams: 4, limit: 0.15, gnaw: 2, back: 0.3 }, // back: what a part the Botnet re-infects returns with, of a Camera's max; // soonest: each fragment a sweep hatches brings the next sweep a cycle sooner, down to this; limit: the most one hit takes off a part, of its max // grows: cycles a fragment lives before it is a Camera; cams: Cameras at once
 };
 export const BUYER = { tollgate: 'TOLLGATE', swarmline: 'SWARMLINE', palemask: 'PALEMASK' };
-export const FB_VERBS = new Set(['reserve', 'lot2', 'demand2', 'notice', 'again', 'top', 'return', 'overflow', 'nightshift', 'finality', 'traitor', 'hardfork', 'botnet', 'lockout', 'reinstate', 'accelerate', 'keptcharges', 'coldimage']);
+export const FB_VERBS = new Set(['reserve', 'lot2', 'demand2', 'notice', 'again', 'top', 'return', 'overflow', 'nightshift', 'margincall', 'traitor', 'hardfork', 'botnet', 'lockout', 'reinstate', 'accelerate', 'keptcharges', 'coldimage']);
 const cyc = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
 const fx = (s, what) => (s.encounter ? fxOn(s, what) : null);
 const fxVal = (x) => Number(x?.fx?.value) || 0;
@@ -86,7 +86,8 @@ export const depthOf = (v) => 1 + FB.stack.deeper * (v?.stack?.calls || 0);
 const actNow = (v) => 1 + (v?.phases || []).filter((x) => x.done).length;
 
 // ---------- engage ----------
-export function fbStart(s) {
+// As the fight engages, and again as each act begins (again: act bars give every act act 1's rules, acts.mjs).
+export function fbStart(s, again = false) {
   const e = s.encounter, v = e?.virus;
   if (!v?.boss || !BOSSES[v.boss]) return;
   const late = fx(s, 'late'); // Escrow: a boss's enrage and its countdowns come later
@@ -95,10 +96,10 @@ export function fbStart(s) {
   if (v.boss === 'shakedown') v.ransom = { left: FB.ransom.clock + fxVal(late), paid: 0, leaks: 0, notice: false };
   if (v.boss === 'shouldersurfer') v.surf = { again: null, top: false };
   if (v.boss === 'nightdesk') {
-    v.desk = { margin: 0, night: null, final: false };
+    v.desk = { margin: 0, night: null, call: false };
     const desk = v.parts.find((p) => p.role === 'desk'), tr = v.parts.filter((p) => p.role === 'trader' && p.attack);
     if (desk) desk.limit = FB.desk.limit;
-    for (let i = 0; i < FB.desk.backlog && tr.length; i++) { const p = tr[i % tr.length]; (p.pending ||= []).push({ amount: Math.max(1, Math.round(attackAmount(p))), at: e.cycle, name: p.attack.name }); } // the backlog: it was settling before you came
+    for (let i = 0; i < (again ? 0 : FB.desk.backlog) && tr.length; i++) { const p = tr[i % tr.length]; (p.pending ||= []).push({ amount: Math.max(1, Math.round(attackAmount(p))), at: e.cycle, name: p.attack.name }); } // the backlog: it was settling before you came
   }
   if (v.boss === 'byzantine') { v.vote = { at: e.cycle + FB.vote.every - 1, passed: 0, traitor: null, fork: false }; for (const p of v.parts) if (p.role === 'node') p.limit = FB.vote.limit; }
   if (v.boss === 'camswarm') { v.swarm = { at: e.cycle + FB.swarm.sweep - 1, every: FB.swarm.sweep, n: 0, botnet: false, lockout: false }; for (const p of v.parts) p.limit = FB.swarm.limit; }
@@ -125,16 +126,19 @@ function sell(s, gavel) {
   if (got > 0) { rotor.integrity += got; emit(s, 'heal', `SOLD. The ${rotor.name} takes its cut: +${got}. ${rotor.integrity}/${rotor.max}.`, { target: rotor.id, amount: got, sold: true }); }
   emit(s, 'spawn', joined.length ? `SOLD. ${joined.join(' and ')} ${joined.length === 1 ? 'joins' : 'join'} the fight.` : 'SOLD. The buyer is already here.', { source: gavel.id, sold: true });
 }
-// A part joins the fight from a spec: the boss's size, its hits the virus's (combat.mjs bossPhases spawn's way).
-function joinPart(s, spec, near) {
+// A part joins the fight from a spec: the boss's size, its hits the virus's (combat.mjs bossPhases spawn's way). seat: the
+// id of a part it replaces, in its place on the board (act bars: an act's new part takes a seat, acts.mjs actEven).
+function joinPart(s, spec, near, seat = null) {
   const e = s.encounter, v = e.virus, B = BOSSES[v.boss];
   const old = v.parts.find((x) => x.id === spec.id);
   if (old) v.parts.splice(v.parts.indexOf(old), 1);
+  const sat = seat && v.parts.find((x) => x.id === seat);
+  if (sat) { near = v.parts[v.parts.indexOf(sat) - 1] || null; v.parts.splice(v.parts.indexOf(sat), 1); }
   const max = Math.max(1, Math.round(spec.integrity * (v.hpPower || 1) * (B.hp || 1) * (v.long ? B.long?.hp || 1 : 1)));
   const p = { id: spec.id, name: spec.name, kind: 'system', integrity: max, max, armor: spec.armor || 0, maxArmor: spec.armor || 0, patchAt: null, veiled: !!spec.veiled, loot: spec.loot || null, special: false,
     ward: spec.ward || null, twin: spec.twin || null, exposedUntil: 0, lastDamaged: 0, boosted: false, ticks: null, ...(spec.role ? { role: spec.role } : {}), ...(spec.noTicks ? { noTicks: true } : {}) };
   if (spec.attack) p.attack = { ...spec.attack, amount: Math.max(1, Math.round(spec.attack.amount * (v.power || 1) * (B.dmg || 1) * (v.long ? B.long?.dmg || 1 : 1))), due: e.cycle + 2, n: 0 };
-  v.parts.splice(v.parts.indexOf(near) + 1, 0, p);
+  v.parts.splice(near ? v.parts.indexOf(near) + 1 : 0, 0, p);
   return p;
 }
 // Your one-part command at the Gavel while the Rotor stands (combat.mjs useAbility): a bid, its Surge one cycle sooner
@@ -256,6 +260,13 @@ function holdTrade(s, p, atk, power) {
   const e = s.encounter, v = e.virus, n = Math.max(1, Math.round(power * (1 + FB.desk.margin * v.desk.margin)));
   (p.pending ||= []).push({ amount: n, at: e.cycle, name: atk.name });
   const all = pendingOf(s);
+  if (v.desk.call && p.core) { // Margin Call (act 3): the Desk's own attack settles the whole table with it, in full
+    const total = all.reduce((sum, t) => sum + tradeOf(s, t), 0);
+    for (const x of livingParts(s)) x.pending = [];
+    const dealt = takeDamage(s, total, p.id, 'Margin Call');
+    emit(s, 'server-hit', `MARGIN CALL. ${all.length === 1 ? 'It settles' : `All ${all.length} trades settle`} in full: −${dealt}.`, { source: p.id, amount: dealt, atk: 'Margin Call', full: true });
+    return;
+  }
   emit(s, 'status', `PENDING. The ${p.name}'s ${atk.name} waits as a trade: ${n}. ${all.length} of ${FB.desk.full} pending.`, { source: p.id, pending: all.length });
   if (all.length < FB.desk.full) return;
   const total = all.reduce((sum, t) => sum + tradeOf(s, t), 0);
@@ -265,7 +276,6 @@ function holdTrade(s, p, atk, power) {
   emit(s, 'server-hit', `TABLE FULL. All ${all.length} trades settle in full: −${dealt}. Every trade now opens ${Math.round(FB.desk.margin * v.desk.margin * 100)}% bigger.`, { source: p.id, amount: dealt, atk: 'Table full', full: true });
 }
 // Your one-part command's hit on a part (combat.mjs hit): its trades settle on you at half.
-// Finality: the other half heals the Desk.
 export function fbCmdHit(s, p) {
   const e = s.encounter, v = e?.virus;
   if (e?.preAuth) e.preAuthUsed = e.cycle; // Pre-Authorization: spent on this command
@@ -276,8 +286,6 @@ export function fbCmdHit(s, p) {
   p.answered = e.cycle;
   const dealt = takeDamage(s, n, p.id, 'Settled trade');
   emit(s, 'server-hit', `SETTLED. The ${p.name}'s ${k === 1 ? 'trade settles' : `${k} trades settle`} at half: −${dealt}.`, { source: p.id, amount: dealt, atk: 'Settled trade', settled: true });
-  const desk = v.desk.final && livingParts(s).find((x) => x.core);
-  if (desk && desk.integrity < desk.max) { const got = Math.min(Math.max(1, Math.round(desk.max * FB.desk.heal * k)), desk.max - desk.integrity); desk.integrity += got; emit(s, 'heal', `FINALITY. The ${desk.name} keeps the other half: +${got}. ${desk.integrity}/${desk.max}.`, { target: desk.id, amount: got }); }
 }
 
 // ---------- BYZANTINE: Vote ----------
@@ -528,10 +536,9 @@ export function fbVerb(s, act) {
   if (act === 'lot2' && v.bid) v.bid.lots = 2;
   if (act === 'demand2') {
     const d = livingParts(s).find((x) => x.deadline), spec = BOSSES[v.boss].extra.find((x) => x.id === 'demand');
-    const p = joinPart(s, { ...spec, id: 'demand2', name: 'Demand II' }, d || v.parts.at(-1));
+    const p = joinPart(s, { ...spec, id: 'demand2', name: 'Demand II' }, d || v.parts.at(-1), 'lockbox'); // in the Lockbox's seat
     p.deadline = true;
     if (p.attack) { p.attack.windup = d?.attack?.windup || 0; p.attack.wound = 0; p.attack.due = d?.attack ? Math.max(e.cycle + 1, d.attack.due) : e.cycle + 3; }
-    for (const w of livingParts(s).filter((x) => x.ward === 'demand')) (w.wardsToo ||= []).push('demand2');
   }
   if (act === 'notice' && v.ransom) v.ransom.notice = true;
   if (act === 'again' && v.surf) v.surf.again = e.cycle + FB.surf.again;
@@ -541,9 +548,9 @@ export function fbVerb(s, act) {
   if (act === 'nightshift' && v.desk) {
     v.desk.night = e.cycle;
     const spec = BOSSES[v.boss].clerk, desk = livingParts(s).find((x) => x.core);
-    if (spec && desk) { const p = joinPart(s, spec, v.parts.filter((x) => x.role === 'trader').at(-1) || desk); (p.pending ||= []).push({ amount: sized(v, spec.trade.amount, 'dmg'), at: e.cycle, name: spec.trade.name }); }
+    if (spec && desk) { const p = joinPart(s, spec, desk, 'teller'); (p.pending ||= []).push({ amount: sized(v, spec.trade.amount, 'dmg'), at: e.cycle, name: spec.trade.name }); } // in the Teller's seat
   }
-  if (act === 'finality' && v.desk) v.desk.final = true;
+  if (act === 'margincall' && v.desk) v.desk.call = true;
   if (act === 'traitor' && v.vote) {
     // The traitor: the most damaged Node as the act starts, so the rule holds until you break it.
     const ns = nodesOf(s), t = ns.length ? ns.reduce((a, p) => (frac(p) < frac(a) ? p : a)) : null;
@@ -593,6 +600,7 @@ export function fbCycle(s) {
   if (e.preAuthUsed === e.cycle) e.preAuth = false;
   if (fx(s, 'shield-hit') && (e.shield || 0) > (e.shieldWas || 0)) e.preAuth = true;
   e.shieldWas = e.shield || 0;
+  if (e.turnedAt === e.cycle) return null; // an act began at this cycle's end (acts.mjs barsTurn): its rules start with its first cycle
   if (v.ransom && livingParts(s).some((x) => x.core)) { // the Collector ♛ runs the clock: break it and the clock stops
     const R = v.ransom;
     R.left--;

@@ -491,23 +491,25 @@ function lashChip(i, c, k = '') {
   return `<div class="intent bend lash${c === 0 ? ' now' : c === 1 ? ' next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}"><span class="ico" ${icon(ICON.mirror)}></span><b class="bend-to">Lash −${i.amount}</b></div>`;
 }
 // NIGHT DESK's attacks (floorbosses.mjs holdTrade): none lands, each opens a pending trade. Marked here (trade), and the
-// one that fills the table carries what settles (full).
+// one that fills the table, or the Desk's Margin Call (act 3), carries what settles (full).
 function asTrades(s, list) {
-  if (!s.encounter.virus.desk) return list;
+  const v = s.encounter.virus;
+  if (!v.desk) return list;
   const all = pendingOf(s);
   let n = all.length, sum = all.reduce((t, x) => t + tradeOf(s, x), 0);
   return list.map((i) => {
     if (i.tell || i.hidden || !(i.effect === 'damage' || i.hit)) return i;
-    const size = i.effect === 'damage' ? i.amount : i.hit;
+    const size = i.effect === 'damage' ? i.amount : i.hit, call = v.desk.call && part(s, i.source)?.core;
     n++; sum += size;
-    const out = { ...i, trade: size, ...(n >= FB.desk.full ? { full: sum } : {}) };
-    if (n >= FB.desk.full) { n = 0; sum = 0; }
+    const out = { ...i, trade: size, ...(n >= FB.desk.full || call ? { full: sum, call } : {}) };
+    if (n >= FB.desk.full || call) { n = 0; sum = 0; }
     return out;
   });
 }
 // A trade's chip: dashed, a clock and the trade's size. The one that fills the table is solid red, with all that settles.
 function tradeChip(i, c, k = '') {
-  const tip = i.full ? `${i.name}\nTrade\nThe table fills at ${FB.desk.full} pending. Every trade settles on you in full, for ${i.full}.${answerLine('Settle a part\'s trades at half before then.')}`
+  const tip = i.call ? `${i.name}\nMargin Call\nSettles every pending trade on you with it, in full, for ${i.full}.${answerLine('Settle the traders first, or break the Desk.')}`
+    : i.full ? `${i.name}\nTrade\nThe table fills at ${FB.desk.full} pending. Every trade settles on you in full, for ${i.full}.${answerLine('Settle a part\'s trades at half before then.')}`
     : `${i.name}\nTrade\nOpens a pending trade of ${i.trade} on this part. It deals nothing until it settles.${answerLine('Hit the part to settle its trades at half.')}`;
   return `<div class="intent trade${i.full ? ' full' : ''}${c === 0 ? ' now' : c === 1 ? ' next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}">${glyph('clock', 'tr-ico')}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${i.full ? `−${i.full}` : i.trade}</small></div>`;
 }
@@ -748,7 +750,7 @@ function floorTags(s, p) {
   const tag = (cls, tip, body) => out.push(`<span class="tag ${cls}" title="${esc(tip)}">${body}</span>`);
   if (p.gavel && p.attack && v.bid) {
     const k = p.attack.interval, who = BUYER[nextBuyer(v)], spec = BOSSES[v.boss].buyers[nextBuyer(v)];
-    tag(k <= FB.bid.fast ? 'hot bid' : 'bid', `Bidding\nBoss rule\nThe ${p.name}'s Surge comes every ${k} cycles, and each one that lands spins it faster. A Surge at every 2 sells to ${who}: its ${spec.name} joins the fight${v.bid.lots > 1 ? ', with a second buyer' : ''}. ${v.bid.reserve ? 'A delay or Throttle steps it back one.' : 'A delay or Throttle takes it back to every 4.'} Each sale heals the Rotor ${Math.round(FB.bid.heal * 100)}% of its max and makes the Surge ${Math.round(FB.bid.sold * 100)}% harder for the fight${v.bid.sold ? ` (${v.bid.sold} so far)` : ''}. Each command you aim at the Gavel while the Rotor stands is a bid: it spins one faster.${answerLine('Leave the Gavel for last. Delay, Throttle or SIGINT it at every 2.')}`, `${glyph('clock')}${k} · ${esc(who)}`);
+    tag(k <= FB.bid.fast ? 'hot bid' : 'bid', `Bidding\nBoss rule\nThe ${p.name}'s Surge comes every ${k} cycles, and each one that lands spins it faster. A Surge at every 2 sells to ${who}: its ${spec.name} joins the fight${v.bid.lots > 1 ? ', with a second buyer' : ''}. ${v.bid.reserve ? 'A delay or Throttle steps it back one.' : 'A delay or Throttle takes it back to every 4.'} Each sale heals the Rotor ${Math.round(FB.bid.heal * 100)}% of its max and makes the Surge ${Math.round(FB.bid.sold * 100)}% harder for the act${v.bid.sold ? ` (${v.bid.sold} so far)` : ''}. Each command you aim at the Gavel while the Rotor stands is a bid: it spins one faster.${answerLine('Leave the Gavel for last. Delay, Throttle or SIGINT it at every 2.')}`, `${glyph('clock')}${k} · ${esc(who)}`);
   }
   // The Resident's Watchdog, on its ♛ (combat.mjs watchdog).
   const wd = p.core ? watchdogIn(s) : null;
@@ -756,7 +758,7 @@ function floorTags(s, p) {
   if (p.buyer) tag('', `${p.name}\nBought by ${BUYER[p.buyer]}\nIt joined when the Gavel sold.`, esc(BUYER[p.buyer]));
   if (p.core && v.ransom) {
     const L = v.ransom.left, k = leakOf(v), n = Math.round(defender(s).max * k);
-    tag(L <= 3 ? 'hot ransom' : 'ransom', `Ransom Clock\nBoss rule\nIt leaks ${n} (${Math.round(k * 100)}% of your max) ${when(L - 1)}, then restarts at ${FB.ransom.restart}. Each leak takes ${Math.round(FB.ransom.grow * 100)}% more than the last, up to ${Math.round(FB.ransom.most * 100)}%. Breaking a Demand while the Collector stands halves the time left. A Deadline that lands adds ${FB.ransom.pay} cycles. One you call off buys nothing.${v.ransom.notice ? ' Each leak re-arms the Demands and brings the Lockbox back.' : ''}${answerLine('Let a Deadline land when the clock would run out first.')}`, `${glyph('clock')}${L}`);
+    tag(L <= 3 ? 'hot ransom' : 'ransom', `Ransom Clock\nBoss rule\nIt leaks ${n} (${Math.round(k * 100)}% of your max) ${when(L - 1)}, then restarts at ${FB.ransom.restart}. Each leak in an act takes ${Math.round(FB.ransom.grow * 100)}% more than the last, up to ${Math.round(FB.ransom.most * 100)}%, and each act starts a new clock. Breaking a Demand while the Collector stands halves the time left. A Deadline that lands adds ${FB.ransom.pay} cycles. One you call off buys nothing.${v.ransom.notice ? ' Each leak re-arms the Demand and brings the Lockbox back.' : ''}${answerLine('Let a Deadline land when the clock would run out first.')}`, `${glyph('clock')}${L}`);
   }
   const lev = leverLeft(s, p);
   if (lev != null) tag(lev <= 0 ? 'hot' : '', `Leverage\nBoss rule\nWhile a Demand stands, the ${p.name} loses at most ${Math.round(FB.ransom.lever * 100)}% of its max a cycle: ${lev} more this cycle. The rest of a hit is lost.${answerLine('Fit your hit to the cap, or spend the big one on a Demand.')}`, `cap ${lev}`);
@@ -775,14 +777,14 @@ function floorTags(s, p) {
   // NIGHT DESK: the trades waiting on a part, the table on its ♛, its traders.
   if (v.desk) {
     const all = pendingOf(s), sum = (xs) => xs.reduce((n, t) => n + tradeOf(s, t), 0);
-    if (p.pending?.length) { const n = sum(p.pending); tag('hot trade', `Pending ${p.pending.length === 1 ? 'trade' : 'trades'}\nBoss rule\n${p.pending.length === 1 ? 'One trade waits' : `${p.pending.length} trades wait`} on the ${p.name}: ${n} in full. Your one-part command on the ${p.name} settles ${p.pending.length === 1 ? 'it' : 'them'} on you at half, for ${Math.round(n * FB.desk.half)}.${v.desk.night != null ? ` Each grows ${pct(FB.desk.grow)}% a cycle.` : ''}${v.desk.final ? ` Each one you settle heals the Desk ${pct(FB.desk.heal)}% of its max.` : ''}${answerLine('Settle before the table fills.')}`, `${glyph('clock')}${p.pending.length} · ${n}`); }
+    if (p.pending?.length) { const n = sum(p.pending); tag('hot trade', `Pending ${p.pending.length === 1 ? 'trade' : 'trades'}\nBoss rule\n${p.pending.length === 1 ? 'One trade waits' : `${p.pending.length} trades wait`} on the ${p.name}: ${n} in full. Your one-part command on the ${p.name} settles ${p.pending.length === 1 ? 'it' : 'them'} on you at half, for ${Math.round(n * FB.desk.half)}.${v.desk.night != null ? ` Each grows ${pct(FB.desk.grow)}% a cycle.` : ''}${v.desk.call ? ' The Desk\'s Margin Call settles every trade in full.' : ''}${answerLine('Settle before the table fills.')}`, `${glyph('clock')}${p.pending.length} · ${n}`); }
     if (p.core) tag(all.length >= FB.desk.full - 1 ? 'hot table' : 'table', `No Timeout\nBoss rule\nIts attacks never land. They wait as pending trades: ${all.length} of ${FB.desk.full}. At ${FB.desk.full}, every trade settles on you in full${all.length ? ` (${sum(all)} now)` : ''}, and each trade after that opens ${pct(FB.desk.margin)}% bigger${v.desk.margin ? ` (+${pct(FB.desk.margin * v.desk.margin)}% so far)` : ''}. No single hit takes more than ${pct(FB.desk.limit)}% of the ${p.name}'s max.${answerLine('Hit a part to settle its trades at half.')}`, `${all.length}/${FB.desk.full}`);
     if (p.role === 'trader') tag('dim', `${p.name}\nOn the books\nIt takes no damage while the Desk stands, and goes when the Desk breaks. Your one-part command on it settles its trades.`, 'books');
   }
   // BYZANTINE: the vote on the Node it would restore, the traitor, the Hard fork.
   if (v.vote && p.role === 'node') {
     const x = voteOf(s), n = v.vote.at - e.cycle;
-    if (x && p === x.low) tag(x.passes ? 'hot vote' : 'vote', `Vote\nBoss rule\nThe Nodes vote ${when(n)}. ${x.passes ? `It passes: the ${p.name} is ${pct(FB.vote.pass)}% or more under ${x.turned ? 'the healthiest Node' : 'the average'}, and is restored by ${x.gain}.` : `It fails: no Node is ${pct(FB.vote.pass)}% under ${x.turned ? 'the healthiest Node' : 'the average'}.`} Each vote that passes makes every Node hit ${pct(FB.vote.harder)}% harder for the fight${v.vote.passed ? ` (+${pct(FB.vote.harder * v.vote.passed)}% now)` : ''}. No single hit takes more than ${pct(FB.vote.limit)}% of a Node's max.${answerLine(`Keep the Nodes within ${pct(FB.vote.pass)}%, then break one between two votes.`)}`, `${glyph('clock')}vote ${Math.max(0, n)}${x.passes ? ` · +${x.gain}` : ''}`);
+    if (x && p === x.low) tag(x.passes ? 'hot vote' : 'vote', `Vote\nBoss rule\nThe Nodes vote ${when(n)}. ${x.passes ? `It passes: the ${p.name} is ${pct(FB.vote.pass)}% or more under ${x.turned ? 'the healthiest Node' : 'the average'}, and is restored by ${x.gain}.` : `It fails: no Node is ${pct(FB.vote.pass)}% under ${x.turned ? 'the healthiest Node' : 'the average'}.`} Each vote that passes makes every Node hit ${pct(FB.vote.harder)}% harder for the act${v.vote.passed ? ` (+${pct(FB.vote.harder * v.vote.passed)}% now)` : ''}. No single hit takes more than ${pct(FB.vote.limit)}% of a Node's max.${answerLine(`Keep the Nodes within ${pct(FB.vote.pass)}%, then break one between two votes.`)}`, `${glyph('clock')}vote ${Math.max(0, n)}${x.passes ? ` · +${x.gain}` : ''}`);
     if (p.id === v.vote.traitor) tag(x?.turned ? 'hot' : '', `Traitor\nBoss rule\nWhile the ${p.name} is not the most damaged Node, a vote restores the most damaged Node to the healthiest Node's level.${answerLine('Keep it the most damaged Node.')}`, 'traitor');
     if (v.vote.fork && p === nodesOf(s)[0]) tag(forkOf(s) ? 'hot' : '', `Hard fork\nBoss rule\nEvery broken Node returned as the phase started. A Node that breaks now returns at the next vote, at the others' average, unless every other Node is under half.${answerLine('Bring every Node under half before you break one.')}`, 'fork');
   }

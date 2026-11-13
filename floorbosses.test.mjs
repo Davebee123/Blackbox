@@ -87,41 +87,48 @@ test("CENTRIFUGE's Bidding: each Surge that lands spins the Gavel up; at every 2
   assert.equal(s2.encounter.virus.bid.sold, 0, 'no sale with the Rotor down');
 });
 
-test("SHAKEDOWN's Ransom Clock: it counts down, leaks 35% of your max at 0 (15% more each leak) and restarts at 5; a Deadline that lands pays 3; it stops with the Collector; act 2 sends a second Demand on the same cycle; act 3 re-arms on a leak", () => {
+test("SHAKEDOWN's Ransom Clock: it counts down, leaks 35% of your max at 0 (15% more each leak) and restarts at 7; a Deadline that lands pays 3; it stops with the Collector; each act brings a new clock; act 2's second Demand takes the Lockbox's seat; act 3 re-arms on a leak", () => {
   const s = boss('shakedown'), v = s.encounter.virus, max = defender(s).max;
-  assert.equal(v.ransom.left, 10);
+  assert.equal(v.ransom.left, FB.ransom.clock);
   hold(s);
-  assert.equal(v.ransom.left, 9);
+  assert.equal(v.ransom.left, FB.ransom.clock - 1);
   const d = of(s, 'demand');
   landNow(s, d);
-  assert.equal(v.ransom.left, 11, 'a Deadline landed: +3');
+  assert.equal(v.ransom.left, FB.ransom.clock + 1, 'a Deadline landed: +3');
   v.ransom.left = 1;
   const was = defender(s).integrity;
   hold(s);
   assert.equal(was - defender(s).integrity, Math.round(max * 0.35), 'the leak');
-  assert.equal(v.ransom.left, 5, 'restarts at 5');
+  assert.equal(v.ransom.left, FB.ransom.restart, 'restarts at 7');
   v.ransom.left = 1;
   const was2 = defender(s).integrity;
   hold(s);
   assert.equal(was2 - defender(s).integrity, Math.round(max * 0.5), 'the next leak takes 15% more');
   assert.match(boardMarkup(s), /Ransom Clock\nBoss rule\nIt leaks/);
-  d.attack.due = s.encounter.cycle + 3;
-  command(s, 'hold');
-  fbVerb(s, 'demand2');
-  const d2 = of(s, 'demand2');
-  assert.ok(d2?.deadline, 'a second Demand');
-  assert.equal(d2.attack.due, d.attack.due, 'its Deadline on the same cycle');
-  assert.ok(of(s, 'lockbox').wardsToo.includes('demand2'), 'the Lockbox wards it too');
-  fbVerb(s, 'notice');
-  const box = of(s, 'lockbox');
-  box.integrity = 0; d.armor = 0;
-  v.ransom.left = 1;
-  resolveCycle(s);
-  assert.ok(box.integrity === box.max && d.armor > 0, 'final notice: the Lockbox is back and the Demand re-armed');
   const left = v.ransom.left;
   of(s, 'collector').integrity = 0;
   hold(s);
   assert.equal(v.ransom.left, left, 'the Collector is down: the clock stops');
+  // Act 2: a new invoice, and a second Demand in the Lockbox's seat, its Deadline on the same cycle.
+  for (const p of livingParts(s)) p.integrity = 0;
+  hold(s);
+  assert.equal(v.ransom.left, FB.ransom.clock, 'each act brings a new clock');
+  assert.equal(v.ransom.leaks, 0, 'and the leaks start small again');
+  const d2 = of(s, 'demand2'), d1 = of(s, 'demand');
+  assert.ok(d2?.deadline, 'a second Demand');
+  assert.ok(!of(s, 'lockbox'), 'in the Lockbox\'s seat');
+  assert.equal(v.parts.indexOf(d2), v.parts.findIndex((p) => p.id === 'demand2'));
+  assert.equal(d2.attack.due, d1.attack.due, 'its Deadline on the same cycle');
+  assert.equal(livingParts(s).reduce((n, p) => n + p.max, 0), s.encounter.actMax, 'the board holds act 1\'s Integrity');
+  // Act 3: act 1's board again (the Lockbox, one Demand), and a leak re-arms the Demand and brings the Lockbox back.
+  for (const p of livingParts(s)) p.integrity = 0;
+  hold(s);
+  assert.ok(of(s, 'lockbox') && !of(s, 'demand2'), 'act 2\'s Demand leaves with its act');
+  const box = of(s, 'lockbox'), d3 = of(s, 'demand');
+  box.integrity = 0; d3.armor = 0;
+  v.ransom.left = 1;
+  hold(s);
+  assert.ok(box.integrity === box.max && d3.armor > 0, 'final notice: the Lockbox is back and the Demand re-armed');
 });
 
 test("SHOULDER SURFER's Replay: the window opens every other cycle; a command outside it is logged, and the Dump plays it back at its full hit", () => {
@@ -291,7 +298,7 @@ test("NIGHT DESK's No Timeout: its attacks wait as trades, a command settles a p
   desk.armor = 0;
   const d0 = desk.integrity;
   hit(s, desk, 99999, { mine: true, pierce: true });
-  assert.ok(d0 - desk.integrity <= Math.round(desk.max * FB.desk.limit), 'the Desk loses 12% of its max a hit at most');
+  assert.ok(d0 - desk.integrity <= Math.round(desk.max * FB.desk.limit), 'the Desk loses 10% of its max a hit at most');
   // Four pending: all settle in full, and every later trade opens 25% bigger.
   const at = defender(s).integrity;
   for (const p of [teller, clearing, desk]) p.pending = [];
@@ -305,15 +312,21 @@ test("NIGHT DESK's No Timeout: its attacks wait as trades, a command settles a p
   const base = teller.attack.amount;
   landNow(s, teller);
   assert.ok(teller.pending[0].amount >= Math.round(base * (1 + FB.desk.margin)), 'a slip makes the rest of the fight harder: later trades open bigger');
-  // Night shift: a pending trade grows 10% a cycle. Finality: each one settled heals the Desk.
+  // Night shift (act 2, by its verb here): the Night Clerk takes the Teller's seat with a trade pending, and a pending
+  // trade grows 15% a cycle.
+  clearing.pending = []; landNow(s, clearing);
   fbVerb(s, 'nightshift');
-  const t0 = tradeOf(s, teller.pending[0]);
+  const clerk = of(s, 'clerk');
+  assert.ok(clerk?.pending?.length === 1 && !of(s, 'teller'), 'the Clerk sits in the Teller\'s seat, holding a trade');
+  const t0 = tradeOf(s, clearing.pending[0]);
   hold(s); hold(s);
-  assert.ok(tradeOf(s, teller.pending[0]) > t0, 'it grows on the night shift');
-  fbVerb(s, 'finality');
-  const d1 = desk.integrity;
-  command(s, 'spike teller'); resolveCycle(s);
-  assert.equal(desk.integrity - d1, Math.round(desk.max * FB.desk.heal), 'Finality: the Desk keeps the other half');
+  assert.ok(tradeOf(s, clearing.pending[0]) > t0, 'it grows on the night shift');
+  // Margin Call (act 3): the Desk's attack settles every pending trade with it, in full.
+  fbVerb(s, 'margincall');
+  const owed = pendingOf(s).reduce((n, t) => n + tradeOf(s, t), 0), at2 = defender(s).integrity;
+  landNow(s, desk);
+  assert.equal(pendingOf(s).length, 0, 'the table clears');
+  assert.ok(at2 - defender(s).integrity > owed, 'every trade in full, and the Margin Call with them');
   // The traders go with the Desk.
   hit(s, desk, 0, {}); desk.limit = 0; desk.ticks = null; desk.core = false;
   hit(s, desk, desk.integrity, { pierce: true, server: true });

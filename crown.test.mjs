@@ -97,7 +97,7 @@ test("CENTRIFUGE's Sold: each sale heals the Rotor ♛ 10% of its max", () => {
   assert.match(boardMarkup(s), /Each sale heals the Rotor 10% of its max/);
 });
 
-test("SHAKEDOWN's Leverage: while a Demand stands the Collector ♛ loses at most 15% of its max a cycle", () => {
+test("SHAKEDOWN's Leverage: while a Demand stands the Collector ♛ loses at most 10% of its max a cycle", () => {
   const s = boss('shakedown'), col = crown(s), cap = Math.round(col.max * FB.ransom.lever);
   col.armor = 0;
   assert.equal(leverLeft(s, col), cap);

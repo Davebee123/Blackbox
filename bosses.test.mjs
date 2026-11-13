@@ -77,7 +77,8 @@ test("REPO MAN's acts call a Collection 3 cycles out, and in act 3 each Lien cou
   l().attack.due = 999;
   under(s);
   resolveCycle(s);
-  liftOf(s);
+  assert.equal(v.liens || 0, 0, 'Liens start over with the act');
+  v.liens = 2; liftOf(s);
   assert.equal(v.interest, 2);
   assert.equal(l().attack.lift, one * 2);
 });

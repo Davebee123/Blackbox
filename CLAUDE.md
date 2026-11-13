@@ -131,8 +131,9 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   most.
 - **Act bars:** every solo boss fights in three acts, each a fresh bar: every part back at full, with the act's rules
   on top. An act ends when its last part breaks. The acts run equal in length and difficulty; a boss whose acts run
-  uneven gets its behaviour or mechanics changed, never its split (acts.mjs `ACT_BARS`). The ♛ carries the boss's
-  signature, and its ticks are a part's. Parts come back mid-act only where a boss's system fits it.
+  uneven gets its behaviour or mechanics changed, never its split (acts.mjs `ACT_BARS`). An act runs 15 to 20 cycles
+  and starts from act 1's board and rules, with one rule of its own. The ♛ carries the boss's signature, and its ticks
+  are a part's. Parts come back mid-act only where a boss's system fits it.
 
 ## Backlog
 

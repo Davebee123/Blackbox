@@ -101,7 +101,7 @@ comment saying what it does.
 | `dist/tells.mjs` | Solo tells: the big moves a part announces ahead (charges, casts, seals). |
 | `dist/interrupt.mjs` | The interrupt: crossing a part's 50% or 25% tick on its due cycle cancels its move. |
 | `dist/order.mjs` | The order levers: parts whose right moment to break depends on the board. |
-| `dist/acts.mjs` | Boss acts: a boss's three acts as act bars (each a fresh board), its Integrity split across them, and its beat (the Backlash, a Mimic, a Decoy). |
+| `dist/acts.mjs` | Boss acts: a boss's three acts as act bars (each a fresh board from act 1's board and rules), their pacing (`ACT_BARS`: Integrity, hits, rounds and enrage an act), and its beat (the Backlash, a Mimic, a Decoy). |
 | `dist/actbreak.mjs` | Presentation only: the act break as a boss starts its next act (the strip, the emote, the board's parts coming back). |
 | `dist/floorbosses.mjs` | The floor 2 to 5 bosses' rules (CENTRIFUGE's Bidding, SHAKEDOWN's Ransom Clock, SHOULDER SURFER's Replay, RECURSION's Call, NIGHT DESK's No Timeout, BYZANTINE's Vote, CAMSWARM's Telnet Sweep, GRACE PERIOD's Grace, EXIT NODE's Rollback), their phase verbs, and their uniques' hooks. |
 | `dist/mechanics.mjs` | The mechanics list: twenty third parts built lean, each rule's hooks in one place. Eleven strains and the eleven mutated ones are built from them (`STRAINS`). |
