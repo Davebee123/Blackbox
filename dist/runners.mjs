@@ -238,9 +238,11 @@ export function tickRunners(s, dt) {
   R.ms += Math.max(0, dt || 0);
   if (!castOf(s).length || !dt) return [];
   const out = [];
+  if (R.down) for (const [id, d] of Object.entries(R.down)) if (!runnerOf(s, d.h)) delete R.down[id]; // moved on: their mark goes
   for (const r of castOf(s)) {
     const a = stateOf(s, r, t0), b = stateOf(s, r, R.ms), kind = turnOf(a, b);
     if (kind) out.push({ h: r.handle, kind, st: b, prev: a });
+    if (kind === 'crash' && locAt(s, b.target)) R.down = { ...R.down, [b.target]: { h: r.handle, k: b.k } }; // a dead runner room (R3)
   }
   return out;
 }
@@ -351,6 +353,36 @@ export function meetingOf(s, isUp = null) {
     return { r, st, room, sig: Math.round((lo + hash(r.handle, st.k * 7 + 6) * (hi - lo)) * 100) / 100 };
   }
   return null;
+}
+// ---------- dead runner rooms (R3) ----------
+// A runner who crashes on a server on your map leaves a mark there (s.runners.down[slot]: { h, k }, the newest a
+// server), kept until you pull them out or they've moved on. On your next visit it's one of the server's live process
+// or elite rooms (never the room a runner is fighting in), kept on the visit (R.visit.dead): win it and you pull them
+// out, their standing up as for Help. Nothing else changes: the room fights and pays as it would. { r, room } or null.
+export function deadOf(s, isUp = null) {
+  const R = s.rooms;
+  if (!R?.world || !R.visit) return null;
+  const loc = (s.locations || []).find((l) => l.id === R.loc), d = loc?.slot && s.runners?.down?.[loc.slot];
+  const r = d && runnerOf(s, d.h);
+  if (!r || hired(s, r.handle)) return null;
+  const kept = R.visit.dead, live = meetingOf(s, isUp)?.room.id;
+  let room = kept?.h === r.handle ? R.graph.rooms[kept.room] : null;
+  if (!room || room.id === live || (isUp && !isUp(s, room))) {
+    const rooms = Object.values(R.graph.rooms).filter((x) => (x.kind === 'process' || x.kind === 'elite') && !x.concealed && x.id !== live && (!isUp || isUp(s, x))).sort((a, b) => (a.id < b.id ? -1 : 1));
+    if (!rooms.length) return null;
+    room = rooms[Math.floor(hash(r.handle, d.k * 7 + 11) * rooms.length)];
+    R.visit.dead = { h: r.handle, room: room.id };
+  }
+  return { r, room };
+}
+// A room won (floorplan.mjs roomEnd): the crashed runner in it is pulled out. Their standing up; the mark is gone.
+export function pulledOut(s, roomId) {
+  const v = s.rooms?.visit?.dead, loc = (s.locations || []).find((l) => l.id === s.rooms?.loc);
+  if (!v || v.room !== roomId || !runnerOf(s, v.h)) return null;
+  const tier = raiseStanding(s, v.h, STANDING.help, `You pulled them out of a crash on ${loc?.name || 'a server'}.`);
+  if (loc?.slot && s.runners?.down) delete s.runners.down[loc.slot];
+  s.rooms.visit.dead = null;
+  return { h: v.h, standing: standingOf(s, v.h), tier };
 }
 // A room you helped them win: standing up, and they leave the room (helped on this job).
 export function helped(s, h) {

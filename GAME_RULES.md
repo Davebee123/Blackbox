@@ -2602,6 +2602,10 @@ no attaching, detaching or memory pips.
   pays (+25), and **Help** (`assist`) in place of Engage. They fight beside you at the Signal they had, take none of the
   XP, and a win raises their standing; the room's card then shows it. Once a job; they never clear your rooms or take
   anything. Helping isn't a solo win.
+- **Dead runner rooms** (R3): a runner who crashes on a server on your map marks it (`s.runners.down`, the newest a
+  server; gone when they move on). On your next visit one of its live process or elite rooms (never the room a runner
+  is fighting in) wears a paper-white tab, a dark skull and their handle. Win it as usual and you pull them out: their
+  standing +25, as for Help. The room fights and pays as it would.
 - **Standing**: 0–100 in four tiers: Stranger, Known (25), Friend (50), Close (75), each a smaller fee. Drawn as the
   Tier bar, its number and how you met in the tooltip. Known face: half again a raise, and three quarters of the fee.
 - **The runner card**: a lone diamond on the map, a row of a counted one's list or a Rail row opens it beside them
