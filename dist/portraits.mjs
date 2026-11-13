@@ -6,6 +6,8 @@
 // same speaker always looks the same. A file is a dog-eared page, a log a ruled sheet. Plain ASCII only.
 //
 // faceOf(who, icon) → the features; portrait(who, icon) → { rows: [[cls, text], ...][] }; portraitMarkup → <pre>.
+// icon 'runner' (runners-view.mjs): a face from the handle alone, never one of the named cast's (a runner called quill
+// isn't Quill).
 
 export const FACE = { w: 34, h: 19, top: 0.32, span: 1.72 }; // cells; the crop runs from y = top down `span` units
 
@@ -68,7 +70,7 @@ const pick = (list, h, k) => list[(h >>> k) % list.length];
 // Who's talking, as features: a page for a file, a sheet for a log, else one of the cast or a face from their name.
 export function faceOf(who = '', icon = 'npc') {
   if (icon === 'file' || icon === 'log') return { kind: icon };
-  for (const [id, c] of Object.entries(CAST)) if (c.re.test(who)) return { kind: 'bust', id, ...c };
+  if (icon !== 'runner') for (const [id, c] of Object.entries(CAST)) if (c.re.test(who)) return { kind: 'bust', id, ...c };
   const h = hashOf(who), top = pick(['none', 'none', 'none', 'hat', 'hood'], h, 3);
   return { kind: 'bust', id: null, top, hair: top === 'none' ? pick(['short', 'long', 'parted', 'crest', 'bun', 'none'], h, 0) : 'none',
     gear: top === 'hood' ? 'none' : pick(['none', 'none', 'headset'], h, 7), collar: pick(['none', 'none', 'up', 'round'], h, 11),
@@ -135,7 +137,7 @@ export function portrait(who = '', icon = 'npc') {
 // The markup: a <pre>, one span a row (--r: its row, for the scan-in), hidden from screen readers (the name is in the
 // window's header).
 const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
-export function portraitMarkup(who, icon) {
+export function portraitMarkup(who, icon, cls = 'q-face') {
   const p = portrait(who, icon);
-  return `<pre class="q-face f-${p.face.kind}" aria-hidden="true">${p.rows.map((row, r) => `<span class="qf-r" style="--r:${r}">${row.map(([cls, t]) => (cls ? `<i class="${cls}">${esc(t)}</i>` : t)).join('')}</span>`).join('')}</pre>`;
+  return `<pre class="${cls} f-${p.face.kind}" aria-hidden="true">${p.rows.map((row, r) => `<span class="qf-r" style="--r:${r}">${row.map(([cls, t]) => (cls ? `<i class="${cls}">${esc(t)}</i>` : t)).join('')}</span>`).join('')}</pre>`;
 }

@@ -324,7 +324,7 @@ function rest(s, t, from, answered = false) {
   const p = t.kind === 'charge' && t.n != null ? sourceOf(s, t) : null;
   if (p?.attack && alive(p)) from = Math.max(from, landsAt(p, t.n));
   t.told = false; t.count++; t.n = null;
-  if (answered) { t.answered = (t.answered || 0) + 1; tally(s, t, 'answered'); }
+  if (answered) { t.answered = (t.answered || 0) + 1; tally(s, t, 'answered'); const e = s.encounter; e.cuts = [...(e.cuts || []).filter((x) => x.cycle === e.cycle), { id: t.id, name: t.name, part: t.part, kind: t.kind, cycle: e.cycle }]; } // this cycle's cuts (floorbosses.mjs: EXIT NODE's Kept charges)
   if (t.once) { t.gone = true; const T = tellsOf(s); T.list = T.list.filter((x) => x !== t); return; }
   if (t.kind === 'mimic') { t.next = null; return; }
   t.after = from + (TELL.rest[t.kind] ?? 3) + jitter(s.encounter.virus, t);
@@ -364,6 +364,32 @@ export function hotCharge(s, hot) {
   say(s, t, best.p, best.x, best.n);
   return t;
 }
+// A floor boss's rule turns a part's attack into a charge (floorbosses.mjs: GRACE PERIOD's lapse, EXIT NODE's kept
+// charge), said at once: its first landing `lead` or more cycles away (2 by default; up to `upto` away first, if one
+// is) that no other tell rides. One of each id at a time.
+export function forceCharge(s, p, name, id, mult = 1, lead = 2, upto = null) {
+  const T = tellsOf(s), e = s.encounter;
+  if (!T?.tier || !p?.attack || p.attack.due >= 900 || T.list.some((t) => t.id === id)) return null;
+  const c = e.cycle, taken = new Set(T.list.filter((t) => t.told).map((t) => tellNext(s, t)));
+  const ns = Array.from({ length: 4 }, (_, k) => (p.attack.n || 0) + k).filter((n) => landsAt(p, n) - c >= lead && !taken.has(landsAt(p, n)));
+  const fit = upto == null ? ns : [...ns.filter((n) => landsAt(p, n) - c <= upto), ...ns]; // upto: a landing that close first, if there is one
+  for (const n of fit.slice(0, 1)) {
+    const x = landsAt(p, n);
+    const t = { kind: 'charge', name, gene: 'overcharge', id, part: p.id, once: true, ...(mult !== 1 ? { mult } : {}), told: false, next: null, n: null, said: null, count: 0, after: c };
+    T.list.push(t);
+    say(s, t, p, x, n);
+    return t;
+  }
+  return null;
+}
+// One told tell called off by a floor boss's rule (floorbosses.mjs: GRACE PERIOD's lapse, paid up): answered, no stagger.
+export function callOff(s, t, msg) {
+  const p = sourceOf(s, t);
+  emit(s, 'blocked', msg, { source: p?.id, target: p?.id, tell: t.id, answered: true });
+  contractDid(s, 'interrupt');
+  rest(s, t, s.encounter.cycle, true);
+  if (p) credit(s, t, p);
+}
 // A part broke (combat.mjs breakPart): its tells stop for good (they sit on a fixed part).
 export function tellBroke(s, p) {
   const T = tellsOf(s);
@@ -384,8 +410,8 @@ function chargeAttack(s, t, p) {
   const enr = p.enrage && p.integrity < p.max / 2 ? CONFIG.enrage : 1; // attackAmount counts Bricker's rage again: take it out
   const more = (T.tier.mult - 1) * (T.tier.extra ?? 1), big = (n, share = 1) => Math.max(1, Math.round(n + n * more * share * k));
   const base = { ...a, name: t.name, ramp: 0, step: 0, rampBy: 0, bonus: 0, grow: 0, windup: 0, wound: 0, noCrit: true, tell: t.id, spawn: t.spawn || 0 };
-  if (a.effect === 'damage') return { ...base, amount: Math.max(1, Math.round(big(attackAmount(p)) / enr)) };
-  if (a.effect === 'encrypt') return { ...base, burst: Math.round(a.amount * more * k) }; // its Encrypt, and a burst on top (TELL.burst cycles)
+  if (a.effect === 'damage') return { ...base, amount: Math.max(1, Math.round((big(attackAmount(p)) * (t.mult || 1)) / enr)) }; // t.mult: a floor boss's own (GRACE PERIOD's compounding lapse)
+  if (a.effect === 'encrypt') return { ...base, burst: Math.round(a.amount * more * k * (t.mult || 1)) }; // its Encrypt, and a burst on top (TELL.burst cycles)
   if (a.effect === 'scramble') return { ...base, amount: a.amount + Math.round((t.longer || 0) * k), hit: a.hit ? (t.plain ? a.hit : big(a.hit)) : 0 }; // Possession: the same hit, a longer scramble
   if (a.effect === 'heal') return { ...base, amount: Math.round(a.amount * (1 + (T.tier.mult - 1) * k)) };
   return { ...base, hit: a.hit ? big(a.hit, 0.5) : 0 }; // replicate: the spawns come on top (spawn)

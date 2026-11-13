@@ -108,7 +108,19 @@ export function leavesAt(s, h, t = clockOf(s)) {
   return null;
 }
 export const runnerOf = (s, h) => castOf(s).find((x) => x.handle === h) || null;
+// Anyone from the pool, on the net now or not (a rival, a feud's runner): the same person on this network's seed.
+export const personFor = (s, h) => personOf(runnerSeed(s) || 1, h);
 export const levelOf = (s, r) => Math.max(1, Math.min(50, hackerLevel(s) + r.off));
+
+// ---------- rivals (R3, rivals.mjs) ----------
+// Hunting you (red on the map and the Rail): racing you on this visit, or you lost to them, or they got away with a
+// vault, and you haven't beaten them since.
+export function huntsYou(s, h) {
+  const v = s.rooms?.visit?.rival;
+  if (v && (v.state === 'loose' || v.state === 'on') && v.id === h) return true;
+  const m = s.rivals?.by?.[h];
+  return m?.last === 'lost' || m?.last === 'away';
+}
 
 // ---------- the clock and what you know ----------
 export function runnersOf(s) {
