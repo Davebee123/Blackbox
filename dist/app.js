@@ -9,6 +9,8 @@ import { createLevelUpUi } from './levelup-ui.mjs';
 import { SHAPES, render as ascii3d } from './ascii3d.mjs';
 import { glyphMotion } from './protocol-glyphs.mjs';
 import { createArt } from './virus-art.mjs';
+import { createStage } from './stage.mjs';
+import * as BFX from './boardfx.mjs';
 import { codexPageMarkup, codexEntry } from './codex-view.mjs';
 import { collectionPageMarkup, finds as findsLog } from './collection-view.mjs';
 import { createFeel } from './feel.mjs';
@@ -415,7 +417,11 @@ const winSound = () => { const cls = classOf(campaign), sub = heroLevel(campaign
 let pendingStrikes = [];
 const DISSOLVE_MS = 1000; // a broken part's last moment on the board
 
+// The floor's stage in the render (stage.mjs): the fight's floor, as its palette is up (screenFx sets stageFloor).
+let stageFloor = null;
+const stage = createStage({ getFloor: () => (active(shown()) || document.body.classList.contains('fight-over') ? stageFloor : null), canMove: () => canMove() });
 const art = createArt({
+  stage,
   getState: shown,
   canMove: () => canMove(),
   breakout: () => fxLevel() !== 'minimal', // an attack strikes out of the render's window (Screen effects on)
@@ -458,6 +464,10 @@ document.addEventListener('click', (e) => {
   if (e.target.closest?.('[data-codex-fold]')) { codexIdx = !codexIdx; dirty = true; }
 });
 try { codexShut = localStorage.getItem('bb-codex-side') === 'shut'; } catch { /* storage unavailable */ } // the Codex's index as you left it
+// The fight log shows its newest line until opened (style.css body.log-open), as you left it.
+const setLogOpen = (open) => { document.body.classList.toggle('log-open', open); $('log-more').setAttribute('aria-expanded', String(open)); $('log-more').title = open ? 'Fight log: shows the newest line only.' : 'Fight log: shows every line.'; };
+try { setLogOpen(localStorage.getItem('bb-fight-log') === 'open'); } catch { setLogOpen(false); }
+$('log-more').addEventListener('click', () => { const open = !document.body.classList.contains('log-open'); setLogOpen(open); try { localStorage.setItem('bb-fight-log', open ? 'open' : 'line'); } catch { /* storage unavailable */ } $('log').scrollTop = $('log').scrollHeight; });
 // The collection log's search: it hides the index rows it doesn't match as you type, with no redraw (the next one draws
 // the same from logFind).
 document.addEventListener('input', (e) => {
@@ -882,6 +892,7 @@ function showSpoils(events) {
   el.hidden = false;
   // Each line lands with a small tick; names decode from noise first.
   const motion = campaign.settings.motion !== false;
+  if (canMove()) BFX.spoilsIn(el, stageFloor); // on some floors the card arrives the floor's way (boardfx.mjs)
   el.querySelectorAll('[style*="--i"]').forEach((node) => {
     const i = Number(node.style.getPropertyValue('--i')) || 0;
     setTimeout(() => {
@@ -2119,7 +2130,7 @@ function renderMeters() {
   if (JSON.stringify(vols) !== lastVols) { lastVols = JSON.stringify(vols); feel.volumes(vols); }
   // A fight plays its family's theme (fightmusic.mjs), building as the virus breaks: heat is how much of it is gone.
   const fighting = active(campaign), vi = fighting ? virusIntegrity(campaign) : null;
-  feel.soundtrack({ on: !!campaign.settings.sound && !coldOn, music: campaign.settings.music !== false, radio: campaign.settings.radio !== false, mood: fighting ? 'fight' : campaign.run ? 'run' : 'home', family: fighting ? campaign.encounter.virus.family : null, heat: vi?.max ? Math.round((0.15 + 0.85 * (1 - vi.current / vi.max)) * 10) / 10 : 0 });
+  feel.soundtrack({ on: !!campaign.settings.sound && !coldOn, music: campaign.settings.music !== false, radio: campaign.settings.radio !== false, mood: fighting ? 'fight' : campaign.run ? 'run' : 'home', family: fighting ? campaign.encounter.virus.family : null, floor: fighting ? stageFloor : null, heat: vi?.max ? Math.round((0.15 + 0.85 * (1 - vi.current / vi.max)) * 10) / 10 : 0 });
   // The place under the music (places.mjs): the hub whose session shows, the run's or fight's floor, the floor on the map.
   feel.places({ on: !!campaign.settings.sound && !coldOn, ...placeOf(campaign, { hub: hubShown() ? hubSel : null, map: module === 'map' && mapView === 'mine' ? V.mapFloorOf(campaign, mapSel, mapFloor) : null }) });
   $('speed').textContent = `${cycleLength(campaign) / 1000}s cycle`;
@@ -2334,6 +2345,7 @@ function render(force = false) {
     if (cache.get('log') !== logBefore) {
       if (logBefore !== undefined) shell.typeIn($('log'), s.logs.length - (render.logLen ?? s.logs.length));
       $('log').scrollTop = $('log').scrollHeight;
+      $('log-hidden').textContent = Math.max(0, $('log').children.length - 1);
     }
     render.logLen = s.logs.length;
   } else if (combatLike && campaign.rooms) {
@@ -2497,18 +2509,19 @@ function turnTimeline(before) {
   const now = new Map([...board.querySelectorAll('[data-k]')].map((el) => [el.dataset.k, el]));
   const ease = 'cubic-bezier(.2,.75,.25,1)';
   const spawned = rowIds().filter((id) => !before.rows?.has(id)); // the rows this cycle added: where a replicate aims
+  const floorMotion = canMove() ? BFX.motionOf(stageFloor) : null; // the floor's way a chip comes in (boardfx.mjs)
   for (const b of before) {
     const el = now.get(b.k);
     if (el) {
       const r = el.getBoundingClientRect();
       const dx = b.rect.left - r.left, dy = b.rect.top - r.top;
-      if (Math.abs(dx) + Math.abs(dy) > 1) el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 440, easing: ease });
+      if (Math.abs(dx) + Math.abs(dy) > 1) { el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 440, easing: ease }); BFX.move(el, floorMotion); }
       if (el.classList.contains('now') && !/\bnow\b/.test(b.cls)) el.animate([{ boxShadow: '0 0 0 0 rgba(255, 91, 61, 0.7)' }, { boxShadow: '0 0 0 6px rgba(255, 91, 61, 0)' }], { duration: 700, delay: 380, easing: 'ease-out' });
     } else if (!spentChips.delete(b.k)) fire(b, spawned); // (one that struck at its own step has gone off)
   }
   spentChips.clear();
   const was = new Set(before.map((b) => b.k));
-  for (const [k, el] of now) if (!was.has(k)) el.animate([{ opacity: 0, transform: 'translateX(28px)' }, { opacity: 1, transform: 'none' }], { duration: 420, delay: 160, easing: 'ease-out', fill: 'backwards' });
+  for (const [k, el] of now) if (!was.has(k)) { BFX.arrive(el, floorMotion, 160); el.animate([{ opacity: 0, transform: 'translateX(28px)' }, { opacity: 1, transform: 'none' }], { duration: 420, delay: 160, easing: 'ease-out', fill: 'backwards' }); }
   const cyc = board.querySelector('.bnow .cyc');
   if (cyc) cyc.animate([{ opacity: 0, transform: 'translateY(-6px)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'ease-out' });
 }
@@ -2648,6 +2661,9 @@ function screenFx() {
   const health = active(s) ? frac(defender(s).integrity, defender(s).max) : s.rooms ? frac(FP.signalNow(s), s.rooms.max) : s.breach ? frac(BR.signalOf(s), BR.maxOf(s)) : s.run ? frac(s.run.integrity, s.run.max) : null;
   const st = screenState(s, { module, mapFloor: module === 'map' ? V.mapFloorOf(s, mapSel, mapFloor) : null, loc: s.run ? currentLocation(s) : null, health, gate: V.gateOf(s), until: sfx.until, fmtLeft: s.degraded ? fmtLeft(degradedLeft(s)) : null });
   if (!shellOn()) Object.assign(st, { level: 'off', floor: null, low: false, on: {} });
+  stageFloor = module === 'map' ? null : st.floor;
+  $('virus-canvas').parentElement.classList.toggle('staged', !!stageFloor); // the place replaces the picture's grid
+  { const pane = $('virus-canvas').closest('.stage'), tag = stage.tagOf(stageFloor); if (pane && pane.dataset.pane !== tag) pane.dataset.pane = tag; } // [ coldline/render ]
   sfx.apply(st);
 }
 // A lamp's one-off blink (#net news, a daemon firing), and the redraw that ends it.

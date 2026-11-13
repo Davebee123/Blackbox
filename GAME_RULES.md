@@ -2606,7 +2606,8 @@ no attaching, detaching or memory pips.
 - **Standing**: 0–100 in four tiers: Stranger, Known (25), Friend (50), Close (75), each a smaller fee. Drawn as the
   Tier bar, its number and how you met in the tooltip. Known face: half again a raise, and three quarters of the fee.
 - **The runner card**: a lone diamond on the map, a row of a counted one's list or a Rail row opens it beside them
-  (beside the Rail row when the map doesn't draw them): faction, handle, class and level; Traits (temperament first), Standing, Now (→ a server and its time, or
+  (beside the Rail row when the map doesn't draw them). Its head (the *Badge*): their ASCII bust (from the handle), faction,
+  handle, class and level, and the Tier bar. Then Traits (temperament first), Now (→ a server and its time, or
   Busy with when they're free), After (their trade); their latest #net line; **Hire**, off with the reason (or the
   clock) until you can.
 - **Hiring** (`hire <runner> [preset]`, anyone on your net, from level 5, three at most): the crew card shows Pay as two
@@ -2876,6 +2877,42 @@ Each floor has its own palette and texture (The Sprawl warm amber and neon haze,
 dusty green, Coldline ice, Deep Core magenta, Kernel Space white on black, The Sink deep red, Bedrock near-monochrome);
 the job colours never change. **Off** shows numbers and bars only. Motion off or reduced motion: no tears, nothing
 moves.
+
+**The stage.** In a fight on a server, the render window shows the floor's place behind the virus, in characters and in
+the floor's colour (Floor colour on): the Sprawl's street, Backhaul's rail yards, an aisle of the Stacks' racks,
+Coldline's harbour, Deep Core's furnace floor, Kernel Space's bare plane, the bottom of the Sink's drain, and the
+stone and ledger figures of Bedrock. The place acts on the virus without touching the board:
+
+- **Light:** its light source shades the virus (brightness only). The Sprawl's sign rims its left side and flickers
+  with it; Coldline's lighthouse beam flares across it once a sweep; Bedrock lights it from below on its old clock's
+  1.25 s tick; Backhaul's passing train, the Stacks' racks, the furnace, the drain's surface and Kernel Space's flat
+  light do the rest.
+- **Camera:** eye level and in the water on Coldline (what's under the waterline is hidden, its reflection below), from
+  below on Bedrock, looking down into the Sink, down the aisle in the Stacks, almost flat in Kernel Space.
+- **Entrance:** a new virus comes in the floor's way: it flickers on like a tube (the Sprawl), rolls in along the
+  rails (Backhaul), is scanned in (the Stacks), surfaces (Coldline), forms out of the heat (Deep Core), is plotted
+  point by point (Kernel Space), sinks into view (the Sink), or is dug out of the rock (Bedrock).
+- **Breaking:** a broken part's bits rise (most floors), freeze and sink at the waterline (Coldline), sink into the
+  pool (the Sink), or fall to rubble (Bedrock).
+- **The board:** on Backhaul and Coldline a new chip's letters spin in and settle, and a chip moving up a column flaps
+  once; on the Sink and Bedrock a new chip types itself in. Chips, colours and telegraphs never change.
+- **The theme:** on Coldline the fight theme plays through 2071 hardware (fewer bits, a narrower speaker, a light tape
+  wobble), on Bedrock through 2041's (6-bit, a small speaker's band, more wobble, hiss and hum).
+
+- **The visit's sky:** where a place has one (the Sprawl, Backhaul, Coldline), each fight takes the window's hour
+  and weather when the virus enters: fog drifts over the far side and mutes the scene, dawn and dusk bring a low sun
+  and light the virus from the front, the rest is night. Rain never shows.
+- **The virus** wears the floor's colour, but on Deep Core and the Sink (whose colours sit near an elite's magenta and a
+  strike's red); a part about to strike stays red.
+- **Winning:** the place stays up behind the spoils card, which arrives the floor's way: flickering on (the Sprawl),
+  flipping in (Backhaul), surfacing (Coldline) or typed in (Bedrock).
+- **The rooms map** has the floor's material under it, faint and clear of every room and link: window dots, sleepers,
+  racks, swell, grating, the plane's dots, sediment, stone grain.
+
+Motion off: the place stands still, no entrance, a steady light. Home and Floor colour off: the picture as before.
+
+**The fight log** shows its newest line, with **▴ N** (the lines above it) to open it whole; it stays as you leave it.
+A finished fight shows it whole.
 
 **A new fight boots in.** The first time you see a fight, the screen goes dark and the virus comes up first, alone
 at the centre, before dropping into its panel; a boot console checks your system and your panels come up. About two

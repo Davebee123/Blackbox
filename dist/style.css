@@ -148,6 +148,10 @@ code { font-family: var(--mono); color: var(--amber); }
 
 .virus-stage { position: relative; min-height: 0; background: var(--inset) url('ui/textures/terminal-grid-fine.png'); border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
 .virus-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.virus-stage.staged { background-image: none; } /* the floor's place (stage.mjs) in place of the grid */
+/* A chip's name coming in the floor's way (boardfx.mjs): a letter at a time, or a caret typing it. */
+.bfx-ch { display: inline-block; white-space: pre; }
+.bfx-caret { display: inline-block; width: 0.55em; height: 1em; margin-left: 1px; vertical-align: -2px; background: currentColor; opacity: 0.8; }
 .stage-flash { position: absolute; left: 0; right: 0; top: 10px; text-align: center; font: 600 13px var(--mono); color: var(--bright); letter-spacing: 1px; pointer-events: none; }
 
 .brow { display: grid; grid-template-columns: minmax(170px, 1.5fr) repeat(4, minmax(0, 1fr)); width: 100%; text-align: left; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 0 12px; background: none; align-items: stretch; }
@@ -3010,6 +3014,15 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .rcard { position: absolute; z-index: 6; width: 300px; padding: 12px 14px; background: var(--panel, #120f0a); border: 1px solid rgba(255, 242, 200, 0.35); border-top: 2px solid var(--bright); border-radius: var(--r-btn); filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.65)); visibility: hidden; }
 .rcard.mine { border-top-color: var(--daemon); }
 .rcard .rc-x { position: absolute; top: 6px; right: 6px; }
+/* The head (the *Badge*): the bust left, kind, handle, class and level and the Tier bar right; the × clears it. */
+.rc-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; margin-bottom: 10px; padding-right: 26px; }
+.rc-head .rc-class { margin: 0 0 6px; }
+.rc-bust { margin: 0; padding: 3px 2px; overflow: hidden; font: 500 4px/4px var(--mono); letter-spacing: 0; white-space: pre; color: rgba(255, 242, 200, 0.85); background: radial-gradient(ellipse at 62% 40%, rgba(255, 242, 200, 0.18), transparent 65%), var(--inset); border: 1px solid rgba(255, 242, 200, 0.25); }
+.rc-bust .qf-r { display: block; }
+.rc-bust i { font-style: normal; }
+.rc-bust .g0, .rc-bust .in { color: rgba(255, 242, 200, 0.35); }
+.rc-bust .g1 { opacity: 0.55; }
+.rc-bust .e2, .rc-bust .gl { color: var(--bright); }
 .rc-kind { margin: 0; font: 10px var(--mono); letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
 .rc-handle { display: flex; align-items: center; gap: 6px; margin: 2px 0 0; font: 600 18px var(--sans); color: var(--bright); }
 .rcard.mine .rc-handle { color: var(--daemon); }
@@ -3989,6 +4002,18 @@ body.no-motion .recap { animation: none; }
   .combat { grid-template-rows: auto minmax(0, 1fr) minmax(96px, 32%); grid-template-areas: 'hud hud' 'board stage' 'board log'; }
   .combat .board { max-height: none; min-height: 0; }
   body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template-areas: 'hud hud' 'log stage'; }
+}
+/* The fight log: its newest line until ▴ opens it (app.js setLogOpen), so the render takes the room. A finished fight
+   shows it whole. */
+.log-more { display: none; }
+@media (min-width: 901px) {
+  body:not(.log-open):not(.fight-over) .combat { grid-template-rows: auto minmax(0, 1fr) auto; }
+  body:not(.fight-over) .log.panel { position: relative; }
+  body:not(.log-open):not(.fight-over) .log-lines { overflow: hidden; padding-right: 64px; padding-bottom: 6px; }
+  body:not(.log-open):not(.fight-over) .log-lines > li:not(:last-child) { display: none; }
+  body:not(.fight-over) .log-more { display: flex; align-items: center; gap: 5px; position: absolute; right: 10px; bottom: 6px; font: 500 12px/1 var(--mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 3px; padding: 4px 7px; cursor: pointer; }
+  body.log-open .log-more { font-size: 0; }
+  body.log-open .log-more::before { content: '▾'; font-size: 12px; }
 }
 .combat .brow:not(.bhead) > .bcell { padding-top: 7px; padding-bottom: 7px; }
 .combat .intent { padding: 5px 8px; font-size: 13px; }

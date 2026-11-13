@@ -96,6 +96,12 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
     eased, no black screen, no readout);
   - network map servers: the *Glyph* (each server its kind's glyph, a bar of what's cleared, a ring round a new one);
   - network map ground: the *Chart* (faint crosshairs and hairlines that pan and zoom with the map);
+  - fights by floor: the *Place* (the floor's scene in characters inside the render, its light and camera on the virus,
+    the floor's entrance and break physics; stage.mjs), the fight log on its newest line (▴ opens it), chips typed or
+    flipped in on some floors (their look never changes), the theme's *era* on Coldline and Bedrock; the picture's
+    *Era* and board skins that change the chips were rejected; then the visit's sky (fog, a low sun), the virus in the
+    floor's colour (not Deep Core or the Sink), the spoils arriving the floor's way, the rooms map's floor as a
+    *material* (a picture under the map was rejected: its landmarks fell under rooms);
   - rooms map: each room kind its own outline and hue (the *Hues*: magenta elite, orange socket, green rest, gold
     vault, white entry and den), thick borders. The one place a colour means a kind.
   - class picker: the *Drawer* (four squares; the picked one slides its traits, starting skills and subclasses out of
