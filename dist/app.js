@@ -190,7 +190,7 @@ function load() {
     FP.connect(s);
     if (pz) { s.rooms.at = FP.neighbours(s.rooms.graph, pz.id)[0]; s.rooms.visit.walked[s.rooms.at] = true; FP.go(s, pz.id); }
     if (params.has('seen')) for (const id of Object.keys(s.rooms.graph.rooms)) s.rooms.seen[id] = 'kind'; // &seen: every room discovered
-    if (params.has('rival')) spawnRival(s, seed, params.get('rival')); // &rival=kudzu|escrow|hush (or any): a rival this visit (rivals.mjs)
+    if (params.has('rival')) spawnRival(s, seed, params.get('rival')); // &rival=<handle> (or any): a rival this visit (rivals.mjs)
     if (RUN_CARDS[params.get('card')]) dealCard(s, params.get('card'), seed); // &card=surge|escort|pack: a run card this visit (runcards.mjs)
     return s;
   }

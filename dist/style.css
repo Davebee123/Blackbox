@@ -2979,6 +2979,15 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .mrun path { fill: var(--bright); stroke: var(--bg); stroke-width: 1.2; }
 .mrun.road path, .mrun.down path { fill: none; stroke: var(--bright); stroke-width: 1.2; }
 .mrun .mrun-hit { fill: transparent; }
+/* A rival (R3, rivals.mjs huntsYou): the one red runner, on the map, the Rail and their card. */
+.mrun.rival path { fill: var(--hot); }
+.mrun.rival.road path { fill: none; stroke: var(--hot); }
+.mrunner.rival .mr-dia { fill: var(--hot); }
+.mrunner.rival .mr-name { fill: var(--hot); }
+.mrunner.rival .mr-route, .mrunner.rival .mr-ring { stroke: var(--hot); }
+.rr-row.rival .rr-dia { border-color: var(--hot); background: var(--hot); }
+.rr-row.rival b { color: var(--hot); }
+.rc-kind.rival { color: var(--hot); }
 /* Several runners at one place: one diamond and how many; its list (runnersList) opens beside it, rows like the Rail's. */
 .mrun .mrun-n { fill: var(--bright); font: 600 calc(11px / var(--z, 1)) var(--mono); dominant-baseline: central; paint-order: stroke; stroke: var(--bg); stroke-width: calc(3px / var(--z, 1)); stroke-linejoin: round; }
 .mrun.crowd.on path { stroke: var(--bright); stroke-width: 2; }

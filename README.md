@@ -150,7 +150,7 @@ comment saying what it does.
 | `dist/sockets.mjs` | Sockets: build a program in a cleared socket room; it changes its own server. |
 | `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, its pull on invasions, and its leaning's id (`leaningOf`). |
 | `dist/leanings.mjs` | Leanings: a server's one positive rule (Venting, Wind-up, Brownout), its multipliers in the fight and what it has paid. |
-| `dist/rivals.mjs` | Rivals: named runners who race you to a server's vault and fight you two or three in a row. |
+| `dist/rivals.mjs` | Rivals: runners from the cast who race you to a server's vault and fight you two or three in a row; lineup by faction, counter-picks by temperament; `huntsYou` (runners.mjs) marks one red. |
 | `dist/runcards.mjs` | Run cards: the director's Surge room, Escort and Hunter pack inside a run. |
 | `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: eight boards that aren't fights (deeper chase and Cascade boards from floor 3), and the cryptogram's key (`s.cipher`). |
 | `dist/forensics.mjs`, `dist/logsweep.mjs` | Log sweep: a short detective puzzle in an incident file (logsweep.mjs builds the logs: a thread's process log, the Terminal room). |

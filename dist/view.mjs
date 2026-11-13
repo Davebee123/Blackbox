@@ -75,7 +75,7 @@ import { EXE } from './exe.mjs';
 import { sigintWindows, sigintCharges, plannedTells } from './tells.mjs';
 import { daemonText } from './daemons.mjs';
 import { ROOMS as ROOMS_FP, KIND_OF, KINDS as KINDS_FP } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
-import { RIVALS } from './rivals.mjs';
+import { rivalP } from './rivals.mjs';
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
 import { arcRows, arcReader } from './arcs-view.mjs';
 import { threadById, serverMarks } from './threads.mjs';
@@ -363,8 +363,8 @@ export function clashTag(v) {
 function rivalTag(s) {
   const e = s.encounter, v = e?.rooms?.as === 'rival' ? s.rooms?.visit?.rival : null;
   if (!v) return '';
-  const P = RIVALS[v.id];
-  return `<span class="tag hot" title="${esc(`${P.name}\nRival · fight ${v.fight + 1} of ${v.fights}\nYour Signal carries to its next fight. Your cooldowns start fresh.\n▸ Win all ${v.fights} to take its pack.`)}">${esc(P.name)} ${v.fight + 1}/${v.fights}</span>`;
+  const P = rivalP(v);
+  return `<span class="tag hot" title="${esc(`${P.name}\nRival · fight ${v.fight + 1} of ${v.fights}\nYour Signal carries to their next fight. Your cooldowns start fresh.\n▸ Win all ${v.fights} to take their pack.`)}">${esc(P.name)} ${v.fight + 1}/${v.fights}</span>`;
 }
 // A solo boss's rounds on your Signal (combat.mjs roundOf): the round it's in and its hits' size.
 function roundTag(s) {
@@ -653,7 +653,7 @@ function partTags(s, p) {
   // A Lockbox's held damage (docs/puzzle-levers.md 3.4): yours, in your teal.
   for (const h of p.integrity > 0 && !pk ? heldOf(s, p) : []) tags.push(`<span class="tag you held" title="${esc(`Held: the ${p.name} holds ${h.held} of your damage on the ${h.partner.name}. When it breaks, half of it, ${h.land}, lands on the ${h.partner.name} at once.`)}">${glyph('unlock')}held ${h.held}</span>`);
   // Fallback (combat.mjs): the part that takes over its partner's attack when the partner breaks first.
-  if (p.rival) { const v = s.rooms?.visit?.rival, P = v && RIVALS[v.id]; if (P) tags.push(`<span class="tag hot" title="${esc(`${p.name}\nPart · added by ${P.name}, read from how you won its last fight.`)}">+ ${esc(P.name)}</span>`); }
+  if (p.rival) { const v = s.rooms?.visit?.rival, P = v && rivalP(v); if (P) tags.push(`<span class="tag hot" title="${esc(`${p.name}\nPart · added by ${P.name}, read from how you won their last fight.`)}">+ ${esc(P.name)}</span>`); }
   if (p.fallback && p.integrity > 0) { const t = e.virus.parts.find((x) => x.id === p.fallback); if (p.tookOver) tags.push(`<span class="tag hot" title="${esc(`Took over: took over the ${t?.name || 'broken part'}'s ${t?.attack?.name || 'attack'} when the ${t?.name || 'other part'} broke.`)}">took over</span>`); else if (t && t.integrity > 0 && t.attack) tags.push(`<span class="tag hot" title="${esc(`Fallback: if the ${t.name} breaks first, the ${p.name} takes over its ${t.attack.name}.`)}">fallback</span>`); }
   // The parts plan (data.mjs BASICS, genes.mjs): an Accumulator's charge, a Hotspot's glow, the Idle Timer's countdown on
   // the signature's row, an Obfuscator's smoke.

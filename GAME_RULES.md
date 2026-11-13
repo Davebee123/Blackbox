@@ -893,31 +893,43 @@ for the visit. An Infiltrator can `slip` past it once a visit.
 
 ### Rivals (rivals.mjs)
 
-Named runners, one per crew, racing you to a traced server's vault ([docs/rivals.md](docs/rivals.md)).
+Runners from the cast (docs/runners.md R3) racing you to a traced server's vault ([docs/rivals.md](docs/rivals.md)).
 
-| Rival | Crew | Lineup | Counter-pick (how you won the last fight → the part it adds) |
-|---|---|---|---|
-| **KUDZU** | SWARMLINE | Trojan, Twinned Worm, Worm | Burst one down → Patcher · spread hits → Hot spare · else Flood ramp |
-| **ESCROW** | TOLLGATE | Ransomware, Wiper, Cryptominer | Burst → Mutex lock · slow or burns → Deadline · else Ward |
-| **HUSH** | PALEMASK | Ghostroot, Echo, Sleeper | Every tell read → Veil · helpers → Phase shift · else Decoy mirror |
+- **Who.** One of the network's runners, never your crew: one hunting you first, else one from the roll. Their faction
+  sets the lineup, their temperament the counter-picks:
 
+| Faction | Lineup |
+|---|---|
+| Halcyon, NULL CHOIR | Ransomware, Wiper, Cryptominer |
+| Kestrel, LANTERN | Trojan, Twinned Worm, Worm |
+| GLASSJAW | Ghostroot, Echo, Sleeper |
+
+| Temperament | Counter-pick (how you won the last fight → the part they add) |
+|---|---|
+| Careful | Burst → Patcher · small strips → Ward · every tell read → Veil · else Mutex lock |
+| Steady | Spread hits → Hot spare · burns → Deadline · helpers → Phase shift · else Flood ramp |
+| Bold | Burst → Decoy mirror · spread hits → Hot spare · slow → Deadline · else Flood ramp |
+
+- **Hunting you.** Red on the network map (their diamond out of any count), the Rail (first) and their card
+  (*Rival · faction*): while racing you, and after you lose to them or they get away with a vault, until you beat them.
 - **The roll.** At most one a visit: 20% at each connect to a traced server whose vault is shut and that isn't yours,
   then none for an hour (`RIVAL`). It starts as far from the vault as the entry is, never next to you.
 - **The walk.** A room for each of your moves (walk or wait), by the shortest route to the vault, never through the
   Core, no key needed. At the vault it opens it and takes the files, then walks to the entry and jacks out with them
   (got away: the files are gone). Its room, its route (a red dotted trace) and the vault show through the fog; the
-  vault's chip shows the race (**YOU 3 · KUDZU 2**).
+  vault's chip shows the race (**YOU 3 · sable 2**).
 - **Aggro.** When it reaches your room, or you walk into its, it has you: no step back, no wait, no jack out. Engage.
 - **The fights.** 2 on floors 1–2, 3 from floor 3, one after another, one level over you, sized like a process room.
-  Your Signal carries; each fight starts your cooldowns fresh. The board tags it **KUDZU 2/3**.
+  Your Signal carries; each fight starts your cooldowns fresh. The board tags it **sable 2/3**.
 - **Counter-pick.** Between fights it adds one part to its next virus, read from how you won the last: burst (a hit
   of a fifth of the virus's Integrity), spread (two parts hit in a quarter of your cycles), slow (14 cycles), burns or
   helpers (a third of the damage), every tell read, small strips (◆ broken six times). Shown before you engage; the
-  part wears **+ KUDZU**. The Veil veils every part of the next virus instead (a ◆ each at least).
+  part wears **+ sable**. The Veil veils every part of the next virus instead (a ◆ each at least).
 - **Stakes.** Beat the whole lineup: its pack (4 Stashes' credits and a blue one level over you) and, if it opened
-  the vault, the vault's files, into your pack. Lose: it's gone with both, and you're disconnected as from any fight.
-- **Memory.** `s.rivals`: each rival's meetings, your record (*meeting 3 · 1–1*), how it last ended, and the command
-  HUSH quotes back. wick has a line on each card.
+  the vault, the vault's files, into your pack, and you've met them: their standing +25. Lose: they're gone with both,
+  and you're disconnected as from any fight.
+- **Memory.** `s.rivals.by[handle]`: meetings, your record (*meeting 3 · 1–1*), how it last ended. Their line (by
+  temperament) and wick's are on each card. Older saves drop the named rivals' memory, and a mid-run one of theirs.
 
 ### Respawns and progress
 
@@ -2310,7 +2322,7 @@ Each goes to the pager and to #net; missing one costs nothing. The director roll
 | **Outbreak** (2) | the net | 30 min | One family surges | Its kills drop double code |
 | **Leak** (1) | a server you've found, not taken | at once | Someone leaks its vault key | You hold the key as you connect |
 | **Darknet listing** (0.5) | the net, from 8 | 20 min | A broker lists a native unique from another network, naming it (`event buy <id>`) | It, for 400 + 40L credits and 2 Exploits |
-| **Feud** (1) | a traced server, from 8, with two rival hubs located | 20 min | A tug-of-war between two rival factions (the bar drifts 2–5% a minute, never past 20/80 alone). *Pick a side* (`event fight <id> <faction>`): fight the other side's runner (an elite of its family at your level); each win pushes your side +25% and brings a fresh runner. Your side wins at 100%, or ahead when time runs out | Each win: 40 + 7.5L credits, a protocol with your side's implicit. Your side +4 rep. The feud: a **part** of your side's faction piece, one of its goods and your side +6, its allies a quarter of a win and the win (+3). No ripple: a feud never costs rep with anyone |
+| **Feud** (1) | a traced server, from 8, with two rival hubs located | 20 min | A tug-of-war between two rival factions (the bar drifts 2–5% a minute, never past 20/80 alone). *Pick a side* (`event fight <id> <faction>`): fight the other side's runner (one of the net's runners who works for it, by handle: an elite of its family at your level); each win pushes your side +25% and brings a fresh runner. Your side wins at 100%, or ahead when time runs out | Each win: 40 + 7.5L credits, a protocol with your side's implicit. Your side +4 rep. The feud: a **part** of your side's faction piece, one of its goods and your side +6, its allies a quarter of a win and the win (+3). No ripple: a feud never costs rep with anyone |
 | **Bounty hunt** (1.5) | a traced server, from 6, two or more traced | 20 min | A named elite that hops to another of your servers every 5 minutes, 3 hops, a level each | 80 + 15L credits ×1, ×1.3, ×1.6, ×2 by hops made, +2 Kestrel rep |
 | **Market shock** (1) | a hub you can trade at, from 5 | 15 min | One ware's price ×2.5 there, or one time in three ×0.4 | No fight |
 | **Spotter** (1) | your wall, from 6 | 10 min | A spotter watching your wall: *Fight* it | The next invasion comes 2 levels weaker, and you know where from and what kind |
@@ -2574,7 +2586,8 @@ no attaching, detaching or memory pips.
   with you. Known runners who are away drop off the Rail until they're back. Each has a handle, a class
   (and subclass from 10), a level 4 below to 4 above yours, a faction, a temperament (Careful, Steady, Bold), one to
   four traits (shown on their cards; only Known face and Haggler in play yet) and a trade: a payment frozen on a floor
-  one to three below where they work.
+  one to three below where they work. Rivals, and the runners feuds, defence calls and counter-raids send, are runners
+  by handle (R3); one hunting you is the one red (see Rivals).
 - **Their loop**, on logged-on time only (nothing moves while you're away): a 6–14 minute cycle on the floor of their
   level: their faction's hub (else the floor's entry), out along the links to a server near their level, work it, and
   back to be paid. A job's outcome is rolled from their level against the server's (Careful +8%, Bold −8%), never
