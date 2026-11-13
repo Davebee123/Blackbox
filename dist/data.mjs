@@ -1218,18 +1218,18 @@ export const BOSSES = {
   // The floor 5 bosses (floorbosses.mjs).
   // GRACE PERIOD: in floor 5's lair pool (floors.mjs FLOOR.lairs), TOLLGATE's. Each part's grace runs down; your command on
   // it pays it up, and a part left to lapse refills its ◆ and charges.
-  graceperiod: { long: { hp: 0.9, dmg: 0.9, enrageAt: 40 }, name: 'GRACE PERIOD', family: 'ransomware', author: 'tollgate', own: true, crown: 'policy', floor: 28, hp: 1.05, dmg: 0.9, enrageAt: 18, acts: { beat: 'none' }, lair: 'GRACEPERIOD-LEDGER',
+  graceperiod: { long: { hp: 0.9, dmg: 0.9, enrageAt: 40 }, name: 'GRACE PERIOD', family: 'ransomware', author: 'tollgate', own: true, crown: 'policy', floor: 28, hp: 1.05, dmg: 0.6, enrageAt: 18, acts: { beat: 'none' }, lair: 'GRACEPERIOD-LEDGER',
     extra: [{ id: 'policy', name: 'Policy', integrity: 56, armor: 1, loot: 'Policy Number', special: true, role: 'policy', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 3 } },
       { id: 'notice', name: 'Notice', integrity: 24, armor: 1, loot: 'Red Envelope', attack: { name: 'Encrypt', effect: 'encrypt', amount: 3, interval: 5, first: 4 } },
       { id: 'collector', name: 'Collector', integrity: 26, armor: 1, loot: 'Ledger Hook', attack: { name: 'Surge', effect: 'damage', amount: 9, interval: 4, first: 2 } },
       { id: 'rider', name: 'Rider', integrity: 20, armor: 1, loot: 'Rider Clause', role: 'rider', attack: { name: 'Surcharge', effect: 'damage', amount: 6, interval: 4, first: 4 } }],
     guide: { open: [['Grace', 'Each part has 3 cycles of grace. Your command on a part pays it up. Area hits pay every part they hit.'],
-      ['Lapse', 'A part whose grace runs out lapses. Its next attack is a charge, and its grace starts over. Your command on the part before the charge lands calls it off.'],
+      ['Lapse', 'A part whose grace runs out lapses. Its next attack is a heavy charge, and its grace starts over. Your command on the part on the cycle the charge lands calls it off.'],
       ['Balance', 'Each lapse charge that lands makes every later one 100% bigger.'],
       ['Rider', 'While the Rider stands, every other part hits 15% harder.'],
       ['Surge and Encrypt', 'The Policy ♛ and the Collector hit you on their own timers. The Notice encrypts you.']],
       phases: [[['Reinstatement', 'A part that lapses refills its ◆ too.']], [['Acceleration', 'Grace drops to 2 cycles, and a lapse takes a cycle off every other part\'s grace.']]] },
-    signature: { name: 'Grace', rule: 'Each part has 3 cycles of grace, and your command on it pays it up. A part whose grace runs out lapses, and its next attack is a charge. Your command on it calls the charge off, and each charge that lands makes the next bigger.' },
+    signature: { name: 'Grace', rule: 'Each part has 3 cycles of grace, and your command on it pays it up. A part whose grace runs out lapses, and its next attack is a heavy charge. Your command on it as the charge lands calls it off.' },
     about: 'A payment plan with four clocks. You can keep three paid, so you choose which part lapses.',
     phases: [{ at: 0.6, do: ['reinstate'], name: 'Reinstatement', emote: 'Coverage reinstated, at the adjusted rate.', say: 'GRACE PERIOD reinstates. A part that lapses refills its ◆ too.' }, { at: 0.3, do: ['accelerate'], name: 'Acceleration', emote: 'Acceleration clause. The full balance is due.', say: 'GRACE PERIOD accelerates. Grace is 2 cycles, and a lapse takes a cycle off every other part.' }] },
   // EXIT NODE: floor 5's floor job (arcs.mjs), PALEMASK hiding ACTUARY's backups. Every 6 cycles it rolls its own bars

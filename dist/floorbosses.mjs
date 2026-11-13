@@ -40,8 +40,9 @@
 //                   other part you broke boots back as a Camera. Act 3
 //                   (Lockout): the Hive boots a Camera, and takes no damage while a Camera stands.
 //   GRACE PERIOD    Grace: each part has 3 cycles' grace, and your command on it pays it up (area hits pay every part
-//                   they hit). A part left to run out lapses: its next attack is a charge, and your command on it before
-//                   it lands calls it off. Each lapse charge that lands makes every later one 100% bigger (the balance).
+//                   they hit). A part left to run out lapses: its next attack is a charge, 3.5 times a plain one's, and
+//                   your command on it on the cycle it lands calls it off. Each lapse charge that lands makes every later
+//                   one 100% bigger (the balance).
 //                   While the Rider stands the rest hit 15% harder. Act 2 (Reinstatement): a lapse refills the part's ◆
 //                   too. Act 3 (Acceleration): grace is 2, and a lapse takes a cycle off every other part's.
 //   EXIT NODE       Rollback: every 6 cycles it restores its own bars (Integrity and ◆) to an image taken 2 cycles before,
@@ -57,7 +58,7 @@
 // fbLogged), a phase's verbs (fbVerb) and the cycle's end (fbCycle). Their uniques (content/items.mjs) hook in here too.
 import { emit, alive, part, livingParts, hit, takeDamage, strikeWith, defender, fxOn, attackAmount } from './combat.mjs';
 import { BOSSES, CONFIG } from './data.mjs';
-import { mimicHit, copyKind, forceCharge, tellsOf, callOff } from './tells.mjs';
+import { mimicHit, copyKind, forceCharge, tellsOf, callOff, tellNext } from './tells.mjs';
 
 export const FB = {
   bid: { slow: 4, fast: 2, after: 4, sold: 0.3, heal: 0.1, buyers: ['tollgate', 'swarmline', 'palemask'] }, // sold: each sale makes the Gavel's Surge that much harder, for the fight; heal: what each sale gives the Rotor ♛ back, of its max
@@ -67,7 +68,7 @@ export const FB = {
   desk: { full: 4, half: 0.5, grow: 0.15, margin: 0.25, limit: 0.12, backlog: 0, heal: 0.04 }, // heal: what each trade settled under Finality gives the Desk back, of its max; limit: the most one hit takes off the Desk, of its max; backlog: trades pending as the fight opens, on its traders (none since the Night Clerk brings one with the night shift) // margin: each Table full opens every later trade that much bigger, for the fight
   vote: { every: 4, pass: 0.15, harder: 0.3, limit: 0.2 }, // limit: the most one hit takes off a Node while another stands, of its max // pass: how far under the level it is restored to the most damaged Node must be; harder: each vote that passes, every Node's hits
   overdraft: 3, // Overdraft: cycles the rest of the hit lands over
-  grace: { days: 3, accel: 2, fee: 1, lead: 2, rider: 0.15 }, // days: a part's grace, in cycles (accel: under the Acceleration); fee: each of a part's lapse charges that landed, its next one that much bigger; lead: a lapse's charge rides its next attack this many cycles away or more; rider: the rest's hits while the Rider stands
+  grace: { days: 3, accel: 2, fee: 1, lead: 2, rider: 0.15, size: 3.5 }, // days: a part's grace, in cycles (accel: under the Acceleration); size: a lapse charge's hit against a plain charge's; fee: each lapse charge that landed, every later one that much bigger; lead: a lapse's charge rides its next attack this many cycles away or more; rider: the rest's hits while the Rider stands
   roll: { every: 6, back: 2, charge: 0.25 }, // a restore every 6 cycles, to the image taken 2 cycles before it; charge: the share of what it restores that lands on you (Chargeback)
   swarm: { sweep: 5, soonest: 2, grows: 3, cams: 4, limit: 0.15, gnaw: 2, back: 0.3 }, // back: what a part the Botnet re-infects returns with, of a Camera's max; // soonest: each fragment a sweep hatches brings the next sweep a cycle sooner, down to this; limit: the most one hit takes off a part, of its max // grows: cycles a fragment lives before it is a Camera; cams: Cameras at once
 };
@@ -353,20 +354,21 @@ export const graceOf = (s) => livingParts(s).filter((p) => p.grace != null);
 // A part's grace runs out (fbCycle): its next attack is a charge, bigger for each lapse charge that landed before it
 // (unpaid, on any part: the balance), and its grace starts over. Your command on it before the charge lands calls it off (fbCmdHit). Under the Reinstatement
 // its ◆ refill too.
-export const feeOf = (v) => 1 + FB.grace.fee * (v?.grace?.fees || 0);
+export const feeOf = (v) => FB.grace.size * (1 + FB.grace.fee * (v?.grace?.fees || 0));
 function lapse(s, p) {
   const e = s.encounter, v = e.virus;
   const gain = v.grace.reinstate ? Math.max(0, (p.maxArmor || 0) - (p.armor || 0)) : 0;
   if (gain) { p.armor = p.maxArmor; p.patchAt = null; p.repatched = true; } // Late Fee reads repatched
   p.grace = v.grace.days; p.lapsedAt = e.cycle;
   const t = forceCharge(s, p, 'Lapse', `lapse:${p.id}`, feeOf(v), FB.grace.lead);
-  emit(s, 'warning', `LAPSED. The ${p.name}'s grace runs out${gain ? `: its ◆ refill (+${gain})` : ''}${t ? `, and its ${p.attack.name} becomes a charge${v.grace.fees ? `, ${Math.round((feeOf(v) - 1) * 100)}% bigger` : ''}. Pay it up before it lands` : ''}.`, { source: p.id, lapse: true, armor: gain });
+  emit(s, 'warning', `LAPSED. The ${p.name}'s grace runs out${gain ? `: its ◆ refill (+${gain})` : ''}${t ? `, and its ${p.attack.name} becomes a charge${v.grace.fees ? `, ${Math.round((feeOf(v) - 1) * 100)}% bigger` : ''}. Your command on it as it lands calls it off` : ''}.`, { source: p.id, lapse: true, armor: gain });
 }
-// Your command on a part (fbBid, fbCmdHit): paid up at the cycle's end, and a lapse's charge on it is called off now.
+// Your command on a part (fbBid, fbCmdHit): paid up at the cycle's end, and a lapse's charge on it landing this cycle
+// is called off.
 function pay(s, p) {
   if (p?.grace == null || !alive(p)) return;
   p.paidAt = s.encounter.cycle;
-  const t = (tellsOf(s)?.list || []).find((x) => x.told && x.id === `lapse:${p.id}`);
+  const t = (tellsOf(s)?.list || []).find((x) => x.told && x.id === `lapse:${p.id}` && tellNext(s, x) <= s.encounter.cycle);
   if (t) callOff(s, t, `PAID. The ${p.name}'s lapse is called off.`);
 }
 // The Rider stands: the rest hit harder.

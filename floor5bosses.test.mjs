@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, livingParts, attackers, hit, bossTable, lairHeld, bossUniques, UNIQUES } from './dist/combat.mjs';
 import { CONFIG, BOSSES } from './dist/data.mjs';
-import { tellsOf } from './dist/tells.mjs';
+import { tellsOf, tellNext } from './dist/tells.mjs';
 import { boardMarkup } from './dist/view.mjs';
 import { FB, fbVerb, fbPower, rollTo } from './dist/floorbosses.mjs';
 import { namedBoss } from './dist/arcs.mjs';
@@ -59,21 +59,24 @@ test("GRACE PERIOD's Grace: a command pays a part up; one left alone lapses into
   assert.equal(collector.armor, 0, 'no ◆ back in act 1');
   assert.ok(told(s, 'lapse:collector'), 'its next attack is a charge');
   assert.equal(collector.grace, FB.grace.days);
-  // Your command on it before it lands calls the charge off.
+  // Your command on it before the cycle it lands pays its grace but leaves the charge; on that cycle it calls it off.
+  command(s, 'crack collector'); resolveCycle(s);
+  assert.ok(told(s, 'lapse:collector'), 'early: the charge stands');
+  while (tellNext(s, told(s, 'lapse:collector')) > e.cycle) hold(s);
   command(s, 'spike collector'); resolveCycle(s);
-  assert.ok(!told(s, 'lapse:collector'), 'paid: called off');
+  assert.ok(!told(s, 'lapse:collector'), 'on its cycle: called off');
   assert.ok(!v.grace.fees);
   // Unpaid, it lands, and every later lapse charge is bigger.
   collector.grace = 1; collector.attack.due = e.cycle + FB.grace.lead;
   hold(s);
   const t = told(s, 'lapse:collector');
-  assert.ok(t && !t.mult, 'a first charge at its plain size, said a cycle or more ahead');
+  assert.equal(t?.mult, FB.grace.size, 'a heavy charge, said 2 cycles or more ahead');
   while (told(s, 'lapse:collector')) hold(s);
   assert.equal(v.grace.fees, 1, 'it landed');
   assert.match(boardMarkup(s), /Balance\nBoss rule/);
   notice.grace = 1; notice.attack.due = e.cycle + 3;
   hold(s);
-  assert.equal(told(s, 'lapse:notice')?.mult, 1 + FB.grace.fee, 'the next one, on any part, is bigger');
+  assert.equal(told(s, 'lapse:notice')?.mult, FB.grace.size * (1 + FB.grace.fee), 'the next one, on any part, is bigger');
   // Attacking only the ♛ is punished: every other part lapses on its own clock.
   for (const p of [policy, notice, collector, rider]) p.grace = 2;
   for (const p of [collector, rider]) p.attack.due = e.cycle + 5;

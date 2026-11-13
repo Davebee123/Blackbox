@@ -4,7 +4,7 @@
 import { gearDamage, classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, skillBase, mirrorOn, bendOf, bendBad, timersHidden, usable, hookHit, wards, attackAmount, delayHeld, frontOf, bufferOn, signatureOf, cooldownOf, frozenNow, asleep, scaled } from './combat.mjs';
 import { ABILITIES, TELL, CONFIG, BOSSES } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
-import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow, beatOn, beatBlind, copyCost, paceOf, tellsOf } from './tells.mjs';
+import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow, beatOn, beatBlind, copyCost, paceOf, tellsOf, tellNext } from './tells.mjs';
 // genesim.mjs: a gene the sim ignores (genes.mjs GENE_BOTS) is played as if it weren't there, one gene at a time.
 import { ignores, GENES, GENE_BOTS } from './genes.mjs';
 import { heatOf } from './parts.mjs';
@@ -267,6 +267,11 @@ function heedFloor(s, move) {
       const m = first(s, open.map((p) => `${id} ${p.id}`)) || first(s, quietOf(s));
       if (m) return m;
     }
+  }
+  if (v.grace) {
+    // GRACE PERIOD: your command on a lapsed part on the cycle its charge lands calls the charge off.
+    const due = (tellsOf(s)?.list || []).filter((t) => t.told && /^lapse:/.test(t.id) && tellNext(s, t) === c).map((t) => part(s, t.part)).find((p) => p && p.integrity > 0);
+    if (due && at !== due.id) { const m = first(s, [...(['part', 'attack'].includes(ABILITIES[id]?.target) ? [id] : []), ...HITS, 'spike', 'crack'].map((k) => `${k} ${due.id}`)); if (m) return m; }
   }
   if (v.surf) {
     // A closed cycle: nothing at the Logger (it shrugs it off and logs it), and nothing big once the log has started.
