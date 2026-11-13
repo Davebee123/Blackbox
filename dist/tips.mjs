@@ -259,6 +259,12 @@ export function nextTip(s, page, visible, pace = {}) {
 // Seen: a tip with your settings (a new game keeps them), a tour step on the save itself (s.tour: once a save).
 const isTour = (id) => tourIds.includes(id);
 export const seenOf = (s, id) => !!(isTour(id) ? s.tour?.[id] : s.settings?.seen?.[id]);
+// A tip that waits for you (done, no mark: map-start) is seen once you've done it, shown or not: connect from
+// anywhere and the opening pointer never comes back.
+export function settleTips(s) {
+  if (!s?.settings) return;
+  for (const t of TIPS) if (t.done && !t.mark && !seenOf(s, t.id) && t.done(s)) markSeen(s, t.id);
+}
 export function markSeen(s, id) {
   if (isTour(id)) { (s.tour ||= {})[id] = 1; return; }
   s.settings.seen ||= {};
