@@ -242,6 +242,8 @@ comment saying what it does.
 | `dist/hitfx.mjs`, `dist/dmgfx.mjs`, `dist/lash.mjs` | Hits landing on a part (a MISS or RESISTED stamped on it; a broken one's row and name breaking into 1s and 0s), damage numbers one per source, a virus lashing at the screen (and its shake). |
 | `dist/chipfx.mjs` | Themed timeline chips: a part's theme (docs/chip-themes.md) played faint inside its chips at +1 and in Now, and its strike into your bar when it goes off (STRIKE_PLAN: when a strike does what, for its sound). |
 | `dist/virus-art.mjs` | Each virus as animated 3D ASCII art: each body's core and limbs attack their own ways out of its window (`STRIKE_OF`, `STRIKES`), a broken part dissolves into 1s and 0s. |
+| `dist/stage.mjs` | The floor's place in the render window behind the virus: its scene, light, camera, a new virus's entrance, a broken part's physics, its reflection. |
+| `dist/boardfx.mjs` | The board's floor motion: a new chip's name typed in or flipped in, a moving chip flapping once. |
 | `dist/boss-art.mjs` | Each boss's own body for it (`BOSS_SHAPE`, the Resident's by family): its parts are the model's regions, the ones that join mid-fight modelled from the start. A boss faces you (`BOSS_SWING`) and is fitted to the window. |
 | `dist/nocarrier.mjs`, `dist/nocarrier.css` | Losing a fight: static and NO CARRIER, then the Disconnected card. |
 | `dist/class-emblems.mjs` | The class picker's ASCII emblems. |
@@ -253,7 +255,7 @@ comment saying what it does.
 | `dist/virussound-all.mjs` | Every other attack's sound in the picked style: each other chip theme's strike, the lash, Scramble, Replicate, Patch, a cast and a seal, and the layers over a hit for a charge and a boss's beat; `virussound-levels.mjs` holds their measured levels. |
 | `dist/virusvoice.mjs` | Virus attack sounds in a fight: which of a batch's events play which attack's sound (one an attack a batch, the biggest hit leading), and how long the numbers wait for a strike's impact. `app.js` attackVoices() plays them and holds each chip's strike for its number. |
 | `dist/soundtrack.mjs`, `dist/music/` | Music and radio chatter (CC0 tracks, CREDITS.md). |
-| `dist/fightmusic.mjs` | Each virus family's fight theme, synthesized live; heat brings its layers in. |
+| `dist/fightmusic.mjs` | Each virus family's fight theme, synthesized live; heat brings its layers in; on Coldline and Bedrock it plays through the floor's old hardware (`ERAS`). |
 | `dist/places.mjs` | A sound bed for each floor, and the virus you're fighting. |
 | `dist/ui/` | Icons, textures and the favicon. Some of the set is unused. |
 
