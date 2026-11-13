@@ -576,6 +576,9 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
 
     const yaw = facing ? Math.sin(angle) * BOSS_SWING : Math.sin(angle) * 0.9 + angle * 0.15, pitch = (shot?.pitch ?? 0.2) + Math.sin(clock * 0.4) * 0.06;
     const cyw = Math.cos(yaw), syw = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    // Each region's part once a frame (the body sums every part's armor), and the yaw's turn with cyw/syw (as rotY).
+    const regions = new Map(), partAt = (region) => { if (!regions.has(region)) regions.set(region, resolvePart(v, region)); return regions.get(region); };
+    const yawed = (x, z) => [x * cyw + z * syw, -x * syw + z * cyw];
     for (const [id, h] of hits) if (now - h.time > (h.kind === 'break' ? BREAK_MS : 900)) hits.delete(id);
     const striking = motion && breakout();
     const quake = motion && shake && now - shake.time < 350 ? (1 - (now - shake.time) / 350) ** 2 * shake.power : 0;
@@ -596,9 +599,9 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       if (u > 0 && u < 1 && who?.integrity > 0) strikes.set(id, { u, h, how, c: { x: 0, y: 0 }, n: 0 });
     }
     if (strikes.size) for (const p of points) {
-      const part = resolvePart(v, p.region), st = part?.id && strikes.get(part.id);
+      const part = partAt(p.region), st = part?.id && strikes.get(part.id);
       if (!st) continue;
-      const q = animate(p, clock), [x1, z1] = rotY(q.x, q.z, yaw);
+      const q = animate(p, clock), [x1, z1] = yawed(q.x, q.z);
       st.c.x += x1; st.c.y += q.y * cp - z1 * sp; st.n++;
     }
     for (const st of strikes.values()) if (st.n) { st.c.x /= st.n; st.c.y /= st.n; }
@@ -607,16 +610,16 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     const cells = new Map();
     for (let i = 0; i < points.length; i++) {
       const p = points[i];
-      const part = resolvePart(v, p.region);
+      const part = partAt(p.region);
       if (!part) continue;
       const h = part.id ? hits.get(part.id) : null;
       if (part.integrity === 0) { if (!(h?.kind === 'break' && motion)) continue; }
       if (part.ghost) continue;
       if (p.region !== 'body' && part.phase && phased && i % 3) continue; // Flicker: the Shade is half gone on odd cycles
       const q = animate(p, clock);
-      let [x1, z1] = rotY(q.x, q.z, yaw);
+      let [x1, z1] = yawed(q.x, q.z);
       const y1 = q.y * cp - z1 * sp; z1 = q.y * sp + z1 * cp;
-      let [nx1, nz1] = rotY(q.nx, q.nz, yaw);
+      let [nx1, nz1] = yawed(q.nx, q.nz);
       const ny1 = q.ny * cp - nz1 * sp; nz1 = q.ny * sp + nz1 * cp;
       const age = h ? (now - h.time) / 900 : 0;
       const fresh = h && part.integrity > 0 && motion ? (1 - age) ** 2 : 0;

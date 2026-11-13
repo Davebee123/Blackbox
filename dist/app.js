@@ -2706,7 +2706,7 @@ function tickUi() {
   }
   ttTapTick();
   { const first = s.serial, k = `${s.encounter.cycle}:${first}`; if (s === campaign && tickUi.exc !== k) { tickUi.exc = k; if (noteExceptions(s)) { react(s.logs.filter((x) => x.id > first)); dirty = true; } } } // an exception the moment it is on the board (checked when the fight changes)
-  if (cd) cd.textContent = s.encounter.paused ? 'II' : Math.max(0, (cycleLength(s) - s.encounter.elapsedMs) / 1000).toFixed(1);
+  if (cd) { const t = s.encounter.paused ? 'II' : Math.max(0, (cycleLength(s) - s.encounter.elapsedMs) / 1000).toFixed(1); if (cd.textContent !== t) cd.textContent = t; } // written only when it changes: each write is a layout
   // One warning per cycle when something is about to land on you.
   const left = cycleLength(s) - s.encounter.elapsedMs;
   const key = s.encounter.cycle + ':' + s.encounter.virus.id;

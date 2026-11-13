@@ -722,6 +722,16 @@ export function createChipFx() {
   const kept = new Map(); // data-k → { box, st, th, seen }
   // The themed chips on the board: a part's own attack and its tells (not its patch, lash or encryption chips).
   const chips = (board) => [...board.querySelectorAll('.brow[data-th] .intent[data-k]')].filter((el) => /^(tell:|[^:]+@)/.test(el.dataset.k));
+  // A chip's size (and a Beacon's icon centre), as the themes read it: measured once layout is done (a ResizeObserver
+  // calls back then, and again whenever it changes), so the frame's tick reads no layout.
+  const measure = (el, th) => {
+    const sz = { w: el.offsetWidth, h: el.offsetHeight };
+    if (th === 'ring') { const ic = el.querySelector('.ico, .bk-ico'); sz.cx = ic ? ic.offsetLeft + ic.offsetWidth / 2 : 14; sz.cy = ic ? ic.offsetTop + ic.offsetHeight / 2 : sz.h / 2; }
+    return sz;
+  };
+  const sized = new WeakMap(); // chip → its rec
+  const ro = typeof ResizeObserver === 'function' ? new ResizeObserver((es) => { for (const e of es) { const rec = sized.get(e.target); if (rec?.el === e.target) rec.sz = measure(e.target, rec.th); } }) : null;
+  const watch = (rec, el) => { if (rec.el === el) return; if (rec.el) ro?.unobserve(rec.el); rec.el = el; rec.sz = null; sized.set(el, rec); ro?.observe(el); };
   return {
     // After every board rebuild: each themed chip gets its box back (or a new one).
     place(board) {
@@ -734,12 +744,13 @@ export function createChipFx() {
         if (!rec) { const box = document.createElement('span'); box.className = 'fxin'; box.setAttribute('aria-hidden', 'true'); rec = { box, st: {}, th: el.closest('.brow').dataset.th }; kept.set(k, rec); }
         rec.seen = now;
         if (rec.box.parentNode !== el) el.prepend(rec.box);
+        watch(rec, el);
       }
-      for (const [k, rec] of kept) if (now - rec.seen > 3000) { rec.box.remove(); kept.delete(k); }
+      for (const [k, rec] of kept) if (now - rec.seen > 3000) { rec.box.remove(); if (rec.el) ro?.unobserve(rec.el); kept.delete(k); }
     },
     // Every frame: dt ms (0 while paused), p the cycle's progress, left its ms to go, k the screen effects' strength (0 is off).
-    // Reads first (each chip's size), then the themes' writes: one layout a frame, not one a chip. Effects off: the boxes
-    // are hidden (opacity 0) and the themes rest.
+    // Each chip's size comes from measure() above (read here only before its first measure), then the themes write.
+    // Effects off: the boxes are hidden (opacity 0) and the themes rest.
     tick({ dt, p, left, k }) {
       const run = [];
       for (const rec of kept.values()) {
@@ -749,9 +760,7 @@ export function createChipFx() {
         const [lv, op] = k ? chipLevel(col, left) : [0, 0];
         if (rec.op !== op * k) rec.box.style.opacity = rec.op = op * k;
         if (!k || !(lv || Object.keys(rec.st).length) || !THEMES[rec.th]) continue;
-        const g = { w: el.offsetWidth, h: el.offsetHeight };
-        if (rec.th === 'ring') { const ic = el.querySelector('.ico, .bk-ico'); g.cx = ic ? ic.offsetLeft + ic.offsetWidth / 2 : 14; g.cy = ic ? ic.offsetTop + ic.offsetHeight / 2 : g.h / 2; }
-        run.push([rec, el, lv, col === 0 ? p : 0, g]);
+        run.push([rec, el, lv, col === 0 ? p : 0, rec.el === el && rec.sz ? rec.sz : measure(el, rec.th)]);
       }
       for (const [rec, el, lv, pp, g] of run) THEMES[rec.th](el, rec.box, rec.st, dt, lv, pp, g);
     },
