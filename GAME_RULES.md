@@ -128,7 +128,7 @@ Hover it for what happens; nothing on the board says how to stop it. Breaking a 
   4% from 17; Purge, Scrub or Rollback cleanses it).
 - **A boss's beat** (Boss acts): the Backlash, RELAY-KING's Broadcast, REPO MAN's Collection and HOLLOW CHOIR's Mimic.
 - **Helpers count** (docs/puzzle-fights.md 3.2). A helper's hit is your hit on every lever: it can set off a Tripwire,
-  cross a boss's phase tick or boot a Spare, and on the Mimic's beat each helper you sent onto it after the beat was
+  cut a part's move or boot a Spare, and on the Mimic's beat each helper you sent onto it after the beat was
   said is played back at its own size (`caughtHelpers`). Helpers never cut a tell on their own. On the board each
   helper's hits left show as teal pips in its part's columns; a pip that trips a lever is edged red.
 
@@ -559,17 +559,17 @@ It remembers `s.dex` (genome.mjs) and `s.research`; crewmates' fights don't writ
 
 ### Solo bosses
 
-Bosses have phases and an enrage. A solo boss's **♛ part** (its signature) has phase ticks at 60% and 30% instead of
-interrupts: taking it across one starts its next phase; its other parts interrupt as usual (interrupt.mjs rule a;
+Bosses have phases and an enrage. A solo boss's phases are its **acts**, each a fresh bar (below): its **♛ part** (its
+signature) carries its own rule, and interrupts at 50% and 25% like every other part (interrupt.mjs rule a;
 `developer bossrule b|c` tries the alternatives). A boss brings three tells, every one open at its level. From its
 enrage cycle every attack lands every cycle, a quarter harder, with a warning three cycles before. A phase change
 flashes on screen.
 
 **The Resident.** Opening a server's vault unseals its **Core**, where the Resident waits: the owner's process, a boss of
 the server's family (all three parts) at the server's level, 1.4× Integrity (1.1× on your first server). Its phase
-re-arms every part. A worm or ransomware Resident plays in acts instead (below): 1.1× Integrity. Its ♛ holds half its
+re-arms every part. A worm or ransomware Resident plays in acts instead (below): 1.1× Integrity. Its ♛ holds half each act's
 Integrity (taken from its other parts), and it runs a **Watchdog**: every 5 cycles its ♛ stands above its next tick,
-every other part patches a ◆ (up to its full). Crossing a tick restarts the count; past the last tick there is none.
+every other part patches a ◆ (up to its full). Each act restarts the count; past its ♛'s last tick there is none.
 *watchdog n* on its ♛. Beat it and the server is **taken over**: yours, teal on the map, its Core
 quiet for good. Lose and you're disconnected, and for 6 hours it is a level stronger, up to three levels.
 
@@ -588,9 +588,9 @@ multiple (R3 ×1.2). A slow kill meets a round it can't survive. Crew bosses hav
 | HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.33× | cycle 40 |
 
 Each plays in acts (below) with a part and a rule of its own, and a mechanic an act (docs/solo-bosses.md). RELAY-KING's
-and REPO MAN's ♛ holds 45% of the boss, taken from its other parts (`BOSSES` work.share).
+and REPO MAN's ♛ holds 45% of each act's board, taken from its other parts (`BOSSES` work.share).
 
-| Boss | Its part | Act 1 | Act 2 (♛ at 60%) | Act 3 (♛ at 30%) |
+| Boss | Its part | Act 1 | Act 2 | Act 3 |
 |---|---|---|---|---|
 | RELAY-KING | **Relay**: Broadcast every 4 cycles, its hit bigger by its base for each fragment on the board | Broadcast | **Crown Hop**: the ♛ (and its 30% tick) moves to the healthiest other part above 30% (none: it stays); the part it leaves heals 25% of its max and takes plain ticks | **Flood**: the Replicator hatches every 2 cycles, the Relay broadcasts every 3 |
 | REPO MAN | **Ledger**: Collection every 5 cycles, its hit bigger by its base for each Lien | **Liens**: each of your commands a ◆ absorbs puts one on the Ledger (strips, piercing hits, burns and helpers don't); a Collection that lands or is cut clears them | Re-arms every part; a Collection 3 cycles out | **Interest**: each Lien counts twice; a Collection 3 cycles out |
@@ -599,10 +599,9 @@ and REPO MAN's ♛ holds 45% of the boss, taken from its other parts (`BOSSES` w
 On the board: ♛ on the crown part, ×*n* fragments on the Relay, §*n* Liens on the Ledger, *round* on a Mimic.
 
 **Floor bosses** (floorbosses.mjs, docs/boss-guide.md). Floors 2 to 5 have bosses of their own: parts of their own
-only, the ♛'s act ticks at **60% and 30%** (every other part's ticks stay at 50% and 25%), the beat on a part of their
-own, a tell an act from their set (floor 4's and GRACE PERIOD deal none: their rule is the fight), and a verb an act. 0.4× to 0.91× Integrity, with more of it on the ♛; they enrage at cycle 36 to 44. Played blind (no rule answered) each floor 2–4 boss loses most of its fights (floor 5's: GRACE PERIOD read 70%, misread 57%, blind 40%; EXIT NODE 64%, 50%, 34%), and one misread at the wrong cycle makes the rest of the fight harder (a sale, a leak, a Dump or a Call grows the next).
+only, every part's ticks at 50% and 25% (its acts are bars, below), the beat on a part of their own, a tell an act from their set (floor 4's and GRACE PERIOD deal none: their rule is the fight), and a verb an act. 0.4× to 0.91× Integrity, with more of it on the ♛; they enrage at cycle 36 to 44. Played blind (no rule answered) each floor 2–4 boss loses most of its fights (floor 5's: GRACE PERIOD read 70%, misread 57%, blind 40%; EXIT NODE 64%, 50%, 34%), and one misread at the wrong cycle makes the rest of the fight harder (a sale, a leak, a Dump or a Call grows the next).
 
-| Boss | Where | Lv | Its rule (on its row) | Act 2 (♛ at 60%) | Act 3 (♛ at 30%) |
+| Boss | Where | Lv | Its rule (on its row) | Act 2 | Act 3 |
 |---|---|---|---|---|---|
 | CENTRIFUGE (GLASSJAW) | Floor 2's floor job: its Boss step's server's Core | 14 | **Bidding**, on the Gavel (no ticks, so never cut): from every 3 cycles, each Surge it lands takes it one sooner, down to 2. Each one-part command you aim at it while the Rotor stands is a bid, one faster too (a delay or a Throttle isn't). A delay or Throttle on it withdraws it to 4, and SIGINT cuts a selling Surge. A Surge at every 2 sells to the buyer it names, whose part joins (TOLLGATE's Lockbox wards the Rotor ♛, SWARMLINE's Mirror twins the Gavel, PALEMASK's Veil hides its timers); the Gavel drops to every 4, each sale makes its Surge 30% harder for the fight, and (**Sold**) heals the Rotor ♛ 10% of its max. Nothing sells once the Rotor breaks. The Rotor's Encrypt comes every 7 cycles; no beat holds its ticks | **Reserve price**: a withdraw steps it back one | **Second lot**: two buyers a sale |
 | SHAKEDOWN (TOLLGATE) | The last room of every floor-2 Pit; back an hour after it falls | 12 | **Ransom Clock**, run by the Collector ♛ (it stops when the Collector breaks): 10 cycles; at 0 it leaks 35% of your max, 15% more each leak after (up to 65%), and restarts at 5. A Demand broken while the Collector stands halves the time left (*missed payment*). A Deadline (the Demand's, a wind-up) that lands adds 3; one called off buys nothing. Its Lockbox wards the Demand. **Leverage**: while a Demand stands, the Collector loses at most 15% of its max a cycle, and the rest of a hit is lost | **Second demand**, its Deadline on the same cycle; the Lockbox wards it too | **Final notice**: a leak re-arms the Demands and brings the Lockbox back |
@@ -628,23 +627,26 @@ vote, the sweep and the leak are chips in their columns, beside their part's own
 
 ### Boss acts (acts.mjs)
 
-A P4 boss (docs/puzzle-fights.md 7) plays in **three acts**: the first from the start, the next two from its ♛ part's
-ticks at 60% and 30%. Built: the worm and ransomware Residents, the three solo
-bosses and the four floor bosses.
+A solo boss plays in **three acts, each a fresh bar**: every part back at full with that act's rules on top. An act
+ends when its last part breaks; the next begins at the cycle's end. Built: the worm and ransomware Residents, the
+three solo bosses, the floor 2–5 bosses and the natives. A crew boss keeps its own framework (raid.mjs).
 
-- **Held at the tick.** Damage takes the ♛ to its next act tick and no further until that act begins, at the cycle's
-  end; the rest of each hit is lost. Every boss with a ♛, in acts or not, so no act is skipped.
-- **The act break** (actbreak.mjs). As the hit crosses the ♛'s tick, the tick bursts into red 1s and 0s. A breath
-  later the board's strip flares red with the act, *ACT 2 / 3 · TRAITOR*, for about 4 seconds, and the boss's emote
-  (its phase's `emote`) types out under its bar. The fight's clock holds meanwhile. Its sound is the *Tritone*: a heavy break as
-  the tick bursts, then a low G against its tritone, droning under the strip. Phones buzz twice short, once long; on
-  a desktop the boss's bar thumps. *ACT n/m* stays by the boss's bar, its rule and next tick in its
-  tooltip.
+- **The split.** A boss's Integrity is cut across its acts (`ACT_BARS.share`), so three acts run about as long as
+  one bar did and each act is about as long and as hard as the others. A board that comes back full attacks for the
+  whole fight, so a longer fight costs more than it did.
+- **The ♛** carries the boss's signature and its own rule. Its ticks are a part's (50% and 25%), like every other
+  part's: it interrupts, and crossing it starts no act. No order is forced, and no order is punished.
+- **The act break** (actbreak.mjs). The board's strip flares red with the act, *ACT 2 / 3 · TRAITOR*, for about 4
+  seconds, and the boss's emote (its phase's `emote`) types out under its bar. Then the parts come back, top to
+  bottom, each fading in from a blur as its bar fills. The fight's clock holds for all of it. Its sound is the
+  *Tritone*: a heavy break, then a low G against its tritone, droning under the strip. Phones buzz twice short, once
+  long; on a desktop the boss's bar thumps.
+- **The bar** is the *Segments*: the boss's bar in one segment an act, the acts done dark, the act now draining, the
+  acts to come full and dim. *ACT n/m* stays beside it, its rule in the tooltip.
 - **A tell an act.** Act 1 deals the boss's first tell (its charge), act 2 its cast as well, act 3 its third.
 - **The beat** repeats, always on the board. Acts 2 and 3 bring the boss's mechanics (a Resident's: act 2 quickens its
   beat, act 3 makes every attack a cycle sooner).
-- **The one to leave.** The ♛ stays above its next tick until this act's beat has played, or nothing else stands. Taken
-  under it sooner, every part re-arms (*Too soon*). The held tick is outlined red; its tooltip says when the beat plays.
+- **Nothing is farmed twice.** A part broken again in a later act gives no research, components or .exe drop.
 
 | Boss | The beat | Every | What answers it |
 |---|---|---|---|

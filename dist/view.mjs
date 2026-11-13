@@ -4,7 +4,7 @@ import { masteryLine } from './mastery.mjs';
 import { componentsOf } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
-import { leaveOf, actInfo } from './acts.mjs';
+import { actInfo, actBar } from './acts.mjs';
 import { FB, BUYER, nextBuyer, dumpOf, topFrame, canCall, frames, leakOf, depthOf, pendingOf, tradeOf, voteOf, forkOf, nodesOf, camerasOf, hatchers, parentOf, leverLeft, rollTo } from './floorbosses.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './memory.mjs';
@@ -322,7 +322,7 @@ const capMark = (s, d) => { const cap = healCap(s); return cap < d.max ? `<i cla
 export function hudMarkup(s, { party = true, preview = null } = {}) {
   const e = s.encounter, v = e.virus;
   runMode = e.mode === 'run';
-  const hp = virusIntegrity(s);
+  const hp = s.encounter?.actBars ? actBar(s) : virusIntegrity(s); // act bars (acts.mjs): this act's bar
   const vp = hp.max ? (hp.current / hp.max) * 100 : 0;
   const d = defender(s);
   const dp = (d.integrity / d.max) * 100;
@@ -339,15 +339,22 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
   return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${crackMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}${copyGhost(d, fc.you, cp)}${claimMarks(s, d)}</div>${clockMeter(s)}</div></div>${statusPanel(s, cp)}</div>
-    <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${actTag(s)}${roundTag(s)}${roomBossTag(s)}${rivalTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
+    <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div>${actSegments(s, `<div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div>`)}<p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${actTag(s)}${roundTag(s)}${roomBossTag(s)}${rivalTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
 }
-// A boss's act (acts.mjs actInfo), on its ♛'s ticks (interrupt.mjs rule a): ACT n/m, the act's rule and the next tick in
-// its tooltip. The act break (actbreak.mjs) announces each new one.
+// The *Segments* (act bars, acts.mjs): the boss's bar in one segment an act, the acts done dark, the act now draining
+// (bar: its own bigbar), the acts to come full and dim.
+export function actSegments(s, bar) {
+  const e = s.encounter, a = e?.actBars ? actInfo(e.virus) : null;
+  if (!a) return bar;
+  return `<div class="act-segs" style="--acts:${a.of}">${Array.from({ length: a.of }, (_, i) => (i + 1 === a.n ? bar : `<div class="bigbar ${i + 1 < a.n ? 'act-done' : 'act-wait'}"><span></span></div>`)).join('')}</div>`;
+}
+// A boss's act (acts.mjs actInfo): ACT n/m, the act's rule and what starts the next in its tooltip. The act break
+// (actbreak.mjs) announces each new one.
 export function actTag(s) {
   const e = s.encounter, v = e?.virus, a = e?.bossRule === 'a' ? actInfo(v) : null;
   if (!a) return '';
   const ph = v.phases[a.n - 2], rule = ph ? (BOSSES[v.boss]?.guide?.phases?.[a.n - 2] || []).map(([, t]) => t).join(' ') || ph.say : '';
-  const next = a.n < a.of ? `Its next act starts when you take its ♛ under ${Math.round(TICKS.act[a.n - 1] * 100)}%.` : 'Its last act.';
+  const next = a.n >= a.of ? 'Its last act.' : 'Break every part and its next act begins, every part back at full.';
   const tip = `${a.name || `Act ${a.n}`}\nAct ${a.n} of ${a.of}\n${rule ? rule + ' ' : ''}${next}`;
   return `<span class="tag hot act-tag" title="${esc(tip)}">ACT ${a.n}/${a.of}</span>`;
 }
@@ -803,13 +810,10 @@ function floorTags(s, p) {
   }
   return out;
 }
-// A P4 boss's ♛ (acts.mjs leaveOf): its next phase tick is held (amber) until this act's beat has played.
+// A part's interrupt ticks on its bar (interrupt.mjs).
 function ticksMarkup(s, p) {
   if (!s.encounter?.ticked || !p.ticks) return '';
-  const lv = p.core ? leaveOf(s) : null, next = p.ticks.find((t) => !t.spent);
-  const held = (t) => lv && !lv.done && t === next;
-  const leaveTip = (t) => (held(t) ? `\nLeave it above this tick until the beat plays${lv.beat != null ? ` (${bendWhen(lv.beat)})` : ''}. Taken under it sooner, every part re-arms.` : '');
-  return p.ticks.map((t) => `<i class="ptick${t.spent ? ' spent' : ''}${t.phase != null ? ' phase' : ''}${held(t) ? ' held' : ''}" style="left:${t.at * 100}%" title="${esc(t.phase != null ? `Phase tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it and the boss starts its next phase. It holds at the tick until the phase begins.${t.spent ? ' Spent.' : ''}${leaveTip(t)}` : `Tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it on a cycle its move is due and that move is cancelled. Each tick works once a fight.${t.spent ? ' Spent.' : ''}`)}"></i>`).join('');
+  return p.ticks.map((t) => `<i class="ptick${t.spent ? ' spent' : ''}" style="left:${t.at * 100}%" title="${esc(`Tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it on a cycle its move is due and that move is cancelled. Each tick works once a fight.${t.spent ? ' Spent.' : ''}`)}"></i>`).join('');
 }
 
 // ---------- what protects what (fightread.mjs partLinks) ----------

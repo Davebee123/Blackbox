@@ -101,7 +101,7 @@ test('one beat\'s playback lands every helper it catches, with no cap', () => {
   assert.ok(one > 0 && twelve > one * 6, `one ${one}, twelve ${twelve}`);
 });
 
-test('a helper\'s hit is your hit: it sets off a Tripwire, starts a ♛ part\'s phase and boots a Spare', () => {
+test('a helper\'s hit is your hit: it sets off a Tripwire and boots a Spare', () => {
   // A Tripwire a helper breaks while the others stand: they go loud.
   const s = fight({ level: 22, family: 'ransomware', seed: withPart('ransomware', 'tripwire', 22) });
   const trip = part(s, 'tripwire');
@@ -109,14 +109,6 @@ test('a helper\'s hit is your hit: it sets off a Tripwire, starts a ♛ part\'s 
   s.encounter.helpers.push({ target: 'tripwire', damage: 12, left: 2, synced: false, sent: s.encounter.cycle, by: 'Deploy' });
   step(s);
   assert.ok(!trip.integrity && s.logs.some((x) => x.tripwire), 'TRIPWIRE: the others go loud');
-  // A helper's tick across a ♛ part's phase tick starts its next phase.
-  const b = fight({ level: 12, family: 'ransomware', seed: 3 });
-  const core = livingParts(b).find((p) => p.attack);
-  Object.assign(core, { core: true, max: 100, integrity: 52, ticks: [{ at: 0.5, spent: false, phase: 0 }, { at: 0.25, spent: false, phase: 1 }] });
-  b.encounter.virus.phases = [{ at: -1, do: [], say: 'Phase 2.' }, { at: -1, do: [], say: 'Phase 3.' }];
-  b.encounter.helpers.push({ target: core.id, damage: 12, left: 2, synced: false, sent: b.encounter.cycle, by: 'Deploy' });
-  step(b);
-  assert.ok(b.logs.some((x) => x.phase && x.tick === 0.5), 'its phase starts');
   // A helper that breaks the signature boots a sleeping Spare.
   const w = fight({ level: 16, family: 'worm', seed: 77, opts: { classic: false, basic: 'pulse', genes: ['spare'] } });
   const sig = part(w, 'replicator'), sp = part(w, 'spare');

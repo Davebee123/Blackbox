@@ -1107,7 +1107,7 @@ export const BOSSES = {
   choir: { long: { hp: 0.95, dmg: 1.6, enrageAt: 40 }, name: 'HOLLOW CHOIR', family: 'ghostroot', third: 'mimic', hp: 1.4, dmg: 1, enrageAt: 16, acts: { beat: 'copy' }, signature: { name: 'Canon', rule: 'Its Mimic copies your command on its beat. At 60% a second voice as big as its ♛ beats 2 cycles behind the first. At 30% each beat plays back your last three commands.' },
     phases: [{ at: 0.5, do: ['fork:mimic', 'voice'], name: 'Second voice', emote: 'Another voice joins. Sing it back to them.', say: 'A second voice joins the Hollow Choir, two beats behind the first.' }, { at: 0.25, do: ['round'], name: 'Round', emote: 'The round begins. We sing what you sang.', say: 'The Hollow Choir sings the round. Each beat plays back your last three commands.' }] },
   // The floor 2 and 3 bosses (docs/solo-bosses.md "Proposed: floors 2–8", floorbosses.mjs): own parts only (own), a
-  // crown (♛) with the act ticks every boss's ♛ carries (interrupt.mjs TICKS.act), their beat on a part of their own (acts 'part'), and a verb an act.
+  // crown (♛) carrying its signature rule, their beat on a part of their own (acts 'part'), and a verb an act.
   // throne: the rogue server kind and floor whose last room it holds (rogue.mjs); the others, a floor job's Core (arcs.mjs).
   // CENTRIFUGE: floor 2's floor job (arcs.mjs), GLASSJAW's. Bidding on the Gavel; its buyers join from its sales.
   centrifuge: { long: { hp: 1, dmg: 0.36, enrageAt: 36 }, name: 'CENTRIFUGE', family: 'ransomware', author: 'glassjaw', own: true, crown: 'rotor', floor: 14, hp: 0.91, dmg: 1, enrageAt: 18, acts: { beat: 'none' }, // no beat: withdrawing the Gavel is the answer, so nothing holds its ♛ ticks

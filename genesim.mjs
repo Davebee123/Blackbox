@@ -31,20 +31,21 @@ function mover(mode, seed) {
 // as shares of your max.
 export function playOut(s, move, cap = 80, { sync = true } = {}) {
   command(s, 'engage');
-  const max = defender(s).max, lost = [];
+  const max = defender(s).max, lost = [], acts = [1]; // the cycle each act began (act bars, dist/acts.mjs)
   let spike = 0, spikeBy = '';
   for (let n = 0; n < cap && active(s); n++) {
     const text = move(s) || 'hold';
     command(s, text);
     if (sync && s.encounter?.sync && s.encounter.virus.parts.some((p) => p.syncOnly && p.integrity > 0)) s.encounter.synced = text !== 'hold';
     if (s.encounter?.sync?.surprise) s.encounter.synced = text !== 'hold';
-    const was = defender(s).integrity, ev = resolveCycle(s);
+    const was = defender(s).integrity, c = s.encounter.cycle, ev = resolveCycle(s);
     for (const x of ev) if (x.type === 'server-hit' && !x.who && (x.amount || 0) > spike) { spike = x.amount; spikeBy = `${x.message} (max ${max}, ${classOf(s)})`; }
+    for (const x of ev) if (x.type === 'phase' && x.act) acts.push(c + 1); // the act begins the cycle after
     lost.push(Math.max(0, was - defender(s).integrity));
   }
   const r = s.reports.at(-1) || { result: 'stalemate', cycles: cap, endIntegrity: defender(s).integrity };
   const three = Math.max(0, ...lost.map((_, i) => (lost[i] || 0) + (lost[i + 1] || 0) + (lost[i + 2] || 0)));
-  return { ...r, spike: spike / max, three: three / max, spikeBy };
+  return { ...r, spike: spike / max, three: three / max, spikeBy, acts };
 }
 // A player of a subclass at a level, on a run, rested.
 export function player(cls, sub, level, opts = {}) {
@@ -63,7 +64,18 @@ export function bossFight(id, level, cls, sub, seed, mode = 'read') {
   else selectEncounter(s, 'random', (seed * 7919 + 131) >>> 0, { mode: 'run', room: '/core', level, zone: true, wild: 'lair', family: B.family, boss: id, strain: B.strain || null, mutation: null, name: B.name });
   s.encounter.soft = 1;
   const max = home ? s.server.max : s.run.max, r = playOut(s, mover(mode, seed));
-  return { win: r.result === 'victory', lost: Math.round(((max - r.endIntegrity) / max) * 100), cycles: r.cycles, spike: r.spike, three: r.three, spikeBy: r.spikeBy };
+  return { win: r.result === 'victory', lost: Math.round(((max - r.endIntegrity) / max) * 100), cycles: r.cycles, spike: r.spike, three: r.three, spikeBy: r.spikeBy, acts: r.acts };
+}
+// A boss's acts, in cycles (docs/solo-bosses.md "Act bars, measured"): the planner on every subclass, over its won
+// fights. Each act runs from the cycle after the one before ended; the last to the kill. A boss the planner never
+// beats is measured over every act that ended.
+export function actLengths(id, level, seeds = SEEDS, mode = 'read') {
+  const won = [], all = [];
+  for (const [cls, sub] of SUBS) for (const seed of seeds) {
+    const r = bossFight(id, level, cls, sub, seed, mode), marks = r.win ? [...r.acts, r.cycles + 1] : r.acts;
+    for (const into of r.win ? [won, all] : [all]) marks.slice(1).forEach((c, i) => { (into[i] ||= []).push(c - marks[i]); });
+  }
+  return (won.length ? won : all).map((xs) => xs.reduce((n, x) => n + x, 0) / xs.length);
 }
 // A boss at a level: win rates for the reader, the misreader and the blind bot, and wins by subclass (of six).
 export function bossBand(id, level, modes = ['read', 'misread', 'blind'], seeds = SEEDS) {

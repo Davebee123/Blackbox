@@ -1,5 +1,5 @@
 // The floor 5 bosses (floorbosses.mjs, docs/boss-guide.md "Floor 5", GAME_RULES.md "Floor bosses"): GRACE PERIOD's Grace
-// and EXIT NODE's Rollback, their act ticks, where they stand and what they drop.
+// and EXIT NODE's Rollback, their acts, where they stand and what they drop.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, livingParts, attackers, hit, bossTable, lairHeld, bossUniques, UNIQUES } from './dist/combat.mjs';
@@ -28,12 +28,13 @@ const of = (s, id) => livingParts(s).find((p) => p.id === id);
 const hold = (s) => { command(s, 'hold'); return resolveCycle(s); };
 const told = (s, id) => (tellsOf(s)?.list || []).find((t) => t.id === id && t.told);
 
-test('the floor 5 bosses: own parts, a ♛, act ticks at 60% and 30% on it and 50% and 25% on the rest, two acts each', () => {
+test('the floor 5 bosses: own parts, a ♛, every part with ticks at 50% and 25%, two acts each, as bars', () => {
   for (const [id, crown, parts, tells] of [['graceperiod', 'policy', ['policy', 'notice', 'collector', 'rider'], 0], ['exitnode', 'core', ['core', 'v7', 'v6', 'v5'], 0]]) {
     const s = boss(id), v = s.encounter.virus, c = livingParts(s).find((p) => p.core);
     assert.deepEqual(v.parts.map((p) => p.id), parts, id);
     assert.equal(c.id, crown, `${id}'s ♛`);
-    assert.deepEqual(c.ticks.map((t) => t.at), [0.6, 0.3], `${id}'s act ticks`);
+    assert.deepEqual(c.ticks.map((t) => t.at), [0.5, 0.25], `${id}'s ♛: plain ticks (its acts are bars)`);
+    assert.ok(s.encounter.actBars, id);
     for (const p of v.parts.filter((x) => x !== c)) assert.deepEqual(p.ticks.map((t) => t.at), [0.5, 0.25], `${id}'s ${p.name}`);
     assert.equal(v.phases.length, 2);
     assert.equal(tellsOf(s)?.list.length || 0, tells, `${id} deals no tells of its own: its charges are its rule's`);
@@ -140,11 +141,11 @@ test("EXIT NODE's Rollback: the Front; every 6 cycles its bars go back 2 cycles 
   // Glass Cut: after the restore the Core's next attack, in the next window, is a charge.
   const gc = tellsOf(s).list.find((t) => t.told && /^glass:/.test(t.id));
   assert.ok(gc && gc.part === 'core', 'the Core charges');
-  // The Core is never restored past its last spent act tick.
-  const t60 = core.ticks.find((t) => t.at === 0.6);
-  core.integrity = Math.floor(core.max * 0.5); t60.spent = true;
+  // The Core is never restored past its last spent tick.
+  const t50 = core.ticks.find((t) => t.at === 0.5);
+  core.integrity = Math.floor(core.max * 0.4); t50.spent = true;
   R.images[R.at - FB.roll.back] = { ...R.images[R.at - FB.roll.back], core: { hp: core.max, armor: 0 } };
-  assert.equal(rollTo(s, core).hp, Math.floor(core.max * 0.6));
+  assert.equal(rollTo(s, core).hp, Math.floor(core.max * 0.5));
   // Kept charges: a charge cut in the window comes back at the restore.
   fbVerb(s, 'keptcharges');
   while (e.cycle < R.at - 1) hold(s);
@@ -161,7 +162,7 @@ test("EXIT NODE's Rollback: the Front; every 6 cycles its bars go back 2 cycles 
   s.server.integrity = 5000;
   hold(s);
   assert.equal(v5.integrity, R.cold.v5.hp, 'back to the cold image');
-  assert.equal(core.integrity, Math.min(R.cold.core.hp, Math.floor(core.max * 0.6)), 'the Core no higher than its spent tick');
+  assert.equal(core.integrity, Math.min(R.cold.core.hp, Math.floor(core.max * 0.5)), 'the Core no higher than its spent tick');
 });
 
 test('where the floor 5 bosses stand: EXIT NODE its floor job\'s, GRACE PERIOD in the lair pool with its pair in the lair\'s roll', () => {
