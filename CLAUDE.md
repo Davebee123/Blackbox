@@ -88,9 +88,10 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
     hairlines; traits as named chips, temperament first; standing as the *Tier bar* (the tier, a bar to the next); a
     hired runner's bar picked from their *Presets* (a tile each: name and how it plays, keys in its tooltip);
   - a boss's loot page: *Grouped* (every kill, its uniques, its set piece, each with the next kill's odds as a bar);
-  - a boss's act break: the *Strip* (the ♛'s tick bursts into red 1s and 0s; after a breath the board's strip flares in
-    with the act's name, holds about 4 s and fades out blurred; the boss's emote types under its bar; the clock holds; the *Tritone*: a heavy break, then a low G against its
-    tritone droning under the strip);
+  - a boss's act break: the *Strip* (after a breath the board's strip flares in with the act's name, holds about 4 s
+    and fades out blurred; the boss's emote types under its bar; then the parts come back in, top to bottom; the clock
+    holds; the *Tritone*: a heavy break, then a low G against its tritone droning under the strip);
+  - a boss's bar: the *Segments* (one segment an act, the acts done dark, the act now draining);
   - connecting to a server: the *Carrier* (a teal line from HOME to its node, the rooms open in a circle from there;
     eased, no black screen, no readout);
   - network map servers: the *Glyph* (each server its kind's glyph, a bar of what's cleared, a ring round a new one);
@@ -128,10 +129,10 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   routine wins. Hard means several threats at once, each choice a lesser evil (docs/puzzle-fights.md decision 15);
   about 30% Signal a same-level fight, and gear matters. A boss's signature changes the fight and ties to its lore; shutting a skill off is a side rule at
   most.
-- **Act ticks:** every boss's ♛ crosses into its acts at 60% and 30%. Ticks and Integrity stay consistent across
-  bosses; a boss whose acts run uneven gets its behaviour or mechanics changed, never its own ticks. The ♛ is attacked
-  as part of the normal flow, and attacking only the ♛ is punished. An uneven boss gets more health on its ♛ or a change
-  in its own system; bringing parts back only where a boss's system fits it, never on every boss.
+- **Act bars:** every solo boss fights in three acts, each a fresh bar: every part back at full, with the act's rules
+  on top. An act ends when its last part breaks. The acts run equal in length and difficulty; a boss whose acts run
+  uneven gets its behaviour or mechanics changed, never its split (acts.mjs `ACT_BARS`). The ♛ carries the boss's
+  signature, and its ticks are a part's. Parts come back mid-act only where a boss's system fits it.
 
 ## Backlog
 
