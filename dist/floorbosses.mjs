@@ -40,13 +40,15 @@
 //                   other part you broke boots back as a Camera. Act 3
 //                   (Lockout): the Hive boots a Camera, and takes no damage while a Camera stands.
 //   GRACE PERIOD    Grace: each part has 3 cycles' grace, and your command on it pays it up (area hits pay every part
-//                   they hit). A part left to run out lapses: its ◆ refill, its next attack is a charge, and its grace
-//                   starts over. While the Rider stands the rest hit 15% harder. Act 2 (Reinstatement): a lapsed part
-//                   hits 25% harder until its ◆ are stripped. Act 3 (Acceleration): grace is 2, and a lapse takes a cycle
-//                   off every other part's.
-//   EXIT NODE       Rollback: every 6 cycles it restores its own bars (Integrity and ◆) to an image taken 2 cycles before;
-//                   a broken part stays broken. Front: while Backup v7 stands, your one-part commands at the Core land
-//                   on it. Act 2 (Kept charges): a charge cut in the 2 cycles before a restore comes back at it. Act 3
+//                   they hit). A part left to run out lapses: its next attack is a charge, and your command on it before
+//                   it lands calls it off. Each lapse charge that lands makes every later one 100% bigger (the balance).
+//                   While the Rider stands the rest hit 15% harder. Act 2 (Reinstatement): a lapse refills the part's ◆
+//                   too. Act 3 (Acceleration): grace is 2, and a lapse takes a cycle off every other part's.
+//   EXIT NODE       Rollback: every 6 cycles it restores its own bars (Integrity and ◆) to an image taken 2 cycles before,
+//                   and a quarter of what it gives back lands on you (Chargeback); a broken part stays broken. After each
+//                   restore the Core charges Glass Cut, in the next window when its timer allows. Front: while Backup v7
+//                   stands, your one-part commands at the Core land on it. Act 2 (Kept charges): a charge cut in the 2
+//                   cycles before a restore comes back at it. Act 3
 //                   (Cold image): every restore returns to the image taken as Backup v6 broke. The Core is never
 //                   restored past its last spent act tick, so an act once started stays.
 //
@@ -55,7 +57,7 @@
 // fbLogged), a phase's verbs (fbVerb) and the cycle's end (fbCycle). Their uniques (content/items.mjs) hook in here too.
 import { emit, alive, part, livingParts, hit, takeDamage, strikeWith, defender, fxOn, attackAmount } from './combat.mjs';
 import { BOSSES, CONFIG } from './data.mjs';
-import { mimicHit, copyKind, forceCharge, tellsOf } from './tells.mjs';
+import { mimicHit, copyKind, forceCharge, tellsOf, callOff } from './tells.mjs';
 
 export const FB = {
   bid: { slow: 4, fast: 2, after: 4, sold: 0.3, heal: 0.1, buyers: ['tollgate', 'swarmline', 'palemask'] }, // sold: each sale makes the Gavel's Surge that much harder, for the fight; heal: what each sale gives the Rotor ♛ back, of its max
@@ -65,8 +67,8 @@ export const FB = {
   desk: { full: 4, half: 0.5, grow: 0.15, margin: 0.25, limit: 0.12, backlog: 0, heal: 0.04 }, // heal: what each trade settled under Finality gives the Desk back, of its max; limit: the most one hit takes off the Desk, of its max; backlog: trades pending as the fight opens, on its traders (none since the Night Clerk brings one with the night shift) // margin: each Table full opens every later trade that much bigger, for the fight
   vote: { every: 4, pass: 0.15, harder: 0.3, limit: 0.2 }, // limit: the most one hit takes off a Node while another stands, of its max // pass: how far under the level it is restored to the most damaged Node must be; harder: each vote that passes, every Node's hits
   overdraft: 3, // Overdraft: cycles the rest of the hit lands over
-  grace: { days: 3, accel: 2, harder: 0.25, rider: 0.15 }, // days: a part's grace, in cycles (accel: under the Acceleration); harder: a reinstated part's hits; rider: the rest's while the Rider stands
-  roll: { every: 6, back: 2 }, // a restore every 6 cycles, to the image taken 2 cycles before it
+  grace: { days: 3, accel: 2, fee: 1, lead: 2, rider: 0.15 }, // days: a part's grace, in cycles (accel: under the Acceleration); fee: each of a part's lapse charges that landed, its next one that much bigger; lead: a lapse's charge rides its next attack this many cycles away or more; rider: the rest's hits while the Rider stands
+  roll: { every: 6, back: 2, charge: 0.25 }, // a restore every 6 cycles, to the image taken 2 cycles before it; charge: the share of what it restores that lands on you (Chargeback)
   swarm: { sweep: 5, soonest: 2, grows: 3, cams: 4, limit: 0.15, gnaw: 2, back: 0.3 }, // back: what a part the Botnet re-infects returns with, of a Camera's max; // soonest: each fragment a sweep hatches brings the next sweep a cycle sooner, down to this; limit: the most one hit takes off a part, of its max // grows: cycles a fragment lives before it is a Camera; cams: Cameras at once
 };
 export const BUYER = { tollgate: 'TOLLGATE', swarmline: 'SWARMLINE', palemask: 'PALEMASK' };
@@ -98,7 +100,7 @@ export function fbStart(s) {
   if (v.boss === 'byzantine') { v.vote = { at: e.cycle + FB.vote.every - 1, passed: 0, traitor: null, fork: false }; for (const p of v.parts) if (p.role === 'node') p.limit = FB.vote.limit; }
   if (v.boss === 'camswarm') { v.swarm = { at: e.cycle + FB.swarm.sweep - 1, every: FB.swarm.sweep, n: 0, botnet: false, lockout: false }; for (const p of v.parts) p.limit = FB.swarm.limit; }
   if (v.boss === 'graceperiod') { v.grace = { days: FB.grace.days, reinstate: false, accel: false }; v.parts.forEach((p, i) => { p.grace = FB.grace.days + i; }); } // staggered: left alone, one lapses at a time
-  if (v.boss === 'exitnode') { v.roll = { at: e.cycle + FB.roll.every - 1, images: {}, cold: null, coldOn: false, kept: false, keep: [], seen: {} }; v.roll.images[e.cycle - 1] = image(v); }
+  if (v.boss === 'exitnode') { v.roll = { at: e.cycle + FB.roll.every - 1, images: {}, cold: null, coldOn: false, kept: false, keep: [] }; v.roll.images[e.cycle - 1] = image(v); }
   if (v.boss === 'recursion') v.stack = { callAt: e.cycle + FB.stack.call - 1, n: v.parts.filter((p) => p.frame != null).length, ret: false, overflow: false };
 }
 
@@ -136,6 +138,7 @@ function joinPart(s, spec, near) {
 // (a delay or a Throttle withdraws it instead).
 export function fbBid(s, target, a) {
   const e = s.encounter, v = e?.virus;
+  if (v?.grace && target && a && ['part', 'attack'].includes(a.target)) pay(s, target); // GRACE PERIOD: any command on a part pays it
   if (!v?.bid || !alive(target) || !target.gavel || !target.attack || !a || !['part', 'attack'].includes(a.target) || a.delay > 0 || a.status === 'throttled' || !livingParts(s).some((x) => x.core)) return;
   if (target.attack.interval <= FB.bid.fast) return;
   target.attack.interval--;
@@ -263,7 +266,7 @@ function holdTrade(s, p, atk, power) {
 export function fbCmdHit(s, p) {
   const e = s.encounter, v = e?.virus;
   if (e?.preAuth) e.preAuthUsed = e.cycle; // Pre-Authorization: spent on this command
-  if (v?.grace && p.grace != null) p.paidAt = e.cycle; // GRACE PERIOD: paid up, at the cycle's end
+  if (v?.grace) pay(s, p); // GRACE PERIOD: an area hit pays every part it lands on
   if (!v?.desk || !p.pending?.length) return;
   const k = p.pending.length, whole = p.pending.reduce((sum, t) => sum + tradeOf(s, t), 0), n = Math.max(1, Math.round(whole * FB.desk.half));
   p.pending = [];
@@ -347,16 +350,24 @@ export function fbShrugs(s, p, opts, base) {
 
 // ---------- GRACE PERIOD: Grace ----------
 export const graceOf = (s) => livingParts(s).filter((p) => p.grace != null);
-// A part's grace runs out (fbCycle): its ◆ refill, its next attack is a charge, its grace starts over. Under the
-// Reinstatement it hits harder until stripped.
+// A part's grace runs out (fbCycle): its next attack is a charge, bigger for each lapse charge that landed before it
+// (unpaid, on any part: the balance), and its grace starts over. Your command on it before the charge lands calls it off (fbCmdHit). Under the Reinstatement
+// its ◆ refill too.
+export const feeOf = (v) => 1 + FB.grace.fee * (v?.grace?.fees || 0);
 function lapse(s, p) {
   const e = s.encounter, v = e.virus;
-  const gain = Math.max(0, (p.maxArmor || 0) - (p.armor || 0));
+  const gain = v.grace.reinstate ? Math.max(0, (p.maxArmor || 0) - (p.armor || 0)) : 0;
   if (gain) { p.armor = p.maxArmor; p.patchAt = null; p.repatched = true; } // Late Fee reads repatched
-  if (v.grace.reinstate) p.reinstated = true;
   p.grace = v.grace.days; p.lapsedAt = e.cycle;
-  const t = forceCharge(s, p, 'Lapse', `lapse:${p.id}`);
-  emit(s, 'warning', `LAPSED. The ${p.name}'s grace runs out${gain ? `: its ◆ refill (+${gain})` : ''}${t ? `, and its ${p.attack.name} becomes a charge` : ''}${p.reinstated ? `. It hits ${Math.round(FB.grace.harder * 100)}% harder until its ◆ are stripped` : ''}.`, { source: p.id, lapse: true, armor: gain });
+  const t = forceCharge(s, p, 'Lapse', `lapse:${p.id}`, feeOf(v), FB.grace.lead);
+  emit(s, 'warning', `LAPSED. The ${p.name}'s grace runs out${gain ? `: its ◆ refill (+${gain})` : ''}${t ? `, and its ${p.attack.name} becomes a charge${v.grace.fees ? `, ${Math.round((feeOf(v) - 1) * 100)}% bigger` : ''}. Pay it up before it lands` : ''}.`, { source: p.id, lapse: true, armor: gain });
+}
+// Your command on a part (fbBid, fbCmdHit): paid up at the cycle's end, and a lapse's charge on it is called off now.
+function pay(s, p) {
+  if (p?.grace == null || !alive(p)) return;
+  p.paidAt = s.encounter.cycle;
+  const t = (tellsOf(s)?.list || []).find((x) => x.told && x.id === `lapse:${p.id}`);
+  if (t) callOff(s, t, `PAID. The ${p.name}'s lapse is called off.`);
 }
 // The Rider stands: the rest hit harder.
 export const riderUp = (s) => livingParts(s).some((x) => x.role === 'rider');
@@ -383,6 +394,7 @@ export function rollTo(s, p) {
 }
 function rollback(s) {
   const e = s.encounter, v = e.virus, R = v.roll, back = [];
+  R.owed = 0;
   for (const p of livingParts(s)) {
     const to = rollTo(s, p);
     if (!to || (to.hp <= p.integrity && to.armor <= (p.armor || 0))) continue;
@@ -390,13 +402,20 @@ function rollback(s) {
     p.integrity = to.hp; p.armor = to.armor;
     if (ar > 0) p.patchAt = null;
     back.push(`${p.name} ${p.integrity}/${p.max}${ar > 0 ? ` +${ar} ◆` : ''}`);
+    R.owed += Math.max(0, got);
     if (got > 0) emit(s, 'heal', `ROLLBACK. The ${p.name} is restored: +${got}. ${p.integrity}/${p.max}.`, { target: p.id, amount: got, rollback: true });
   }
   if (!back.length) emit(s, 'blocked', 'ROLLBACK. Nothing to restore.', { rollback: false });
+  // Chargeback: what it restored lands on you, in part.
+  const owed = Math.round(R.owed * FB.roll.charge), src = livingParts(s).find((x) => x.core) || livingParts(s)[0];
+  if (owed > 0 && src) { const n = takeDamage(s, owed, src.id, 'Chargeback'); emit(s, 'server-hit', `CHARGEBACK. ${Math.round(FB.roll.charge * 100)}% of what it restored lands on you: −${n}.`, { source: src.id, amount: n, atk: 'Chargeback' }); }
   // Kept charges: a charge cut in the window comes back now.
   for (const k of R.keep) { const p = part(s, k.part); if (alive(p)) forceCharge(s, p, k.name, `kept:${k.id}`); }
   R.keep = [];
   R.at = e.cycle + FB.roll.every;
+  // Glass Cut: the Core's attack in the next window is a charge.
+  const core = livingParts(s).find((x) => x.core);
+  if (core) forceCharge(s, core, 'Glass Cut', `glass:${e.cycle}`, 1, FB.roll.every - FB.roll.back + 1, FB.roll.every);
   for (const c of Object.keys(R.images)) if (+c < e.cycle - FB.roll.every) delete R.images[c];
 }
 // Your one-part command at the Core while Backup v7 stands lands on v7 (fbAim).
@@ -412,7 +431,6 @@ export function fbPower(s, p, atk) {
   if (p.frame != null && e.virus.stack) m *= depthOf(e.virus); // each Call let through, a harder stack
   if (p.kind === 'fragment' && e.virus.swarm) m *= FB.swarm.gnaw; // CAMSWARM's fragments bite harder
   if (e.virus.grace && p.role !== 'rider' && riderUp(s)) m *= 1 + FB.grace.rider; // GRACE PERIOD's Rider
-  if (p.reinstated) { if ((p.armor || 0) > 0) m *= 1 + FB.grace.harder; else p.reinstated = false; } // stripped: it is over
   if (p.role === 'node' && e.virus.vote?.passed) m *= 1 + FB.vote.harder * e.virus.vote.passed; // each vote that passed, harder Nodes
   if (atk.dump && e.virus.surf?.dumps) m *= 1 + FB.surf.grow * e.virus.surf.dumps; // each Dump before it, a bigger one
   if (atk.dump && e.virus.surf) { const d = dumpOf(s), base = attackAmount(p) || 1; if (d) { m *= d.amount / base; e.dumped = d.id; } else e.dumped = null; }
@@ -446,6 +464,7 @@ export function fbLanded(s, p, atk) {
   if (atk.dump && v.surf && e.dumped) { v.surf.dumps = (v.surf.dumps || 0) + 1; emit(s, 'status', `The ${p.name}'s next Dump hits ${Math.round(FB.surf.grow * v.surf.dumps * 100)}% harder.`, { source: p.id, dumps: v.surf.dumps }); }
   if (atk.dump && v.surf && !v.surf.top) e.logged = []; // from the top: the log never clears (combat.mjs keeps its count)
   if (p.role === 'c2' && v.swarm?.botnet) v.swarm.beacon = e.cycle; // the Cameras fire with it (fbCycle)
+  if (v.grace && /^lapse:/.test(atk.tell || '')) { v.grace.fees = (v.grace.fees || 0) + 1; emit(s, 'status', `UNPAID. Every lapse from now is ${Math.round((feeOf(v) - 1) * 100)}% bigger.`, { source: p.id, fees: v.grace.fees }); } // GRACE PERIOD: the balance grows
 }
 // A part broke (combat.mjs breakPart): RECURSION's Return; Tail Call, Stack Guard.
 export function fbBroke(s, p) {
@@ -615,14 +634,9 @@ export function fbCycle(s) {
   }
   if (v.roll) {
     const R = v.roll;
-    // Kept charges: a charge answered in the window comes back at the restore.
-    for (const t of tellsOf(s)?.list || []) {
-      if (t.kind !== 'charge') continue;
-      const was = R.seen[t.id] || 0, now = t.answered || 0;
-      if (now > was && R.kept && e.cycle > R.at - FB.roll.back && e.cycle <= R.at) R.keep.push({ id: t.id.replace(/^kept:/, ''), name: t.name, part: t.part });
-      R.seen[t.id] = now;
-    }
-    if (e.cycle >= R.at) rollback(s);
+    // Kept charges: a charge cut in the window (tells.mjs logs each cut) comes back at the restore.
+    if (R.kept && e.cycle > R.at - FB.roll.back) for (const c of (e.cuts || []).filter((x) => x.cycle === e.cycle && x.kind === 'charge')) R.keep.push({ id: c.id.replace(/^kept:/, ''), name: c.name, part: c.part });
+    if (e.cycle >= R.at) { rollback(s); if (defender(s).integrity <= 0) return 'crashed'; }
     R.images[e.cycle] = image(v);
   }
   if (v.stack && e.cycle >= v.stack.callAt) {
