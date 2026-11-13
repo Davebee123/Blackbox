@@ -93,7 +93,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
     holds; the *Tritone*: a heavy break, then a low G against its tritone droning under the strip);
   - a boss's bar: the *Segments* (one segment an act, the acts done dark, the act now draining);
   - connecting to a server: the *Carrier* (a teal line from HOME to its node, the rooms open in a circle from there;
-    eased, no black screen, no readout);
+    eased, no black screen, no readout), and jacking out plays it backwards (your room locks teal, the rooms close in
+    a circle onto the node, the line runs home);
   - network map servers: the *Glyph* (each server its kind's glyph, a bar of what's cleared, a ring round a new one);
   - network map ground: the *Chart* (faint crosshairs and hairlines that pan and zoom with the map);
   - fights by floor: the *Place* (the floor's scene in characters inside the render, its light and camera on the virus,

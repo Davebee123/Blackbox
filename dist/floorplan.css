@@ -692,3 +692,6 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 .fp-cardstat.surge .lbl, .fp-cardstat.surge b { color: var(--daemon); }
 .fp-cardstat.pack .lbl, .fp-cardstat.pack b { color: var(--hot); }
 .fp-cardbar { display: inline-block; width: 56px; height: 7px; margin: 0 6px; vertical-align: middle; border: 1px solid var(--daemon); background: linear-gradient(90deg, var(--daemon) calc(var(--f, 0) * 100%), transparent 0); }
+#tray .ability.flee { border-color: var(--hot); }
+#tray .ability.flee .ico { background: var(--hot); }
+#tray .ability.flee .name { color: var(--hot); }

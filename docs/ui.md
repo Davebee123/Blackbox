@@ -195,7 +195,7 @@ short vibration on phones that have it.
 
 ## The pages, at a glance
 
-- **The top bar:** the pages on the left; in the middle your handle · class · level with the class's XP as a thin bar;
+- **The top bar:** the pages on the left, each with a one-line tooltip; in the middle your handle · class · level with the class's XP as a thin bar;
   on the right the people button, the pager, then Integrity (a server tower that drains), Signal (five bars) and
   credits, each with its **+**. At 1440 with the casing the pager's tray tightens so the class name keeps its place.
 - **The map** shows one floor at a time. A server (the *Glyph*, `view.mjs` serverIcon) is its kind's glyph on a dark
@@ -311,8 +311,9 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
   page opens out of it and your room rings teal, under 0.9 s. Connecting to a server (*Carrier*): a teal line runs
   from HOME to its node, the node pings, and the rooms open in a circle from there, the map dimming behind the edge;
   the entry rings teal. Eased, no black, no text, chrome lit; 1.7 s (1.3 s with no HOME on the map). Jacking out
-  (*Hang-up*): your room locks teal, the rooms go dark toward it, the hang-up readout, then the map with the server's
-  node ringed; 1.7 s. **No flash, no blink** (the designer): in the boot and the hang-up a panel only brightens or only
+  (the *Carrier* backwards): your room locks teal, the rooms close in a circle onto the server's node, the map
+  brightening outside it; the node pings and the line runs back to HOME, which rings; 1.7 s (0.8 s not from the rooms
+  page). **No flash, no blink** (the designer): in the boot a panel only brightens or only
   dims, in held steps; chrome dims to 15%, never out (bootfx.test.mjs). Any key or click ends each. Screen effects off or Motion off: none of them.
 - **Floor palettes** are the one exception to *No new colours*, approved by the designer. A floor swaps the surface
   tokens (`--bg`, `--panel`, `--panel-2`, `--inset`), the structure colour (`--amber` and its forms) and the text tints
