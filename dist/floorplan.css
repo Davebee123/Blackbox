@@ -638,6 +638,7 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 .fp-rn-tab text { font-size: 10px; font-weight: 700; letter-spacing: 1px; fill: #14110a; }
 .fp-rn-tab rect.sig { fill: rgba(255, 242, 200, 0.18); }
 .fp-rn-tab rect.sig.fill { fill: var(--bright); }
+.fp-rn-tab.dead .sk { fill: #14110a; } /* a crashed runner (R3): a dark skull beside the handle */
 .fp-rv-lineup rect { fill: #140503; stroke: var(--hot); stroke-width: 1; }
 .fp-rv-lineup text { font-size: 9px; font-weight: 700; fill: var(--hot); }
 .fp-rv-lineup .next rect { fill: var(--hot); } .fp-rv-lineup .next text { fill: #140503; }

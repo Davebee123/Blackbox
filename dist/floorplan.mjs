@@ -68,7 +68,7 @@ import { GENES } from './genes.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
 import { PUZZLES, PUZZLE_KINDS, isPuzzle, cipherOf, cgOpen, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
 import { spawnRival, rivalOf, rivalAt, rivalMove, rivalMeet, rivalLeave, rivalFight, rivalArm, rivalWon, rivalLost, rivalLine } from './rivals.mjs';
-import { meetingOf } from './runners.mjs';
+import { meetingOf, pulledOut } from './runners.mjs';
 import { dealCard, cardLeave, surgeAt, surgeScreen, surgeFight, surgeWon, escortMove, escortArm, escortAfter, packAt, packMove, packFight, packWon } from './runcards.mjs';
 
 // ---------- tuning ----------
@@ -1623,6 +1623,8 @@ hooks.roomEnd = (s, result) => {
   }
   R.stats.won++;
   if (e.virus.boss) R.stats.boss.won++;
+  const out = R.world ? pulledOut(s, room.id) : null; // a crashed runner in it (runners.mjs R3): pulled out
+  if (out) { R.visit.metWon = { h: out.h, room: room.id }; say(s, `You pull ${out.h} out. Standing ${out.standing}.`, 'rooms-good'); }
   setSig(s, Math.max(1, Math.min(s.run.max, s.run.integrity, R.fightFrom ?? s.run.max)));
   if (e.roomsLoot?.credits) { if (R.world) s.run.pack.push({ path: `${room.path}/#loot-${s.serial}`, name: 'loot.dat', kind: 'credits', amount: e.roomsLoot.credits }); else { R.credits += e.roomsLoot.credits; s.server.credits += e.roomsLoot.credits; } }
   if (as === 'exfil') {
