@@ -253,6 +253,7 @@ comment saying what it does.
 | `dist/virussound-all.mjs` | Every other attack's sound in the picked style: each other chip theme's strike, the lash, Scramble, Replicate, Patch, a cast and a seal, and the layers over a hit for a charge and a boss's beat; `virussound-levels.mjs` holds their measured levels. |
 | `dist/virusvoice.mjs` | Virus attack sounds in a fight: which of a batch's events play which attack's sound (one an attack a batch, the biggest hit leading), and how long the numbers wait for a strike's impact. `app.js` attackVoices() plays them and holds each chip's strike for its number. |
 | `dist/soundtrack.mjs`, `dist/music/` | Music and radio chatter (CC0 tracks, CREDITS.md). |
+| `dist/mixout.mjs` | The one way out to the speakers: every bus meets there, and a limiter keeps their sum from clipping. |
 | `dist/fightmusic.mjs` | Each virus family's fight theme, synthesized live; heat brings its layers in. |
 | `dist/places.mjs` | A sound bed for each floor, and the virus you're fighting. |
 | `dist/ui/` | Icons, textures and the favicon. Some of the set is unused. |

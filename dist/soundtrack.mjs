@@ -13,6 +13,7 @@
 // beep, a reply. Sometimes a numbers station, sometimes a modem burst. It never says anything,
 // on purpose: it's texture, not information.
 import { FIGHT_THEMES, playTheme } from './fightmusic.mjs';
+import { outputOf } from './mixout.mjs';
 
 const HOME = ['music/home.ogg', 'music/home.mp3'];
 export const MUSIC = {
@@ -147,7 +148,7 @@ export function createSoundtrack(getCtx) {
     ctx = getCtx();
     if (!ctx) return false;
     // Two buses: music, and everything else here (radio, rain, thunder, the street).
-    if (!out) { out = ctx.createGain(); out.connect(ctx.destination); mus = ctx.createGain(); mus.connect(ctx.destination); applyVol(); }
+    if (!out) { out = ctx.createGain(); out.connect(outputOf(ctx)); mus = ctx.createGain(); mus.connect(outputOf(ctx)); applyVol(); }
     return true;
   }
   function fadeOut(p) {

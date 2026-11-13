@@ -9,6 +9,7 @@
 // WAV for listening offline.
 import { playAbility, timingOf } from './abilitysound.mjs';
 import { playAttack, attackTiming } from './virussound.mjs';
+import { outputOf } from './mixout.mjs';
 
 const NOTE = (n) => 440 * Math.pow(2, (n - 69) / 12); // MIDI note → Hz
 
@@ -730,7 +731,7 @@ function chain(ctx) {
   const g = ctx.createGain(), c = ctx.createDynamicsCompressor();
   g.gain.value = 0.55;
   c.threshold.value = -18; c.ratio.value = 4; c.attack.value = 0.003; c.release.value = 0.15;
-  g.connect(c).connect(ctx.destination);
+  g.connect(c).connect(outputOf(ctx));
   const room = ctx.createConvolver(), wet = ctx.createGain();
   room.buffer = roomIR(ctx); wet.gain.value = 0.9;
   room.connect(wet).connect(g);
@@ -853,8 +854,8 @@ export function createSound() {
   };
   function ready() {
     try {
-      ctx ||= new AudioContext();
-      if (!ch) { ch = chain(ctx); hum = ctx.createGain(); hum.connect(ctx.destination); applyVol(); }
+      ctx ||= new AudioContext({ latencyHint: 'balanced' }); // a little more buffer: 'interactive' crackles under a busy fight
+      if (!ch) { ch = chain(ctx); hum = ctx.createGain(); hum.connect(outputOf(ctx)); applyVol(); }
       if (ctx.state === 'suspended') ctx.resume();
       loadBank(ctx);
       if (wantHum && !stopHum) stopHum = ambience(ctx, hum);
@@ -915,7 +916,7 @@ export function createSound() {
     // An output at the effects volume for a scene with its own mix (the cold open): { ctx, out }, or null.
     out() {
       if (!ready()) return null;
-      const g = ctx.createGain(); g.gain.value = vol.sfx / 0.8; g.connect(ctx.destination);
+      const g = ctx.createGain(); g.gain.value = vol.sfx / 0.8; g.connect(outputOf(ctx));
       return { ctx, out: g };
     },
     // The shared context, for the soundtrack (null if audio can't start).
