@@ -127,3 +127,11 @@ test('round two: the visit\'s sky, the virus\'s tint, the map\'s material, the s
   assert.equal(groundSvg(null, { id: 'w', rooms: [], links: [], box: {}, cx: 0, cy: 0, rx: 1, ry: 1 }), '', 'home: nothing');
   for (const f of Object.keys(SPOILS_MOTION)) assert.ok(PLACES[f]);
 });
+
+test('the board\'s frame by floor leaves chips and the header alone', () => {
+  const css = readFileSync(new URL('./dist/style.css', import.meta.url), 'utf8');
+  const frame = css.split('\n').filter((l) => l.startsWith('html[data-sfx-floor='));
+  assert.ok(frame.length >= 6);
+  for (const l of frame) assert.ok(!/\.intent|\.tl-|\.chip/.test(l), `no chip in ${l.slice(0, 60)}`);
+  for (const l of frame.filter((x) => /> \.bcell:nth-child\(2\)/.test(x))) assert.match(l, /\.brow:not\(\.bhead\)/); // the Now cell's rules skip the header
+});

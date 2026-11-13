@@ -961,6 +961,29 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 /* the header has its own countdown and bar: no playhead over the digits */
 .brow.bhead > .bcell:nth-child(2):not(.span5) { background-image: none; }
 
+/* ---------- the board's frame by floor (the floor's palette up: <html data-sfx-floor>) ----------
+   Only the frame: the playhead's form, the rules between rows and columns, the headings' type. The chips, their colours
+   and every telegraph stay as they are; the playhead keeps its colours (teal, red when an attack closes). */
+html[data-sfx-floor="1"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: linear-gradient(90deg, transparent 0 3px, var(--band-line) 3px 5px, transparent 5px 8px), linear-gradient(90deg, transparent, color-mix(in srgb, var(--band-line) 22%, transparent), transparent); background-size: 8px 100%, 22px 100%; background-position: calc(var(--elapsed) - 3px) 0, calc(var(--elapsed) - 10px) 0; } /* the Sprawl: a neon tube */
+html[data-sfx-floor="2"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: radial-gradient(circle, var(--band-line) 0 3px, transparent 3.5px), linear-gradient(var(--band-line), var(--band-line)); background-size: 10px 10px, 2px 100%; background-position: calc(var(--elapsed) - 4px) 6px, var(--elapsed) 0; } /* Backhaul: a signal post, a lamp on each row */
+html[data-sfx-floor="2"] .board .brow:not(.bhead) { border-top: 2px dashed color-mix(in srgb, var(--amber) 22%, transparent); } /* its rows as sleepers */
+html[data-sfx-floor="4"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: linear-gradient(var(--band-line), var(--band-line)), linear-gradient(90deg, color-mix(in srgb, var(--amber) 10%, transparent), color-mix(in srgb, var(--amber) 4%, transparent)); background-size: 2px 100%, var(--elapsed) 100%; background-position: var(--elapsed) 0, 0 0; } /* Coldline: the Now cell fills like a tide */
+html[data-sfx-floor="4"] .board .brow:not(.bhead) { border-top-style: dashed; } /* its rows as swell lines */
+html[data-sfx-floor="8"] .board .bcell + .bcell { border-left: 3px double color-mix(in srgb, var(--amber) 30%, transparent); } /* Bedrock: the ledger's double column rules */
+html[data-sfx-floor="8"] .board .bhead .bcell, html[data-sfx-floor="8"] .board .bhead .cyc, html[data-sfx-floor="8"] .board .part-name, html[data-sfx-floor="8"] .board .you-top b { font-family: 'Courier Prime', monospace; }
+html[data-sfx-floor="8"] .board .bhead .bcell, html[data-sfx-floor="8"] .board .bhead .cyc { font-style: italic; text-transform: none; letter-spacing: 0.5px; }
+html[data-sfx-floor="8"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-size: 1px 100%; } /* a pen line */
+html[data-sfx-floor="3"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: repeating-linear-gradient(to bottom, var(--band-line) 0 4px, transparent 4px 7px); background-size: 2px 100%; background-position: var(--elapsed) 0; } /* the Stacks: a column of status LEDs */
+html[data-sfx-floor="3"] .board .brow:not(.bhead) { border-top-style: dotted; } /* its rows as rack slots */
+html[data-sfx-floor="5"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: linear-gradient(var(--band-line), var(--band-line)), repeating-linear-gradient(90deg, color-mix(in srgb, var(--amber) 13%, transparent) 0 1px, transparent 1px 5px); background-size: 2px 100%, 100% 100%; background-position: var(--elapsed) 0, 0 0; } /* Deep Core: a grating over the heat */
+html[data-sfx-floor="5"] .board .brow:not(.bhead) { border-top-style: dotted; }
+html[data-sfx-floor="6"] .board .brow:not(.bhead) { border-top-color: transparent; } /* Kernel Space: nothing but the plane */
+html[data-sfx-floor="6"] .board .bcell + .bcell:not(:nth-child(2)) { border-left-color: transparent; }
+html[data-sfx-floor="6"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-size: 1px 100%; }
+html[data-sfx-floor="7"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: radial-gradient(circle, var(--band-line) 0 2.5px, transparent 3px), linear-gradient(var(--band-line), var(--band-line)); background-size: 8px 8px, 2px calc(100% - 6px); background-position: calc(var(--elapsed) - 3px) calc(100% - 1px), var(--elapsed) 0; } /* the Sink: a drop at the playhead's foot */
+
+
+
 /* ---------- levels ---------- */
 .meter-level { min-width: 150px; }
 .meter-level strong { font-size: 14px; }
@@ -4000,9 +4023,15 @@ body.no-motion .recap { animation: none; }
    under the picture on the right. Rows are tighter, and if the parts still don't fit, app.js adds .dense and the
    rows tighten again (sub-lines go, chips go to one line). */
 @media (min-width: 901px) {
-  .combat { grid-template-rows: auto minmax(0, 1fr) minmax(96px, 32%); grid-template-areas: 'hud hud' 'board stage' 'board log'; }
+  /* The picture on the left beside the part names, the board on the right: your eyes sit in the middle and see both.
+     The HUD follows: the virus's bar over its picture, yours over the board, your statuses between. */
+  .combat { grid-template-columns: minmax(0, 1fr) minmax(0, 1.55fr); grid-template-rows: auto minmax(0, 1fr) minmax(96px, 32%); grid-template-areas: 'hud hud' 'stage board' 'log board'; }
   .combat .board { max-height: none; min-height: 0; }
-  body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template-areas: 'hud hud' 'log stage'; }
+  body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template-areas: 'hud hud' 'stage log'; }
+  .combat .hud { grid-template-columns: minmax(0, 1fr) minmax(0, 1.55fr); }
+  .combat .hud > .hud-bar.enemy { order: -1; }
+  .combat .hud-left { grid-template-columns: minmax(0, 0.55fr) minmax(0, 1fr); }
+  .combat .hud-left > .hud-you { order: 2; }
 }
 /* The fight log: its newest line until ▴ opens it (app.js setLogOpen), so the render takes the room. A finished fight
    shows it whole. */
