@@ -137,9 +137,11 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 .fp-tag.rare rect { stroke: var(--next); } .fp-tag.rare text { fill: var(--next); font-size: 10px; }
 .fp-cost rect { fill: #0a0703; stroke: var(--amber); stroke-width: 1; }
 .fp-cost text { font-size: 10px; fill: var(--amber); font-variant-numeric: tabular-nums; }
-/* The step's Signal cost shows on hover (and focus) only: the designer's call, November 2026. */
+/* A step's Signal cost shows on hover or focus only, like SCAN; on a phone's map (no hover) it always shows (the
+   designer's call, November 2026). */
 .fp-cost { opacity: 0; transition: opacity 0.12s; }
-.fp-room:hover .fp-cost, .fp-room:focus-visible .fp-cost { opacity: 1; }
+.fp-room:hover .fp-cost, .fp-room:focus-within .fp-cost, .fp-svg.tall .fp-cost { opacity: 1; }
+@media (hover: none) { .fp-cost { opacity: 1; } }
 .fp-you-tab rect { fill: var(--you); }
 .fp-you-tab text { font-size: 10px; font-weight: 700; letter-spacing: 1px; fill: #06100e; }
 .fp-live { fill: var(--hot); }

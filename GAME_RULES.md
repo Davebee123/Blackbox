@@ -869,7 +869,7 @@ objective too (it pays its archive, not the bonus).
 ### Walking and fog
 
 - **Walking** into a room for the first time on a visit costs 3% of your max Signal if you've been in it before, 5% if
-  you never have (4% and 6% from floor 5); the cost shows on its chip when you hover it. Rooms you've walked this visit and `wait` are free.
+  you never have (4% and 6% from floor 5); the cost shows on its chip when you hover it (always on a phone). Rooms you've walked this visit and `wait` are free.
 - **Fog.** Every room is **unknown** until you've been in it: a dashed ghost chip with a ? and its address. You see the
   shape of the rooms next to you and one further (an Infiltrator's two) and the Core's chip. Walk in and it's
   **discovered** for good. A virus in an unknown room still stops you at the door (**Engage** / **Step back**).
