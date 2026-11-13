@@ -278,7 +278,7 @@ function eraChain(ctx, from, to, E, hold) {
 export const FIGHT_THEMES = Object.fromEntries(THEMES.map((t) => [t.id, t]));
 // Stand-ins until the designer hears their own: the Botnet plays the Worm's, the Logic Bomb the Ransomware's.
 Object.assign(FIGHT_THEMES, { botnet: FIGHT_THEMES.worm, logicbomb: FIGHT_THEMES.ransomware });
-const AHEAD = 0.15; // seconds of notes scheduled ahead
+const AHEAD = 0.4; // seconds of notes scheduled ahead: a fight's busy frames hold the timer up past 0.15 s, and the beat stuttered
 
 // Play a family's theme into dest, fading in over fadeIn seconds. Returns { id, setHeat(0-1), stop(fade) }, or null
 // for a family with no theme. While the page is hidden nothing new is scheduled (timers there run late).
