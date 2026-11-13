@@ -871,7 +871,7 @@ objective too (it pays its archive, not the bonus).
 ### Walking and fog
 
 - **Walking** into a room for the first time on a visit costs 3% of your max Signal if you've been in it before, 5% if
-  you never have (4% and 6% from floor 5); the cost shows on its chip when you hover it. Rooms you've walked this visit and `wait` are free.
+  you never have (4% and 6% from floor 5); the cost shows on its chip when you hover it (always on a phone). Rooms you've walked this visit and `wait` are free.
 - **Fog.** Every room is **unknown** until you've been in it: a dashed ghost chip with a ? and its address. You see the
   shape of the rooms next to you and one further (an Infiltrator's two) and the Core's chip. Walk in and it's
   **discovered** for good. A virus in an unknown room still stops you at the door (**Engage** / **Step back**).
@@ -2922,6 +2922,14 @@ Motion off: the place stands still, no entrance, a steady light. Home and Floor 
 
 **The fight log** shows its newest line, with **▴ N** (the lines above it) to open it whole; it stays as you leave it.
 A finished fight shows it whole.
+
+**On a desktop** the virus's picture sits left of the board, its bar over it, and your Signal over the board.
+
+**The board's frame** carries the floor (Floor colour on); chips and telegraphs never change. The Sprawl's playhead
+glows like a neon tube; Backhaul's carries a lamp on each row, its rows dashed like sleepers; on Coldline the Now cell
+fills like a tide as the cycle runs; Bedrock's board takes the ledger's double column rules and typewriter headings.
+The Stacks' playhead is a column of status lights over dotted rack rows; Deep Core's Now cell is a grating over the
+heat; Kernel Space drops every rule but the Now column's; on the Sink a drop forms at the playhead's foot.
 
 **A new fight boots in.** The first time you see a fight, the screen goes dark and the virus comes up first, alone
 at the centre, before dropping into its panel; a boot console checks your system and your panels come up. About two

@@ -93,7 +93,9 @@ teal, violet or a threat's red.
 
 ## The fight board
 
-- **The HUD**, left to right: your Signal (your server at home) with your crew's bars under it; **Status**, everything on
+- **The layout** (desktop; the designer's *Swap*): the virus's picture on the left beside the part names, the board on
+  the right, so the eyes sit in the middle and see both. The HUD follows it.
+- **The HUD**, right to left: your Signal (your server at home) with your crew's bars under it; **Status**, everything on
   you, names in their colours (teal yours, red against you, violet helpers), each with its rule on hover; under it
   **Gear**, a chip for each equipped rule that waits on a condition (`fightread.mjs` gearLive), lit teal while it holds,
   struck through once a once-a-fight one is spent; and the virus, its name and level over its bar, its tags and the
@@ -344,6 +346,8 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
 - **The rooms map** carries the floor as a material (ground.mjs), never a picture: a picture's landmarks fell under rooms
   (rejected). It sits in the map's SVG under the links, masked clear of rooms and links, fading at the edges.
 - **The virus's tint** follows the floor but on Deep Core and the Sink (stage.mjs `TINT_SKIP`).
+- **The board's frame** by floor (style.css, keyed on `data-sfx-floor`): the playhead's form, the row and column rules,
+  the headings' type. Never a chip, never the playhead's colours.
 - Prototyped first (picked by the designer, November 2026): *Place* over *Era* for the picture, the era kept for the
   theme's sound.
 
