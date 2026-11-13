@@ -180,9 +180,9 @@ export function createSoundtrack(getCtx) {
     if (!should) { fadeOut(playing); playing = null; theme?.stop(THEME_FADE); theme = null; return; }
     // A fight with a theme of its own: the track makes way for it.
     const id = want.mood === 'fight' && FIGHT_THEMES[want.family] ? want.family : null;
-    if (theme && theme.id !== id) { theme.stop(THEME_FADE); theme = null; }
+    if (theme && (theme.id !== id || theme.floor !== (want.floor || null))) { theme.stop(THEME_FADE); theme = null; } // a floor's room and era are its own
     if (id) {
-      if (!theme) { fadeOut(playing); playing = null; theme = playTheme(ctx, mus, id, { level: THEME_LEVEL, fadeIn: THEME_FADE, heat: want.heat }); }
+      if (!theme) { fadeOut(playing); playing = null; theme = playTheme(ctx, mus, id, { level: THEME_LEVEL, fadeIn: THEME_FADE, heat: want.heat, floor: want.floor || null }); }
       theme?.setHeat(want.heat);
       return;
     }

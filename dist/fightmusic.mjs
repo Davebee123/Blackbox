@@ -16,8 +16,9 @@ const noiseOf = (ctx) => {
 const curve = (k) => { const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(k * x) / Math.tanh(k); } return c; };
 
 // A theme's chain: dry and pumped (ducked by the kick) into a hard overdrive with a loud bit-crushed copy under it and a presence lift, plus reverb and a filtered feedback
-// delay, into its fader. A faint tape hiss and a low factory rumble run under it all.
-function makeBus(ctx, dest, delayTime, fb = 0.4) {
+// delay, into its fader. A faint tape hiss and a low factory rumble run under it all. On an old floor (ERAS) the theme
+// plays through that floor's own hardware.
+function makeBus(ctx, dest, delayTime, fb = 0.4, floor = null) {
   const fader = ctx.createGain(), dry = ctx.createGain(), pump = ctx.createGain(), rev = ctx.createGain(), del = ctx.createGain();
   const drive = ctx.createWaveShaper(), tape = ctx.createBiquadFilter();
   drive.curve = curve(7); drive.oversample = '2x'; tape.type = 'lowpass'; tape.frequency.value = 9000;
@@ -29,15 +30,18 @@ function makeBus(ctx, dest, delayTime, fb = 0.4) {
   del.connect(dl).connect(lp).connect(fbk).connect(dl); lp.connect(drive); lp.connect(rev);
   rev.gain.value = 1; rev.connect(conv).connect(drive);
   dry.connect(drive); pump.connect(drive); const pres = ctx.createBiquadFilter(), hp = ctx.createBiquadFilter(); pres.type = 'peaking'; pres.frequency.value = 2600; pres.gain.value = 5; pres.Q.value = 0.8; hp.type = 'highpass'; hp.frequency.value = 35;
-  drive.connect(tape).connect(pres).connect(hp).connect(fader); fader.connect(dest);
+  drive.connect(tape).connect(pres).connect(hp); fader.connect(dest);
   const cr = ctx.createWaveShaper(), cg = ctx.createGain(); cr.curve = crush(5); cg.gain.value = 0.5; drive.connect(cr).connect(cg).connect(tape); // a bit-crushed copy under it all
   const bus = { ctx, fader, dry, pump, rev, del, held: [] };
+  if (ERAS[floor]) eraChain(ctx, hp, fader, ERAS[floor], (n) => hold(bus, n)); else hp.connect(fader);
   const h = ctx.createBufferSource(), hb = ctx.createBiquadFilter(), hg = ctx.createGain();
   h.buffer = noiseOf(ctx); h.loop = true; hb.type = 'bandpass'; hb.frequency.value = 5200; hb.Q.value = 0.4; hg.gain.value = 0.006;
   h.connect(hb).connect(hg).connect(fader); hold(bus, h);
-  const r = ctx.createBufferSource(), rb = ctx.createBiquadFilter(), rg = ctx.createGain(); // the factory floor: a low rumble
-  r.buffer = noiseOf(ctx); r.loop = true; rb.type = 'lowpass'; rb.frequency.value = 90; rb.Q.value = 3; rg.gain.value = 0.05;
-  r.connect(rb).connect(rg).connect(fader); hold(bus, r);
+  {
+    const r = ctx.createBufferSource(), rb = ctx.createBiquadFilter(), rg = ctx.createGain(); // the factory floor: a low rumble
+    r.buffer = noiseOf(ctx); r.loop = true; rb.type = 'lowpass'; rb.frequency.value = 90; rb.Q.value = 3; rg.gain.value = 0.05;
+    r.connect(rb).connect(rg).connect(fader); hold(bus, r);
+  }
   return bus;
 }
 function out(bus, node, { rev = 0, del = 0, pan = 0, pumped = false } = {}) {
@@ -251,6 +255,26 @@ export const THEMES = [
   },
 ];
 
+// ---------- the floor under the theme ----------
+const flt = (ctx, type, f, q = 0.7) => { const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q; return b; };
+const amp = (ctx, v) => { const g = ctx.createGain(); g.gain.value = v; return g; };
+const loopNoise = (ctx, hold) => { const n = ctx.createBufferSource(); n.buffer = noiseOf(ctx); n.loop = true; n.loopStart = Math.random(); hold(n); return n; };
+const lfo = (ctx, param, rate, depth, hold) => { const o = ctx.createOscillator(), g = amp(ctx, depth); o.frequency.value = rate; o.connect(g).connect(param); hold(o); };
+// The theme through an old floor's own hardware: fewer bits, the small speaker's band, a tape's wobble, its hiss and hum.
+export const ERAS = {
+  4: { bits: 10, band: [70, 6500], wow: [0.35, 6], flutter: [6, 1.5], hiss: 0.0002, hum: 0, gain: 1 }, // Coldline, 2071
+  8: { bits: 6, band: [160, 3000], wow: [0.55, 16], flutter: [7, 4], hiss: 0.0006, hum: 0.0005, gain: 1.35 }, // gain: as loud as the theme // Bedrock, 2041
+};
+function eraChain(ctx, from, to, E, hold) {
+  const crushed = ctx.createWaveShaper(); crushed.curve = crush(2 ** (E.bits - 1));
+  const dl = ctx.createDelay(0.1); dl.delayTime.value = 0.02; // a drifting delay: the tape's wow and flutter
+  const cents = (c, f) => (2 ** (c / 1200) - 1) / (2 * Math.PI * f); // the delay's swing that bends the pitch by c cents
+  lfo(ctx, dl.delayTime, E.wow[0], cents(E.wow[1], E.wow[0]), hold); lfo(ctx, dl.delayTime, E.flutter[0], cents(E.flutter[1], E.flutter[0]), hold);
+  const hp = flt(ctx, 'highpass', E.band[0]), lp = flt(ctx, 'lowpass', E.band[1]), lp2 = flt(ctx, 'lowpass', E.band[1]);
+  from.connect(amp(ctx, 0.5)).connect(crushed).connect(amp(ctx, 2)).connect(dl).connect(hp).connect(lp).connect(lp2).connect(amp(ctx, E.gain)).connect(to);
+  if (E.hiss) { const g = amp(ctx, E.hiss); loopNoise(ctx, hold).connect(flt(ctx, 'highpass', 2000)).connect(g).connect(to); }
+  if (E.hum) { const o = ctx.createOscillator(), g = amp(ctx, E.hum); o.frequency.value = 50; o.connect(g).connect(to); hold(o); }
+}
 export const FIGHT_THEMES = Object.fromEntries(THEMES.map((t) => [t.id, t]));
 // Stand-ins until the designer hears their own: the Botnet plays the Worm's, the Logic Bomb the Ransomware's.
 Object.assign(FIGHT_THEMES, { botnet: FIGHT_THEMES.worm, logicbomb: FIGHT_THEMES.ransomware });
@@ -258,10 +282,10 @@ const AHEAD = 0.4; // seconds of notes scheduled ahead: a fight's busy frames ho
 
 // Play a family's theme into dest, fading in over fadeIn seconds. Returns { id, setHeat(0-1), stop(fade) }, or null
 // for a family with no theme. While the page is hidden nothing new is scheduled (timers there run late).
-export function playTheme(ctx, dest, id, { level = 1, fadeIn = 3, heat = 0.2 } = {}) {
+export function playTheme(ctx, dest, id, { level = 1, fadeIn = 3, heat = 0.2, floor = null } = {}) {
   const th = FIGHT_THEMES[id];
   if (!th) return null;
-  const s = 60 / th.bpm / 4, bus = makeBus(ctx, dest, s * (th.delay || 3), th.fb ?? 0.4), g = bus.fader.gain, t0 = ctx.currentTime;
+  const s = 60 / th.bpm / 4, bus = makeBus(ctx, dest, s * (th.delay || 3), th.fb ?? 0.4, floor), g = bus.fader.gain, t0 = ctx.currentTime;
   g.setValueAtTime(0, t0); g.linearRampToValueAtTime(th.gain * level, t0 + fadeIn);
   th.start?.(bus);
   let i = 0, next = t0 + 0.05, stopped = false;
@@ -274,6 +298,7 @@ export function playTheme(ctx, dest, id, { level = 1, fadeIn = 3, heat = 0.2 } =
   tick();
   return {
     id,
+    floor,
     setHeat(h) { heat = Math.max(0, Math.min(1, h)); },
     stop(fade = 3) {
       if (stopped) return;

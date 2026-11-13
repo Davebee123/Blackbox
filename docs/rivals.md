@@ -1,37 +1,26 @@
 # Rivals
 
-Named runners, one per crew, who race you to a server's vault and fight you trainer-style. **Built** (October 2026,
-`dist/rivals.mjs`, GAME_RULES.md "Rivals"): KUDZU, ESCROW and HUSH, lean. CANTOR waits for floor 3+.
+Runners from the cast (docs/runners.md R3) who race you to a server's vault and fight you trainer-style. **Built**
+(`dist/rivals.mjs`, GAME_RULES.md "Rivals"). The named rivals (KUDZU, ESCROW, HUSH) were replaced by runners in
+November 2026 (the designer's call); their lineups and counter-picks live on as the factions' and temperaments'.
 
-KUDZU's Hot spare is the Spare part; wick's lines past the ones below are new and want the designer's pass.
+## Who
 
-## Roster
+- **A runner on the net**, never your crew: one hunting you first, else one from the roll. Handle, class and faction
+  are theirs.
+- **Lineup by faction:** Halcyon and NULL CHOIR run ransomware, wiper, cryptominer (TOLLGATE's builds); Kestrel and
+  LANTERN trojan, twinned worm, worm (SWARMLINE's); GLASSJAW ghostroot, Echo, Sleeper (PALEMASK's).
+- **Counter-picks by temperament** (GAME_RULES.md has the table); their line on the challenge card too.
+- **Hunting you:** red on the network map and the Rail (the *red diamond*, picked: their own diamond out of any count,
+  the Rail row first), while racing you and after you lose to them or they get away, until you beat them.
+- **Beat them** and you've met them: their standing rises a tier.
 
-| Rival | Crew | In a line | Lineup | Counter-pick (reads your last fight) |
-|---|---|---|---|---|
-| **KUDZU** | SWARMLINE | Cheerful, too friendly, lower case with "!!". Every loss is pruning. | Worms and trojans: spares, twins, floods | Burst one down → **Patcher**. Spread hits → **Hot spare**. Slow single target → **Flood ramp** |
-| **ESCROW** | TOLLGATE | Polite and formal. Invoices you for your time. | Ransomware, Wiper, Cryptominer: armor on a clock | Burst → **Mutex lock**. Slow or burns → **Deadline**. Small strips → **Ward** |
-| **HUSH** | PALEMASK | Never speaks. Quotes your own last command back at you. | Ghostroots: veiled, mirrored | Read every tell → **Veil**. Big hits → **Decoy mirror**. Helpers → **Phase shift** |
-| **CANTOR** (later, floor 3+) | NULL CHOIR | Mocking, keeps time. | Keyloggers, Mimics, Sync locks | The next Mimic beats on the skill you opened with most |
-
-Rival lines: KUDZU *"hiii again!! brought friends"* · ESCROW *"Invoice 0417. Your time is billable."* · HUSH *"> spike enc"*
-(your own) · CANTOR *"Again. From the top."*
-
-wick:
-- KUDZU: *kudzu. you beat it on two. it's been practising.* · *it saw you burst the first one. it brought a patcher.* ·
-  *vault and pack both. good night.*
-- ESCROW: *escrow's here. it bills by the cycle. don't pay.* · *you made escrow wait last time. it brought a deadline.*
-- HUSH: *hush is on this one. you won't see it till it's next to you.* · *it's quoting you again. read the board, not the
-  chat.*
-- CANTOR: *the choir sent cantor. it plays back what you lead with. lead small.*
-
-**GLASSJAW gets no rival.** It's a broker working against Halcyon, not a turf crew. It sells the rivals your fight logs:
-the in-world reason for the counter-pick and their memory, at no rule cost.
+GLASSJAW sells the rivals your fight logs: the in-world reason for the counter-pick and their memory, at no rule cost.
 
 ## Rules
 
-- **On a run.** At most one rival per server, rolled like the Exfil. It walks a room for each of your moves, by the
-  shortest route to the vault, and needs no key. Its chip shows through the fog, and so does the vault it's after.
+- **On a run.** At most one rival per server, rolled like the Exfil. They walk a room for each of your moves, by the
+  shortest route to the vault, and need no key. Their chip shows through the fog, and so does the vault.
 - **Aggro.** When it reaches your room it pulls you into the fight. No step back.
 - **The fight.** 2 viruses on floors 1–2, 3 from floor 3, one after another, one level over you. Your Signal carries;
   your cooldowns reset between fights.
@@ -44,11 +33,11 @@ the in-world reason for the counter-pick and their memory, at no rule cost.
 
 ## The look (picked)
 
-Red for the rival and its viruses, amber for the loot, teal for you; the crew's colour only on its byline.
+Red for the rival and their viruses, amber for the loot, teal for you; the faction's colour only on the byline.
 
 1. **Map:** a red ring and a name tab on its room (beside YOU when it reaches you), its whole route as a red dotted
    trace, its lineup as virus chips under its room, and the race on the vault: your rooms to it in teal, its in red.
-2. **Challenge:** the room's pop-up card: name, crew and level, your record, its line, the lineup as numbered rows,
+2. **Challenge:** the room's pop-up card: handle, faction and level, your record, its line, the lineup as numbered rows,
    the stakes (the vault + its pack) as amber icons, wick's line, and Engage only.
 3. **Between fights:** a card over the board: the lineup rail (beaten ones struck), what you did → the part it adds
    (*3 cycles → Patcher*), your Signal, wick's line, Engage.

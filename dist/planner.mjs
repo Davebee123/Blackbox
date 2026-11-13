@@ -4,13 +4,13 @@
 import { gearDamage, classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, skillBase, mirrorOn, bendOf, bendBad, timersHidden, usable, hookHit, wards, attackAmount, delayHeld, frontOf, bufferOn, signatureOf, cooldownOf, frozenNow, asleep, scaled } from './combat.mjs';
 import { ABILITIES, TELL, CONFIG, BOSSES } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
-import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow, beatOn, beatBlind, copyCost, paceOf, tellsOf } from './tells.mjs';
+import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow, beatOn, beatBlind, copyCost, paceOf, tellsOf, tellNext } from './tells.mjs';
 // genesim.mjs: a gene the sim ignores (genes.mjs GENE_BOTS) is played as if it weren't there, one gene at a time.
 import { ignores, GENES, GENE_BOTS } from './genes.mjs';
 import { heatOf } from './parts.mjs';
 import { interruptMove, saveTick, toCross } from './interrupt.mjs';
 import { loudWins, blastPays, cashIn } from './order.mjs';
-import { actsOf, lashOn, actDone, actCap } from './acts.mjs';
+import { actsOf, lashOn } from './acts.mjs';
 import { copyKind } from './tells.mjs';
 import { topFrame, canCall, callingNow, FB, pendingOf, tradeOf, nodesOf, fragsOf, camerasOf, parentOf, leverLeft } from './floorbosses.mjs';
 
@@ -55,7 +55,7 @@ const leverNow = (s) => (!ignores('ward') && cashIn(s)?.part) || (!ignores('trip
 // the ♛ waits for the others, as on any boss).
 const restOf = (v) => { const r = v.parts.filter((p) => p.kind === 'system' && !p.core && !p.noTicks); return r.reduce((n, p) => n + p.integrity, 0) / Math.max(1, r.reduce((n, p) => n + p.max, 0)); };
 const crownNow = (s) => { const v = s.encounter.virus, W = BOSSES[v.boss]?.work, c = W?.lead != null && answers() && livingParts(s).find((p) => p.core); return c && c.ticks?.some((t) => !t.spent) && others(s, c) && reachable(s, c) && c.integrity / c.max > restOf(v) + W.lead ? c : null; };
-const order = (s, p) => (p.core && p.ticks?.some((t) => !t.spent) && livingParts(s).some((x) => x !== p && x.attack) && !(actsOf(s.encounter.virus) && ignores('leave')) ? 0.4 : p.deadman && !ignores('tripwire') && others(s, p) ? 0.05 : p.fuse && !ignores('zipbomb') && others(s, p) ? 0.05 : p.hotspot && !ignores('hotspot') && others(s, p) ? 0.3 : p.command && !ignores('c2') && livingParts(s).filter((x) => x.kind === 'fragment').length >= 2 ? 4 : 1);
+const order = (s, p) => (p.core && p.ticks?.some((t) => !t.spent && t.phase != null) && livingParts(s).some((x) => x !== p && x.attack) && !(actsOf(s.encounter.virus) && ignores('leave')) ? 0.4 : p.deadman && !ignores('tripwire') && others(s, p) ? 0.05 : p.fuse && !ignores('zipbomb') && others(s, p) ? 0.05 : p.hotspot && !ignores('hotspot') && others(s, p) ? 0.3 : p.command && !ignores('c2') && livingParts(s).filter((x) => x.kind === 'fragment').length >= 2 ? 4 : 1);
 export const mostThreat = (s) => livingParts(s).filter((p) => reachable(s, p)).map((p) => ({ p, k: (threatOf(p) * invested(s, p) * order(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
 const bare = (p) => alive(p) && !p.armor;
 // A Trojan's Package while its Loader lives (families.mjs): any damage unpacks it, so a player leaves it alone.
@@ -143,6 +143,7 @@ export function kitPlannerAt(s, p, no = null, read = null) {
 const BUFFING = new Set(['harden', 'brace', 'sudo', 'fork', 'debris-field', 'rm-rf', 'circuit-breaker', 'honeypot', 'maintenance-window', 'bulkhead', 'dmz', 'mesh']);
 const scrapeNow = (s) => !ignores('scraper') && landingNow(s).some((i) => part(s, i.source)?.scrape);
 export function planner(s) {
+  if (s.encounter?.actBars && !livingParts(s).length) return 'hold'; // between acts (act bars): the next board comes in at the cycle's end
   if (!scrapeNow(s)) return heedFloor(s, heedActs(s, heedBend(s, heedHelpers(s, spareLast(s, planner1(s))))));
   const was = veto;
   veto = (id) => BUFFING.has(id) || !!(was && was(id));
@@ -268,6 +269,11 @@ function heedFloor(s, move) {
       if (m) return m;
     }
   }
+  if (v.grace) {
+    // GRACE PERIOD: your command on a lapsed part on the cycle its charge lands calls the charge off.
+    const due = (tellsOf(s)?.list || []).filter((t) => t.told && /^lapse:/.test(t.id) && tellNext(s, t) === c).map((t) => part(s, t.part)).find((p) => p && p.integrity > 0);
+    if (due && at !== due.id) { const m = first(s, [...(['part', 'attack'].includes(ABILITIES[id]?.target) ? [id] : []), ...HITS, 'spike', 'crack'].map((k) => `${k} ${due.id}`)); if (m) return m; }
+  }
   if (v.surf) {
     // A closed cycle: nothing at the Logger (it shrugs it off and logs it), and nothing big once the log has started.
     const shut = c % 2 === 1, beat = v.surf.again && v.surf.again - c <= 1, aim = at && part(s, at);
@@ -286,10 +292,9 @@ function heedActs(s, move) {
   const [id] = String(move).split(' '), it = toIntent(s, move), aim = it && !it.error ? part(s, it.target) : null;
   const bad = (p, k = id) => {
     if (!p) return false;
-    const breaks = !(p.armor > 0 && !ignoresArmor(s, k)) && previewDamage(s, k, p) >= p.integrity && !(actCap(s, p) < p.integrity); // the ♛ holds at its tick
+    const breaks = !(p.armor > 0 && !ignoresArmor(s, k)) && previewDamage(s, k, p) >= p.integrity;
     if (breaks) return false;
     if (!ignores('backlash') && lashOn(s, p)) return true;
-    if (!ignores('leave') && p.core && !actDone(s)) { const n = toCross(p); if (n != null && (!(p.armor > 0) || ignoresArmor(s, k)) && previewDamage(s, k, p) >= n) return true; }
     return false;
   };
   const hit = AREA.has(id) ? livingParts(s) : aim ? [aim] : [];
