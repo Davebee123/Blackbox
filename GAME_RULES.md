@@ -598,9 +598,9 @@ and REPO MAN's ♛ holds 45% of the boss, taken from its other parts (`BOSSES` w
 
 On the board: ♛ on the crown part, ×*n* fragments on the Relay, §*n* Liens on the Ledger, *round* on a Mimic.
 
-**Floor bosses** (floorbosses.mjs, docs/boss-guide.md). Floors 2, 3 and 4 have bosses of their own: parts of their own
+**Floor bosses** (floorbosses.mjs, docs/boss-guide.md). Floors 2 to 5 have bosses of their own: parts of their own
 only, the ♛'s act ticks at **60% and 30%** (every other part's ticks stay at 50% and 25%), the beat on a part of their
-own, a tell an act from their set (floor 4's deal none: their rule is the fight), and a verb an act. 0.4× to 0.91× Integrity, with more of it on the ♛; they enrage at cycle 36 to 44. Played blind (no rule answered) each loses most of its fights, and one misread at the wrong cycle makes the rest of the fight harder (a sale, a leak, a Dump or a Call grows the next).
+own, a tell an act from their set (floor 4's and GRACE PERIOD deal none: their rule is the fight), and a verb an act. 0.4× to 0.91× Integrity, with more of it on the ♛; they enrage at cycle 36 to 44. Played blind (no rule answered) each floor 2–4 boss loses most of its fights (the bots don't read floor 5's rules yet: read, misread and blind all win about half), and one misread at the wrong cycle makes the rest of the fight harder (a sale, a leak, a Dump or a Call grows the next).
 
 | Boss | Where | Lv | Its rule (on its row) | Act 2 (♛ at 60%) | Act 3 (♛ at 30%) |
 |---|---|---|---|---|---|
@@ -611,6 +611,8 @@ own, a tell an act from their set (floor 4's deal none: their rule is the fight)
 | NIGHT DESK (Kessler's old settlement process) | Floor 4's floor job: its Boss step's server's Core | 24 | **No Timeout**: its attacks never land. Each waits on its part as a pending trade. Your one-part command on a part settles its trades on you at half. At 4 pending, all settle in full and each trade after opens 25% bigger for the fight. Only the Desk ♛ takes damage, 12% of its max a hit at most; the Teller and the Clearing House go when it breaks. SIGINT, delays and Throttles do nothing to a trade | **Night shift**: the Night Clerk clocks in, a third trader holding one trade (it opens none of its own); a pending trade grows 15% a cycle | **Finality**: each trade you settle heals the Desk 4% of its max |
 | BYZANTINE (GLASSJAW) | The last room of every floor-4 Pit; back an hour after it falls | 26 | **Vote**: every 4 cycles, if the most damaged Node is 15% or more under the average of the Nodes standing, it is restored to that average, and every Node hits 30% harder for the fight. A hit takes 20% of a Node's max at most. Node B adds a fragment every 5 cycles | **Traitor**: the most damaged Node turns. While it is not the most damaged, a vote restores the most damaged to the healthiest Node's level | **Hard fork**: every broken Node returns as the act starts, at the standing Nodes' average; a Node that breaks after returns at the next vote, unless every other Node is under half |
 | CAMSWARM (SWARMLINE) | Floor 4's lair, on networks whose own boss isn't TRIPMINE (about half) | 24 | **Telnet Sweep**: every 5 cycles each part under half (never the Hive ♛) hatches a fragment and shields it: it takes no damage while that part stands, and drops when it breaks. Each fragment hatched brings the next sweep a cycle sooner, down to every 2. A fragment that lives 3 cycles is a Camera, a part with a Surge of its own. A hit takes 15% of a part's max at most; its fragments gnaw twice as hard | **Botnet**: every Camera fires with the C2 Node's Beacon; a broken C2 Node comes back, and each other part you broke returns in its place as a Camera at 30% | **Lockout**: the Hive boots a Camera, and takes no damage while a Camera stands |
+| GRACE PERIOD (TOLLGATE) | Floor 5's lair | 28 | **Grace**, on every part: 3 cycles each, staggered at the start (3, 4, 5, 6). Your command on a part pays it up at the cycle's end; area hits pay every part they hit. A part whose grace runs out lapses: its ◆ refill, its next attack 2 or more cycles away is a charge (cut it or SIGINT it), and its grace starts over. While the Rider stands every other part hits 15% harder | **Reinstatement**: a part that lapses hits 25% harder until its ◆ are stripped | **Acceleration**: grace is 2, and a lapse takes a cycle off every other part (one at most a cycle each); one it takes to 0 lapses too |
+| EXIT NODE (PALEMASK) | Floor 5's floor job: its Boss step's server's Core | 30 | **Rollback**, on the Core ♛: every 6 cycles it restores its own bars (Integrity and ◆) to the image taken 2 cycles before, so damage in those 2 cycles is undone. Your Signal is never restored, and a broken part stays broken. **Front**: while Backup v7 stands, a one-part command at the Core lands on it (burns, helpers and area hits reach the Core). A backup charges Glass Cut | **Kept charges**: a charge cut in the 2 cycles before a restore comes back at it | **Cold image**: every restore returns to the image taken as Backup v6 broke. The Core is never restored past its last spent act tick |
 
 A floor job's Boss step points at a server on its floor's main road (never the lair); once the chain reaches the step,
 that server's Core holds the boss in the Resident's place for good, and beating it takes nothing over. A step posted at
@@ -683,11 +685,15 @@ Resident drops each of its two once, then makes no unique roll. After a miss the
 | CAMSWARM | Mass Reboot (script, 24) | When you break a part, every fragment takes 30 (grown with its level) |
 | BYZANTINE | Majority Attack (exploit, 26) | +8% damage for each part below half, up to +32% |
 | BYZANTINE | Quorum Sensor (proxy, 26) | The second attack to land on you in a cycle deals 30% less |
+| GRACE PERIOD | Installment (implant, 28) | Your first hit on each part every 3 cycles deals 10% more |
+| GRACE PERIOD | Late Fee (exploit, 28) | +15% damage on a part whose ◆ came back this fight |
+| EXIT NODE | Hidden Service (implant, 30) | Every 6 cycles, the next attack on you deals half |
+| EXIT NODE | Tail Circuit (exploit, 30) | +10% damage on a part with more Integrity than it had 2 cycles ago |
 
 Their set pieces: CENTRIFUGE drops Glass Ceiling's **Rotor** (as GLASSJAW's bosses and elites still do), SHOULDER SURFER
 On-Call's **Pager** (floor 4's lair boss still drops it too), NIGHT DESK its **Runbook** and BYZANTINE its **Failover** (no
-longer the lair bosses'), at a boss's set odds (8% a kill, +3% a miss). CAMSWARM holds a lair, so it pays as one: the
-lair's single roll (the same odds and pity), with floor 4's lair set pieces. Its pair comes first: while you lack
+longer the lair bosses'), at a boss's set odds (8% a kill, +3% a miss); EXIT NODE has none. CAMSWARM and GRACE PERIOD
+hold a lair, so each pays as one: the lair's single roll (the same odds and pity), with its floor's lair set pieces. Its pair comes first: while you lack
 either, a roll that hits gives one of them; once both are found, your network's natives as before.
 The Codex boss page groups its loot (*Grouped*): every kill, its uniques, its set pieces, each with the next kill's odds
 as a bar and the odds and pity in the bar's tooltip.
@@ -711,7 +717,8 @@ after it falls. The map labels a found lair with its boss, and its card's boss t
 | 2 | DEADBOLT, BACK ORIFICE, PATCH TUESDAY, SLEEPWALKER, MIRRORSHADE |
 | 3 | HASHLORD, FLOODWALL, ECHOLALIA |
 | 4 | TRIPMINE, CAMSWARM (a floor boss, not a native: its pair of uniques comes first in the lair's roll) |
-| 5–8 | none built yet: your native boss |
+| 5 | GRACE PERIOD (a floor boss, as CAMSWARM) |
+| 6–8 | none built yet: your native boss |
  A boss with a floor
 (HASHLORD 16, MIRRORSHADE 12) moves in only once you reach that level; until then the Core stays sealed and says from
 which. Every lair boss drops a boss's item and rolls for its network's **native uniques** (Networks) at the bosses'
@@ -1693,9 +1700,9 @@ unique** leans to a class or subclass: three times as likely for it, twice for t
   for 16; Bench Mark (implant 48, threads; Infiltrator): a hit on a Tagged part heals 5; Flue (proxy 48, rare spawns):
   a burn tick shields you for 2.
 - **Floors 5 and 6** (docs/floor-items.md; levels 28–40), each from its floor's lair boss until its planned source is
-  built (`planned`: the boss, family or server kind named). Deep Core, GRACE PERIOD's: Installment (implant 28): your
+  built (`planned`: the boss, family or server kind named). Deep Core, GRACE PERIOD's (built): Installment (implant 28): your
   first hit on each part every 3 cycles deals 10% more; Late Fee (exploit 28): +15% to a part whose ◆ came back this
-  fight. EXIT NODE's: Hidden Service (implant 30): every 6 cycles the next attack on you deals half; Tail Circuit
+  fight. EXIT NODE's (built): Hidden Service (implant 30): every 6 cycles the next attack on you deals half; Tail Circuit
   (exploit 30): +10% to a part with more Integrity than 2 cycles ago. PARASITE's: Antibody (exploit 32): +40% to a part
   that healed since your last turn; Tourniquet (proxy 32): siphons deal you 50% less and heal half as much. ACTUARY's
   (level 40, so the lair boss can't drop them until it is 38): Moral Hazard (exploit): +3% for each tell that landed on

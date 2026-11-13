@@ -103,7 +103,7 @@ comment saying what it does.
 | `dist/order.mjs` | The order levers: parts whose right moment to break depends on the board. |
 | `dist/acts.mjs` | Boss acts (P4): a boss's three acts, its beat (the Backlash, a Mimic, a Decoy), and the ♛ left until its beat plays. |
 | `dist/actbreak.mjs` | Presentation only: the act break as a boss crosses into its next act (the tick's burst, the strip, the emote). |
-| `dist/floorbosses.mjs` | The floor 2, 3 and 4 bosses' rules (CENTRIFUGE's Bidding, SHAKEDOWN's Ransom Clock, SHOULDER SURFER's Replay, RECURSION's Call, NIGHT DESK's No Timeout, BYZANTINE's Vote, CAMSWARM's Telnet Sweep), their phase verbs, and their uniques' hooks. |
+| `dist/floorbosses.mjs` | The floor 2 to 5 bosses' rules (CENTRIFUGE's Bidding, SHAKEDOWN's Ransom Clock, SHOULDER SURFER's Replay, RECURSION's Call, NIGHT DESK's No Timeout, BYZANTINE's Vote, CAMSWARM's Telnet Sweep, GRACE PERIOD's Grace, EXIT NODE's Rollback), their phase verbs, and their uniques' hooks. |
 | `dist/mechanics.mjs` | The mechanics list: twenty third parts built lean, each rule's hooks in one place. Eleven strains and the eleven mutated ones are built from them (`STRAINS`). |
 | `dist/situations.mjs` | The moment on the board each situational skill is built for; the tray lights it. |
 | `dist/raid.mjs` | Crew bosses: phases and mechanics for KESSLER-FARM-00's three. |

@@ -5,7 +5,7 @@ import { componentsOf } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
 import { leaveOf, actInfo } from './acts.mjs';
-import { FB, BUYER, nextBuyer, dumpOf, topFrame, canCall, frames, leakOf, depthOf, pendingOf, tradeOf, voteOf, forkOf, nodesOf, camerasOf, hatchers, parentOf, leverLeft } from './floorbosses.mjs';
+import { FB, BUYER, nextBuyer, dumpOf, topFrame, canCall, frames, leakOf, depthOf, pendingOf, tradeOf, voteOf, forkOf, nodesOf, camerasOf, hatchers, parentOf, leverLeft, rollTo } from './floorbosses.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './memory.mjs';
 // The server whose Connect is waiting on a yes (app.js): its card shows the memory it takes.
@@ -505,7 +505,7 @@ function tradeChip(i, c, k = '') {
   return `<div class="intent trade${i.full ? ' full' : ''}${c === 0 ? ' now' : c === 1 ? ' next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}">${glyph('clock', 'tr-ico')}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${i.full ? `−${i.full}` : i.trade}</small></div>`;
 }
 // A boss rule's own chip (floorbosses.mjs fbIntents: a vote, a sweep, a leak): drawn beside its part's attack, never in its place.
-const ruleChip = (i) => !!(i.vote || i.sweep || i.leak);
+const ruleChip = (i) => !!(i.vote || i.sweep || i.leak || i.rollback);
 function attackChip(i, c, k = '', to = null) {
   if (i.trade) return tradeChip(i, c, k);
   if (i.effect === 'mirror') return bendChip(i, c, k);
@@ -786,6 +786,20 @@ function floorTags(s, p) {
     if (p.core && v.swarm.lockout) tag(camerasOf(s).length ? 'hot' : '', `Lockout\nBoss rule\nThe ${p.name} takes no damage while a Camera stands.${answerLine('Break every Camera first.')}`, 'locked');
     if (p.kind === 'fragment' && p.hatched != null) { const k = p.hatched + FB.swarm.grows - e.cycle; tag('hot', `Fragment\nBoss rule\nIt becomes a Camera ${when(k)}.${host ? ` The ${host.name} shields it: it takes no damage, and drops when the ${host.name} breaks.` : ''}${answerLine(host ? `Break the ${host.name}.` : 'Break it first.')}`, `${glyph('clock')}cam ${Math.max(0, k)}${host ? ' · shielded' : ''}`); }
     if (p.role === 'camera') tag('', `${p.name}\nRecruited\nA part with a Surge of its own. Under half, it hatches on the sweep.${v.swarm.botnet ? ' It fires when the C2 Node\'s Beacon lands.' : ''}`, 'camera');
+  }
+  // GRACE PERIOD: each part's grace, a reinstated part, the Rider.
+  if (v.grace && p.grace != null) {
+    const paid = p.paidAt === e.cycle, n = paid ? v.grace.days : p.grace;
+    tag(n <= 1 ? 'hot grace' : 'grace', `Grace\nBoss rule\n${paid ? `Paid up: ${v.grace.days} cycles of grace from the end of this cycle.` : `The ${p.name} lapses at the end of ${n <= 1 ? 'this cycle' : `${n} cycles`}.`} Your command on it pays it up. When it lapses, its ◆ refill and its next attack is a charge.${v.grace.reinstate ? ` A lapsed part hits ${pct(FB.grace.harder)}% harder until its ◆ are stripped.` : ''}${v.grace.accel ? ' Each lapse takes a cycle off every other part\'s grace.' : ''}${answerLine('Keep three paid, and let lapse the part whose charge you can cut.')}`, `${glyph('clock')}grace ${n}${paid ? ' · paid' : ''}`);
+    if (p.reinstated && p.armor > 0) tag('hot', `Reinstated\nBoss rule\nThe ${p.name} hits ${pct(FB.grace.harder)}% harder until its ◆ are stripped.${answerLine('Strip its ◆.')}`, `+${pct(FB.grace.harder)}%`);
+    if (p.role === 'rider') tag('hot', `Rider\nBoss rule\nWhile the ${p.name} stands, every other part hits ${pct(FB.grace.rider)}% harder.`, `rider +${pct(FB.grace.rider)}%`);
+  }
+  // EXIT NODE: the restore on the Core, what each part goes back to, the Front.
+  if (v.roll) {
+    const n = v.roll.at - e.cycle, to = rollTo(s, p), cold = v.roll.coldOn && v.roll.cold;
+    if (p.core) tag(n <= 1 ? 'hot rollback' : 'rollback', `Rollback\nBoss rule\nIt restores its own bars ${n <= 0 ? 'at the end of this cycle' : n === 1 ? 'at the end of next cycle' : `in ${n} cycles`}, to ${cold ? 'the image taken as Backup v6 broke' : `the image taken ${FB.roll.back} cycles before`}. Your Signal is never restored, and a broken part stays broken. The ${p.name} is never restored past its last act tick.${v.roll.kept ? ' A charge you cut in the 2 cycles before a restore comes back at it.' : ''}${answerLine(n <= 1 ? 'Break a part outright now, or shield and wait.' : 'Do your damage now.')}`, `${glyph('clock')}rollback ${Math.max(0, n)}`);
+    if (to && to.hp > p.integrity) tag('dim', `Rollback image\nBoss rule\nAt the restore the ${p.name} goes back to ${to.hp}/${p.max}${to.armor > (p.armor || 0) ? `, with ${to.armor} ◆` : ''}.`, `↺ ${to.hp}`);
+    if (p.role === 'front') tag('hot', `Front\nBoss rule\nWhile the ${p.name} stands, your one-part commands at the Core land on it. Burns, helpers and area hits reach the Core.${answerLine('Break it to reach the Core.')}`, 'front');
   }
   return out;
 }

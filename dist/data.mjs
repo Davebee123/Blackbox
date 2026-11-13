@@ -1215,6 +1215,37 @@ export const BOSSES = {
     signature: { name: 'Telnet Sweep', rule: 'Every 5 cycles, each part under half its Integrity hatches a fragment and shields it. A fragment that lives 3 cycles becomes a Camera with a Surge of its own.' },
     about: 'Hurt parts hatch fragments, and a fragment left alone grows into a Camera. Each part shields the fragments it hatched.',
     phases: [{ at: 0.6, do: ['botnet'], name: 'Botnet', emote: 'Cameras online. They fire on my beacon.', say: 'CAMSWARM links its Cameras. Each one fires when the Beacon lands.' }, { at: 0.3, do: ['lockout'], name: 'Lockout', emote: 'Locked out. The hive sees through every camera.', say: 'CAMSWARM locks you out. The Hive boots a Camera, and takes no damage while a Camera stands.' }] },
+  // The floor 5 bosses (floorbosses.mjs).
+  // GRACE PERIOD: in floor 5's lair pool (floors.mjs FLOOR.lairs), TOLLGATE's. Each part's grace runs down; your command on
+  // it pays it up, and a part left to lapse refills its ◆ and charges.
+  graceperiod: { long: { hp: 0.9, dmg: 0.9, enrageAt: 40 }, name: 'GRACE PERIOD', family: 'ransomware', author: 'tollgate', own: true, crown: 'policy', floor: 28, hp: 0.85, dmg: 0.8, enrageAt: 18, acts: { beat: 'none' }, lair: 'GRACEPERIOD-LEDGER',
+    extra: [{ id: 'policy', name: 'Policy', integrity: 56, armor: 1, loot: 'Policy Number', special: true, role: 'policy', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 3 } },
+      { id: 'notice', name: 'Notice', integrity: 24, armor: 1, loot: 'Red Envelope', attack: { name: 'Encrypt', effect: 'encrypt', amount: 3, interval: 5, first: 4 } },
+      { id: 'collector', name: 'Collector', integrity: 26, armor: 1, loot: 'Ledger Hook', attack: { name: 'Surge', effect: 'damage', amount: 9, interval: 4, first: 2 } },
+      { id: 'rider', name: 'Rider', integrity: 20, armor: 1, loot: 'Rider Clause', role: 'rider', attack: { name: 'Surcharge', effect: 'damage', amount: 6, interval: 4, first: 4 } }],
+    guide: { open: [['Grace', 'Each part has 3 cycles of grace. Your command on a part pays it up. Area hits pay every part they hit.'],
+      ['Lapse', 'A part whose grace runs out lapses. Its ◆ refill, its next attack is a charge, and its grace starts over.'],
+      ['Rider', 'While the Rider stands, every other part hits 15% harder.'],
+      ['Surge and Encrypt', 'The Policy ♛ and the Collector hit you on their own timers. The Notice encrypts you.']],
+      phases: [[['Reinstatement', 'A part that lapses hits 25% harder until its ◆ are stripped again.']], [['Acceleration', 'Grace drops to 2 cycles, and a lapse takes a cycle off every other part\'s grace.']]] },
+    signature: { name: 'Grace', rule: 'Each part has 3 cycles of grace, and your command on it pays it up. A part whose grace runs out lapses. Its ◆ refill, and its next attack is a charge.' },
+    about: 'A payment plan with four clocks. You can keep three paid, so you choose which part lapses.',
+    phases: [{ at: 0.6, do: ['reinstate'], name: 'Reinstatement', emote: 'Coverage reinstated, at the adjusted rate.', say: 'GRACE PERIOD reinstates. A part that lapses hits 25% harder until its ◆ are stripped.' }, { at: 0.3, do: ['accelerate'], name: 'Acceleration', emote: 'Acceleration clause. The full balance is due.', say: 'GRACE PERIOD accelerates. Grace is 2 cycles, and a lapse takes a cycle off every other part.' }] },
+  // EXIT NODE: floor 5's floor job (arcs.mjs), PALEMASK hiding ACTUARY's backups. Every 6 cycles it rolls its own bars
+  // back to an image taken 2 cycles before.
+  exitnode: { long: { hp: 0.9, dmg: 0.8, enrageAt: 40 }, name: 'EXIT NODE', family: 'ghostroot', author: 'palemask', own: true, crown: 'core', floor: 30, hp: 0.85, dmg: 1.1, enrageAt: 18, acts: { beat: 'none' },
+    extra: [{ id: 'core', name: 'Core', integrity: 64, armor: 1, loot: 'Relay Descriptor', special: true, role: 'core', attack: { name: 'Surge', effect: 'damage', amount: 16, interval: 3, first: 3 } },
+      { id: 'v7', name: 'Backup v7', integrity: 26, armor: 1, loot: 'Snapshot v7', role: 'front', attack: { name: 'Surge', effect: 'damage', amount: 8, interval: 4, first: 2 } },
+      { id: 'v6', name: 'Backup v6', integrity: 24, armor: 1, loot: 'Snapshot v6', role: 'backup', attack: { name: 'Surge', effect: 'damage', amount: 7, interval: 4, first: 4 } },
+      { id: 'v5', name: 'Backup v5', integrity: 22, armor: 0, loot: 'Snapshot v5', role: 'backup', attack: { name: 'Surge', effect: 'damage', amount: 9, interval: 5, first: 5 } }],
+    guide: { open: [['Rollback', 'Every 6 cycles it restores its own bars to where they were 2 cycles earlier. Your Signal is never restored. A broken part stays broken.'],
+      ['Front', 'While Backup v7 stands, your one-part commands at the Core land on it. Burns, helpers and area hits reach the Core.'],
+      ['Glass Cut', 'A backup charges.'],
+      ['Surge', 'Every part hits you on its own timer.']],
+      phases: [[['Kept charges', 'A charge you cut in the 2 cycles before a restore comes back at the restore.']], [['Cold image', 'Every restore returns to the image taken as Backup v6 broke. The Core is never restored past its last act tick.']]] },
+    signature: { name: 'Rollback', rule: 'Every 6 cycles it restores its own bars to where they were 2 cycles earlier. Your Signal is never restored, and a broken part stays broken.' },
+    about: 'ACTUARY\'s backups, three deep, kept by PALEMASK. Damage in the 2 cycles before a restore is undone, unless it breaks a part.',
+    phases: [{ at: 0.6, do: ['keptcharges'], name: 'Kept charges', emote: 'v6 mounted. Nothing you stop stays stopped.', say: 'EXIT NODE mounts v6. A charge cut in the 2 cycles before a restore comes back at the restore.' }, { at: 0.3, do: ['coldimage'], name: 'Cold image', emote: 'v5 is cold storage. It remembers the moment v6 fell.', say: 'EXIT NODE goes cold. Every restore returns to the image taken as Backup v6 broke.' }] },
   // Native bosses (network.mjs): each network rolls one of these for its lair, a rogue server of its own. Solo bosses
   // on the tells framework: every tell open at their level, a signature charge of their own (TELLS, TELL_SETS by id;
   // a strain boss renames its strain's charge), a third part they always bring (third), and phases. Their drops are
@@ -1419,6 +1450,8 @@ export const TELL_SETS = {
   shouldersurfer: ['overcharge', 'persistence', 'keyrotation'],
   // The floor 4 bosses: none. Their rules are the fight (nothing of NIGHT DESK's can be interrupted).
   nightdesk: [], byzantine: [], camswarm: [],
+  // The floor 5 bosses: GRACE PERIOD's charges are its lapses; EXIT NODE's Core charges Glass Cut.
+  graceperiod: [], exitnode: ['glasscut'],
 };
 
 // ---------- the genome (genes.mjs, docs/genome.md) ----------

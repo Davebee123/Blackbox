@@ -364,6 +364,22 @@ export function hotCharge(s, hot) {
   say(s, t, best.p, best.x, best.n);
   return t;
 }
+// A floor boss's rule turns a part's attack into a charge (floorbosses.mjs: GRACE PERIOD's lapse, EXIT NODE's kept
+// charge), said at once: its first landing 2 or more cycles away that no other tell rides. One of each id at a time.
+export function forceCharge(s, p, name, id) {
+  const T = tellsOf(s), e = s.encounter;
+  if (!T?.tier || !p?.attack || p.attack.due >= 900 || T.list.some((t) => t.id === id)) return null;
+  const c = e.cycle, taken = new Set(T.list.filter((t) => t.told).map((t) => tellNext(s, t)));
+  for (let n = p.attack.n || 0; n < (p.attack.n || 0) + 4; n++) {
+    const x = landsAt(p, n);
+    if (x - c < 2 || taken.has(x)) continue;
+    const t = { kind: 'charge', name, gene: 'overcharge', id, part: p.id, once: true, told: false, next: null, n: null, said: null, count: 0, after: c };
+    T.list.push(t);
+    say(s, t, p, x, n);
+    return t;
+  }
+  return null;
+}
 // A part broke (combat.mjs breakPart): its tells stop for good (they sit on a fixed part).
 export function tellBroke(s, p) {
   const T = tellsOf(s);

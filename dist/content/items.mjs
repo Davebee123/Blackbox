@@ -9138,9 +9138,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "lair",
-          "floor": 5,
-          "planned": "GRACE PERIOD"
+          "kind": "boss",
+          "id": "graceperiod"
         }
       ],
       "flavour": "Small amounts, on time, for as long as it takes."
@@ -9168,9 +9167,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "lair",
-          "floor": 5,
-          "planned": "GRACE PERIOD"
+          "kind": "boss",
+          "id": "graceperiod"
         }
       ],
       "flavour": "Charged on the first of the month to anything still standing."
@@ -9252,9 +9250,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "lair",
-          "floor": 5,
-          "planned": "EXIT NODE"
+          "kind": "boss",
+          "id": "exitnode"
         }
       ],
       "flavour": "An address that answers, from a machine nobody has ever found."
@@ -9282,9 +9279,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "lair",
-          "floor": 5,
-          "planned": "EXIT NODE"
+          "kind": "boss",
+          "id": "exitnode"
         }
       ],
       "flavour": "Three hops out, and the last one remembers everything."
