@@ -148,6 +148,10 @@ code { font-family: var(--mono); color: var(--amber); }
 
 .virus-stage { position: relative; min-height: 0; background: var(--inset) url('ui/textures/terminal-grid-fine.png'); border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
 .virus-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.virus-stage.staged { background-image: none; } /* the floor's place (stage.mjs) in place of the grid */
+/* A chip's name coming in the floor's way (boardfx.mjs): a letter at a time, or a caret typing it. */
+.bfx-ch { display: inline-block; white-space: pre; }
+.bfx-caret { display: inline-block; width: 0.55em; height: 1em; margin-left: 1px; vertical-align: -2px; background: currentColor; opacity: 0.8; }
 .stage-flash { position: absolute; left: 0; right: 0; top: 10px; text-align: center; font: 600 13px var(--mono); color: var(--bright); letter-spacing: 1px; pointer-events: none; }
 
 .brow { display: grid; grid-template-columns: minmax(170px, 1.5fr) repeat(4, minmax(0, 1fr)); width: 100%; text-align: left; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 0 12px; background: none; align-items: stretch; }
@@ -3998,6 +4002,18 @@ body.no-motion .recap { animation: none; }
   .combat { grid-template-rows: auto minmax(0, 1fr) minmax(96px, 32%); grid-template-areas: 'hud hud' 'board stage' 'board log'; }
   .combat .board { max-height: none; min-height: 0; }
   body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template-areas: 'hud hud' 'log stage'; }
+}
+/* The fight log: its newest line until ▴ opens it (app.js setLogOpen), so the render takes the room. A finished fight
+   shows it whole. */
+.log-more { display: none; }
+@media (min-width: 901px) {
+  body:not(.log-open):not(.fight-over) .combat { grid-template-rows: auto minmax(0, 1fr) auto; }
+  body:not(.fight-over) .log.panel { position: relative; }
+  body:not(.log-open):not(.fight-over) .log-lines { overflow: hidden; padding-right: 64px; padding-bottom: 6px; }
+  body:not(.log-open):not(.fight-over) .log-lines > li:not(:last-child) { display: none; }
+  body:not(.fight-over) .log-more { display: flex; align-items: center; gap: 5px; position: absolute; right: 10px; bottom: 6px; font: 500 12px/1 var(--mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 3px; padding: 4px 7px; cursor: pointer; }
+  body.log-open .log-more { font-size: 0; }
+  body.log-open .log-more::before { content: '▾'; font-size: 12px; }
 }
 .combat .brow:not(.bhead) > .bcell { padding-top: 7px; padding-bottom: 7px; }
 .combat .intent { padding: 5px 8px; font-size: 13px; }

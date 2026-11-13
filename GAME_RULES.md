@@ -2876,6 +2876,32 @@ dusty green, Coldline ice, Deep Core magenta, Kernel Space white on black, The S
 the job colours never change. **Off** shows numbers and bars only. Motion off or reduced motion: no tears, nothing
 moves.
 
+**The stage.** In a fight on a server, the render window shows the floor's place behind the virus, in characters and in
+the floor's colour (Floor colour on): the Sprawl's street, Backhaul's rail yards, an aisle of the Stacks' racks,
+Coldline's harbour, Deep Core's furnace floor, Kernel Space's bare plane, the bottom of the Sink's drain, and the
+stone and ledger figures of Bedrock. The place acts on the virus without touching the board:
+
+- **Light:** its light source shades the virus (brightness only). The Sprawl's sign rims its left side and flickers
+  with it; Coldline's lighthouse beam flares across it once a sweep; Bedrock lights it from below on its old clock's
+  1.25 s tick; Backhaul's passing train, the Stacks' racks, the furnace, the drain's surface and Kernel Space's flat
+  light do the rest.
+- **Camera:** eye level and in the water on Coldline (what's under the waterline is hidden, its reflection below), from
+  below on Bedrock, looking down into the Sink, down the aisle in the Stacks, almost flat in Kernel Space.
+- **Entrance:** a new virus comes in the floor's way: it flickers on like a tube (the Sprawl), rolls in along the
+  rails (Backhaul), is scanned in (the Stacks), surfaces (Coldline), forms out of the heat (Deep Core), is plotted
+  point by point (Kernel Space), sinks into view (the Sink), or is dug out of the rock (Bedrock).
+- **Breaking:** a broken part's bits rise (most floors), freeze and sink at the waterline (Coldline), sink into the
+  pool (the Sink), or fall to rubble (Bedrock).
+- **The board:** on Backhaul and Coldline a new chip's letters spin in and settle, and a chip moving up a column flaps
+  once; on the Sink and Bedrock a new chip types itself in. Chips, colours and telegraphs never change.
+- **The theme:** on Coldline the fight theme plays through 2071 hardware (fewer bits, a narrower speaker, a light tape
+  wobble), on Bedrock through 2041's (6-bit, a small speaker's band, more wobble, hiss and hum).
+
+Motion off: the place stands still, no entrance, a steady light. Home and Floor colour off: the picture as before.
+
+**The fight log** shows its newest line, with **▴ N** (the lines above it) to open it whole; it stays as you leave it.
+A finished fight shows it whole.
+
 **A new fight boots in.** The first time you see a fight, the screen goes dark and the virus comes up first, alone
 at the centre, before dropping into its panel; a boot console checks your system and your panels come up. About two
 seconds; any key or click ends it (and still acts). Leaving a won fight, the page folds to a teal line like a tube
