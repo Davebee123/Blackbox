@@ -10,6 +10,7 @@
 import { bossShape, bossKit, BOSS_BUILD, BOSS_STRIKES } from './boss-art.mjs';
 
 const COLORS = { amber: '#f1b92f', bright: '#fff2c8', hot: '#ff5b3d', dim: '#7e5311', gold: '#ffd85c', deep: '#a8741c' };
+const BASE = { ...COLORS }; // a floor's stage tints the body (stage.mjs colors); hot, a strike, stays red
 const RAMP = ' .,:-=+*#%@'; // dark → lit
 const SHARDS = '#*+=:.01';
 const BITS = '0101010#*';
@@ -153,9 +154,10 @@ export const sprayAt = (u) => (u > 0.15 && u < 0.75 ? Math.sin(((u - 0.15) / 0.6
 // When a broken part's point lets go, 0–1 of the dissolve: stable per point, so it crumbles in a scatter.
 export const releaseOf = (i) => ((i * 0.6180339887) % 1) * 0.8;
 
-export function createArt({ getState, canMove, getSelected, getNowSources, breakout = () => true }) {
+export function createArt({ getState, canMove, getSelected, getNowSources, breakout = () => true, stage = null }) {
   let canvas = null, ctx = null, previous = 0, angle = 0, clock = 0;
   let builtFor = '', points = [], anims = [], radius = 1, rx = 1, ry = 1, style = { core: 'lunge', limb: 'lunge' };
+  let enteredFor = null, camBase = 300;
   let cam = 300, facing = false, midX = 0, midY = 0; // a boss: seen from further off, facing you, fitted to the window
   const hits = new Map();
   let shake = null, glitch = 0;
@@ -461,7 +463,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     ry = Math.max(40, ...points.map((p) => Math.abs(p.y) + 8));
     // A boss is wide, and faces you: it swings side to side without turning away, from far enough off that its near
     // end doesn't swell, and it is fitted to the window as it is drawn at the ends of its swing.
-    facing = !plain; cam = plain ? 300 : 300 * Math.max(1, radius / 70); midX = midY = 0;
+    facing = !plain; cam = camBase = plain ? 300 : 300 * Math.max(1, radius / 70); midX = midY = 0;
     if (facing) {
       let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
       for (const yaw of [-BOSS_SWING, 0, BOSS_SWING]) for (const pitch of [0.14, 0.26]) {
@@ -535,6 +537,12 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     if (!v) return;
     const key = v.id + v.parts.length;
     if (key !== builtFor) { builtFor = key; build(v); shards.length = 0; }
+    // The floor's stage (stage.mjs): its place behind the virus, its light, its camera, and a new virus's entrance.
+    const S = stage?.update(now) ? stage : null;
+    if (S && v.id !== enteredFor) { enteredFor = v.id; S.enter(now); }
+    const shot = S?.cam(now);
+    Object.assign(COLORS, S?.colors() || BASE);
+    cam = shot?.dist && !facing ? shot.dist : camBase; // a boss keeps its own distance, fitted to the window
     const motion = canMove();
     const moving = motion && s.encounter.phase === 'active' && !s.encounter.paused;
     if (moving) angle += delta * 0.00016;
@@ -552,8 +560,9 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Behind it: a faint data rain.
-    if (motion) {
+    // Behind it: the floor's place, or else a faint data rain.
+    if (S) S.back(ctx, { width, height, glyph, gx, gy, now, dpr });
+    else if (motion) {
       while (rain.length < Math.floor(width / 26)) rain.push({ x: Math.random() * width, y: Math.random() * height, v: 30 + Math.random() * 60, c: Math.random() < 0.5 ? '0' : '1' });
       ctx.fillStyle = COLORS.dim;
       for (const d of rain) {
@@ -565,7 +574,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       }
     }
 
-    const yaw = facing ? Math.sin(angle) * BOSS_SWING : Math.sin(angle) * 0.9 + angle * 0.15, pitch = 0.2 + Math.sin(clock * 0.4) * 0.06;
+    const yaw = facing ? Math.sin(angle) * BOSS_SWING : Math.sin(angle) * 0.9 + angle * 0.15, pitch = (shot?.pitch ?? 0.2) + Math.sin(clock * 0.4) * 0.06;
     const cyw = Math.cos(yaw), syw = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
     for (const [id, h] of hits) if (now - h.time > (h.kind === 'break' ? BREAK_MS : 900)) hits.delete(id);
     const striking = motion && breakout();
@@ -574,7 +583,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     const tearing = motion && now < glitch; // a hit tears a few rows sideways
     const tearRows = tearing ? new Set(Array.from({ length: 4 }, () => Math.floor(Math.random() * (height / gy)))) : null;
     const selected = getSelected(), nowSources = getNowSources();
-    const scale = facing ? Math.min((width * 0.48) / rx, (height * 0.47) / ry) : Math.min((width * 0.47) / rx, (height * 0.42) / ry);
+    const scale = (facing ? Math.min((width * 0.48) / rx, (height * 0.47) / ry) : Math.min((width * 0.47) / rx, (height * 0.42) / ry)) * (shot?.zoom || 1);
     const pulse = 0.55 + 0.45 * Math.sin(now / 160); // parts about to attack throb
     const phased = s.encounter.cycle % 2 === 1;
 
@@ -623,8 +632,8 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       const jolt = fresh * (h?.kind === 'crit' ? 12 : h?.kind === 'attack' ? 0 : h?.kind === 'chit' ? 4 : 7);
       // A boss's parts stand well off its middle: one that strikes swells out from where it stands, not from the middle.
       const ax = facing && m ? st.c.x : 0, ay = facing && m ? st.c.y : 0, kc = k0 + (k - k0) * 0.2;
-      let sx = width / 2 + qx + (ax * kc + (x1 + (m?.dx || 0) - ax) * k - midX) * scale + Math.sin(i * 7.3) * jolt;
-      let sy = height / 2 + qy + (ay * kc + (y1 + (m?.dy || 0) - ay) * k - midY) * scale + Math.cos(i * 3.1) * jolt;
+      let sx = width * (0.5 + (shot?.dx || 0)) + qx + (ax * kc + (x1 + (m?.dx || 0) - ax) * k - midX) * scale + Math.sin(i * 7.3) * jolt;
+      let sy = height * (0.5 + (shot?.dy || 0)) + qy + (ay * kc + (y1 + (m?.dy || 0) - ay) * k - midY) * scale + Math.cos(i * 3.1) * jolt;
       const lunging = striking && grow > 1.12;
       const step = lunging ? Math.round(grow * 4) / 4 : 1; // near characters sit on a coarser grid, bigger
       const row = Math.round(sy / (gy * step));
@@ -633,7 +642,8 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       const cell = lunging ? -(step * 4 * 1e8 + cx * 10000 + cyc) : cx * 10000 + cyc;
       const was = cells.get(cell);
       if (was && was.z <= z1) continue;
-      const lum = Math.max(0, nx1 * LIGHT[0] + ny1 * LIGHT[1] + nz1 * LIGHT[2]);
+      let lum = Math.max(0, nx1 * LIGHT[0] + ny1 * LIGHT[1] + nz1 * LIGHT[2]);
+      if (S) lum = S.light(lum, nx1, ny1, nz1, now);
       cells.set(cell, { x: cx * gx * step, y: cyc * gy * step, z: z1, lum, part, h, fresh, i, region: p.region, step: lunging ? step : 0, glitch: m?.glitch });
     }
 
@@ -666,6 +676,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       ctx.fillStyle = flare || (attacking ? COLORS.hot : part.id === selected ? COLORS.gold : c.region === 'body' ? (ratio < 0.4 ? COLORS.dim : COLORS.deep) : ratio < 0.4 ? COLORS.dim : lit > 0.7 ? COLORS.bright : COLORS.amber);
       const age = h ? (now - h.time) / 900 : 0;
       ctx.globalAlpha = Math.min(1, depth * faded * (attacking && !flare ? pulse + 0.25 : 1) * (broken ? 1 - done * 0.4 : 1) * (0.55 + lit * 0.6));
+      if (S) { const rv = S.reveal(c, ch, now, width, height); if (!rv) continue; if (rv.ch) ch = rv.ch; if (rv.a != null) ctx.globalAlpha *= rv.a; if (rv.color) ctx.fillStyle = rv.color; }
       ctx.fillText(ch, c.x, c.y);
       c.ch = ch;
     }
@@ -767,6 +778,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
         const d = shards[i];
         d.life -= delta;
         if (d.life <= 0) { shards.splice(i, 1); continue; }
+        if (d.bit && S?.bit(ctx, d, delta, { width, height, gx, gy })) continue;
         if (d.bit) { // a dissolving point: drifts up and out, wavering, flipping between 1 and 0, dimming
           d.t += delta;
           d.x += (d.vx + Math.sin(d.t / 140 + d.ph) * 0.35) * delta / 16; d.y += d.vy * delta / 16; d.vy *= 0.995;
@@ -783,6 +795,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       }
     }
     ctx.globalAlpha = 1;
+    S?.post(ctx, canvas, { width, height, gy, now });
     lastFrame = { cells, width, height };
   }
   let lastFrame = null;
