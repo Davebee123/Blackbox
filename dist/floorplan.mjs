@@ -67,7 +67,7 @@ import { rollObjective, armObjective } from './objectives.mjs';
 import { GENES } from './genes.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
 import { PUZZLES, PUZZLE_KINDS, isPuzzle, cipherOf, cgOpen, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
-import { RIVALS, spawnRival, rivalOf, rivalAt, rivalMove, rivalMeet, rivalLeave, rivalFight, rivalArm, rivalWon, rivalLost, rivalLine } from './rivals.mjs';
+import { spawnRival, rivalOf, rivalAt, rivalMove, rivalMeet, rivalLeave, rivalFight, rivalArm, rivalWon, rivalLost, rivalLine } from './rivals.mjs';
 import { meetingOf } from './runners.mjs';
 import { dealCard, cardLeave, surgeAt, surgeScreen, surgeFight, surgeWon, escortMove, escortArm, escortAfter, packAt, packMove, packFight, packWon } from './runcards.mjs';
 
@@ -995,7 +995,7 @@ export function jackOut(s, why = '') {
   settle(s);
   if (!R?.at) { deny(s, 'You are not on the server.'); return out(s, first); }
   if (active(s)) { deny(s, 'No jacking out mid-fight. Win it, or lose the pack.'); return out(s, first); }
-  if (R.screen?.kind === 'rival') { deny(s, `${RIVALS[rivalOf(s).id].name} has you. No stepping back.`); return out(s, first); }
+  if (R.screen?.kind === 'rival') { deny(s, `${rivalOf(s).id} has you. No stepping back.`); return out(s, first); }
   keysBack(s);
   if (R.world) {
     R.last = { result: 'out', xp: xpTotal(s) - R.visit.xp0, banked: s.run.pack.length, visit: R.visit.n };
@@ -1073,7 +1073,7 @@ export function go(s, id, opts = {}) {
   else if (active(s)) deny(s, 'Finish the fight first.');
   else if (R.screen?.kind === 'virus') deny(s, `The ${R.screen.name} holds ${hereOf(s).path}. Engage it, or step back.`);
   else if (R.screen?.kind === 'hunter') deny(s, 'The hunter is on you.');
-  else if (R.screen?.kind === 'rival') deny(s, `${RIVALS[rivalOf(s).id].name} has you. No stepping back.`);
+  else if (R.screen?.kind === 'rival') deny(s, `${rivalOf(s).id} has you. No stepping back.`);
   else if (!room || !walkable(s, R.at).includes(room.id)) deny(s, room ? `${room.path} is not next to ${hereOf(s).path}.` : `No room ${id}.`);
   else if (room.kind === 'core' && !coreOpen(s)) deny(s, R.world ? `The Core is sealed. ${WORLD.view?.sealed?.(s) || (R.graph.vaults[0] ? `Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.` : '')}`.trim() : `The Core is sealed. Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.`);
   else { step(s, room, opts); hooks.railCheck?.(s); } // routines.mjs: a move that took you under your jack-out line
@@ -1192,7 +1192,7 @@ export function act(s, verb, arg = null, opts = {}) {
   }
   if (sc?.kind === 'rival') {
     if (verb === 'engage' || verb === 'fight') { R.screen = null; fight(s, here, { as: 'rival', pause: !!opts.pause || !!sc.pause }); }
-    else deny(s, `${RIVALS[rivalOf(s).id].name} has you. Engage.`);
+    else deny(s, `${rivalOf(s).id} has you. Engage.`);
     return out(s, first);
   }
   // Help a runner fighting in this room (runners.mjs meetingOf): they fight beside you (crew.mjs), and a win raises
@@ -1216,7 +1216,7 @@ export function act(s, verb, arg = null, opts = {}) {
   }
   if ((verb === 'pull' || verb === 'pull all') && (here.kind === 'cache' || here.kind === 'secret')) { pull(s, here, opts); return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'stash') { if (!cacheFull(s, here)) deny(s, `The stash is empty. It fills again in ${fmtLeft(refillAt(s, here) - nowOf())}.`); else { ask('stash', s, here); R.taken[here.id] = nowOf(); clear(s, here); } return out(s, first); }
-  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'vault' && rivalHolds(s, here)) { deny(s, `${RIVALS[R.visit.rival.id].name} took the files.`); return out(s, first); }
+  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'vault' && rivalHolds(s, here)) { deny(s, `${R.visit.rival.id} took the files.`); return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'vault' && R.world && opened(s, here)) { if (!ask('pull', s, here)) deny(s, 'Nothing left in the vault.'); return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'entry' && R.world) { if (!ask('entryPull', s)) deny(s, 'Nothing here to take.'); return out(s, first); }
   if ((verb === 'open' || verb === 'force') && here.kind === 'vault') { openVault(s, here, verb === 'force'); return out(s, first); }
