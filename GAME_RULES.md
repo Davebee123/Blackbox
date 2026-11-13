@@ -568,10 +568,11 @@ before. A phase change flashes on screen.
 
 **The Resident.** Opening a server's vault unseals its **Core**, where the Resident waits: the owner's process, a boss of
 the server's family (all three parts) at the server's level, 1.4× Integrity (1.1× on your first server). Its phase
-re-arms every part. A worm or ransomware Resident plays in acts instead (below): 1.1× Integrity. Its ♛ holds half each act's
-Integrity (taken from its other parts), and it runs a **Watchdog**: every 5 cycles its ♛ stands above its next tick,
-every other part patches a ◆ (up to its full). Each act restarts the count; past its ♛'s last tick there is none.
-*watchdog n* on its ♛. Beat it and the server is **taken over**: yours, teal on the map, its Core
+re-arms every part. Its ♛ runs a **Watchdog**: every 5 cycles it stands above its next tick, every other part patches a
+◆ (up to its full); past its ♛'s last tick there is none. *watchdog n* on its ♛. A worm or ransomware Resident plays in
+acts instead (below), 1.1× Integrity, its ♛ half each act's (taken from its other parts): act 1 the **Backlash**, act 2
+the **Watchdog**, act 3 the worm's **Outbreak** (a lash also hatches a fragment) or the ransomware's **Lockdown** (a lash
+also encrypts you, while the Encryptor stands). *outbreak* or *lockdown* on its ♛. Beat it and the server is **taken over**: yours, teal on the map, its Core
 quiet for good. Lose and you're disconnected, and for 6 hours it is a level stronger, up to three levels.
 
 On your Signal each solo boss takes its own Integrity and hits on top of the fight length (`BOSSES` long). In acts each
@@ -592,11 +593,12 @@ and REPO MAN's ♛ holds 45% of each act's board, taken from its other parts (`B
 
 | Boss | Its part | Act 1 | Act 2 | Act 3 |
 |---|---|---|---|---|
-| RELAY-KING | **Relay**: Broadcast every 4 cycles, its hit bigger by its base for each fragment on the board | Broadcast | **Crown Hop**: the ♛ (and its 30% tick) moves to the healthiest other part above 30% (none: it stays); the part it leaves heals 25% of its max and takes plain ticks | **Flood**: the Replicator hatches every 2 cycles, the Relay broadcasts every 3 |
-| REPO MAN | **Ledger**: Collection every 5 cycles, its hit bigger by its base for each Lien | **Liens**: each of your commands a ◆ absorbs puts one on the Ledger (strips, piercing hits, burns and helpers don't); a Collection that lands or is cut clears them | Re-arms every part; a Collection 3 cycles out | **Interest**: each Lien counts twice; a Collection 3 cycles out |
-| HOLLOW CHOIR | A **Mimic**, its third part | One voice: the Mimic's beat every 4 cycles | **Second voice**: a second Mimic at the ♛'s full size, beating 2 cycles behind the first | **Round**: each beat also plays back the two commands before it, at half (only those fired since the Round began); a cycle you hold adds nothing |
+| RELAY-KING | **Relay**: Broadcast every 4 cycles, its hit bigger by its base for each fragment on the board | Broadcast | **Crown Hop**: as the ♛ crosses its 50% tick (after any cut), it hops to the healthiest other part, and the two swap how full they are; once an act, and with no part healthier it stays | **Flood**: each Broadcast that lands hatches a fragment on every part (up to the cap) |
+| REPO MAN | **Ledger**: Collection every 5 cycles, its hit bigger by its base for each Lien | **Liens**: each of your commands a ◆ absorbs puts one on the Ledger (strips, piercing hits, burns and helpers don't); a Collection that lands or is cut clears them | **Repossession**: a Collection that lands puts a ◆ back for each Lien, on the parts missing most | **Interest**: each Lien counts twice |
+| HOLLOW CHOIR | A **Mimic**, its third part | One voice: the Mimic's beat every 4 cycles | **Second voice**: a second Mimic in the Pulse Node's seat, at its size, beating 2 cycles behind the first | **Round**, one voice: each beat also plays back the two commands before it, at half (only those fired since the Round began); a cycle you hold adds nothing |
 
-On the board: ♛ on the crown part, ×*n* fragments on the Relay, §*n* Liens on the Ledger, *round* on a Mimic.
+On the board: ♛ on the crown part (*hop* in RELAY-KING's act 2), ×*n* fragments on the Relay (*flood* in act 3), §*n*
+Liens on the Ledger, *round* on a Mimic.
 
 **Floor bosses** (floorbosses.mjs, docs/boss-guide.md). Floors 2 to 5 have bosses of their own: parts of their own
 only, every part's ticks at 50% and 25% (its acts are bars, below), the beat on a part of their own, a tell an act from their set (floor 4's and GRACE PERIOD deal none: their rule is the fight), and a verb an act. 0.4× to 0.91× Integrity, with more of it on the ♛; like every boss in acts they enrage 24 cycles into an act. One misread at the wrong cycle makes the rest of its act harder (a sale, a leak, a Dump or a Call grows the next).
@@ -647,8 +649,8 @@ three solo bosses, the floor 2–5 bosses and the natives. A crew boss keeps its
 - **The bar** is the *Segments*: the boss's bar in one segment an act, the acts done dark, the act now draining, the
   acts to come full and dim. *ACT n/m* stays beside it, its rule in the tooltip.
 - **A tell an act.** Act 1 deals the boss's first tell (its charge), act 2 its cast as well, act 3 its third.
-- **The beat** repeats, always on the board. Acts 2 and 3 bring the boss's mechanics (a Resident's: act 2 quickens its
-  beat, act 3 makes every attack a cycle sooner).
+- **The beat** repeats, always on the board. Acts 2 and 3 bring the boss's mechanics (a Resident's: the Watchdog,
+  then the Outbreak or the Lockdown).
 - **Nothing is farmed twice.** A part broken again in a later act gives no research, components or .exe drop.
 
 | Boss | The beat | Every | What answers it |

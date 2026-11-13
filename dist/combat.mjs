@@ -28,7 +28,7 @@ import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './interrupt.mjs';
-import { actsStart, lashHit, lashLand, actIntents, actBegins, actInfo, barsSnap, barsTotal, barsTurn, actEven } from './acts.mjs';
+import { actsStart, actsOf, lashHit, lashLand, actIntents, actBegins, actInfo, barsSnap, barsTotal, barsTurn, actEven } from './acts.mjs';
 import { FB, fbBid, fbStart, fbPower, fbLanded, fbMisses, fbSlowed, fbBroke, fbAim, fbCommand, fbDealt, fbVerb, FB_VERBS, fbCycle, fbIntents, fbLogged, surfShut, fbCmdHit, fbShrugs, fbTaken, fbCap } from './floorbosses.mjs';
 import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
@@ -2231,7 +2231,7 @@ function engage(s) {
   logFight(s, e.virus); // the Codex tab: a boss fought, a mutation and what it rode on (genome.mjs)
   prepareTicks(s); // the interrupt's ticks on every part, and a boss's rule (interrupt.mjs; not a crew boss or a breach)
   actsStart(s); // a P4 boss's beat on its part (acts.mjs)
-  { const v = s.encounter.virus, W = BOSSES[v?.boss]?.watchdog; if (W) v.watchdog = { at: s.encounter.cycle + W.every - 1, act: 0 }; } // the Resident's Watchdog counts from the first cycle
+  { const v = s.encounter.virus, W = BOSSES[v?.boss]?.watchdog; if (W && !actsOf(v)) v.watchdog = { at: s.encounter.cycle + W.every - 1, act: 0 }; } // the Resident's Watchdog counts from the first cycle (in acts, act 2's)
   fbStart(s); // the floor 2 and 3 bosses' rules (floorbosses.mjs)
   barsSnap(s); // act bars: the board act 2 refills (acts.mjs)
   tellStart(s); // a solo fight's tells (tells.mjs)
@@ -3208,12 +3208,16 @@ function bossPhases(s) {
         if (p.lock) { const t = part(s, p.lock); if (alive(t)) { t.lockMax = t.lockHp = Math.max(1, Math.round(t.max * CONFIG.mutex.share)); t.lockAt = null; } } // a Mutex that joins locks its part at once
         for (const w of livingParts(s).filter((x) => x.ward === spec.id && p.id !== spec.id)) (w.wardsToo ||= []).push(p.id); // HASHLORD's Pool Lock wards the forked Miner too
       }
-      if (act === 'hop') say = crownHop(s) || say; // RELAY-KING
-      if (act === 'flood') for (const p of attackers(s)) { if (p.attack.effect === 'replicate') p.attack.interval = Math.min(p.attack.interval, 2); if (p.broadcast) p.attack.interval = Math.min(p.attack.interval, 3); }
-      if (act === 'collect') { const l = livingParts(s).find((x) => x.lien && x.attack); if (l) l.attack.due = Math.min(l.attack.due, e.cycle + 3); } // REPO MAN: a Collection 3 cycles out
+      // Each act's own rule rides on the virus, so the next act's refill takes it away (acts.mjs barsTurn).
+      if (act === 'watchdog' && BOSSES[v.boss]?.watchdog) v.watchdog = { at: e.cycle + BOSSES[v.boss].watchdog.every, act: v.phases.filter((x) => x.done).length }; // the Resident's act 2: counted from the act's first cycle
+      if (act === 'outbreak') v.outbreak = true; // the worm Resident's act 3: a lash hatches (acts.mjs lashLand)
+      if (act === 'lockdown') v.lockdown = true; // the ransomware Resident's: a lash encrypts you
+      if (act === 'hop') v.hop = true; // RELAY-KING: the ♛ hops at its 50% tick (crownHop)
+      if (act === 'flood') v.flood = true; // RELAY-KING: a Broadcast that lands hatches on every part (liensPaid)
+      if (act === 'repossess') v.repo = true; // REPO MAN: a Collection that lands puts a ◆ back a Lien (liensPaid)
       if (act === 'interest') v.interest = 2;
       if (act === 'voice') say = secondVoice(s) || say; // HOLLOW CHOIR
-      if (act === 'round') { v.round = 3; v.roundFrom = e.cycle; } // it records only what you fire after it starts
+      if (act === 'round') { v.round = 3; v.roundFrom = e.cycle; if (v.tells) v.tells.list = v.tells.list.filter((x) => x.id !== 'mimic2'); } // one voice; it records only what you fire after it starts
       if (act === 'doppelganger') say = doppelganger(s);
       if (FB_VERBS.has(act)) say = fbVerb(s, act) || say; // the floor 2 and 3 bosses (floorbosses.mjs)
     }
@@ -3235,10 +3239,10 @@ function bossPhases(s) {
 // The Resident's Watchdog (BOSSES watchdog, docs/solo-bosses.md "Working the ♛"): every `every` cycles its ♛ stands
 // above its next tick, every other part patches a ◆ (up to its full). Each act restarts the count; past its last tick
 // there is none.
-export const watchdogIn = (s) => { const v = s.encounter?.virus, c = v?.watchdog && livingParts(s).find((x) => x.core); return c?.ticks?.some((t) => (s.encounter.actBars || t.phase != null) && !t.spent) ? Math.max(0, v.watchdog.at - s.encounter.cycle) : null; };
+export const watchdogIn = (s) => { const v = s.encounter?.virus, c = v?.watchdog && livingParts(s).find((x) => x.core); return c && (c.ticks ? c.ticks.some((t) => (s.encounter.actBars || t.phase != null) && !t.spent) : s.encounter.actBars) ? Math.max(0, v.watchdog.at - s.encounter.cycle) : null; }; // a refilled ♛ arms its ticks on its first hit
 function watchdog(s) {
   const e = s.encounter, v = e.virus, W = BOSSES[v.boss]?.watchdog;
-  if (!W) return;
+  if (!W || (actsOf(v) && !v.watchdog)) return; // in acts, act 2 only
   const done = (v.phases || []).filter((x) => x.done).length;
   if (!v.watchdog || v.watchdog.act !== done) v.watchdog = { at: e.cycle + W.every, act: done };
   if (watchdogIn(s) !== 0) return;
@@ -3248,30 +3252,30 @@ function watchdog(s) {
   emit(s, got.length ? 'patch' : 'blocked', got.length ? `WATCHDOG. The ♛ still stands above its tick: ${got.map((p) => `the ${p.name}`).join(', ')} ${got.length === 1 ? 'patches' : 'patch'} a ◆.` : 'WATCHDOG. No part has a ◆ to patch.', { boss: v.boss, watchdog: true, ...(got[0] ? { target: got[0].id } : {}) });
 }
 
-// RELAY-KING's Crown Hop: its ♛ (and the phase ticks still to come) moves to its healthiest other part above its next
-// act tick, and the part it leaves heals a quarter of its max and takes plain ticks. With no part above it, the ♛ stays
-// (so no act is skipped).
-export const CROWN = { heal: 0.25 };
-function crownHop(s) {
-  const v = s.encounter.virus, old = livingParts(s).find((x) => x.core);
-  if (!old) return null;
-  const left = (old.ticks || []).filter((t) => t.phase != null && !t.spent), was = old.integrity, next = left[0]?.at ?? 0;
-  const to = livingParts(s).filter((x) => x !== old && x.kind === 'system' && !x.mimic && x.integrity > Math.floor(next * x.max)).sort((a, b) => b.integrity / b.max - a.integrity / a.max)[0];
-  if (!to) return `${v.name} tries to reroute. No part can take its ♛, so it stays on the ${old.name}.`;
-  old.core = false;
-  old.integrity = Math.min(old.max, old.integrity + Math.round(old.max * CROWN.heal));
-  old.ticks = TICKS.at.map((at) => ({ at, spent: old.integrity <= at * old.max }));
-  to.core = true;
-  to.ticks = left.map((t) => ({ ...t, spent: false }));
-  return `${v.name} reroutes. Its ♛ hops to the ${to.name}, and the ${old.name} heals ${old.integrity - was}.`;
+// RELAY-KING's Crown Hop (act 2): as its ♛ crosses its 50% tick (interrupt.mjs onHit, after any cut), the ♛ hops to the
+// healthiest other part, and the two swap how full they are; each keeps the ticks its new fill leaves. Once an act. With no
+// part healthier, it stays.
+export function crownHop(s, old) {
+  const v = s.encounter.virus;
+  if (v.hop !== true || !old?.core || !alive(old)) return null;
+  v.hop = 'done';
+  const fill = (x) => x.integrity / x.max;
+  const to = livingParts(s).filter((x) => x !== old && x.kind === 'system' && !x.mimic && fill(x) > fill(old)).sort((a, b) => fill(b) - fill(a))[0];
+  if (!to) return emit(s, 'status', `${v.name} tries to reroute. No part is healthier, so its ♛ stays on the ${old.name}.`, { target: old.id });
+  const a = fill(old), b = fill(to);
+  old.integrity = Math.max(1, Math.round(b * old.max)); to.integrity = Math.max(1, Math.round(a * to.max));
+  for (const x of [old, to]) x.ticks = TICKS.at.map((at) => ({ at, spent: x.integrity <= at * x.max }));
+  old.core = false; to.core = true;
+  return emit(s, 'status', `${v.name} reroutes. Its ♛ hops to the ${to.name}, and the ${old.name} takes its health.`, { boss: v.boss, target: to.id, hop: old.id });
 }
-// HOLLOW CHOIR's second voice: a Mimic at the ♛'s full size (fork:mimic before it), beating 2 cycles behind the first.
+// HOLLOW CHOIR's second voice (act 2): a Mimic in the Pulse Node's seat, at its size, beating 2 cycles behind the first.
 function secondVoice(s) {
-  const e = s.encounter, v = e.virus, T = v.tells, ms = livingParts(s).filter((x) => x.mimic), m2 = ms.length > 1 ? ms.at(-1) : null;
-  if (!m2) return 'The Hollow Choir has no voice left to double.';
+  const e = s.encounter, v = e.virus, T = v.tells, m1 = livingParts(s).find((x) => x.mimic), seat = v.parts.find((x) => x.id === 'pulse');
+  if (!m1 || !seat) return 'The Hollow Choir has no voice left to double.';
+  const m2 = { ...structuredClone(m1), id: m1.id + '2', name: m1.name + ' II', core: false, max: seat.max, integrity: seat.max, armor: m1.maxArmor, ticks: null, played: [], lastDamaged: 0 };
+  if (m2.attack) m2.attack.due = e.cycle + 2;
+  v.parts.splice(v.parts.indexOf(seat), 1, m2); // in the Pulse Node's seat
   if (!T || T.list.some((t) => t.part === m2.id)) return null;
-  const crown = v.parts.find((x) => x.core);
-  if (crown) m2.max = m2.integrity = crown.max; // it joins at the ♛'s full size (docs/solo-bosses.md "Working the ♛")
   const t1 = T.list.find((t) => t.kind === 'mimic'), every = t1?.every || TELLS.mimic.every;
   let first = (t1 ? t1.first : e.cycle + 1) + Math.floor(every / 2);
   while (first < e.cycle + 3) first += every;
@@ -3287,11 +3291,20 @@ function lien(s, p) {
   emit(s, 'status', `${v.name} files a Lien on your ${p.name} hit: ${v.liens} on the ${l.name}.`, { source: l.id, lien: v.liens });
 }
 // A boss's beat on its own part played, landed or cut (acts.mjs beatOf: RELAY-KING's Broadcast, REPO MAN's Collection), and
-// the Ledger's Collection pays every Lien off.
-export function liensPaid(s, p) {
-  if (!p || !s.encounter?.virus) return;
+// the Ledger's Collection pays every Lien off. landed: it landed (strike), so act 2's Repossession puts a ◆ back a Lien, and
+// act 3's Flood hatches a fragment on every part.
+export function liensPaid(s, p, landed = false) {
+  const v = s.encounter?.virus;
+  if (!p || !v) return;
   if (p.lien || p.broadcast || p.beat) (p.played ||= []).push(s.encounter.cycle); // beat: a floor boss's own (acts.mjs beat 'part')
-  if (p.lien) { s.encounter.virus.liens = 0; liftOf(s); }
+  if (landed && p.broadcast && v.flood) for (const x of livingParts(s).filter((y) => y.kind !== 'fragment')) hatch(s, p, `the ${x.name}`);
+  if (!p.lien) return;
+  if (landed && v.repo && v.liens > 0) {
+    const got = [];
+    for (let n = 0; n < v.liens; n++) { const x = livingParts(s).filter((y) => y.kind === 'system' && y.armor < y.maxArmor).sort((a, b) => (b.maxArmor - b.armor) - (a.maxArmor - a.armor))[0]; if (!x) break; x.armor++; x.patchAt = null; got.push(x.name); }
+    if (got.length) emit(s, 'patch', `REPOSSESSION. ${v.liens} ${v.liens === 1 ? 'Lien' : 'Liens'} collected: ${got.length} ◆ back on ${[...new Set(got)].map((x) => `the ${x}`).join(', ')}.`, { source: p.id, repo: got.length });
+  }
+  v.liens = 0; liftOf(s);
 }
 
 // MIRRORSHADE's Doppelganger: the Mimic stops recording and takes the shape of the first part you broke (its attack and
@@ -4105,7 +4118,7 @@ function landAttack(s, p) {
   e.reached = e.cycle; // an attack reached you this cycle, whatever stops it (Dead Air, chase.mjs)
   atk.due = e.cycle + atk.interval; // it lands: the next attack can be delayed again
   atk.n = (atk.n || 0) + 1; // its landings: a charge rides one of them (tells.mjs)
-  liensPaid(s, p); // the Ledger's Collection: its size is set (power, above), the Liens are paid
+  liensPaid(s, p, true); // the Ledger's Collection: its size is set (power, above), the Liens are paid
   fbLanded(s, p, atk); // a floor boss's rule on a landing: the Gavel's bid, a Deadline paid (floorbosses.mjs)
   if (fbMisses(s, p, atk, hitPower)) return; // Privacy Screen: a playback misses. NIGHT DESK: it waits as a pending trade
   // A volley (a Repeater's Double Tap, a Prism's Spread): its next hit the next cycle, then an interval after the first.
@@ -4239,18 +4252,25 @@ function landAttack(s, p) {
     const living = livingParts(s).filter((x) => x.kind === 'fragment').length;
     if (e.buffs?.dmz >= e.cycle) emit(s, 'blocked', `${atk.name} fizzles. Nothing new gets into the DMZ.`, { source: p.id, ability: 'dmz' }); // Warden DMZ
     else if (living >= CONFIG.fragmentCap) emit(s, 'info', `${atk.name} fizzles. The fragment limit is reached.`, { source: p.id });
-    else for (let k = 0; k < (p.spawnN || 1) && livingParts(s).filter((x) => x.kind === 'fragment').length < CONFIG.fragmentCap; k++) { // a Replicator.exe hatches two
-      const n = e.nextFragment++;
-      const pw = e.virus.power || 1;
-      const amount = Math.max(1, Math.round(CONFIG.fragmentDamage * pw));
-      const hp = Math.max(1, Math.round(CONFIG.fragmentIntegrity * (e.virus.addPower ?? e.virus.hpPower ?? pw))); // health follows the virus's health scale, not its damage
-      e.virus.parts.push({ id: 'frag' + n, name: 'Fragment ' + n, kind: 'fragment', integrity: hp, max: hp, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, attack: { name: 'Gnaw', effect: 'damage', amount, interval: 1, due: e.cycle + 1 }, exposedUntil: 0, lastDamaged: 0, boosted: false });
-      if (p.overrun) { const f = e.virus.parts.at(-1); f.attack.ramp = 1; f.attack.rampBy = Math.max(1, Math.round(pw)); f.attack.step = 0; }
-      e.undo = { type: 'replicate', part: 'frag' + n };
-      emit(s, 'spawn', `Fragment ${n} spawns with ${hp} Integrity. It gnaws ${amount} every cycle.`, { source: p.id, target: 'frag' + n });
-    }
+    else for (let k = 0; k < (p.spawnN || 1); k++) if (!hatch(s, p)) break; // a Replicator.exe hatches two
   }
   if (bodyRules(e)) hooks.roomLanded?.(s, p, atk); // a room body's attack that got through (families.mjs: a Wiper's Wipe)
+}
+
+// A fragment hatches from a part (a Replicate; RELAY-KING's Flood and the worm Resident's Outbreak: from, where it says it
+// spawned). False at the fragment cap.
+export function hatch(s, p, from = null) {
+  const e = s.encounter;
+  if (livingParts(s).filter((x) => x.kind === 'fragment').length >= CONFIG.fragmentCap) return false;
+  const n = e.nextFragment++;
+  const pw = e.virus.power || 1;
+  const amount = Math.max(1, Math.round(CONFIG.fragmentDamage * pw));
+  const hp = Math.max(1, Math.round(CONFIG.fragmentIntegrity * (e.virus.addPower ?? e.virus.hpPower ?? pw))); // health follows the virus's health scale, not its damage
+  e.virus.parts.push({ id: 'frag' + n, name: 'Fragment ' + n, kind: 'fragment', integrity: hp, max: hp, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, attack: { name: 'Gnaw', effect: 'damage', amount, interval: 1, due: e.cycle + 1 }, exposedUntil: 0, lastDamaged: 0, boosted: false });
+  if (p.overrun) { const f = e.virus.parts.at(-1); f.attack.ramp = 1; f.attack.rampBy = Math.max(1, Math.round(pw)); f.attack.step = 0; }
+  e.undo = { type: 'replicate', part: 'frag' + n };
+  emit(s, 'spawn', `Fragment ${n} spawns${from ? ` from ${from}` : ''} with ${hp} Integrity. It gnaws ${amount} every cycle.`, { source: p.id, target: 'frag' + n });
+  return true;
 }
 
 // One player's part of a cycle: their command (or auto-repeat), their daemons, then their burns,

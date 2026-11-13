@@ -543,7 +543,7 @@ test("an act's last part broken: the phase event names the act and refills the b
   assert.match(hudMarkup(s), /bigbar act-done/);
   // Every boss with acts of its own names each act and gives it an emote; the Codex lists them by act.
   for (const id of ['relayking', 'repoman', 'choir', 'centrifuge', 'shakedown', 'shouldersurfer', 'recursion', 'nightdesk', 'byzantine', 'camswarm']) for (const ph of BOSSES[id].phases) assert.ok(ph.name && ph.emote, `${id}: ${ph.say}`);
-  for (const ph of BOSSES.resident.actPhases) assert.ok(ph.name && ph.emote);
+  for (const ph of Object.values(BOSSES.resident.actPhases).flat()) assert.ok(ph.name && ph.emote);
   const met = Object.assign(fresh(), { dex: { fought: { relayking: 1 }, won: {} } });
   assert.deepEqual(entryOf(met, 'boss:relayking').phases.map((ph) => ph.act), [2, 3]);
 });

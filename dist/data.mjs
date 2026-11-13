@@ -1077,37 +1077,44 @@ export const BOSSES = {
   // by family, in its acts.
   // work (docs/solo-bosses.md "Working the ♛"): share, the ♛'s part of the boss's Integrity (createVirus moves it from the
   // other parts; the total stays); lead, how far ahead of the rest the planner works the ♛ (planner.mjs crownNow).
-  // watchdog: every that many cycles the ♛ stands above its next tick, every other part patches a ◆ (combat.mjs).
+  // watchdog: every that many cycles the ♛ stands above its next tick, every other part patches a ◆ (combat.mjs): all
+  // fight for a Resident not in acts, act 2 only for one in acts.
   // P4 (acts.mjs, docs/puzzle-fights.md 7): a P4 boss plays in three acts, each from a tick on its ♛ part. acts: its beat
   // (backlash, copy, bend, broadcast or collect), every and first its rhythm; a phase's every quickens it. The Resident's are by family: the
   // worm's and the ransomware's are built, the ghostroot's keeps the old phase until P4's next batch.
   resident: { long: { hp: 1.6, dmg: 0.54, enrageAt: 36 }, name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, work: { share: 0.5 }, watchdog: { every: 5 }, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }],
-    acts: { worm: { beat: 'backlash', every: 4, first: 3, hp: 1.1, enrageAt: 24, bar: 0.55 }, ransomware: { beat: 'backlash', every: 4, first: 4, hp: 1.1, enrageAt: 24, bar: 1.2 } },
-    actPhases: [{ at: 0.5, do: [], every: 3, name: 'Quickening', emote: 'Priority raised. You are using too many of my cycles.', say: 'The Resident quickens. Its Backlash comes every 3 cycles.' }, { at: 0.25, do: ['faster'], name: 'Desperation', emote: 'Every handler armed. Nothing waits now.', say: 'The Resident gets desperate. Every attack comes a cycle sooner.' }] },
+    acts: { worm: { beat: 'backlash', every: 4, first: 3, hp: 1.1, enrageAt: 24, bar: 0.6 }, ransomware: { beat: 'backlash', every: 4, first: 4, hp: 1.1, enrageAt: 24, bar: 1.2 } },
+    // Its acts by family (docs/solo-bosses.md "The act-bars redesign"): act 2 the Watchdog, act 3 the worm's Outbreak (a lash
+    // hatches a fragment) or the ransomware's Lockdown (a lash encrypts you).
+    actPhases: { worm: [{ at: 0.5, do: ['watchdog'], name: 'Watchdog', emote: 'Watchdog armed. Every handler reports to me now.', say: 'The Resident arms its Watchdog. While its ♛ stands above its next tick, every other part patches a ◆ every 5 cycles.' }, { at: 0.25, do: ['outbreak'], name: 'Outbreak', emote: 'Every handler spawns now. Hit me and I spread.', say: 'The Resident breaks out. Each Backlash hatches a fragment.' }],
+      ransomware: [{ at: 0.5, do: ['watchdog'], name: 'Watchdog', emote: 'Watchdog armed. Every handler reports to me now.', say: 'The Resident arms its Watchdog. While its ♛ stands above its next tick, every other part patches a ◆ every 5 cycles.' }, { at: 0.25, do: ['lockdown'], name: 'Lockdown', emote: 'Lockdown. Every handler carries a key.', say: 'The Resident locks down. Each Backlash encrypts you while the Encryptor stands.' }] } },
   // The three solo bosses (docs/solo-bosses.md) play in acts too: each has a part and a rule of its own, its beat on that
   // part (acts.mjs), and a mechanic an act, from its ♛ part's ticks (combat.mjs bossPhases).
   // RELAY-KING (run.mjs): a worm boss in SPRAWL-00's /net from level 3, back every half hour. Its Relay's Broadcast grows
-  // for each fragment on the board (a Fan-in's lift); at 60% the ♛ hops to its healthiest part, at 30% the Flood.
-  relayking: { long: { hp: 1.05, dmg: 1.6, enrageAt: 36 }, name: 'RELAY-KING', bar: 1.0, family: 'worm', hp: 1.25, dmg: 1, enrageAt: 16, acts: { beat: 'broadcast' }, work: { share: 0.45 },
+  // for each fragment on the board (a Fan-in's lift). Act 2: at its 50% tick the ♛ hops (combat.mjs crownHop). Act 3: each
+  // Broadcast that lands hatches a fragment on every part.
+  relayking: { long: { hp: 1.05, dmg: 1.6, enrageAt: 36 }, name: 'RELAY-KING', bar: 0.85, family: 'worm', hp: 1.25, dmg: 1, enrageAt: 16, acts: { beat: 'broadcast' }, work: { share: 0.45 },
     extra: [{ id: 'relay', name: 'Relay', integrity: 30, armor: 1, loot: 'Crown Relay', fanin: 1, broadcast: true, attack: { name: 'Broadcast', effect: 'damage', amount: 3, interval: 4, first: 5 } }],
-    signature: { name: 'Broadcast', rule: 'The Relay\'s Broadcast hits harder for each fragment on the board. At 60% the ♛ hops to its healthiest part, and at 30% the Flood starts.' },
-    phases: [{ at: 0.5, do: ['hop'], name: 'Crown Hop', emote: 'Rerouting. You were hitting the old address.', say: 'RELAY-KING reroutes. Its ♛ hops to its healthiest part.' }, { at: 0.25, do: ['flood'], name: 'Flood', emote: 'Opening every port. Let the segment flood.', say: 'RELAY-KING floods the network. The Replicator hatches every 2 cycles, and the Relay broadcasts every 3.' }] },
+    signature: { name: 'Broadcast', rule: 'The Relay\'s Broadcast hits harder for each fragment on the board.' },
+    phases: [{ at: 0.5, do: ['hop'], name: 'Crown Hop', emote: 'Rerouting. You were hitting the old address.', say: 'RELAY-KING reroutes. When its ♛ crosses half, it hops to the healthiest part, and the two swap how full they are.' }, { at: 0.25, do: ['flood'], name: 'Flood', emote: 'Opening every port. Let the segment flood.', say: 'RELAY-KING floods the network. Each Broadcast that lands hatches a fragment on every part.' }] },
   // REPO MAN (events.mjs): the bounty from level 8. Each command a ◆ absorbs puts a Lien on its Ledger; the Ledger's
-  // Collection hits harder for each Lien and pays them off. Each phase calls a Collection in 3 cycles.
+  // Collection hits harder for each Lien and pays them off. Act 2: a Collection that lands puts a ◆ back for each Lien.
+  // Act 3: each Lien counts twice.
   repoman: { long: { hp: 1.15, dmg: 0.54, enrageAt: 34 }, name: 'REPO MAN', bar: 2.2, family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, acts: { beat: 'collect' }, work: { share: 0.45 },
     extra: [{ id: 'ledger', name: 'Ledger', integrity: 32, armor: 2, loot: 'Ledger Page', lien: 1, attack: { name: 'Collection', effect: 'damage', amount: 3, interval: 5, first: 6 } }],
-    signature: { name: 'Lien', rule: 'Each command a ◆ absorbs puts a Lien on the Ledger. Its Collection hits harder for each Lien, then clears them. Each phase calls a Collection in 3 cycles.' },
-    phases: [{ at: 0.5, do: ['rearm', 'collect'], name: 'Repossession', emote: 'Your account is past due. I am taking the armor back.', say: 'REPO MAN repossesses. Every part re-arms, and the Ledger collects in 3 cycles.' }, { at: 0.25, do: ['interest', 'collect'], name: 'Interest', emote: 'Interest compounds. Every lien counts twice now.', say: 'REPO MAN compounds the interest. Each Lien counts twice, and the Ledger collects in 3 cycles.' }] },
+    signature: { name: 'Lien', rule: 'Each command a ◆ absorbs puts a Lien on the Ledger. Its Collection hits harder for each Lien, then clears them.' },
+    phases: [{ at: 0.5, do: ['repossess'], name: 'Repossession', emote: 'Your account is past due. I am taking the armor back.', say: 'REPO MAN repossesses. A Collection that lands puts a ◆ back for each Lien.' }, { at: 0.25, do: ['interest'], name: 'Interest', emote: 'Interest compounds. Every lien counts twice now.', say: 'REPO MAN compounds the interest. Each Lien counts twice.' }] },
   // KESSLER-FARM-00 (rogue.mjs FARM), the crew dungeon: crew bosses on the group boss framework (raid.mjs).
   // Sized for a crew of four (smaller crews get a smaller boss: crewHp in raid.mjs). Their own parts hit
   // softly (dmg) and go at whoever holds aggro; the danger is the mechanics, each a share of max Signal.
   foreman: { name: 'THE FOREMAN', family: 'ransomware', hp: 13, dmg: 0.45, enrageAt: 22, phases: [], raid: FOREMAN },
   heatsink: { name: 'HEATSINK', family: 'worm', hp: 17, dmg: 0.45, enrageAt: 25, phases: [], raid: HEATSINK },
   coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 8.8, dmg: 0.45, enrageAt: 18, phases: [], raid: COLDWALLET },
-  // HOLLOW CHOIR (events.mjs): a ghostroot boss from level 10 that sings in rounds. A Mimic from the start; at 60% a
-  // second voice at its ♛'s full size, beating two cycles behind the first; at 30% the Round: each beat plays back your last three commands.
-  choir: { long: { hp: 0.95, dmg: 1.6, enrageAt: 40 }, name: 'HOLLOW CHOIR', bar: 3.3, family: 'ghostroot', third: 'mimic', hp: 1.4, dmg: 1, enrageAt: 16, acts: { beat: 'copy' }, signature: { name: 'Canon', rule: 'Its Mimic copies your command on its beat. At 60% a second voice as big as its ♛ beats 2 cycles behind the first. At 30% each beat plays back your last three commands.' },
-    phases: [{ at: 0.5, do: ['fork:mimic', 'voice'], name: 'Second voice', emote: 'Another voice joins. Sing it back to them.', say: 'A second voice joins the Hollow Choir, two beats behind the first.' }, { at: 0.25, do: ['round'], name: 'Round', emote: 'The round begins. We sing what you sang.', say: 'The Hollow Choir sings the round. Each beat plays back your last three commands.' }] },
+  // HOLLOW CHOIR (events.mjs): a ghostroot boss from level 10 that sings in rounds. A Mimic from the start; act 2 a second
+  // voice in the Pulse Node's seat, beating two cycles behind the first; act 3 the Round, one voice: each beat plays back
+  // your last three commands.
+  choir: { long: { hp: 0.95, dmg: 1.6, enrageAt: 40 }, name: 'HOLLOW CHOIR', bar: 3.85, family: 'ghostroot', third: 'mimic', hp: 1.4, dmg: 1, enrageAt: 16, acts: { beat: 'copy' }, signature: { name: 'Canon', rule: 'Its Mimic copies your command on its beat.' },
+    phases: [{ at: 0.5, do: ['voice'], name: 'Second voice', emote: 'Another voice joins. Sing it back to them.', say: 'A second voice takes the Pulse Node\'s place, two beats behind the first.' }, { at: 0.25, do: ['round'], name: 'Round', emote: 'The round begins. We sing what you sang.', say: 'The Hollow Choir sings the round. Each beat plays back your last three commands.' }] },
   // The floor 2 and 3 bosses (docs/solo-bosses.md "Proposed: floors 2–8", floorbosses.mjs): own parts only (own), a
   // crown (♛) carrying its signature rule, their beat on a part of their own (acts 'part'), and a verb an act.
   // throne: the rogue server kind and floor whose last room it holds (rogue.mjs); the others, a floor job's Core (arcs.mjs).
@@ -1726,7 +1733,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // Enemy damage can crit, from level 3 (like mutations).
   const crit = level >= SERVER.mutationsFrom ? CONFIG.enemyCrit : 0;
   const author = overrides.signed || authorOf({ family: familyId, strain: strainId, boss: overrides.boss || null }, overrides.author);
-  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? eliteDmg : 1), hpPower: scale, addPower: scale / (long ? runLate(level, CONFIG.length.hp) : 1), ...(long ? { long: true } : {}), crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(rolled2?.clash ? { clash: rolled2.clash } : {}), ...(boss ? { boss: overrides.boss, phases: (boss.acts?.[familyId] ? boss.actPhases : boss.phases).map((x) => ({ ...x, done: false })), enrageAt: (long && boss.long?.enrageAt) || (acts?.enrageAt ?? boss.enrageAt) } : {}),
+  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? eliteDmg : 1), hpPower: scale, addPower: scale / (long ? runLate(level, CONFIG.length.hp) : 1), ...(long ? { long: true } : {}), crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(rolled2?.clash ? { clash: rolled2.clash } : {}), ...(boss ? { boss: overrides.boss, phases: (boss.acts?.[familyId] ? boss.actPhases[familyId] : boss.phases).map((x) => ({ ...x, done: false })), enrageAt: (long && boss.long?.enrageAt) || (acts?.enrageAt ?? boss.enrageAt) } : {}),
     genes: genome, author, ...unsigned, ...(unlinked ? { unlinked: true } : {}) };
 }
 

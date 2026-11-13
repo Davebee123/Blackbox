@@ -1,15 +1,14 @@
 // Boss acts (docs/puzzle-fights.md P4): a beat that repeats, and three acts, each on a bar of its own (act bars, below).
-// A boss with a beat (BOSSES[id].acts, by family for the Resident) deals one more of its tells an act and quickens its
-// beat in act 2; the last speeds every attack.
+// A boss with a beat (BOSSES[id].acts, by family for the Resident) deals one more of its tells an act, and each act
+// brings its own rule (BOSSES phases).
 //
 //   the beat     one move on a fixed rhythm, always on the board: the Backlash (on its beat, a part your command hits
 //                that doesn't break lashes back: its own attack lands at once, doubled), the Mimic's copy (HOLLOW CHOIR),
 //                the Decoy's bend, or a part's own attack (RELAY-KING's Broadcast, REPO MAN's Collection). What you fire
 //                on the beat, and where, is the puzzle.
-//   the acts     act n deals tell n (charge, cast, then the third); act 2 quickens the beat (every), act 3 speeds every
-//                attack a cycle (BOSSES phases). An act ends when its last part breaks (act bars, below).
+//   the acts     act n deals tell n (charge, cast, then the third); a phase's every quickens the beat. An act ends when its last part breaks (act bars, below).
 import { BOSSES } from './data.mjs';
-import { emit, alive, part, livingParts, strikeWith, attackAmount, landingsOf } from './combat.mjs';
+import { emit, alive, part, livingParts, strikeWith, attackAmount, landingsOf, hatch, active } from './combat.mjs';
 import { tellsOf } from './tells.mjs';
 
 export const ACTS = { lash: 2 }; // the Backlash's multiple
@@ -90,14 +89,27 @@ export function lashAttack(s, p) {
   const amount = Math.max(1, Math.round(n * ACTS.lash));
   return { name: 'Backlash', effect: 'damage', amount, interval: a.interval, noCrit: true };
 }
+// The Resident's act 3 on top of a lash (BOSSES actPhases): the worm's Outbreak hatches a fragment, the ransomware's
+// Lockdown encrypts you (while an Encryptor stands, on its Encrypt). What the chip says it adds, or null.
+const encryptor = (s) => livingParts(s).find((x) => x.attack?.effect === 'encrypt') || null;
+export function lashPlus(s, p) {
+  const v = s.encounter.virus;
+  if (v.outbreak && p.attack?.effect !== 'replicate') return 'hatches a fragment';
+  if (v.lockdown && p.attack?.effect !== 'encrypt' && encryptor(s)) return 'encrypts you';
+  return null;
+}
 // The virus's half (combat.mjs endCycle, before its attacks due): each lash lands. True if the fight ended.
 export function lashLand(s) {
   const e = s.encounter;
   for (const p of livingParts(s).filter((x) => x.lashAt === e.cycle && x.attack)) {
     p.lashAt = null;
-    emit(s, 'telegraph', `BACKLASH: you hit the ${p.name} on the beat. It lashes back.`, { source: p.id, tell: 'backlash', kind: 'backlash', at: e.cycle, name: 'BACKLASH' });
+    const plus = lashPlus(s, p);
+    emit(s, 'telegraph', `BACKLASH: you hit the ${p.name} on the beat. It lashes back${plus ? ` and ${plus}` : ''}.`, { source: p.id, tell: 'backlash', kind: 'backlash', at: e.cycle, name: 'BACKLASH' });
     if (strikeWith(s, p, lashAttack(s, p))) return true;
     if (p.attack.effect !== 'damage' && strikeWith(s, p, { ...p.attack, name: p.attack.name, hit: 0 })) return true;
+    if (plus && e.virus.outbreak) hatch(s, p, `the ${p.name}'s lash`);
+    if (plus && e.virus.lockdown) { const k = encryptor(s); if (strikeWith(s, k, { ...k.attack, name: 'Lockdown', hit: 0 })) return true; }
+    if (!active(s)) return true;
   }
   return false;
 }
@@ -105,7 +117,7 @@ export function lashLand(s) {
 export function actIntents(s, columns) {
   const e = s.encounter, out = [], v = e.virus;
   if (!v.backlash) return out;
-  for (let col = 0; col < columns; col++) if (lashBeat(v, e.cycle + col)) for (const p of livingParts(s).filter((x) => x.attack)) { out.push({ source: p.id, name: 'Backlash', effect: 'backlash', amount: lashAttack(s, p).amount, also: p.attack.effect !== 'damage' ? p.attack.name : null, col, hidden: false, kind: p.kind }); }
+  for (let col = 0; col < columns; col++) if (lashBeat(v, e.cycle + col)) for (const p of livingParts(s).filter((x) => x.attack)) { out.push({ source: p.id, name: 'Backlash', effect: 'backlash', amount: lashAttack(s, p).amount, also: p.attack.effect !== 'damage' ? p.attack.name : null, plus: lashPlus(s, p), col, hidden: false, kind: p.kind }); }
   return out;
 }
 // ---------- act bars (docs/solo-bosses.md "The shape") ----------

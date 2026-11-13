@@ -105,12 +105,39 @@ test('each act deals its own tell: act 1 its first, the rest wait', () => {
   assert.ok(T.list.some((t) => t.act === 1 && (t.told || t.count)), 'act 1\'s is');
 });
 
-test('act 2 quickens the beat', () => {
+// A lash on the Pulse Node: on the beat, a hit it outlives.
+function lash(s) {
+  const v = s.encounter.virus, pulse = part(s, 'pulse');
+  while (!lashOn(s, pulse)) { command(s, 'hold'); resolveCycle(s); }
+  Object.assign(pulse, { armor: 0, integrity: 500, max: 500 });
+  pulse.attack.due = s.encounter.cycle + 3;
+  defender(s).integrity = defender(s).max = 1e6;
+  command(s, 'spike pulse');
+  return resolveCycle(s);
+}
+
+test("the Resident's acts: the Watchdog in act 2 only; in act 3 the worm's lash hatches and the ransomware's encrypts", async () => {
+  const { watchdogIn } = await import('./dist/combat.mjs');
+  const { boardMarkup } = await import('./dist/view.mjs');
   const s = boss('resident', 'worm'), v = s.encounter.virus;
-  const every = v.backlash.every;
+  assert.equal(watchdogIn(s), null, 'no Watchdog in act 1');
   breakAll(s);
   assert.equal(actOf(v), 2);
-  assert.ok(v.backlash.every < every);
+  assert.equal(watchdogIn(s), BOSSES.resident.watchdog.every - 1, 'act 2 brings it, counted from its first cycle');
+  breakAll(s);
+  assert.equal(watchdogIn(s), null, 'it leaves with act 2');
+  assert.match(boardMarkup(s), /Outbreak\nBoss rule/);
+  const frags = () => livingParts(s).filter((p) => p.kind === 'fragment').length, was = frags();
+  const ev = lash(s);
+  assert.ok(ev.some((x) => x.tell === 'backlash'));
+  assert.equal(frags(), was + 1, 'Outbreak: the lash hatched a fragment');
+  // The ransomware's Lockdown: a lash encrypts you.
+  const r = boss('resident', 'ransomware');
+  breakAll(r); breakAll(r);
+  assert.ok(intents(r).some((i) => i.effect === 'backlash' && i.plus === 'encrypts you'), 'the lash chip says so');
+  r.encounter.encrypt = 0;
+  lash(r);
+  assert.ok(r.encounter.encrypt > 0, 'Lockdown: the lash encrypted you');
 });
 
 test("the solo bosses' beats are their own parts' (docs/solo-bosses.md): the Relay's Broadcast, the Ledger's Collection, the Mimic", () => {

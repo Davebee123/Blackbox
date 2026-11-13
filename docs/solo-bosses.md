@@ -71,8 +71,8 @@ ticks: act 1 held every part and ran long, and acts 2 and 3 burned in a few cycl
 ### What the old shape left behind (November 2026)
 
 Built while acts came from the ♛'s ticks, and still in the code: the ♛'s share of its board (`BOSSES` work.share: half
-on the Resident and SHOULDER SURFER, 45% on RELAY-KING and REPO MAN), the Resident's **Watchdog** (act 2's rule in the
-redesign below), CENTRIFUGE's **Sold** heal and SHAKEDOWN's planner lead (work.lead).
+on the Resident and SHOULDER SURFER, 45% on RELAY-KING and REPO MAN), the Resident's **Watchdog** (act 2's rule
+since session 2 of the redesign below), CENTRIFUGE's **Sold** heal and SHAKEDOWN's planner lead (work.lead).
 
 ## The act-bars redesign (picked November 13, 2026)
 
@@ -102,14 +102,14 @@ called off, the big key on the beat) something specific.
 | CAMSWARM | **Telnet Sweep**; the 15% limit on the Hive only | **Botnet**: a Camera, seat Pulse Node | **Lockout**: a Camera, seat C2 Node | Chipping every part under half |
 | BYZANTINE | **Vote**, Consensus for the act | **Traitor**: your last break in act 1 | **Hard fork**: mid-act returns only | Tunnelling one Node |
 | SHOULDER SURFER | **Replay**, the Dump's growth for the act | **Again** | **From the top**, without Again | A big key on a shut cycle |
-| RELAY-KING | **Broadcast** | **Crown Hop**: at its 50% tick the ♛ hops to the healthiest part, the two swap how full they are | **Flood**: each Broadcast hatches a fragment on every part | Ignoring fragments; tunnelling the ♛ |
+| RELAY-KING (built) | **Broadcast** | **Crown Hop**: at its 50% tick the ♛ hops to the healthiest part, the two swap how full they are | **Flood**: each Broadcast hatches a fragment on every part | Ignoring fragments; tunnelling the ♛ |
 | EXIT NODE | **v7 · Front** | **v6 · Kept charges**, v6 fronts | **v5 · Cold image**: the restore point is the act's first break | Bursting in the restore window |
-| REPO MAN | **Liens** | **Repossession**: a Collection re-arms a ◆ a Lien | **Interest** | Plain hits into ◆ |
+| REPO MAN (built) | **Liens** | **Repossession**: a Collection re-arms a ◆ a Lien | **Interest** | Plain hits into ◆ |
 | RECURSION | **Call**, its growth for the act | **Return**: no frame pushed | **Overflow**: one frame deeper, same Integrity | Letting every Call through |
-| HOLLOW CHOIR | **One voice** | **Second voice**: seat Pulse Node | **Round**, one voice | The big key on the beat |
+| HOLLOW CHOIR (built) | **One voice** | **Second voice**: seat Pulse Node | **Round**, one voice | The big key on the beat |
 | GRACE PERIOD | **Grace** 3, the Rider | **Reinstatement**: a lapsed part +25% until stripped; nothing returns | **Acceleration**: a lapse takes a cycle off every other part | Paying every part |
 | CENTRIFUGE | **Bidding** | **Reserve price** | **Second lot** | Commands at the Gavel |
-| The Residents | **Backlash** | **Watchdog**, this act only | Worm **Outbreak** (a lash hatches); ransomware **Lockdown** (a lash encrypts you) | Hits on the beat |
+| The Residents (built) | **Backlash** | **Watchdog**, this act only | Worm **Outbreak** (a lash hatches); ransomware **Lockdown** (a lash encrypts you) | Hits on the beat |
 | DEADBOLT | **Lock** | **Tumblers**: a Deadbolt that lands re-locks | **Double lock**: a Mutex, seat Pulse Node | Hitting the lock |
 | TRIPMINE | **Tripwire** | **Daisy chain**: a Tripwire, seat Pulse Node (Claymore to the Encryptor) | **Dead man**: the Pulse Node sets off every wire | The Tripwire first |
 | HASHLORD | **Pool Lock** | **Chain Fork**: a Miner, seat Pulse Node | **51%**: the Lock wards the healthiest part | Commands into the ward |
@@ -122,7 +122,10 @@ called off, the big key on the beat) something specific.
 
 **Build order**, one session each, in sequence (every one touches the combat rules), each played before the next:
 1. The shared rules, the pacing, SHAKEDOWN and NIGHT DESK (built November 13).
-2. The Residents, RELAY-KING, REPO MAN, HOLLOW CHOIR.
+2. The Residents, RELAY-KING, REPO MAN, HOLLOW CHOIR (built November 13). Their acts for the planner (won fights, level
+   10): Resident worm 15.3 / 15.8 / 15.3 (`bar` 0.6), ransomware 16.2 / 18.7 / 17.7 (1.2), REPO MAN 15.8 / 16.0 / 15.4
+   (2.2), HOLLOW CHOIR 16.0 / 17.7 / 14.5 (3.85). RELAY-KING (0.85) is won 3 times in 48, so its acts are read over every
+   act that ended: 18.8 / 17.6 / 18.0.
 3. Floor 2: DEADBOLT, BACK ORIFICE, PATCH TUESDAY, SLEEPWALKER, MIRRORSHADE, CENTRIFUGE.
 4. Floor 3: SHOULDER SURFER, RECURSION, HASHLORD, FLOODWALL, ECHOLALIA.
 5. Floors 4 and 5: BYZANTINE, CAMSWARM, TRIPMINE, GRACE PERIOD, EXIT NODE.
@@ -134,12 +137,11 @@ actLengths), and leaves the bands to the designer's play.
 
 | Boss | Its part | Act 1 | Act 2 | Act 3 | The read |
 |---|---|---|---|---|---|
-| RELAY-KING | Relay: Broadcast every 4, +its hit per fragment | Broadcast | **Crown Hop**: the ♛ moves to the healthiest part above 30% (none: it stays); the old one heals 25% | **Flood**: Replicate every 2, Broadcast every 3 | Clear fragments before a Broadcast; pace the parts so the ♛ hops where you want it |
-| REPO MAN | Ledger: Collection every 5, +its hit per Lien | **Liens**: each command a ◆ absorbs adds one; a Collection, landed or cut, clears them | Re-arms every part; a Collection in 3 | **Interest**: each Lien counts twice; a Collection in 3 | Strip with strips, burns or helpers; cut the Collection; cross a tick with the ledger clear |
-| HOLLOW CHOIR | A Mimic (its third) | One voice: a beat every 4 | **Second voice**: a second Mimic at the ♛'s full size, beating 2 behind | **Round**: each beat plays back your last three commands | Cut a voice before 30%; hold or fire small in the two cycles before a beat |
+| RELAY-KING | Relay: Broadcast every 4, +its hit per fragment | Broadcast | **Crown Hop**: at the ♛'s 50% tick it hops to the healthiest part, and the two swap how full they are | **Flood**: a Broadcast that lands hatches a fragment on every part | Bring the other parts down before the ♛'s tick; cut the Broadcast |
+| REPO MAN | Ledger: Collection every 5, +its hit per Lien | **Liens**: each command a ◆ absorbs adds one; a Collection, landed or cut, clears them | **Repossession**: a Collection that lands puts a ◆ back a Lien | **Interest**: each Lien counts twice | Strip with strips, burns or helpers; cut the Collection |
+| HOLLOW CHOIR | A Mimic (its third) | One voice: a beat every 4 | **Second voice**: a second Mimic in the Pulse Node's seat, beating 2 behind | **Round**, one voice: each beat plays back your last three commands | Hold or fire small in the two cycles before a beat |
 
-Integrity (`BOSSES` in data.mjs): RELAY-KING 1.25× (its Relay is a fourth part), REPO MAN 1.6×, HOLLOW CHOIR 1.4× (its second
-voice is as big as its ♛).
+Integrity (`BOSSES` in data.mjs): RELAY-KING 1.25× (its Relay is a fourth part), REPO MAN 1.6×, HOLLOW CHOIR 1.4×.
 
 The Round's sung notes land at half (`ROUND.echo`) and record only what you fire after it starts: at full, one Flood
 fired the cycle the Round began came back as 54% of a level-10 Breaker's bar.

@@ -20,7 +20,7 @@
 //      a fresh board, the next starting when every part is broken. Every part interrupts as usual, the ♛ too.
 //   b  every part interrupts; phases stay on total Integrity; it brings one more charge.
 //   c  phases at 50% and 25% of total; ticks interrupt, but the fight has a budget of TICKS.budget cancels.
-import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toIntent, usable, readyIn, fxOn, frontOf, liensPaid, fireEvent } from './combat.mjs';
+import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toIntent, usable, readyIn, fxOn, frontOf, liensPaid, fireEvent, crownHop } from './combat.mjs';
 import { FAMILIES, GUARDS, STRAINS, BOSSES, ROOM_FAMILIES, ABILITIES, TELL } from './data.mjs';
 import { tellsOf, tellAnswer, tellNext, tierOf, inWindow, answers } from './tells.mjs';
 import { raidDef } from './raid.mjs';
@@ -109,6 +109,10 @@ export function onHit(s, p, was, dealt, opts = {}) {
   for (const t of crossed) t.spent = true;
   e.metrics.ticks = (e.metrics.ticks || 0) + crossed.length;
   if (p.integrity <= 0) return; // it broke: everything it did stops with it
+  try { tickCut(s, p, crossed); } finally { if (v.hop === true && p.core && crossed.some((t) => t.at === 0.5)) crownHop(s, p); } // RELAY-KING's act 2: after the cut, the ♛ hops
+}
+function tickCut(s, p, crossed) {
+  const e = s.encounter, v = e.virus;
   const verb = hooks.tickVerb?.(s, p) || 'cancel';
   if (verb !== 'cancel') { for (const t of crossed) hooks.tickDo?.(s, p, verb, t); return; }
   const due = dueOf(s, p);
