@@ -199,7 +199,7 @@ test('the rogue server: viruses sit in its folders; attack one for a home-style 
   hooks.now = () => 1000;
   say(s, 'connect sprawl');
   assert.equal(s.run.loc, 'sprawl');
-  assert.equal(liveSpawns(s), 5, 'every folder has a virus, the sealed Core aside');
+  assert.equal(liveSpawns(s), 9, 'every folder has a virus, the sealed Core aside');
   say(s, 'cd tmp');
   const ls = say(s, 'ls').find((e) => e.type === 'net-ls');
   const virus = ls.entries.find((x) => x.kind === 'virus');
@@ -213,9 +213,9 @@ test('the rogue server: viruses sit in its folders; attack one for a home-style 
   assert.ok(events.some((e) => e.type === 'victory'));
   assert.ok(events.some((e) => e.type === 'xp'), 'XP right away');
   assert.ok(hiddenNear(s, { id: 'sprawl' }).some((n) => n.lead > 0), 'a lead toward one of its ? servers');
-  assert.equal(liveSpawns(s), 4);
+  assert.equal(liveSpawns(s), 8);
   zoneSpawns(s, 1000 + CONFIG.zone.respawnMs + 1);
-  assert.equal(liveSpawns(s), 5, 'it came back');
+  assert.equal(liveSpawns(s), 9, 'it came back');
   hooks.now = null;
 });
 
@@ -232,7 +232,7 @@ test('SPRAWL-00 rooms keep their own timers: a named target or a live RELAY-KING
   zoneSpawns(s, 1000 + CONFIG.zone.respawnMs - 1);
   assert.equal(Object.values(z.spawns).filter((x) => x.alive).length, 2, 'the king and the target; the strays on their timers');
   zoneSpawns(s, 1000 + CONFIG.zone.respawnMs);
-  assert.equal(Object.values(z.spawns).filter((x) => x.alive).length, 6, 'every stray back beside them');
+  assert.equal(Object.values(z.spawns).filter((x) => x.alive).length, 10, 'every stray back beside them');
   assert.ok(z.spawns[strays[0]].bounty, 'the target still holds its room');
 });
 
