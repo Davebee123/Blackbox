@@ -87,7 +87,7 @@ import * as PGV from './pager-view.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
-import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, whenConnected, playHangup, stopHangup, hangupLines, whenHome } from './bootfx.mjs';
+import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, whenConnected, playHangup, stopHangup, whenHome } from './bootfx.mjs';
 let bootFor = null; // the fight the screen last booted into (go)
 import { startTraffic } from './traffic.mjs';
 import { postFound } from './scanner.mjs';
@@ -1789,17 +1789,17 @@ function connectTo(e) {
   if (!dialFx() || module !== 'rooms') return;
   playConnect($('app'), held);
 }
-// Jacking out (bootfx.mjs, Hang-up): from the rooms page your room locks teal and the rooms go dark toward it,
-// the hang-up's readout holds the dark, then the map comes up with the server's node ringed. Screen
-// effects off or Motion off: straight to the map.
+// Jacking out (bootfx.mjs, the Carrier backwards): from the rooms page your room locks teal and the rooms close in a
+// circle onto the server's node on the map; your signal runs home along a teal line. Screen effects off or Motion off:
+// straight to the map.
 function hangUp(events) {
   const e = events.findLast((x) => x.type === 'jacked-out'), shown = (q) => [...$('page-view').querySelectorAll(q)].find((g) => g.getBoundingClientRect().width);
   const fx = dialFx() && !CAMP, here = fx && module === 'rooms' ? shown('.fp-room.here') : null;
   const held = here ? bootHold($('page-view'), here) : null;
   go('map', true);
   if (!fx || module !== 'map') return;
-  const name = e?.message.match(/JACKED OUT of (.+?)\./)?.[1] || '', sel = e?.out && `[data-select="${CSS.escape(e.out)}"]`;
-  playHangup($('app'), held, name, hangupLines({ name, banked: e?.gains?.length || 0 }), () => (sel ? shown(`${sel} .core`) || shown(sel) : null));
+  const sel = e?.out && `[data-select="${CSS.escape(e.out)}"]`;
+  playHangup($('app'), held, () => (sel ? shown(`${sel} .core`) || shown(sel) : null));
 }
 // What the boot console checks: read off the fight's page as it now stands.
 function bootInfo() {
