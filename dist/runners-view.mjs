@@ -5,6 +5,7 @@
 import { castOf, knownOf, runnerOf, stateOf, clsLabel, doing, shortPlace, headingOf, revealed, inSight, hash, TRAITS, standingOf, tierOf, busyOf, cantHire, feeOf, feePaid, cutOf, hired, clockOf, gainOf, PRESET_PLAY, PRESET_TIP, huntsYou } from './runners.mjs';
 import { FACTIONS } from './factions.mjs';
 import { glyph } from './glyphs.mjs';
+import { portraitMarkup } from './portraits.mjs';
 import { SUBS, SUBCLASS, ABILITIES, presetBar } from './data.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -152,7 +153,8 @@ export function runnerCard(s, h, { mode = 'runner', preset = 'rotation' } = {}) 
   const r = runnerOf(s, h);
   if (!r) return '';
   const st = stateOf(s, r), busy = busyOf(s, r), mine = hired(s, h), no = cantHire(s, r);
-  const head = `<p class="rc-kind${huntsYou(s, h) ? ' rival' : ''}">${esc(kindOf(s, r))}</p><h2 class="rc-handle">${glyph(CLASS_GLYPH[r.cls] || 'run', 'rc-cls')}${esc(h)}</h2><p class="rc-class">${esc(clsLabel(r, st.level))} · level ${st.level}</p>`;
+  // The head (the *Badge*): their bust (portraits.mjs, from the handle), then kind, handle, class and level, and the Tier bar.
+  const head = `<div class="rc-head">${portraitMarkup(h, 'runner', 'rc-bust')}<div><p class="rc-kind${huntsYou(s, h) ? ' rival' : ''}">${esc(kindOf(s, r))}</p><h2 class="rc-handle">${glyph(CLASS_GLYPH[r.cls] || 'run', 'rc-cls')}${esc(h)}</h2><p class="rc-class">${esc(clsLabel(r, st.level))} · level ${st.level}</p>${tierBar(s, h)}</div></div>`;
   const x = '<button type="button" class="btn small rc-x" data-runner-close title="Close">×</button>';
   if (mode === 'crew' && !mine) {
     const fee = feePaid(s, h) ? 0 : feeOf(s, r), cut = Math.round(cutOf(r) * 100);
@@ -166,7 +168,7 @@ export function runnerCard(s, h, { mode = 'runner', preset = 'rotation' } = {}) 
     const rows = row('Traits', traitChips(r)) + row('Pay', pay) + row('Bar', `<span class="rc-tiles">${tiles}</span>`);
     return `<section class="rcard crew" id="runner-pop" data-runner-card="${esc(h)}">${x}${head}<dl class="rc-rows">${rows}</dl><div class="row acts"><button type="button" class="btn primary" data-command="hire ${esc(h)} ${esc(preset)}"${no ? ` disabled title="${esc(`You can't hire ${h}: ${no}.`)}"` : ''}>Hire</button><button type="button" class="btn" data-runner-hire="0">Back</button></div></section>`;
   }
-  const rows = row('Traits', traitChips(r)) + row('Standing', tierBar(s, h)) + row('Now', nowRow(s, r, st, busy)) + row('After', `<span>${esc(st.trade.what)}, frozen on floor ${st.trade.floor}</span>`);
+  const rows = row('Traits', traitChips(r)) + row('Now', nowRow(s, r, st, busy)) + row('After', `<span>${esc(st.trade.what)}, frozen on floor ${st.trade.floor}</span>`);
   const said = lastLine(s, h);
   const act = mine ? `<button type="button" class="btn" data-command="crew kick ${esc(h)}">Let go</button>`
     : `<button type="button" class="btn primary" data-runner-hire="1"${no ? ` disabled title="${esc(`You can't hire ${h}: ${no}.`)}"` : ''}>${busy ? `${glyph('clock')}${mmss(busy.until - clockOf(s))}` : 'Hire'}</button>`;
