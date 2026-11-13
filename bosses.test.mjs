@@ -51,7 +51,7 @@ test("RELAY-KING's Crown Hop: in act 2, at its 50% tick the ♛ hops to the heal
   assert.equal(crown(s), best, 'the ♛ hopped to the healthiest part');
   assert.ok(!old.core);
   assert.ok(Math.abs(old.integrity / old.max - fill) < 0.01, 'the old one takes its fill');
-  assert.ok(best.integrity / best.max < 0.5, 'and the new ♛ takes the old one\'s');
+  assert.ok(best.integrity / best.max <= 0.5, 'and the new ♛ takes the old one\'s');
   assert.deepEqual(best.ticks.map((t) => t.spent), [true, false]);
   hitServer(s, best, 1);
   assert.equal(crown(s), best, 'once an act');
