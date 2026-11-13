@@ -1,5 +1,6 @@
 // The floor 2 and 3 bosses (docs/solo-bosses.md "Proposed: floors 2–8", docs/boss-guide.md): each a part and a rule of its
-// own, three acts from its ♛'s ticks at 60% and 30% (BOSSES ticks), and its beat on its own part (acts.mjs beat 'part').
+// own, three acts as act bars (acts.mjs: each act a fresh board, the next when its last part breaks), and its beat on
+// its own part (acts.mjs beat 'part').
 //
 //   CENTRIFUGE      Bidding: each Surge the Gavel lands spins it faster (every 4, 3, 2); a delay or Throttle on it
 //                   withdraws it to every 4. A Surge at every 2 sells: the buyer named on the Gavel joins as a part with
@@ -52,7 +53,7 @@
 //                   stands, your one-part commands at the Core land on it. Act 2 (Kept charges): a charge cut in the 2
 //                   cycles before a restore comes back at it. Act 3
 //                   (Cold image): every restore returns to the image taken as Backup v6 broke. The Core is never
-//                   restored past its last spent act tick, so an act once started stays.
+//                   restored past its ♛'s last spent tick, so ground you took stays taken.
 //
 // The rules' state rides on the virus (v.bid, v.ransom, v.surf, v.stack, v.desk, v.vote, v.swarm, v.grace, v.roll); combat.mjs calls in at engage (fbStart), at a
 // landing (fbPower, fbLanded), a delay or Throttle (fbSlowed), a break (fbBroke), your command (fbAim, fbCommand,
@@ -386,7 +387,7 @@ export function rollImage(s) {
   if (R.coldOn && R.cold) return R.cold;
   return R.images[R.at - FB.roll.back] || null;
 }
-// What a part goes back to at the restore (null: nothing): its image's Integrity, never past the ♛'s last spent act tick.
+// What a part goes back to at the restore (null: nothing): its image's Integrity, never past the ♛'s last spent tick.
 export function rollTo(s, p) {
   const img = rollImage(s)?.[p.id];
   if (!img || !alive(p)) return null;

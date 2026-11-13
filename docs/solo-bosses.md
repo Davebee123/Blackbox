@@ -8,104 +8,73 @@ family virus at 1.6× Integrity with one stock phase: the kit player (blind to t
 
 ## The shape
 
-- **Three acts**: the opening, then one at each of the ♛ part's act ticks (60%, 30%). Each act adds a mechanic. A stock
-  phase (re-arm, a cycle sooner) is never an act on its own.
-- **A part of its own**, with a rule, on top of its family's: the boss's signature, shown on its row.
-- **You choose when**: the ♛ ticks are yours to cross, so each phase starts when you are ready for it.
-- **The ♛ is worked through the fight** (the designer, November 2026): it is attacked as part of the normal flow, and a
-  player who attacks only the ♛ is punished. An uneven boss gets more of its health on the ♛, or something in its own
-  system that makes the ♛ worth working early. Bringing parts back is for the few bosses whose system fits it, never a
-  mechanic every boss shares.
-- **Act length** (November 2026): the ♛'s act ticks are at **60% and 30%** on every boss (`TICKS.act`, interrupt.mjs);
-  every other part's cut ticks stay at 50% and 25%. The aim is acts 2 and 3 lasting at least as long as act 1. The
-  ticks and a boss's Integrity stay consistent: a boss whose acts run uneven gets its behaviour or mechanics changed
-  (the designer, November 2026), never its ticks.
+- **Three acts, each a fresh bar** (built November 2026): every part back at full with that act's rules on top. An act
+  ends when its last part breaks; the next begins at the cycle's end. Each act adds a mechanic. A stock phase (re-arm,
+  a cycle sooner) is never an act on its own.
+- **A part of its own**, with a rule, on top of its family's: the boss's signature, its ♛, shown on its row.
+- **The ♛ is a part like the others**: its ticks are 50% and 25%, it interrupts, and crossing it starts no act. No kill
+  order is forced and none is punished, so a boss needs no rule to make its ♛ worth working early.
+- **The split** (acts.mjs `ACT_BARS.share`): the acts together hold 0.72 of the boss's Integrity, about a quarter of it
+  an act. A board that comes back full attacks for the whole fight, and every act re-arms its ◆ and spends its ticks
+  afresh, so a full third an act runs the fight about 20% longer than one bar did. At a quarter the fight is the length
+  it is today.
+- **Equal acts** is the aim and the bar: a boss whose acts run uneven gets its behaviour or mechanics changed, never
+  its split.
 
-### Act length, measured
+### Why acts became bars (the designer, November 2026)
 
-Cycles an act, the planner on every subclass, 12 seeds, each boss at its floor (10 where it has none): genesim.mjs
-`bossFight`'s loop, noting the cycle each phase starts. Acts 2 and 3 over won fights only. The first eleven rows are
-with "Working the ♛" built and the ♛ held at its tick (below); the natives are as they were.
+Acts used to start at the ♛'s ticks (60% and 30%). Act 1 held every part, so commands spread and it ran long; once the
+other parts were dead the ♛ took the whole kit and acts 2 and 3 burned in a few cycles. Measured on nearly every boss
+(the table below, before): RELAY-KING 19.4 / 4.7 / 2.8, PATCH TUESDAY 15.4 / 4.9 / 2.8, EXIT NODE 16.6 / 2.6 / 3.0.
+More health on the ♛ didn't fix it (GRACE PERIOD: act 3 got shorter). What went with the change: the ♛'s act ticks, the
+cap that held it at its tick, the one to leave (take it under too soon and every part re-arms) and the rule that
+working only the ♛ is punished — an act ends only when every part is down, so the order is the player's.
 
-| Boss | ♛ ticks | Act 1 | Act 2 | Act 3 |
-|---|---|---|---|---|
-| Resident (worm, ransomware) | 60 / 30 | 23.2 | 5.4 | 4.8 |
-| RELAY-KING | 60 / 30 | 19.3 | 4.7 | 2.8 |
-| REPO MAN | 60 / 30 | 10.1 | 3.9 | 2.8 |
-| HOLLOW CHOIR | 60 / 30 | 6.9 | 2.5 | 8.4 |
-| CENTRIFUGE | 60 / 30 | 7.5 | 4.8 | 9.7 |
-| SHAKEDOWN | 60 / 30 | 8.0 | 4.4 | 7.8 |
-| SHOULDER SURFER | 60 / 30 | 15.8 | 4.0 | 4.0 |
-| RECURSION | 60 / 30 | 13.1 | 6.4 | 5.2 |
-| NIGHT DESK | 60 / 30 | 8.4 | 6.5 | 8.9 |
-| BYZANTINE | 60 / 30 | 11.2 | 7.6 | 9.2 |
-| CAMSWARM | 60 / 30 | 20.0 | 6.5 | 8.2 |
-| DEADBOLT | 60 / 30 | 19.2 | 5.5 | 8.7 |
-| TRIPMINE (one phase) | 60 / 30 | 24.8 | 9.0 | |
-| HASHLORD | 60 / 30 | 23.0 | 4.2 | 6.7 |
-| BACK ORIFICE | 60 / 30 | 20.4 | 2.8 | 6.2 |
-| PATCH TUESDAY | 60 / 30 | 23.4 | 4.5 | 2.5 |
-| FLOODWALL (one phase) | 60 / 30 | 9.6 | 18.2 | |
-| MIRRORSHADE | 60 / 30 | 16.5 | 3.9 | 6.5 |
-| SLEEPWALKER (one phase) | 60 / 30 | 24.1 | 8.9 | |
-| ECHOLALIA | 60 / 30 | 23.6 | 5.1 | 3.8 |
+### Act bars, measured
 
-- Moving the built bosses from 50 / 25 to 60 / 30 took about a cycle off act 1 and added it to acts 2 and 3; their win
-  rates moved inside the noise (HASHLORD's reader 59% → 68%).
-- **Held at the tick** (November 12): damage takes a ♛ to its next act tick and no further until that act begins,
-  on every boss with a ♛ (acts.mjs `actCap`). Before, a second hit in the same cycle went on to the next tick, and act
-  2 lasted no cycles in 19% of HOLLOW CHOIR's fights and 10% of REPO MAN's; the natives and the ghostroot Resident had
-  no cap at all. RELAY-KING's Crown Hop could land its ♛ on a part already under 30% (6% of its fights): it now hops
-  only to a part above 30%, and stays put when none is. No act 2 is skipped. A tick no hit crossed (Integrity set some other way) holds nothing.
-  CENTRIFUGE's Phantom had won by carrying the Rotor through 30% to 0 in one cycle; made to play act 3, its reader fell
-  to 59%. After a sale the Gavel now drops to every 4 (it was 3), and each sale makes its Surge 30% harder (50%): read
-  63%, misread 52%, blind 39%.
-- **No boss meets the aim yet**, with "Working the ♛" built (below). NIGHT DESK (8.4 / 6.2 / 8.8) and SHAKEDOWN
-  (8.0 / 4.4 / 7.9) are closest: a third act as long as the first, a second still short.
+Cycles an act and the band, the planner on every subclass, 12 seeds, each boss at its floor (10 where it has none).
+Before: acts at the ♛'s ticks, as built through November 12. After: act bars at 0.72.
 
-### Working the ♛ (built November 2026)
-
-Each fix as built (floorbosses.mjs, combat.mjs `watchdog` and `secondVoice`, data.mjs `BOSSES` work; crown.test.mjs),
-then measured: every subclass, 12 seeds, at the boss's floor. *Crown-only* is the planner with every one-part command
-turned on the ♛. Before → after.
-
-| Boss | Built | ♛ | Act 1 | Act 2 | Act 3 | Planner | Crown-only |
+| Boss | Act 1 | Act 2 | Act 3 | Cycles (won) | Read | Misread | Blind |
 |---|---|---|---|---|---|---|---|
-| Resident | The ♛ to half the boss. **Watchdog**: every 5 cycles the ♛ stands above its next tick, every other part patches a ◆ | 41 → 50% | 22.1 → 23.2 | 5.3 → 5.3 | 4.4 → 4.7 | 43 → 49% | 15 → 11% |
-| RELAY-KING | The ♛ to 45% of the boss | 31 → 45% | 14.5 → 19.3 | 7.1 → 4.7 | 4.3 → 2.8 | 22 → 35% | 0 → 0% |
-| REPO MAN | The ♛ to 45% of the boss | 31 → 45% | 8.9 → 10.1 | 3.2 → 2.9 | 3.6 → 2.9 | 94 → 67% | 13 → 14% |
-| HOLLOW CHOIR | The second voice joins at the ♛'s full size | 42% | 6.9 → 6.9 | 2.3 → 2.3 | 6.9 → 8.8 | 70 → 68% | 30 → 24% |
-| CENTRIFUGE | **Sold**: each sale heals the Rotor ♛ 10% of its max | 55% | 7.5 → 7.5 | 4.8 → 4.8 | 9.7 → 9.7 | 78 → 77% | 68 → 64% |
-| SHAKEDOWN | **Leverage**: while a Demand stands, the Collector ♛ loses at most 15% of its max a cycle. The planner works the ♛ first (work.lead) | 60% | 10.6 → 8.0 | 2.8 → 4.4 | 3.7 → 7.9 | 79 → 81% | 93 → 91% |
-| SHOULDER SURFER | The Logger ♛ to half the boss (47, 25, 22) | 38 → 50% | 16.5 → 15.8 | 4.0 → 4.0 | 3.9 → 4.0 | 74 → 73% | 23 → 19% |
-| RECURSION | **Return** and **Overflow** each push a frame as they start, at 25% of the top frame's max, hardening nothing. Paid for in act 1: a Call every 5 cycles (it was 4) | 56% | 16.0 → 13.1 | 4.1 → 6.3 | 3.1 → 4.9 | 74 → 75% | 52 → 57% |
-| NIGHT DESK | **Night shift** clocks in the Night Clerk, a third trader holding one trade (none of its own after), and trades grow 15% a cycle (10%). Paid for in act 1: no trades pending as it opens (2) | 62% | 12.3 → 8.4 | 5.2 → 6.2 | 8.6 → 8.8 | 81 → 85% | 39 → 57% |
-| BYZANTINE | **Hard fork** forks at once: every broken Node returns as act 3 starts, at the standing Nodes' average | 33% | 11.2 → 11.2 | 8.5 → 7.9 | 6.2 → 9.0 | 68 → 63% | 11 → 11% |
-| CAMSWARM | **Botnet** re-infects: each part you broke returns in its place as a Camera at 30% (the C2 Node as itself) | 49% | 20.0 → 20.0 | 5.1 → 6.5 | 8.6 → 8.2 | 66 → 67% | 0 → 0% |
-| The natives | Not built: with their own phases (Proposed: the nine lair bosses, below). Crown-only goes unpunished on TRIPMINE (40% either way) and FLOODWALL (23% → 40%), so their phases need that too | 37–48% | | | | 23–77% | 0–40% |
+| Resident worm | 22.7 → 12.1 | 6.9 → 11.2 | 6.1 → 12.0 | 35.4 → 35.2 | 34 → 47% | 34 → 47% | 39 → 47% |
+| Resident ransomware | 17.7 → 9.4 | 4.7 → 9.6 | 4.0 → 9.8 | 27.2 → 28.7 | 63 → 96% | 58 → 97% | 51 → 100% |
+| RELAY-KING | 19.4 → 9.7 | 4.7 → 9.1 | 2.8 → 10.7 | 26.8 → 29.5 | 31 → 14% | 31 → 13% | 30 → 13% |
+| REPO MAN | 8.8 → 6.1 | 4.0 → 5.8 | 2.9 → 6.8 | 15.5 → 18.7 | 58 → 38% | 59 → 38% | 65 → 38% |
+| HOLLOW CHOIR | 6.4 → 4.4 | 2.3 → 6.3 | 6.9 → 6.2 | 17.4 → 17.3 | 74 → 43% | 57 → 49% | 23 → 40% |
+| CENTRIFUGE | 10.5 → 8.6 | 4.9 → 8.7 | 7.9 → 9.5 | 23.2 → 27.1 | 63 → 86% | 52 → 70% | 39 → 67% |
+| SHAKEDOWN | 7.8 → 4.0 | 4.2 → 4.0 | 6.9 → 5.0 | 19.8 → — | 80 → 0% | 55 → 1% | 8 → 0% |
+| SHOULDER SURFER | 13.7 → 9.0 | 4.1 → 8.8 | 4.1 → 8.9 | 23.1 → 27.6 | 73 → 14% | 56 → 11% | 22 → 1% |
+| RECURSION | 10.4 → 6.1 | 6.0 → 6.8 | 5.1 → 9.9 | 23.0 → 22.8 | 71 → 43% | 56 → 34% | 10 → 13% |
+| NIGHT DESK | 8.3 → 6.7 | 6.7 → 12.5 | 8.2 → 16.4 | 23.3 → 35.7 | 85 → 21% | 45 → 2% | 0 → 0% |
+| BYZANTINE | 7.2 → 5.5 | 6.1 → 5.9 | 8.6 → 7.9 | 23.8 → 17.8 | 63 → 15% | 49 → 17% | 24 → 22% |
+| CAMSWARM | 18.1 → 7.0 | 7.3 → 7.5 | 8.3 → 8.2 | 34.9 → 22.2 | 66 → 13% | 54 → 13% | 29 → 13% |
+| GRACE PERIOD | 13.2 → 6.8 | 9.1 → 8.7 | 3.8 → 9.9 | 27.9 → 26.7 | 70 → 63% | 57 → 50% | 40 → 27% |
+| EXIT NODE | 16.6 → 7.6 | 2.6 → 8.0 | 3.0 → 7.1 | 22.9 → 23.2 | 64 → 27% | 50 → 28% | 34 → 31% |
+| DEADBOLT | 20.2 → 9.6 | 6.5 → 9.8 | 9.1 → 11.4 | 36.3 → 30.9 | 61 → 100% | 60 → 100% | 64 → 100% |
+| TRIPMINE | 26.9 → 14.5 | 9.3 → 14.5 |  | 38.4 → 28.8 | 39 → 84% | 36 → 88% | 33 → 89% |
+| HASHLORD | 21.8 → 9.4 | 4.6 → 10.3 | 7.3 → 13.5 | 33.3 → 33.0 | 59 → 13% | 54 → 11% | 24 → 9% |
+| BACK ORIFICE | 16.5 → 9.0 | 3.3 → 9.6 | 7.0 → 11.5 | 26.6 → 30.1 | 26 → 43% | 27 → 45% | 33 → 45% |
+| PATCH TUESDAY | 15.4 → 9.6 | 4.9 → 10.1 | 2.8 → 10.6 | 24.6 → 30.0 | 20 → 76% | 19 → 79% | 15 → 74% |
+| FLOODWALL | 6.5 → 13.7 | 17.2 → 13.2 |  | 25.7 → 27.1 | 20 → 85% | 18 → 86% | 13 → 83% |
+| MIRRORSHADE | 12.1 → 9.1 | 4.1 → 8.1 | 6.3 → 8.3 | 24.1 → 25.9 | 50 → 74% | 35 → 56% | 17 → 22% |
+| SLEEPWALKER | 18.5 → 13.6 | 9.5 → 14.5 |  | 28.9 → 28.3 | 31 → 88% | 28 → 88% | 30 → 88% |
+| ECHOLALIA | 19.3 → 11.0 | 5.6 → 11.3 | 4.3 → 11.0 | 29.0 → 33.8 | 29 → 92% | 31 → 91% | 34 → 88% |
 
-What the numbers say:
+The acts run even on every boss, which is what the change was for. The bands swing hard and in both directions, because
+each boss's own rules were built for one bar: a clock that never stops (SHAKEDOWN), a vote over a board that returns
+whole (BYZANTINE), a table of trades that refills (NIGHT DESK), and on the other side the natives, whose stock phases
+give a returning board nothing to answer (DEADBOLT, TRIPMINE, SLEEPWALKER). Each boss's rules are the next session's
+work; the numbers above are what it starts from.
 
-- **Bringing work back lengthens the later acts** (RECURSION, NIGHT DESK, BYZANTINE's act 3, CAMSWARM's act 2), and
-  the band holds when act 1 gives up as much pressure as the act gains. Sized as picked, each took its reader out of
-  the band (RECURSION 27% with frames at 60%, NIGHT DESK 20% with a Clerk that trades, CAMSWARM 34% with Cameras back
-  at full); the numbers above are the largest that keep every band green.
-- **Moving health to the ♛ lengthens act 1** while the planner leaves the ♛ for last: act 1 holds every other part
-  and 40% of a bigger ♛. REPO MAN's planner loses 27 points to it (its ♛ wears ◆◆◆◆◆ and re-arms at 60%).
-- **Working the ♛ early costs the planner wins** (work.lead, planner.mjs `crownNow`: the ♛ is the part to work on while
-  it stands further up its bar than the rest). It evens the acts some (Resident 16.0 / 4.9 / 5.1, REPO MAN 8.0 / 3.9 /
-  3.5, SHOULDER SURFER 12.5 / 5.0 / 4.9) and drops the reader to 21%, 61% and 48%: the other parts keep hitting while
-  the ♛'s ◆ are stripped. The Watchdog punishes leaving the ♛ without making it cheaper to work. Only SHAKEDOWN's
-  planner has it, where the ♛ first was already the better play.
-- **Crown-only is still the better play on SHAKEDOWN** (91% to 81%). The Collector stops the clock when it breaks, and
-  every Deadline a crown-only player lets land pays the clock. A heavier Deadline flips it (Deadline 24, cap 20%:
-  planner 53%, crown-only 52%; Deadline 28: 45% to 34%) and takes the reader out of the band, so it wasn't kept.
-  It needs a rule that costs the Collector's attacker for each Deadline paid.
-- For the designer: the share bosses and the Resident need a reason that makes the early ♛ the cheaper line (a ♛ with
-  no ◆ of its own, or other parts that go quiet while the ♛ is being worked), before more health on it helps.
+### What the old shape left behind (November 2026)
 
-Health moves to the ♛ from the boss's other parts; its total stays. A part that comes back returns in its place with
-fresh ticks, as a phase line.
+Built while acts came from the ♛'s ticks, and still in the code because it works on one act's board as it did on the
+fight's: the ♛'s share of its board (`BOSSES` work.share: half on the Resident and SHOULDER SURFER, 45% on RELAY-KING
+and REPO MAN), the Resident's **Watchdog** (every 5 cycles its ♛ stands above its next tick, every other part patches a
+◆; each act restarts the count), HOLLOW CHOIR's second voice at the ♛'s full size, CENTRIFUGE's **Sold** heal, and
+SHAKEDOWN's **Leverage** cap. The rules written to punish a crown-only player are no longer needed, since an act ends
+only when every part is down: SHAKEDOWN's planner lead (work.lead) and that cap are the next session's to look at.
 
 ## Built: the three solo bosses
 

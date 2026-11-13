@@ -132,6 +132,13 @@ code { font-family: var(--mono); color: var(--amber); }
 .hud-bar.mine.mid .bar-ico { color: var(--next); } .hud-bar.mine.low .bar-ico { color: var(--hot); }
 .bigbar { height: 14px; background: var(--inset); border: 1px solid var(--hot); margin-top: 6px; }
 .bigbar span { display: block; height: 100%; background: linear-gradient(90deg, #a82f20, var(--hot)); transition: width 0.25s; }
+/* Act bars (acts.mjs): the boss's bar, a segment an act (view.mjs actSegments). */
+.act-segs { display: grid; grid-template-columns: repeat(var(--acts, 3), 1fr); gap: 4px; margin-top: 6px; }
+.act-segs .bigbar { margin-top: 0; }
+.act-segs .bigbar.act-done { border-color: var(--gray); opacity: 0.45; }
+.act-segs .bigbar.act-done span { width: 0; }
+.act-segs .bigbar.act-wait { border-color: rgba(255, 91, 61, 0.45); }
+.act-segs .bigbar.act-wait span { width: 100%; background: #5a2a1e; }
 .hud-bar.mine .bigbar { border-color: var(--you); }
 .hud-bar.mine .bigbar span { background: var(--you); }
 .hud-bar.mine .bar-top span { color: var(--you); }

@@ -1,10 +1,10 @@
-// P4 boss acts (dist/acts.mjs, docs/puzzle-fights.md 7; the solo bosses' own rules: bosses.test.mjs): a beat that repeats, three acts, and the one to leave.
+// P4 boss acts (dist/acts.mjs, docs/puzzle-fights.md 7; the solo bosses' own rules: bosses.test.mjs): a beat that repeats, and three acts on act bars.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, resolveCycle, selectEncounter, part, livingParts, intents, defender } from './dist/combat.mjs';
+import { fresh, command, resolveCycle, selectEncounter, part, livingParts, intents, defender, virusIntegrity, active } from './dist/combat.mjs';
 import { player } from './genesim.mjs';
 import { tellsOf } from './dist/tells.mjs';
-import { actsOf, actOf, actDone, lashOn, actCap, leaveOf, beatsPlayed, beatOf, nextBeat, ACTS } from './dist/acts.mjs';
+import { actsOf, actOf, lashOn, beatOf, nextBeat, actBar } from './dist/acts.mjs';
 import { BOSSES, CONFIG } from './dist/data.mjs';
 
 CONFIG.misses = false; // the rules, not the dice
@@ -53,43 +53,48 @@ test('a hit that breaks the part on the beat is safe', () => {
   assert.ok(!resolveCycle(s).some((x) => x.tell === 'backlash'));
 });
 
-test('the ♛ holds at its next tick until that act begins: no act is skipped', () => {
-  const s = boss('resident', 'worm'), c = core(s);
-  c.armor = 0;
-  assert.deepEqual(c.ticks.map((t) => t.at), [0.6, 0.3], 'its act ticks');
-  assert.equal(actCap(s, c), c.integrity - Math.floor(0.6 * c.max));
-  c.integrity = Math.floor(0.6 * c.max);
-  c.ticks[0].spent = true;
-  assert.equal(actCap(s, c), 0, 'under the tick, its act not begun yet: nothing more this cycle');
-  s.encounter.virus.phases[0].done = true;
-  assert.equal(actCap(s, c), c.integrity - Math.floor(0.3 * c.max), 'the act begun: down to the next tick');
+// Act bars (acts.mjs): every part broken ends the act; at the cycle's end the board comes back at full.
+const breakAll = (s) => { for (const p of s.encounter.virus.parts) p.integrity = 0; command(s, 'hold'); return resolveCycle(s); };
+
+test('act bars: the fight is three bars, and breaking every part starts the next with every part back at full', () => {
+  const s = boss('relayking'), v = s.encounter.virus, bar = actBar(s), all = virusIntegrity(s);
+  assert.equal(all.max, bar.max * 3, 'three acts, the same bar each');
+  const before = Object.fromEntries(v.parts.map((p) => [p.id, { max: p.max, armor: p.maxArmor }]));
+  const ev = breakAll(s);
+  assert.equal(actOf(v), 2);
+  assert.ok(ev.some((x) => x.act?.refill && x.act.n === 2), 'the act break, with the refill');
+  for (const p of v.parts.filter((x) => x.kind !== 'fragment')) {
+    assert.equal(p.integrity, p.max, `${p.id} at full`);
+    if (before[p.id]) assert.equal(p.armor, before[p.id].armor, `${p.id} ◆ full`);
+  }
+  assert.equal(virusIntegrity(s).current, actBar(s).current + 1 * s.encounter.actMax, 'one more act to come');
+  assert.ok(active(s), 'no victory before the last act');
+  breakAll(s);
+  assert.equal(actOf(v), 3);
+  breakAll(s);
+  assert.equal(s.reports.at(-1)?.result, 'victory', 'the last act broken: the fight is won');
 });
 
-test('the one to leave: the ♛ taken under its tick before the beat plays re-arms every part', () => {
+test("act bars: the ♛ carries plain ticks, and crossing them starts no act", () => {
   const s = boss('resident', 'ransomware'), c = core(s), v = s.encounter.virus;
+  assert.deepEqual(c.ticks.map((t) => t.at), [0.5, 0.25]);
+  Object.assign(c, { armor: 0, integrity: Math.floor(0.5 * c.max) + 1 });
+  command(s, 'overload ' + c.id);
+  resolveCycle(s);
   assert.equal(actOf(v), 1);
-  assert.ok(!actDone(s) && beatsPlayed(s) === 0, 'no beat yet');
-  assert.ok(leaveOf(s) && !leaveOf(s).done, 'the board holds its tick');
-  const pulse = part(s, 'pulse');
-  pulse.armor = 0;
-  Object.assign(c, { armor: 0, integrity: Math.floor(0.6 * c.max) + 2 });
-  command(s, 'overload ' + c.id);
-  const ev = resolveCycle(s);
-  assert.ok(ev.some((x) => x.early), 'too soon');
-  assert.ok(pulse.armor > 0, 'every part re-arms');
-  assert.equal(actOf(v), 2, 'the next act still starts');
 });
 
-test('after the beat plays, the ♛ goes under its tick with no re-arm', () => {
-  const s = boss('resident', 'ransomware'), c = core(s), v = s.encounter.virus;
-  to(s, v.backlash.first + 1);
-  assert.ok(actDone(s));
-  const pulse = part(s, 'pulse');
-  pulse.armor = 0;
-  Object.assign(c, { armor: 0, integrity: Math.floor(0.6 * c.max) + 2 });
-  command(s, 'overload ' + c.id);
-  assert.ok(!resolveCycle(s).some((x) => x.early));
-  assert.equal(pulse.armor, 0);
+test('act bars: a part broken again in a later act pays no more research or components', async () => {
+  const { hit } = await import('./dist/combat.mjs');
+  const s = boss('relayking'), v = s.encounter.virus, id = v.parts.find((x) => x.loot)?.id || v.parts[0].id, again = () => part(s, id);
+  again().loot ||= 'x';
+  hit(s, again(), again().integrity, { mine: true, pierce: true });
+  assert.ok(s.encounter.metrics.breakOrder.includes(id));
+  breakAll(s);
+  s.encounter.metrics.loot = [];
+  again().loot ||= 'x';
+  for (let i = 0; i < 20; i++) { again().integrity = 5; hit(s, again(), 5, { mine: true, pierce: true }); }
+  assert.ok(!s.encounter.metrics.loot.includes(again().loot), 'no component from it, twenty breaks on'); // (a break can set off hits on other parts, whose first break this act is)
 });
 
 test('each act deals its own tell: act 1 its first, the rest wait', () => {
@@ -101,12 +106,9 @@ test('each act deals its own tell: act 1 its first, the rest wait', () => {
 });
 
 test('act 2 quickens the beat', () => {
-  const s = boss('resident', 'worm'), v = s.encounter.virus, c = core(s);
+  const s = boss('resident', 'worm'), v = s.encounter.virus;
   const every = v.backlash.every;
-  to(s, v.backlash.first + 1);
-  Object.assign(c, { armor: 0, integrity: Math.floor(0.6 * c.max) + 2 });
-  command(s, 'overload ' + c.id);
-  resolveCycle(s);
+  breakAll(s);
   assert.equal(actOf(v), 2);
   assert.ok(v.backlash.every < every);
 });
@@ -119,51 +121,30 @@ test("the solo bosses' beats are their own parts' (docs/solo-bosses.md): the Rel
   }
 });
 
-test("a part's own attack as the beat: it counts as played once it has landed, so the ♛ may go on", () => {
+test("a part's own attack as the beat: it falls where the attack lands", () => {
   const s = boss('relayking'), r = part(s, 'relay');
-  assert.equal(beatsPlayed(s), 0);
-  const c = nextBeat(s);
-  assert.equal(c, r.attack.due, 'the beat falls where the Broadcast lands');
-  to(s, c + 1);
-  assert.equal(beatsPlayed(s), 1);
-  assert.ok(actDone(s));
+  assert.equal(nextBeat(s), r.attack.due, 'the beat falls where the Broadcast lands');
 });
 
 test('a fresh save is untouched: no boss state outside a fight', () => {
   assert.equal(fresh().encounter, null);
 });
 
-// Every boss with a ♛ (rule a), in acts or not: hits piled into one cycle from just above 60% leave it at its tick, and
-// the next cycle, its act begun, down to the next one. Its last act's tick passed, it breaks.
-test('no act is skipped: hits piled into one cycle hold the ♛ at its tick on every boss, natives too', async () => {
-  const { hit, attackers } = await import('./dist/combat.mjs');
+// Every solo boss with phases plays them as act bars: each act ends when every part is broken, and the fight only on
+// the last.
+test('every solo boss, natives too, plays its acts as bars', async () => {
   const FP = await import('./dist/floorplan.mjs');
-  const solo = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid).flatMap((k) => (k === 'resident' ? ['worm', 'ransomware', 'ghostroot'].map((f) => [k, f]) : [[k, BOSSES[k].family]]));
+  const solo = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid && BOSSES[k].phases?.length).flatMap((k) => (k === 'resident' ? ['worm', 'ransomware', 'ghostroot'].map((f) => [k, f]) : [[k, BOSSES[k].family]]));
   for (const [id, family] of solo) {
-    const s = fresh(), L = Math.max(BOSSES[id].floor || 14, 14);
+    const s = fresh(), L = Math.max(BOSSES[id].floor || 14, 14), name = `${id} ${family}`;
     FP.outfit(s, { cls: 'breaker', level: L });
     selectEncounter(s, 'random', 7, { level: L, mutation: null, family, boss: id });
     command(s, 'engage');
     s.server.max = s.server.integrity = 1e6;
-    for (const p of attackers(s)) p.attack.due = 999;
-    for (const t of tellsOf(s)?.list || []) { t.told = false; t.after = 999; }
-    const c = core(s), v = s.encounter.virus, name = `${id} ${family}`;
-    for (const p of livingParts(s)) if (p !== c) { p.ward = null; p.wardsToo = null; } // a ward of its own is another rule
-    c.armor = 0; c.limit = 0; c.syncOnly = false;
-    c.integrity = Math.floor(0.61 * c.max);
-    for (const o of [{ mine: true }, { mine: true }, { dot: true }, { server: true }]) hit(s, c, c.max, { ...o, pierce: true });
-    assert.equal(c.integrity, Math.floor(0.6 * c.max), `${name}: held at 60% this cycle`);
-    command(s, 'hold'); resolveCycle(s);
-    assert.ok(v.phases[0].done, `${name}: its act began`);
-    if (!v.phases[1] || v.phases[1].done) continue; // one more act only (or RELAY-KING's ♛ hopped under its 30% tick)
-    const c2 = core(s); // RELAY-KING's Crown Hop moves it
-    c2.armor = 0; c2.limit = 0; c2.integrity = Math.floor(0.31 * c2.max);
-    for (let i = 0; i < 3; i++) hit(s, c2, c2.max, { mine: true, pierce: true });
-    assert.equal(c2.integrity, Math.floor(0.3 * c2.max), `${name}: held at 30%`);
-    command(s, 'hold'); resolveCycle(s);
-    c2.armor = 0; c2.lockHp = 0; // DEADBOLT's Mutex is another rule
-    for (const d of livingParts(s).filter((p) => p.deadline || p.role === 'camera')) d.integrity = 0; // SHAKEDOWN's Leverage and CAMSWARM's Lockout are other rules
-    hit(s, c2, c2.max, { mine: true, pierce: true });
-    assert.ok(c2.integrity <= 0, `${name}: its last act begun, it breaks`);
+    const v = s.encounter.virus, n = v.phases.length + 1;
+    assert.ok(s.encounter.actBars, name);
+    for (let a = 1; a < n; a++) { breakAll(s); assert.equal(actOf(v), a + 1, `${name}: act ${a + 1}`); assert.ok(livingParts(s).length, `${name}: its board is back`); }
+    breakAll(s);
+    assert.equal(s.reports.at(-1)?.result, 'victory', `${name}: won on its last act`);
   }
 });
