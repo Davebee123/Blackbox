@@ -140,7 +140,8 @@ make a dearer fee. No drawbacks for now.
 ## Friends
 
 A friend is a runner in your world, from their **record**: handle, level, character (`coop-char.mjs characterOf`),
-network seed, servers traced and held, project contributions, when it was posted. A few KB. Each player writes only
+network seed, servers traced and held, project contributions, deepest flash rank and the build that cleared it
+(docs/coop.md), when it was posted. A few KB. Each player writes only
 their own record, and shared things are read from everyone's: a consortium's tier counts records, a project sums
 contributions, a member's network is drawn from their seed. Records travel peer to peer when friends connect, or
 through a small mailbox (a file store, no game logic). Live co-op puts the person in their ghost's place.
