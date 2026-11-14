@@ -1,7 +1,8 @@
 # Legends and Epoch items
 
 **Status.** Talked through with the designer, November 2026. Decided: legends (very rare, very strong, endgame), the
-name *Epoch*, and trading later. The rest is proposed. Nothing is built.
+name *Epoch*, trading later, and uncapping is fine for a legend. The rest is proposed. Built on the bench only: all 27
+in `dist/legends.mjs`, off until the legends simulation registers them; none drops.
 
 ## Why
 
@@ -30,7 +31,7 @@ rare enough that a drop is a story.
 The floor 8 lair holds your native boss, and none is built yet (GAME_RULES.md "Lairs and native bosses"), so build
 legends come after floor 8's bosses.
 
-## First draft (untested)
+## First draft
 
 Each pays off only once set up. None ignores ◆, tells or the one-delay rule, so a blind player still loses.
 
@@ -52,7 +53,43 @@ Each pays off only once set up. None ignores ◆, tells or the one-delay rule, s
 | **Third Rail** | Universal | Every part has a third interrupt tick, at 75% | One more cut a part |
 | **Perfect Pitch** | Universal | Sync Windows open twice as often | Each class's Sync bonus, twice as often |
 
-Watch on bosses: Crossed Wires (halved there) and Stress Test (may want a cap there).
+Twelve more, three a class:
+
+| Legend | For | What it does |
+|---|---|---|
+| **Patch Gap** | Demolitionist | Zero-Day readies again each time a part breaks |
+| **Detonator Cord** | Demolitionist | Logic Bomb plants on every part at once, and they go off together |
+| **Red Zone** | Overclocker | Segfault on a part winding up a charge readies again at once |
+| **Rate Card** | Bastion | Throttle stacks: each Rate Limit halves the part's next attack again |
+| **Flatline** | Warden | Below a quarter of your Signal, Failover has no cooldown |
+| **Bleach** | Sysop | Scrub also bleaches a part: clears its buffs and casts, and its ◆ can't patch for 3 cycles |
+| **Long Tail** | Infiltrator | Implant is once a part instead of once a fight |
+| **Pressure Cooker** | Payload | Detonate leaves the burns running |
+| **Knife Edge** | Phantom | A Backstab crit makes Weak Spot fresh on its part |
+| **Ulimit** | Operator | No helper cap |
+| **Cron Farm** | Herder | Crontab runs on every part at once; a new one doesn't replace the last |
+| **Instant Replay** | Hijacker | Replay plays back the last tell that hit you, at double |
+
+## First simulation (November 2026)
+
+Level 50, Bedrock's band, the planner, the same seeds with and without; the legend keeps the replaced item's stats.
+Cycles change (normal / elite / boss) and Signal lost. Bosses: the six built ones; INIT and floors 6–8 have none yet.
+
+| Strong | Cycles | Signal lost | On bosses |
+|---|---|---|---|
+| Quine | −27 / −27 / −30% | −11% | REPO MAN 0 → 7 of 10 |
+| Avalanche | −13 / −17 / −24% | −22% | RELAY-KING −44% cycles |
+| Stress Test | −10 / −20 / −13% | −50% | REPO MAN and BACK ORIFICE 0 → 9 |
+| Crossed Wires | −3 / 0 / −14% | −31% | DEADBOLT 1 → 9 |
+| Flashover (Demolitionist) | −11 / −13 / −14% | −13% | REPO MAN 0 → 9 |
+| Patch Gap, Detonator Cord | about −8 / −8 / −17% | −16% | HOLLOW CHOIR 0 → 9 (Detonator Cord) |
+
+- **No boss went trivial.** Over 40% fewer cycles: Avalanche on RELAY-KING and BACK ORIFICE, Quine on BACK ORIFICE.
+- **Not set up by the planner** (untested, not weak): SIGKILL, Pressure Cooker, Ulimit, Rate Card, Flatline, Long
+  Tail on the Payload. Near zero: Red Zone, Positive Feedback, Knife Edge, Dead Angle, Cron Farm, Bounce Message,
+  Headroom. Reinfection is a net loss (its slower Inject costs more than the stacks).
+- **Bleach** does little on bosses: the solo bosses never cast. The Sysop wins no level-50 boss either way.
+- Next: the designer plays them on the bench.
 
 ## Epoch items (name decided)
 

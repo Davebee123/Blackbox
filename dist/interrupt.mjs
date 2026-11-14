@@ -20,7 +20,7 @@
 //      a fresh board, the next starting when every part is broken. Every part interrupts as usual, the ♛ too.
 //   b  every part interrupts; phases stay on total Integrity; it brings one more charge.
 //   c  phases at 50% and 25% of total; ticks interrupt, but the fight has a budget of TICKS.budget cancels.
-import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toIntent, usable, readyIn, fxOn, frontOf, liensPaid, fireEvent, crownHop } from './combat.mjs';
+import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toIntent, usable, readyIn, fxOn, frontOf, liensPaid, fireEvent, crownHop, legend, legendFire } from './combat.mjs';
 import { FAMILIES, GUARDS, STRAINS, BOSSES, ROOM_FAMILIES, ABILITIES, TELL } from './data.mjs';
 import { tellsOf, tellAnswer, tellNext, tierOf, inWindow, answers } from './tells.mjs';
 import { raidDef } from './raid.mjs';
@@ -105,8 +105,10 @@ export function onHit(s, p, was, dealt, opts = {}) {
   if (!ticked(e) || dealt <= 0 || opts.blast) return; // a Zip Bomb's blast cuts on its own (blastCut), and spends no tick
   if (!p.ticks && hasTicks(v, p)) p.ticks = fresh();
   if (!p.ticks) return;
+  if (!p.ticks.some((t) => t.at === 0.75) && legend(s, 'third-rail')) p.ticks.unshift({ at: 0.75, spent: false }); // Third Rail (a legend)
   const crossed = p.ticks.filter((t) => !t.spent && was > t.at * p.max && p.integrity <= t.at * p.max);
   if (!crossed.length) return;
+  if (crossed[0].at === 0.75 && p.integrity > 0 && dueOf(s, p).length && !(e.cutBudget != null && e.cutBudget <= 0) && (hooks.tickVerb?.(s, p) || 'cancel') === 'cancel') legendFire(s, 'third-rail');
   for (const t of crossed) t.spent = true;
   e.metrics.ticks = (e.metrics.ticks || 0) + crossed.length;
   if (p.integrity <= 0) return; // it broke: everything it did stops with it

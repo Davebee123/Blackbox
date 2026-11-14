@@ -268,6 +268,7 @@ comment saying what it does.
 |---|---|
 | `dist/breach.mjs`, `dist/breach-view.mjs`, `dist/breach.css` | The campaign's breach: one run through one server on a branching map. |
 | `dist/campaign.mjs`, `dist/campaign-view.mjs`, `dist/campaign.css` | The breach campaign: servers by layer, its own save. |
+| `dist/legends.mjs` | The 27 legends (docs/legends.md), bench only: none drops, and none changes a fight until `registerLegends` runs (only the legends simulation calls it). |
 | `dist/heat.mjs`, `dist/scripts.mjs`, `dist/rewrites.mjs`, `dist/skillrules.mjs` | The breach's heat ranks, one-shot scripts, rewrites and skill rules. |
 | `dist/world.mjs`, `dist/room.mjs`, `dist/room-view.mjs`, `dist/room.css`, `dist/content/room.mjs` | LOWLIGHT's back room and the world turn between breaches. |
 | `dist/bench.mjs`, `dist/bench-key.mjs` | The test bench and the Dev drawer (loaded only on a bench or with `?dev`); `build()` is shared with the simulations. The save keys. |
