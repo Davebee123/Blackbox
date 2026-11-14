@@ -2618,7 +2618,7 @@ no attaching, detaching or memory pips.
   Tier bar, its number and how you met in the tooltip. Known face: half again a raise, and three quarters of the fee.
 - **The runner card**: a lone diamond on the map, a row of a counted one's list or a Rail row opens it beside them
   (where it last was when the map doesn't draw them). Its head (the *Badge*): their ASCII bust (from the handle), faction,
-  handle, class and level, and the Tier bar. Then Traits (temperament first), Now (→ a server and its time, or
+  handle, class and level, and the Tier bar; hovering a diamond shows the Badge alone. Then Traits (temperament first), Now (→ a server and its time, or
   Busy with when they're free), After (their trade); their latest #net line; **Hire**, off with the reason (or the
   clock) until you can.
 - **Hiring** (`hire <runner> [preset]`, anyone on your net, from level 5, three at most): the crew card shows Pay as two
@@ -2808,17 +2808,19 @@ The log and terminal still say what happened, in a line; they don't teach.
 
 ### The pager
 
-On the top bar: a lamp, then one icon per thing you can act on (`pager.mjs`). A **page** is a line you can act on (a
+World events land as pings (`pager.mjs`, `pings.mjs`). A **page** is a line you can act on (a
 threat, a world event, a contract ready, an offer, a letter, a thread, wick's lead, an invite); everything else is
 **news** (pay, the retainer, rep, restocks, finds, a blocked invasion, titles), gone 10 minutes after it came in.
 A page stays while it's true, an hour at most; the same news again replaces the old line.
 
-- **The tray:** one icon per waiting page, most urgent first (threats, then events by time left, then a ready contract,
-  letters, offers), amber, red for a threat; up to four on a desktop, three under 900 px, then **+n** (a phone shows the lamp and the count). **One tap** does
-  the page's thing (**Deliver**, **Read**, **Jack in**, **Show**…); mid-fight or on a run, anything that would start a
+- **The ping log** (desktop): frameless lines, an icon and one short sentence each, newest at the bottom, five at most,
+  the older fading in steps; names amber, red on a threat, yours teal. In the map's left column under Contracts; on
+  other pages above the prompt (in a fight, threats only). A plain line fades after 30 s; a threat, a contract to turn
+  in, an unread letter and an invite stay until dealt with. Its tooltip: the name, the line, ▸ what a click does.
+  An unseen threat glows every 10 s until you hover it. **One click** does the page's thing (**Deliver**, **Read**, **Jack in**, **Show**…); mid-fight or on a run, anything that would start a
   fight shows you where it is instead. A page that takes on a task (an offer, a world event's fight) shows its quest
   first, in the quest window's look, with **Take** (or **Intercept**, **Hunt**…) and **Cancel**.
-- **The lamp:** dark with nothing to do, lit while pages wait, blinking while one is new, red for a threat; click it for
+- **On a phone, the lamp** (in the strip, with the count): dark with nothing to do, lit while pages wait, blinking while one is new, red for a threat; click it for
   **Comms** (the pages, then the news folded under **News**, then the director's **History**).
 - **Sound:** only a new page chirps; mid-fight only a breach. A breach also flashes the Integrity meter with BREACH.
 

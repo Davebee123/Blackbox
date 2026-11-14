@@ -48,15 +48,16 @@ test('only the contracts you hold: not the board, not the delivered ones', () =>
   assert.match(more, /Contracts<small>4<\/small>/, 'a floor job is a row, so it counts in the kicker');
   assert.match(more, /3 of 6 contract slots in use; story and floor jobs don’t take a slot\./, 'but not toward the slots');
   s.mail.jobs.pop();
-  // Its name, who it's for and its progress, on the row itself.
+  // Lean: its name and its progress on the row; who it's for in the tooltip.
   const [kill, take, item] = rows(html);
   assert.match(kill, /<b>Kill 5 Ransomware viruses, Lv 8\+<\/b>/);
-  assert.match(kill, /Halcyon Mutual · Claims/);
-  assert.match(kill, /ct-say">3\/5 viruses killed</, 'a count as its numbers and words, not pips');
+  assert.match(kill, /title="[^"]*Contract for Halcyon Mutual · Claims/);
+  assert.doesNotMatch(kill, /ct-for/, 'no line for who it is for');
+  assert.match(kill, /ct-prog ct-side"><small class="ct-n">3\/5</, 'a count as n/N beside its name');
   assert.match(take, new RegExp(`Take over ${loc.name}`));
   assert.match(take, /ct-say">Vault shut</, 'anything else as its few words');
   assert.match(item, /<b>Recover ledger\.db<\/b>/);
-  assert.match(item, /wick · LOWLIGHT/);
+  assert.match(item, /Contract for wick · LOWLIGHT/);
   assert.match(item, new RegExp(`In the vault on ${loc.name}`));
   // Delivered: it leaves the map.
   s.mail.jobs[0].done = true;
