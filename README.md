@@ -211,7 +211,7 @@ comment saying what it does.
 | `dist/channel.mjs`, `dist/presence.mjs` | #net, the public channel; who's online and your friends. |
 | `dist/runners.mjs`, `dist/runners-view.mjs` | Runners: the cast from the network seed, their loop on logged-on time; meeting, standing and hiring; dead runner rooms (`deadOf`, `pulledOut`); the map's diamonds, counts and lists (only where you've revealed: `revealed`, `inSight`), the Rail, the runner and crew cards. |
 | `dist/comms.mjs`, `dist/pager.mjs`, `dist/pager-view.mjs`, `dist/pager.css` | The pager: world events as entries, which ones ask something of you, and the tray. |
-| `dist/casing.mjs`, `dist/casing-view.mjs`, `dist/casing.css` | Casing cosmetics: the monitor's colourway and plate, stickers anywhere on its plastic, props on the desk or on top. |
+| `dist/casing.mjs`, `dist/casing-view.mjs`, `dist/casing.css` | Casing cosmetics: the monitor color and plate, stickers anywhere on its plastic, props on the desk or on top. Rig → Casing is a rail of sections beside the open one's pane. |
 | `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on Rig → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |
 | `dist/house.mjs`, `dist/house-view.mjs`, `dist/house.css`, `dist/content/furniture.mjs` | Your house on Rig → **House**: floors opened by achievement points, furniture from achievements, placed by click. |
 | `dist/recap.mjs` | The death recap on the Disconnected card. |

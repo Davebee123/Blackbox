@@ -2976,13 +2976,13 @@ function paceCard(s) {
 // wire, fight reports, the log).
 const systemTabs = (tab, dev) => dev ? `<nav class="ltabs sys-tabs" role="tablist" aria-label="Settings">${[['settings', 'Settings'], ['dev', 'Dev']].map(([k, l]) => `<button type="button" role="tab" data-stab="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</nav>` : '';
 // The Rig page: Achievements (achievements-view.mjs), and what they unlock for your machine: Casing (casing-view.mjs:
-// the monitor's colourway, plate and stickers), Terminal (terminal-view.mjs: the boot, the prompt and the cursor) and
+// the monitor's color, plate and stickers), Terminal (terminal-view.mjs: the boot, the prompt and the cursor) and
 // House (house-view.mjs: your house and its furniture).
 export const RIG_TABS = [['achievements', 'Achievements'], ['casing', 'Casing'], ['terminal', 'Terminal'], ['house', 'House']];
 const rigTabs = (s, tab) => `<nav class="ltabs sys-tabs" role="tablist" aria-label="Rig">${RIG_TABS.map(([k, l]) => `<button type="button" role="tab" data-rtab="${k}" aria-selected="${tab === k}">${esc(l)}${k === 'achievements' ? `<small class="sys-pts">${glyph('medal')}${pointsOf(s)}</small>` : ''}</button>`).join('')}</nav>`;
-export function rigMarkup(s, { tab = 'achievements', ach = {}, house = {} } = {}) {
+export function rigMarkup(s, { tab = 'achievements', ach = {}, house = {}, casing = 'color' } = {}) {
   if (tab === 'house') return rigTabs(s, tab) + housePageMarkup(s, house);
-  if (tab === 'casing') return rigTabs(s, tab) + casingPageMarkup(s);
+  if (tab === 'casing') return rigTabs(s, tab) + casingPageMarkup(s, { sec: casing });
   if (tab === 'terminal') return rigTabs(s, tab) + terminalPageMarkup(s);
   return rigTabs(s, 'achievements') + achievementsMarkup(s, ach);
 }

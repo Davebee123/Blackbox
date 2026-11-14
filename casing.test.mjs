@@ -44,9 +44,9 @@ test('nothing goes on the screen: every casing rule and element is on the bezel'
   const app = html.slice(html.indexOf('<div class="app"'), html.indexOf('<div id="casing">'));
   assert.ok(!/decal|cs-|data-case/.test(app), 'no casing element in the app');
   // casing.css: each rule is a colourway's variables, the body's plastic, the chin (#casing) or Rig → Casing's page.
-  // the casing's own media query (style.css) and the reduced-motion one (the mug's steam): rules inside them are checked
+  // the casing's own media query (style.css), the phone's (the rail as a strip) and the reduced-motion one (the mug's steam): rules inside them are checked
   // like the rest; the steam's keyframes are its own (only #casing .prop .steam runs them)
-  const css = strip(read('./dist/casing.css')).replace(/@media \(min-width: 1100px\) and \(min-height: 720px\) \{|@media \(prefers-reduced-motion: reduce\) \{/g, '').replace(/@keyframes cs-steam \{(?:[^{}]*\{[^}]*\})*\s*\}/g, '');
+  const css = strip(read('./dist/casing.css')).replace(/@media \(min-width: 1100px\) and \(min-height: 720px\) \{|@media \(prefers-reduced-motion: reduce\) \{|@media \(max-width: 700px\) \{/g, '').replace(/@keyframes cs-steam \{(?:[^{}]*\{[^}]*\})*\s*\}/g, '');
   for (const m of css.matchAll(/([^{}]+)\{[^}]*\}/g)) {
     for (const sel of m[1].split(',').map((x) => x.trim()).filter(Boolean)) {
       assert.ok(/^\[data-case="\w+"\]$/.test(sel) || /^body\.cased\[data-case(="\w+")?\](::after| #casing( \.[\w-]+)*)?$/.test(sel) || /^(\.no-motion )?#casing\b/.test(sel) || /^\.cs-/.test(sel), `${sel} is on the casing or its page`);
@@ -190,16 +190,21 @@ test('Rig → Casing: the swatches (locked with their achievement), the plate an
   assert.equal(JSON.stringify(s), snap);
   assert.match(html, /class="cs-sw" data-case="stock" data-run="casing color stock" aria-pressed="true"/);
   assert.match(html, /class="cs-sw locked" data-case="beige" title="Beige box: [^"]*Comes with Process Killer\."/);
-  assert.match(html, /None yet/);
+  assert.match(casingPageMarkup(s, { sec: 'stickers' }), /None yet/);
+  // The rail: every section with what it holds now, the open one lit; only its options in the pane.
+  assert.match(html, /data-cs-sec="color" aria-selected="true"><b>Monitor color<\/b><small>Stock <i>· 1 of 9<\/i>/);
+  assert.match(html, /data-cs-sec="plate" aria-selected="false"><b>Nameplate<\/b><small>BLACKBOX · MODEL 7</);
+  assert.doesNotMatch(html, /cs-pl"|cs-prop"|cs-dist"/, 'only the open section');
+  assert.match(casingPageMarkup(s, { sec: 'nope' }), /data-cs-sec="color" aria-selected="true"/, 'an unknown section opens the first');
   assert.match(rigMarkup(s), /data-rtab="casing"/, 'a tab on the Rig page');
   assert.match(rigMarkup(s, { tab: 'casing' }), /cs-page/);
   developerAchieve(s, 'all');
-  const all = casingPageMarkup(s);
+  const all = casingPageMarkup(s) + casingPageMarkup(s, { sec: 'stickers' });
   assert.ok(!all.includes('cs-sw locked'), 'every colourway open');
   const mine = decalsOwned(s);
   assert.match(all, new RegExp(`class="cs-decal" data-run="casing sticker ${mine[0].id}" aria-pressed="false"`));
   play(s, `casing sticker ${mine[0].id}`);
-  assert.match(casingPageMarkup(s), new RegExp(`class="cs-decal" data-run="casing sticker ${mine[0].id} off" aria-pressed="true"`), 'a click puts it on, another takes it off');
+  assert.match(casingPageMarkup(s, { sec: 'stickers' }), new RegExp(`class="cs-decal" data-run="casing sticker ${mine[0].id} off" aria-pressed="true"`), 'a click puts it on, another takes it off');
   for (const x of mine) play(s, `casing sticker ${x.id}`);
   assert.equal(casingLook(s).decals.length, mine.length, 'all of them at once');
   assert.ok(achievements().filter((a) => a.reward?.casing).length === COLORWAY_IDS.length - 1);
@@ -250,9 +255,9 @@ test('districts: each from its achievement (a separate block of rewards), locked
 
 test('Rig → Casing → Window: the districts, yours to pick, the rest dim with their achievement; the reward shows as a chip', () => {
   const s = me(), snap = JSON.stringify(s);
-  const html = rigMarkup(s, { tab: 'casing' });
+  const html = rigMarkup(s, { tab: 'casing', casing: 'window' });
   assert.equal(JSON.stringify(s), snap, 'a view never writes the save');
-  assert.match(html, /<h2 title="[^"]*1700px[^"]*">Window<\/h2>/);
+  assert.match(html, /data-cs-sec="window" aria-selected="true" title="[^"]*1700px[^"]*"><b>Window<\/b><small>The Sprawl <i>· 1 of 5/);
   assert.match(html, /class="cs-dist" data-run="district sprawl" aria-pressed="true"/);
   for (const id of DISTRICT_IDS.slice(1)) assert.ok(html.includes(`class="cs-dist locked" title="${DISTRICTS[id].name}: `) && html.includes(`Comes with ${districtFrom(id).name}.`), `${id} dim, with its achievement`);
   developerAchieve(s, 'all');
@@ -285,8 +290,8 @@ test('props: six, each from an achievement, only earned ones, on the desk or on 
   assert.deepEqual(s.cosmetics.props, [{ id: 'cactus', on: 'desk', u: 0.9 }], 'a drag saves the place');
   assert.match(propMarkup(propsLook(s)[0]), /^<span class="prop p-cactus" data-prop="cactus" title="Cactus\. [^"]*"><svg viewBox="0 0 30 26"/);
   // Rig → Casing → Props
-  const html = casingPageMarkup(s);
-  assert.match(html, /<h2>Props<\/h2>/);
+  const html = casingPageMarkup(s, { sec: 'props' });
+  assert.match(html, /data-cs-sec="props" aria-selected="true"><b>Props<\/b><small>1 out <i>· /);
   assert.match(html, /class="cs-prop" data-run="casing prop cactus off" aria-pressed="true"/);
   assert.match(html, /class="cs-prop locked" title="Coffee mug: [^"]*Comes with Long Uptime\."/);
   assert.match(html, /class="cs-prop locked" title="Lucky die: [^"]*Comes with a hidden achievement\."/, 'a hidden one stays hidden');

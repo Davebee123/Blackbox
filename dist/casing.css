@@ -48,26 +48,42 @@ body.cased[data-case="beige"] #casing .badge { text-shadow: 0 1px 0 rgba(255, 25
 @media (prefers-reduced-motion: reduce) { #casing .prop .steam { animation: none; } }
 
 /* ---------- System → Casing (casing-view.mjs) ---------- */
-.cs-page { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: var(--s5); align-items: start; }
+/* The rail (the sections, each with what it holds now) beside the open one's pane; on a phone the rail is a strip. */
+.cs-page { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: var(--s5); align-items: start; }
+.cs-rail { display: grid; gap: 2px; }
+.cs-rail button { display: grid; gap: 3px; padding: 10px 12px; background: none; border: 0; border-left: 2px solid transparent; text-align: left; cursor: pointer; }
+.cs-rail b { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--muted); }
+.cs-rail small { font: 12px var(--mono); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cs-rail small i { font-style: normal; color: var(--dim); }
+.cs-rail button:hover b { color: var(--text); }
+.cs-rail button[aria-selected='true'] { border-left-color: var(--amber); background: rgba(241, 185, 47, 0.06); }
+.cs-rail button[aria-selected='true'] b { color: var(--amber); }
+.cs-pane { min-width: 0; min-height: 260px; }
+@media (max-width: 700px) {
+  .cs-page { grid-template-columns: minmax(0, 1fr); }
+  .cs-rail { grid-auto-flow: column; grid-auto-columns: max-content; gap: 0; overflow-x: auto; border-bottom: 1px solid var(--line); }
+  .cs-rail button { border-left: 0; border-bottom: 2px solid transparent; padding: 8px 10px; }
+  .cs-rail button[aria-selected='true'] { border-bottom-color: var(--amber); background: none; }
+}
 .cs-note { margin: 0 0 var(--s4); font: 12px var(--mono); color: var(--dim); }
-.cs-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: var(--s3); }
+.cs-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--s3); }
 .cs-sw { position: relative; display: grid; justify-items: start; gap: var(--s3); padding: 8px; background: var(--inset); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-card); font: 600 11px var(--mono); text-align: left; cursor: pointer; }
 .cs-sw[aria-pressed='true'] { border-color: var(--amber); color: var(--amber); }
 .cs-sw.locked { cursor: help; color: var(--muted); }
 .cs-sw.locked .cs-chip { opacity: 0.7; }
 .cs-sw .glyph { position: absolute; top: 8px; right: 8px; width: 11px; height: 11px; margin: 0; color: var(--muted); }
 /* A swatch is a little bezel: the colourway's plastic round a dark strip of glass. */
-.cs-chip { display: block; width: 100%; height: 34px; border-radius: 6px; background: radial-gradient(120% 90% at 50% 40%, var(--case-hi, #2a2724), var(--case-mid, #181614) 70%, var(--case-lo, #0e0d0c)); box-shadow: inset 0 0 0 1px var(--case-rim, #0b0a09); position: relative; }
+.cs-chip { display: block; width: 100%; height: 52px; border-radius: 6px; background: radial-gradient(120% 90% at 50% 40%, var(--case-hi, #2a2724), var(--case-mid, #181614) 70%, var(--case-lo, #0e0d0c)); box-shadow: inset 0 0 0 1px var(--case-rim, #0b0a09); position: relative; }
 .cs-chip::after { content: ''; position: absolute; inset: 5px 7px 11px; border-radius: 3px; background: #070503; box-shadow: 0 0 0 1px #000; }
 .cs-plate { display: inline-block; padding: 6px 14px; font: 700 12px var(--mono); letter-spacing: 4px; color: color-mix(in srgb, var(--case-badge, #6b655c) 55%, #f0e2b6); background: radial-gradient(120% 90% at 50% 40%, var(--case-hi, #2a2724), var(--case-mid, #181614) 70%, var(--case-lo, #0e0d0c)); border-radius: var(--r-card); text-shadow: 0 1px 0 rgba(255, 255, 255, 0.07), 0 -1px 0 rgba(0, 0, 0, 0.8); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-.cs-page [data-case="beige"] .cs-plate { color: var(--case-badge); } /* light plastic: the dark engraving */
+.cs-pane[data-case="beige"] .cs-plate { color: var(--case-badge); } /* light plastic: the dark engraving */
 .cs-plates { display: flex; flex-wrap: wrap; gap: var(--s3); margin: var(--s4) 0; }
 .cs-pl { min-height: var(--h-btn-sm); padding: 3px 8px; background: var(--inset); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-btn); font: 600 10.5px var(--mono); letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
 .cs-pl[aria-pressed='true'] { border-color: var(--amber); color: var(--amber); }
-.cs-own { display: flex; gap: var(--s3); }
+.cs-own { display: flex; gap: var(--s3); max-width: 460px; }
 .cs-own input { flex: 1; min-width: 0; height: var(--h-btn-sm); padding: 0 8px; background: var(--inset); color: var(--bright); border: 1px solid var(--line); border-radius: var(--r-btn); font: 600 12px var(--mono); letter-spacing: 2px; text-transform: uppercase; }
 .cs-own input:focus { outline: none; border-color: var(--amber); }
-.cs-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); margin: var(--s4) 0 var(--s3); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--muted); }
+.cs-row { display: flex; align-items: center; justify-content: flex-end; gap: var(--s4); margin: var(--s4) 0 var(--s3); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--muted); }
 .cs-decals { display: flex; flex-wrap: wrap; gap: var(--s3); }
 .cs-decal { padding: 4px; background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-btn); cursor: pointer; }
 .cs-decal[aria-pressed='true'] { border-color: var(--amber); }
@@ -78,15 +94,15 @@ body.cased[data-case="beige"] #casing .badge { text-shadow: 0 1px 0 rgba(255, 25
 
 /* System → Settings → Window (casing-view.mjs districtCardMarkup): the districts, each its skyline in miniature. */
 .cs-mini-d { display: block; background: linear-gradient(180deg, #1c1319, #241611 70%, #3a2016); }
-.cs-dists { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: var(--s3); }
+.cs-dists { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--s3); }
 .cs-dist { position: relative; display: grid; justify-items: start; gap: var(--s3); padding: 8px; background: var(--inset); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-card); font: 600 11px var(--mono); text-align: left; cursor: pointer; }
-.cs-dist .cs-mini-d { width: 100%; height: 34px; border-radius: 4px; box-shadow: inset 0 0 0 1px #000; }
+.cs-dist .cs-mini-d { width: 100%; height: 52px; border-radius: 4px; box-shadow: inset 0 0 0 1px #000; }
 .cs-dist[aria-pressed='true'] { border-color: var(--amber); color: var(--amber); }
 .cs-dist.locked { cursor: help; color: var(--muted); }
 .cs-dist.locked .cs-mini-d { opacity: 0.65; filter: grayscale(0.5); }
 .cs-dist .glyph { position: absolute; top: 8px; right: 8px; width: 11px; height: 11px; margin: 0; color: var(--muted); }
 /* Rig → Casing → Props (deskCardMarkup). */
-.cs-props { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: var(--s3); }
+.cs-props { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: var(--s3); }
 .cs-prop { position: relative; display: flex; align-items: center; gap: var(--s3); padding: 6px 8px; background: var(--inset); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-btn); font: 600 11px var(--mono); text-align: left; cursor: pointer; }
 .cs-prop[aria-pressed='true'] { border-color: var(--amber); color: var(--amber); }
 .cs-prop.locked { cursor: help; padding-right: 20px; color: var(--muted); }
@@ -94,4 +110,3 @@ body.cased[data-case="beige"] #casing .badge { text-shadow: 0 1px 0 rgba(255, 25
 .cs-prop .glyph { position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; margin: 0; color: var(--muted); }
 .cs-prop svg { flex: none; }
 .cs-prop .steam { fill: none; stroke: rgba(236, 226, 214, 0.45); stroke-width: 1.1; stroke-linecap: round; }
-.cs-stack { display: grid; gap: var(--s5); align-content: start; }
