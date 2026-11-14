@@ -336,7 +336,6 @@ you've never met never comes as its .exe. Its research and Codex card are the pa
 | Degausser | Its Wipe takes your two strongest keys. |
 | Prism | A cut stops only the hit it lands on, not the rest of the volley. |
 | Mimic | On its beat it plays back the dearer of your last two commands. |
-| Packer | A scan unpacks only one of the parts it hides. |
 | Damper | Drops two kinds of damage, not one. |
 | Cold Store | Thaws with one more ◆; its Chill lands the next cycle. |
 | Twin Rig | A Rig left alone takes the other's climb and 3 steps more, not 1. |
@@ -379,7 +378,7 @@ A basic with no attack is its signature's **fallback**: break the signature firs
 | Ransomware | **Tripwire** (16): 18, ◆, Ping 3 every 3 | Break it while the others stand and they go **loud** for the fight: 25% more damage and every attack a cycle sooner, but 40% more damage taken and all their ◆ gone. Trip it when you can finish them fast (*loud wins*), else break it last. Throttle quiets a loud part. |
 | Ransomware, Wiper | **Scraper** (19): 22, ◆, Scrape 4 every 4 | When its Scrape lands it takes the buffs you put up before it: your ◆, your shield after its hit, your timed buffs. Buff after it lands. |
 | Wiper | **Recycle Bin** (19): 24, ◆ | Holds the key the Wipe takes (*holds Flood*). Push it past a tick while it holds one and the key comes back, ready. |
-| Ghostroot | **Packer** (20): 20, ◆ | While it stands, the virus's rolled parts show as *Packed part* (attacks named ???) and its rules as ??? chips. A scan before you engage, or breaking it, unpacks them. |
+| Ghostroot | **Packer** (20): 20, ◆ | While it stands, the virus's rolled parts show as *Packed part* (attacks named ???) and its rules as ??? chips. Breaking it unpacks them. |
 | Ghostroot, Wiper | **Bad Block** (21): 22, ◆, Bad Write 4 every 4 | When it lands your next heals lose up to 10% of your max (*Cracked*). Purge, Scrub, Rollback, Rotate Keys and Vent clear it. |
 | Cryptominer, Wiper | **Damper** (23): 26, ◆◆ | While it wears ◆ it takes nothing from one kind (burns, helpers or area hits, crossed out on its tag), which still breaks a ◆. Strip it first. |
 | Ransomware, Wiper | **Cold Store** (24): 30, ◆, Chill 10 every 5 | Frozen and untouchable for its first 5 cycles; its first Chill comes 2 cycles after the thaw. |
@@ -506,7 +505,7 @@ with its faction, even on a strain (Halcyon writes none yet); the elite's set dr
 - **Names.** A wild virus is named for its costliest rolled rule, its body's stem, four digits and its grade:
   *WARDED CRYPTJACK-4821 v2*. The fight header adds the author's byline in its colour.
 - **The rules' chips** under the virus's bar name its rules (the body's dim and dashed, rolled ones bright), ??? until
-  met or scanned. `inspect <part>` lists a part's rules and what each does once researched; it takes no cycle.
+  met. `inspect <part>` lists a part's rules and what each does once researched; it takes no cycle.
 - **Compatibility** (docs/genome.md 5.3): at most one punishment and one amplifier per axis (Burst exempt, tells left
   out), at most one beat, and the hard exclusions.
 - **Testing:** `?playtest=<name>` (`?playtest=flicker`, `?playtest=bouncer`) or `encounter <name>` fights any strain or
@@ -865,8 +864,6 @@ objective too (it pays its archive, not the bonus).
   magenta bevel, the Core red with a point at its foot, a socket orange with pins, a cache an amber rounded chip, the
   vault a gold square, the rest room a green chip with deeply rounded corners, the entry and the den white hexagons. Cleared or used, it goes gray.
 - **Live viruses hold their rooms:** `engage`, or `back` out (the move in is spent).
-- **Scan** (`scan [room]`, or **SCAN −1** on a discovered neighbour's chip): 1 Signal (an Infiltrator's is free and
-  reads deeper) for a card naming every rule the virus carries; it unpacks a Packer.
 - **The key walk.** The guard post sits on another branch, three or more rooms from the vault. Beat its guard and the
   key is yours for the visit; jack out holding it and it goes back to its post, guard and all. An Archive has two
   vaults and two keys; only the one before the Core unseals it. A leaked key or a key cracker puts it in your hand as
@@ -1013,7 +1010,6 @@ Rooms n/N, Mapped or a no-rest job. Invasions carry the quirk too (Invasions).
 | `cat`, `pull` | Read a cache, take it; `pull` in an open vault or at the entry takes what's waiting |
 | `open`, `force` | The vault: with its key, or for 15% of your Signal |
 | `rest` | The rest room (or a Defrag Bay: 25%), once a visit |
-| `scan [room]` | Read this room or a discovered neighbour |
 | `slip` | Slip past the hunter (Infiltrator) |
 | `build [program]`, `uninstall` | In a cleared socket (Sockets and programs) |
 | `install` (`plant`) | A contract's item, in its room |
@@ -2763,7 +2759,7 @@ The rooms tour and a crash skip the pacing. **Turn tips off** on any tip or the 
 them again.
 
 Your first server's room map gets a short **rooms tour**, a step at a time (walk, engage, jack out; a cache, the
-hunter, the rest room and SCAN as you meet them). Later tips meet the vault, the Core, an elite room, a thread, a
+hunter and the rest room as you meet them). Later tips meet the vault, the Core, an elite room, a thread, a
 rival, your Signal running low, a boss's ♛, an elite's clash, a fight's lever (from level 6), an objective, the Lock
 tell and your program (level 5).
 The log and terminal still say what happened, in a line; they don't teach.

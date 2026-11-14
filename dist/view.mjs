@@ -29,7 +29,7 @@ import { GENES, CATS, AXES, CLASHES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import * as UI from './uiscale.mjs';
-import { chipOf, virusGenes, scannedDeep, scannedRead, packedChip, packsGene } from './genome.mjs';
+import { chipOf, virusGenes, packedChip, packsGene } from './genome.mjs';
 import { mastered, RESEARCH, TIER } from './research.mjs';
 import { SFX, levelOf as sfxLevel } from './screenfx.mjs';
 import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, zoneSpawns, TRACE } from './run.mjs';
@@ -539,20 +539,13 @@ export function geneChip(c, extra = '') {
   // WoW's grammar: its name, its kind on a line of its own (Attack type), what it does, then the answer, muted.
   const ax = AXES[c.axis], what = c.catName[0].toUpperCase() + c.catName.slice(1);
   const how = GENES[c.id]?.decode === 'part' ? `Reach research ${TIER.rule} on a part that carries it to learn its rule.` : GENES[c.id]?.decode === 'tell' ? 'Answer it once to learn its rule.' : 'Beat two viruses that carry it to learn its rule.';
-  const title = c.packed ? `Packed: ${an(c.catName)} ${c.catName} the Packer hides until it breaks. A scan before the fight reads it.` : !c.name ? `${an(c.catName)} ${c.catName} you haven't seen.` : c.rule ? `${c.name}: ${what}\n${c.rule}${answerLine(c.answer)}` : `${c.name}: ${what}\n${how}`;
+  const title = c.packed ? `Packed: ${an(c.catName)} ${c.catName} the Packer hides until it breaks.` : !c.name ? `${an(c.catName)} ${c.catName} you haven't seen.` : c.rule ? `${c.name}: ${what}\n${c.rule}${answerLine(c.answer)}` : `${c.name}: ${what}\n${how}`;
   return `<span class="gchip g-${c.src}${c.name ? '' : ' unknown'}${c.packed ? ' packed' : ''}"${c.name ? `style="--ax:${ax.colour}"` : ''} ${extra} title="${esc(title)}">${glyph(c.name ? ax.icon : CATS[c.cat].icon)}${esc(c.name ? c.name.toLowerCase() : '???')}</span>`;
 }
 function geneChips(s, v) {
   const genes = virusGenes(v);
   if (!genes.length) return '';
-  const deep = scannedDeep(s, v), read = scannedRead(s, v);
-  return `<p class="gene-line">${genes.map((g) => (packsGene(s, v, g) ? geneChip(packedChip(chipOf(s, g.id, g.src, deep, read)), 'data-packed="1"') : geneChip(chipOf(s, g.id, g.src, deep, read), GENES[g.id].mutation && g.src !== 'boss' ? `data-mut="${g.id}"` : ''))).join('')}</p>`;
-}
-// A scan on a run: the genome card in the terminal (genome.mjs genomeCard), and on a server's rooms the notice (app.js).
-export function scanMarkup(e) {
-  const c = e.card, a = AUTHORS[c.author];
-  const row = (label, chips) => (chips.length ? `<div class="sc-row"><span class="sc-k">${label}</span><span class="sc-chips">${chips.map((x) => geneChip(x)).join('')}</span></div>` : '');
-  return `<div class="scan-card"><div class="sc-head"><b>${esc(c.name)}</b>${a ? `<span class="byline" style="--ac:${a.colour}">· ${esc(a.name)}</span>` : '<span class="byline stray">· unsigned</span>'}<small>Lv ${c.level} · ${esc(c.strain || c.body)}${c.grade > 1 ? ` · v${c.grade}` : ''}</small></div>${a ? `<p class="sc-style">${esc(a.style)}</p>` : ''}${row('body', c.genes.filter((x) => x.src === 'core'))}${row('rolled', c.genes.filter((x) => x.src !== 'core'))}${row('tells', c.tells)}${c.deep ? `<ul class="sc-deep">${[...c.genes, ...c.tells].filter((x) => x.rule && x.state !== 'decoded').map((x) => `<li><b>${esc(x.name)}</b> ${esc(x.rule)}</li>`).join('')}</ul>` : ''}</div>`;
+  return `<p class="gene-line">${genes.map((g) => (packsGene(s, v, g) ? geneChip(packedChip(chipOf(s, g.id, g.src)), 'data-packed="1"') : geneChip(chipOf(s, g.id, g.src), GENES[g.id].mutation && g.src !== 'boss' ? `data-mut="${g.id}"` : ''))).join('')}</p>`;
 }
 // The collection log: every unique and trophy, found or not. Hidden until your first one; one you
 // haven't found shows where it comes from (a strain's name only once you've met that strain).
@@ -1727,7 +1720,7 @@ export function lessonMarkup(t, lessons) {
 // One column: header (where, Signal, pack), then the terminal. Everything you
 // act on is in the terminal or the buttons under the prompt.
 
-const NET_CLASS = { 'net-scan': 'scan-li', 'net-cmd': 'you', 'net-err': 'warn', 'net-good': 'good', 'net-file': 'file', 'net-ls': 'ls', 'net-sweep': 'sweep-li', 'net-out': 'note', 'run-start': 'good', intrusion: 'bad', victory: 'good', crashed: 'bad', disconnected: 'bad', 'jacked-out': 'good', trap: 'bad', 'pack-hit': 'bad', lead: 'good', located: 'good', warning: 'warn' };
+const NET_CLASS = { 'net-cmd': 'you', 'net-err': 'warn', 'net-good': 'good', 'net-file': 'file', 'net-ls': 'ls', 'net-sweep': 'sweep-li', 'net-out': 'note', 'run-start': 'good', intrusion: 'bad', victory: 'good', crashed: 'bad', disconnected: 'bad', 'jacked-out': 'good', trap: 'bad', 'pack-hit': 'bad', lead: 'good', located: 'good', warning: 'warn' };
 
 // Who's in a SPRAWL-00 folder (presence.mjs): a dot each, friends lit, a name on hover.
 const peopleChips = (list = []) => (list.length ? `<span class="ls-people" title="${esc(list.map((x) => x.handle + (x.fighting ? ' (fighting)' : '')).join(', '))}">${list.slice(0, 3).map((x) => `<span class="who${x.crew ? ' crew' : x.friend ? ' friend' : x.member ? ' member' : ''}${x.fighting ? ' fighting' : ''}">${esc(x.handle)}</span>`).join('')}${list.length > 3 ? `<span class="who more">+${list.length - 3}</span>` : ''}</span>` : '');
@@ -1785,7 +1778,7 @@ export function netTranscript(s, limit = 80) {
   // Warnings from a fight (typos, bad targets) belong to the fight: the terminal skips them.
   const lines = s.logs.slice(Math.max(0, start)).filter((e) => NET_CLASS[e.type] !== undefined && !(e.type === 'warning' && e.fight)).slice(-limit);
   const lastSweep = lines.findLastIndex((e) => e.type === 'net-sweep');
-  return earlier + lines.map((e, i) => `<li class="${NET_CLASS[e.type]}">${e.type === 'net-ls' && e.entries ? lsMarkup(e) : e.type === 'net-sweep' && e.sweep ? sweepMarkup(s, e, i === lastSweep) : e.type === 'net-scan' && e.card ? scanMarkup(e) : esc(e.message) + suggestButton(e)}</li>`).join('');
+  return earlier + lines.map((e, i) => `<li class="${NET_CLASS[e.type]}">${e.type === 'net-ls' && e.entries ? lsMarkup(e) : e.type === 'net-sweep' && e.sweep ? sweepMarkup(s, e, i === lastSweep) : esc(e.message) + suggestButton(e)}</li>`).join('');
 }
 
 

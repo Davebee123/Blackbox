@@ -200,10 +200,11 @@ test('Mimic.exe on a hold plays back your last command; the plain Mimic copies n
   }
 });
 
-test('the lever builds: Twin Rig.exe, Recycle Bin.exe, Packer.exe and Mimic.exe carry theirs', () => {
+test('the lever builds: Twin Rig.exe, Recycle Bin.exe and Mimic.exe carry theirs; the Packer has no .exe', () => {
   assert.equal(part(fight(22, 'cryptominer', { genes: ['twinrig'], exe: ['twinrig'] }), 'twinrig').twinBonus, 3);
   assert.ok(part(fight(30, 'wiper', { genes: ['recyclebin'], exe: ['recyclebin'] }), 'recyclebin').binCool);
-  for (const [gene, id] of [['packer', 'packer'], ['mimic', 'mimic']]) assert.equal(part(fight(22, 'ghostroot', { genes: [gene], exe: [id] }), id).name, `${EXE[id] && id === 'packer' ? 'Packer' : 'Mimic'}.exe`);
+  assert.equal(part(fight(22, 'ghostroot', { genes: ['mimic'], exe: ['mimic'] }), 'mimic').name, 'Mimic.exe');
+  assert.ok(!EXE.packer);
 });
 
 test('echoes: a floor\'s natives come back four floors down, weighted up, always as their .exe', () => {

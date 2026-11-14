@@ -11,7 +11,7 @@ const cost = (s, n) => lifted(n, hackerLevel(s));
 import { hasSpecial, armoredAt, SPECIAL } from './specials.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
-import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
+import { findLocation, closest, command, selectEncounter, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
 import { developerWall, developerDamage } from './firewall.mjs';
@@ -36,10 +36,9 @@ import { consortiumCommand, isGround, arrive, memberServers } from './consortium
 import { isLive, joinCost, liveCount, memoryCap, memoryCommand } from './memory.mjs';
 import { strikeServer } from './factions.mjs';
 import { biasCode, netOf } from './network.mjs';
-import { showCard } from './genome.mjs';
 import { owned, procIn, procOf, rootFileInfo, rootFiles, rootOf, CACHE_FILE, STASH_DIR, STASH_FILE } from './root.mjs';
 import { enterRooms, roomsFor } from './netrooms.mjs';
-import { roomsCommand, jackOut as roomsJackOut, settle as roomsSettle, hereOf, FIGHTS, roomList, neighbours, isUp, coreOpen, walkToRoom, seenOf, fightOf, WORLD as ROOMS_WORLD } from './floorplan.mjs';
+import { roomsCommand, jackOut as roomsJackOut, settle as roomsSettle, hereOf, roomList, neighbours, isUp, coreOpen, walkToRoom, seenOf, WORLD as ROOMS_WORLD } from './floorplan.mjs';
 import { threadCommand, developerThread, isDark } from './threads.mjs';
 export { zoneOf, zoneRooms };
 
@@ -374,7 +373,7 @@ const locked = (loc, path) => !!layoutOf(loc)[path]?.locked && !loc.state.unlock
 
 // ---------- commands ----------
 
-export const RUN_COMMANDS = ['split', 'link', 'goto', 'regroup', 'unlink', 'history', 'ls', 'cd', 'cat', 'pull', 'unlock', 'jack', 'look', 'go', 'pwd', 'tree', 'pack', 'help', 'spoof', 'slip', 'tap', 'attack', 'boost', 'sweep', 'scan'];
+export const RUN_COMMANDS = ['split', 'link', 'goto', 'regroup', 'unlink', 'history', 'ls', 'cd', 'cat', 'pull', 'unlock', 'jack', 'look', 'go', 'pwd', 'tree', 'pack', 'help', 'spoof', 'slip', 'tap', 'attack', 'boost', 'sweep'];
 const equipped = (s, id) => knownSkills(s, classOf(s)).includes(id); // run skills (Spoof, Tap) take no bar slot: knowing one is enough
 const onceUsed = (s, id) => (s.run.used ||= {})[id];
 
@@ -803,13 +802,12 @@ export function play(s, input) {
     if (word === 'pack') { const first = s.serial; out(s, s.run.pack.length ? s.run.pack.map((f) => `${f.name.padEnd(14)} ${packLine(f)}`).concat('unbanked until you jack out.') : 'pack is empty.', 'rooms-out'); return since(s, first); }
     if (word === 'help') { const first = s.serial; out(s, ['ls            this room and its exits', 'go <room>     walk: a name or an address (cd C2; cd .. toward the entry)', 'map           the rooms you have seen', 'wait          stay a move', 'engage, back  fight what holds the room, or step back', 'cat, pull     read and take a cache (pull in an open vault)', 'open, force   the vault', 'rest          the rest room', 'install       a contract\'s item, in its room (plant)', 'play          a puzzle room\'s board (play wall c4, play up, play tap b2, play ping d4)', 'talk          who waits in a thread\'s room (talk 1, talk 2 to choose; read a log)', 'threads       your threads (thread <id>, thread abandon <id>)', 'slip          past the hunter (Infiltrator)', 'pack          what you carry', 'jack out      home, banking the pack'], 'rooms-out'); return since(s, first); }
     if (['split', 'link', 'goto', 'regroup', 'unlink'].includes(word)) { const first = s.serial; crewMove(s, word, rest); return since(s, first); }
-    if (word === 'scan') { const first = s.serial; scanRoom(s, rest); return since(s, first); }
     const ev = roomsCommand(s, text.replace(/^look$/, 'ls').replace(/^attack\b.*/, 'engage').replace(/^tree$/, 'map'));
     if (ev) return ev;
-    if (RUN_COMMANDS.includes(word) && !['scan', 'boost', 'crew'].includes(word) && !(word === 'jack' && rest !== 'out')) { const first = s.serial; warn(s, `${word}: not on rooms. Type help.`); return since(s, first); }
+    if (RUN_COMMANDS.includes(word) && !['boost', 'crew'].includes(word) && !(word === 'jack' && rest !== 'out')) { const first = s.serial; warn(s, `${word}: not on rooms. Type help.`); return since(s, first); }
     return command(s, input);
   }
-  const isRun = RUN_COMMANDS.includes(word) && !(word === 'jack' && rest !== 'out') && !(word === 'scan' && active(s)); // scan mid-fight reads the fight (genome.mjs)
+  const isRun = RUN_COMMANDS.includes(word) && !(word === 'jack' && rest !== 'out');
   if (!s.run || !isRun) return command(s, input);
   const first = s.serial;
   if (active(s)) {
@@ -836,13 +834,12 @@ export function play(s, input) {
   }
   else if (word === 'slip') slip(s);
   else if (word === 'attack') attack(s, rest);
-  else if (word === 'scan') scan(s, rest);
   else if (word === 'tap') tap(s);
   else if (word === 'boost') boost(s);
   else if (word === 'sweep') sweepCommand(s, currentLocation(s), rest);
   else if (word === 'pack') out(s, s.run.pack.length ? s.run.pack.map((f) => `${f.name.padEnd(14)} ${f.kind === 'credits' ? f.amount + ' credits' : f.kind === 'item' ? f.item : f.kind === 'gear' ? itemLabel(f.item) : f.kind === 'code' ? `${f.amount} ${MATERIALS[f.material].name}` : f.kind === 'daemon' ? 'daemon' : 'trace record (deeper node)'}`).concat('unbanked until you jack out.') : 'pack is empty.');
   else if (word === 'help') out(s, ['ls            what is here (ls -a shows hidden files)', 'cd <dir>      move (cd .. goes up)', 'cat <file>    read',
-  'sweep <x>     answer an incident log (cat it first)', 'pull <file>   take it (banked when you jack out)', 'unlock <dir> <password>', 'tree          map of what you have seen', 'history       everything this run (the terminal shows one folder at a time)', 'pack          what you are carrying', `scan <x>      a virus's rules before you fight it (${SCAN.signal} Signal${classOf(s) === 'infiltrator' ? ', quiet for you' : ', and Trace on a break-in'})`, 'jack out      go home', ...(equipped(s, 'spoof') ? ['spoof         slip past the next guard (once per run)'] : []), ...(classOf(s) === 'infiltrator' ? [`slip          walk past a guard without a fight (${slipsLeft(s)} left this run)`] : []), ...(equipped(s, 'tap') ? ['tap           show the whole map, guards and where the key is (once per run)'] : [])]);
+  'sweep <x>     answer an incident log (cat it first)', 'pull <file>   take it (banked when you jack out)', 'unlock <dir> <password>', 'tree          map of what you have seen', 'history       everything this run (the terminal shows one folder at a time)', 'pack          what you are carrying', 'jack out      go home', ...(equipped(s, 'spoof') ? ['spoof         slip past the next guard (once per run)'] : []), ...(classOf(s) === 'infiltrator' ? [`slip          walk past a guard without a fight (${slipsLeft(s)} left this run)`] : []), ...(equipped(s, 'tap') ? ['tap           show the whole map, guards and where the key is (once per run)'] : [])]);
   return since(s, first);
 }
 
@@ -910,7 +907,7 @@ hooks.crewGuests = (s, room) => {
   return at(s, loc.id, folder).map((x) => ({ cls: x.cls, name: x.handle, level: x.level }));
 };
 
-// The fight a folder's virus brings: [key, seed, opts] for selectEncounter, and for scan to read before it starts.
+// The fight a folder's virus brings: [key, seed, opts] for selectEncounter, and for selectEncounter.
 // A wild virus carries its file's four digits (WARDED CRYPTJACK-4821); a boss or a bounty keeps its name.
 const tagOf = (name) => (String(name).match(/(\d{4})$/) || [])[1];
 const procFight = (s, loc, proc, room) => ['random', proc.seed, { mode: 'run', room, level: proc.level, family: proc.family, zone: true, process: loc.id, tag: tagOf(proc.name), strain: proc.strain, grade: proc.grade }];
@@ -936,71 +933,6 @@ function attack(s, arg) {
   if (arg && !named(sp.name, arg)) return err(s, `No ${arg} here. This folder has ${sp.name}.exe.`);
   selectEncounter(s, ...spawnFight(s, loc, sp, s.run.cwd));
   command(s, 'engage');
-}
-
-// scan [virus or folder]: a virus's genome card before you fight it (genome.mjs): the virus in this folder, a folder you
-// can see that holds a virus or a guard, or the guard you just walked in on. It costs SCAN.signal Signal, and SCAN.trace
-// Trace on a break-in. An Infiltrator scans quietly and for free, and reads the rules of genes it hasn't decoded, for
-// that fight (inspect shows them too).
-export const SCAN = { signal: 1, trace: 4 };
-function scanTarget(s, loc, arg) {
-  if (s.encounter && !active(s)) return s.encounter.virus; // the guard at the door
-  const here = s.run.cwd, a = (arg || '').replace(/\.exe$/, '').replace(/\/$/, '');
-  const proc = procIn(loc, here);
-  if (proc && (!a || named(proc.name, a))) return encounterVirus(s, ...procFight(s, loc, proc, here));
-  const spawns = isWild(loc) ? (loc.zone ? zoneSpawns(s) : rogueSpawns(s, loc)) : {};
-  if (spawns[here]?.alive && (!a || named(spawns[here].name, a))) return encounterVirus(s, ...spawnFight(s, loc, spawns[here], here));
-  if (!a) return null;
-  const room = join(here, a); // a folder next to you: one ls shows
-  if (!(layoutOf(loc)[here]?.dirs || []).includes(a) || !layoutOf(loc)[room] || (hiddenName(a) && !s.run.showHidden)) return null;
-  if (spawns[room]?.alive) return encounterVirus(s, ...spawnFight(s, loc, spawns[room], room));
-  if (watching(s, loc, room)) return encounterVirus(s, ...guardFight(s, loc, room));
-  return null;
-}
-function scan(s, arg) {
-  const loc = currentLocation(s);
-  const v = scanTarget(s, loc, arg);
-  if (!v) return err(s, arg ? `Nothing to scan at ${arg}. Scan a virus here, or a folder you can see that holds one.` : 'Nothing to scan in this folder. scan <folder> reads a guard or a virus next door.');
-  const deep = classOf(s) === 'infiltrator';
-  if (!deep) {
-    if (s.run.integrity <= cost(s, SCAN.signal)) return err(s, 'Not enough Signal to scan.');
-    s.run.integrity -= cost(s, SCAN.signal);
-    traceAdd(s, SCAN.trace);
-  } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
-  (s.run.unpack ||= []).includes(v.id) || s.run.unpack.push(v.id); // a Packer's rules show once you've scanned it (combat.mjs packerOn)
-  (s.run.named ||= []).includes(v.id) || s.run.named.push(v.id); // its rules show by name, on the card and in the fight (genome.mjs scannedRead)
-  showCard(s, v, { deep, type: 'net-scan' });
-}
-
-// scan [room] on rooms: the genome card of what holds this room, or a room next to you that you've discovered (been in:
-// floorplan.mjs fog) and holds a fight. An unknown room can't be read from outside.
-// It costs SCAN.signal Signal (an Infiltrator scans quietly and for free, and reads deeper).
-// What scan reads on rooms: a room you've been in whose fight is up (a sealed Core never is).
-const scanReads = (s, room) => !!room && seenOf(s, room.id) === 'kind' && FIGHTS.includes(room.kind) && isUp(s, room) && !(room.kind === 'core' && !coreOpen(s));
-// The Scan button on a room's pop-up card (floorplan-view.mjs, through netrooms.mjs): a room next to you that scan
-// reads, out of a fight. It runs scan <room>, as the prompt does. Null where scan can't read it, your own room too.
-export function scanButton(s, room) {
-  const R = s.rooms;
-  if (!s.run?.rooms || !R?.at || active(s) || !room || room.id === R.at || !neighbours(R.graph, R.at).includes(room.id) || !scanReads(s, room)) return null;
-  const free = classOf(s) === 'infiltrator';
-  return { cmd: `scan ${room.dir}`, free, cost: free ? 0 : SCAN.signal, short: !free && s.run.integrity <= SCAN.signal };
-}
-function scanRoom(s, arg) {
-  const R = s.rooms, g = R.graph, a = (arg || '').toLowerCase();
-  const near = [R.at, ...neighbours(g, R.at)].map((id) => g.rooms[id]);
-  const room = a ? near.find((x) => x.dir === a.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || x.path0 === a || x.path0 === '/' + a || x.path.toLowerCase() === a) : g.rooms[R.at];
-  if (room && seenOf(s, room.id) !== 'kind') return err(s, `scan: you haven't been in that room. You can't read what's in it from outside.`);
-  if (!scanReads(s, room)) return err(s, a ? `Nothing to scan at ${arg}. Scan a room next to you that holds a fight.` : 'Nothing to scan here. scan <room> reads a fight next door.');
-  const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts);
-  const deep = classOf(s) === 'infiltrator';
-  if (!deep) {
-    if (s.run.integrity <= cost(s, SCAN.signal)) return err(s, 'Not enough Signal to scan.');
-    s.run.integrity -= cost(s, SCAN.signal);
-  } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
-  (s.run.unpack ||= []).includes(v.id) || s.run.unpack.push(v.id); // a Packer's rules show once you've scanned it (combat.mjs packerOn)
-  (s.run.named ||= []).includes(v.id) || s.run.named.push(v.id); // its rules show by name, on the card and in the fight (genome.mjs scannedRead)
-  s.run.scans = (s.run.scans || 0) + 1; // the rooms tour's scan step (tips.mjs)
-  showCard(s, v, { deep, type: 'net-scan' });
 }
 
 // attack <name>: the start of its name, in any case, with or without .exe.
@@ -1093,14 +1025,14 @@ export function runSuggestions(s, input) {
   return ['history', 'ls', 'ls -a', 'cd ', 'cat ', ...(canCloak(s) ? ['spoof'] : []), ...(equipped(s, 'tap') ? ['tap'] : []), ...(slipsLeft(s) > 0 ? ['slip'] : []), 'pull ', 'unlock ', 'jack out', 'tree', 'pack', 'help', 'engage'].filter((c) => c.startsWith(text));
 }
 
-// On rooms: the room verbs, and for cd/go/scan the rooms you've discovered (by the slug you type; never an unknown one).
+// On rooms: the room verbs, and for cd/go the rooms you've discovered (by the slug you type; never an unknown one).
 function roomSuggestions(s, text) {
   const [word, arg = ''] = text.split(/ (.*)/);
   if (text.includes(' ')) {
-    if (['cd', 'go', 'scan'].includes(word)) return [...(word === 'cd' ? ['..'] : []), ...roomList(s).filter((x) => seenOf(s, x.id) === 'kind' && x.dir).map((x) => x.dir)].filter((d) => d.startsWith(arg)).map((d) => `${word} ${d}`);
+    if (['cd', 'go'].includes(word)) return [...(word === 'cd' ? ['..'] : []), ...roomList(s).filter((x) => seenOf(s, x.id) === 'kind' && x.dir).map((x) => x.dir)].filter((d) => d.startsWith(arg)).map((d) => `${word} ${d}`);
     return [];
   }
-  return ['ls', 'map', 'cd ', 'go ', 'wait', 'back', 'engage', 'cat', 'pull', 'open', 'force', 'rest', 'slip', 'scan', 'pack', 'help', 'jack out'].filter((c) => c.startsWith(text));
+  return ['ls', 'map', 'cd ', 'go ', 'wait', 'back', 'engage', 'cat', 'pull', 'open', 'force', 'rest', 'slip', 'pack', 'help', 'jack out'].filter((c) => c.startsWith(text));
 }
 
 export { guarded, locked };

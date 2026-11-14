@@ -47,7 +47,7 @@ import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
 import { traceNear, hiddenLead, HIDDEN } from './hidden.mjs';
 import { hiddenNear } from './floors.mjs';
-import { zoneSpawns, kingOpen, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn, scanButton } from './run.mjs';
+import { zoneSpawns, kingOpen, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn } from './run.mjs';
 import { blipStood, blipRooms, runCardRoll, runCardUp, runCardEnd } from './events.mjs';
 import { RUN_CARDS } from './runcards.mjs';
 import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
@@ -604,8 +604,6 @@ FP.WORLD.view = {
   jobs: (s) => { const loc = locOf(s); return loc ? jobsOn(s, loc) : []; },
   // The director's blips on this server (events.mjs): { roomId: { kind, name, text } }, a spark on the chip.
   blips: (s) => { const loc = locOf(s); return loc ? blipRooms(s, loc) : {}; },
-  // A room next to you that scan reads (run.mjs scanRoom): its card's Scan button runs scan <room>.
-  scan: (s, room) => scanButton(s, room),
 };
 
 // The live viruses in the rooms you know on this server, as a contract reads a kill (roomKill's terms): the marks.

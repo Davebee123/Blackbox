@@ -540,7 +540,7 @@ test('Scraper: its landing takes your ◆ (its hit goes past them) and what is l
   assert.equal(p.armor, a0 + 2, 'never more than 2 in all');
   assert.ok(intents(s, 4).filter((i) => i.source === 'scraper').every((i) => i.scrape), 'its cells carry the takes-shield mark');
 });
-test('Packer: while it stands the virus\'s rolled rules read as ???; breaking it, or a scan before the fight, unpacks them', () => {
+test('Packer: while it stands the virus\'s rolled rules read as ???; breaking it unpacks them', () => {
   const s = fight2(20, 'ghostroot', ['packer', 'frontend']), fe = part(s, 'frontend');
   s.research = { 'ghostroot:frontend': 60 };
   assert.match(partTip(s, s.encounter.virus, fe), /hidden until the Packer breaks/);
@@ -549,13 +549,6 @@ test('Packer: while it stands the virus\'s rolled rules read as ???; breaking it
   assert.ok(s.encounter.virus.name.startsWith('PACKED'), 'it names the virus');
   hit(s, part(s, 'packer'), 99999, { pierce: true, server: true });
   assert.doesNotMatch(partTip(s, s.encounter.virus, fe), /hidden until the Packer breaks/, 'broken: unpacked');
-  const t = fresh(); t.metAll = true; t.run = { loc: 'sim', cwd: '/', integrity: 300, max: 300, pack: [], visited: ['/'], unpack: [] };
-  const opts = { mode: 'run', room: '/x', level: 20, family: 'ghostroot', basic: 'pulse', genes: ['packer', 'frontend'], mutation: null, quiet: true };
-  t.run.unpack.push(encounterVirus(t, 'random', 77, opts).id);
-  selectEncounter(t, 'random', 77, opts);
-  assert.ok(t.encounter.unpacked, 'scanned before: it hides nothing');
-  assert.ok(t.encounter.virus.parts.every((p) => !p.packedAs && p.name !== 'Packed part') && part(t, 'frontend').name === 'Front End', 'scanned: every part by its own name');
-  assert.doesNotMatch(boardMarkup(t), /Packed part|tag packed/);
 });
 test('Spare asleep: its ◆ take a big hit (the key\'s ◆ badge says so), the ◆ ABSORBED line fires, and they patch back', () => {
   const s = fight2(14, 'worm', ['spare']), sp = part(s, 'spare');

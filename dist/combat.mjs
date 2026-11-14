@@ -1354,10 +1354,6 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, process: opts.process || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, scrambleUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {}, soft: opts.zone && !opts.wild && !opts.process && (s.pace?.kills || 0) < CONFIG.zone.starterKills ? CONFIG.zone.starterHit : 1 }; // soft: your first kills in SPRAWL-00 hit softer, so you can learn the board
   const lean = mode === 'run' && s.run ? leaningOf(findLocation(s, s.run.loc)) : null;
   if (lean) s.encounter.leaning = { id: lean, paid: 0 }; // the server's leaning (leanings.mjs)
-  if (s.run?.unpack?.includes(virus.id)) { // scanned before the fight: a Packer hides nothing (genes.mjs packer); a Packer.exe all but one
-    const pk = virus.parts.find((x) => x.packer);
-    if (pk?.exe) s.encounter.unpackedOne = virus.parts.find((x) => x.kind === 'system' && !x.packer && !x.special && !x.basic)?.id || null; else s.encounter.unpacked = true;
-  }
   packParts(s);
   const signed = virus.author && AUTHORS[virus.author] ? ` ${AUTHORS[virus.author].name} wrote it.` : '';
   if (!opts.quiet) emit(s, 'intrusion', opts.zone
@@ -2762,8 +2758,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     floorCommand(s, text); // floors.mjs: the floors you've reached, the map's floor, the way down
   } else if (/^network( |$)/.test(text)) {
     networkCommand(s, text); // network.mjs: your network's signature, or a member's
-  } else if (/^(inspect|scan)( |$)/.test(text)) {
-    genomeCommand(s, text); // genome.mjs: a part's genes (free, no cycle), or the card of what you're facing
+  } else if (/^inspect( |$)/.test(text)) {
+    genomeCommand(s, text); // genome.mjs: a part's genes (free, no cycle)
   } else if (text.startsWith('config ') || text.startsWith('craft config ')) {
     warn(s, 'Configs are gone: services run as they come.');
   } else if (text.startsWith('outpost ') || /^build( |$)/.test(text)) {
@@ -3330,11 +3326,11 @@ export function hitKind(s, p, opts = {}) {
   if (opts.mine && c?.id && (ABILITIES[c.id]?.target === 'none' || (c.target && c.target !== p.id))) return 'area';
   return null;
 }
-// A living Packer, not unpacked (by a scan before the fight, or by breaking it): the virus's rolled parts hide who they
+// A living Packer, not unpacked (by breaking it): the virus's rolled parts hide who they
 // are. Each shows as a Packed part (A, B… when there are more), its attack's name as ???, its tags, telegraphs, rule
 // and inspect hidden; what it does still happens. p.packedAs keeps its own names until it unpacks.
 export const packerOn = (s, v = s?.encounter?.virus) => !!v && !s?.encounter?.unpacked && s?.encounter?.virus === v && v.parts.some((x) => x.packer && alive(x));
-export const packed = (s, v, p) => packerOn(s, v) && !!p && !p.packer && p.kind === 'system' && !p.special && !p.basic && p.id !== s.encounter.unpackedOne;
+export const packed = (s, v, p) => packerOn(s, v) && !!p && !p.packer && p.kind === 'system' && !p.special && !p.basic;
 export const PACKED_NAME = 'Packed part';
 export function packParts(s) {
   const v = s.encounter?.virus;
@@ -3450,9 +3446,7 @@ function breakPart(s, p) {
   // The weak point moves: a new one forms on another part.
   if (e.virus.weakPoint === p.id) {
     const next = livingParts(s).find((x) => x.kind === 'system');
-    const wasKnown = e.virus.weakKnown;
     if (next) { e.virus.weakPoint = next.id; e.virus.weakKnown = false; }
-    if (wasKnown && next && usable(s).includes('scan')) emit(s, 'info', 'A new weak point formed. Scan to find it.');
   }
   // Zip Bomb: its fuse burns, then it hits you (cycleStart), unless the fight ends first.
   if (p.fuse && !p.fuseAt) { const fz = p.fuseIn ?? CONFIG.zipbomb.fuse; p.fuseAt = e.cycle + fz; emit(s, 'warning', `The ${p.name}'s fuse is lit. It goes off in ${fz === 1 ? '1 cycle' : `${fz} cycles`} unless the fight ends first.`, { target: p.id, fuse: p.fuseAt }); }
@@ -5302,7 +5296,7 @@ export function suggestions(s, input = '') {
     }
   }
   const base = active(s)
-    ? [...usable(s).map((id) => (id === 'spike' ? spikeWord(s) : id)), 'hold', 'pause', 'resume', 'cancel', 'status', 'scan', ...living.filter((p) => p.kind !== 'fragment').map((p) => `inspect ${packed(s, s.encounter.virus, p) ? partKey(s, p) : p.id}`)]
+    ? [...usable(s).map((id) => (id === 'spike' ? spikeWord(s) : id)), 'hold', 'pause', 'resume', 'cancel', 'status', ...living.filter((p) => p.kind !== 'fragment').map((p) => `inspect ${packed(s, s.encounter.virus, p) ? partKey(s, p) : p.id}`)]
     : ['engage', 'jack in', 'mail', 'repair', 'top up', 'protocols', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
   return base.filter((x) => x.startsWith(text));
 }

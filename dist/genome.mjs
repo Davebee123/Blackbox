@@ -1,4 +1,4 @@
-// A virus's genome in play (docs/genome.md): `scan`, `inspect` and the rules' chips. genes.mjs is the library and
+// A virus's genome in play (docs/genome.md): `inspect` and the rules' chips. genes.mjs is the library and
 // authors.mjs who writes them; data.mjs puts genes and an author on every virus it builds. "Gene" is a word for the
 // code only: the player reads rules, parts and mutations (the Codex's part research, research.mjs, is what decodes).
 //
@@ -12,7 +12,7 @@
 import { GENES, CATS, AXES, partGenes } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { FAMILIES, ROOM_FAMILIES, STRAINS, GUARDS, genomeOf } from './data.mjs';
-import { emit, warn, alive, familyInfo, classOf, packerOn, packed } from './combat.mjs';
+import { emit, warn, alive, packerOn, packed } from './combat.mjs';
 import { plannedTells } from './tells.mjs';
 import { RESEARCH, TIER } from './research.mjs';
 
@@ -111,26 +111,18 @@ export function logSet(s, family, set) {
   (dexOf(s).sets ||= {})[`${family}:${set}`] = 1;
 }
 
-// ---------- the genome card (scan) ----------
-// What you can tell about a virus: its author, body, grade and every gene chip, named if you've seen it, ??? with its
-// category otherwise. deep: an Infiltrator's scan, which shows the rule of genes you haven't decoded, for that fight.
-// read: a virus you scanned (scannedRead), whose rules all show by name, for that fight. What each does still waits for
-// the Codex (or deep).
+// ---------- gene chips ----------
+// What you can tell about a gene: named if you've seen it, ??? with its category otherwise; its rule once decoded.
+// deep: a breach audit (breach-view.mjs), which shows the rule of genes you haven't decoded.
 const one = (id) => CATS[GENES[id].cat].one;
-export function chipOf(s, id, src, deep = false, read = false) {
+export function chipOf(s, id, src, deep = false) {
   // A mutation's rule shows once you've met it, as it always has (every mutation is visible from the start).
   const g = GENES[id], state = geneState(s, id), named = state !== 'unknown', open = state === 'decoded' || deep || (g.mutation && named);
-  return { id, src, cat: g.cat, catName: one(id), axis: g.axis, axisName: AXES[g.axis].name, state, name: named || deep || read ? g.name : null, rule: open ? g.does : null, answer: open ? g.answer : null };
+  return { id, src, cat: g.cat, catName: one(id), axis: g.axis, axisName: AXES[g.axis].name, state, name: named || deep ? g.name : null, rule: open ? g.does : null, answer: open ? g.answer : null };
 }
 // A Packer standing in the fight (combat.mjs packerOn): the rolled genes read as ???, whatever your Codex knows.
 export const packedChip = (c) => ({ ...c, state: 'unknown', name: null, rule: null, answer: null, packed: true });
 export const packsGene = (s, v, g) => g.src !== 'core' && g.id !== 'packer' && packerOn(s, v);
-export function genomeCard(s, v, { deep = false } = {}) {
-  const fam = familyInfo(v.family), read = scannedRead(s, v);
-  const genes = virusGenes(v).map((g) => (packsGene(s, v, g) ? packedChip(chipOf(s, g.id, g.src, deep, read)) : chipOf(s, g.id, g.src, deep, read)));
-  const tells = tellGenes(v).map((id) => chipOf(s, id, 'tell', deep));
-  return { name: v.name, author: v.author || null, authorName: authorName(v.author), style: AUTHORS[v.author]?.style || null, body: fam?.name || v.family, level: v.level, grade: v.grade || 1, strain: v.strain ? STRAINS[v.strain]?.name : null, genes, tells, deep };
-}
 const list = (xs) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`);
 const NUM = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
 const an = (w) => (/^[aeiou]/i.test(w) ? 'an' : 'a');
@@ -141,20 +133,6 @@ function named(chips) {
   const rest = Object.entries(unknown).map(([cat, n]) => (n === 1 ? `${an(cat)} ${cat}` : `${NUM[n] || n} ${cat}s`) + ' you haven\'t seen');
   return list([...known, ...rest]);
 }
-// The card in plain sentences, for the log.
-export function cardLines(card) {
-  const by = card.authorName ? `, written by ${card.authorName}` : ', a stray nobody signs';
-  const what = card.strain ? `a ${card.strain} build on a ${card.body.toLowerCase()} body` : `a ${card.body.toLowerCase()} body`;
-  const out = [`${card.name}${by}. It is ${what}, level ${card.level}${card.grade > 1 ? `, grade v${card.grade}` : ''}.`];
-  if (card.style) out.push(card.style);
-  const core = card.genes.filter((c) => c.src === 'core'), more = card.genes.filter((c) => c.src !== 'core' && c.src !== 'grade'), grade = card.genes.filter((c) => c.src === 'grade');
-  out.push(`Its body carries ${named(core)}.${more.length ? ` It also carries ${named(more)}.` : ''}${grade.length ? ` Its grade makes it ${named(grade)}.` : ''}`);
-  if (card.tells.length) out.push(`It can announce ${named(card.tells)}.`);
-  // An Infiltrator's scan reads the rules you haven't decoded (the rest are in your codex).
-  if (card.deep) for (const c of [...card.genes, ...card.tells]) if (c.rule && c.state !== 'decoded') out.push(`${c.name} is ${an(c.catName)} ${c.catName}. ${c.rule}`);
-  return out;
-}
-
 // ---------- inspect <part> (a fight; free) ----------
 export function inspect(s, arg) {
   const e = s.encounter;
@@ -165,37 +143,17 @@ export function inspect(s, arg) {
   const p = ps.find((x) => key(x) === arg || x.name.toLowerCase() === arg) || ps.find((x) => key(x).startsWith(arg) || x.name.toLowerCase().startsWith(arg));
   if (!arg || !p) return warn(s, `inspect <part>: ${ps.map(key).join(', ')}.`);
   if (packed(s, e.virus, p)) return emit(s, 'info', `The Packer hides what the ${p.name} carries. Break the Packer to read it.`, { target: p.id, inspect: true });
-  const ids = partGenes(p), deep = scannedDeep(s, e.virus), read = scannedRead(s, e.virus);
+  const ids = partGenes(p);
   if (!ids.length) return emit(s, 'info', `The ${p.name} carries no rule of its own.`, { target: p.id, inspect: true });
   const lines = ids.map((id) => {
-    const c = chipOf(s, id, 'part', deep, read);
+    const c = chipOf(s, id, 'part');
     if (c.rule) return `${c.name} is ${an(c.catName)} ${c.catName}. ${c.rule} ${c.answer}`;
     return `You haven't learned ${c.name || `this ${c.catName}`} yet. Reach research ${RESEARCH.tiers[1]} on the ${p.name} to learn what it does.`;
   });
-  return emit(s, 'info', `The ${p.name}${alive(p) ? '' : ', broken,'} carries ${named(ids.map((id) => chipOf(s, id, 'part', deep, read)))}.\n${lines.join('\n')}`, { target: p.id, inspect: true });
-}
-// An Infiltrator's scan reads deeper, for the fight it scanned.
-export const scannedDeep = (s, v) => !!(v && s.run?.scanned?.includes(v.id));
-// Any scan names every rule the virus carries, for the fight it scanned (run.mjs scan and scanRoom keep s.run.named).
-export const scannedRead = (s, v) => !!(v && s.run?.named?.includes(v.id));
-
-// ---------- scan ----------
-// The card for the virus you're facing (a fight at the gate, or under way): free, you can see it. On a run, scanning
-// a virus or a guarded folder you can see before you engage is run.mjs's (it costs Signal and Trace).
-export function scanFight(s) {
-  const v = s.encounter?.virus;
-  if (!v) return warn(s, 'Nothing to scan here. On a run, scan a virus or a guarded folder you can see.');
-  return showCard(s, v, { deep: classOf(s) === 'infiltrator' || scannedDeep(s, v) });
-}
-export function showCard(s, v, { deep = false, type = 'scan' } = {}) {
-  const card = genomeCard(s, v, { deep });
-  return emit(s, type, cardLines(card).join('\n'), { card });
+  return emit(s, 'info', `The ${p.name}${alive(p) ? '' : ', broken,'} carries ${named(ids.map((id) => chipOf(s, id, 'part')))}.\n${lines.join('\n')}`, { target: p.id, inspect: true });
 }
 export function genomeCommand(s, text) {
-  const [word, ...rest] = text.split(' ');
-  const arg = rest.join(' ').trim().toLowerCase();
-  if (word === 'inspect') return inspect(s, arg);
-  if (s.encounter) return scanFight(s);
-  return warn(s, 'scan works on a run, on a virus or a guarded folder you can see, or on what you are fighting.');
+  const arg = text.split(' ').slice(1).join(' ').trim().toLowerCase();
+  return inspect(s, arg);
 }
 export { CATS, AXES };

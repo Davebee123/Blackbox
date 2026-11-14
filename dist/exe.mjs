@@ -48,7 +48,6 @@ export const EXE = {
   scraper: { kind: 'stronger', what: 'It gains up to 4 ◆ from what it takes, not 2.', apply: (p) => { p.scrape = (p.scrape || 2) * 2; } },
   prism: { kind: 'different', what: 'A cut stops only the hit it lands on, not the rest of the volley.', apply: (p) => { p.cutOne = true; } },
   mimic: { kind: 'different', what: 'On its beat it plays back the dearer of your last two commands, so holding is no longer safe.', apply: () => {} },
-  packer: { kind: 'different', what: 'A scan unpacks only one of the parts it hides. Breaking it unpacks the rest.', apply: () => {} },
   damper: { kind: 'stronger', what: 'It drops two kinds of damage, not one.', apply: (p) => { const k = ['burn', 'helper', 'area']; p.damperKind2 = k[(k.indexOf(p.damperKind) + 1) % k.length]; } },
   coldstore: { kind: 'stronger', what: 'It thaws with one more ◆, and its Chill lands the next cycle, not 2 cycles later.', apply: (p) => { p.thawHard = true; } },
   twinrig: { kind: 'stronger', what: 'A Rig left alone takes the other\'s climb and 3 steps more, not 1.', apply: (p) => { p.twinBonus = 3; } },

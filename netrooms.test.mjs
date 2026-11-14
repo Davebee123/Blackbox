@@ -77,7 +77,7 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   assert.equal(s.encounter.bossRule, 'a');
 });
 
-test('the terminal on rooms: ls, cd, cd .., map, go, wait, back, engage, pack, help, scan and jack out all work; a typo says so', () => {
+test('the terminal on rooms: ls, cd, cd .., map, go, wait, back, engage, pack, help and jack out all work; a typo says so', () => {
   const { s, loc } = traced();
   play(s, 'connect ' + loc.id);
   const R = s.rooms;
@@ -87,7 +87,6 @@ test('the terminal on rooms: ls, cd, cd .., map, go, wait, back, engage, pack, h
   assert.match(said('help'), /go <room>[\s\S]*jack out/);
   assert.match(said('pack'), /pack is empty/);
   const next = FP.neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]).find((r) => FP.isUp(s, r));
-  assert.match(said('scan ' + next.dir), /./, 'a genome card');
   said('go ' + next.dir);
   assert.equal(R.at, next.id);
   assert.equal(R.screen?.kind, 'virus');

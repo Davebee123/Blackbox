@@ -281,7 +281,7 @@ test('crewmates\' fights don\'t count for you: their breaks earn nothing, and yo
   assert.ok(mastered(s, s.encounter.virus, q) && !mastered(m, s.encounter.virus, q), 'the perk is yours, not theirs');
 });
 
-test('no player text says gene: the Codex, the System page, the fight board, the HUD, the log, a scan and inspect, tips and rewrites', () => {
+test('no player text says gene: the Codex, the System page, the fight board, the HUD, the log, inspect, tips and rewrites', () => {
   const s = fight({ opts: { elite: true } });
   s.met = { ransomware: true, worm: true, ghostroot: true, keylogger: true, watchdog: true };
   s.dex.fought['nb-deadbolt'] = 1;
@@ -289,7 +289,7 @@ test('no player text says gene: the Codex, the System page, the fight board, the
   breakIt(s, 'pulse');
   s.research['ransomware:encryptor'] = TIER.rule;
   s.research['ransomware:lockbox'] = TIER.mastered;
-  command(s, 'scan'); command(s, 'inspect encryptor');
+  command(s, 'inspect encryptor');
   const texts = [boardMarkup(s, null), hudMarkup(s), systemMarkup(s), ...s.logs.map((e) => e.message)];
   for (const g of entries(s)) for (const r of g.rows) texts.push(codexPageMarkup(s, r.key));
   for (const t of TIPS) texts.push(t.text);

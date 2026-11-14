@@ -966,9 +966,6 @@ document.addEventListener('click', (e) => {
 // The chase's keys: the arrows move, space waits (not while you type).
 const CHASE_KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', ' ': 'wait' };
 document.addEventListener('keydown', (e) => {
-  // SCAN on a room's chip (floorplan-view.mjs): Enter or space scans; the chip around it walks.
-  const sb = e.target.closest?.('.fp-scanbtn');
-  if (sb && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); if (sb.dataset.command) run(sb.dataset.command); return; }
   const g = e.target.closest?.('[data-rooms]');
   if (g && (e.key === 'Enter' || e.key === ' ') && g.tagName !== 'BUTTON') { e.preventDefault(); roomsClick(g.dataset.rooms, g.dataset.arg); return; }
   const t = e.target.closest?.('[data-fp-sel]');
@@ -1367,7 +1364,6 @@ function react(events) {
       // A boss changes phase (combat.mjs bossPhases): across its ♛'s act tick, the act break (actbreak.mjs), once the hit
       // has played; the clock holds for it. Its enrage, or a phase of a boss with no act ticks: the flash.
       case 'phase': if (e.act && !e.enrage) { feel.add(() => { actHold = Date.now() + actBreakMs(); actBreak.play(e.act, campaign.encounter?.virus?.name); }); feel.add('act', null); } else { flash(e.enrage ? 'ENRAGED' : e.message.split('.')[0]); feel.add('hurt', null); } break;
-      case 'scan': art.hit(e.target); flash(e.message.split('.')[0].toUpperCase()); feel.add('good', row(e.target), 'WEAK'); break;
       case 'proc': feel.add('good', null); break;
       // Tells (tells.mjs): a read pays (the part Open, or a skill ready again); one that lands bites back.
       case 'read': flash(e.open ? 'READ · OPEN' : 'READ'); feel.add('good', e.target ? row(e.target) : MINE, e.open ? 'OPEN +50%' : 'READY'); break;
@@ -1486,16 +1482,6 @@ function notice(text, bad = false, suggest = null, sticky = false) {
   if (text && !sticky) noticeTimer = setTimeout(() => (el.hidden = true), 4000); // sticky (help): stays until the next notice or command
 }
 
-// A card as the notice (a scan on a server's rooms): sticky, so it stays until the next command or a click.
-function noticeCard(html) {
-  const el = $('notice');
-  el.innerHTML = html;
-  el.classList.remove('bad');
-  el.classList.add('sticky');
-  el.hidden = false;
-  clearTimeout(noticeTimer);
-}
-
 // ---------- commands ----------
 const NAV = ['map', 'combat', 'net', 'server', 'loadout', 'daemons', 'codex', 'rig', 'system', 'campaign', 'room', 'archive'];
 const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 'loadout', inventory: 'loadout', services: 'server', ports: 'server', wall: 'server', talents: 'loadout', skills: 'loadout', archetypes: 'loadout', home: 'map', trace: 'map', leads: 'map', logs: 'system', settings: 'system', achievements: 'rig', casing: 'rig', terminal: 'rig', bestiary: 'codex', fight: 'combat', run: 'net' };
@@ -1607,7 +1593,7 @@ function run(raw) {
   if (text === 'reset game' || text === 'new game') return resetGame();
   if (text === 'help' && !CAMP) return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload and deconstruct. For your server, use install, uninstall, firewall upgrade|defrag and filter equip. On the net, use connect, relay, detach and mail. The pages are map, mail, server, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
   // The campaign: fights, your gear, skills and talents. The old game's commands (connect, mail, install…) sit out.
-  if (CAMP && !fighting && !/^(load|unload|equip|unequip|talent|untalent|respec|subclass|archetype|loadout|preset|deconstruct|scan|codex|collection|hold|now)\b/.test(text)) {
+  if (CAMP && !fighting && !/^(load|unload|equip|unequip|talent|untalent|respec|subclass|archetype|loadout|preset|deconstruct|codex|collection|hold|now)\b/.test(text)) {
     if (text === 'help') return notice('On the campaign map, pick a server and breach it. On a breach, use ls, cd <n>, tree and the screen\'s verbs (pick, cat, pull, rest, reslot, buy, patch, service, open, force, fight, splice, leave, choose). In a breach fight, script <n> runs one of your scripts. In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills and - is SIGINT. For gear and skills, use load, unload, equip and unequip. The pages are campaign, room, loadout, archive and system.', false, null, true);
     return notice(`${text.split(' ')[0]}: not on the campaign. Type help.`, true);
   }
@@ -1631,11 +1617,10 @@ function run(raw) {
     const info = events.some((e) => e.type === 'contract-done') ? null : events.findLast((e) => ['info', 'repair', 'daemon-set', 'service'].includes(e.type) && !e.serverXp);
     if (info) notice(info.message);
   }
-  // A server's rooms have no terminal: a scan's card (typed, or its Scan button on a room's card) goes up as the notice,
-  // and so does why one can't (run.mjs scanRoom). It stays until your next move, or a click.
+  // A server's rooms have no terminal: why a command can't goes up as the notice. It stays until your next move, or a click.
   if (campaign.rooms && module === 'rooms' && !active(campaign)) {
-    const card = events.findLast((e) => e.type === 'net-scan' && e.card), no = events.findLast((e) => e.type === 'net-err');
-    if (card) noticeCard(V.scanMarkup(card)); else if (no && !warning) notice(no.message, true);
+    const no = events.findLast((e) => e.type === 'net-err');
+    if (no && !warning) notice(no.message, true);
   }
   // (a connect or hang-up has its own sound, so the channel change stays quiet)
   if ((wasAlert || events.some((e) => e.type === 'jack-in' || e.type === 'engage')) && active(campaign)) go('combat', events.some((e) => e.type === 'jack-in'));
@@ -3158,7 +3143,6 @@ document.addEventListener('click', (e) => {
   const side = e.target.closest('[data-mk-side]');
   if (side && mkOrder) { setMkOrder({ ...mkOrder, side: side.dataset.mkSide, n: 1 }); return; }
   if (e.target.closest('.mk-go') && mkOrder) { const c = e.target.closest('.mk-go').dataset.command; setMkOrder({ ...mkOrder, n: 1 }); return run(c); }
-  if (e.target.closest('.fp-scanbtn[aria-disabled="true"]')) return; // SCAN short of Signal: a click on it never walks in
   const cmd = e.target.closest('[data-command]');
   if (cmd && !cmd.disabled) {
     // Irreversible buttons (scrapping good gear) ask with a second click.
