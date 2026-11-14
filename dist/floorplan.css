@@ -132,6 +132,7 @@
 .fp-tag.key text { fill: #1a1400; font-weight: 700; }
 .fp-tag.hot rect { stroke: var(--hot); } .fp-tag.hot text { fill: var(--hot); }
 .fp-tag.rare rect { stroke: var(--next); } .fp-tag.rare text { fill: var(--next); font-size: 10px; }
+.fp-tag.lvup text { font-size: 10px; font-weight: 700; } .fp-tag.lvup.con-orange rect { stroke: #ff9a3d; } .fp-tag.lvup.con-orange text { fill: #ff9a3d; } .fp-tag.lvup.con-red rect { stroke: #ff5b3d; } .fp-tag.lvup.con-red text { fill: #ff5b3d; }
 .fp-cost rect { fill: #0a0703; stroke: var(--amber); stroke-width: 1; }
 .fp-cost text { font-size: 10px; fill: var(--amber); font-variant-numeric: tabular-nums; }
 .fp-you-tab rect { fill: var(--you); }

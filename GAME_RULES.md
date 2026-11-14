@@ -1272,7 +1272,7 @@ a favoured card once it has come up twice, its rich code once it leans your way;
   daemon slots (+1 at 15, 30 and 45).
 - **Enemies have a level (1–60).** A server keeps the level it was found at, so old servers get easier. Enemy levels
   are coloured WoW-style: red (5+ above you), orange (3–4), yellow (about even), green (below), grey (10+ below, no XP). A room's
-  card adds **▲n** when its virus is n levels above you.
+  map tile and card add **▲n** when its live virus is n levels above you, orange (red from 5 above).
 
 | Level | Unlocks |
 |---|---|

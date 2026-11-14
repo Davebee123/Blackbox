@@ -549,6 +549,8 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, bl = {
     if (room.kind === 'vault' && !opened(s, room)) tags.push(R.visit?.keys.includes(room.id) ? ['KEY FITS', 'key'] : ['LOCKED', 'lock']);
     if (sealed) tags.push(['SEALED', 'hot']);
     if (up && R.rare[room.id]) tags.push(['★', 'rare']);
+    const gap = up && !room.mirror ? (fightOf(s, room).level || 0) - hackerLevel(s) : 0; // its virus above your level: ▲n
+    if (gap > 0) tags.push([`▲${gap}`, `lvup ${upCon(gap)}`, null, `Level ${fightOf(s, room).level}: ${gap} ${gap === 1 ? 'level' : 'levels'} above you.`]);
     const ob = objOf(s, room);
     if (ob) tags.push([OBJECTIVES[ob].n ? String(OBJECTIVES[ob].n) : '', 'obj', OBJ_ICON[ob], `${OBJECTIVES[ob].name}: ${objectiveLine(ob)}`]);
     if (denEdge) tags.push(['WAKES', 'hot']);
@@ -698,10 +700,12 @@ const btn = (verb, label, { arg = null, primary = false, hot = false, small = fa
 function cardTip(s, c) { const C = RUN_CARDS[c.kind]; return `${C.name}\nRun card\n${C.tip}\n${C.muted}`; }
 const note = (html, cls = '') => `<p class="fp-note${cls ? ' ' + cls : ''}">${html}</p>`;
 // What holds the room: its icon, its name, and its line.
+// A level above yours reads orange (red from 5 above), never yellow: it should look like a step up.
+const upCon = (gap) => (gap >= 5 ? 'con-red' : gap > 0 ? 'con-orange' : conClass(gap));
 // Its level against yours (L), in WoW's colours, with ▲n when it's above you.
 const lvMark = (sub, L) => (L == null ? esc(sub) : esc(sub).replace(/\b(lv|Level) (\d+)/, (_, w, n) => {
   const gap = +n - L, tip = gap > 0 ? `${gap} ${gap === 1 ? 'level' : 'levels'} above you` : gap < 0 ? `${-gap} ${gap === -1 ? 'level' : 'levels'} below you` : 'Your level';
-  return `<b class="fp-lv ${conClass(gap)}" title="${tip}">${w} ${n}${gap > 0 ? `<i class="fp-up">▲${gap}</i>` : ''}</b>`;
+  return `<b class="fp-lv ${upCon(gap)}" title="${tip}">${w} ${n}${gap > 0 ? `<i class="fp-up">▲${gap}</i>` : ''}</b>`;
 }));
 const holder = (name, title, sub, tip = '', cls = 'hot', L = null) => `<div class="fp-virus ${cls}"${tip ? ` title="${esc(tip)}"` : ''}>${ic(name)}<span><b>${esc(title)}</b><small>${lvMark(sub, L)}</small></span></div>`;
 // The card's one state line: the room's address (dim, first, like a number on a door), here, live, cleared ↻ 4:12,
