@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { BANK, CLIPS, RECIPES, VOICES } from './dist/sound.mjs';
+import { BANK, CLIPS, RECIPES, VOICES, MAX_RATE, openContext } from './dist/sound.mjs';
 
 test('every sample the sound bank lists ships in dist/sfx, and nothing extra', () => {
   const want = Object.entries(BANK).flatMap(([n, k]) => Array.from({ length: k }, (_, i) => `${n}-${i}.wav`)).sort();
@@ -34,4 +34,19 @@ test('the victory clips ship, are credited, and play for a fight, a boss, a take
   assert.match(app, /feel\.add\(campaign\.encounter\?\.virus\?\.boss \? 'bosswin' : 'win', '\.hud'\)/);
   assert.match(app, /case 'takeover': flash\('TAKEN OVER'\); feel\.add\('bosswin', null\)/);
   assert.match(fs.readFileSync('dist/levelup-ui.mjs', 'utf8'), /feel\.add\('levelup', null\)/);
+});
+
+test("the audio context keeps an output's own rate up to the cap, and renders at the cap over it", () => {
+  const made = [];
+  const device = (rate, canSet = true) => class { constructor(o) { if (o && !canSet) throw new Error('NotSupportedError'); this.sampleRate = o?.sampleRate ?? rate; this.closed = false; made.push(this); } close() { this.closed = true; } };
+  for (const rate of [44100, 48000]) { made.length = 0; const c = openContext(device(rate)); assert.equal(c.sampleRate, rate); assert.equal(made.length, 1, 'one context, untouched'); assert.equal(c.closed, false); }
+  for (const rate of [88200, 96000, 192000]) {
+    made.length = 0;
+    const c = openContext(device(rate));
+    assert.equal(c.sampleRate, MAX_RATE);
+    assert.deepEqual(made.map((x) => x.closed), [true, false], "the output's own context is closed, the capped one kept");
+  }
+  made.length = 0;
+  const kept = openContext(device(192000, false)); // a browser that can't set the rate
+  assert.equal(kept.sampleRate, 192000); assert.equal(kept.closed, false); assert.equal(made.length, 1);
 });

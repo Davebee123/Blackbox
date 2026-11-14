@@ -859,6 +859,17 @@ function ambience(ctx, dest, { seeks = true } = {}) {
   };
 }
 
+// The page's audio context, at the output's own rate up to MAX_RATE. Every node's work grows with the rate: an output
+// set to 96 or 192 kHz made the audio thread do three or four times a 44.1 kHz output's work, more than a core at
+// 192 kHz, so fights crackled and the music dropped out. Over the cap the game renders at MAX_RATE and the browser
+// resamples to the output; at or under it nothing changes. (AC: the constructor, for the test.)
+export const MAX_RATE = 48000;
+export function openContext(AC = globalThis.AudioContext) {
+  const first = new AC();
+  if (!(first.sampleRate > MAX_RATE)) return first;
+  try { const capped = new AC({ sampleRate: MAX_RATE }); first.close?.(); return capped; } catch { return first; } // a browser that can't set the rate keeps its own
+}
+
 // One sound system per page (the feel layer and the prompt share it).
 let shared = null;
 export function createSound() {
@@ -873,7 +884,7 @@ export function createSound() {
   };
   function ready() {
     try {
-      ctx ||= new AudioContext(); // the browser's own buffer: asking for a bigger one cut the sound out in fights on some outputs
+      ctx ||= openContext(); // the browser's own buffer: asking for a bigger one cut the sound out in fights on some outputs
       if (!ch) { ch = chain(ctx); hum = ctx.createGain(); hum.connect(outputOf(ctx)); applyVol(); }
       if (ctx.state === 'suspended') ctx.resume();
       loadBank(ctx);
