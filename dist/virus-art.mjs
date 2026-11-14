@@ -502,27 +502,49 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
   }
 
   // ---------- animation ----------
-  const rotY = (x, z, a) => [x * Math.cos(a) + z * Math.sin(a), -x * Math.sin(a) + z * Math.cos(a)];
-  const rotZ = (x, y, a) => [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
+  // One point moved by its animation, into Q (reused: read it before the next call). What an animation does to every
+  // point alike (its angle, that angle's sine and cosine, its scale) is worked out once a frame, in F.
+  const Q = { x: 0, y: 0, z: 0, nx: 0, ny: 0, nz: 0 };
+  let F = [], fAt = NaN, fFor = null;
+  function frameOf(t) {
+    if (t === fAt && fFor === anims) return;
+    fAt = t; fFor = anims;
+    F = anims.map((A) => {
+      const [cx, cy, cz] = A.c || [0, 0, 0], f = { cx, cy, cz, k: 0, a: 0, c: 0, s: 0 };
+      switch (A.k) {
+        case 'breathe': f.k = 1 + Math.sin(t * A.speed + (A.phase || 0)) * A.amp; break;
+        case 'ripple': f.k = 1 + Math.sin(t * A.speed - A.phase) * A.amp; break;
+        case 'bob': case 'slide': f.k = Math.sin(t * A.speed + (A.phase || 0)) * A.amp; break;
+        case 'swing': f.a = Math.sin(t * A.speed + (A.phase || 0)) * A.amp; break;
+        case 'sway': f.a = Math.sin(t * A.speed + A.phase) * A.amp; break;
+        case 'sweep': f.a = Math.sin(t * A.speed) * A.amp; break;
+        case 'orbit': case 'spin': f.a = t * A.speed; break;
+      }
+      f.c = Math.cos(f.a); f.s = Math.sin(f.a);
+      return f;
+    });
+  }
   function animate(p, t) {
     const A = anims[p.a];
-    let { x, y, z, nx, ny, nz } = p;
-    if (!A || A.k === 'none') return { x, y, z, nx, ny, nz };
-    const [cx, cy, cz] = A.c || [0, 0, 0];
-    switch (A.k) {
-      case 'breathe': { const k = 1 + Math.sin(t * A.speed + (A.phase || 0)) * A.amp; x = cx + (x - cx) * k; y = cy + (y - cy) * k; z = cz + (z - cz) * k; break; }
-      case 'ripple': { const k = 1 + Math.sin(t * A.speed - A.phase) * A.amp; x = cx + (x - cx) * k; z = cz + (z - cz) * k; break; }
-      case 'wave': y += Math.sin(t * A.speed + x * A.freq) * A.amp; z += Math.cos(t * A.speed * 0.7 + x * A.freq) * A.amp * 0.5; break;
-      case 'bob': y += Math.sin(t * A.speed + (A.phase || 0)) * A.amp; break;
-      case 'slide': x += Math.sin(t * A.speed + (A.phase || 0)) * A.amp; break;
-      case 'rise': x += Math.sin(t * A.speed - y * A.freq + (A.phase || 0)) * A.amp; break; // heat off a surface: a wobble that climbs
-      case 'swing': { const a = Math.sin(t * A.speed + (A.phase || 0)) * A.amp; [x, y] = rotZ(x - cx, y - cy, a); x += cx; y += cy; [nx, ny] = rotZ(nx, ny, a); break; } // rigid, about its pivot
-      case 'sway': { const a = Math.sin(t * A.speed + A.phase) * A.amp; const d = Math.hypot(x - cx, y - cy, z - cz) / 40; [x, y] = rotZ(x - cx, y - cy, a * d); x += cx; y += cy; [nx, ny] = rotZ(nx, ny, a * d); break; }
-      case 'sweep': { const a = Math.sin(t * A.speed) * A.amp; [x, z] = rotY(x - cx, z - cz, a); x += cx; z += cz; [nx, nz] = rotY(nx, nz, a); break; }
-      case 'orbit': { const a = t * A.speed; [x, z] = rotY(x - cx, z - cz, a); x += cx; z += cz; [nx, nz] = rotY(nx, nz, a); break; }
-      case 'spin': { const a = t * A.speed; if (A.axis === 'y') { [x, z] = rotY(x - cx, z - cz, a); x += cx; z += cz; [nx, nz] = rotY(nx, nz, a); } else { [x, y] = rotZ(x - cx, y - cy, a); x += cx; y += cy; [nx, ny] = rotZ(nx, ny, a); } break; }
+    let x = p.x, y = p.y, z = p.z, nx = p.nx, ny = p.ny, nz = p.nz;
+    if (A && A.k !== 'none') {
+      frameOf(t);
+      const f = F[p.a], { cx, cy, cz } = f;
+      switch (A.k) {
+        case 'breathe': { const k = f.k; x = cx + (x - cx) * k; y = cy + (y - cy) * k; z = cz + (z - cz) * k; break; }
+        case 'ripple': { const k = f.k; x = cx + (x - cx) * k; z = cz + (z - cz) * k; break; }
+        case 'wave': y += Math.sin(t * A.speed + x * A.freq) * A.amp; z += Math.cos(t * A.speed * 0.7 + x * A.freq) * A.amp * 0.5; break;
+        case 'bob': y += f.k; break;
+        case 'slide': x += f.k; break;
+        case 'rise': x += Math.sin(t * A.speed - y * A.freq + (A.phase || 0)) * A.amp; break; // heat off a surface: a wobble that climbs
+        case 'swing': { const c = f.c, s = f.s, X = x - cx, Y = y - cy; x = X * c - Y * s + cx; y = X * s + Y * c + cy; const NX = nx; nx = NX * c - ny * s; ny = NX * s + ny * c; break; } // rigid, about its pivot
+        case 'sway': { const d = Math.hypot(x - cx, y - cy, z - cz) / 40, a = f.a * d, c = Math.cos(a), s = Math.sin(a), X = x - cx, Y = y - cy; x = X * c - Y * s + cx; y = X * s + Y * c + cy; const NX = nx; nx = NX * c - ny * s; ny = NX * s + ny * c; break; }
+        case 'spin': if (A.axis !== 'y') { const c = f.c, s = f.s, X = x - cx, Y = y - cy; x = X * c - Y * s + cx; y = X * s + Y * c + cy; const NX = nx; nx = NX * c - ny * s; ny = NX * s + ny * c; break; } // falls through: about y
+        case 'sweep': case 'orbit': { const c = f.c, s = f.s, X = x - cx, Z = z - cz; x = X * c + Z * s + cx; z = -X * s + Z * c + cz; const NX = nx; nx = NX * c + nz * s; nz = -NX * s + nz * c; break; }
+      }
     }
-    return { x, y, z, nx, ny, nz };
+    Q.x = x; Q.y = y; Q.z = z; Q.nx = nx; Q.ny = ny; Q.nz = nz;
+    return Q;
   }
 
   // ---------- drawing ----------
@@ -576,9 +598,8 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
 
     const yaw = facing ? Math.sin(angle) * BOSS_SWING : Math.sin(angle) * 0.9 + angle * 0.15, pitch = (shot?.pitch ?? 0.2) + Math.sin(clock * 0.4) * 0.06;
     const cyw = Math.cos(yaw), syw = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
-    // Each region's part once a frame (the body sums every part's armor), and the yaw's turn with cyw/syw (as rotY).
+    // Each region's part once a frame (the body sums every part's armor); the yaw turns points with cyw/syw (about y).
     const regions = new Map(), partAt = (region) => { if (!regions.has(region)) regions.set(region, resolvePart(v, region)); return regions.get(region); };
-    const yawed = (x, z) => [x * cyw + z * syw, -x * syw + z * cyw];
     for (const [id, h] of hits) if (now - h.time > (h.kind === 'break' ? BREAK_MS : 900)) hits.delete(id);
     const striking = motion && breakout();
     const quake = motion && shake && now - shake.time < 350 ? (1 - (now - shake.time) / 350) ** 2 * shake.power : 0;
@@ -601,7 +622,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     if (strikes.size) for (const p of points) {
       const part = partAt(p.region), st = part?.id && strikes.get(part.id);
       if (!st) continue;
-      const q = animate(p, clock), [x1, z1] = yawed(q.x, q.z);
+      const q = animate(p, clock), x1 = q.x * cyw + q.z * syw, z1 = -q.x * syw + q.z * cyw;
       st.c.x += x1; st.c.y += q.y * cp - z1 * sp; st.n++;
     }
     for (const st of strikes.values()) if (st.n) { st.c.x /= st.n; st.c.y /= st.n; }
@@ -617,9 +638,9 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       if (part.ghost) continue;
       if (p.region !== 'body' && part.phase && phased && i % 3) continue; // Flicker: the Shade is half gone on odd cycles
       const q = animate(p, clock);
-      let [x1, z1] = yawed(q.x, q.z);
+      const x1 = q.x * cyw + q.z * syw; let z1 = -q.x * syw + q.z * cyw;
       const y1 = q.y * cp - z1 * sp; z1 = q.y * sp + z1 * cp;
-      let [nx1, nz1] = yawed(q.nx, q.nz);
+      const nx1 = q.nx * cyw + q.nz * syw; let nz1 = -q.nx * syw + q.nz * cyw;
       const ny1 = q.ny * cp - nz1 * sp; nz1 = q.ny * sp + nz1 * cp;
       const age = h ? (now - h.time) / 900 : 0;
       const fresh = h && part.integrity > 0 && motion ? (1 - age) ** 2 : 0;
