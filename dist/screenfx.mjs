@@ -97,7 +97,7 @@ export function floorOf(s, { module, mapFloor = null, loc = null } = {}) {
   if (module === 'map') return mapFloor || null;
   const e = s.encounter;
   if (e && (e.phase === 'active' || e.phase === 'alert') && e.mode !== 'run') return null; // a fight at home
-  if (s.run) return Math.max(1, Math.min(PALETTES.length, loc?.depth || 1));
+  if (s.run) return Math.max(1, Math.min(PALETTES.length, loc?.depth || s.rooms?.floor || 1)); // the rooms playtest has no location: its own floor
   return null;
 }
 // Low Signal: your health under a quarter, while it matters. health: your bar's share (0..1) in a fight, on a run, in

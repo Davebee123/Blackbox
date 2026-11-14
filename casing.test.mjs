@@ -252,7 +252,7 @@ test('Rig → Casing → Window: the districts, yours to pick, the rest dim with
   const s = me(), snap = JSON.stringify(s);
   const html = rigMarkup(s, { tab: 'casing' });
   assert.equal(JSON.stringify(s), snap, 'a view never writes the save');
-  assert.match(html, /<h2>Window<\/h2>/);
+  assert.match(html, /<h2 title="[^"]*1700px[^"]*">Window<\/h2>/);
   assert.match(html, /class="cs-dist" data-run="district sprawl" aria-pressed="true"/);
   for (const id of DISTRICT_IDS.slice(1)) assert.ok(html.includes(`class="cs-dist locked" title="${DISTRICTS[id].name}: `) && html.includes(`Comes with ${districtFrom(id).name}.`), `${id} dim, with its achievement`);
   developerAchieve(s, 'all');

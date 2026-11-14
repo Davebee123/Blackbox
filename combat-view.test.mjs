@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, addLocation } from './dist/combat.mjs';
+import { fresh, command, active, selectEncounter, resolveCycle, part, addLocation } from './dist/combat.mjs';
 import { graphOf } from './dist/floors.mjs';
 import { boardMarkup, hudMarkup, trayMarkup, mapMarkup, mapLayout } from './dist/view.mjs';
 import { CONFIG } from './dist/data.mjs';
@@ -317,4 +317,29 @@ test('Turbo shows on a crewmate\'s bar', async () => {
   s.encounter.turbo = { until: s.encounter.cycle + 2, dealt: 1.3, taken: 1.2, who: 'Ada' };
   const x = statusSpans(s).find((y) => y.name === 'Turbo');
   assert.ok(x && x.value === '+30% · +20% taken' && x.cycles === 3 && /Buff from Ada's Turbo Boost/.test(x.title) && /30% more damage and take 20% more/.test(x.title), JSON.stringify(x));
+});
+
+test('a fight on a server shows a red Jack out key that sends the emergency jack out; none at home', async () => {
+  const { fleeKey } = await import('./dist/view.mjs');
+  const { play } = await import('./dist/run.mjs');
+  const FP = await import('./dist/floorplan.mjs');
+  const s = fresh();
+  s.tutorialCompleted = true;
+  command(s, 'developer location ransomware');
+  const l = s.locations[0];
+  l.lockUntil = 0;
+  play(s, `connect ${l.id}`);
+  for (let i = 0; i < 20 && !active(s); i++) {
+    const room = FP.roomList(s).find((x) => ['process', 'guard'].includes(x.kind) && !s.rooms.cleared?.[x.id]);
+    FP.go(s, room.id); FP.act(s, 'engage');
+  }
+  assert.ok(active(s) && s.encounter.mode === 'run', 'in a fight on the server');
+  assert.match(fleeKey(s), /class="ability flee" data-command="jack out" data-confirm=/);
+  s.roomsPlay = true;
+  assert.equal(fleeKey(s), '', 'the rooms playtest has no jack out mid-fight');
+  delete s.roomsPlay;
+  play(s, 'jack out');
+  for (let i = 0; i < 5 && s.run; i++) resolveCycle(s);
+  assert.ok(!s.run, 'home');
+  assert.equal(fleeKey(s), '', 'nothing to jack out of');
 });

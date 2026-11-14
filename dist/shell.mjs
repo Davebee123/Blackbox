@@ -187,7 +187,11 @@ export function createShell({ getState, isOn, canMove, tick, sound, tear }) {
     const c = $('caret');
     if (!input || !c) return;
     const at = input.selectionStart ?? input.value.length;
-    const key = input.value + '|' + at + '|' + input.scrollLeft;
+    // scrollLeft is a layout read: skipped while the line sits unfocused and unchanged (nothing can scroll it then).
+    const va = input.value + '|' + at, focused = document.activeElement === input;
+    if (!focused && !caret.focused && va === caret.va) return;
+    caret.va = va; caret.focused = focused;
+    const key = va + '|' + input.scrollLeft;
     if (key === caretKey) return;
     const typing = caretKey && caretKey.split('|')[0] !== input.value;
     caretKey = key;

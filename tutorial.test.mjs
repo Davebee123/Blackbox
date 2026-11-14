@@ -196,7 +196,7 @@ test('a server map teaches its vault, Core, elite, a rival and low Signal, once 
   skipTour(s);
   const g = s.rooms.graph;
   for (const r of Object.values(g.rooms)) s.rooms.seen[r.id] = 'kind'; // the whole map drawn
-  RV.spawnRival(s, 99, 'kudzu');
+  RV.spawnRival(s, 99, 'sable');
   const tipsHere = () => { const ids = []; for (let t; (t = nextTip(s, 'rooms', shows(s))) && ids.length < 12;) { ids.push(t.id); markSeen(s, t.id); } return ids; };
   const kinds = new Set(Object.values(g.rooms).map((r) => r.kind));
   const ids = tipsHere();

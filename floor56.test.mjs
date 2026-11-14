@@ -23,6 +23,8 @@ const SETS56 = {
   hiddenprocess: ['Hidden Process', [32, 36], [['unlink', 'Unlink', 'exploit', 32], ['hollow', 'Hollow', 'script', 34], ['driver', 'Driver', 'implant', 36]], ['lair', 6, 'Rootkit kills']],
   watertight: ['Watertight', [34, 38], [['hatch', 'Hatch', 'proxy', 34], ['seal-plate', 'Seal Plate', 'shell', 36], ['pressure-door', 'Pressure Door', 'implant', 38]], ['lair', 6, 'Kestrel ICE on floor 6']],
 };
+// Built since (floorbosses.mjs): their boss drops them.
+const BUILT56 = { 'GRACE PERIOD': 'graceperiod', 'EXIT NODE': 'exitnode' };
 const U56 = [
   ['installment', 'Installment', 'implant', 28, 5, 'GRACE PERIOD'], ['late-fee', 'Late Fee', 'exploit', 28, 5, 'GRACE PERIOD'],
   ['antibody', 'Antibody', 'exploit', 32, 5, 'PARASITE'], ['tourniquet', 'Tourniquet', 'proxy', 32, 5, 'PARASITE'],
@@ -101,7 +103,7 @@ test('floors 5 and 6: seven sets and nineteen uniques, each with the plan\'s nam
     const u = UNIQUES[id];
     assert.ok(u && !u.set, id);
     all.push([u, name, slot, level]);
-    assert.deepEqual(u.sources, [{ kind: 'lair', floor, planned }], `${name}: its floor's lair boss until ${planned} is built`);
+    assert.deepEqual(u.sources, BUILT56[planned] ? [{ kind: 'boss', id: BUILT56[planned] }] : [{ kind: 'lair', floor, planned }], `${name}: its floor's lair boss until ${planned} is built, then that boss`);
     assert.ok(u.flavour && !/break.?in|keyhole|breach|way in|intru|backdoor/i.test(u.flavour), `${name}: flavour`);
   }
   assert.equal(all.length, 23 + 19);
@@ -120,7 +122,7 @@ test('floors 5 and 6: seven sets and nineteen uniques, each with the plan\'s nam
   }
   // Where they drop: floor 5's lair boss rolls its uniques (ACTUARY's level-40 pair once the boss is 38 or more), floor 6's
   // its own; the set pieces come from the set roll; Semaphore from Deadlock boards on floor 6.
-  assert.deepEqual(floorUniques('lair', 5, 32).map((u) => u.id).sort(), U56.filter((x) => x[4] === 5 && x[3] <= 34).map((x) => x[0]).sort());
+  assert.deepEqual(floorUniques('lair', 5, 32).map((u) => u.id).sort(), U56.filter((x) => x[4] === 5 && x[3] <= 34 && !BUILT56[x[5]]).map((x) => x[0]).sort());
   assert.deepEqual(floorUniques('lair', 6, 38).map((u) => u.id).sort(), U56.filter((x) => x[4] === 6).map((x) => x[0]).sort());
   assert.deepEqual(sourcePool({ kind: 'puzzle', id: 'deadlock', floor: 6 }).map((u) => u.id), SETS.semaphore.pieces);
   assert.deepEqual(sourcePool({ kind: 'puzzle', id: 'deadlock', floor: 2 }).map((u) => u.id), [], 'not a shallow board');

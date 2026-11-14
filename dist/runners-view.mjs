@@ -2,9 +2,10 @@
 // drawn on it: a paper-white diamond with the handle, a dotted route through the servers they've passed, a dashed ring
 // on where they're heading. Paper white throughout (--bright); a runner hunting you (R3) is the one red.
 // The map draws a runner only where you've revealed (runners.mjs revealed, inSight); the Rail gives the rest a floor.
-import { castOf, knownOf, runnerOf, stateOf, clsLabel, doing, shortPlace, headingOf, revealed, inSight, hash, TRAITS, standingOf, tierOf, busyOf, cantHire, feeOf, feePaid, cutOf, hired, clockOf, gainOf, PRESET_PLAY, PRESET_TIP } from './runners.mjs';
+import { castOf, knownOf, runnerOf, stateOf, clsLabel, doing, shortPlace, headingOf, revealed, inSight, hash, TRAITS, standingOf, tierOf, busyOf, cantHire, feeOf, feePaid, cutOf, hired, clockOf, gainOf, PRESET_PLAY, PRESET_TIP, huntsYou } from './runners.mjs';
 import { FACTIONS } from './factions.mjs';
 import { glyph } from './glyphs.mjs';
+import { portraitMarkup } from './portraits.mjs';
 import { SUBS, SUBCLASS, ABILITIES, presetBar } from './data.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -13,9 +14,11 @@ export const RAIL = { rows: 6 };
 // The tooltip, in WoW's grammar: the handle; Runner · faction (the kind line); class, level and what they're doing;
 // then, muted, how you know them and what they're after.
 export function runnerTip(s, r, st = stateOf(s, r)) {
-  const how = (s.runners?.known?.[r.handle]?.by || 'net') === 'net' ? 'You know them from #net.' : 'You have met them.';
+  const how = huntsYou(s, r.handle) ? "They're hunting you. Beat them in a race to a vault to settle it." : (s.runners?.known?.[r.handle]?.by || 'net') === 'net' ? 'You know them from #net.' : 'You have met them.';
   return `${r.handle}: ${clsLabel(r, st.level)}, level ${st.level}, ${doing(s, st)}.\n▸ ${how} After ${st.trade.what}, frozen on floor ${st.trade.floor}.`;
 }
+// The tooltip's kind line: Runner · faction, or Rival · faction for one hunting you (red).
+export const kindOf = (s, r) => `${huntsYou(s, r.handle) ? 'Rival' : 'Runner'} · ${FACTIONS[r.faction].short}`;
 // Where, on the Rail: a place, or → a place for one on the road.
 export function railWhere(s, st) {
   const g = st.g, to = headingOf(st);
@@ -24,11 +27,11 @@ export function railWhere(s, st) {
 // The Rail: the runners you know, the last heard first (RAIL.rows at most), the picked one lit.
 // shut: the section folded to its head (app.js keeps it per viewer).
 export function runnerRail(s, pick = null, shut = false) {
-  const R = s.runners?.known || {}, list = knownOf(s).sort((a, b) => (R[b.handle].at || 0) - (R[a.handle].at || 0) || a.handle.localeCompare(b.handle)).slice(0, RAIL.rows);
+  const R = s.runners?.known || {}, list = knownOf(s).sort((a, b) => huntsYou(s, b.handle) - huntsYou(s, a.handle) || (R[b.handle].at || 0) - (R[a.handle].at || 0) || a.handle.localeCompare(b.handle)).slice(0, RAIL.rows);
   if (!list.length) return '';
   const rows = list.map((r) => {
     const st = stateOf(s, r);
-    return `<button type="button" class="rr-row${r.handle === pick ? ' on' : ''}${st.stage === 'down' ? ' down' : ''}" data-runner="${esc(r.handle)}" title="${esc(runnerTip(s, r, st))}" data-tt-kind="${esc(`Runner · ${FACTIONS[r.faction].short}`)}"><i class="rr-dia" aria-hidden="true"></i><span class="rr-txt"><b>${esc(r.handle)}</b><small>${esc(clsLabel(r, st.level))} ${st.level}</small></span><small class="rr-at">${esc(railWhere(s, st))}</small></button>`;
+    return `<button type="button" class="rr-row${r.handle === pick ? ' on' : ''}${st.stage === 'down' ? ' down' : ''}${huntsYou(s, r.handle) ? ' rival' : ''}" data-runner="${esc(r.handle)}" title="${esc(runnerTip(s, r, st))}" data-tt-kind="${esc(kindOf(s, r))}"><i class="rr-dia" aria-hidden="true"></i><span class="rr-txt"><b>${esc(r.handle)}</b><small>${esc(clsLabel(r, st.level))} ${st.level}</small></span><small class="rr-at">${esc(railWhere(s, st))}</small></button>`;
   }).join('');
   return `<section class="rrail${shut ? ' shut' : ''}" aria-label="Runners"><h3 class="ct-head rr-head"><button type="button" class="rr-fold" data-rail-fold aria-expanded="${!shut}" title="${shut ? 'Show the runners you know' : 'Fold the runners away'}"><i class="rr-dia" aria-hidden="true"></i>Runners<small>${knownOf(s).length}</small><i class="rr-chev" aria-hidden="true">${shut ? '▸' : '▾'}</i></button></h3>${shut ? '' : rows}</section>`;
 }
@@ -46,7 +49,7 @@ export function runnerMark(s, handle, fl, portrait = false) {
   const pts = passed.slice(from).map(P).filter(Boolean).concat(b ? [me] : []), to = headingOf(st), ring = to && revealed(s, g, to) ? P(to) : null;
   const f = (v) => Math.round(v * 10) / 10;
   const route = pts.length > 1 ? `<polyline class="mr-route" points="${pts.map((p) => `${f(p.x)},${f(p.y)}`).join(' ')}"/>` : '';
-  return `<g class="mrunner${st.stage === 'down' ? ' down' : ''}" data-runner-mark="${esc(r.handle)}">${route}${ring ? `<circle class="mr-ring" cx="${f(ring.x)}" cy="${f(ring.y)}" r="22"/>` : ''}<g transform="translate(${f(me.x)} ${f(me.y - (b ? 0 : 16))})"><title>${esc(runnerTip(s, r, st).replace(/\n▸ /, ' '))}</title><path class="mr-dia" d="M0 -7 L7 0 L0 7 L-7 0 Z"/><text class="mr-name" y="-12" text-anchor="middle">${esc(r.handle)}</text></g></g>`;
+  return `<g class="mrunner${st.stage === 'down' ? ' down' : ''}${huntsYou(s, r.handle) ? ' rival' : ''}" data-runner-mark="${esc(r.handle)}">${route}${ring ? `<circle class="mr-ring" cx="${f(ring.x)}" cy="${f(ring.y)}" r="22"/>` : ''}<g transform="translate(${f(me.x)} ${f(me.y - (b ? 0 : 16))})"><title>${esc(runnerTip(s, r, st).replace(/\n▸ /, ' '))}</title><path class="mr-dia" d="M0 -7 L7 0 L0 7 L-7 0 Z"/><text class="mr-name" y="-12" text-anchor="middle">${esc(r.handle)}</text></g></g>`;
 }
 // The runners the map draws on a floor: those in sight, less your crew (they're with you) and the picked one (runnerMark).
 export const runnersOn = (s, fl, pick = null) => castOf(s).filter((r) => r.handle !== pick && !hired(s, r.handle)).map((r) => ({ r, st: stateOf(s, r) })).filter((x) => x.st.floor === fl && inSight(s, x.st));
@@ -65,17 +68,22 @@ export function runnersMap(s, fl, pick = null, portrait = false, open = null) {
   const at = {};
   for (const x of here) if (!x.st.pos.next) (at[x.st.pos.at] ||= []).push(x);
   const f = (v) => Math.round(v * 10) / 10;
-  const dia = (x, p, road) => `<g class="mrun${road ? ' road' : ''}${x.st.stage === 'down' ? ' down' : ''}" data-runner="${esc(x.r.handle)}" role="button" tabindex="0" aria-label="${esc(x.r.handle)}" transform="translate(${f(p.x)} ${f(p.y)})"><title>${esc(runnerTip(s, x.r, x.st).replace(/\n▸ /, ' '))}</title><circle class="mrun-hit" r="7"/><path d="${DIA}"/></g>`;
+  const dia = (x, p, road) => `<g class="mrun${road ? ' road' : ''}${x.st.stage === 'down' ? ' down' : ''}${huntsYou(s, x.r.handle) ? ' rival' : ''}" data-runner="${esc(x.r.handle)}" role="button" tabindex="0" aria-label="${esc(x.r.handle)}" transform="translate(${f(p.x)} ${f(p.y)})"><title>${esc(runnerTip(s, x.r, x.st).replace(/\n▸ /, ' '))}</title><circle class="mrun-hit" r="7"/><path d="${DIA}"/></g>`;
   const crowd = (id, list, p) => { const tip = `${list.length} runners at ${shortPlace(s, g, id)}: ${list.map((x) => x.r.handle).sort().join(', ')}.`; return `<g class="mrun crowd${id === open ? ' on' : ''}" data-runners-at="${esc(id)}" role="button" tabindex="0" aria-label="${esc(tip)}" transform="translate(${f(p.x)} ${f(p.y)})"><title>${esc(tip)}</title><rect class="mrun-hit" x="-13" y="-8" width="32" height="16"/><path transform="translate(-6 0)" d="${DIA}"/><text class="mrun-n" x="2">${list.length}</text></g>`; };
   let out = '';
-  for (const [id, list] of Object.entries(at)) { const c = P(id); if (c) out += list.length > 1 ? crowd(id, list, { x: c.x, y: c.y + 30 }) : dia(list[0], { x: c.x, y: c.y + 30 }, false); }
+  for (const [id, all] of Object.entries(at)) { // a rival stands out of the count, red, beside it
+    const c = P(id); if (!c) continue;
+    const red = all.filter((x) => huntsYou(s, x.r.handle)), list = all.filter((x) => !red.includes(x)), dx = red.length && list.length ? 14 : 0;
+    if (list.length) out += list.length > 1 ? crowd(id, list, { x: c.x - dx, y: c.y + 30 }) : dia(list[0], { x: c.x - dx, y: c.y + 30 }, false);
+    red.forEach((x, i) => { out += dia(x, { x: c.x + dx + i * 14, y: c.y + 30 }, false); });
+  }
   for (const x of here.filter((y) => y.st.pos.next)) { const a = P(x.st.pos.at), b = P(x.st.pos.next); if (a && b) out += dia(x, { x: a.x + (b.x - a.x) * x.st.pos.f, y: a.y + (b.y - a.y) * x.st.pos.f }, true); }
   return `<g class="mruns">${out}</g>`;
 }
 // Who's at a place (a counted diamond opens it beside itself): the place and how many, then each runner a row (handle,
 // class and level); a click on one opens their card. Nothing once fewer than two are left there.
 export function runnersList(s, fl, slot) {
-  const list = slot ? runnersAt(s, fl, slot) : [];
+  const list = slot ? runnersAt(s, fl, slot).filter((x) => !huntsYou(s, x.r.handle)) : []; // a rival has their own diamond
   if (list.length < 2) return '';
   const rows = list.map(({ r, st }) => `<button type="button" class="rr-row${st.stage === 'down' ? ' down' : ''}" data-runner="${esc(r.handle)}" title="${esc(runnerTip(s, r, st))}" data-tt-kind="${esc(`Runner · ${FACTIONS[r.faction].short}`)}"><i class="rr-dia" aria-hidden="true"></i><span class="rr-txt"><b>${esc(r.handle)}</b></span><small class="rr-at">${esc(clsLabel(r, st.level))} ${st.level}</small></button>`).join('');
   return `<section class="rcard rcrowd" id="crowd-pop" data-crowd="${esc(slot)}" aria-label="Runners at ${esc(shortPlace(s, list[0].st.g, slot))}"><button type="button" class="btn small rc-x" data-crowd-close title="Close">×</button><h3 class="ct-head rr-head"><i class="rr-dia" aria-hidden="true"></i>${esc(shortPlace(s, list[0].st.g, slot))}<small>${list.length}</small></h3>${rows}</section>`;
@@ -145,7 +153,8 @@ export function runnerCard(s, h, { mode = 'runner', preset = 'rotation' } = {}) 
   const r = runnerOf(s, h);
   if (!r) return '';
   const st = stateOf(s, r), busy = busyOf(s, r), mine = hired(s, h), no = cantHire(s, r);
-  const head = `<p class="rc-kind">Runner · ${esc(FACTIONS[r.faction].short)}</p><h2 class="rc-handle">${glyph(CLASS_GLYPH[r.cls] || 'run', 'rc-cls')}${esc(h)}</h2><p class="rc-class">${esc(clsLabel(r, st.level))} · level ${st.level}</p>`;
+  // The head (the *Badge*): their bust (portraits.mjs, from the handle), then kind, handle, class and level, and the Tier bar.
+  const head = `<div class="rc-head">${portraitMarkup(h, 'runner', 'rc-bust')}<div><p class="rc-kind${huntsYou(s, h) ? ' rival' : ''}">${esc(kindOf(s, r))}</p><h2 class="rc-handle">${glyph(CLASS_GLYPH[r.cls] || 'run', 'rc-cls')}${esc(h)}</h2><p class="rc-class">${esc(clsLabel(r, st.level))} · level ${st.level}</p>${tierBar(s, h)}</div></div>`;
   const x = '<button type="button" class="btn small rc-x" data-runner-close title="Close">×</button>';
   if (mode === 'crew' && !mine) {
     const fee = feePaid(s, h) ? 0 : feeOf(s, r), cut = Math.round(cutOf(r) * 100);
@@ -159,7 +168,7 @@ export function runnerCard(s, h, { mode = 'runner', preset = 'rotation' } = {}) 
     const rows = row('Traits', traitChips(r)) + row('Pay', pay) + row('Bar', `<span class="rc-tiles">${tiles}</span>`);
     return `<section class="rcard crew" id="runner-pop" data-runner-card="${esc(h)}">${x}${head}<dl class="rc-rows">${rows}</dl><div class="row acts"><button type="button" class="btn primary" data-command="hire ${esc(h)} ${esc(preset)}"${no ? ` disabled title="${esc(`You can't hire ${h}: ${no}.`)}"` : ''}>Hire</button><button type="button" class="btn" data-runner-hire="0">Back</button></div></section>`;
   }
-  const rows = row('Traits', traitChips(r)) + row('Standing', tierBar(s, h)) + row('Now', nowRow(s, r, st, busy)) + row('After', `<span>${esc(st.trade.what)}, frozen on floor ${st.trade.floor}</span>`);
+  const rows = row('Traits', traitChips(r)) + row('Now', nowRow(s, r, st, busy)) + row('After', `<span>${esc(st.trade.what)}, frozen on floor ${st.trade.floor}</span>`);
   const said = lastLine(s, h);
   const act = mine ? `<button type="button" class="btn" data-command="crew kick ${esc(h)}">Let go</button>`
     : `<button type="button" class="btn primary" data-runner-hire="1"${no ? ` disabled title="${esc(`You can't hire ${h}: ${no}.`)}"` : ''}>${busy ? `${glyph('clock')}${mmss(busy.until - clockOf(s))}` : 'Hire'}</button>`;

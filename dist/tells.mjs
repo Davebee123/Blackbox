@@ -47,6 +47,7 @@ import { cancelAttack, crossBy, interruptMove, nextTick, fronted } from './inter
 import { ignores, CLASHES } from './genes.mjs';
 import { contractDid } from './mail.mjs';
 import { tellAct, actOf } from './acts.mjs';
+import { nativeCharge, NATIVE } from './nativeacts.mjs';
 
 // What a fight's tells did, on its metrics (the gap test reads them): said, answered, read (answered by a command
 // of yours, not by breaking the part), landed, and the Signal (or Integrity) they cost you, by tell.
@@ -324,7 +325,7 @@ function rest(s, t, from, answered = false) {
   const p = t.kind === 'charge' && t.n != null ? sourceOf(s, t) : null;
   if (p?.attack && alive(p)) from = Math.max(from, landsAt(p, t.n));
   t.told = false; t.count++; t.n = null;
-  if (answered) { t.answered = (t.answered || 0) + 1; tally(s, t, 'answered'); }
+  if (answered) { t.answered = (t.answered || 0) + 1; tally(s, t, 'answered'); const e = s.encounter; e.cuts = [...(e.cuts || []).filter((x) => x.cycle === e.cycle), { id: t.id, name: t.name, part: t.part, kind: t.kind, cycle: e.cycle }]; } // this cycle's cuts (floorbosses.mjs: EXIT NODE's Kept charges)
   if (t.once) { t.gone = true; const T = tellsOf(s); T.list = T.list.filter((x) => x !== t); return; }
   if (t.kind === 'mimic') { t.next = null; return; }
   t.after = from + (TELL.rest[t.kind] ?? 3) + jitter(s.encounter.virus, t);
@@ -364,6 +365,32 @@ export function hotCharge(s, hot) {
   say(s, t, best.p, best.x, best.n);
   return t;
 }
+// A floor boss's rule turns a part's attack into a charge (floorbosses.mjs: GRACE PERIOD's lapse, EXIT NODE's kept
+// charge), said at once: its first landing `lead` or more cycles away (2 by default; up to `upto` away first, if one
+// is) that no other tell rides. One of each id at a time.
+export function forceCharge(s, p, name, id, mult = 1, lead = 2, upto = null) {
+  const T = tellsOf(s), e = s.encounter;
+  if (!T?.tier || !p?.attack || p.attack.due >= 900 || T.list.some((t) => t.id === id)) return null;
+  const c = e.cycle, taken = new Set(T.list.filter((t) => t.told).map((t) => tellNext(s, t)));
+  const ns = Array.from({ length: 4 }, (_, k) => (p.attack.n || 0) + k).filter((n) => landsAt(p, n) - c >= lead && !taken.has(landsAt(p, n)));
+  const fit = upto == null ? ns : [...ns.filter((n) => landsAt(p, n) - c <= upto), ...ns]; // upto: a landing that close first, if there is one
+  for (const n of fit.slice(0, 1)) {
+    const x = landsAt(p, n);
+    const t = { kind: 'charge', name, gene: 'overcharge', id, part: p.id, once: true, ...(mult !== 1 ? { mult } : {}), told: false, next: null, n: null, said: null, count: 0, after: c };
+    T.list.push(t);
+    say(s, t, p, x, n);
+    return t;
+  }
+  return null;
+}
+// One told tell called off by a floor boss's rule (floorbosses.mjs: GRACE PERIOD's lapse, paid up): answered, no stagger.
+export function callOff(s, t, msg) {
+  const p = sourceOf(s, t);
+  emit(s, 'blocked', msg, { source: p?.id, target: p?.id, tell: t.id, answered: true });
+  contractDid(s, 'interrupt');
+  rest(s, t, s.encounter.cycle, true);
+  if (p) credit(s, t, p);
+}
 // A part broke (combat.mjs breakPart): its tells stop for good (they sit on a fixed part).
 export function tellBroke(s, p) {
   const T = tellsOf(s);
@@ -384,8 +411,8 @@ function chargeAttack(s, t, p) {
   const enr = p.enrage && p.integrity < p.max / 2 ? CONFIG.enrage : 1; // attackAmount counts Bricker's rage again: take it out
   const more = (T.tier.mult - 1) * (T.tier.extra ?? 1), big = (n, share = 1) => Math.max(1, Math.round(n + n * more * share * k));
   const base = { ...a, name: t.name, ramp: 0, step: 0, rampBy: 0, bonus: 0, grow: 0, windup: 0, wound: 0, noCrit: true, tell: t.id, spawn: t.spawn || 0 };
-  if (a.effect === 'damage') return { ...base, amount: Math.max(1, Math.round(big(attackAmount(p)) / enr)) };
-  if (a.effect === 'encrypt') return { ...base, burst: Math.round(a.amount * more * k) }; // its Encrypt, and a burst on top (TELL.burst cycles)
+  if (a.effect === 'damage') return { ...base, amount: Math.max(1, Math.round((big(attackAmount(p)) * (t.mult || 1)) / enr)) }; // t.mult: a floor boss's own (GRACE PERIOD's compounding lapse)
+  if (a.effect === 'encrypt') return { ...base, burst: Math.round(a.amount * more * k * (t.mult || 1)) }; // its Encrypt, and a burst on top (TELL.burst cycles)
   if (a.effect === 'scramble') return { ...base, amount: a.amount + Math.round((t.longer || 0) * k), hit: a.hit ? (t.plain ? a.hit : big(a.hit)) : 0 }; // Possession: the same hit, a longer scramble
   if (a.effect === 'heal') return { ...base, amount: Math.round(a.amount * (1 + (T.tier.mult - 1) * k)) };
   return { ...base, hit: a.hit ? big(a.hit, 0.5) : 0 }; // replicate: the spawns come on top (spawn)
@@ -446,6 +473,7 @@ export function tellLand(s) {
       const atk = chargeAttack(s, t, p), locked = s.encounter.encrypt || 0, shield = e.shield || 0;
       if (strikeWith(s, p, atk)) return done(), true;
       advance(p, e);
+      nativeCharge(s, t); // DEADBOLT's Tumblers (nativeacts.mjs)
       // Full Disk: a burst of encryption on top of its Encrypt, for TELL.burst cycles (it goes when the part breaks, or with Purge).
       if (atk.burst && (s.encounter.encrypt || 0) > locked) { // its Encrypt got through (a ◆, Null Route or Sanitize stops both)
         s.encounter.burst = { name: t.name, amount: atk.burst, left: TELL.burst, source: p.id };
@@ -712,7 +740,12 @@ export function mimicLands(s, t, p) { // (exported for exe.test.mjs)
   const amount = Math.max(1, Math.round(direct + swarm * TELL.mimic));
   const loud = copy?.loud > 1 && direct;
   emit(s, 'status', loud ? `You're Scrambled, and the ${p.name} plays ${what} back at you ${copy.loud === 2 ? 'twice' : `${copy.loud} times`} over.` : `The ${p.name} plays ${what} back at you.`, { source: p.id, tell: t.id, missed: true, ...(swarm ? { helpers: caught.length } : {}) });
-  const over = strikeWith(s, p, { name: `${direct ? (hits.length > 1 ? 'The round' : ABILITIES[hits[0].id]?.name || hits[0].name) : 'Helpers'}${direct && swarm ? ' and helpers' : ''} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id });
+  const atk = { name: `${direct ? (hits.length > 1 ? 'The round' : ABILITIES[hits[0].id]?.name || hits[0].name) : 'Helpers'}${direct && swarm ? ' and helpers' : ''} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id };
+  // MIRRORSHADE's Shatter (act 3, nativeacts.mjs): three shards, a third each, so a ◆ on you stops one.
+  const n = host.encounter.virus.shatter ? NATIVE.shards : 1;
+  if (n > 1) emit(s, 'status', `SHATTER. The ${p.name}'s playback breaks into ${n} shards.`, { source: p.id, tell: t.id, shatter: true });
+  let over = false;
+  for (let k = 0; k < n && !over; k++) over = strikeWith(s, p, n > 1 ? { ...atk, name: `Shard ${k + 1}`, amount: Math.max(1, Math.ceil(amount / n)) } : atk);
   if (!over) { if (direct) lockLast(s, t, 'MIMIC'); corrupt(s, t, p); } // your command's skill goes offline; helpers alone lock nothing
   return over;
 }
