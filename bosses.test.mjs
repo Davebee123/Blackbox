@@ -156,7 +156,7 @@ test('rounds: a solo boss hits harder each round, and its bar shows the round', 
   const land = (cycle) => { e.cycle = cycle; e.chits = 0; e.shield = 0; const d = defender(s); d.integrity = d.max; strikeWith(s, p, { name: 'Test', effect: 'damage', amount: 400, interval: 4, noCrit: true }); return d.max - d.integrity; };
   const one = land(1), six = land(ROUNDS.every * 5 + 1);
   assert.ok(one > 0 && Math.abs(six / one - (1 + g) ** 5) < 0.05, `round 6 lands ${six}, round 1 ${one}`);
-  assert.match(hudMarkup(s), /class="tag hot rounds"[^>]*title="Rounds\nBoss rule\n[^"]*Round 6: its hits are ×/);
+  assert.doesNotMatch(hudMarkup(s), /class="tag hot rounds"/, 'no round tag on the HUD');
   // A crew boss has none.
   const c = fresh();
   selectEncounter(c, 'random', 7, { level: 18, mutation: null, family: 'ransomware', boss: 'foreman' });

@@ -579,8 +579,7 @@ On your Signal each solo boss takes its own Integrity and hits on top of the fig
 act runs 15 to 20 cycles (below). In a breach the Resident keeps its old size and enrages at 18.
 
 **Rounds** (`ROUNDS`): a solo boss fights in rounds of 4 cycles, and each round every hit it lands is 8% harder than the
-last round's, compounding (×1.4 by round 5, ×1.85 by round 9), its enrage on top. Each act's rounds start over. Its bar shows the round and its
-multiple (R3 ×1.2). A slow kill meets a round it can't survive. Crew bosses have none.
+last round's, compounding (×1.4 by round 5, ×1.85 by round 9), its enrage on top. Each act's rounds start over. A slow kill meets a round it can't survive. Crew bosses have none.
 
 | Boss | Where | From | Integrity | Enrages |
 |---|---|---|---|---|
@@ -648,7 +647,7 @@ three solo bosses, the floor 2–5 bosses and the natives. A crew boss keeps its
   *Tritone*: a heavy break, then a low G against its tritone, droning under the strip. Phones buzz twice short, once
   long; on a desktop the boss's bar thumps.
 - **The bar** is the *Segments*: the boss's bar in one segment an act, the acts done dark, the act now draining, the
-  acts to come full and dim. *ACT n/m* stays beside it, its rule in the tooltip.
+  acts to come full and dim.
 - **A tell an act.** Act 1 deals the boss's first tell (its charge), act 2 its cast as well, act 3 its third.
 - **The beat** repeats, always on the board. Acts 2 and 3 bring the boss's mechanics (a Resident's: the Watchdog,
   then the Outbreak or the Lockdown).

@@ -532,14 +532,13 @@ test("CAMSWARM's pair comes first in the lair's roll; Changed Default's helpers 
 // ---------- the act break (actbreak.mjs) ----------
 import { hudMarkup } from './dist/view.mjs';
 import { entryOf } from './dist/codex.mjs';
-test("an act's last part broken: the phase event names the act and refills the board; the HUD tags ACT n/m on its segment; the Codex lists Act 2 and Act 3", () => {
+test("an act's last part broken: the phase event names the act and refills the board; the HUD shows its segments, no ACT tag; the Codex lists Act 2 and Act 3", () => {
   const s = boss('byzantine');
-  assert.match(hudMarkup(s), /class="tag hot act-tag" title="Act 1\nAct 1 of 3\nBreak every part and its next act begins, every part back at full\.">ACT 1\/3</);
+  assert.doesNotMatch(hudMarkup(s), /act-tag|ACT 1\/3/, 'the segments say it');
   assert.equal((hudMarkup(s).match(/class="bigbar/g) || []).length - 1, 3, 'three segments beside your bar');
   for (const p of s.encounter.virus.parts) p.integrity = 0;
   const ev = hold(s).find((x) => x.type === 'phase'), c = livingParts(s).find((p) => p.core);
   assert.deepEqual(ev.act, { n: 2, of: 3, name: 'Traitor', emote: BOSSES.byzantine.phases[0].emote, part: c.id, at: null, refill: true });
-  assert.match(hudMarkup(s), /title="Traitor\nAct 2 of 3\nThe most damaged Node turns traitor\.[^"]*every part back at full\.">ACT 2\/3</);
   assert.match(hudMarkup(s), /bigbar act-done/);
   // Every boss with acts of its own names each act and gives it an emote; the Codex lists them by act.
   for (const id of ['relayking', 'repoman', 'choir', 'centrifuge', 'shakedown', 'shouldersurfer', 'recursion', 'nightdesk', 'byzantine', 'camswarm']) for (const ph of BOSSES[id].phases) assert.ok(ph.name && ph.emote, `${id}: ${ph.say}`);
