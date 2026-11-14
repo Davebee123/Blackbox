@@ -125,6 +125,19 @@ export function runDaemons(s) {
     e.metrics.daemon = (e.metrics.daemon || 0) + 1;
   }
 }
+// Wakeup Call (a legend, combat.mjs): each slotted daemon with a cooldown acts once more now, its cooldown untouched.
+// True if any acted.
+export function daemonsAgain(s) {
+  const e = s.encounter;
+  let any = false;
+  for (const id of slottedDaemons(s)) {
+    const d = DAEMONS[id];
+    if (!d.cd || !ACT[id] || !active(s) || virusIntegrity(s).current === 0 || (d.exfil && e.objective?.kind !== 'exfil')) continue;
+    if (asDaemon(s, () => ACT[id](s, id))) { any = true; e.metrics.daemon = (e.metrics.daemon || 0) + 1; }
+  }
+  flushDaemons(s);
+  return any;
+}
 // Something happened (see data.mjs DAEMONS `on`). x: what it happened to ({ part, source }).
 export function daemonsOn(s, what, x = {}) {
   const e = s.encounter;
