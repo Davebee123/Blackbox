@@ -81,9 +81,10 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - journals: one Ledger entry, a timeline over the writers, a document card on the first find (docs/journals.md);
   - runners on the map: the *Diamonds* (one small paper-white diamond under a place you've revealed that has runners,
     how many beside it from two up, a hollow one each on the road; none under a ? or anywhere else you haven't
-    revealed; a lone diamond opens their card to hire them, a counted one the list of who's there) and the *Rail* (a
-    Runners list under Contracts that folds away; the runner you pick gets their route and where they're heading, as
-    far as you've revealed); runners stay off the Online list (docs/runners.md);
+    revealed; a lone diamond opens their card to hire them, a counted one the list of who's there; the runner you pick
+    gets their route and where they're heading, as far as you've revealed); the *Rail* (a Runners list) is off the
+    desktop map (the designer reads the map instead) and stays only in a phone's sheet; runners stay off the Online
+    list (docs/runners.md);
   - meeting and hiring runners: a paper-white tab on the room, Help / Step back on its card; cards with rows split by
     hairlines; traits as named chips, temperament first; standing as the *Tier bar* (the tier, a bar to the next); a
     hired runner's bar picked from their *Presets* (a tile each: name and how it plays, keys in its tooltip);

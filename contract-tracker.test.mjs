@@ -41,7 +41,13 @@ test('only the contracts you hold: not the board, not the delivered ones', () =>
   const html = mapMarkup(s);
   assert.equal(rows(html).length, 3, 'three held, the delivered one and the offer left out');
   assert.deepEqual(trackedJobs(s).map((j) => j.id), openContracts(s).map((c) => c.id));
-  assert.match(tracker(html), new RegExp(`Contracts<small>3/${MAIL.take}</small>`), 'the kicker counts them against the hand');
+  assert.match(tracker(html), /Contracts<small>3<\/small>/, 'the kicker counts the rows you see');
+  assert.match(tracker(html), new RegExp(`title="3 of ${MAIL.take} contract slots in use\\."`), 'the slots it takes on hover');
+  s.mail.jobs.push({ id: 5, type: 'kill', family: 'ransomware', count: 5, got: 0, level: 12, from: 'Halcyon Mutual · Claims', chain: 1, reward: { credits: 10 } });
+  const more = tracker(mapMarkup(s));
+  assert.match(more, /Contracts<small>4<\/small>/, 'a floor job is a row, so it counts in the kicker');
+  assert.match(more, /3 of 6 contract slots in use; story and floor jobs don’t take a slot\./, 'but not toward the slots');
+  s.mail.jobs.pop();
   // Its name, who it's for and its progress, on the row itself.
   const [kill, take, item] = rows(html);
   assert.match(kill, /<b>Kill 5 Ransomware viruses, Lv 8\+<\/b>/);

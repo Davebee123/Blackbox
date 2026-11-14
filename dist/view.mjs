@@ -2300,9 +2300,9 @@ function pinnedTracker(s) {
 }
 const SLOT_GLYPH = { exploit: 'exploit', proxy: 'relay', shell: 'module', script: 'cipher', implant: 'injector' };
 // The map's left column: the threat rail, then the contract tracker under it (the selected server's contract lit), then
-// the pinned earned pieces.
+// the pinned earned pieces. The Runners are on the map itself (a phone still lists them in the sheet: mapRail).
 function mapLeft(s, sel, runner = null, railShut = false) {
-  const col = threatRail(s) + contractTracker(s, sel) + pinnedTracker(s) + runnerRail(s, runner, railShut);
+  const col = threatRail(s) + contractTracker(s, sel) + pinnedTracker(s);
   return col ? `<div class="map-lcol">${col}</div>` : '';
 }
 // A phone's map (docs/phone-plan.md P3): the rail and the tracker fold into a row of chips under the floors, a red
@@ -2353,7 +2353,9 @@ function contractTracker(s, sel = null) {
   const list = trackedJobs(s);
   if (!list.length) return '';
   const rows = list.map((j) => `<button type="button" class="ct-row${j.ready ? ' ready' : ''}${j.locate && j.locate === sel ? ' on' : ''}" ${j.command ? `data-command="${esc(j.command)}"` : j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`} title="${esc(j.tip)}">${j.pay ? `<template class="tt-more">${j.pay}</template>` : ''}${ctInner(j)}</button>`).join('');
-  return `<section class="ctrack" aria-label="Contracts"><h3 class="ct-head">${glyph('contract')}Contracts<small>${heldCount(s)}/${MAIL.take}</small></h3>${rows}</section>`;
+  // The kicker counts the rows you see; how many of the board's slots they fill (story and floor jobs take none) is its tip.
+  const h = heldCount(s), slots = `${h} of ${MAIL.take} contract slots in use${list.length > h ? `; story and floor jobs don’t take a slot` : ''}.`;
+  return `<section class="ctrack" aria-label="Contracts"><h3 class="ct-head" title="${esc(slots)}">${glyph('contract')}Contracts<small>${list.length}</small></h3>${rows}</section>`;
 }
 
 // Traffic on the net: files moving between servers, as dots along the links. Your market orders

@@ -53,7 +53,7 @@ be on the net, like Guild Wars 1's heroes and Starsector's officers and fleets.
   hubs you've found and exits on your map. A `?` doesn't count. No diamond under a `?`, at a server or hub off your
   map, or on a road with an unrevealed end. The picked runner's route stops at the first unrevealed place, their ring
   is drawn only on a revealed one, and out of sight they have no mark: their card opens beside their Rail row.
-- **The Rail folds** to its head; runners stay off the Online list (it keeps friends, members and crew).
+- **The Rail** is off the desktop map (November 2026: the diamonds do its job); a phone's sheet keeps it, folding to its head; runners stay off the Online list (it keeps friends, members and crew).
 - **Tooltip:** the handle; *Runner · <faction>*; class, level and what they're doing (*working a server on floor 1*
   where you haven't located it); then, muted, how you know them and what they're after. Their own #net lines keep the
   server's kind (*on a Lab on floor 1 now*).

@@ -50,7 +50,7 @@ teal, violet or a threat's red.
   poster, a boss frame), a feud's two faction halves over its bar, a price tile, a price tag. Rewards are an icon and a
   number. The card's sentence is the strip's tooltip. Motion is locked to the clock (`--ph`) so a redraw never restarts
   it. The map pop-up widens to 376px while it holds one.
-- **Contract tracker** (`.ctrack`, `view.mjs` `contractTracker`): under the threat rail; an icon column, who it's for over
+- **Contract tracker** (`.ctrack`, `view.mjs` `contractTracker`): under the threat rail; its kicker counts the rows (the slots they fill of 6 in its tooltip; story and floor jobs take none); an icon column, who it's for over
   the name, the progress in amber (its few words, *3/5 viruses killed*; past 10 a bar
   with *n/N*); a done one has a green border and **Turn in**. A row is a
   button (`data-locate`, `data-go` to Mail, or a done one's `mail deliver`); its tooltip shows the pay as icon chips. No teal.

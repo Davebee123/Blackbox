@@ -2582,7 +2582,7 @@ no attaching, detaching or memory pips.
 - **Standing**: 0–100 in four tiers: Stranger, Known (25), Friend (50), Close (75), each a smaller fee. Drawn as the
   Tier bar, its number and how you met in the tooltip. Known face: half again a raise, and three quarters of the fee.
 - **The runner card**: a lone diamond on the map, a row of a counted one's list or a Rail row opens it beside them
-  (beside the Rail row when the map doesn't draw them): faction, handle, class and level; Traits (temperament first), Standing, Now (→ a server and its time, or
+  (where it last was when the map doesn't draw them): faction, handle, class and level; Traits (temperament first), Standing, Now (→ a server and its time, or
   Busy with when they're free), After (their trade); their latest #net line; **Hire**, off with the reason (or the
   clock) until you can.
 - **Hiring** (`hire <runner> [preset]`, anyone on your net, from level 5, three at most): the crew card shows Pay as two
@@ -2601,12 +2601,12 @@ no attaching, detaching or memory pips.
 - **Revealed** (`runners.mjs` `revealed`, `inSight`): a located server, SPRAWL-00 or an up-link, a hub you've found, an
   exit on your map. A `?` isn't. A runner under a `?`, at a server or hub off your map, or on a road with an unrevealed
   end isn't drawn; they appear once you locate the server.
-- **The Rail**: under Contracts on the map, the runners you know (heard on #net, or met), last heard first, six at most:
+- **The Rail** (a phone's sheet only; the desktop map has none, the diamonds do its job): the runners you know (heard on #net, or met), last heard first, six at most:
   handle, class and level, where (`→` a server on the road; a server you haven't located is only its floor, `F1`, and
   *a server on floor 1* in the tooltip and on the card). Its head folds the section away (kept per browser). Click
   one (or a diamond) to pick it: its handle, a dotted route through the servers passed (back to the first unrevealed
   one), a dashed ring where it's heading (a revealed place only), and its card. Again to drop it. A picked runner out
-  of sight has no mark; their card sits beside their Rail row.
+  of sight has no mark; their card sits where it last was.
 - **People**: the people button on the top bar (how many are on; violet when a friend is) opens **Friends** and
   **Online**: handle, class and level, where. On a network that's your friends, your consortium's members and your crew
   (the other runners are on the map);
