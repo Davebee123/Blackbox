@@ -116,7 +116,7 @@ called off, the big key on the beat) something specific.
 | DEADBOLT (built) | **Lock** | **Tumblers**: a Deadbolt that lands re-locks | **Double lock**: a Mutex, seat Pulse Node | Hitting the lock |
 | TRIPMINE | **Tripwire** | **Daisy chain**: a Tripwire, seat Pulse Node (Claymore to the Encryptor) | **Dead man**: the Pulse Node sets off every wire | The Tripwire first |
 | HASHLORD | **Pool Lock** | **Chain Fork**: a Miner, seat Pulse Node | **51%**: the Lock wards the healthiest part | Commands into the ward |
-| BACK ORIFICE (built) | **Spam Run** | **Port knock**: one part open every 3, the rest half | **Mirror**: seat Pulse Node | Closed ports |
+| BACK ORIFICE (built) | **Spam Run** | **Round robin**: one part open every 3, the rest half | **Mirror**: seat Pulse Node | Hitting shut parts |
 | PATCH TUESDAY (built) | **Patch** | **Out of band**: a tick crossed is patched at once | **Hotfix**: the last part broken back at 25% | Chipping the first part |
 | FLOODWALL | **Flood** | **Spillway**: a delay sends the ramp to the Pulse Node | **Levee**: the ramp moves on when the Flooder breaks | Never delaying |
 | MIRRORSHADE (built) | **Feedback** | **Doppelganger**: your first break in act 1 | **Shatter**: three copies of your next command, a third each | Bursting while Scrambled |

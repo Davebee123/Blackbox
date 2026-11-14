@@ -322,7 +322,7 @@ export function damageMultiplier(s, p, opts = {}) {
   if (on(s, p, 'open')) m *= TELL.open.mult; // a tell read: the part is open (tells.mjs)
   m *= overclockMult(s); // an Overclock that landed: every part takes double (tells.mjs, breaches only)
   if (p.loud) m *= CONFIG.tripwire.taken; // a Tripwire tripped: the loud parts take more from everything (loud both ways)
-  if (e.virus?.boss) m *= nativeTaken(s, p); // BACK ORIFICE's Port knock, SLEEPWALKER's dozer (nativeacts.mjs)
+  if (e.virus?.boss) m *= nativeTaken(s, p); // BACK ORIFICE's Round robin, SLEEPWALKER's dozer (nativeacts.mjs)
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) m *= CONFIG.weakMultiplier;
   m *= leanDealt(e, p); // the server's leaning: Venting, Wind-up (leanings.mjs)
   if (opts.mine) {

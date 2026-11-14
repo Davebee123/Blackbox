@@ -5,7 +5,7 @@ import { componentsOf } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
 import { actInfo, actBar } from './acts.mjs';
-import { knockOpen, knockIn, dozer } from './nativeacts.mjs';
+import { robinOpen, robinIn, dozer } from './nativeacts.mjs';
 import { FB, BUYER, nextBuyer, dumpOf, topFrame, canCall, frames, leakOf, depthOf, pendingOf, tradeOf, voteOf, forkOf, nodesOf, camerasOf, hatchers, parentOf, leverLeft, rollTo } from './floorbosses.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './memory.mjs';
@@ -629,15 +629,15 @@ export function partAbout(p, v = null, s = null) {
   const r = partRead(s, v || { parts: [p] }, p);
   return `${r.does}${answerLine(r.answer)}`;
 }
-// Floor 2's lair bosses' act rules on their parts (nativeacts.mjs): Tumblers, Port knock, Out of band, Hotfix, the dozer,
+// Floor 2's lair bosses' act rules on their parts (nativeacts.mjs): Tumblers, Round robin, Out of band, Hotfix, the dozer,
 // Shatter. Each tag's tooltip: the rule, and the answer.
 function nativeTags(s, p) {
   const e = s.encounter, v = e.virus, out = [], tag = (label, tip) => out.push(`<span class="tag hot" title="${esc(tip)}">${label}</span>`);
   const cyc = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
   if (v.tumblers && p.lockMax && livingParts(s).some((m) => m.lock === p.id)) tag('tumblers', `Tumblers\nBoss rule\nA Deadbolt that lands locks the ${p.name} again at full.${answerLine('Cut the Deadbolt.')}`);
-  const open = v.knock && p.kind === 'system' ? knockOpen(s) : null;
-  if (open === p) { const n = knockIn(s); tag(`open ${n}`, `Port knock\nBoss rule\nThe ${p.name} is open and takes full damage. The other parts take half. The port moves on in ${cyc(n)}.${answerLine('Hit the open part.')}`); }
-  else if (open) tag('½', `Port knock\nBoss rule\nThe ${p.name} is shut and takes half damage. The ${open.name} is open.${answerLine('Hit the open part.')}`);
+  const open = v.robin && p.kind === 'system' ? robinOpen(s) : null;
+  if (open === p) { const n = robinIn(s); tag(`open ${n}`, `Round robin\nBoss rule\nThe ${p.name} is open and takes full damage. The other parts take half. The turn moves on in ${cyc(n)}.${answerLine('Hit the open part.')}`); }
+  else if (open) tag('½', `Round robin\nBoss rule\nThe ${p.name} is shut and takes half damage. The ${open.name} is open.${answerLine('Hit the open part.')}`);
   if (v.oob && p.attack?.effect === 'heal') tag('oob', `Out of band\nBoss rule\nWhen your hit takes a part across a tick, the ${p.name} patches it at once for ${p.attack.amount}.${answerLine('Cross both ticks in one hit, or break the Patcher first.')}`);
   if (v.hotfix === true && p.core) tag('hotfix', `Hotfix\nBoss rule\nThe last part you break this act comes back once at 25%.${answerLine('Save a big hit for the last part.')}`);
   if (dozer(s) === p) {

@@ -3,7 +3,7 @@
 //
 //   DEADBOLT       act 2 Tumblers: a Deadbolt that lands locks the Encryptor again at full. Act 3 Double lock: a
 //                  second Mutex in the Pulse Node's seat (seat:pulse).
-//   BACK ORIFICE   act 2 Port knock: one part is open, moving every 3 cycles; the rest take half. Act 3: a Mirror in
+//   BACK ORIFICE   act 2 Round robin: one part is open, moving every 3 cycles; the rest take half. Act 3: a Mirror in
 //                  the Pulse Node's seat, the twins rebooting each other twice (combat.mjs bossPhases 'twice').
 //   PATCH TUESDAY  act 2 Out of band: a part that crosses a tick is patched at once. Act 3 Hotfix: the last part you
 //                  break comes back once at 25%.
@@ -17,12 +17,12 @@ import { tellsOf, forceCharge, callOff } from './tells.mjs';
 import { TICKS } from './interrupt.mjs';
 
 export const NATIVE = {
-  knock: { every: 3, shut: 0.5 }, // Port knock: the open part moves every 3 cycles; a shut part takes half
+  robin: { every: 3, shut: 0.5 }, // Round robin: the open part moves every 3 cycles; a shut part takes half
   hotfix: 0.25, // Hotfix: the last part broken comes back at a quarter of its max
   rem: { every: 4, taken: 2 }, // REM: a part dozes every 4 cycles; a dozer takes double
   shards: 3, // Shatter
 };
-export const NATIVE_VERBS = new Set(['tumblers', 'knock', 'outofband', 'hotfix', 'rem', 'terror', 'shatter']);
+export const NATIVE_VERBS = new Set(['tumblers', 'robin', 'outofband', 'hotfix', 'rem', 'terror', 'shatter']);
 
 const sys = (s) => livingParts(s).filter((x) => x.kind === 'system');
 
@@ -30,7 +30,7 @@ const sys = (s) => livingParts(s).filter((x) => x.kind === 'system');
 export function nativeVerb(s, act) {
   const e = s.encounter, v = e.virus;
   if (act === 'tumblers') v.tumblers = true;
-  if (act === 'knock') { const p = sys(s)[0]; v.knock = { open: p?.id || null, next: e.cycle + 1 + NATIVE.knock.every }; }
+  if (act === 'robin') { const p = sys(s)[0]; v.robin = { open: p?.id || null, next: e.cycle + 1 + NATIVE.robin.every }; }
   if (act === 'outofband') v.oob = true;
   if (act === 'hotfix') v.hotfix = true;
   if (act === 'rem' || act === 'terror') v.rem = { part: null, next: null, until: null, terror: act === 'terror' };
@@ -49,18 +49,18 @@ export function nativeCharge(s, t) {
 }
 
 // ---------- BACK ORIFICE ----------
-export const knockOpen = (s) => { const k = s.encounter?.virus?.knock; return k ? part(s, k.open) : null; };
-export const knockIn = (s) => { const k = s.encounter?.virus?.knock; return k ? Math.max(0, k.next - s.encounter.cycle) : null; };
+export const robinOpen = (s) => { const k = s.encounter?.virus?.robin; return k ? part(s, k.open) : null; };
+export const robinIn = (s) => { const k = s.encounter?.virus?.robin; return k ? Math.max(0, k.next - s.encounter.cycle) : null; };
 // The cycle's end: the port moves on its rhythm, or at once from a part that broke.
-function knockCycle(s) {
-  const e = s.encounter, k = e.virus.knock, xs = sys(s);
+function robinCycle(s) {
+  const e = s.encounter, k = e.virus.robin, xs = sys(s);
   if (!k || !xs.length) return;
   const open = part(s, k.open);
   if (alive(open) && e.cycle + 1 < k.next) return;
   const all = e.virus.parts, from = open ? all.indexOf(open) : -1;
   const to = xs.find((x) => all.indexOf(x) > from) || xs[0];
-  k.open = to.id; k.next = e.cycle + 1 + NATIVE.knock.every;
-  if (to !== open) emit(s, 'status', `PORT KNOCK. The ${to.name} is open for ${NATIVE.knock.every} cycles. The other parts take half.`, { target: to.id, knock: true });
+  k.open = to.id; k.next = e.cycle + 1 + NATIVE.robin.every;
+  if (to !== open) emit(s, 'status', `ROUND ROBIN. The ${to.name} is open for ${NATIVE.robin.every} cycles. The other parts take half.`, { target: to.id, robin: true });
 }
 
 // ---------- PATCH TUESDAY ----------
@@ -146,13 +146,13 @@ function remCycle(s) {
 export function nativeTaken(s, p) {
   const e = s.encounter, v = e.virus;
   let m = 1;
-  if (v.knock && p.kind === 'system' && p.id !== v.knock.open) m *= NATIVE.knock.shut;
+  if (v.robin && p.kind === 'system' && p.id !== v.robin.open) m *= NATIVE.robin.shut;
   if (v.rem && (v.rem.part === p.id || (v.rem.woke?.part === p.id && v.rem.woke.at === e.cycle))) m *= NATIVE.rem.taken;
   return m;
 }
 // The cycle's end (combat.mjs bossPhases, after the act's verbs).
 export function nativeCycle(s) {
   const v = s.encounter.virus;
-  if (v.knock) knockCycle(s);
+  if (v.robin) robinCycle(s);
   if (v.rem) remCycle(s);
 }

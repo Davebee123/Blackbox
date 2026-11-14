@@ -52,17 +52,17 @@ test('DEADBOLT: Tumblers relocks the Encryptor when a Deadbolt lands; Double loc
   assert.ok(part(s, 'encryptor').lockHp > 0, 'locked');
 });
 
-test('BACK ORIFICE: Port knock opens one part at a time, the rest take half; act 3 seats a Mirror', () => {
+test('BACK ORIFICE: Round robin opens one part at a time, the rest take half; act 3 seats a Mirror', () => {
   const s = lair('nb-backorifice');
   breakAll(s);
-  const v = s.encounter.virus, open = part(s, v.knock.open), shut = livingParts(s).find((p) => p.kind === 'system' && p !== open);
+  const v = s.encounter.virus, open = part(s, v.robin.open), shut = livingParts(s).find((p) => p.kind === 'system' && p !== open);
   assert.ok(open && shut);
-  assert.deepEqual([nativeTaken(s, open), nativeTaken(s, shut)], [1, NATIVE.knock.shut]);
-  for (let n = 0; n < NATIVE.knock.every; n++) hold(s);
-  assert.notEqual(v.knock.open, open.id, 'it moves after 3 cycles');
+  assert.deepEqual([nativeTaken(s, open), nativeTaken(s, shut)], [1, NATIVE.robin.shut]);
+  for (let n = 0; n < NATIVE.robin.every; n++) hold(s);
+  assert.notEqual(v.robin.open, open.id, 'it moves after 3 cycles');
   open.integrity = 0; // a part that breaks hands the port on at once
   breakAll(s);
-  assert.equal(v.knock, undefined);
+  assert.equal(v.robin, undefined);
   assert.ok(ids(s).includes('mirror') && !ids(s).includes('pulse'), 'a Mirror in the Pulse Node\'s seat');
 });
 

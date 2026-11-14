@@ -104,7 +104,7 @@ comment saying what it does.
 | `dist/acts.mjs` | Boss acts: a boss's three acts as act bars (each a fresh board from act 1's board, rules and tells), their pacing (`ACT_BARS`: Integrity, hits, rounds and enrage an act), and its beat (the Backlash, a Mimic, a Decoy; the Resident's Outbreak and Lockdown ride the Backlash). |
 | `dist/actbreak.mjs` | Presentation only: the act break as a boss starts its next act (the strip, the emote, the board's parts coming back). |
 | `dist/floorbosses.mjs` | The floor 2 to 5 bosses' rules (CENTRIFUGE's Bidding, SHAKEDOWN's Ransom Clock, SHOULDER SURFER's Replay, RECURSION's Call, NIGHT DESK's No Timeout, BYZANTINE's Vote, CAMSWARM's Telnet Sweep, GRACE PERIOD's Grace, EXIT NODE's Rollback), their phase verbs, and their uniques' hooks. |
-| `dist/nativeacts.mjs` | Floor 2's lair bosses' act rules (DEADBOLT's Tumblers, BACK ORIFICE's Port knock, PATCH TUESDAY's Out of band and Hotfix, SLEEPWALKER's REM and Night Terror, MIRRORSHADE's Shatter) and their board numbers. |
+| `dist/nativeacts.mjs` | Floor 2's lair bosses' act rules (DEADBOLT's Tumblers, BACK ORIFICE's Round robin, PATCH TUESDAY's Out of band and Hotfix, SLEEPWALKER's REM and Night Terror, MIRRORSHADE's Shatter) and their board numbers. |
 | `dist/mechanics.mjs` | The mechanics list: twenty third parts built lean, each rule's hooks in one place. Eleven strains and the eleven mutated ones are built from them (`STRAINS`). |
 | `dist/situations.mjs` | The moment on the board each situational skill is built for; the tray lights it. |
 | `dist/raid.mjs` | Crew bosses: phases and mechanics for KESSLER-FARM-00's three. |
