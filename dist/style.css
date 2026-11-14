@@ -3108,6 +3108,8 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ptip-body .impl { display: block; } /* its text wraps back to the left edge, under the icon */
 .ptip-body .impl .glyph { display: inline-block; vertical-align: -2px; margin-right: 6px; }
 .ptip-body em { color: var(--muted); font-size: 11px; margin-top: 4px; }
+.ptip-body > small.zd { color: var(--text); font: 13px var(--sans); margin-top: 2px; } /* the effect reads as rules text; flavour stays muted */
+.ptip-body > small.zd b { color: var(--r-zeroday); font-weight: 600; }
 .inv-card .inv-state { display: flex; align-items: center; gap: 8px; margin: 6px 0 4px; }
 .inv-card .inv-state b { font: 600 12px var(--mono); color: var(--text); }
 .inv-card.breach { border-color: rgba(255, 91, 61, 0.6); }

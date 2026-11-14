@@ -209,7 +209,7 @@ comment saying what it does.
 | `dist/achievements.mjs`, `dist/achievements-view.mjs`, `dist/achievements.css` | Achievements and their cosmetic rewards; the **Rig** page (Achievements, Casing, Terminal; `rigMarkup` in view.mjs). |
 | `dist/profile.mjs`, `dist/profile-view.mjs` | Your profile card (`finger`), and #net's markup. |
 | `dist/channel.mjs`, `dist/presence.mjs` | #net, the public channel; who's online and your friends. |
-| `dist/runners.mjs`, `dist/runners-view.mjs` | Runners: the cast from the network seed, their loop on logged-on time; meeting, standing and hiring; dead runner rooms (`deadOf`, `pulledOut`); the map's diamonds, counts and lists (only where you've revealed: `revealed`, `inSight`), the Rail, the runner and crew cards. |
+| `dist/runners.mjs`, `dist/runners-view.mjs` | Runners: the cast from the network seed, their loop on logged-on time; meeting, standing and hiring; dead runner rooms (`deadOf`, `pulledOut`); the map's diamonds, counts and lists (only where you've revealed: `revealed`, `inSight`), the Rail (a phone's sheet), the runner and crew cards. |
 | `dist/comms.mjs`, `dist/pager.mjs`, `dist/pager-view.mjs`, `dist/pager.css` | The pager: world events as entries, which ones ask something of you, and the tray. |
 | `dist/casing.mjs`, `dist/casing-view.mjs`, `dist/casing.css` | Casing cosmetics: the monitor color and plate, stickers anywhere on its plastic, props on the desk or on top. Rig → Casing is a rail of sections beside the open one's pane. |
 | `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on Rig → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |
@@ -250,7 +250,7 @@ comment saying what it does.
 | `dist/nocarrier.mjs`, `dist/nocarrier.css` | Losing a fight: static and NO CARRIER, then the Disconnected card. |
 | `dist/class-emblems.mjs` | The class picker's ASCII emblems. |
 | `dist/feel.mjs` | The feedback language: each kind of event's one signature in motion and sound. |
-| `dist/sound.mjs`, `dist/sfx/` | Sound effects from recorded CC0 samples (CREDITS.md). A fight won, a boss down and a level gained are whole clips (`sfx/wins`, rendered by `tools/sound-preview/clips4.js`). |
+| `dist/sound.mjs`, `dist/sfx/` | Sound effects from recorded CC0 samples (CREDITS.md). A fight won, a boss down and a level gained are whole clips (`sfx/wins`, rendered by `tools/sound-preview/clips4.js`). The audio context runs at the output's own rate up to 48 kHz (`openContext`): over that the game renders at 48 kHz and the browser resamples. |
 | `dist/abilitysound.mjs` | Ability sounds timed to their effects (docs/ability-sounds-plan.md): the kit, the style round and each class's key 1. `app.js` strikes() plays the picked style in a fight (abilitySound, abilityVoices); `?playtest=fx` plays any. |
 | `dist/abilitysound-all.mjs` | Every other ability's sound in the picked style, built from its row in the effects table, with the mastery tiers' layers and the winning break's flourishes; `abilitysound-levels.mjs` holds their measured levels. |
 | `dist/virussound.mjs` | Virus attack sounds (docs/ability-sounds-plan.md, "Virus attacks"): the list of attacks (ATTACKS), the style round's four in three styles (Corrupt picked, Latch for its Encrypt), timed to their chips' strikes. A fight plays the pick (`virusvoice.mjs`); `?playtest=fx` plays any. |
