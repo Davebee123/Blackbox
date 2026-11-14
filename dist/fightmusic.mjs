@@ -3,15 +3,19 @@
 // overdrive with a bit-crushed copy under it, shredded drums, a stamping press, overdriven basses, supersaw pads that
 // duck under the kick, tape hiss and a factory rumble. Heat (0-1, how far the fight has gone) brings layers in.
 // soundtrack.mjs fades a theme in when a fight starts and out when it ends.
+import { texture, reverbGain } from './texture.mjs';
 const mtof = (m) => 440 * 2 ** ((m - 69) / 12);
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
-let noiseBuf = null;
+let noiseBuf = null, irBuf = null;
 const noiseOf = (ctx) => {
   if (noiseBuf && noiseBuf.sampleRate === ctx.sampleRate) return noiseBuf;
-  const b = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = b.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-  return (noiseBuf = b);
+  return (noiseBuf = texture(ctx, 1, 2, (d) => { for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }));
+};
+// The themes' reverb: white noise falling away over 3.2 s (texture.mjs: as built at 192 kHz), made once per rate.
+const irOf = (ctx) => {
+  if (irBuf && irBuf.sampleRate === ctx.sampleRate) return irBuf;
+  return (irBuf = texture(ctx, 2, 3.2, (d) => { const len = d.length; for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2.5; }, { wrap: false }));
 };
 const curves = new Map(); // one per drive amount: a note no longer builds its own
 const curve = (k) => curves.get(k) || curves.set(k, curveOf(k)).get(k);
@@ -24,13 +28,12 @@ function makeBus(ctx, dest, delayTime, fb = 0.4, floor = null) {
   const fader = ctx.createGain(), dry = ctx.createGain(), pump = ctx.createGain(), rev = ctx.createGain(), del = ctx.createGain();
   const drive = ctx.createWaveShaper(), tape = ctx.createBiquadFilter();
   drive.curve = curve(7); drive.oversample = '2x'; tape.type = 'lowpass'; tape.frequency.value = 9000;
-  const conv = ctx.createConvolver(), len = ctx.sampleRate * 3.2, ir = ctx.createBuffer(2, len, ctx.sampleRate);
-  for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2.5; }
+  const conv = ctx.createConvolver(), ir = irOf(ctx);
   conv.buffer = ir;
   const dl = ctx.createDelay(2), fbk = ctx.createGain(), lp = ctx.createBiquadFilter();
   dl.delayTime.value = delayTime; fbk.gain.value = fb; lp.type = 'lowpass'; lp.frequency.value = 2200;
   del.connect(dl).connect(lp).connect(fbk).connect(dl); lp.connect(drive); lp.connect(rev);
-  rev.gain.value = 1; rev.connect(conv).connect(drive);
+  rev.gain.value = 1; const revOut = ctx.createGain(); revOut.gain.value = reverbGain(ir); rev.connect(conv).connect(revOut).connect(drive);
   dry.connect(drive); pump.connect(drive); const pres = ctx.createBiquadFilter(), hp = ctx.createBiquadFilter(); pres.type = 'peaking'; pres.frequency.value = 2600; pres.gain.value = 5; pres.Q.value = 0.8; hp.type = 'highpass'; hp.frequency.value = 35;
   drive.connect(tape).connect(pres).connect(hp); fader.connect(dest);
   const cr = ctx.createWaveShaper(), cg = ctx.createGain(); cr.curve = crush(5); cg.gain.value = 0.5; drive.connect(cr).connect(cg).connect(tape); // a bit-crushed copy under it all
