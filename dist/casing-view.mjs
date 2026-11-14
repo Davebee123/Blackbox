@@ -27,11 +27,11 @@ export function casingPageMarkup(s) {
   const owned = decalsOwned(s), on = new Set(look.decals.map((x) => x.id));
   const chips = owned.map((x) => `<button type="button" class="cs-decal" data-run="casing sticker ${esc(x.id)}${on.has(x.id) ? ' off' : ''}" aria-pressed="${on.has(x.id)}" title="${esc(`${x.tip}.${on.has(x.id) ? ' Drag it anywhere on the casing.' : ''}`)}">${decalMarkup(x)}</button>`).join('');
   return `<div class="cs-page">
-    <section class="card cs-card"><h2>Colourway</h2>${off ? `<p class="cs-note">${esc('Casing off. Settings turns it on.')}</p>` : ''}<div class="cs-swatches">${sw}</div></section>
-    <div class="cs-stack"><section class="card cs-card" data-case="${cur}"><h2>Nameplate</h2><span class="cs-plate" title="The plate on the chin">${esc(look.plate)}</span>
+    <section class="card"><h2>Colourway</h2>${off ? `<p class="cs-note">${esc('Casing off. Settings turns it on.')}</p>` : ''}<div class="cs-swatches">${sw}</div></section>
+    <div class="cs-stack"><section class="card" data-case="${cur}"><h2>Nameplate</h2><span class="cs-plate" title="The plate on the chin">${esc(look.plate)}</span>
       <div class="cs-plates">${plates}</div>
       <form class="cs-own" data-cs-plate><input id="cs-plate-in" maxlength="${CASING.plate}" value="${esc(C.plate?.text || '')}" placeholder="Your own, ${CASING.plate} characters" spellcheck="false" autocomplete="off" aria-label="Your own plate"><button type="submit" class="btn small primary">Use</button></form></section>
-    <section class="card cs-card" data-case="${cur}"><h2>Stickers</h2>
+    <section class="card" data-case="${cur}"><h2>Stickers</h2>
       <div class="cs-row"><span>On · ${on.size} / ${owned.length}</span>${on.size ? '<button type="button" class="act dim ach-pin" data-run="casing sticker off">Clear</button>' : ''}</div>
       ${owned.length ? `<div class="cs-decals">${chips}</div>` : `<p class="cs-note">${esc('None yet. Achievements bring them.')}</p>`}</section></div>
     ${deskCardMarkup(s)}
@@ -71,7 +71,7 @@ export function districtCardMarkup(s) {
       ? `<button type="button" class="cs-dist" data-run="district ${id}" aria-pressed="${cur === id}" title="${esc(tip)}">${districtMini(id)}<span>${esc(DISTRICTS[id].name)}</span></button>`
       : `<span class="cs-dist locked" title="${esc(tip)}">${districtMini(id)}<span>${esc(DISTRICTS[id].name)}</span>${glyph('lock')}</span>`;
   }).join('');
-  return `<section class="card cs-card cs-dists-card"><h2>Window</h2><p class="cs-note">${esc(off ? 'The window is off. Casing and Window on show it, beside the monitor on screens 1700px wide and more.' : 'Out the window beside the monitor, on screens 1700px wide and more.')}</p><div class="cs-dists">${items}</div></section>`;
+  return `<section class="card"><h2 title="${esc('The district out the window beside the monitor, on screens 1700px wide and more.')}">Window</h2>${off ? `<p class="cs-note">${esc('Off. Settings turns on Casing and Window.')}</p>` : ''}<div class="cs-dists">${items}</div></section>`;
 }
 
 // Rig → Casing → Props: yours, the ones standing lit, the rest dim. A click stands one on the desk or takes it off.
@@ -83,7 +83,7 @@ export function deskCardMarkup(s) {
       ? `<button type="button" class="cs-prop" data-run="casing prop ${id}${on.has(id) ? ' off' : ''}" aria-pressed="${on.has(id)}" title="${esc(tip)}">${propSvg(id)}<span>${esc(PROPS[id].name)}</span></button>`
       : `<span class="cs-prop locked" title="${esc(tip)}">${propSvg(id)}<span>${esc(PROPS[id].name)}</span>${glyph('lock')}</span>`;
   }).join('');
-  return `<section class="card cs-card"><h2>Props</h2>
+  return `<section class="card"><h2>Props</h2>
       <div class="cs-row"><span>Out · ${on.size} / ${propsOwned(s).length}</span>${on.size ? '<button type="button" class="act dim ach-pin" data-run="casing prop off">Clear</button>' : ''}</div>
       <div class="cs-props">${items}</div></section>`;
 }
