@@ -1,8 +1,12 @@
 # Runners: the people on the net
 
-**Status.** R1 and R2 built (the cast, the loop, the Rail, #net lines; meeting, standing and hiring); R3–R4 to come.
-R2's follow-ups: trait effects in fights (only Known face and Haggler are in play), temperament steering the
-planner, meeting a crashed runner or a rival you beat, Known's leads and Close's consortium. The looks are picked: the map (the *Rail*), and meeting and hiring (below).
+**Status.** R1 and R2 built (the cast, the loop, the Rail, #net lines; meeting, standing and hiring). R3 in part:
+rivals are runners (the *red diamond*, picked; beating one raises their standing), feuds name runners, and dead
+runner rooms (a crash marks an existing room, a skull beside the handle on its tab, picked; win it to pull them out). In
+SPRAWL-00 a runner between jobs wears a paper-white tab on their room's chip (the *Tab*, picked); walk in to meet them.
+R4 to come. R2's follow-ups: trait
+effects in fights (only Known face and Haggler are in play), temperament steering the planner, Known's leads and
+Close's consortium. The looks are picked: the map (the *Rail*), and meeting and hiring (below).
 Talked through with the designer, November 2026.
 
 ## Why
@@ -76,9 +80,10 @@ server; runners in the Online list.
 - **Standing:** 0–100 in four tiers: Stranger, Known (leads), Friend, Close (consortium); anyone can be hired, and each
   tier makes the fee smaller (a stranger's is double). Drawn as the tier's
   name, a bar to the next and the next one's name (the *Tier bar*); the number and how you met are its tooltip.
-- **The runner card** (a Rail row opens it beside their diamond): *Runner · faction*, the handle, class glyph, class
-  and level; rows, split by hairlines and each label level with its row's first line, for Traits (temperament first, dashed, then the traits as named chips, ★ on a
-  starred one), Standing, Now (→ a server and its time) and After (the trade in words and the
+- **The runner card** (a Rail row opens it beside their diamond): the head is the *Badge* (picked November 2026 over
+  the bust on top or in a sidebar): a small backlit ASCII bust from their handle (portraits.mjs), then *Runner ·
+  faction*, the handle, class glyph, class and level, and the Tier bar; rows, split by hairlines and each label level with its row's first line, for Traits (temperament first, dashed, then the traits as named chips, ★ on a
+  starred one), Now (→ a server and its time) and After (the trade in words and the
   floor it's frozen on); their latest line; **Hire**.
 - **The crew card** (Hire turns the runner card into it): Pay as two icons, both owed (MOO2's leaders): a credits fee
   once, the first time you hire that runner, and a cut of the credits each run pays while they're with you (items and
@@ -135,7 +140,8 @@ make a dearer fee. No drawbacks for now.
 ## Friends
 
 A friend is a runner in your world, from their **record**: handle, level, character (`coop-char.mjs characterOf`),
-network seed, servers traced and held, project contributions, when it was posted. A few KB. Each player writes only
+network seed, servers traced and held, project contributions, deepest flash rank and the build that cleared it
+(docs/coop.md), when it was posted. A few KB. Each player writes only
 their own record, and shared things are read from everyone's: a consortium's tier counts records, a project sums
 contributions, a member's network is drawn from their seed. Records travel peer to peer when friends connect, or
 through a small mailbox (a file store, no game logic). Live co-op puts the person in their ghost's place.

@@ -135,7 +135,7 @@ import { play } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import './dist/netrooms.mjs';
 import { matesOf } from './dist/crew.mjs';
-import { STANDING, HIRE, tierOf, standingOf, raiseStanding, meetingOf, feeOf, cutOf, sigOf, setSig, busyOf, cantHire, gainOf } from './dist/runners.mjs';
+import { STANDING, HIRE, tierOf, standingOf, raiseStanding, meetingOf, deadOf, feeOf, cutOf, sigOf, setSig, busyOf, cantHire, gainOf } from './dist/runners.mjs';
 import { runnerCard, tierBar, runnersMap, runnersOn, runnersAt, runnersList } from './dist/runners-view.mjs';
 import { listed } from './dist/presence.mjs';
 import { roomsMarkup } from './dist/floorplan-view.mjs';
@@ -437,4 +437,58 @@ test('the Rail, the tooltip and the card give a runner at an unlocated server it
   const loc = locate(s, out.st.target);
   assert.match(runnerRail(s, out.r.handle), new RegExp(`<small class="rr-at">→ ${loc.name}</small>`), 'located: by its name');
   assert.equal(doing(s, out.st), `heading for ${loc.name}`);
+});
+
+test('the runner card: the Badge head, their bust from the handle, never a named character\'s face', async () => {
+  const { faceOf } = await import('./dist/portraits.mjs');
+  assert.equal(faceOf('quill', 'runner').id, null, 'a runner called quill is not Quill');
+  assert.equal(faceOf('quill', 'npc').id, 'quill');
+  assert.deepEqual(faceOf('byte', 'runner'), faceOf('byte', 'runner'), 'the same handle, the same face');
+  const s = fresh(); s.netSeed = 1054899509;
+  const h = castOf(s)[0].handle, html = runnerCard(s, h);
+  assert.match(html, /class="rc-head"><pre class="rc-bust f-bust"/);
+  assert.match(html, /rc-head[^]*class="rc-tier"[^]*rc-rows/, 'the Tier bar sits in the head');
+  assert.doesNotMatch(html, /<dt>Standing<\/dt>/, 'no Standing row');
+});
+
+test('R3 dead runner rooms: a crash on a server on your map marks one of its rooms; win it and you pull them out', () => {
+  const { s, loc } = onTheirServer();
+  // A runner whose job crashes: put the location on their target, just before they turn back.
+  let hit = null;
+  for (const r of castOf(s)) { for (let k = 0; k < 40 && !hit; k++) { const t = k * r.cycle - r.phase + Math.round(r.cycle * 0.79); const st = stateOf(s, r, t); if (k > 0 && st.stage === 'work' && !st.ok && castOf(s, t).some((x) => x.handle === r.handle) && castOf(s, t + 60000).some((x) => x.handle === r.handle)) hit = { r, t, st }; } if (hit) break; }
+  assert.ok(hit, 'a crash to watch');
+  loc.slot = hit.st.target; runnersOf(s).ms = hit.t;
+  for (let i = 0; i < 200 && !s.runners.down?.[loc.slot]; i++) tickRunners(s, 5000);
+  assert.deepEqual(s.runners.down[loc.slot]?.h, hit.r.handle, 'the crash marks the server');
+  play(s, `connect ${loc.name}`);
+  const d = deadOf(s, FP.isUp);
+  assert.equal(d?.r.handle, hit.r.handle);
+  assert.ok(['process', 'elite'].includes(d.room.kind) && FP.isUp(s, d.room));
+  assert.notEqual(d.room.id, meetingOf(s, FP.isUp)?.room.id, 'never the room a runner is fighting in');
+  const html = roomsMarkup(s);
+  assert.match(html, new RegExp(`class="fp-rn-tab dead"><rect[^>]*/><path class="sk"[^>]*/><text[^>]*>${hit.r.handle}</text>`), 'a skull beside the handle');
+  assert.match(html, new RegExp(`The runner ${hit.r.handle} crashed here\\.\\n▸ Win the room to pull them out\\.`));
+  walkIn(s, { room: d.room });
+  FP.act(s, 'engage');
+  winFight(s);
+  assert.equal(standingOf(s, hit.r.handle), gainOf(hit.r), 'pulled out: their standing, up');
+  assert.equal(s.runners.down[loc.slot], undefined, 'the mark is gone');
+  assert.equal(deadOf(s, FP.isUp), null);
+});
+
+test('SPRAWL-00: a runner standing in a room wears a paper-white tab (+n for more); walking in, you have met them', () => {
+  const { s, loc } = onTheirServer();
+  play(s, `connect ${loc.name}`);
+  const room = Object.values(s.rooms.graph.rooms).find((x) => x.id !== s.rooms.at && FP.neighbours(s.rooms.graph, s.rooms.at).includes(x.id));
+  const [a, b] = castOf(s).filter((r) => !meetingOf(s, FP.isUp) || r.handle !== meetingOf(s, FP.isUp).r.handle).map((r) => r.handle);
+  const was = FP.WORLD.people;
+  FP.WORLD.people = (_, x) => (x.id === room.id ? [a, b, 'not-a-runner'] : []);
+  try {
+    if (s.rooms.visit) s.rooms.visit.dead = null;
+    const html = roomsMarkup(s);
+    assert.match(html, new RegExp(`class="fp-rn-tab stand"><rect[^>]*/><text[^>]*>${a} \\+1</text>`));
+    assert.match(html, new RegExp(`${a} and ${b} are here between jobs\\.\\n▸ Walk in to meet them all\\.`));
+    FP.go(s, room.id);
+    assert.equal(runnersOf(s).known[a]?.by, 'met'); assert.equal(runnersOf(s).known[b]?.by, 'met');
+  } finally { FP.WORLD.people = was; }
 });

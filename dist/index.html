@@ -38,22 +38,22 @@
   <header class="topbar">
     <a href="./" class="brand" aria-label="BLACKBOX home"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">BLACKBOX</span></a>
     <nav class="modules" aria-label="Modules">
-      <button data-module="room" id="tab-room" hidden>Room</button>
-      <button data-module="campaign" id="tab-campaign" hidden>Campaign</button>
-      <button data-module="map">Map</button>
-      <button data-module="mail">Mail<span id="mail-count" class="count" hidden></span><span id="mail-ready" class="ready-check" title="A contract is ready to deliver" hidden>✓</span></button>
-      <button data-module="combat" id="tab-combat" class="ctx" hidden>Fight<span id="combat-dot" class="dot" hidden></span></button>
-      <button data-module="net" id="tab-net" class="ctx" hidden>Run</button>
-      <button data-module="breach" id="tab-breach" class="ctx" hidden>Breach</button>
-      <button data-module="rooms" id="tab-rooms" class="ctx" hidden>Server</button>
-      <button data-module="store" id="tab-store" hidden>Store</button>
-      <button data-module="consortium" id="tab-consortium" hidden>Consortium<span id="con-count" class="count" hidden></span></button>
-      <button data-module="server">Server</button>
-      <button data-module="loadout">Loadout<span id="new-loadout" class="count new" hidden></span></button>
-      <button data-module="archive" id="tab-archive" hidden>Archive</button>
-      <button data-module="codex">Codex</button>
-      <button data-module="rig">Rig</button>
-      <button data-module="system">Settings</button>
+      <button data-module="room" id="tab-room" data-tt="Room: Your room, wick and the news." hidden>Room</button>
+      <button data-module="campaign" id="tab-campaign" data-tt="Campaign: The campaign's servers by layer." hidden>Campaign</button>
+      <button data-module="map" data-tt="Map: The network. Pick a server to connect or send a runner.">Map</button>
+      <button data-module="mail" data-tt="Mail: Messages and contracts. A ✓ means a contract is ready to deliver.">Mail<span id="mail-count" class="count" hidden></span><span id="mail-ready" class="ready-check" title="A contract is ready to deliver" hidden>✓</span></button>
+      <button data-module="combat" id="tab-combat" data-tt="Fight: The fight you're in." class="ctx" hidden>Fight<span id="combat-dot" class="dot" hidden></span></button>
+      <button data-module="net" id="tab-net" data-tt="Run: The server you're connected to." class="ctx" hidden>Run</button>
+      <button data-module="breach" id="tab-breach" data-tt="Breach: The breach you're in." class="ctx" hidden>Breach</button>
+      <button data-module="rooms" id="tab-rooms" data-tt="Server: The rooms of the server you're connected to." class="ctx" hidden>Server</button>
+      <button data-module="store" id="tab-store" data-tt="Store: Halcyon's shop." hidden>Store</button>
+      <button data-module="consortium" id="tab-consortium" data-tt="Consortium: The hackers you've merged servers with, and their networks." hidden>Consortium<span id="con-count" class="count" hidden></span></button>
+      <button data-module="server" data-tt="Server: Your home server. Its firewall, filters, code and the threats on it.">Server</button>
+      <button data-module="loadout" data-tt="Loadout: Your class, protocols, daemons, program, skills and talents.">Loadout<span id="new-loadout" class="count new" hidden></span></button>
+      <button data-module="archive" id="tab-archive" data-tt="Archive: The core.dump fragments you've found." hidden>Archive</button>
+      <button data-module="codex" data-tt="Codex: What you've learned about viruses, and your collection log.">Codex</button>
+      <button data-module="rig" data-tt="Rig: Your achievements, casing, terminal and house.">Rig</button>
+      <button data-module="system" data-tt="Settings: Sound, display and game options.">Settings</button>
     </nav>
     <div class="whoami" id="whoami"><b id="who-handle">rookie</b><span class="who-dot" aria-hidden="true">·</span><span id="who-class">Breaker</span><span class="who-dot" aria-hidden="true">·</span><span class="who-lv">Lv <b id="who-lv">1</b></span><span class="who-bar" aria-hidden="true"><span id="who-fill"></span></span></div>
     <button type="button" class="people-btn" id="people" aria-label="People: friends and who's online" aria-expanded="false" aria-controls="people-panel" hidden><svg class="p-ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5" r="2.8"/><path d="M2.8 14c.4-3 2.5-4.6 5.2-4.6s4.8 1.6 5.2 4.6"/></svg><span id="people-count">0</span></button>
@@ -112,6 +112,7 @@
       </aside>
       <section class="log panel" aria-label="Combat log" data-pane="var/log/fight">
         <ol class="log-lines" id="log" role="log" aria-live="polite"></ol>
+        <button type="button" class="log-more" id="log-more" title="Fight log: shows every line." aria-expanded="false">▴ <span id="log-hidden">0</span></button>
       </section>
     </section>
     <section id="page-view" class="page" hidden></section>

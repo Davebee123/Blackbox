@@ -132,6 +132,13 @@ code { font-family: var(--mono); color: var(--amber); }
 .hud-bar.mine.mid .bar-ico { color: var(--next); } .hud-bar.mine.low .bar-ico { color: var(--hot); }
 .bigbar { height: 14px; background: var(--inset); border: 1px solid var(--hot); margin-top: 6px; }
 .bigbar span { display: block; height: 100%; background: linear-gradient(90deg, #a82f20, var(--hot)); transition: width 0.25s; }
+/* Act bars (acts.mjs): the boss's bar, a segment an act (view.mjs actSegments). */
+.act-segs { display: grid; grid-template-columns: repeat(var(--acts, 3), 1fr); gap: 4px; margin-top: 6px; }
+.act-segs .bigbar { margin-top: 0; }
+.act-segs .bigbar.act-done { border-color: var(--gray); opacity: 0.45; }
+.act-segs .bigbar.act-done span { width: 0; }
+.act-segs .bigbar.act-wait { border-color: rgba(255, 91, 61, 0.45); }
+.act-segs .bigbar.act-wait span { width: 100%; background: #5a2a1e; }
 .hud-bar.mine .bigbar { border-color: var(--you); }
 .hud-bar.mine .bigbar span { background: var(--you); }
 .hud-bar.mine .bar-top span { color: var(--you); }
@@ -141,6 +148,10 @@ code { font-family: var(--mono); color: var(--amber); }
 
 .virus-stage { position: relative; min-height: 0; background: var(--inset) url('ui/textures/terminal-grid-fine.png'); border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
 .virus-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.virus-stage.staged { background-image: none; } /* the floor's place (stage.mjs) in place of the grid */
+/* A chip's name coming in the floor's way (boardfx.mjs): a letter at a time, or a caret typing it. */
+.bfx-ch { display: inline-block; white-space: pre; }
+.bfx-caret { display: inline-block; width: 0.55em; height: 1em; margin-left: 1px; vertical-align: -2px; background: currentColor; opacity: 0.8; }
 .stage-flash { position: absolute; left: 0; right: 0; top: 10px; text-align: center; font: 600 13px var(--mono); color: var(--bright); letter-spacing: 1px; pointer-events: none; }
 
 .brow { display: grid; grid-template-columns: minmax(170px, 1.5fr) repeat(4, minmax(0, 1fr)); width: 100%; text-align: left; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 0 12px; background: none; align-items: stretch; }
@@ -182,7 +193,7 @@ code { font-family: var(--mono); color: var(--amber); }
 .tcol:first-child .tcol-head { color: var(--bright); font-weight: 600; }
 .countdown { font: 600 22px var(--mono); color: var(--bright); line-height: 1; }
 .cyclebar { position: relative; height: 7px; background: var(--inset); border: 1px solid var(--line); }
-.cyclebar span { position: relative; display: block; height: 100%; background: var(--you); }
+.cyclebar span { position: relative; display: block; height: 100%; background: var(--you); transform-origin: left; } /* filled by scaleX (app.js tickUi): no layout each frame */
 .intent { display: flex; align-items: center; gap: 6px; padding: 5px 7px; border: 1px solid var(--line-strong); border-radius: 3px; font-size: 13px; background: var(--panel-2); }
 .intent .ico { width: 14px; height: 14px; flex: none; background: currentColor; -webkit-mask: var(--icon) center/contain no-repeat; mask: var(--icon) center/contain no-repeat; }
 .intent b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: clip; min-width: 0; }
@@ -950,6 +961,29 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 /* the header has its own countdown and bar: no playhead over the digits */
 .brow.bhead > .bcell:nth-child(2):not(.span5) { background-image: none; }
 
+/* ---------- the board's frame by floor (the floor's palette up: <html data-sfx-floor>) ----------
+   Only the frame: the playhead's form, the rules between rows and columns, the headings' type. The chips, their colours
+   and every telegraph stay as they are; the playhead keeps its colours (teal, red when an attack closes). */
+html[data-sfx-floor="1"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: linear-gradient(90deg, transparent 0 3px, var(--band-line) 3px 5px, transparent 5px 8px), linear-gradient(90deg, transparent, color-mix(in srgb, var(--band-line) 22%, transparent), transparent); background-size: 8px 100%, 22px 100%; background-position: calc(var(--elapsed) - 3px) 0, calc(var(--elapsed) - 10px) 0; } /* the Sprawl: a neon tube */
+html[data-sfx-floor="2"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: radial-gradient(circle, var(--band-line) 0 3px, transparent 3.5px), linear-gradient(var(--band-line), var(--band-line)); background-size: 10px 10px, 2px 100%; background-position: calc(var(--elapsed) - 4px) 6px, var(--elapsed) 0; } /* Backhaul: a signal post, a lamp on each row */
+html[data-sfx-floor="2"] .board .brow:not(.bhead) { border-top: 2px dashed color-mix(in srgb, var(--amber) 22%, transparent); } /* its rows as sleepers */
+html[data-sfx-floor="4"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: linear-gradient(var(--band-line), var(--band-line)), linear-gradient(90deg, color-mix(in srgb, var(--amber) 10%, transparent), color-mix(in srgb, var(--amber) 4%, transparent)); background-size: 2px 100%, var(--elapsed) 100%; background-position: var(--elapsed) 0, 0 0; } /* Coldline: the Now cell fills like a tide */
+html[data-sfx-floor="4"] .board .brow:not(.bhead) { border-top-style: dashed; } /* its rows as swell lines */
+html[data-sfx-floor="8"] .board .bcell + .bcell { border-left: 3px double color-mix(in srgb, var(--amber) 30%, transparent); } /* Bedrock: the ledger's double column rules */
+html[data-sfx-floor="8"] .board .bhead .bcell, html[data-sfx-floor="8"] .board .bhead .cyc, html[data-sfx-floor="8"] .board .part-name, html[data-sfx-floor="8"] .board .you-top b { font-family: 'Courier Prime', monospace; }
+html[data-sfx-floor="8"] .board .bhead .bcell, html[data-sfx-floor="8"] .board .bhead .cyc { font-style: italic; text-transform: none; letter-spacing: 0.5px; }
+html[data-sfx-floor="8"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-size: 1px 100%; } /* a pen line */
+html[data-sfx-floor="3"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: repeating-linear-gradient(to bottom, var(--band-line) 0 4px, transparent 4px 7px); background-size: 2px 100%; background-position: var(--elapsed) 0; } /* the Stacks: a column of status LEDs */
+html[data-sfx-floor="3"] .board .brow:not(.bhead) { border-top-style: dotted; } /* its rows as rack slots */
+html[data-sfx-floor="5"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: linear-gradient(var(--band-line), var(--band-line)), repeating-linear-gradient(90deg, color-mix(in srgb, var(--amber) 13%, transparent) 0 1px, transparent 1px 5px); background-size: 2px 100%, 100% 100%; background-position: var(--elapsed) 0, 0 0; } /* Deep Core: a grating over the heat */
+html[data-sfx-floor="5"] .board .brow:not(.bhead) { border-top-style: dotted; }
+html[data-sfx-floor="6"] .board .brow:not(.bhead) { border-top-color: transparent; } /* Kernel Space: nothing but the plane */
+html[data-sfx-floor="6"] .board .bcell + .bcell:not(:nth-child(2)) { border-left-color: transparent; }
+html[data-sfx-floor="6"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-size: 1px 100%; }
+html[data-sfx-floor="7"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: radial-gradient(circle, var(--band-line) 0 2.5px, transparent 3px), linear-gradient(var(--band-line), var(--band-line)); background-size: 8px 8px, 2px calc(100% - 6px); background-position: calc(var(--elapsed) - 3px) calc(100% - 1px), var(--elapsed) 0; } /* the Sink: a drop at the playhead's foot */
+
+
+
 /* ---------- levels ---------- */
 .meter-level { min-width: 150px; }
 .meter-level strong { font-size: 14px; }
@@ -1109,12 +1143,15 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 }
 .shell-on #crt::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 22vh; background: linear-gradient(to bottom, transparent, rgba(255, 230, 160, 0.03) 60%, transparent); animation: crt-roll 11s linear infinite; }
 .shell-on #crt::after {
-  content: ''; position: absolute; inset: -50%; opacity: 0.045;
+  content: ''; position: absolute; inset: -15%; opacity: 0.045;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   animation: crt-grain 0.5s steps(3) infinite;
 }
+/* Grain (settings.grain, `grain on|off`): unset, it's off in the phone layout, where its big moving layer costs the most. */
+body.grain-off #crt::after, [data-form='phone'] body:not(.grain-on) #crt::after { display: none; }
 @keyframes crt-roll { from { transform: translateY(-25vh); } to { transform: translateY(105vh); } }
-@keyframes crt-grain { 0% { transform: translate(0, 0); } 33% { transform: translate(-7%, 4%); } 66% { transform: translate(5%, -6%); } 100% { transform: translate(0, 0); } }
+/* the grain's layer is 1.3x the screen (inset -15%): these shifts are 14% and 10% of the screen across, 8% and 12% down */
+@keyframes crt-grain { 0% { transform: translate(0, 0); } 33% { transform: translate(-10.77%, 6.15%); } 66% { transform: translate(7.69%, -9.23%); } 100% { transform: translate(0, 0); } }
 /* your health, felt: screenfx.css (#crt-bezel.warn, .low), at the screen's very edge only. */
 
 /* the tube: rounded corners and darker edges */
@@ -1132,7 +1169,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   body.cased { --side: max(26px, 1.2vw); --top: 22px; --chin: 52px; --desk: 0px; box-sizing: border-box; height: 100dvh; overflow: hidden; padding: var(--top) var(--side) calc(var(--chin) + var(--desk)); background: radial-gradient(120% 90% at 50% 40%, var(--case-hi, #2a2724), var(--case-mid, #181614) 70%, var(--case-lo, #0e0d0c)); } /* the plastic: casing.css colourways set these */
   body.cased::before { content: ''; position: fixed; top: calc(var(--top) - 14px); bottom: calc(var(--desk) + 8px); left: calc(var(--side) - 18px); right: calc(var(--side) - 18px); border-radius: 26px; pointer-events: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -2px 0 rgba(0, 0, 0, 0.6), 0 0 0 8px var(--case-rim, #0b0a09); }
   body.cased .app { height: calc((100dvh - var(--top) - var(--chin) - var(--desk)) / var(--ui, 1)); max-width: none; position: relative; overflow: hidden; border-radius: 18px; background: var(--bg) url('ui/textures/grime-overlay-subtle.png'); box-shadow: 0 0 0 2px #000, 0 0 30px 6px rgba(241, 185, 47, 0.08); }
-  body.cased #crt, body.cased .boot, body.cased #fx-edge, body.cased .poweron, body.cased .class-pick { inset: var(--top) var(--side) calc(var(--chin) + var(--desk)); border-radius: 18px; overflow: hidden; }
+  body.cased #crt, body.cased .boot, body.cased #fx-edge, body.cased .poweron, body.cased .class-pick, body.cased .first-cover { inset: var(--top) var(--side) calc(var(--chin) + var(--desk)); border-radius: 18px; overflow: hidden; }
   body.cased .class-pick { overflow-y: auto; } /* it scrolls on a short screen, inside the glass */
   body.cased .class-pick::after { display: none; } /* the tube's own scanlines (#crt) cover it now */
   body.cased #crt-bezel { border-radius: 18px; box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.65), inset 0 0 6px rgba(0, 0, 0, 0.9); }
@@ -1216,6 +1253,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 /* boot screen */
 .boot { position: fixed; inset: 0; z-index: 65; background: #050302; display: flex; flex-direction: column; justify-content: center; padding: 8vh 10vw; transition: opacity 0.35s; }
 .boot.out { opacity: 0; }
+.first-cover { position: fixed; inset: 0; z-index: 64; background: #050302; } /* under the first launch's screens (app.js coverUp) */
 .boot pre { margin: 0; max-height: none; overflow: visible; font: 15px/1.7 var(--mono); color: var(--muted); text-shadow: 0 0 8px rgba(241, 185, 47, 0.35); white-space: pre-wrap; }
 .boot pre .b { color: var(--bright); letter-spacing: 2px; margin-bottom: 8px; }
 .boot pre .h { color: var(--hot); }
@@ -2979,6 +3017,15 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .mrun path { fill: var(--bright); stroke: var(--bg); stroke-width: 1.2; }
 .mrun.road path, .mrun.down path { fill: none; stroke: var(--bright); stroke-width: 1.2; }
 .mrun .mrun-hit { fill: transparent; }
+/* A rival (R3, rivals.mjs huntsYou): the one red runner, on the map, the Rail and their card. */
+.mrun.rival path { fill: var(--hot); }
+.mrun.rival.road path { fill: none; stroke: var(--hot); }
+.mrunner.rival .mr-dia { fill: var(--hot); }
+.mrunner.rival .mr-name { fill: var(--hot); }
+.mrunner.rival .mr-route, .mrunner.rival .mr-ring { stroke: var(--hot); }
+.rr-row.rival .rr-dia { border-color: var(--hot); background: var(--hot); }
+.rr-row.rival b { color: var(--hot); }
+.rc-kind.rival { color: var(--hot); }
 /* Several runners at one place: one diamond and how many; its list (runnersList) opens beside it, rows like the Rail's. */
 .mrun .mrun-n { fill: var(--bright); font: 600 calc(11px / var(--z, 1)) var(--mono); dominant-baseline: central; paint-order: stroke; stroke: var(--bg); stroke-width: calc(3px / var(--z, 1)); stroke-linejoin: round; }
 .mrun.crowd.on path { stroke: var(--bright); stroke-width: 2; }
@@ -2994,6 +3041,15 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .rcard { position: absolute; z-index: 6; width: 300px; padding: 12px 14px; background: var(--panel, #120f0a); border: 1px solid rgba(255, 242, 200, 0.35); border-top: 2px solid var(--bright); border-radius: var(--r-btn); filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.65)); visibility: hidden; }
 .rcard.mine { border-top-color: var(--daemon); }
 .rcard .rc-x { position: absolute; top: 6px; right: 6px; }
+/* The head (the *Badge*): the bust left, kind, handle, class and level and the Tier bar right; the × clears it. */
+.rc-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; margin-bottom: 10px; padding-right: 26px; }
+.rc-head .rc-class { margin: 0 0 6px; }
+.rc-bust { margin: 0; padding: 3px 2px; overflow: hidden; font: 500 4px/4px var(--mono); letter-spacing: 0; white-space: pre; color: rgba(255, 242, 200, 0.85); background: radial-gradient(ellipse at 62% 40%, rgba(255, 242, 200, 0.18), transparent 65%), var(--inset); border: 1px solid rgba(255, 242, 200, 0.25); }
+.rc-bust .qf-r { display: block; }
+.rc-bust i { font-style: normal; }
+.rc-bust .g0, .rc-bust .in { color: rgba(255, 242, 200, 0.35); }
+.rc-bust .g1 { opacity: 0.55; }
+.rc-bust .e2, .rc-bust .gl { color: var(--bright); }
 .rc-kind { margin: 0; font: 10px var(--mono); letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
 .rc-handle { display: flex; align-items: center; gap: 6px; margin: 2px 0 0; font: 600 18px var(--sans); color: var(--bright); }
 .rcard.mine .rc-handle { color: var(--daemon); }
@@ -3103,7 +3159,9 @@ details.map-pick { pointer-events: auto; }
 .trace-ways .tw .glyph { width: 14px; height: 14px; color: var(--you); }
 .trace-ways .tw span { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trace-ways .tw b { font: 700 12px var(--mono); color: var(--r-tuned); }
-.trace-ways .tw.off { opacity: 0.45; } .trace-ways .tw.off .glyph { color: var(--muted); } .trace-ways .tw.off b { color: var(--muted); }
+/* A way you don't have yet: hatched and shaded, its words faded, the lock in its icon's place at full strength. */
+.trace-ways .tw.off { background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0 3px, rgba(241, 185, 47, 0.06) 3px 6px); border-color: rgba(241, 185, 47, 0.12); }
+.trace-ways .tw.off span, .trace-ways .tw.off b { opacity: 0.4; color: var(--muted); } .trace-ways .tw.off .glyph { color: var(--text); }
 .trace-ways .tw.done span { text-decoration: line-through; color: var(--muted); } .trace-ways .tw.done b::after { content: ' ✓'; }
 .fam-tag .glyph, .svc-line .tag.dim .glyph { width: 12px; height: 12px; margin-right: 4px; vertical-align: -2px; }
 .op-pick-t { font: 11px var(--mono); color: var(--muted); margin-right: 8px; }
@@ -3970,9 +4028,27 @@ body.no-motion .recap { animation: none; }
    under the picture on the right. Rows are tighter, and if the parts still don't fit, app.js adds .dense and the
    rows tighten again (sub-lines go, chips go to one line). */
 @media (min-width: 901px) {
-  .combat { grid-template-rows: auto minmax(0, 1fr) minmax(96px, 32%); grid-template-areas: 'hud hud' 'board stage' 'board log'; }
+  /* The picture on the left beside the part names, the board on the right: your eyes sit in the middle and see both.
+     The HUD follows: the virus's bar over its picture, yours over the board, your statuses between. */
+  .combat { grid-template-columns: minmax(0, 1fr) minmax(0, 1.55fr); grid-template-rows: auto minmax(0, 1fr) minmax(96px, 32%); grid-template-areas: 'hud hud' 'stage board' 'log board'; }
   .combat .board { max-height: none; min-height: 0; }
-  body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template-areas: 'hud hud' 'log stage'; }
+  body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template-areas: 'hud hud' 'stage log'; }
+  .combat .hud { grid-template-columns: minmax(0, 1fr) minmax(0, 1.55fr); }
+  .combat .hud > .hud-bar.enemy { order: -1; }
+  .combat .hud-left { grid-template-columns: minmax(0, 0.55fr) minmax(0, 1fr); }
+  .combat .hud-left > .hud-you { order: 2; }
+}
+/* The fight log: its newest line until ▴ opens it (app.js setLogOpen), so the render takes the room. A finished fight
+   shows it whole. */
+.log-more { display: none; }
+@media (min-width: 901px) {
+  body:not(.log-open):not(.fight-over) .combat { grid-template-rows: auto minmax(0, 1fr) auto; }
+  body:not(.fight-over) .log.panel { position: relative; }
+  body:not(.log-open):not(.fight-over) .log-lines { overflow: hidden; padding-right: 64px; padding-bottom: 6px; }
+  body:not(.log-open):not(.fight-over) .log-lines > li:not(:last-child) { display: none; }
+  body:not(.fight-over) .log-more { display: flex; align-items: center; gap: 5px; position: absolute; right: 10px; bottom: 6px; font: 500 12px/1 var(--mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 3px; padding: 4px 7px; cursor: pointer; }
+  body.log-open .log-more { font-size: 0; }
+  body.log-open .log-more::before { content: '▾'; font-size: 12px; }
 }
 .combat .brow:not(.bhead) > .bcell { padding-top: 7px; padding-bottom: 7px; }
 .combat .intent { padding: 5px 8px; font-size: 13px; }
@@ -4074,9 +4150,10 @@ body.no-motion .recap { animation: none; }
    A Mutex's lock sits on its partner's own bar as an absorb segment (hatched steel, a padlock where hits drain it);
    a Lockbox's ward as a cap line at the most the part can still lose this cycle. ---- */
 
-#board:has(.tether) { --gut: 66px; }
-#board:has(.tether.lane1) { --gut: 80px; }
-@media (max-width: 480px) { #board:has(.tether) { --gut: 56px; } #board:has(.tether.lane1) { --gut: 70px; } }
+/* tt-gut, tt-lane1: the board holds a tether, in two lanes (app.js render; a class, since :has() here restyled the board every frame) */
+#board.tt-gut { --gut: 66px; }
+#board.tt-gut.tt-lane1 { --gut: 80px; }
+@media (max-width: 480px) { #board.tt-gut { --gut: 56px; } #board.tt-gut.tt-lane1 { --gut: 70px; } }
 .tether { --x: 18px; --tt: var(--steel); position: absolute; top: 0; bottom: 0; left: calc(-1 * var(--gut)); width: var(--gut); pointer-events: none; z-index: 1; color: var(--steel); }
 .tether.lane1 { --x: 31px; }
 .tt-line { position: absolute; left: calc(var(--x) - 1px); width: 2px; background: var(--tt); pointer-events: auto; }
@@ -4099,7 +4176,7 @@ body.no-motion .recap { animation: none; }
 .tt-node.clock { width: auto; height: auto; gap: 3px; grid-auto-flow: column; padding: 1px 5px 1px 4px; border-radius: var(--r-tag); }
 .tt-node.clock .tt-ico { width: 11px; height: 11px; }
 .tether:has(.tt-node) { z-index: 2; } /* a node on a row's edge sits over the next row's piece of line */
-#board:has(.tether.lane1) .tt-node.clock { left: 25px; } /* two lanes: every chip in one column, over both lines */
+#board.tt-gut.tt-lane1 .tt-node.clock { left: 25px; } /* two lanes: every chip in one column, over both lines */
 .tt-count { color: var(--bright); font: 700 13px/16px var(--mono); }
 /* Two arms on one row (view.mjs tethers --arm): one a little above the middle, one below, so neither hides the other. */
 .tether .tt-arm.dst { top: calc(50% - 1px + var(--arm, 0px)); }
@@ -4477,7 +4554,7 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .intent.bufup { border-style: dashed; border-color: var(--steel); color: var(--steel); background: transparent; }
 .tag.hotspot { display: inline-flex; align-items: center; gap: 3px; color: var(--amber); border-color: var(--amber); box-shadow: 0 0 6px var(--amber-wash); }
 .tag.hotspot .glyph { width: 10px; height: 10px; margin: 0; }
-.brow.bpart:has(.tag.hotspot) { box-shadow: inset 3px 0 0 var(--amber-soft); }
+.board .brow.bpart.has-hotspot { box-shadow: inset 3px 0 0 var(--amber-soft); }
 .tag.idlepips { display: inline-flex; align-items: center; gap: 2px; letter-spacing: 1px; font-size: 9px; }
 .tag.idlepips .glyph { width: 10px; height: 10px; margin: 0 2px 0 0; }
 .tag.idlepips i { opacity: 0.4; font-style: normal; }
