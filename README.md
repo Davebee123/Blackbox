@@ -321,6 +321,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/progression.md`](docs/progression.md), [`docs/economy.md`](docs/economy.md), [`docs/content.md`](docs/content.md), [`docs/variety-plan.md`](docs/variety-plan.md) | Pacing, the economy, activities and variety. |
 | [`docs/rivals.md`](docs/rivals.md) | Rivals: the roster, the rules and the picked look. |
 | [`docs/loot-plan.md`](docs/loot-plan.md) | Sets and uniques. |
+| [`docs/legends.md`](docs/legends.md) | Legends (very rare, very strong endgame uniques) and Epoch items from the flash ranks (decided, not built). |
 | [`docs/floor-items.md`](docs/floor-items.md) | Floors 2–8's sets and uniques, boss by boss (designed). |
 | [`docs/builds.md`](docs/builds.md) | Builds: skill affixes on gear and combos (design, not built). |
 | [`docs/item-builds.md`](docs/item-builds.md) | Item builds: combos the uniques and sets already make, what doesn't stack, loops to watch. |
