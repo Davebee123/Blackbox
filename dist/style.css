@@ -3159,7 +3159,9 @@ details.map-pick { pointer-events: auto; }
 .trace-ways .tw .glyph { width: 14px; height: 14px; color: var(--you); }
 .trace-ways .tw span { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trace-ways .tw b { font: 700 12px var(--mono); color: var(--r-tuned); }
-.trace-ways .tw.off { opacity: 0.45; } .trace-ways .tw.off .glyph { color: var(--muted); } .trace-ways .tw.off b { color: var(--muted); }
+/* A way you don't have yet: hatched and shaded, its words faded, the lock in its icon's place at full strength. */
+.trace-ways .tw.off { background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0 3px, rgba(241, 185, 47, 0.06) 3px 6px); border-color: rgba(241, 185, 47, 0.12); }
+.trace-ways .tw.off span, .trace-ways .tw.off b { opacity: 0.4; color: var(--muted); } .trace-ways .tw.off .glyph { color: var(--text); }
 .trace-ways .tw.done span { text-decoration: line-through; color: var(--muted); } .trace-ways .tw.done b::after { content: ' ✓'; }
 .fam-tag .glyph, .svc-line .tag.dim .glyph { width: 12px; height: 12px; margin-right: 4px; vertical-align: -2px; }
 .op-pick-t { font: 11px var(--mono); color: var(--muted); margin-right: 8px; }
