@@ -11,7 +11,8 @@ import { heatOf } from './parts.mjs';
 import { interruptMove, saveTick, toCross } from './interrupt.mjs';
 import { loudWins, blastPays, cashIn } from './order.mjs';
 import { actsOf, lashOn } from './acts.mjs';
-import { copyKind } from './tells.mjs';
+import { copyKind, tellOn } from './tells.mjs';
+import { legend } from './combat.mjs';
 import { topFrame, canCall, callingNow, FB, pendingOf, tradeOf, nodesOf, fragsOf, camerasOf, parentOf, leverLeft } from './floorbosses.mjs';
 
 // Against a crew boss only the tank taunts (a taunt pulls its busters onto you): raid.mjs noTaunt.
@@ -144,6 +145,7 @@ const BUFFING = new Set(['harden', 'brace', 'sudo', 'fork', 'debris-field', 'rm-
 const scrapeNow = (s) => !ignores('scraper') && landingNow(s).some((i) => part(s, i.source)?.scrape);
 export function planner(s) {
   if (s.encounter?.actBars && !livingParts(s).length) return 'hold'; // between acts (act bars): the next board comes in at the cycle's end
+  if (legend(s, 'bleach') && livingParts(s).some((p) => tellOn(s, p, 'cast')) && usable(s).includes('scrub') && readyIn(s, 'scrub') === 0) return 'scrub'; // Bleach (a legend): the legends sim's one-line nudge
   if (!scrapeNow(s)) return heedFloor(s, heedActs(s, heedBend(s, heedHelpers(s, spareLast(s, planner1(s))))));
   const was = veto;
   veto = (id) => BUFFING.has(id) || !!(was && was(id));
