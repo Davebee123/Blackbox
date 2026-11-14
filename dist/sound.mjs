@@ -873,7 +873,7 @@ export function createSound() {
   };
   function ready() {
     try {
-      ctx ||= new AudioContext({ latencyHint: 'balanced' }); // a little more buffer: 'interactive' crackles under a busy fight
+      ctx ||= new AudioContext(); // the browser's own buffer: asking for a bigger one cut the sound out in fights on some outputs
       if (!ch) { ch = chain(ctx); hum = ctx.createGain(); hum.connect(outputOf(ctx)); applyVol(); }
       if (ctx.state === 'suspended') ctx.resume();
       loadBank(ctx);

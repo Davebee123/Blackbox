@@ -1210,8 +1210,9 @@ until a relay pings it or it sends an invader at you).
 
 At 100% the server is **located**: an ordinary server at its slot, with its own ? neighbours; contracts aimed at it
 follow it there. Its card shows the way you're tracing it now on top, with a pip for each step still needed, then the
-other ways, dim until you have them. Your first server is always SPRAWL-00's level-1 neighbour; reaching level 4
-with nothing traced traces it for you, and at 5 wick pages you with one you haven't cracked.
+other ways, shaded with a lock in the icon's place until you have them. Your first server is always SPRAWL-00's
+level-1 neighbour; reaching level 4 with nothing traced traces it for you, and at 5 wick pages you with one you
+haven't cracked.
 
 **Relays** (Halcyon sells them; the storyline gives you one) go on a server you've taken over (`relay <server>`, or its
 card). While you have none, one Halcyon takeover or recovery job at a time pays a relay too. A relay pings the ?
