@@ -8,158 +8,159 @@ family virus at 1.6× Integrity with one stock phase: the kit player (blind to t
 
 ## The shape
 
-- **Three acts**: the opening, then one at each of the ♛ part's act ticks (60%, 30%). Each act adds a mechanic. A stock
-  phase (re-arm, a cycle sooner) is never an act on its own.
-- **A part of its own**, with a rule, on top of its family's: the boss's signature, shown on its row.
-- **You choose when**: the ♛ ticks are yours to cross, so each phase starts when you are ready for it.
-- **The ♛ is worked through the fight** (the designer, November 2026): it is attacked as part of the normal flow, and a
-  player who attacks only the ♛ is punished. An uneven boss gets more of its health on the ♛, or something in its own
-  system that makes the ♛ worth working early. Bringing parts back is for the few bosses whose system fits it, never a
-  mechanic every boss shares.
-- **Act length** (November 2026): the ♛'s act ticks are at **60% and 30%** on every boss (`TICKS.act`, interrupt.mjs);
-  every other part's cut ticks stay at 50% and 25%. The aim is acts 2 and 3 lasting at least as long as act 1. The
-  ticks and a boss's Integrity stay consistent: a boss whose acts run uneven gets its behaviour or mechanics changed
-  (the designer, November 2026), never its ticks.
+- **Three acts, each a fresh bar** (built November 2026): every part back at full with that act's rules on top. An act
+  ends when its last part breaks; the next begins at the cycle's end. Each act brings a mechanic. A stock phase (re-arm,
+  a cycle sooner) is never an act on its own.
+- **One rule an act** (built November 13): every act starts from act 1's board and act 1's rules, so an act's own rule
+  leaves with it and what grew in it starts over. A part an act brings takes a seat, and the board holds act 1's
+  Integrity.
+- **A part of its own**, with a rule, on top of its family's: the boss's signature, its ♛, shown on its row.
+- **The ♛ is a part like the others**: its ticks are 50% and 25%, it interrupts, and crossing it starts no act. No kill
+  order is forced and none is punished, so a boss needs no rule to make its ♛ worth working early.
+- **15 to 20 cycles an act** (the designer, November 13; acts.mjs `ACT_BARS`): each act holds a third of 1.8 of the
+  boss's Integrity, times its `bar` (BOSSES), set so the planner's acts land there. Its hits are ×0.55 of one bar's, so
+  the longer fight costs about what the short one did, and its rounds and enrage (24 cycles in) start with each act.
+- **About even acts** is the aim, with no hard ratio (the designer, November 13: a boss can carry a bit more health,
+  and bosses needn't be perfectly balanced). A boss whose acts run far apart gets its behaviour or mechanics changed,
+  never its split.
 
-### Act length, measured
+### Why acts became bars (the designer, November 2026)
 
-Cycles an act, the planner on every subclass, 12 seeds, each boss at its floor (10 where it has none): genesim.mjs
-`bossFight`'s loop, noting the cycle each phase starts. Acts 2 and 3 over won fights only. The first eleven rows are
-with "Working the ♛" built and the ♛ held at its tick (below); the natives are as they were.
+Acts used to start at the ♛'s ticks (60% and 30%). Act 1 held every part, so commands spread and it ran long; once the
+other parts were dead the ♛ took the whole kit and acts 2 and 3 burned in a few cycles. Measured on nearly every boss
+(the table below, before): RELAY-KING 19.4 / 4.7 / 2.8, PATCH TUESDAY 15.4 / 4.9 / 2.8, EXIT NODE 16.6 / 2.6 / 3.0.
+More health on the ♛ didn't fix it (GRACE PERIOD: act 3 got shorter). What went with the change: the ♛'s act ticks, the
+cap that held it at its tick, the one to leave (take it under too soon and every part re-arms) and the rule that
+working only the ♛ is punished — an act ends only when every part is down, so the order is the player's.
 
-| Boss | ♛ ticks | Act 1 | Act 2 | Act 3 |
+### Act bars, measured
+
+Cycles an act (every act that ended, won or lost) and the band: the planner on every subclass, 6 seeds, each boss at its
+floor (10 where it has none). The band is read · misread · blind wins, act bars as first built (November 12, share
+0.72) → with one rule an act and the pacing (November 13). The redesign below reworks each boss from here.
+
+| Boss | Act 1 | Act 2 | Act 3 | Read | Misread | Blind |
+|---|---|---|---|---|---|---|
+| Resident worm | 16.2 | 17.2 | 17.9 | 47 → 75% | 47 → 75% | 47 → 75% |
+| Resident ransomware | 20.2 | 21.4 | 19.2 | 96 → 67% | 97 → 63% | 100 → 48% |
+| RELAY-KING | 19.4 | 18.6 | 19.0 | 14 → 10% | 13 → 10% | 13 → 10% |
+| REPO MAN | 14.1 | 14.9 | 14.9 | 38 → 60% | 38 → 60% | 38 → 60% |
+| HOLLOW CHOIR | 17.3 | 20.4 | 13.0 | 43 → 52% | 49 → 27% | 40 → 6% |
+| CENTRIFUGE | 16.0 | 18.2 | 17.6 | 86 → 98% | 70 → 58% | 67 → 38% |
+| SHAKEDOWN | 15.8 | 15.1 | 13.4 | 0 → 71% | 1 → 73% | 0 → 73% |
+| SHOULDER SURFER | 19.7 | 19.4 | 15.0 | 14 → 23% | 11 → 10% | 1 → 0% |
+| RECURSION | 17.8 | 18.8 | 18.7 | 43 → 85% | 34 → 67% | 13 → 31% |
+| NIGHT DESK | 15.5 | 16.0 | 13.8 | 21 → 79% | 2 → 35% | 0 → 0% |
+| BYZANTINE | 16.9 | 18.5 | 18.4 | 15 → 60% | 17 → 56% | 22 → 23% |
+| CAMSWARM | 19.9 | 21.1 | 18.5 | 13 → 60% | 13 → 46% | 13 → 33% |
+| GRACE PERIOD | 15.9 | 19.3 | 15.3 | 63 → 73% | 50 → 63% | 27 → 10% |
+| EXIT NODE | 17.3 | 17.8 | 17.7 | 27 → 25% | 28 → 23% | 31 → 15% |
+| DEADBOLT | 19.2 | 19.7 | 18.8 | 100 → 88% | 100 → 88% | 100 → 88% |
+| TRIPMINE | 15.8 | 15.7 |  | 84 → 100% | 88 → 100% | 89 → 100% |
+| HASHLORD | 16.6 | 17.6 | 19.2 | 13 → 85% | 11 → 79% | 9 → 75% |
+| BACK ORIFICE | 17.4 | 18.0 | 18.5 | 43 → 65% | 45 → 67% | 45 → 67% |
+| PATCH TUESDAY | 18.9 | 17.3 | 18.1 | 76 → 77% | 79 → 77% | 74 → 77% |
+| FLOODWALL | 16.2 | 15.2 |  | 85 → 100% | 86 → 94% | 83 → 94% |
+| MIRRORSHADE | 21.6 | 16.9 | 14.6 | 74 → 65% | 56 → 56% | 22 → 19% |
+| SLEEPWALKER | 17.9 | 18.3 |  | 88 → 100% | 88 → 100% | 88 → 100% |
+| ECHOLALIA | 19.6 | 19.9 | 16.8 | 92 → 83% | 91 → 85% | 88 → 88% |
+
+TRIPMINE, FLOODWALL and SLEEPWALKER have two acts until their redesign. Before act bars, acts started at the ♛'s
+ticks: act 1 held every part and ran long, and acts 2 and 3 burned in a few cycles (RELAY-KING 19.4 / 4.7 / 2.8).
+
+### What the old shape left behind (November 2026)
+
+Built while acts came from the ♛'s ticks, and still in the code: the ♛'s share of its board (`BOSSES` work.share: half
+on the Resident and SHOULDER SURFER, 45% on RELAY-KING and REPO MAN), the Resident's **Watchdog** (act 2's rule
+since session 2 of the redesign below), CENTRIFUGE's **Sold** heal and SHAKEDOWN's planner lead (work.lead).
+
+## The act-bars redesign (picked November 13, 2026)
+
+Every boss's rules were written for one bar. The designer picked a rework for all 23 (the review page, November 13),
+with each fork's A unless named, NIGHT DESK's Margin Call, and acts of 15 to 20 cycles. The signature runs all fight;
+each act brings one rule of its own, and costs the default move (the first ready key on the first part, every charge
+called off, the big key on the beat) something specific.
+
+**The shared rules** (built, session 1, acts.mjs):
+
+- **One rule an act.** Every act starts from act 1's board and act 1's rules; an act's own rule leaves with it.
+- **What grows lasts the act**: a leak, a sale, a passed vote, a Call, a Dump, a lapse charge, a full table, Liens.
+- **A part an act brings takes a seat** (`joinPart` seat), and the board holds act 1's Integrity (`actEven`).
+- **Pacing**: rounds and the enrage (24 cycles in) count from each act's start; hits ×0.55; each act a third of
+  `ACT_BARS.share`, times the boss's `bar`.
+- **Act 1's tells come back with their parts** (built, session 3). Before, every tell died with its part as the act
+  ended, so acts 2 and 3 ran with none (HOLLOW CHOIR's Round never sang). A tell on a part an act seats away moves to
+  one that can carry it.
+- **The refill does the returning.** Re-arm, Hard fork's returns, Botnet's and Reinstatement's go in their sessions. A
+  part comes back mid-act only where its system is about coming back (the Mutex's lock, Final notice, Hotfix, restores).
+- **The break can name the next act** (not built): BYZANTINE's traitor is your last break, MIRRORSHADE's Doppelganger
+  your first; the strip says so (*ACT 2 / 3 · TRAITOR · NODE C*).
+
+**Each boss** (the ♛'s signature runs all three acts; *seat*: takes that part's place):
+
+| Boss | Act 1 | Act 2 | Act 3 | The blind move it costs |
 |---|---|---|---|---|
-| Resident (worm, ransomware) | 60 / 30 | 23.2 | 5.4 | 4.8 |
-| RELAY-KING | 60 / 30 | 19.3 | 4.7 | 2.8 |
-| REPO MAN | 60 / 30 | 10.1 | 3.9 | 2.8 |
-| HOLLOW CHOIR | 60 / 30 | 6.9 | 2.5 | 8.4 |
-| CENTRIFUGE | 60 / 30 | 7.5 | 4.8 | 9.7 |
-| SHAKEDOWN | 60 / 30 | 8.0 | 4.4 | 7.8 |
-| SHOULDER SURFER | 60 / 30 | 15.8 | 4.0 | 4.0 |
-| RECURSION | 60 / 30 | 13.1 | 6.4 | 5.2 |
-| NIGHT DESK | 60 / 30 | 8.4 | 6.5 | 8.9 |
-| BYZANTINE | 60 / 30 | 11.2 | 7.6 | 9.2 |
-| CAMSWARM | 60 / 30 | 20.0 | 6.5 | 8.2 |
-| DEADBOLT | 60 / 30 | 19.2 | 5.5 | 8.7 |
-| TRIPMINE (one phase) | 60 / 30 | 24.8 | 9.0 | |
-| HASHLORD | 60 / 30 | 23.0 | 4.2 | 6.7 |
-| BACK ORIFICE | 60 / 30 | 20.4 | 2.8 | 6.2 |
-| PATCH TUESDAY | 60 / 30 | 23.4 | 4.5 | 2.5 |
-| FLOODWALL (one phase) | 60 / 30 | 9.6 | 18.2 | |
-| MIRRORSHADE | 60 / 30 | 16.5 | 3.9 | 6.5 |
-| SLEEPWALKER (one phase) | 60 / 30 | 24.1 | 8.9 | |
-| ECHOLALIA | 60 / 30 | 23.6 | 5.1 | 3.8 |
+| SHAKEDOWN (built) | **Ransom Clock**, one an act | **Second demand**: seat Lockbox | **Final notice** | Calling off every Deadline; the Demand first |
+| NIGHT DESK (built) | **No Timeout** | **Night shift**: the Clerk, seat Teller | **Margin Call**: the Desk's attack settles the table | Tunnelling the Desk |
+| CAMSWARM | **Telnet Sweep**; the 15% limit on the Hive only | **Botnet**: a Camera, seat Pulse Node | **Lockout**: a Camera, seat C2 Node | Chipping every part under half |
+| BYZANTINE | **Vote**, Consensus for the act | **Traitor**: your last break in act 1 | **Hard fork**: mid-act returns only | Tunnelling one Node |
+| SHOULDER SURFER | **Replay**, the Dump's growth for the act | **Again** | **From the top**, without Again | A big key on a shut cycle |
+| RELAY-KING (built) | **Broadcast** | **Crown Hop**: at its 50% tick the ♛ hops to the healthiest part, the two swap how full they are | **Flood**: each Broadcast hatches a fragment on every part | Ignoring fragments; tunnelling the ♛ |
+| EXIT NODE | **v7 · Front** | **v6 · Kept charges**, v6 fronts | **v5 · Cold image**: the restore point is the act's first break | Bursting in the restore window |
+| REPO MAN (built) | **Liens** | **Repossession**: a Collection re-arms a ◆ a Lien | **Interest** | Plain hits into ◆ |
+| RECURSION | **Call**, its growth for the act | **Return**: no frame pushed | **Overflow**: one frame deeper, same Integrity | Letting every Call through |
+| HOLLOW CHOIR (built) | **One voice** | **Second voice**: seat Pulse Node | **Round**, one voice | The big key on the beat |
+| GRACE PERIOD | **Grace** 3, the Rider | **Reinstatement**: a lapsed part +25% until stripped; nothing returns | **Acceleration**: a lapse takes a cycle off every other part | Paying every part |
+| CENTRIFUGE (built) | **Bidding** | **Reserve price** | **Second lot** | Commands at the Gavel |
+| The Residents (built) | **Backlash** | **Watchdog**, this act only | Worm **Outbreak** (a lash hatches); ransomware **Lockdown** (a lash encrypts you) | Hits on the beat |
+| DEADBOLT (built) | **Lock** | **Tumblers**: a Deadbolt that lands re-locks | **Double lock**: a Mutex, seat Pulse Node | Hitting the lock |
+| TRIPMINE | **Tripwire** | **Daisy chain**: a Tripwire, seat Pulse Node (Claymore to the Encryptor) | **Dead man**: the Pulse Node sets off every wire | The Tripwire first |
+| HASHLORD | **Pool Lock** | **Chain Fork**: a Miner, seat Pulse Node | **51%**: the Lock wards the healthiest part | Commands into the ward |
+| BACK ORIFICE (built) | **Spam Run** | **Port knock**: one part open every 3, the rest half | **Mirror**: seat Pulse Node | Closed ports |
+| PATCH TUESDAY (built) | **Patch** | **Out of band**: a tick crossed is patched at once | **Hotfix**: the last part broken back at 25% | Chipping the first part |
+| FLOODWALL | **Flood** | **Spillway**: a delay sends the ramp to the Pulse Node | **Levee**: the ramp moves on when the Flooder breaks | Never delaying |
+| MIRRORSHADE (built) | **Feedback** | **Doppelganger**: your first break in act 1 | **Shatter**: three copies of your next command, a third each | Bursting while Scrambled |
+| SLEEPWALKER (built) | **Dormant**, every act | **REM**: one part dozes, ×2; a hit sounds the Alarm | **Night Terror**: the dozer charges; wake it or take it | Waking it at once |
+| ECHOLALIA | **Echo** | **Echo chamber**: echoes wait, and land when the Echo breaks | **Last Word**: the last part repeats its final 3 cycles' hits (its charge back to Feedback) | Bursting the last part |
 
-- Moving the built bosses from 50 / 25 to 60 / 30 took about a cycle off act 1 and added it to acts 2 and 3; their win
-  rates moved inside the noise (HASHLORD's reader 59% → 68%).
-- **Held at the tick** (November 12): damage takes a ♛ to its next act tick and no further until that act begins,
-  on every boss with a ♛ (acts.mjs `actCap`). Before, a second hit in the same cycle went on to the next tick, and act
-  2 lasted no cycles in 19% of HOLLOW CHOIR's fights and 10% of REPO MAN's; the natives and the ghostroot Resident had
-  no cap at all. RELAY-KING's Crown Hop could land its ♛ on a part already under 30% (6% of its fights): it now hops
-  only to a part above 30%, and stays put when none is. No act 2 is skipped. A tick no hit crossed (Integrity set some other way) holds nothing.
-  CENTRIFUGE's Phantom had won by carrying the Rotor through 30% to 0 in one cycle; made to play act 3, its reader fell
-  to 59%. After a sale the Gavel now drops to every 4 (it was 3), and each sale makes its Surge 30% harder (50%): read
-  63%, misread 52%, blind 39%.
-- **No boss meets the aim yet**, with "Working the ♛" built (below). NIGHT DESK (8.4 / 6.2 / 8.8) and SHAKEDOWN
-  (8.0 / 4.4 / 7.9) are closest: a third act as long as the first, a second still short.
+**Build order**, one session each, in sequence (every one touches the combat rules), each played before the next:
+1. The shared rules, the pacing, SHAKEDOWN and NIGHT DESK (built November 13).
+2. The Residents, RELAY-KING, REPO MAN, HOLLOW CHOIR (built November 13). Their acts for the planner (won fights, level
+   10): Resident worm 15.3 / 15.8 / 15.3 (`bar` 0.6), ransomware 16.2 / 18.7 / 17.7 (1.2), REPO MAN 15.8 / 16.0 / 15.4
+   (2.2), HOLLOW CHOIR 16.0 / 17.7 / 14.5 (3.85). RELAY-KING (0.85) is won 3 times in 48, so its acts are read over every
+   act that ended: 18.8 / 17.6 / 18.0.
+3. Floor 2: DEADBOLT, BACK ORIFICE, PATCH TUESDAY, SLEEPWALKER, MIRRORSHADE, CENTRIFUGE (built November 14,
+   nativeacts.mjs). Their acts for the planner (won fights, level 10, 12 seeds): DEADBOLT 18.1 / 18.8 / 15.1 (`bar`
+   1.1), BACK ORIFICE 15.8 / 19.9 / 14.7 (1.0), PATCH TUESDAY 16.1 / 17.7 / 17.9 (0.8), SLEEPWALKER 16.8 / 15.5 / 15.2
+   (0.76), MIRRORSHADE 16.8 / 14.9 / 18.2 (1.04), CENTRIFUGE 13.4 / 16.2 / 16.7 (1.1, unchanged: a bigger bar only
+   loses more fights, so the won ones stay short). Read as built: Hotfix brings back the act's last part as it breaks;
+   the dozer is the healthiest part, never the same twice running, every 4 cycles; Shatter splits each beat's hit; BACK
+   ORIFICE's act 3 twins reboot each other twice. The tells' return moved session 2's bosses: HOLLOW CHOIR is won 6
+   times in 48 (35 before), CENTRIFUGE 24 (47), REPO MAN 29 (24).
+4. Floor 3: SHOULDER SURFER, RECURSION, HASHLORD, FLOODWALL, ECHOLALIA.
+5. Floors 4 and 5: BYZANTINE, CAMSWARM, TRIPMINE, GRACE PERIOD, EXIT NODE.
 
-### Working the ♛ (built November 2026)
-
-Each fix as built (floorbosses.mjs, combat.mjs `watchdog` and `secondVoice`, data.mjs `BOSSES` work; crown.test.mjs),
-then measured: every subclass, 12 seeds, at the boss's floor. *Crown-only* is the planner with every one-part command
-turned on the ♛. Before → after.
-
-| Boss | Built | ♛ | Act 1 | Act 2 | Act 3 | Planner | Crown-only |
-|---|---|---|---|---|---|---|---|
-| Resident | The ♛ to half the boss. **Watchdog**: every 5 cycles the ♛ stands above its next tick, every other part patches a ◆ | 41 → 50% | 22.1 → 23.2 | 5.3 → 5.3 | 4.4 → 4.7 | 43 → 49% | 15 → 11% |
-| RELAY-KING | The ♛ to 45% of the boss | 31 → 45% | 14.5 → 19.3 | 7.1 → 4.7 | 4.3 → 2.8 | 22 → 35% | 0 → 0% |
-| REPO MAN | The ♛ to 45% of the boss | 31 → 45% | 8.9 → 10.1 | 3.2 → 2.9 | 3.6 → 2.9 | 94 → 67% | 13 → 14% |
-| HOLLOW CHOIR | The second voice joins at the ♛'s full size | 42% | 6.9 → 6.9 | 2.3 → 2.3 | 6.9 → 8.8 | 70 → 68% | 30 → 24% |
-| CENTRIFUGE | **Sold**: each sale heals the Rotor ♛ 10% of its max | 55% | 7.5 → 7.5 | 4.8 → 4.8 | 9.7 → 9.7 | 78 → 77% | 68 → 64% |
-| SHAKEDOWN | **Leverage**: while a Demand stands, the Collector ♛ loses at most 15% of its max a cycle. The planner works the ♛ first (work.lead) | 60% | 10.6 → 8.0 | 2.8 → 4.4 | 3.7 → 7.9 | 79 → 81% | 93 → 91% |
-| SHOULDER SURFER | The Logger ♛ to half the boss (47, 25, 22) | 38 → 50% | 16.5 → 15.8 | 4.0 → 4.0 | 3.9 → 4.0 | 74 → 73% | 23 → 19% |
-| RECURSION | **Return** and **Overflow** each push a frame as they start, at 25% of the top frame's max, hardening nothing. Paid for in act 1: a Call every 5 cycles (it was 4) | 56% | 16.0 → 13.1 | 4.1 → 6.3 | 3.1 → 4.9 | 74 → 75% | 52 → 57% |
-| NIGHT DESK | **Night shift** clocks in the Night Clerk, a third trader holding one trade (none of its own after), and trades grow 15% a cycle (10%). Paid for in act 1: no trades pending as it opens (2) | 62% | 12.3 → 8.4 | 5.2 → 6.2 | 8.6 → 8.8 | 81 → 85% | 39 → 57% |
-| BYZANTINE | **Hard fork** forks at once: every broken Node returns as act 3 starts, at the standing Nodes' average | 33% | 11.2 → 11.2 | 8.5 → 7.9 | 6.2 → 9.0 | 68 → 63% | 11 → 11% |
-| CAMSWARM | **Botnet** re-infects: each part you broke returns in its place as a Camera at 30% (the C2 Node as itself) | 49% | 20.0 → 20.0 | 5.1 → 6.5 | 8.6 → 8.2 | 66 → 67% | 0 → 0% |
-| The natives | Not built: with their own phases (Proposed: the nine lair bosses, below). Crown-only goes unpunished on TRIPMINE (40% either way) and FLOODWALL (23% → 40%), so their phases need that too | 37–48% | | | | 23–77% | 0–40% |
-
-What the numbers say:
-
-- **Bringing work back lengthens the later acts** (RECURSION, NIGHT DESK, BYZANTINE's act 3, CAMSWARM's act 2), and
-  the band holds when act 1 gives up as much pressure as the act gains. Sized as picked, each took its reader out of
-  the band (RECURSION 27% with frames at 60%, NIGHT DESK 20% with a Clerk that trades, CAMSWARM 34% with Cameras back
-  at full); the numbers above are the largest that keep every band green.
-- **Moving health to the ♛ lengthens act 1** while the planner leaves the ♛ for last: act 1 holds every other part
-  and 40% of a bigger ♛. REPO MAN's planner loses 27 points to it (its ♛ wears ◆◆◆◆◆ and re-arms at 60%).
-- **Working the ♛ early costs the planner wins** (work.lead, planner.mjs `crownNow`: the ♛ is the part to work on while
-  it stands further up its bar than the rest). It evens the acts some (Resident 16.0 / 4.9 / 5.1, REPO MAN 8.0 / 3.9 /
-  3.5, SHOULDER SURFER 12.5 / 5.0 / 4.9) and drops the reader to 21%, 61% and 48%: the other parts keep hitting while
-  the ♛'s ◆ are stripped. The Watchdog punishes leaving the ♛ without making it cheaper to work. Only SHAKEDOWN's
-  planner has it, where the ♛ first was already the better play.
-- **Crown-only is still the better play on SHAKEDOWN** (91% to 81%). The Collector stops the clock when it breaks, and
-  every Deadline a crown-only player lets land pays the clock. A heavier Deadline flips it (Deadline 24, cap 20%:
-  planner 53%, crown-only 52%; Deadline 28: 45% to 34%) and takes the reader out of the band, so it wasn't kept.
-  It needs a rule that costs the Collector's attacker for each Deadline paid.
-- For the designer: the share bosses and the Resident need a reason that makes the early ♛ the cheaper line (a ♛ with
-  no ◆ of its own, or other parts that go quiet while the ♛ is being worked), before more health on it helps.
-
-Health moves to the ♛ from the boss's other parts; its total stays. A part that comes back returns in its place with
-fresh ticks, as a phase line.
+Each session sets its bosses' `bar` so their acts run 15 to 20 cycles for the planner (`node genesim.mjs`'s
+actLengths), and leaves the bands to the designer's play.
 
 ## Built: the three solo bosses
 
-| Boss | Its part | Act 1 | Act 2 (60%) | Act 3 (30%) | The read |
+| Boss | Its part | Act 1 | Act 2 | Act 3 | The read |
 |---|---|---|---|---|---|
-| RELAY-KING | Relay: Broadcast every 4, +its hit per fragment | Broadcast | **Crown Hop**: the ♛ moves to the healthiest part above 30% (none: it stays); the old one heals 25% | **Flood**: Replicate every 2, Broadcast every 3 | Clear fragments before a Broadcast; pace the parts so the ♛ hops where you want it |
-| REPO MAN | Ledger: Collection every 5, +its hit per Lien | **Liens**: each command a ◆ absorbs adds one; a Collection, landed or cut, clears them | Re-arms every part; a Collection in 3 | **Interest**: each Lien counts twice; a Collection in 3 | Strip with strips, burns or helpers; cut the Collection; cross a tick with the ledger clear |
-| HOLLOW CHOIR | A Mimic (its third) | One voice: a beat every 4 | **Second voice**: a second Mimic at the ♛'s full size, beating 2 behind | **Round**: each beat plays back your last three commands | Cut a voice before 30%; hold or fire small in the two cycles before a beat |
+| RELAY-KING | Relay: Broadcast every 4, +its hit per fragment | Broadcast | **Crown Hop**: at the ♛'s 50% tick it hops to the healthiest part, and the two swap how full they are | **Flood**: a Broadcast that lands hatches a fragment on every part | Bring the other parts down before the ♛'s tick; cut the Broadcast |
+| REPO MAN | Ledger: Collection every 5, +its hit per Lien | **Liens**: each command a ◆ absorbs adds one; a Collection, landed or cut, clears them | **Repossession**: a Collection that lands puts a ◆ back a Lien | **Interest**: each Lien counts twice | Strip with strips, burns or helpers; cut the Collection |
+| HOLLOW CHOIR | A Mimic (its third) | One voice: a beat every 4 | **Second voice**: a second Mimic in the Pulse Node's seat, beating 2 behind | **Round**, one voice: each beat plays back your last three commands | Hold or fire small in the two cycles before a beat |
 
-Integrity (`BOSSES` in data.mjs): RELAY-KING 1.25× (its Relay is a fourth part), REPO MAN 1.6×, HOLLOW CHOIR 1.4× (its second
-voice is as big as its ♛).
-
-They play in P4's acts (GAME_RULES.md "Boss acts"): one ♛ tick a hit, a tell an act, and the ♛ left above its tick until
-the act's beat has played (the Broadcast, the Collection, the Mimic's copy), else every part re-arms.
-
-What the bots made of it (a scratch sim, 12 fights a cell, wins %, before → after):
-
-| Boss, level | Planner | Kit | Blind |
-|---|---|---|---|
-| RELAY-KING 10 | 100 → 67 | 100 → 50 | 50 → 42 |
-| RELAY-KING 18 | 100 → 67 | 83 → 75 | 58 → 50 |
-| REPO MAN 10 | 92 → 50 | 100 → 42 | 100 → 33 |
-| REPO MAN 18 | 100 → 50 | 92 → 50 | 75 → 25 |
-| HOLLOW CHOIR 10 | 92 → 33 | 83 → 33 | 83 → 25 |
-| HOLLOW CHOIR 18 | 100 → 67 | 100 → 42 | 75 → 17 |
-
-The planner knows only enough to measure: clear fragments before a Broadcast, cut the second voice, and keep a dear
-command off the cycles a Round beat will sing. It doesn't avoid Liens. The designer's play is the bar.
+Integrity (`BOSSES` in data.mjs): RELAY-KING 1.25× (its Relay is a fourth part), REPO MAN 1.6×, HOLLOW CHOIR 1.4×.
 
 The Round's sung notes land at half (`ROUND.echo`) and record only what you fire after it starts: at full, one Flood
 fired the cycle the Round began came back as 54% of a level-10 Breaker's bar.
 
-## Proposed: the nine lair bosses (not built)
-
-Each keeps its signature and gains two phases of its own in place of re-arm and a cycle sooner. For the designer to
-pick from before they're built.
-
-| Boss | At 50% | At 25% |
-|---|---|---|
-| DEADBOLT | **Tumblers**: each Deadbolt that lands re-locks the Encryptor | **Double lock**: a second Mutex on the Pulse Node; break both within 2 cycles or the first re-forms |
-| TRIPMINE | **Daisy chain**: a second Tripwire; tripping one gives the other a 3-cycle fuse | **Dead man**: breaking the Pulse Node sets off every live wire, so it goes last |
-| HASHLORD | Chain Fork (as now) | **51%**: the Pool Lock wards whichever Miner has more Integrity, so keep them even |
-| BACK ORIFICE | **Port knock**: every 3 cycles one part is open and takes full damage, the rest half | Its Mirror twins the Replicator (as now) |
-| PATCH TUESDAY | **Rollback**: every 5 cycles the part you hit most in the last 3 returns to where it was 3 cycles ago | **Hotfix**: the Patcher brings back the last part you broke at 25%, unless the Patcher went first |
-| FLOODWALL | **Spillway**: a delay sends the Flooder's ramp onto the Pulse Node's next hit instead of resetting it | **Levee**: when the Flooder breaks, its ramp moves to the next part |
-| MIRRORSHADE | Doppelganger (as now) | **Shatter**: breaking the Doppelganger leaves three shards; each copies your next command |
-| SLEEPWALKER | **REM**: one part dozes at a time, taking ×2; hitting it sounds the Alarm for 3 cycles | **Night Terror** every 3 cycles while any part dozes |
-| ECHOLALIA | **Reverb**: your commands echo a cycle later at half, onto the part beside it | **Last Word**: the last part standing repeats every hit it took in its final 3 cycles |
-
 ## Proposed: floors 2–8 (picked November 2026)
 
 **Built:** CENTRIFUGE, SHAKEDOWN, SHOULDER SURFER, RECURSION, CAMSWARM, NIGHT DESK and BYZANTINE (floorbosses.mjs,
-GAME_RULES.md "Floor bosses"; the three floor 4 rows below are as built), their act ticks at 60% and 30% like every boss's. The rest are
-not built.
+GAME_RULES.md "Floor bosses"; SHAKEDOWN's and the floor 4 rows below are as built), in act bars like every boss. The rest
+are not built.
 
 Prototyped as applets (a board an act), with docs/content.md 3.2. How each one plays, phase by phase: docs/boss-guide.md. Each plays in the shape above: three acts, a
 signature that changes the fight, a beat, the default move wrong at least once. *Sketched* has no board yet.
@@ -167,14 +168,14 @@ signature that changes the fight, a beat, the default move wrong at least once. 
 **Every act adds a pressure that costs to ignore** (the November audit): the opening carries two at least, so that
 answering one costs you on the other, and an act that only tightens a number (sooner, fewer, smaller) is not an act.
 
-| Boss | Floor · where | Act 1 | Act 2 (60%) | Act 3 (30%) |
+| Boss | Floor · where | Act 1 | Act 2 | Act 3 |
 |---|---|---|---|---|
-| SHAKEDOWN 12 | 2 · throne of the Pits | **Ransom Clock**: a 12-cycle clock; at 0 it leaks 30% of your max and restarts at 6. A Deadline you let land pays the ransom (+3); one you call off buys nothing. The Lockbox wards the Demand. **Leverage**: while a Demand stands the Collector loses 15% of its max a cycle at most | **Second demand**: a second Demand, its Deadline on the same cycle | **Final notice**: each leak re-arms the Demand's ◆ and brings the Lockbox back |
+| SHAKEDOWN 12 | 2 · throne of the Pits | **Ransom Clock**, one an act: 14 cycles; at 0 it leaks 35% of your max (15% more each leak that act) and restarts at 7. A Deadline you let land pays the ransom (+3); one you call off buys nothing. The Lockbox wards the Demand. **Leverage**: while a Demand stands the Collector loses 10% of its max a cycle at most | **Second demand**: a second Demand in the Lockbox's seat, its Deadline on the same cycle | **Final notice**: each leak re-arms the Demand and brings the Lockbox back |
 | CENTRIFUGE 14 | 2 · floor job | **Bidding**: each Surge the Gavel lands spins it faster (every 4, 3, 2); a delay or Throttle withdraws it to 4. A Surge at every 2 sells: the buyer the Gavel names joins as a part with its crew's rule (TOLLGATE wards the Rotor, SWARMLINE twins the Gavel, PALEMASK veils a part), and heals the Rotor 10% | **Reserve price**: a delay or Throttle only steps the Gavel back one | **Second lot**: each sale brings two buyers |
 | SHOULDER SURFER 18 | 3 · floor job | **Replay**: a Sync Window every other cycle. The Logger takes damage only from commands fired in it; each one outside is logged, and at 3 its Dump plays your last command back. The Pulse Node's charges land on the closed cycles | **Again**: on its beat, every 4, it plays your last three commands back in order | **From the top**: the log never clears, and the Dump plays the biggest command logged |
 | RECURSION 19 · *new* | 3 · the last room of floor 3's Gauntlets | **Call**: frames stack, main() (the ♛) at the bottom. Your single-target commands reach only the top frame; burns and area hits reach all. Every 5 cycles the top frame pushes a new one at 60% of its max; a frame under 25 can't | **Return**: it pushes a frame at 25% as the act starts; a frame that breaks makes the one beneath attack a cycle sooner at +50% | **Overflow**: one more frame; at 5 frames every frame attacks at once |
 | CAMSWARM 24 | 4 · lair | **Telnet Sweep**: every 5 cycles each part under half (never the Hive) hatches a fragment and shields it until that part breaks; each one hatched brings the next sweep a cycle sooner. A fragment that lives 3 cycles becomes a Camera with its own Surge. A hit takes 15% of a part at most | **Botnet**: every Camera fires with the C2 Node's Beacon; a broken C2 Node comes back, and each other part you broke returns as a Camera at 30% | **Lockout**: the Hive boots a Camera, and takes no damage while a Camera stands |
-| NIGHT DESK 24 | 4 · floor job | **No Timeout**: its attacks open pending trades on their parts. Hitting a part settles its trades on you at half; at four pending, all settle in full and later trades open 25% bigger. Only the Desk takes damage, 12% a hit at most. Interrupts do nothing | **Night shift**: the Night Clerk clocks in holding one trade; a pending trade grows 15% a cycle | **Finality**: each trade you settle heals the Desk 4% |
+| NIGHT DESK 24 | 4 · floor job | **No Timeout**: its attacks open pending trades on their parts. Hitting a part settles its trades on you at half; at four pending, all settle in full and later trades that act open 25% bigger. Only the Desk takes damage, 10% a hit at most; its traders and their trades go with it. Interrupts do nothing | **Night shift**: the Night Clerk in the Teller's seat, holding one trade; a pending trade grows 15% a cycle | **Margin Call**: the Desk's own attack settles every pending trade with it, in full |
 | BYZANTINE 26 | 4 · throne of the Pits | **Vote**: every 4 cycles the most damaged Node, if 15% or more under the average, is restored to it, and every Node hits 30% harder. A hit takes 20% of a Node at most | **Traitor**: the most damaged Node turns; while it isn't the most damaged, the restore goes to the healthiest's level | **Hard fork**: every broken Node returns as the act starts; a Node that breaks returns at the next vote at the others' average, unless both are under half |
 | GRACE PERIOD 28 · *new* | 5 · lair | **Grace**: each part has 3 cycles' grace; your command on it pays it up. Left alone it lapses: full ◆, and its next attack is a charge | **Reinstatement**: a lapsed part hits 25% harder until its ◆ are stripped again | **Acceleration**: grace is 2 cycles, and a lapse takes a cycle off every other part |
 | PARASITE 32 · *sketched* | 5 · lair | **Host Takeover** (docs/genome.md 7.4); the Siphon's healing is drained from your Signal | **Spare Tap**: a broken Tap boots back 2 cycles later at 60% | **Gorge**: every 4 cycles it eats its fragments to heal the ♛ by what they had left |

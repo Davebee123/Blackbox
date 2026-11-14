@@ -93,7 +93,9 @@ teal, violet or a threat's red.
 
 ## The fight board
 
-- **The HUD**, left to right: your Signal (your server at home) with your crew's bars under it; **Status**, everything on
+- **The layout** (desktop; the designer's *Swap*): the virus's picture on the left beside the part names, the board on
+  the right, so the eyes sit in the middle and see both. The HUD follows it.
+- **The HUD**, right to left: your Signal (your server at home) with your crew's bars under it; **Status**, everything on
   you, names in their colours (teal yours, red against you, violet helpers), each with its rule on hover; under it
   **Gear**, a chip for each equipped rule that waits on a condition (`fightread.mjs` gearLive), lit teal while it holds,
   struck through once a once-a-fight one is spent; and the virus, its name and level over its bar, its tags and the
@@ -195,7 +197,7 @@ short vibration on phones that have it.
 
 ## The pages, at a glance
 
-- **The top bar:** the pages on the left; in the middle your handle · class · level with the class's XP as a thin bar;
+- **The top bar:** the pages on the left, each with a one-line tooltip; in the middle your handle · class · level with the class's XP as a thin bar;
   on the right the people button, the pager, then Integrity (a server tower that drains), Signal (five bars) and
   credits, each with its **+**. At 1440 with the casing the pager's tray tightens so the class name keeps its place.
 - **The map** shows one floor at a time. A server (the *Glyph*, `view.mjs` serverIcon) is its kind's glyph on a dark
@@ -311,8 +313,9 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
   page opens out of it and your room rings teal, under 0.9 s. Connecting to a server (*Carrier*): a teal line runs
   from HOME to its node, the node pings, and the rooms open in a circle from there, the map dimming behind the edge;
   the entry rings teal. Eased, no black, no text, chrome lit; 1.7 s (1.3 s with no HOME on the map). Jacking out
-  (*Hang-up*): your room locks teal, the rooms go dark toward it, the hang-up readout, then the map with the server's
-  node ringed; 1.7 s. **No flash, no blink** (the designer): in the boot and the hang-up a panel only brightens or only
+  (the *Carrier* backwards): your room locks teal, the rooms close in a circle onto the server's node, the map
+  brightening outside it; the node pings and the line runs back to HOME, which rings; 1.7 s (0.8 s not from the rooms
+  page). **No flash, no blink** (the designer): in the boot a panel only brightens or only
   dims, in held steps; chrome dims to 15%, never out (bootfx.test.mjs). Any key or click ends each. Screen effects off or Motion off: none of them.
 - **Floor palettes** are the one exception to *No new colours*, approved by the designer. A floor swaps the surface
   tokens (`--bg`, `--panel`, `--panel-2`, `--inset`), the structure colour (`--amber` and its forms) and the text tints
@@ -330,6 +333,23 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
 | Kernel Space | `#f4f4f4` white | `#000000` / `#0a0a0a` | dot matrix | 5.4 to 5.0 |
 | The Sink | `#e09a94` blood rose | `#0a0303` / `#130606` | drips | 4.9 to 4.8 |
 | Bedrock | `#cfc7b4` stone | `#080807` / `#0f0f0d` | heavy static | 4.9 to 4.6 |
+
+## The stage
+
+- **The floor's place** (stage.mjs) is drawn inside the virus picture (`#virus-canvas`), never behind the board: in
+  characters on the virus's own grid, in the floor's structure colour, faint (mean alpha under 0.3). Its still part is
+  cached; only what moves is drawn each frame. The render's label names the floor (`[ coldline/render ]`).
+- **It acts on the virus, not the board:** light (brightness only), camera, entrance, a broken part's bits, a
+  reflection where there is water. The board's chips and telegraphs keep their look on every floor; only how a chip
+  comes in changes (boardfx.mjs: typed on the old ledgers, flipped on the departure boards).
+- **The fight log** folds to its newest line by default (`▴ N` opens it), so the picture takes the room.
+- **The rooms map** carries the floor as a material (ground.mjs), never a picture: a picture's landmarks fell under rooms
+  (rejected). It sits in the map's SVG under the links, masked clear of rooms and links, fading at the edges.
+- **The virus's tint** follows the floor but on Deep Core and the Sink (stage.mjs `TINT_SKIP`).
+- **The board's frame** by floor (style.css, keyed on `data-sfx-floor`): the playhead's form, the row and column rules,
+  the headings' type. Never a chip, never the playhead's colours.
+- Prototyped first (picked by the designer, November 2026): *Place* over *Era* for the picture, the era kept for the
+  theme's sound.
 
 ## The casing and the window
 

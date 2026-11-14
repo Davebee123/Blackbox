@@ -9,6 +9,7 @@
 // WAV for listening offline.
 import { playAbility, timingOf } from './abilitysound.mjs';
 import { playAttack, attackTiming } from './virussound.mjs';
+import { outputOf } from './mixout.mjs';
 
 const NOTE = (n) => 440 * Math.pow(2, (n - 69) / 12); // MIDI note → Hz
 
@@ -725,12 +726,21 @@ function clipAt(ctx, out, t, name) {
   return true;
 }
 
+// A sound's own buses are cut from the chain once it has long rung out (at: a context time). Its echoes are feedback
+// loops, and a live context keeps a loop connected to the speakers rendering forever: a fight's worth of hits used to
+// pile up until the audio stuttered.
+const live = (ctx) => typeof OfflineAudioContext === 'undefined' || !(ctx instanceof OfflineAudioContext);
+function release(ctx, at, nodes) {
+  if (!live(ctx)) return;
+  setTimeout(() => { for (const n of nodes) try { n.disconnect(); } catch { /* already */ } }, Math.max(0, at - ctx.currentTime) * 1000);
+}
+
 // The chain everything plays into: a little headroom and a gentle compressor, with the room beside it.
 function chain(ctx) {
   const g = ctx.createGain(), c = ctx.createDynamicsCompressor();
   g.gain.value = 0.55;
   c.threshold.value = -18; c.ratio.value = 4; c.attack.value = 0.003; c.release.value = 0.15;
-  g.connect(c).connect(ctx.destination);
+  g.connect(c).connect(outputOf(ctx));
   const room = ctx.createConvolver(), wet = ctx.createGain();
   room.buffer = roomIR(ctx); wet.gain.value = 0.9;
   room.connect(wet).connect(g);
@@ -752,34 +762,42 @@ function hallOf(ctx, ch) {
 }
 const ABILITY_ROOM = { a: 0.1, b: 0.16, c: 0.1, b1: 0.12, b2: 0.1, b3: 0.14, b4: 0.2, b7: 0.3, b8: 0.45, b9: 0.24, b10: 0.24, b11: 0.24, b12: 0.24, b13: 0.24 };
 const ABILITY_HALL = { b7: 1.2, b8: 2.2, b9: 0.85, b10: 0.85, b11: 0.85, b12: 0.85, b13: 0.85 }; // how much of the whole sound rings into the hall
-// The voice cap: at most ABILITY_CAP ability sounds starting within ABILITY_SPAN s of each other; one more plays nothing
-// (its caller falls back to its result's voice, one short sample).
-const ABILITY_CAP = 4, ABILITY_SPAN = 0.25, recent = new WeakMap();
+// The voice cap: at most ABILITY_CAP ability or attack sounds landing within ABILITY_SPAN s of each other, and HEAVY_LIVE
+// within HEAVY_SPAN (a part breaking sets off a pile at once, and each is a hundred nodes); one more plays nothing (its
+// caller falls back to its result's voice, one short sample).
+const ABILITY_CAP = 4, ABILITY_SPAN = 0.25, HEAVY_LIVE = 6, HEAVY_SPAN = 1, recent = new WeakMap();
+const RING_OUT = 6; // s after its contact that a hit's own buses are cut (release): the longest rings 5 s
+function admit(ctx, T) {
+  const near = (recent.get(ctx) || []).filter((t) => Math.abs(t - T.t) < HEAVY_SPAN);
+  if (near.length >= HEAVY_LIVE || near.filter((t) => Math.abs(t - T.t) < ABILITY_SPAN).length >= ABILITY_CAP) return false;
+  recent.set(ctx, [...near, T.t]);
+  return true;
+}
 function abilityAt(ctx, ch, style, key, T) {
   if (!banks.get(ctx)?.ready) return false;
-  const live = (recent.get(ctx) || []).filter((t) => Math.abs(t - T.t) < ABILITY_SPAN);
-  if (live.length >= ABILITY_CAP) return false;
-  recent.set(ctx, [...live, T.t]);
+  if (!admit(ctx, T)) return false;
   const dry = ctx.createGain(), send = ctx.createGain(), room = ctx.createGain(), more = ctx.createGain();
   send.gain.value = ABILITY_ROOM[style] ?? 0.1; more.gain.value = 0.6;
   dry.connect(ch.master); dry.connect(send).connect(ch.room);
   room.connect(dry); room.connect(more).connect(ch.room);
-  if (ABILITY_HALL[style]) { const h = ctx.createGain(); h.gain.value = ABILITY_HALL[style]; dry.connect(h).connect(hallOf(ctx, ch)); }
-  if (['b', 'b1', 'b3', 'b4', 'b7', 'b8', 'b9', 'b10', 'b11', 'b12', 'b13'].includes(style)) { const h = ctx.createGain(); h.gain.value = 0.5; room.connect(h).connect(hallOf(ctx, ch)); } // the weighty ones: the bigger space
+  const cut = [dry, send, room, more];
+  if (ABILITY_HALL[style]) { const h = ctx.createGain(); h.gain.value = ABILITY_HALL[style]; dry.connect(h).connect(hallOf(ctx, ch)); cut.push(h); }
+  if (['b', 'b1', 'b3', 'b4', 'b7', 'b8', 'b9', 'b10', 'b11', 'b12', 'b13'].includes(style)) { const h = ctx.createGain(); h.gain.value = 0.5; room.connect(h).connect(hallOf(ctx, ch)); cut.push(h); } // the weighty ones: the bigger space
   const list = (name) => { const l = banks.get(ctx)?.buffers.get(name); return l && take(l, name); };
+  release(ctx, T.hit + T.stop + RING_OUT, cut);
   return playAbility(ctx, { dry, room }, style, key, T, list);
 }
 // A virus attack's sound (virussound.mjs) in a style, timed by T (attackTiming): the same room and hall as yours, a
 // little less of each (a dull sound muddies sooner). It shares the abilities' voice cap.
 function attackAt(ctx, ch, style, key, T) {
   if (!banks.get(ctx)?.ready) return false;
-  const live = (recent.get(ctx) || []).filter((t) => Math.abs(t - T.t) < ABILITY_SPAN);
-  if (live.length >= ABILITY_CAP) return false;
-  recent.set(ctx, [...live, T.t]);
+  if (!admit(ctx, T)) return false;
   const dry = ctx.createGain(), send = ctx.createGain(), room = ctx.createGain(), more = ctx.createGain(), hall = ctx.createGain(), far = ctx.createGain();
   send.gain.value = 0.2; more.gain.value = 0.6; hall.gain.value = 0.6; far.gain.value = 0.5;
   dry.connect(ch.master); dry.connect(send).connect(ch.room); dry.connect(hall).connect(hallOf(ctx, ch));
   room.connect(dry); room.connect(more).connect(ch.room); room.connect(far).connect(hallOf(ctx, ch));
+  const last = Math.max(T.hit, T.stop, ...Object.values(T.post).flat(), ...T.again) + T.tail + T.n * T.step;
+  release(ctx, last + RING_OUT, [dry, send, room, more, hall, far]);
   const list = (name) => { const l = banks.get(ctx)?.buffers.get(name); return l && take(l, name); };
   return playAttack(ctx, { dry, room }, style, key, T, list);
 }
@@ -789,8 +807,9 @@ function voiceAt(ctx, ch, name, t, opts = {}) {
   const r = RECIPES[name], ready = banks.get(ctx)?.ready;
   const v = ctx.createGain();
   v.connect(ch.master);
+  release(ctx, t + 20, [v]); // the longest whole clip (a boss down) is well inside this
   if (r && ready) {
-    const send = ctx.createGain(); send.gain.value = r.room; v.connect(send).connect(ch.room);
+    const send = ctx.createGain(); send.gain.value = r.room; v.connect(send).connect(ch.room); release(ctx, t + 20, [send]);
     r.play(ctx, v, t, opts, (n, at, o) => sample(ctx, v, t, n, { ...o, at }), (n) => clipAt(ctx, v, t, n));
   } else if (VOICES[name]) VOICES[name](ctx, v, t, opts);
   else if (name === 'jackin') VOICES.unlock(ctx, v, t, opts);
@@ -845,6 +864,7 @@ let shared = null;
 export function createSound() {
   if (shared) return shared;
   let ctx = null, ch = null, stopHum = null, wantHum = false, hum = null;
+  const lastVoice = new Map();
   const vol = { sfx: 0.8, ambience: 0.8 };
   // Sliders: effects scale the whole game-sound chain (its own 0.55 headroom stays), ambience the room tone.
   const applyVol = () => {
@@ -853,8 +873,8 @@ export function createSound() {
   };
   function ready() {
     try {
-      ctx ||= new AudioContext();
-      if (!ch) { ch = chain(ctx); hum = ctx.createGain(); hum.connect(ctx.destination); applyVol(); }
+      ctx ||= new AudioContext(); // the browser's own buffer: asking for a bigger one cut the sound out in fights on some outputs
+      if (!ch) { ch = chain(ctx); hum = ctx.createGain(); hum.connect(outputOf(ctx)); applyVol(); }
       if (ctx.state === 'suspended') ctx.resume();
       loadBank(ctx);
       if (wantHum && !stopHum) stopHum = ambience(ctx, hum);
@@ -875,6 +895,9 @@ export function createSound() {
   shared = {
     play(name, opts = {}, delay = 0) {
       if (!ready()) return;
+      const at = ctx.currentTime + Math.max(0, delay);
+      if (Math.abs((lastVoice.get(name) ?? -1) - at) < 0.06) return; // the same voice twice at once: once is as loud and half the work
+      lastVoice.set(name, at);
       try { voiceAt(ctx, ch, name, ctx.currentTime + 0.005 + Math.max(0, delay), opts); } catch { /* no audio */ }
     },
     // An ability's sound in a style (abilitysound.mjs), timed by its effect's plan ({ travel, hold, impact, stop } ms
@@ -915,7 +938,7 @@ export function createSound() {
     // An output at the effects volume for a scene with its own mix (the cold open): { ctx, out }, or null.
     out() {
       if (!ready()) return null;
-      const g = ctx.createGain(); g.gain.value = vol.sfx / 0.8; g.connect(ctx.destination);
+      const g = ctx.createGain(); g.gain.value = vol.sfx / 0.8; g.connect(outputOf(ctx));
       return { ctx, out: g };
     },
     // The shared context, for the soundtrack (null if audio can't start).

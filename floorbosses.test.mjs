@@ -1,5 +1,5 @@
 // The floor 2 and 3 bosses (floorbosses.mjs, docs/solo-bosses.md, GAME_RULES.md "Floor bosses"): CENTRIFUGE's Bidding,
-// SHAKEDOWN's Ransom Clock, SHOULDER SURFER's Replay, RECURSION's Call, their act ticks at 60% and 30%, where they
+// SHAKEDOWN's Ransom Clock, SHOULDER SURFER's Replay, RECURSION's Call, their acts, where they
 // stand (a floor-2 Pit's and a floor-3 Gauntlet's last room), their uniques, and their marks on the board.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -32,12 +32,13 @@ const of = (s, id) => livingParts(s).find((p) => p.id === id);
 const hold = (s) => { command(s, 'hold'); return resolveCycle(s); };
 const landNow = (s, p) => { p.attack.due = s.encounter.cycle; return hold(s); };
 
-test('each floor boss: its own parts only, its ♛, act ticks at 60% and 30% on it, the rest at 50% and 25%', () => {
+test('each floor boss: its own parts only, its ♛, every part with ticks at 50% and 25%, its acts bars', () => {
   for (const [id, crown, parts] of [['centrifuge', 'rotor', ['rotor', 'gavel']], ['shakedown', 'collector', ['collector', 'demand', 'lockbox']], ['shouldersurfer', 'logger', ['logger', 'pulse', 'scrambler']], ['recursion', 'main', ['main', 'frame1', 'frame2']]]) {
     const s = boss(id), v = s.encounter.virus, c = livingParts(s).find((p) => p.core);
     assert.deepEqual(v.parts.map((p) => p.id), parts, id);
     assert.equal(c.id, crown, `${id}'s ♛`);
-    assert.deepEqual(c.ticks.map((t) => t.at), [0.6, 0.3], `${id}'s act ticks`);
+    assert.deepEqual(c.ticks.map((t) => t.at), [0.5, 0.25], `${id}'s ♛: plain ticks (its acts are bars)`);
+    assert.ok(s.encounter.actBars, id);
     assert.ok(v.parts.filter((p) => p !== c && p.ticks).every((p) => p.ticks.map((t) => t.at).join() === '0.5,0.25'), `${id}'s other parts`);
     assert.equal(v.phases.length, 2);
   }
@@ -86,41 +87,48 @@ test("CENTRIFUGE's Bidding: each Surge that lands spins the Gavel up; at every 2
   assert.equal(s2.encounter.virus.bid.sold, 0, 'no sale with the Rotor down');
 });
 
-test("SHAKEDOWN's Ransom Clock: it counts down, leaks 35% of your max at 0 (15% more each leak) and restarts at 5; a Deadline that lands pays 3; it stops with the Collector; act 2 sends a second Demand on the same cycle; act 3 re-arms on a leak", () => {
+test("SHAKEDOWN's Ransom Clock: it counts down, leaks 35% of your max at 0 (15% more each leak) and restarts at 7; a Deadline that lands pays 3; it stops with the Collector; each act brings a new clock; act 2's second Demand takes the Lockbox's seat; act 3 re-arms on a leak", () => {
   const s = boss('shakedown'), v = s.encounter.virus, max = defender(s).max;
-  assert.equal(v.ransom.left, 10);
+  assert.equal(v.ransom.left, FB.ransom.clock);
   hold(s);
-  assert.equal(v.ransom.left, 9);
+  assert.equal(v.ransom.left, FB.ransom.clock - 1);
   const d = of(s, 'demand');
   landNow(s, d);
-  assert.equal(v.ransom.left, 11, 'a Deadline landed: +3');
+  assert.equal(v.ransom.left, FB.ransom.clock + 1, 'a Deadline landed: +3');
   v.ransom.left = 1;
   const was = defender(s).integrity;
   hold(s);
   assert.equal(was - defender(s).integrity, Math.round(max * 0.35), 'the leak');
-  assert.equal(v.ransom.left, 5, 'restarts at 5');
+  assert.equal(v.ransom.left, FB.ransom.restart, 'restarts at 7');
   v.ransom.left = 1;
   const was2 = defender(s).integrity;
   hold(s);
   assert.equal(was2 - defender(s).integrity, Math.round(max * 0.5), 'the next leak takes 15% more');
   assert.match(boardMarkup(s), /Ransom Clock\nBoss rule\nIt leaks/);
-  d.attack.due = s.encounter.cycle + 3;
-  command(s, 'hold');
-  fbVerb(s, 'demand2');
-  const d2 = of(s, 'demand2');
-  assert.ok(d2?.deadline, 'a second Demand');
-  assert.equal(d2.attack.due, d.attack.due, 'its Deadline on the same cycle');
-  assert.ok(of(s, 'lockbox').wardsToo.includes('demand2'), 'the Lockbox wards it too');
-  fbVerb(s, 'notice');
-  const box = of(s, 'lockbox');
-  box.integrity = 0; d.armor = 0;
-  v.ransom.left = 1;
-  resolveCycle(s);
-  assert.ok(box.integrity === box.max && d.armor > 0, 'final notice: the Lockbox is back and the Demand re-armed');
   const left = v.ransom.left;
   of(s, 'collector').integrity = 0;
   hold(s);
   assert.equal(v.ransom.left, left, 'the Collector is down: the clock stops');
+  // Act 2: a new invoice, and a second Demand in the Lockbox's seat, its Deadline on the same cycle.
+  for (const p of livingParts(s)) p.integrity = 0;
+  hold(s);
+  assert.equal(v.ransom.left, FB.ransom.clock, 'each act brings a new clock');
+  assert.equal(v.ransom.leaks, 0, 'and the leaks start small again');
+  const d2 = of(s, 'demand2'), d1 = of(s, 'demand');
+  assert.ok(d2?.deadline, 'a second Demand');
+  assert.ok(!of(s, 'lockbox'), 'in the Lockbox\'s seat');
+  assert.equal(v.parts.indexOf(d2), v.parts.findIndex((p) => p.id === 'demand2'));
+  assert.equal(d2.attack.due, d1.attack.due, 'its Deadline on the same cycle');
+  assert.equal(livingParts(s).reduce((n, p) => n + p.max, 0), s.encounter.actMax, 'the board holds act 1\'s Integrity');
+  // Act 3: act 1's board again (the Lockbox, one Demand), and a leak re-arms the Demand and brings the Lockbox back.
+  for (const p of livingParts(s)) p.integrity = 0;
+  hold(s);
+  assert.ok(of(s, 'lockbox') && !of(s, 'demand2'), 'act 2\'s Demand leaves with its act');
+  const box = of(s, 'lockbox'), d3 = of(s, 'demand');
+  box.integrity = 0; d3.armor = 0;
+  v.ransom.left = 1;
+  hold(s);
+  assert.ok(box.integrity === box.max && d3.armor > 0, 'final notice: the Lockbox is back and the Demand re-armed');
 });
 
 test("SHOULDER SURFER's Replay: the window opens every other cycle; a command outside it is logged, and the Dump plays it back at its full hit", () => {
@@ -255,12 +263,13 @@ import { namedBoss } from './dist/arcs.mjs';
 import { FLOOR, lairBossFor } from './dist/floors.mjs';
 import { fxText } from './dist/content.mjs';
 
-test('the floor 4 bosses: own parts, a ♛, act ticks at 60% and 30%, two acts each', () => {
+test('the floor 4 bosses: own parts, a ♛, acts as bars, two acts each', () => {
   for (const [id, crown, parts] of [['nightdesk', 'desk', ['desk', 'teller', 'clearing']], ['byzantine', 'nodea', ['nodea', 'nodeb', 'nodec']], ['camswarm', 'hive', ['hive', 'pulse', 'c2']]]) {
     const s = boss(id), v = s.encounter.virus, c = livingParts(s).find((p) => p.core);
     assert.deepEqual(v.parts.map((p) => p.id), parts, id);
     assert.equal(c.id, crown, `${id}'s ♛`);
-    assert.deepEqual(c.ticks.map((t) => t.at), [0.6, 0.3], `${id}'s act ticks`);
+    assert.deepEqual(c.ticks.map((t) => t.at), [0.5, 0.25], `${id}'s ♛: plain ticks (its acts are bars)`);
+    assert.ok(s.encounter.actBars, id);
     assert.equal(v.phases.length, 2);
     assert.equal(tellsOf(s)?.list.length || 0, 0, `${id} deals no tells: its rule is the fight`);
     assert.ok(BOSSES[id].guide.open.length && BOSSES[id].guide.phases.length === 2, `${id}'s Codex guide`);
@@ -289,7 +298,7 @@ test("NIGHT DESK's No Timeout: its attacks wait as trades, a command settles a p
   desk.armor = 0;
   const d0 = desk.integrity;
   hit(s, desk, 99999, { mine: true, pierce: true });
-  assert.ok(d0 - desk.integrity <= Math.round(desk.max * FB.desk.limit), 'the Desk loses 12% of its max a hit at most');
+  assert.ok(d0 - desk.integrity <= Math.round(desk.max * FB.desk.limit), 'the Desk loses 10% of its max a hit at most');
   // Four pending: all settle in full, and every later trade opens 25% bigger.
   const at = defender(s).integrity;
   for (const p of [teller, clearing, desk]) p.pending = [];
@@ -303,15 +312,21 @@ test("NIGHT DESK's No Timeout: its attacks wait as trades, a command settles a p
   const base = teller.attack.amount;
   landNow(s, teller);
   assert.ok(teller.pending[0].amount >= Math.round(base * (1 + FB.desk.margin)), 'a slip makes the rest of the fight harder: later trades open bigger');
-  // Night shift: a pending trade grows 10% a cycle. Finality: each one settled heals the Desk.
+  // Night shift (act 2, by its verb here): the Night Clerk takes the Teller's seat with a trade pending, and a pending
+  // trade grows 15% a cycle.
+  clearing.pending = []; landNow(s, clearing);
   fbVerb(s, 'nightshift');
-  const t0 = tradeOf(s, teller.pending[0]);
+  const clerk = of(s, 'clerk');
+  assert.ok(clerk?.pending?.length === 1 && !of(s, 'teller'), 'the Clerk sits in the Teller\'s seat, holding a trade');
+  const t0 = tradeOf(s, clearing.pending[0]);
   hold(s); hold(s);
-  assert.ok(tradeOf(s, teller.pending[0]) > t0, 'it grows on the night shift');
-  fbVerb(s, 'finality');
-  const d1 = desk.integrity;
-  command(s, 'spike teller'); resolveCycle(s);
-  assert.equal(desk.integrity - d1, Math.round(desk.max * FB.desk.heal), 'Finality: the Desk keeps the other half');
+  assert.ok(tradeOf(s, clearing.pending[0]) > t0, 'it grows on the night shift');
+  // Margin Call (act 3): the Desk's attack settles every pending trade with it, in full.
+  fbVerb(s, 'margincall');
+  const owed = pendingOf(s).reduce((n, t) => n + tradeOf(s, t), 0), at2 = defender(s).integrity;
+  landNow(s, desk);
+  assert.equal(pendingOf(s).length, 0, 'the table clears');
+  assert.ok(at2 - defender(s).integrity > owed, 'every trade in full, and the Margin Call with them');
   // The traders go with the Desk.
   hit(s, desk, 0, {}); desk.limit = 0; desk.ticks = null; desk.core = false;
   hit(s, desk, desk.integrity, { pierce: true, server: true });
@@ -443,7 +458,7 @@ test('the floor 4 uniques and set pieces: Overdraft, Pre-Authorization, Changed 
   assert.ok(fr.integrity < fhp, 'Mass Reboot');
   // Majority Attack: +8% for each part below half. Quorum Sensor: the second landing in a cycle is softer.
   const ma0 = boss('byzantine'), ma1 = boss('byzantine', { wear: ['majority-attack'] });
-  const dealt = (q) => { const [a, b, c] = ['nodea', 'nodeb', 'nodec'].map((id) => of(q, id)); for (const p of [a, b, c]) { p.armor = 0; p.limit = 0; } a.integrity = Math.round(a.max * 0.4); c.integrity = Math.round(c.max * 0.4); const w = b.integrity; hit(q, b, 20, { mine: true }); return w - b.integrity; };
+  const dealt = (q) => { const [a, b, c] = ['nodea', 'nodeb', 'nodec'].map((id) => of(q, id)); for (const p of [a, b, c]) { p.armor = 0; p.limit = 0; } a.integrity = Math.round(a.max * 0.4); c.integrity = Math.round(c.max * 0.4); const w = b.integrity; hit(q, b, 5, { mine: true }); return w - b.integrity; };
   const base = dealt(ma0), more = dealt(ma1);
   assert.ok(more > base, `Majority Attack: ${more} > ${base}`);
   const qs = boss('byzantine', { wear: ['quorum-sensor'] }), qa = of(qs, 'nodea'), qc = of(qs, 'nodec');
@@ -453,11 +468,11 @@ test('the floor 4 uniques and set pieces: Overdraft, Pre-Authorization, Changed 
 });
 
 // ---------- the fights session: act length, floor 4 polish, CAMSWARM's pair ----------
-test('act ticks: every boss\'s ♛ at 60% and 30%, the same for all; a part beside it keeps 50% and 25%', () => {
+test('act bars: every solo boss\'s acts are bars, and its ♛ keeps plain ticks like the parts beside it', () => {
   for (const id of ['byzantine', 'nightdesk', 'centrifuge', 'relayking', 'repoman', 'choir', 'resident', 'nb-deadbolt', 'nb-hashlord', 'nb-mirrorshade', 'nb-echolalia']) {
-    const s = boss(id, { level: Math.max(12, BOSSES[id].floor || 0) }), c = s.encounter.virus.parts.find((p) => p.core);
-    assert.deepEqual(c.ticks.map((t) => t.at), [0.6, 0.3], id);
-    assert.ok(s.encounter.virus.parts.filter((p) => p !== c && p.ticks).every((p) => p.ticks.map((t) => t.at).join() === '0.5,0.25'), `${id}'s other parts`);
+    const s = boss(id, { level: Math.max(12, BOSSES[id].floor || 0) });
+    assert.ok(s.encounter.actBars, id);
+    assert.ok(s.encounter.virus.parts.filter((p) => p.ticks).every((p) => p.ticks.map((t) => t.at).join() === '0.5,0.25'), id);
   }
 });
 
@@ -517,19 +532,20 @@ test("CAMSWARM's pair comes first in the lair's roll; Changed Default's helpers 
 // ---------- the act break (actbreak.mjs) ----------
 import { hudMarkup } from './dist/view.mjs';
 import { entryOf } from './dist/codex.mjs';
-test("crossing the ♛'s act tick: the phase event names the act and the tick; the HUD tags ACT n/m; the Codex shows 60% and 30%", () => {
-  const s = boss('byzantine'), c = livingParts(s).find((p) => p.core);
-  assert.match(hudMarkup(s), /class="tag hot act-tag" title="Act 1\nAct 1 of 3\nIts next act starts when you take its ♛ under 60%\.">ACT 1\/3</);
-  c.armor = 0; c.limit = 0; c.integrity = Math.floor(0.6 * c.max) + 2;
-  hit(s, c, 5, { pierce: true, server: true });
-  const ev = hold(s).find((x) => x.type === 'phase');
-  assert.deepEqual(ev.act, { n: 2, of: 3, name: 'Traitor', emote: BOSSES.byzantine.phases[0].emote, part: c.id, at: 0.6 });
-  assert.match(hudMarkup(s), /title="Traitor\nAct 2 of 3\nThe most damaged Node turns traitor\.[^"]*under 30%\.">ACT 2\/3</);
-  // Every boss with acts of its own names each act and gives it an emote; the Codex puts them at the ♛'s act ticks.
+test("an act's last part broken: the phase event names the act and refills the board; the HUD tags ACT n/m on its segment; the Codex lists Act 2 and Act 3", () => {
+  const s = boss('byzantine');
+  assert.match(hudMarkup(s), /class="tag hot act-tag" title="Act 1\nAct 1 of 3\nBreak every part and its next act begins, every part back at full\.">ACT 1\/3</);
+  assert.equal((hudMarkup(s).match(/class="bigbar/g) || []).length - 1, 3, 'three segments beside your bar');
+  for (const p of s.encounter.virus.parts) p.integrity = 0;
+  const ev = hold(s).find((x) => x.type === 'phase'), c = livingParts(s).find((p) => p.core);
+  assert.deepEqual(ev.act, { n: 2, of: 3, name: 'Traitor', emote: BOSSES.byzantine.phases[0].emote, part: c.id, at: null, refill: true });
+  assert.match(hudMarkup(s), /title="Traitor\nAct 2 of 3\nThe most damaged Node turns traitor\.[^"]*every part back at full\.">ACT 2\/3</);
+  assert.match(hudMarkup(s), /bigbar act-done/);
+  // Every boss with acts of its own names each act and gives it an emote; the Codex lists them by act.
   for (const id of ['relayking', 'repoman', 'choir', 'centrifuge', 'shakedown', 'shouldersurfer', 'recursion', 'nightdesk', 'byzantine', 'camswarm']) for (const ph of BOSSES[id].phases) assert.ok(ph.name && ph.emote, `${id}: ${ph.say}`);
-  for (const ph of BOSSES.resident.actPhases) assert.ok(ph.name && ph.emote);
+  for (const ph of Object.values(BOSSES.resident.actPhases).flat()) assert.ok(ph.name && ph.emote);
   const met = Object.assign(fresh(), { dex: { fought: { relayking: 1 }, won: {} } });
-  assert.deepEqual(entryOf(met, 'boss:relayking').phases.map((ph) => ph.at), [0.6, 0.3]);
+  assert.deepEqual(entryOf(met, 'boss:relayking').phases.map((ph) => ph.act), [2, 3]);
 });
 
 test('the act break\'s sound, the Tritone: the break on the act sign as the tick bursts, the drone a voice of its own', async () => {

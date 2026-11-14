@@ -27,6 +27,7 @@
 import { CONFIG, ABILITIES } from '../data.mjs';
 import { soonest, doomed } from '../planner.mjs';
 import { tellOn, tellOpen } from '../tells.mjs';
+import { missedYou, legend } from '../combat.mjs';
 import { subOf, subEdge, hasTalent, rank, capValue, heal, emit, hit, part, alive, livingParts, attackers, soonestAttacker, burnsOn, classOf, alliesOf, openProc, scaled, toIntent, intents, defender, on, virusIntegrity, previewDamage, mirrorOn, usable, readyIn, addBurn, mergeBurns, injectTicks, injectTick, delayAttack } from '../combat.mjs';
 
 const A = (id) => ABILITIES[id];
@@ -318,6 +319,7 @@ export default {
       emit(s, 'blocked', `${atk.name} hits the shadow copy. It does nothing.`, {});
       const caster = everyone(s).find((x) => (x.who || '') === from) || s;
       openProc(caster, 'slipped');
+      missedYou(caster); // Dead Angle (a legend)
       return 0;
     }
     let m = 1;
@@ -453,7 +455,7 @@ function core(s, t) {
 }
 
 // Your Inject is on the part (one a part: another press only refreshes it).
-const injected = (s, p) => burnsOn(s, p).some((b) => b.id === 'inject');
+const injected = (s, p) => burnsOn(s, p).filter((b) => b.id === 'inject').length >= (legend(s, 'reinfection') ? 3 : 1); // reinfection: the legends sim's one-line nudge
 // The target has your Inject: the next part that will last has none yet, so the burn works there while you
 // finish this one (the part attacking soonest first).
 const nextInject = (s, t) => { const p = livingParts(s).filter((x) => x !== t && !injected(s, x) && !x.phase && x.integrity > 30).sort((a, b) => dueIn(s, a) - dueIn(s, b))[0]; return p ? 'inject ' + p.id : null; };

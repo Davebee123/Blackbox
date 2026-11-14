@@ -1,5 +1,5 @@
-// The three solo bosses' own parts and phases (docs/solo-bosses.md, GAME_RULES.md "Solo bosses"): RELAY-KING's Broadcast
-// and Crown Hop, REPO MAN's Liens, HOLLOW CHOIR's second voice and Round.
+// The three solo bosses' own parts and phases (docs/solo-bosses.md, GAME_RULES.md "Solo bosses"): RELAY-KING's Broadcast,
+// Crown Hop and Flood, REPO MAN's Liens, Repossession and Interest, HOLLOW CHOIR's second voice and Round.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, livingParts, attackers, attackAmount, liftOf, hit } from './dist/combat.mjs';
@@ -25,7 +25,7 @@ const fire = (s, text) => { command(s, text); return resolveCycle(s); };
 const of = (s, id) => livingParts(s).find((p) => p.id === id);
 const crown = (s) => livingParts(s).find((p) => p.core);
 // Take the ♛ part just under a share of its max with a hit of the server's (no command, no Lien, no stagger).
-const under = (s, at) => { const c = crown(s); c.integrity = Math.floor(at * c.max) + 1; c.armor = 0; command(s, 'hold'); resolveCycle(s); hitServer(s, c, 2); };
+const under = (s) => { for (const p of s.encounter.virus.parts) p.integrity = 0; command(s, 'hold'); resolveCycle(s); }; // the act's last part broken: the next act (act bars, acts.mjs)
 const hitServer = (s, p, n) => hit(s, p, n, { pierce: true, server: true });
 
 test("RELAY-KING's Relay broadcasts harder for each fragment on the board", () => {
@@ -38,30 +38,35 @@ test("RELAY-KING's Relay broadcasts harder for each fragment on the board", () =
   assert.match(boardMarkup(s), /×1<\/span>/, 'the Relay shows the fragments it counts');
 });
 
-test("RELAY-KING's Crown Hop: at 60% the ♛ moves to its healthiest part with the 30% tick; the part it leaves heals", () => {
-  const s = boss('relayking'), was = crown(s);
-  assert.equal(was.id, 'replicator');
-  under(s, 0.6);
-  resolveCycle(s);
-  const now = crown(s);
-  assert.notEqual(now, was, 'the ♛ moved');
-  assert.ok(!was.core && was.integrity > 0.6 * was.max, 'the old crown healed a quarter');
-  assert.deepEqual(now.ticks.map((t) => [t.at, t.phase]), [[0.3, 1]], 'the 30% phase tick went with it');
-  assert.ok(was.ticks.every((t) => t.phase == null), 'the old crown takes plain ticks');
-  under(s, 0.3);
-  resolveCycle(s);
-  assert.equal(of(s, 'replicator').attack.interval, 2, 'the Flood');
-  assert.equal(of(s, 'relay').attack.interval, 3);
+test("RELAY-KING's Crown Hop: in act 2, at its 50% tick the ♛ hops to the healthiest part and the two swap how full they are", () => {
+  const s = boss('relayking'), v = s.encounter.virus;
+  assert.equal(crown(s).id, 'replicator');
+  under(s);
+  const old = crown(s), others = livingParts(s).filter((p) => p !== old && p.kind === 'system');
+  assert.match(boardMarkup(s), /Crown Hop\nBoss rule/);
+  others.forEach((p, i) => { p.integrity = Math.round(p.max * (0.9 - i * 0.2)); });
+  const best = others[0], fill = best.integrity / best.max;
+  old.armor = 0;
+  hitServer(s, old, old.integrity - Math.floor(0.5 * old.max) + 1);
+  assert.equal(crown(s), best, 'the ♛ hopped to the healthiest part');
+  assert.ok(!old.core);
+  assert.ok(Math.abs(old.integrity / old.max - fill) < 0.01, 'the old one takes its fill');
+  assert.ok(best.integrity / best.max <= 0.5, 'and the new ♛ takes the old one\'s');
+  assert.deepEqual(best.ticks.map((t) => t.spent), [true, false]);
+  hitServer(s, best, 1);
+  assert.equal(crown(s), best, 'once an act');
 });
-test("RELAY-KING's Crown Hop never lands on a part under its 30% tick: with none above it, the ♛ stays", () => {
-  const s = boss('relayking'), was = crown(s);
-  for (const p of livingParts(s)) if (p !== was) p.integrity = Math.floor(0.3 * p.max);
-  under(s, 0.6);
-  const ev = resolveCycle(s);
-  assert.equal(crown(s), was, 'it stays');
-  assert.equal(s.encounter.virus.phases.filter((x) => x.done).length, 1, 'act 2 only: none skipped');
-  assert.ok(ev.some((x) => /No part can take its ♛/.test(x.message || '')));
-  assert.deepEqual(was.ticks.filter((t) => !t.spent).map((t) => t.at), [0.3]);
+
+test("RELAY-KING's Flood: in act 3 a Broadcast that lands hatches a fragment on every part", () => {
+  const s = boss('relayking');
+  under(s); under(s);
+  const r = of(s, 'relay'), frags = () => livingParts(s).filter((p) => p.kind === 'fragment').length;
+  assert.equal(r.attack.interval, BOSSES.relayking.extra[0].attack.interval, 'its rhythm is act 1\'s');
+  assert.match(boardMarkup(s), /Flood\nBoss rule/);
+  r.attack.due = s.encounter.cycle;
+  command(s, 'hold');
+  resolveCycle(s);
+  assert.equal(frags(), Math.min(CONFIG.fragmentCap, livingParts(s).filter((p) => p.kind !== 'fragment').length));
 });
 
 test("REPO MAN's Liens: a command a ◆ absorbs adds one and grows the Collection; a Collection clears them", () => {
@@ -80,38 +85,49 @@ test("REPO MAN's Liens: a command a ◆ absorbs adds one and grows the Collectio
   assert.equal(v.liens, 0, 'the Collection paid them off');
 });
 
-test("REPO MAN's phases call a Collection 3 cycles out, and at 30% each Lien counts twice", () => {
-  const s = boss('repoman'), v = s.encounter.virus, l = of(s, 'ledger');
-  under(s, 0.6);
-  resolveCycle(s);
-  assert.ok(l.attack.due <= s.encounter.cycle + 3, 'a Collection is coming');
+test("REPO MAN's Repossession: in act 2 a Collection that lands puts a ◆ back for each Lien; in act 3 each Lien counts twice", () => {
+  const s = boss('repoman'), v = s.encounter.virus, l = () => of(s, 'ledger'); // each act's board is a fresh one
+  under(s);
+  const bare = livingParts(s).filter((p) => p.maxArmor > 0);
+  for (const p of bare) p.armor = 0;
   v.liens = 2; liftOf(s);
-  const one = l.attack.lift;
-  l.attack.due = 999;
-  under(s, 0.3);
-  resolveCycle(s);
-  liftOf(s);
+  assert.match(boardMarkup(s), /puts a ◆ back for each Lien/);
+  l().attack.due = s.encounter.cycle;
+  const ev = fire(s, 'hold');
+  assert.ok(ev.some((x) => x.repo === 2), 'two Liens, two ◆');
+  assert.equal(bare.reduce((n, p) => n + p.armor, 0), 2);
+  assert.equal(v.liens, 0);
+  v.liens = 2;
+  l().attack.due = 999;
+  under(s);
+  assert.ok(!v.repo, 'Repossession leaves with act 2');
+  assert.equal(v.liens || 0, 0, 'Liens start over with the act');
+  v.liens = 2; liftOf(s);
+  const lift = l().attack.lift;
   assert.equal(v.interest, 2);
-  assert.equal(l.attack.lift, one * 2);
+  assert.equal(lift, Math.round(l().attack.amount * l().lien * 4), 'two Liens count as four');
 });
 
-test('HOLLOW CHOIR: one voice, a second at 60% beating two behind, and at 30% the Round sings back the cycles before the beat', () => {
+test('HOLLOW CHOIR: one voice, a second in act 2 beating two behind, and in act 3 the Round sings back the cycles before the beat', () => {
   const s = boss('choir', { level: 14 }), v = s.encounter.virus;
   assert.equal(livingParts(s).filter((p) => p.mimic).length, 1);
   assert.ok(!livingParts(s).some((p) => p.reflect), 'no Decoy');
-  under(s, 0.6);
+  under(s);
   resolveCycle(s);
+  assert.ok(!of(s, 'pulse'), 'the second voice took the Pulse Node\'s seat');
   const ms = livingParts(s).filter((p) => p.mimic), beats = tellsOf(s).list.filter((t) => t.kind === 'mimic');
   assert.equal(ms.length, 2, 'a second voice');
   assert.equal(beats.length, 2);
   assert.equal(((beats[1].first - beats[0].first) % 4 + 4) % 4, 2, 'two cycles behind');
-  under(s, 0.3);
+  under(s);
   resolveCycle(s);
   assert.equal(v.round, 3);
+  assert.equal(livingParts(s).filter((p) => p.mimic).length, 1, 'the Round has one voice');
+  assert.equal(tellsOf(s).list.filter((t) => t.kind === 'mimic').length, 1);
   // Fire two hits, then hold on the beat: the beat sings the two back.
-  const m = ms[0], t = beats[0];
+  const m = livingParts(s).find((p) => p.mimic), t = beats[0]; // act 3's board is a fresh one
   const target = livingParts(s).find((p) => !p.mimic && !p.core) || livingParts(s).find((p) => !p.mimic);
-  target.armor = 0;
+  Object.assign(target, { armor: 0, integrity: 1000, max: 1000 }); // two spikes it outlives (an act's parts are small)
   fire(s, `spike ${target.id}`);
   fire(s, `spike ${target.id}`);
   command(s, 'hold');

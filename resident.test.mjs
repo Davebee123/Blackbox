@@ -4,15 +4,18 @@ import { fresh, command, resolveCycle, part, active, hooks } from './dist/combat
 import { play, connect, currentLocation, residentLevel } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { CONFIG, BOSSES } from './dist/data.mjs';
+import { ACT_BARS } from './dist/acts.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
 
 const say = (s, t) => play(s, t);
 const onRun = (family = 'ransomware') => { const s = fresh(); command(s, `developer location ${family}`); connect(s, s.locations[0].id); return s; };
-const finishOff = (s, id) => {
-  for (const p of s.encounter.virus.parts) Object.assign(p, { integrity: 0, armor: 0 });
-  part(s, id).integrity = 1;
-  command(s, 'spike ' + id);
-  resolveCycle(s);
+const finishOff = (s, id) => { // every act of a boss's (act bars, acts.mjs): each ends when its last part breaks
+  for (let n = 0; n < 4 && s.encounter?.phase === 'active'; n++) {
+    for (const p of s.encounter.virus.parts) Object.assign(p, { integrity: 0, armor: 0 });
+    part(s, id).integrity = 1;
+    command(s, 'spike ' + id);
+    resolveCycle(s);
+  }
 };
 const winFight = (s) => { if (!active(s)) command(s, 'engage'); finishOff(s, s.encounter.virus.parts[0].id); FP.settle(s); };
 // Since R1 a server is rooms (netrooms.mjs): the vault's key is an elite's, the Resident waits in the Core.
@@ -64,23 +67,24 @@ test('a Resident that beats you is a level stronger for 6 hours, up to three', (
 });
 
 // The ghostroot Resident keeps this phase; the worm's and ransomware's play in acts (acts.test.mjs).
-test('a boss has phases (GAME_RULES.md "Solo bosses", rule a): taking the Resident\'s core part across its 60% tick re-arms every part', () => {
+test('a boss has phases (GAME_RULES.md "Solo bosses", act bars): breaking every part of the Resident starts its next act, every part back at full', () => {
   const s = onRun('ghostroot');
   openVault(s);
   toCore(s);
   const e = s.encounter, v = e.virus;
-  assert.ok(v.phases.length && v.enrageAt === BOSSES.resident.long.enrageAt, 'on your Signal it enrages at its long cycle (CONFIG.length)');
+  assert.ok(v.phases.length && v.enrageAt === v.actAt + ACT_BARS.enrage, 'it enrages a set number of cycles into each act (acts.mjs ACT_BARS)');
   assert.equal(e.bossRule, 'a');
+  assert.ok(e.actBars, 'its phases are act bars');
   const core = v.parts.find((p) => p.core);
-  assert.ok(core && core.special && core.ticks.every((t) => t.phase != null), 'its ♛ part carries phase ticks');
-  // Its total under half alone starts nothing.
-  for (const p of v.parts) { p.armor = 0; if (p !== core) p.integrity = Math.floor(p.max * 0.3); }
+  assert.ok(core && core.special && core.ticks.every((t) => t.phase == null), 'its ♛ part carries plain ticks');
+  // A part left standing holds the act.
+  for (const p of v.parts) { p.armor = 0; if (p !== core) p.integrity = 0; }
   command(s, 'hold'); resolveCycle(s);
-  assert.ok(!v.phases[0].done, 'the total alone starts nothing');
-  core.integrity = Math.floor(core.max * 0.6) + 2; core.lockHp = 0;
-  command(s, 'spike ' + core.id); resolveCycle(s);
-  assert.ok(v.phases[0].done, 'across its tick: the phase');
-  assert.ok(v.parts.filter((p) => p.id !== 'sentry' && p.integrity > 0).every((p) => p.armor >= 1), 're-armed');
+  assert.ok(!v.phases[0].done, 'the ♛ still stands: no act');
+  for (const p of v.parts) p.integrity = 0;
+  command(s, 'hold'); resolveCycle(s);
+  assert.ok(v.phases[0].done, 'every part broken: the next act');
+  assert.ok(v.parts.every((p) => p.integrity === p.max && p.armor === p.maxArmor), 'back at full');
   assert.ok(s.logs.some((e2) => e2.type === 'phase'));
 });
 

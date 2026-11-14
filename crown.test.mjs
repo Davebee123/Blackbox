@@ -45,10 +45,15 @@ test('a worked ♛ holds its share of the boss, taken from the other parts: the 
   assert.equal(ss.find((p) => p.id === 'logger').integrity / sum, 0.5);
 });
 
-test("the Resident's Watchdog: every 5 cycles its ♛ stands above its next tick, every other part patches a ◆; a tick restarts it", () => {
-  const s = boss('resident', { family: 'ransomware' }), v = s.encounter.virus, c = crown(s), rest = livingParts(s).filter((p) => !p.core && p.maxArmor > 0);
+test("the Resident's Watchdog, in act 2: every 5 cycles its ♛ stands above its next tick, every other part patches a ◆", () => {
+  const s = boss('resident', { family: 'ransomware' }), v = s.encounter.virus;
+  for (const p of v.parts) p.integrity = 0;
+  hold(s);
+  assert.equal(v.phases.filter((x) => x.done).length, 1, 'act 2');
+  const c = crown(s), rest = livingParts(s).filter((p) => !p.core && p.maxArmor > 0);
+  for (const p of livingParts(s).filter((x) => x.attack)) p.attack.due = 999;
   assert.ok(rest.length);
-  assert.equal(watchdogIn(s), BOSSES.resident.watchdog.every - 1, 'counted from the first cycle');
+  assert.equal(watchdogIn(s), BOSSES.resident.watchdog.every - 1, 'counted from the act\'s first cycle');
   assert.match(boardMarkup(s), /Watchdog\nBoss rule/);
   for (const p of rest) p.armor = 0;
   c.armor = 0;
@@ -58,32 +63,24 @@ test("the Resident's Watchdog: every 5 cycles its ♛ stands above its next tick
   assert.ok(ev.some((x) => x.watchdog), 'it says so');
   assert.ok(rest.every((p) => p.armor === 1), 'a ◆ each');
   assert.equal(c.armor, 0, 'never the ♛');
-  // Crossing a tick restarts the count: five more cycles before the next.
-  for (const p of rest) p.armor = 0;
-  c.integrity = Math.floor(0.6 * c.max) + 1;
-  hitServer(s, c, 2);
-  hold(s);
-  assert.equal(v.phases.filter((x) => x.done).length, 1);
-  for (let i = 0; i < 3; i++) hold(s);
-  assert.ok(rest.every((p) => p.armor === 0), 'the count restarted with the act');
-  // Past its last tick there is no Watchdog.
-  c.integrity = Math.floor(0.3 * c.max) + 1;
-  hitServer(s, c, 2);
-  hold(s);
+  // Past its ♛'s last tick there is no Watchdog.
+  c.integrity = Math.floor(0.5 * c.max) + 1;
+  for (const p of livingParts(s)) { p.ward = null; p.wardsToo = null; } // a ward is another rule
+  hitServer(s, c, c.integrity - Math.floor(0.2 * c.max));
   assert.equal(watchdogIn(s), null);
   assert.doesNotMatch(boardMarkup(s), /Watchdog\nBoss rule/);
 });
 
-test("HOLLOW CHOIR's second voice joins at its ♛'s full size", () => {
-  const s = boss('choir'), c = crown(s);
-  c.integrity = Math.floor(0.6 * c.max) + 1; c.armor = 0;
+test("HOLLOW CHOIR's second voice takes the Pulse Node's seat, at its size", () => {
+  const s = boss('choir'), pulse = of(s, 'pulse'), at = s.encounter.virus.parts.indexOf(pulse), size = pulse.max;
+  for (const p of s.encounter.virus.parts) p.integrity = 0;
   hold(s);
-  hitServer(s, c, 2);
-  hold(s);
-  const voices = livingParts(s).filter((p) => p.mimic);
+  const voices = livingParts(s).filter((p) => p.mimic), m2 = of(s, 'mimic2');
   assert.equal(voices.length, 2);
-  assert.equal(voices.at(-1).max, c.max);
-  assert.equal(voices.at(-1).integrity, c.max);
+  assert.ok(!livingParts(s).some((p) => p.id === 'pulse'), 'the Pulse Node is gone');
+  assert.equal(s.encounter.virus.parts.indexOf(m2), at, 'in its seat');
+  assert.equal(m2.max, size);
+  assert.equal(m2.integrity, m2.max);
 });
 
 test("CENTRIFUGE's Sold: each sale heals the Rotor ♛ 10% of its max", () => {
@@ -98,7 +95,7 @@ test("CENTRIFUGE's Sold: each sale heals the Rotor ♛ 10% of its max", () => {
   assert.match(boardMarkup(s), /Each sale heals the Rotor 10% of its max/);
 });
 
-test("SHAKEDOWN's Leverage: while a Demand stands the Collector ♛ loses at most 15% of its max a cycle", () => {
+test("SHAKEDOWN's Leverage: while a Demand stands the Collector ♛ loses at most 10% of its max a cycle", () => {
   const s = boss('shakedown'), col = crown(s), cap = Math.round(col.max * FB.ransom.lever);
   col.armor = 0;
   assert.equal(leverLeft(s, col), cap);

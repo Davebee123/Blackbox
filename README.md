@@ -101,9 +101,10 @@ comment saying what it does.
 | `dist/tells.mjs` | Solo tells: the big moves a part announces ahead (charges, casts, seals). |
 | `dist/interrupt.mjs` | The interrupt: crossing a part's 50% or 25% tick on its due cycle cancels its move. |
 | `dist/order.mjs` | The order levers: parts whose right moment to break depends on the board. |
-| `dist/acts.mjs` | Boss acts (P4): a boss's three acts, its beat (the Backlash, a Mimic, a Decoy), and the ♛ left until its beat plays. |
-| `dist/actbreak.mjs` | Presentation only: the act break as a boss crosses into its next act (the tick's burst, the strip, the emote). |
-| `dist/floorbosses.mjs` | The floor 2, 3 and 4 bosses' rules (CENTRIFUGE's Bidding, SHAKEDOWN's Ransom Clock, SHOULDER SURFER's Replay, RECURSION's Call, NIGHT DESK's No Timeout, BYZANTINE's Vote, CAMSWARM's Telnet Sweep), their phase verbs, and their uniques' hooks. |
+| `dist/acts.mjs` | Boss acts: a boss's three acts as act bars (each a fresh board from act 1's board, rules and tells), their pacing (`ACT_BARS`: Integrity, hits, rounds and enrage an act), and its beat (the Backlash, a Mimic, a Decoy; the Resident's Outbreak and Lockdown ride the Backlash). |
+| `dist/actbreak.mjs` | Presentation only: the act break as a boss starts its next act (the strip, the emote, the board's parts coming back). |
+| `dist/floorbosses.mjs` | The floor 2 to 5 bosses' rules (CENTRIFUGE's Bidding, SHAKEDOWN's Ransom Clock, SHOULDER SURFER's Replay, RECURSION's Call, NIGHT DESK's No Timeout, BYZANTINE's Vote, CAMSWARM's Telnet Sweep, GRACE PERIOD's Grace, EXIT NODE's Rollback), their phase verbs, and their uniques' hooks. |
+| `dist/nativeacts.mjs` | Floor 2's lair bosses' act rules (DEADBOLT's Tumblers, BACK ORIFICE's Port knock, PATCH TUESDAY's Out of band and Hotfix, SLEEPWALKER's REM and Night Terror, MIRRORSHADE's Shatter) and their board numbers. |
 | `dist/mechanics.mjs` | The mechanics list: twenty third parts built lean, each rule's hooks in one place. Eleven strains and the eleven mutated ones are built from them (`STRAINS`). |
 | `dist/situations.mjs` | The moment on the board each situational skill is built for; the tray lights it. |
 | `dist/raid.mjs` | Crew bosses: phases and mechanics for KESSLER-FARM-00's three. |
@@ -150,7 +151,7 @@ comment saying what it does.
 | `dist/sockets.mjs` | Sockets: build a program in a cleared socket room; it changes its own server. |
 | `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, its pull on invasions, and its leaning's id (`leaningOf`). |
 | `dist/leanings.mjs` | Leanings: a server's one positive rule (Venting, Wind-up, Brownout), its multipliers in the fight and what it has paid. |
-| `dist/rivals.mjs` | Rivals: named runners who race you to a server's vault and fight you two or three in a row. |
+| `dist/rivals.mjs` | Rivals: runners from the cast who race you to a server's vault and fight you two or three in a row; lineup by faction, counter-picks by temperament; `huntsYou` (runners.mjs) marks one red. |
 | `dist/runcards.mjs` | Run cards: the director's Surge room, Escort and Hunter pack inside a run. |
 | `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: eight boards that aren't fights (deeper chase and Cascade boards from floor 3), and the cryptogram's key (`s.cipher`). |
 | `dist/forensics.mjs`, `dist/logsweep.mjs` | Log sweep: a short detective puzzle in an incident file (logsweep.mjs builds the logs: a thread's process log, the Terminal room). |
@@ -182,7 +183,7 @@ comment saying what it does.
 | `dist/threads.mjs`, `dist/threads-view.mjs`, `dist/content/threads.mjs` | Threads: quests found in rooms, their marks and dialogue, and their data. |
 | `dist/scanner.mjs`, `dist/scanner-view.mjs`, `dist/scanner.css` | The scanner: the Listening Post (its map node, card and hub terminal), its radio, the stations, the reel, the tape and what each pays. |
 | `dist/quest-view.mjs`, `dist/quest.css` | The quest window: a thread as an intercepted transmission. |
-| `dist/portraits.mjs` | The speaker's portrait in the quest window: a backlit ASCII silhouette, the cast's own or one from their name. |
+| `dist/portraits.mjs` | Backlit ASCII busts: the quest window's speaker (the cast's own or one from their name) and a runner's on their card (from the handle alone). |
 | `dist/coldopen.mjs` | First launch: the cold open (KESSLER's clearing house crashing), its own sound mix through `feel.scene()`. |
 | `dist/intro.mjs` | First launch: the login, then Halcyon's transmission. |
 | `dist/scenes.mjs`, `dist/scenes-view.mjs`, `dist/scenes.css`, `dist/content/scenes.mjs` | Transmissions: conversations with a contact over the map, their window and their words. |
@@ -208,7 +209,7 @@ comment saying what it does.
 | `dist/achievements.mjs`, `dist/achievements-view.mjs`, `dist/achievements.css` | Achievements and their cosmetic rewards; the **Rig** page (Achievements, Casing, Terminal; `rigMarkup` in view.mjs). |
 | `dist/profile.mjs`, `dist/profile-view.mjs` | Your profile card (`finger`), and #net's markup. |
 | `dist/channel.mjs`, `dist/presence.mjs` | #net, the public channel; who's online and your friends. |
-| `dist/runners.mjs`, `dist/runners-view.mjs` | Runners: the cast from the network seed, their loop on logged-on time; meeting, standing and hiring; the map's diamonds, counts and lists (only where you've revealed: `revealed`, `inSight`), the Rail, the runner and crew cards. |
+| `dist/runners.mjs`, `dist/runners-view.mjs` | Runners: the cast from the network seed, their loop on logged-on time; meeting, standing and hiring; dead runner rooms (`deadOf`, `pulledOut`); the map's diamonds, counts and lists (only where you've revealed: `revealed`, `inSight`), the Rail, the runner and crew cards. |
 | `dist/comms.mjs`, `dist/pager.mjs`, `dist/pager-view.mjs`, `dist/pager.css` | The pager: world events as entries, which ones ask something of you, and the tray. |
 | `dist/casing.mjs`, `dist/casing-view.mjs`, `dist/casing.css` | Casing cosmetics: the monitor's colourway and plate, stickers anywhere on its plastic, props on the desk or on top. |
 | `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on Rig → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |
@@ -233,15 +234,18 @@ comment saying what it does.
 |---|---|
 | `dist/index.html`, `dist/app.js` | The page and its shell: modules, command line, clock, save, rendering, URL parameters. |
 | `dist/style.css` | Tokens and every shared component (docs/ui.md). Each page has its own stylesheet beside its view. |
-| `dist/shell.mjs`, `dist/poweron.mjs` | The CRT shell, boot lines and status line; the power-up. |
+| `dist/shell.mjs`, `dist/poweron.mjs` | The CRT shell, boot lines and status line; the power-up. Its grain (`settings.grain`, off by default on a phone) is style.css `#crt::after`. |
 | `dist/screenfx.mjs`, `dist/screenfx.css` | Screen effects: light on the glass around the game, never on it. |
-| `dist/bootfx.mjs`, `dist/bootfx.css` | A new fight: the screen boots into it, the virus first; leaving a won one, a channel cut; connecting to a server, the carrier; jacking out, the hang-up. |
+| `dist/bootfx.mjs`, `dist/bootfx.css` | A new fight: the screen boots into it, the virus first; leaving a won one, a channel cut; connecting to a server, the carrier; jacking out, the carrier backwards. |
 | `dist/window.mjs`, `dist/districts.mjs` | The slum outside the window behind the monitor, and its weather (loaded only on a desktop); its districts as data. |
 | `dist/abilityfx.mjs`, `dist/abilityfx-table.mjs`, `dist/abilityfx-playtest.mjs` | Ability effects on the board, the table of every ability's effect, and its playtest. |
 | `dist/abilitylight.mjs` | What an ability effect does where it lands, drawn in light: flashes, shock rings, cracks, sparks, flames, the comet, a status cashing in. |
 | `dist/hitfx.mjs`, `dist/dmgfx.mjs`, `dist/lash.mjs` | Hits landing on a part (a MISS or RESISTED stamped on it; a broken one's row and name breaking into 1s and 0s), damage numbers one per source, a virus lashing at the screen (and its shake). |
 | `dist/chipfx.mjs` | Themed timeline chips: a part's theme (docs/chip-themes.md) played faint inside its chips at +1 and in Now, and its strike into your bar when it goes off (STRIKE_PLAN: when a strike does what, for its sound). |
 | `dist/virus-art.mjs` | Each virus as animated 3D ASCII art: each body's core and limbs attack their own ways out of its window (`STRIKE_OF`, `STRIKES`), a broken part dissolves into 1s and 0s. |
+| `dist/stage.mjs` | The floor's place in the render window behind the virus: its scene, light, camera, a new virus's entrance, a broken part's physics, its reflection. |
+| `dist/boardfx.mjs` | The board's floor motion: a new chip's name typed in or flipped in, a moving chip flapping once; the spoils card arriving the floor's way. |
+| `dist/ground.mjs` | The floor's material under the rooms map: a texture in the map's SVG, clear of rooms and links. |
 | `dist/boss-art.mjs` | Each boss's own body for it (`BOSS_SHAPE`, the Resident's by family): its parts are the model's regions, the ones that join mid-fight modelled from the start. A boss faces you (`BOSS_SWING`) and is fitted to the window. |
 | `dist/nocarrier.mjs`, `dist/nocarrier.css` | Losing a fight: static and NO CARRIER, then the Disconnected card. |
 | `dist/class-emblems.mjs` | The class picker's ASCII emblems. |
@@ -253,7 +257,8 @@ comment saying what it does.
 | `dist/virussound-all.mjs` | Every other attack's sound in the picked style: each other chip theme's strike, the lash, Scramble, Replicate, Patch, a cast and a seal, and the layers over a hit for a charge and a boss's beat; `virussound-levels.mjs` holds their measured levels. |
 | `dist/virusvoice.mjs` | Virus attack sounds in a fight: which of a batch's events play which attack's sound (one an attack a batch, the biggest hit leading), and how long the numbers wait for a strike's impact. `app.js` attackVoices() plays them and holds each chip's strike for its number. |
 | `dist/soundtrack.mjs`, `dist/music/` | Music and radio chatter (CC0 tracks, CREDITS.md). |
-| `dist/fightmusic.mjs` | Each virus family's fight theme, synthesized live; heat brings its layers in. |
+| `dist/mixout.mjs` | The one way out to the speakers: every bus meets there, and a limiter keeps their sum from clipping. |
+| `dist/fightmusic.mjs` | Each virus family's fight theme, synthesized live; heat brings its layers in; on Coldline and Bedrock it plays through the floor's old hardware (`ERAS`). |
 | `dist/places.mjs` | A sound bed for each floor, and the virus you're fighting. |
 | `dist/ui/` | Icons, textures and the favicon. Some of the set is unused. |
 
@@ -263,6 +268,7 @@ comment saying what it does.
 |---|---|
 | `dist/breach.mjs`, `dist/breach-view.mjs`, `dist/breach.css` | The campaign's breach: one run through one server on a branching map. |
 | `dist/campaign.mjs`, `dist/campaign-view.mjs`, `dist/campaign.css` | The breach campaign: servers by layer, its own save. |
+| `dist/legends.mjs` | The 27 legends (docs/legends.md), bench only: none drops, and none changes a fight until `registerLegends` runs (only the legends simulation calls it). |
 | `dist/heat.mjs`, `dist/scripts.mjs`, `dist/rewrites.mjs`, `dist/skillrules.mjs` | The breach's heat ranks, one-shot scripts, rewrites and skill rules. |
 | `dist/world.mjs`, `dist/room.mjs`, `dist/room-view.mjs`, `dist/room.css`, `dist/content/room.mjs` | LOWLIGHT's back room and the world turn between breaches. |
 | `dist/bench.mjs`, `dist/bench-key.mjs` | The test bench and the Dev drawer (loaded only on a bench or with `?dev`); `build()` is shared with the simulations. The save keys. |
@@ -316,6 +322,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/progression.md`](docs/progression.md), [`docs/economy.md`](docs/economy.md), [`docs/content.md`](docs/content.md), [`docs/variety-plan.md`](docs/variety-plan.md) | Pacing, the economy, activities and variety. |
 | [`docs/rivals.md`](docs/rivals.md) | Rivals: the roster, the rules and the picked look. |
 | [`docs/loot-plan.md`](docs/loot-plan.md) | Sets and uniques. |
+| [`docs/legends.md`](docs/legends.md) | Legends (very rare, very strong endgame uniques) and Epoch items from the flash ranks (decided, not built). |
 | [`docs/floor-items.md`](docs/floor-items.md) | Floors 2–8's sets and uniques, boss by boss (designed). |
 | [`docs/builds.md`](docs/builds.md) | Builds: skill affixes on gear and combos (design, not built). |
 | [`docs/item-builds.md`](docs/item-builds.md) | Item builds: combos the uniques and sets already make, what doesn't stack, loops to watch. |

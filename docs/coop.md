@@ -84,3 +84,17 @@ No hosted world: authority stays in the host's browser. Between sessions, friend
 (docs/runners.md *Friends*): each player posts their own, peer to peer or through a small mailbox, and a friend shows
 up in your world as a runner. The same mailbox can hand out room codes and a TURN relay, so invites stop being copy and
 paste. Reconnects come from a host-side checkpoint of the run. Rewards between friends stay trusted.
+
+**What records are for** (proposed, November 2026). A seed matters only if friends want what's on it; build legends
+give it that (docs/legends.md).
+
+- **Visits.** A friend connects to your network from your record while you're away (a member's servers, made real) and
+  farms its lair for its legends. Each server they trace there comes back to you as a lead, with a letter.
+- **Hires.** Your character joins their Runners list; the planner plays your loadout and routines. Their fight log
+  comes back: what your build beat, what killed it. No XP or loot: nothing runs while you're away.
+- **The ladder.** Your record carries your deepest flash rank and the build that cleared it (*nyx, rank 7, Warden with
+  Stress Test*), so friends see a ladder that names whose network a legend drops on.
+- **Remnants by fight.** Places come from each player's seed, so a remnant keys to a fight: a friend's crash against
+  CAMSWARM leaves a dead runner room in your CAMSWARM lair, with their rig and last log, never the routine that won.
+- **Live co-op's payoff:** crossover lairs (docs/networks.md).
+- **Trading:** later (docs/legends.md).

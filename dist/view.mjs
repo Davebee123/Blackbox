@@ -4,8 +4,9 @@ import { masteryLine } from './mastery.mjs';
 import { componentsOf } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
-import { leaveOf, actInfo } from './acts.mjs';
-import { FB, BUYER, nextBuyer, dumpOf, topFrame, canCall, frames, leakOf, depthOf, pendingOf, tradeOf, voteOf, forkOf, nodesOf, camerasOf, hatchers, parentOf, leverLeft } from './floorbosses.mjs';
+import { actInfo, actBar } from './acts.mjs';
+import { knockOpen, knockIn, dozer } from './nativeacts.mjs';
+import { FB, BUYER, nextBuyer, dumpOf, topFrame, canCall, frames, leakOf, depthOf, pendingOf, tradeOf, voteOf, forkOf, nodesOf, camerasOf, hatchers, parentOf, leverLeft, rollTo } from './floorbosses.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './memory.mjs';
 // The server whose Connect is waiting on a yes (app.js): its card shows the memory it takes.
@@ -75,7 +76,7 @@ import { EXE } from './exe.mjs';
 import { sigintWindows, sigintCharges, plannedTells } from './tells.mjs';
 import { daemonText } from './daemons.mjs';
 import { ROOMS as ROOMS_FP, KIND_OF, KINDS as KINDS_FP } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
-import { RIVALS } from './rivals.mjs';
+import { rivalP } from './rivals.mjs';
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
 import { arcRows, arcReader } from './arcs-view.mjs';
 import { threadById, serverMarks } from './threads.mjs';
@@ -233,7 +234,7 @@ export function timelineMarkup(s) {
       .join('');
     const quiet = !hidden && !items.length ? `<span class="quiet">${runMode ? 'quiet' : 'quiet · trace lands'}</span>` : '';
     const head = c === 0
-      ? `<div class="tcol-head"><span>Now</span><span class="countdown" id="countdown">${e.paused ? 'II' : remaining.toFixed(1)}</span></div><div class="cyclebar"><span id="cyclebar" style="width:${(e.elapsedMs / CONFIG.cycleMs) * 100}%"></span></div>${youChip(s)}`
+      ? `<div class="tcol-head"><span>Now</span><span class="countdown" id="countdown">${e.paused ? 'II' : remaining.toFixed(1)}</span></div><div class="cyclebar"><span id="cyclebar" style="transform:scaleX(${e.elapsedMs / CONFIG.cycleMs})"></span></div>${youChip(s)}`
       : `<div class="tcol-head"><span>+${c}</span></div>`;
     return `<div class="tcol">${head}${chips}${quiet}</div>`;
   });
@@ -322,7 +323,7 @@ const capMark = (s, d) => { const cap = healCap(s); return cap < d.max ? `<i cla
 export function hudMarkup(s, { party = true, preview = null } = {}) {
   const e = s.encounter, v = e.virus;
   runMode = e.mode === 'run';
-  const hp = virusIntegrity(s);
+  const hp = s.encounter?.actBars ? actBar(s) : virusIntegrity(s); // act bars (acts.mjs): this act's bar
   const vp = hp.max ? (hp.current / hp.max) * 100 : 0;
   const d = defender(s);
   const dp = (d.integrity / d.max) * 100;
@@ -336,18 +337,25 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   // No title of its own: the virus's name labels its health bar, its tags sit under the bar with
   // its armor. Your bar and the crew's window come first; the virus's bar is at the right.
   const tags = `${v.champion ? '<span class="tag tag-crew" title="Champion: an elite-grade invader, sized for one. It is tougher, gives three times the XP, and leaves a capture when it falls: a sure daemon.">★ CHAMPION</span>' : v.elite ? '<span class="tag tag-crew" title="Elite\nA tougher virus, with a clash: two rules whose answers pull against each other.\nIt gives three times the XP and drops better loot.">◆ CREW</span>' : ''}${clashTag(v)}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invasion · ${esc(s.invasion.fromName)}</span>` : ''}${m && !geneChips(s, v) ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
-  // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
-  // over its picture.
+  // Yours (what you watch): your Signal with the crew under it, over the board; the virus's total over its picture.
+  // On a desktop the virus's side is drawn on the left (style.css, the Swap).
   return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${crackMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}${copyGhost(d, fc.you, cp)}${claimMarks(s, d)}</div>${clockMeter(s)}</div></div>${statusPanel(s, cp)}</div>
-    <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${actTag(s)}${roundTag(s)}${roomBossTag(s)}${rivalTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
+    <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div>${actSegments(s, `<div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div>`)}<p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${actTag(s)}${roundTag(s)}${roomBossTag(s)}${rivalTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
 }
-// A boss's act (acts.mjs actInfo), on its ♛'s ticks (interrupt.mjs rule a): ACT n/m, the act's rule and the next tick in
-// its tooltip. The act break (actbreak.mjs) announces each new one.
+// The *Segments* (act bars, acts.mjs): the boss's bar in one segment an act, the acts done dark, the act now draining
+// (bar: its own bigbar), the acts to come full and dim.
+export function actSegments(s, bar) {
+  const e = s.encounter, a = e?.actBars ? actInfo(e.virus) : null;
+  if (!a) return bar;
+  return `<div class="act-segs" style="--acts:${a.of}">${Array.from({ length: a.of }, (_, i) => (i + 1 === a.n ? bar : `<div class="bigbar ${i + 1 < a.n ? 'act-done' : 'act-wait'}"><span></span></div>`)).join('')}</div>`;
+}
+// A boss's act (acts.mjs actInfo): ACT n/m, the act's rule and what starts the next in its tooltip. The act break
+// (actbreak.mjs) announces each new one.
 export function actTag(s) {
   const e = s.encounter, v = e?.virus, a = e?.bossRule === 'a' ? actInfo(v) : null;
   if (!a) return '';
   const ph = v.phases[a.n - 2], rule = ph ? (BOSSES[v.boss]?.guide?.phases?.[a.n - 2] || []).map(([, t]) => t).join(' ') || ph.say : '';
-  const next = a.n < a.of ? `Its next act starts when you take its ♛ under ${Math.round(TICKS.act[a.n - 1] * 100)}%.` : 'Its last act.';
+  const next = a.n >= a.of ? 'Its last act.' : 'Break every part and its next act begins, every part back at full.';
   const tip = `${a.name || `Act ${a.n}`}\nAct ${a.n} of ${a.of}\n${rule ? rule + ' ' : ''}${next}`;
   return `<span class="tag hot act-tag" title="${esc(tip)}">ACT ${a.n}/${a.of}</span>`;
 }
@@ -363,8 +371,8 @@ export function clashTag(v) {
 function rivalTag(s) {
   const e = s.encounter, v = e?.rooms?.as === 'rival' ? s.rooms?.visit?.rival : null;
   if (!v) return '';
-  const P = RIVALS[v.id];
-  return `<span class="tag hot" title="${esc(`${P.name}\nRival · fight ${v.fight + 1} of ${v.fights}\nYour Signal carries to its next fight. Your cooldowns start fresh.\n▸ Win all ${v.fights} to take its pack.`)}">${esc(P.name)} ${v.fight + 1}/${v.fights}</span>`;
+  const P = rivalP(v);
+  return `<span class="tag hot" title="${esc(`${P.name}\nRival · fight ${v.fight + 1} of ${v.fights}\nYour Signal carries to their next fight. Your cooldowns start fresh.\n▸ Win all ${v.fights} to take their pack.`)}">${esc(P.name)} ${v.fight + 1}/${v.fights}</span>`;
 }
 // A solo boss's rounds on your Signal (combat.mjs roundOf): the round it's in and its hits' size.
 function roundTag(s) {
@@ -480,32 +488,34 @@ function bendChip(i, c, k = '') {
 // A P4 boss's Backlash (acts.mjs): a dashed red chip on each part with an attack, in the columns the beat falls in, with
 // what the lash costs. Its tooltip: the rule, and the answer.
 function lashChip(i, c, k = '') {
-  const tip = `Backlash, ${bendWhen(c)}. A beat: hit this part with a command then and it lashes back for ${i.amount}${i.also ? `, with its ${i.also}` : ''}. A hit that breaks it doesn't.${answerLine('Hit a part with no attack, break one, or fire a shield or buff then.')}`;
+  const tip = `Backlash, ${bendWhen(c)}. A beat: hit this part with a command then and it lashes back for ${i.amount}${i.also ? `, with its ${i.also}` : ''}${i.plus ? `, and ${i.plus}` : ''}. A hit that breaks it doesn't.${answerLine('Hit a part with no attack, break one, or fire a shield or buff then.')}`;
   return `<div class="intent bend lash${c === 0 ? ' now' : c === 1 ? ' next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}"><span class="ico" ${icon(ICON.mirror)}></span><b class="bend-to">Lash −${i.amount}</b></div>`;
 }
 // NIGHT DESK's attacks (floorbosses.mjs holdTrade): none lands, each opens a pending trade. Marked here (trade), and the
-// one that fills the table carries what settles (full).
+// one that fills the table, or the Desk's Margin Call (act 3), carries what settles (full).
 function asTrades(s, list) {
-  if (!s.encounter.virus.desk) return list;
+  const v = s.encounter.virus;
+  if (!v.desk) return list;
   const all = pendingOf(s);
   let n = all.length, sum = all.reduce((t, x) => t + tradeOf(s, x), 0);
   return list.map((i) => {
     if (i.tell || i.hidden || !(i.effect === 'damage' || i.hit)) return i;
-    const size = i.effect === 'damage' ? i.amount : i.hit;
+    const size = i.effect === 'damage' ? i.amount : i.hit, call = v.desk.call && part(s, i.source)?.core;
     n++; sum += size;
-    const out = { ...i, trade: size, ...(n >= FB.desk.full ? { full: sum } : {}) };
-    if (n >= FB.desk.full) { n = 0; sum = 0; }
+    const out = { ...i, trade: size, ...(n >= FB.desk.full || call ? { full: sum, call } : {}) };
+    if (n >= FB.desk.full || call) { n = 0; sum = 0; }
     return out;
   });
 }
 // A trade's chip: dashed, a clock and the trade's size. The one that fills the table is solid red, with all that settles.
 function tradeChip(i, c, k = '') {
-  const tip = i.full ? `${i.name}\nTrade\nThe table fills at ${FB.desk.full} pending. Every trade settles on you in full, for ${i.full}.${answerLine('Settle a part\'s trades at half before then.')}`
+  const tip = i.call ? `${i.name}\nMargin Call\nSettles every pending trade on you with it, in full, for ${i.full}.${answerLine('Settle the traders first, or break the Desk.')}`
+    : i.full ? `${i.name}\nTrade\nThe table fills at ${FB.desk.full} pending. Every trade settles on you in full, for ${i.full}.${answerLine('Settle a part\'s trades at half before then.')}`
     : `${i.name}\nTrade\nOpens a pending trade of ${i.trade} on this part. It deals nothing until it settles.${answerLine('Hit the part to settle its trades at half.')}`;
   return `<div class="intent trade${i.full ? ' full' : ''}${c === 0 ? ' now' : c === 1 ? ' next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}">${glyph('clock', 'tr-ico')}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${i.full ? `−${i.full}` : i.trade}</small></div>`;
 }
 // A boss rule's own chip (floorbosses.mjs fbIntents: a vote, a sweep, a leak): drawn beside its part's attack, never in its place.
-const ruleChip = (i) => !!(i.vote || i.sweep || i.leak);
+const ruleChip = (i) => !!(i.vote || i.sweep || i.leak || i.rollback);
 function attackChip(i, c, k = '', to = null) {
   if (i.trade) return tradeChip(i, c, k);
   if (i.effect === 'mirror') return bendChip(i, c, k);
@@ -619,6 +629,24 @@ export function partAbout(p, v = null, s = null) {
   const r = partRead(s, v || { parts: [p] }, p);
   return `${r.does}${answerLine(r.answer)}`;
 }
+// Floor 2's lair bosses' act rules on their parts (nativeacts.mjs): Tumblers, Port knock, Out of band, Hotfix, the dozer,
+// Shatter. Each tag's tooltip: the rule, and the answer.
+function nativeTags(s, p) {
+  const e = s.encounter, v = e.virus, out = [], tag = (label, tip) => out.push(`<span class="tag hot" title="${esc(tip)}">${label}</span>`);
+  const cyc = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
+  if (v.tumblers && p.lockMax && livingParts(s).some((m) => m.lock === p.id)) tag('tumblers', `Tumblers\nBoss rule\nA Deadbolt that lands locks the ${p.name} again at full.${answerLine('Cut the Deadbolt.')}`);
+  const open = v.knock && p.kind === 'system' ? knockOpen(s) : null;
+  if (open === p) { const n = knockIn(s); tag(`open ${n}`, `Port knock\nBoss rule\nThe ${p.name} is open and takes full damage. The other parts take half. The port moves on in ${cyc(n)}.${answerLine('Hit the open part.')}`); }
+  else if (open) tag('½', `Port knock\nBoss rule\nThe ${p.name} is shut and takes half damage. The ${open.name} is open.${answerLine('Hit the open part.')}`);
+  if (v.oob && p.attack?.effect === 'heal') tag('oob', `Out of band\nBoss rule\nWhen your hit takes a part across a tick, the ${p.name} patches it at once for ${p.attack.amount}.${answerLine('Cross both ticks in one hit, or break the Patcher first.')}`);
+  if (v.hotfix === true && p.core) tag('hotfix', `Hotfix\nBoss rule\nThe last part you break this act comes back once at 25%.${answerLine('Save a big hit for the last part.')}`);
+  if (dozer(s) === p) {
+    const a = livingParts(s).find((x) => x.attack?.alarm), alarm = a ? ` and sounds the Alarm for ${a.attack.amount}` : '';
+    tag('z ×2', v.rem.terror ? `Night Terror\nBoss rule\nThe ${p.name} dozes and charges, and takes double damage. A hit on it wakes it, calls the charge off${alarm}.${answerLine('Wake it, or take the charge.')}` : `REM\nBoss rule\nThe ${p.name} dozes: its attack waits, and it takes double damage. A hit on it wakes it${alarm}.${answerLine('Hit it when you can take the Alarm, or leave it be.')}`);
+  }
+  if (v.shatter && p.mimic) tag('shatter', `Shatter\nBoss rule\nOn its beat the ${p.name} plays your hit back as three shards, a third each. A ◆ on you stops one shard.${answerLine('Hold ◆ for the beat, or fire small on it.')}`);
+  return out;
+}
 function partTags(s, p) {
   const e = s.encounter, tags = [], pk = packed(s, e.virus, p); // a Packer standing: a rolled part's rule reads as ???
   if (pk && p.integrity > 0) tags.push(`<span class="tag packed" title="${esc('Packed: its name and rule are hidden until the Packer breaks.')}">${glyph('crate')}???</span>`);
@@ -653,7 +681,7 @@ function partTags(s, p) {
   // A Lockbox's held damage (docs/puzzle-levers.md 3.4): yours, in your teal.
   for (const h of p.integrity > 0 && !pk ? heldOf(s, p) : []) tags.push(`<span class="tag you held" title="${esc(`Held: the ${p.name} holds ${h.held} of your damage on the ${h.partner.name}. When it breaks, half of it, ${h.land}, lands on the ${h.partner.name} at once.`)}">${glyph('unlock')}held ${h.held}</span>`);
   // Fallback (combat.mjs): the part that takes over its partner's attack when the partner breaks first.
-  if (p.rival) { const v = s.rooms?.visit?.rival, P = v && RIVALS[v.id]; if (P) tags.push(`<span class="tag hot" title="${esc(`${p.name}\nPart · added by ${P.name}, read from how you won its last fight.`)}">+ ${esc(P.name)}</span>`); }
+  if (p.rival) { const v = s.rooms?.visit?.rival, P = v && rivalP(v); if (P) tags.push(`<span class="tag hot" title="${esc(`${p.name}\nPart · added by ${P.name}, read from how you won their last fight.`)}">+ ${esc(P.name)}</span>`); }
   if (p.fallback && p.integrity > 0) { const t = e.virus.parts.find((x) => x.id === p.fallback); if (p.tookOver) tags.push(`<span class="tag hot" title="${esc(`Took over: took over the ${t?.name || 'broken part'}'s ${t?.attack?.name || 'attack'} when the ${t?.name || 'other part'} broke.`)}">took over</span>`); else if (t && t.integrity > 0 && t.attack) tags.push(`<span class="tag hot" title="${esc(`Fallback: if the ${t.name} breaks first, the ${p.name} takes over its ${t.attack.name}.`)}">fallback</span>`); }
   // The parts plan (data.mjs BASICS, genes.mjs): an Accumulator's charge, a Hotspot's glow, the Idle Timer's countdown on
   // the signature's row, an Obfuscator's smoke.
@@ -670,10 +698,15 @@ function partTags(s, p) {
   if (frozenNow(s, p) && !pk) { const k = p.thawAt ?? p.frozen, f = Math.max(0, Math.min(1, (e.cycle - 1) / k)), n = k - e.cycle + 1; tags.push(`<span class="tag frost" title="${esc(`Frozen: off the timeline and immune to damage. Thaws ${n <= 1 ? 'at the end of this cycle' : `in ${n} cycles`}. Its first hit lands 2 cycles after the thaw.`)}">${glyph('clock')}<i class="thaw-bar"><b style="width:${Math.round(f * 100)}%"></b></i></span>`); }
   // The solo bosses (docs/solo-bosses.md): the ♛ part, RELAY-KING's Broadcast, REPO MAN's Liens, HOLLOW CHOIR's Round.
   const v = e.virus;
-  if (p.core && p.integrity > 0) tags.push(`<span class="tag hot crown" title="${esc(`${p.name}\nBoss part\nIts ticks start the boss's next phase instead of cutting a move.${v.boss === 'relayking' && !v.phases?.[0]?.done ? ' At its 50% tick, the ♛ hops to the healthiest other part.' : ''}${answerLine('Cross a tick when you are ready for the next phase.')}`)}">♛</span>`);
+  if (p.core && p.integrity > 0) tags.push(`<span class="tag hot crown" title="${esc(`${p.name}\nBoss part\nIt carries the boss's signature. Break every part to end the act.`)}">♛</span>`);
+  // The act rules on the board (combat.mjs bossPhases): RELAY-KING's Crown Hop and Flood, the Resident's Outbreak or Lockdown.
+  if (p.core && p.integrity > 0 && v.hop === true) tags.push(`<span class="tag hot" title="${esc(`Crown Hop\nBoss rule\nWhen the ${p.name} crosses half, the ♛ hops to the healthiest other part, and the two swap how full they are. Once this act.${answerLine('Bring the other parts down first, so the swap gives little back.')}`)}">${glyph('relay')}hop</span>`);
+  if (p.broadcast && p.integrity > 0 && v.flood) tags.push(`<span class="tag hot" title="${esc(`Flood\nBoss rule\nEach ${p.attack?.name || 'Broadcast'} that lands hatches a fragment on every part, up to ${CONFIG.fragmentCap} on the board.${answerLine('Cut the Broadcast, or break parts before it lands.')}`)}">flood</span>`);
+  if (p.core && p.integrity > 0 && (v.outbreak || v.lockdown)) tags.push(`<span class="tag hot" title="${esc(v.outbreak ? `Outbreak\nBoss rule\nEach Backlash also hatches a fragment.${answerLine('Stay off the beat.')}` : `Lockdown\nBoss rule\nEach Backlash also encrypts you while the Encryptor stands.${answerLine('Stay off the beat, or break the Encryptor first.')}`)}">${v.outbreak ? 'outbreak' : 'lockdown'}</span>`);
   if (p.broadcast && p.attack && p.integrity > 0) { const n = livingParts(s).filter((x) => x.kind === 'fragment').length, each = Math.round(p.attack.amount * (p.fanin || 0)); tags.push(`<span class="tag hot" title="${esc(`Broadcast\nBoss rule\nThe ${p.name}'s ${p.attack.name} deals ${each} more damage for each fragment on the board.${answerLine('Clear the fragments before it lands, or cut it.')}`)}">${glyph('relay')}×${n}</span>`); }
-  if (p.lien && p.integrity > 0) { const n = v.liens || 0, each = Math.round(p.attack ? p.attack.amount * p.lien * (v.interest || 1) : 0); tags.push(`<span class="tag hot liens" title="${esc(`Lien\nBoss rule\nEach of your commands that a ◆ absorbs puts a Lien on the ${p.name}. Each Lien adds ${each} damage to its ${p.attack?.name || 'Collection'}. A Collection that lands or is cut clears them.${answerLine('Take ◆ off with strips, burns or helpers, and cut the Collection.')}`)}">§${n}</span>`); }
+  if (p.lien && p.integrity > 0) { const n = v.liens || 0, each = Math.round(p.attack ? p.attack.amount * p.lien * (v.interest || 1) : 0); tags.push(`<span class="tag hot liens" title="${esc(`Lien\nBoss rule\nEach of your commands that a ◆ absorbs puts a Lien on the ${p.name}. Each Lien adds ${each} damage to its ${p.attack?.name || 'Collection'}${v.interest > 1 ? ' (Interest: it counts twice)' : ''}. A Collection that lands or is cut clears them.${v.repo ? ' One that lands puts a ◆ back for each Lien.' : ''}${answerLine('Take ◆ off with strips, burns or helpers, and cut the Collection.')}`)}">§${n}</span>`); }
   for (const x of p.integrity > 0 ? floorTags(s, p) : []) tags.push(x); // the floor 2 and 3 bosses (floorbosses.mjs)
+  for (const x of p.integrity > 0 ? nativeTags(s, p) : []) tags.push(x); // floor 2's lair bosses' act rules (nativeacts.mjs)
   if (p.mimic && v.round && p.integrity > 0) tags.push(`<span class="tag hot" title="${esc(`Round\nBoss rule\nOn its beat the ${p.name} plays back your last three commands: the one you fire on the beat and the two before it. A cycle you hold adds nothing.${answerLine('Hold or fire small in the two cycles before a beat.')}`)}">round</span>`);
   if (p.command && p.integrity > 0) tags.push(`<span class="tag hot" title="${esc(`${p.name}: fragments deal ${Math.round((p.gnaw ?? CONFIG.c2.gnaw) * 100)}% more damage while it stands. When it breaks, every fragment drops.`)}">commands fragments</span>`);
   const burn = (e.burns || []).filter((b) => b.target === p.id);
@@ -741,7 +774,7 @@ function floorTags(s, p) {
   const tag = (cls, tip, body) => out.push(`<span class="tag ${cls}" title="${esc(tip)}">${body}</span>`);
   if (p.gavel && p.attack && v.bid) {
     const k = p.attack.interval, who = BUYER[nextBuyer(v)], spec = BOSSES[v.boss].buyers[nextBuyer(v)];
-    tag(k <= FB.bid.fast ? 'hot bid' : 'bid', `Bidding\nBoss rule\nThe ${p.name}'s Surge comes every ${k} cycles, and each one that lands spins it faster. A Surge at every 2 sells to ${who}: its ${spec.name} joins the fight${v.bid.lots > 1 ? ', with a second buyer' : ''}. ${v.bid.reserve ? 'A delay or Throttle steps it back one.' : 'A delay or Throttle takes it back to every 4.'} Each sale heals the Rotor ${Math.round(FB.bid.heal * 100)}% of its max and makes the Surge ${Math.round(FB.bid.sold * 100)}% harder for the fight${v.bid.sold ? ` (${v.bid.sold} so far)` : ''}. Each command you aim at the Gavel while the Rotor stands is a bid: it spins one faster.${answerLine('Leave the Gavel for last. Delay, Throttle or SIGINT it at every 2.')}`, `${glyph('clock')}${k} · ${esc(who)}`);
+    tag(k <= FB.bid.fast ? 'hot bid' : 'bid', `Bidding\nBoss rule\nThe ${p.name}'s Surge comes every ${k} cycles, and each one that lands spins it faster. A Surge at every 2 sells to ${who}: its ${spec.name} joins the fight${v.bid.lots > 1 ? ', with a second buyer' : ''}. ${v.bid.reserve ? 'A delay or Throttle steps it back one.' : 'A delay or Throttle takes it back to every 4.'} Each sale heals the Rotor ${Math.round(FB.bid.heal * 100)}% of its max and makes the Surge ${Math.round(FB.bid.sold * 100)}% harder for the act${v.bid.sold ? ` (${v.bid.sold} so far)` : ''}. Each command you aim at the Gavel while the Rotor stands is a bid: it spins one faster.${answerLine('Leave the Gavel for last. Delay, Throttle or SIGINT it at every 2.')}`, `${glyph('clock')}${k} · ${esc(who)}`);
   }
   // The Resident's Watchdog, on its ♛ (combat.mjs watchdog).
   const wd = p.core ? watchdogIn(s) : null;
@@ -749,7 +782,7 @@ function floorTags(s, p) {
   if (p.buyer) tag('', `${p.name}\nBought by ${BUYER[p.buyer]}\nIt joined when the Gavel sold.`, esc(BUYER[p.buyer]));
   if (p.core && v.ransom) {
     const L = v.ransom.left, k = leakOf(v), n = Math.round(defender(s).max * k);
-    tag(L <= 3 ? 'hot ransom' : 'ransom', `Ransom Clock\nBoss rule\nIt leaks ${n} (${Math.round(k * 100)}% of your max) ${when(L - 1)}, then restarts at ${FB.ransom.restart}. Each leak takes ${Math.round(FB.ransom.grow * 100)}% more than the last, up to ${Math.round(FB.ransom.most * 100)}%. Breaking a Demand while the Collector stands halves the time left. A Deadline that lands adds ${FB.ransom.pay} cycles. One you call off buys nothing.${v.ransom.notice ? ' Each leak re-arms the Demands and brings the Lockbox back.' : ''}${answerLine('Let a Deadline land when the clock would run out first.')}`, `${glyph('clock')}${L}`);
+    tag(L <= 3 ? 'hot ransom' : 'ransom', `Ransom Clock\nBoss rule\nIt leaks ${n} (${Math.round(k * 100)}% of your max) ${when(L - 1)}, then restarts at ${FB.ransom.restart}. Each leak in an act takes ${Math.round(FB.ransom.grow * 100)}% more than the last, up to ${Math.round(FB.ransom.most * 100)}%, and each act starts a new clock. Breaking a Demand while the Collector stands halves the time left. A Deadline that lands adds ${FB.ransom.pay} cycles. One you call off buys nothing.${v.ransom.notice ? ' Each leak re-arms the Demand and brings the Lockbox back.' : ''}${answerLine('Let a Deadline land when the clock would run out first.')}`, `${glyph('clock')}${L}`);
   }
   const lev = leverLeft(s, p);
   if (lev != null) tag(lev <= 0 ? 'hot' : '', `Leverage\nBoss rule\nWhile a Demand stands, the ${p.name} loses at most ${Math.round(FB.ransom.lever * 100)}% of its max a cycle: ${lev} more this cycle. The rest of a hit is lost.${answerLine('Fit your hit to the cap, or spend the big one on a Demand.')}`, `cap ${lev}`);
@@ -768,14 +801,14 @@ function floorTags(s, p) {
   // NIGHT DESK: the trades waiting on a part, the table on its ♛, its traders.
   if (v.desk) {
     const all = pendingOf(s), sum = (xs) => xs.reduce((n, t) => n + tradeOf(s, t), 0);
-    if (p.pending?.length) { const n = sum(p.pending); tag('hot trade', `Pending ${p.pending.length === 1 ? 'trade' : 'trades'}\nBoss rule\n${p.pending.length === 1 ? 'One trade waits' : `${p.pending.length} trades wait`} on the ${p.name}: ${n} in full. Your one-part command on the ${p.name} settles ${p.pending.length === 1 ? 'it' : 'them'} on you at half, for ${Math.round(n * FB.desk.half)}.${v.desk.night != null ? ` Each grows ${pct(FB.desk.grow)}% a cycle.` : ''}${v.desk.final ? ` Each one you settle heals the Desk ${pct(FB.desk.heal)}% of its max.` : ''}${answerLine('Settle before the table fills.')}`, `${glyph('clock')}${p.pending.length} · ${n}`); }
+    if (p.pending?.length) { const n = sum(p.pending); tag('hot trade', `Pending ${p.pending.length === 1 ? 'trade' : 'trades'}\nBoss rule\n${p.pending.length === 1 ? 'One trade waits' : `${p.pending.length} trades wait`} on the ${p.name}: ${n} in full. Your one-part command on the ${p.name} settles ${p.pending.length === 1 ? 'it' : 'them'} on you at half, for ${Math.round(n * FB.desk.half)}.${v.desk.night != null ? ` Each grows ${pct(FB.desk.grow)}% a cycle.` : ''}${v.desk.call ? ' The Desk\'s Margin Call settles every trade in full.' : ''}${answerLine('Settle before the table fills.')}`, `${glyph('clock')}${p.pending.length} · ${n}`); }
     if (p.core) tag(all.length >= FB.desk.full - 1 ? 'hot table' : 'table', `No Timeout\nBoss rule\nIts attacks never land. They wait as pending trades: ${all.length} of ${FB.desk.full}. At ${FB.desk.full}, every trade settles on you in full${all.length ? ` (${sum(all)} now)` : ''}, and each trade after that opens ${pct(FB.desk.margin)}% bigger${v.desk.margin ? ` (+${pct(FB.desk.margin * v.desk.margin)}% so far)` : ''}. No single hit takes more than ${pct(FB.desk.limit)}% of the ${p.name}'s max.${answerLine('Hit a part to settle its trades at half.')}`, `${all.length}/${FB.desk.full}`);
     if (p.role === 'trader') tag('dim', `${p.name}\nOn the books\nIt takes no damage while the Desk stands, and goes when the Desk breaks. Your one-part command on it settles its trades.`, 'books');
   }
   // BYZANTINE: the vote on the Node it would restore, the traitor, the Hard fork.
   if (v.vote && p.role === 'node') {
     const x = voteOf(s), n = v.vote.at - e.cycle;
-    if (x && p === x.low) tag(x.passes ? 'hot vote' : 'vote', `Vote\nBoss rule\nThe Nodes vote ${when(n)}. ${x.passes ? `It passes: the ${p.name} is ${pct(FB.vote.pass)}% or more under ${x.turned ? 'the healthiest Node' : 'the average'}, and is restored by ${x.gain}.` : `It fails: no Node is ${pct(FB.vote.pass)}% under ${x.turned ? 'the healthiest Node' : 'the average'}.`} Each vote that passes makes every Node hit ${pct(FB.vote.harder)}% harder for the fight${v.vote.passed ? ` (+${pct(FB.vote.harder * v.vote.passed)}% now)` : ''}. No single hit takes more than ${pct(FB.vote.limit)}% of a Node's max.${answerLine(`Keep the Nodes within ${pct(FB.vote.pass)}%, then break one between two votes.`)}`, `${glyph('clock')}vote ${Math.max(0, n)}${x.passes ? ` · +${x.gain}` : ''}`);
+    if (x && p === x.low) tag(x.passes ? 'hot vote' : 'vote', `Vote\nBoss rule\nThe Nodes vote ${when(n)}. ${x.passes ? `It passes: the ${p.name} is ${pct(FB.vote.pass)}% or more under ${x.turned ? 'the healthiest Node' : 'the average'}, and is restored by ${x.gain}.` : `It fails: no Node is ${pct(FB.vote.pass)}% under ${x.turned ? 'the healthiest Node' : 'the average'}.`} Each vote that passes makes every Node hit ${pct(FB.vote.harder)}% harder for the act${v.vote.passed ? ` (+${pct(FB.vote.harder * v.vote.passed)}% now)` : ''}. No single hit takes more than ${pct(FB.vote.limit)}% of a Node's max.${answerLine(`Keep the Nodes within ${pct(FB.vote.pass)}%, then break one between two votes.`)}`, `${glyph('clock')}vote ${Math.max(0, n)}${x.passes ? ` · +${x.gain}` : ''}`);
     if (p.id === v.vote.traitor) tag(x?.turned ? 'hot' : '', `Traitor\nBoss rule\nWhile the ${p.name} is not the most damaged Node, a vote restores the most damaged Node to the healthiest Node's level.${answerLine('Keep it the most damaged Node.')}`, 'traitor');
     if (v.vote.fork && p === nodesOf(s)[0]) tag(forkOf(s) ? 'hot' : '', `Hard fork\nBoss rule\nEvery broken Node returned as the phase started. A Node that breaks now returns at the next vote, at the others' average, unless every other Node is under half.${answerLine('Bring every Node under half before you break one.')}`, 'fork');
   }
@@ -787,15 +820,26 @@ function floorTags(s, p) {
     if (p.kind === 'fragment' && p.hatched != null) { const k = p.hatched + FB.swarm.grows - e.cycle; tag('hot', `Fragment\nBoss rule\nIt becomes a Camera ${when(k)}.${host ? ` The ${host.name} shields it: it takes no damage, and drops when the ${host.name} breaks.` : ''}${answerLine(host ? `Break the ${host.name}.` : 'Break it first.')}`, `${glyph('clock')}cam ${Math.max(0, k)}${host ? ' · shielded' : ''}`); }
     if (p.role === 'camera') tag('', `${p.name}\nRecruited\nA part with a Surge of its own. Under half, it hatches on the sweep.${v.swarm.botnet ? ' It fires when the C2 Node\'s Beacon lands.' : ''}`, 'camera');
   }
+  // GRACE PERIOD: each part's grace, the balance on its ♛, the Rider.
+  if (v.grace && p.grace != null) {
+    const paid = p.paidAt === e.cycle, n = paid ? v.grace.days : p.grace;
+    tag(n <= 1 ? 'hot grace' : 'grace', `Grace\nBoss rule\n${paid ? `Paid up: ${v.grace.days} cycles of grace from the end of this cycle.` : `The ${p.name} lapses at the end of ${n <= 1 ? 'this cycle' : `${n} cycles`}.`} Your command on it pays it up. When it lapses, its next attack is a charge${v.grace.reinstate ? ' and its ◆ refill' : ''}. Your command on it on the cycle the charge lands calls it off.${answerLine('Keep three paid, and hit a lapsed part on the cycle its charge lands.')}`, `${glyph('clock')}grace ${n}${paid ? ' · paid' : ''}`);
+    if (p.core && v.grace.fees) tag('hot', `Balance\nBoss rule\nEach lapse charge that lands makes every later one ${pct(FB.grace.fee)}% bigger. ${v.grace.fees === 1 ? 'One has' : `${v.grace.fees} have`} landed: +${pct(FB.grace.fee * v.grace.fees)}% now.${answerLine('Hit each lapsed part as its charge lands.')}`, `fee +${pct(FB.grace.fee * v.grace.fees)}%`);
+    if (p.role === 'rider') tag('hot', `Rider\nBoss rule\nWhile the ${p.name} stands, every other part hits ${pct(FB.grace.rider)}% harder.`, `rider +${pct(FB.grace.rider)}%`);
+  }
+  // EXIT NODE: the restore on the Core, what each part goes back to, the Front.
+  if (v.roll) {
+    const n = v.roll.at - e.cycle, to = rollTo(s, p), cold = v.roll.coldOn && v.roll.cold;
+    if (p.core) tag(n <= 1 ? 'hot rollback' : 'rollback', `Rollback\nBoss rule\nIt restores its own bars ${n <= 0 ? 'at the end of this cycle' : n === 1 ? 'at the end of next cycle' : `in ${n} cycles`}, to ${cold ? 'the image taken as Backup v6 broke' : `the image taken ${FB.roll.back} cycles before`}. A quarter of what it gives back lands on you${(() => { const k = Math.round(livingParts(s).reduce((t, x) => t + Math.max(0, (rollTo(s, x)?.hp ?? x.integrity) - x.integrity), 0) * FB.roll.charge); return k ? ` (${k} now)` : ''; })()}. A broken part stays broken. The ${p.name} is never restored past its last act tick.${v.roll.kept ? ' A charge you cut in the 2 cycles before a restore comes back at it.' : ''}${answerLine(n <= 1 ? 'Break a part outright now, or answer the Glass Cut and wait.' : 'Do your damage now.')}`, `${glyph('clock')}rollback ${Math.max(0, n)}`);
+    if (to && to.hp > p.integrity) tag('dim', `Rollback image\nBoss rule\nAt the restore the ${p.name} goes back to ${to.hp}/${p.max}${to.armor > (p.armor || 0) ? `, with ${to.armor} ◆` : ''}.`, `↺ ${to.hp}`);
+    if (p.role === 'front') tag('hot', `Front\nBoss rule\nWhile the ${p.name} stands, your one-part commands at the Core land on it. Burns, helpers and area hits reach the Core.${answerLine('Break it to reach the Core.')}`, 'front');
+  }
   return out;
 }
-// A P4 boss's ♛ (acts.mjs leaveOf): its next phase tick is held (amber) until this act's beat has played.
+// A part's interrupt ticks on its bar (interrupt.mjs).
 function ticksMarkup(s, p) {
   if (!s.encounter?.ticked || !p.ticks) return '';
-  const lv = p.core ? leaveOf(s) : null, next = p.ticks.find((t) => !t.spent);
-  const held = (t) => lv && !lv.done && t === next;
-  const leaveTip = (t) => (held(t) ? `\nLeave it above this tick until the beat plays${lv.beat != null ? ` (${bendWhen(lv.beat)})` : ''}. Taken under it sooner, every part re-arms.` : '');
-  return p.ticks.map((t) => `<i class="ptick${t.spent ? ' spent' : ''}${t.phase != null ? ' phase' : ''}${held(t) ? ' held' : ''}" style="left:${t.at * 100}%" title="${esc(t.phase != null ? `Phase tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it and the boss starts its next phase. It holds at the tick until the phase begins.${t.spent ? ' Spent.' : ''}${leaveTip(t)}` : `Tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it on a cycle its move is due and that move is cancelled. Each tick works once a fight.${t.spent ? ' Spent.' : ''}`)}"></i>`).join('');
+  return p.ticks.map((t) => `<i class="ptick${t.spent ? ' spent' : ''}" style="left:${t.at * 100}%" title="${esc(`Tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it on a cycle its move is due and that move is cancelled. Each tick works once a fight.${t.spent ? ' Spent.' : ''}`)}"></i>`).join('');
 }
 
 // ---------- what protects what (fightread.mjs partLinks) ----------
@@ -920,7 +964,7 @@ export function boardMarkup(s, selected, preview = null) {
   const gearCyc = (c) => { const names = fighting ? cycleGear(s, e.cycle + c) : []; return names.length ? `<i class="gcyc" title="${esc(`${list2(names)}: live on cycle ${e.cycle + c}.`)}">${glyph('clock')}</i>` : ''; };
   const live = fighting ? gearLive(s) : [], onParts = gearOnParts(live);
   const head = `<div class="brow bhead"><div class="bcell bname">Part</div>
-    <div class="bcell bnow${gearCyc(0) ? ' gear-cyc' : ''}"><span>Now <small class="cyc">cycle ${e.cycle}</small>${gearCyc(0)}</span><span class="countdown" id="countdown">${!fighting ? '—' : e.paused ? 'II' : remaining.toFixed(1)}</span><div class="cyclebar">${e.sync && fighting ? `<i class="sync-win${e.sync.surprise ? ' surprise' : ''}" id="sync-win" style="left:${(e.sync.at * 100).toFixed(1)}%;width:${(e.sync.width * 100).toFixed(1)}%" title="${esc(e.sync.surprise ? `Surprise: fire while the bar is here. Inject ticks at once, Tag lasts ${CONFIG.surprise.tagCycles} cycles with burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, Keepalive stretches burns ${CONFIG.surprise.keepalive} cycles.` : `Sync Window: fire your command while the bar is here for +${Math.round(CONFIG.sync.bonus * 100)}% damage. ${SYNC[classOf(s)]?.rule || ''}`)}"></i>` : ''}<span id="cyclebar" style="width:${(e.elapsedMs / cycleLength(s)) * 100}%"></span></div></div>
+    <div class="bcell bnow${gearCyc(0) ? ' gear-cyc' : ''}"><span>Now <small class="cyc">cycle ${e.cycle}</small>${gearCyc(0)}</span><span class="countdown" id="countdown">${!fighting ? '—' : e.paused ? 'II' : remaining.toFixed(1)}</span><div class="cyclebar">${e.sync && fighting ? `<i class="sync-win${e.sync.surprise ? ' surprise' : ''}" id="sync-win" style="left:${(e.sync.at * 100).toFixed(1)}%;width:${(e.sync.width * 100).toFixed(1)}%" title="${esc(e.sync.surprise ? `Surprise: fire while the bar is here. Inject ticks at once, Tag lasts ${CONFIG.surprise.tagCycles} cycles with burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, Keepalive stretches burns ${CONFIG.surprise.keepalive} cycles.` : `Sync Window: fire your command while the bar is here for +${Math.round(CONFIG.sync.bonus * 100)}% damage. ${SYNC[classOf(s)]?.rule || ''}`)}"></i>` : ''}<span id="cyclebar" style="transform:scaleX(${e.elapsedMs / cycleLength(s)})"></span></div></div>
     ${[1, 2, 3].map((c) => `<div class="bcell${gearCyc(c) ? ' gear-cyc' : ''}">+${c}${gearCyc(c)}${quietCol(c) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div>`).join('')}</div>`;
   // Your row mirrors the parts: what you'll do in each upcoming cycle.
   const cutNote = (q) => { const x = q?.target && e.ticked ? crossBy(s, q.ability, part(s, q.target)) : null; return x === 'cut' ? ' <small class="cuts">cuts</small>' : x === 'both' ? ' <small class="cuts">cuts · −tick</small>' : x === 'waste' ? ' <small class="cuts waste">−tick</small>' : ''; };
@@ -1193,6 +1237,13 @@ export function trayMarkup(s, selected = null) {
   // The Toolkit (skills-view.mjs), quiet at the tray's end and out of its grid (style.css .tk-open): the way in on a phone.
   cards.push(`<button type="button" class="tk-open" data-toolkit="${classOf(s)}" title="Toolkit: Your abilities and your bar. Keys change between fights." data-tt-kind="Key T" aria-label="Toolkit"><span class="ico" ${icon('command')}></span></button>`);
   return cards.join('');
+}
+// The emergency jack out (combat.mjs flee, run.mjs hooks.flee): a red key at the tray's end, wherever the typed
+// command works. Not on a breach, the rooms playtest, or while a hunter has your trace.
+export function fleeKey(s) {
+  const e = s.encounter;
+  if (!active(s) || e.mode !== 'run' || !s.run || s.roomsPlay || e.breach || (e.hunter && !s.run.rooms)) return '';
+  return `<button type="button" class="ability flee" data-command="jack out" data-confirm="Sure?" title="${esc('Jack out: leave the fight on your turn. You keep your pack, and the virus stays.')}">${keyFace('cancel', 'Jack out')}</button>`;
 }
 
 // ---------- pages ----------
@@ -1623,11 +1674,12 @@ export function rewardChips(s, c) {
 }
 // How to trace an unknown server, shown rather than explained (docs/style-guide.md section 0): the way that is
 // tracing it now on top, with pips for the kills or clears still needed; then every other way as an icon, a label and
-// what it adds, dim and locked until you have it. The sentences live in the rows' tooltips.
+// what it adds, shaded with a lock in its icon's place until you have it. The sentences live in the rows' tooltips.
 function traceWays(s, h, via, kit) {
   const relay = !!h.pinged, route = `ping-${h.id}.trc`, banked = !!via?.state?.taken?.['/' + route], left = 100 - h.lead;
   const fam = FAMILIES[h.family]?.name || '?', at = viaName(s, h);
-  const row = (ic, label, gain, tip, state = 'on') => `<li class="tw ${state}" title="${esc(tip)}">${glyph(ic)}<span>${esc(label)}</span><b>${esc(gain)}</b></li>`;
+  // A way you don't have yet wears a lock in its icon's place, on a shaded row.
+  const row = (ic, label, gain, tip, state = 'on') => `<li class="tw ${state}" title="${esc(tip)}">${glyph(state === 'off' ? 'lock' : ic)}<span>${esc(label)}</span><b>${esc(gain)}</b></li>`;
   const pips = (n) => (n > 0 ? `<span class="tw-pips" aria-label="${n} more">${'<i></i>'.repeat(Math.min(n, 10))}${n > 10 ? '<small>+</small>' : ''}</span>` : '');
   // The main way: SPRAWL-00's kills (the ? closest to being found goes first), or first clears of the server it hangs off.
   const zone = h.via === CONFIG.zone.id, per = zone ? leadOf(s, Math.min(hackerLevel(s), CONFIG.zone.maxLevel)) : HIDDEN.firstClear;
@@ -2960,7 +3012,7 @@ function devMarkup(s, coop) {
     <section class="card"><h2>Fight reports</h2>${s.reports.length ? `<details><summary>${s.reports.length} report(s)</summary><pre>${esc(JSON.stringify(s.reports.slice(-5), null, 1))}</pre></details>` : '<p>None yet.</p>'}</section></div>
     <section class="card"><h2>Log</h2><ol class="fulllog">${s.logs.slice(-300).map((e) => `<li>c${e.cycle} · ${esc(e.message)}</li>`).join('')}</ol></section></div>`;
 }
-export function systemMarkup(s, { coop = false, dev = false, tab = 'settings' } = {}) {
+export function systemMarkup(s, { coop = false, dev = false, tab = 'settings', phone = false } = {}) {
   if (tab !== 'dev' || !dev) tab = 'settings';
   const head = systemTabs(tab, dev);
   if (tab === 'dev') return head + devMarkup(s, coop);
@@ -2976,6 +3028,7 @@ export function systemMarkup(s, { coop = false, dev = false, tab = 'settings' } 
       <button type="button" class="btn" data-run="shell boot" ${s.settings.shell === 'plain' ? 'disabled' : ''}>Reboot screen</button>
       <button type="button" class="btn" data-run="casing ${s.settings.casing === false ? 'on' : 'off'}" aria-pressed="${s.settings.casing !== false}" ${s.settings.shell === 'plain' ? 'disabled' : ''} title="The monitor around the screen, on wide screens">Casing ${s.settings.casing === false ? 'off' : 'on'}</button>
       <button type="button" class="btn" data-run="window ${s.settings.window === false ? 'on' : 'off'}" aria-pressed="${s.settings.window !== false}" ${s.settings.shell === 'plain' || s.settings.casing === false ? 'disabled' : ''} title="The city outside, beside the monitor">Window ${s.settings.window === false ? 'off' : 'on'}</button>
+      ${((on) => `<button type="button" class="btn" data-run="grain ${on ? 'off' : 'on'}" aria-pressed="${on}" ${s.settings.shell === 'plain' ? 'disabled' : ''} title="Film grain moving over the screen. It starts off on a phone.">Grain ${on ? 'on' : 'off'}</button>`)(s.settings.grain ?? !phone)}
       <button type="button" class="btn" data-run="ui scale" title="The screen drawn larger or smaller, for big displays. Auto sizes it to your screen. It scales up only as far as the layout has room: none at 1920 pixels wide, about 140% at 2560. Type ui scale 125 for a size of your own.">${esc(UI.scaleLabel(s.settings.uiScale ?? 1, UI.ROOM.avail))}</button>
       <button type="button" class="btn" data-run="screen fx next" title="Light around the game (the backdrop, the screen's edges, the casing's lamps) and how much moves in a fight. Off: numbers and bars only. Subtle and medium: the number, the bar and who did it. Bold: impact bursts, sparks and flashes too">Screen effects: ${esc(sfxLevel(s))}</button>
       ${Object.entries(SFX.effects).map(([id, name]) => `<button type="button" class="btn" data-run="screen fx ${id} ${!s.settings.screenFxOff?.[id] ? 'off' : 'on'}" aria-pressed="${!s.settings.screenFxOff?.[id]}" ${s.settings.shell === 'plain' || sfxLevel(s) === 'off' ? 'disabled' : ''}>${name} ${!s.settings.screenFxOff?.[id] ? 'on' : 'off'}</button>`).join('')}
