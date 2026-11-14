@@ -635,7 +635,8 @@ three solo bosses, the floor 2–5 bosses and the natives. A crew boss keeps its
 
 - **Act 1's board and rules, every act.** Each act starts from act 1's board and the rules act 1 began with, then
   adds its own: an act's rule leaves with it, and what grew in it (a leak, a full table, Liens, a Round) starts over.
-  A part an act brings takes another's seat, and the board holds act 1's Integrity.
+  Act 1's tells come back with their parts. A part an act brings takes another's seat (a tell on the part it
+  replaced moves to one that can carry it), and the board holds act 1's Integrity.
 - **The pacing** (`ACT_BARS`): an act runs 15 to 20 cycles. Each holds a third of `share` of the boss's Integrity,
   times its `bar`; its hits are ×0.55 of one bar's; its rounds and its enrage (24 cycles in) count from its first
   cycle.
@@ -734,15 +735,18 @@ odds, kept per network; its first fall names them all. A strain boss's hits step
 
 | Boss | Built on | What it does |
 |---|---|---|
-| DEADBOLT | Ransomware, a Mutex | Its charge is Deadbolt. Re-arms at 60%; at 30% a second Mutex re-locks the Encryptor |
+| DEADBOLT | Ransomware, a Mutex | Its charge is Deadbolt. Act 2 **Tumblers**: a Deadbolt that lands locks the Encryptor again at full. Act 3 **Double lock**: a second Mutex in the Pulse Node's seat |
 | TRIPMINE | Ransomware, a Tripwire (a Lockbox below 20) | Claymore on the Pulse Node. Every attack a cycle sooner at half |
 | HASHLORD | The Hashrat strain (GLASSJAW's) | A Pool Lock wards its Miner against your commands (burns and helpers go through). Difficulty Bomb, and Block Reward grows each part by half of what it has left. Re-arms at 60%; at half a second Miner spins up |
-| BACK ORIFICE | Worm, a C2 Node | Spam Run hatches two. Sooner at half; at 25% a Mirror twins the Replicator |
-| PATCH TUESDAY | The Patchwork strain | Rollup. Re-arms at 60%, sooner at 30% |
+| BACK ORIFICE | Worm, a C2 Node | Spam Run hatches two. Act 2 **Port knock**: one part is open, the next in turn every 3 cycles (at once if it breaks); the rest take half. Act 3 **Mirror**: a Mirror in the Pulse Node's seat twins the Replicator, and each reboots the other twice |
+| PATCH TUESDAY | The Patchwork strain | Rollup. Act 2 **Out of band**: a hit that takes a part across a tick has the Patcher patch it at once. Act 3 **Hotfix**: the act's last part, broken, comes back once at 25% |
 | FLOODWALL | The Floodgate strain | Storm Surge. Re-arms at half |
-| MIRRORSHADE | Ghostroot, a Mimic (NULL CHOIR's) | Glass Cut on the Scrambler. While you're Scrambled its Mimic plays your hit back twice over. Re-arms at 60%; at half the Mimic becomes a Doppelganger of the first part you broke |
-| SLEEPWALKER | The Sleeper strain | Night Terror. Re-arms at half |
+| MIRRORSHADE | Ghostroot, a Mimic (NULL CHOIR's) | Glass Cut on the Scrambler. **Feedback**: while you're Scrambled its Mimic plays your hit back twice over. Act 2 **Doppelganger**: the Mimic takes the shape of the first part you broke (else the Pulse Node). Act 3 **Shatter**: each beat plays your hit back as three shards, a third each, so a ◆ on you stops one |
+| SLEEPWALKER | The Sleeper strain | Night Terror. Dormant at each act's start. Act 2 **REM**: every 4 cycles a part dozes, the healthiest but never the same twice running (its attack waits), and takes double damage; a hit on it wakes it and sounds the Cell's Alarm. Act 3 **Night Terror**: the dozer charges instead of waiting; a hit wakes it, calls the charge off and sounds the Alarm |
 | ECHOLALIA | The Echo strain | Last Word. Re-arms at 60%, sooner at 30% |
+
+On the board: *tumblers* on the Encryptor, *open n* on the open part and ½ on the shut ones, *oob* on the Patcher,
+*hotfix* on the ♛, *z ×2* on the dozer, *shatter* on the Mimic.
 
 ### Crew bosses (raid.mjs)
 

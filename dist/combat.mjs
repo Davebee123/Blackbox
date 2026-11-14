@@ -28,7 +28,7 @@ import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './interrupt.mjs';
-import { actsStart, actsOf, lashHit, lashLand, actIntents, actBegins, actInfo, barsSnap, barsTotal, barsTurn, actEven } from './acts.mjs';
+import { actsStart, actsOf, lashHit, lashLand, actIntents, actBegins, actInfo, barsSnap, barsTotal, barsTurn, actEven, barsTells, actTells } from './acts.mjs';
 import { FB, fbBid, fbStart, fbPower, fbLanded, fbMisses, fbSlowed, fbBroke, fbAim, fbCommand, fbDealt, fbVerb, FB_VERBS, fbCycle, fbIntents, fbLogged, surfShut, fbCmdHit, fbShrugs, fbTaken, fbCap } from './floorbosses.mjs';
 import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
@@ -60,6 +60,7 @@ import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TI
 import { PARTS, heatOf } from './parts.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { noteUse } from './mastery.mjs';
+import { nativeVerb, NATIVE_VERBS, nativeCycle, nativeTaken, remHit, hotfixBroke, nativeLand } from './nativeacts.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
 export const SAVE_VERSION = 62; // v62: runners, s.runners (runners.mjs runnersOf: made on first use, keyed on the field); v61: every hub's Shop has one shape: the agency stock, premium shelves and hub stock go (store.mjs shopRestore, keyed on the fields); v60: payloads, held hubs and swarms are cut: a held hub is paid out once (store.mjs hubsRestore, keyed on the fields); v59: journals, s.journals (journals.mjs findJournal: made on first use, keyed on the field); v58: one rep scale: rep under 1 comes back as 1 (factions.mjs repRestore, keyed on the value); s.commission and s.receipts are new; v57: the talent tiers: old ranks and two-way picks become tier picks where the talent survives (talents.mjs tiersRestore, keyed on the old fields); v56: floors as tiers: items refilled on the tiers (gear.mjs curveRestore, keyed on s.curve 3); v55: gear carries your power: items filled at their level (gear.mjs curveRestore, keyed on s.curve 2); v54: the compounding curve: items lifted at their level (gear.mjs curveRestore, keyed on s.curve); v53: the cryptogram's key, s.cipher (puzzles.mjs cipherOf: made on first use, keyed on the field); v52: rivals' memory, s.rivals (rivals.mjs rivalsRestore: made on first use, keyed on the field); v51: the scanner's log, s.scanner (scanner.mjs scannerOf: made on first use, keyed on the field); v50: site traits become server specials (specials.mjs specialsRestore); v49: crafting is gone: recipes, plans and their files become credits, Zero-day source the Zero-day (progression.mjs craftRestore); v48: Indemnity retires: an older save's unspent Indemnity becomes credits once, with a letter from Halcyon (store.mjs indemnityRestore); v47: one kind of component: an older save's pile of named pieces (s.salvage) becomes its count, s.components (salvage.mjs componentsRestore); v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, GAME_RULES.md "Saves"); v39: every server is a room graph (netrooms.mjs roomsRestore, GAME_RULES.md "Runs: servers as rooms"); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
@@ -321,6 +322,7 @@ export function damageMultiplier(s, p, opts = {}) {
   if (on(s, p, 'open')) m *= TELL.open.mult; // a tell read: the part is open (tells.mjs)
   m *= overclockMult(s); // an Overclock that landed: every part takes double (tells.mjs, breaches only)
   if (p.loud) m *= CONFIG.tripwire.taken; // a Tripwire tripped: the loud parts take more from everything (loud both ways)
+  if (e.virus?.boss) m *= nativeTaken(s, p); // BACK ORIFICE's Port knock, SLEEPWALKER's dozer (nativeacts.mjs)
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) m *= CONFIG.weakMultiplier;
   m *= leanDealt(e, p); // the server's leaning: Venting, Wind-up (leanings.mjs)
   if (opts.mine) {
@@ -2235,6 +2237,7 @@ function engage(s) {
   fbStart(s); // the floor 2 and 3 bosses' rules (floorbosses.mjs)
   barsSnap(s); // act bars: the board act 2 refills (acts.mjs)
   tellStart(s); // a solo fight's tells (tells.mjs)
+  barsTells(s); // act bars: the tells every act deals again (acts.mjs)
 }
 
 // Fast kills: beat your own usual pace (cycles per 100 Integrity of virus, kept per class) by a
@@ -2958,6 +2961,7 @@ export function hit(s, p, base, opts = {}) {
   }
   // Sleeper: any hit wakes it.
   if (e.virus.dormant && base > 0) e.virus.woke = true;
+  if (e.virus.rem) remHit(s, p, base, opts); // SLEEPWALKER's dozer wakes (nativeacts.mjs)
   // Keylogger: the Logger only feels commands fired in a Sync Window (and the burns and helpers
   // they started).
   if (p.syncOnly && !(opts.dot ? opts.synced : e.synced && !opts.server)) {
@@ -3208,6 +3212,8 @@ function bossPhases(s) {
         if (p.lock) { const t = part(s, p.lock); if (alive(t)) { t.lockMax = t.lockHp = Math.max(1, Math.round(t.max * CONFIG.mutex.share)); t.lockAt = null; } } // a Mutex that joins locks its part at once
         for (const w of livingParts(s).filter((x) => x.ward === spec.id && p.id !== spec.id)) (w.wardsToo ||= []).push(p.id); // HASHLORD's Pool Lock wards the forked Miner too
       }
+      if (act === 'twice') for (const p of livingParts(s).filter((x) => twinOf(s, x))) p.rebootMax = 2; // BACK ORIFICE's act 3: each twin reboots twice
+      if (act.startsWith('seat:')) { const seat = v.parts.find((x) => x.id === act.split(':')[1]), p = v.parts.at(-1); if (seat && p !== seat) { v.parts.pop(); v.parts.splice(v.parts.indexOf(seat), 1, p); } } // the part just spawned takes that part's seat (actEven, below)
       // Each act's own rule rides on the virus, so the next act's refill takes it away (acts.mjs barsTurn).
       if (act === 'watchdog' && BOSSES[v.boss]?.watchdog) v.watchdog = { at: e.cycle + BOSSES[v.boss].watchdog.every, act: v.phases.filter((x) => x.done).length }; // the Resident's act 2: counted from the act's first cycle
       if (act === 'outbreak') v.outbreak = true; // the worm Resident's act 3: a lash hatches (acts.mjs lashLand)
@@ -3220,13 +3226,15 @@ function bossPhases(s) {
       if (act === 'round') { v.round = 3; v.roundFrom = e.cycle; if (v.tells) v.tells.list = v.tells.list.filter((x) => x.id !== 'mimic2'); } // one voice; it records only what you fire after it starts
       if (act === 'doppelganger') say = doppelganger(s);
       if (FB_VERBS.has(act)) say = fbVerb(s, act) || say; // the floor 2 and 3 bosses (floorbosses.mjs)
+      if (NATIVE_VERBS.has(act)) nativeVerb(s, act); // floor 2's lair bosses (nativeacts.mjs)
     }
     // The act break (actbreak.mjs) names the act, then the board's parts come back (act bars, acts.mjs).
     // Act bars: the board refilled (the act break names the act, then the parts come back in).
     const crown = e.bossRule === 'a' && livingParts(s).find((x) => x.core), a = crown && actInfo(v);
-    if (turned === ph) actEven(s); // a part the act brought takes a seat: the board holds act 1's Integrity
+    if (turned === ph) { actEven(s); actTells(s); } // a part the act brought takes a seat: the board holds act 1's Integrity, and a tell on the part it replaced moves
     emit(s, 'phase', `PHASE ${v.phases.filter((x) => x.done).length + 1}. ${say}`, { boss: v.boss, ...(a ? { act: { ...a, part: crown.id, at: null, refill: true } } : {}) });
   }
+  nativeCycle(s); // floor 2's lair bosses: the port moves, a part dozes (nativeacts.mjs)
   watchdog(s);
   if (v.enrageAt && e.cycle === v.enrageAt - ENRAGE.warn) emit(s, 'warning', `${v.name} enrages in ${ENRAGE.warn} cycles. Then every attack lands every cycle.`);
   if (v.enrageAt && e.cycle === v.enrageAt && !v.enraged) {
@@ -3581,6 +3589,7 @@ function breakPart(s, p) {
     if (p.drain) { e.drain = Math.max(1, p.attack.amount); emit(s, 'status', `The ${p.name} breaks, but your encryption stays on. It drops ${e.drain} a cycle. Purge clears it.`, { target: p.id }); }
     else { e.encrypt = 0; e.burst = null; emit(s, 'decrypted', 'Key recovered. Your server is decrypted.', { target: p.id }); }
   }
+  hotfixBroke(s, p); // PATCH TUESDAY's Hotfix: the act's last part comes back once (nativeacts.mjs)
   if (e.autoStopped) {
     e.autoStopped = false;
     if (virusIntegrity(s).current > 0) emit(s, 'warning-soft', 'That part is broken. Pick your next target.');
@@ -4834,7 +4843,7 @@ function lagCycle(s, first) {
 function endCycle(s, first) {
   if (cycleStart(s)) return since(s, first);
   // 2. Enemy attacks due this cycle (a P4 boss's Backlash first: acts.mjs).
-  if (lashLand(s)) return since(s, first);
+  if (lashLand(s) || nativeLand(s)) return since(s, first); // and an Alarm a wake sounded (nativeacts.mjs)
   let landed = 0;
   for (const p of dueNow(s)) {
     if (p.attack?.due > s.encounter.cycle) continue;

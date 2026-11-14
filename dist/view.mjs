@@ -5,6 +5,7 @@ import { componentsOf } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
 import { actInfo, actBar } from './acts.mjs';
+import { knockOpen, knockIn, dozer } from './nativeacts.mjs';
 import { FB, BUYER, nextBuyer, dumpOf, topFrame, canCall, frames, leakOf, depthOf, pendingOf, tradeOf, voteOf, forkOf, nodesOf, camerasOf, hatchers, parentOf, leverLeft, rollTo } from './floorbosses.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './memory.mjs';
@@ -628,6 +629,24 @@ export function partAbout(p, v = null, s = null) {
   const r = partRead(s, v || { parts: [p] }, p);
   return `${r.does}${answerLine(r.answer)}`;
 }
+// Floor 2's lair bosses' act rules on their parts (nativeacts.mjs): Tumblers, Port knock, Out of band, Hotfix, the dozer,
+// Shatter. Each tag's tooltip: the rule, and the answer.
+function nativeTags(s, p) {
+  const e = s.encounter, v = e.virus, out = [], tag = (label, tip) => out.push(`<span class="tag hot" title="${esc(tip)}">${label}</span>`);
+  const cyc = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
+  if (v.tumblers && p.lockMax && livingParts(s).some((m) => m.lock === p.id)) tag('tumblers', `Tumblers\nBoss rule\nA Deadbolt that lands locks the ${p.name} again at full.${answerLine('Cut the Deadbolt.')}`);
+  const open = v.knock && p.kind === 'system' ? knockOpen(s) : null;
+  if (open === p) { const n = knockIn(s); tag(`open ${n}`, `Port knock\nBoss rule\nThe ${p.name} is open and takes full damage. The other parts take half. The port moves on in ${cyc(n)}.${answerLine('Hit the open part.')}`); }
+  else if (open) tag('½', `Port knock\nBoss rule\nThe ${p.name} is shut and takes half damage. The ${open.name} is open.${answerLine('Hit the open part.')}`);
+  if (v.oob && p.attack?.effect === 'heal') tag('oob', `Out of band\nBoss rule\nWhen your hit takes a part across a tick, the ${p.name} patches it at once for ${p.attack.amount}.${answerLine('Cross both ticks in one hit, or break the Patcher first.')}`);
+  if (v.hotfix === true && p.core) tag('hotfix', `Hotfix\nBoss rule\nThe last part you break this act comes back once at 25%.${answerLine('Save a big hit for the last part.')}`);
+  if (dozer(s) === p) {
+    const a = livingParts(s).find((x) => x.attack?.alarm), alarm = a ? ` and sounds the Alarm for ${a.attack.amount}` : '';
+    tag('z ×2', v.rem.terror ? `Night Terror\nBoss rule\nThe ${p.name} dozes and charges, and takes double damage. A hit on it wakes it, calls the charge off${alarm}.${answerLine('Wake it, or take the charge.')}` : `REM\nBoss rule\nThe ${p.name} dozes: its attack waits, and it takes double damage. A hit on it wakes it${alarm}.${answerLine('Hit it when you can take the Alarm, or leave it be.')}`);
+  }
+  if (v.shatter && p.mimic) tag('shatter', `Shatter\nBoss rule\nOn its beat the ${p.name} plays your hit back as three shards, a third each. A ◆ on you stops one shard.${answerLine('Hold ◆ for the beat, or fire small on it.')}`);
+  return out;
+}
 function partTags(s, p) {
   const e = s.encounter, tags = [], pk = packed(s, e.virus, p); // a Packer standing: a rolled part's rule reads as ???
   if (pk && p.integrity > 0) tags.push(`<span class="tag packed" title="${esc('Packed: its name and rule are hidden until the Packer breaks.')}">${glyph('crate')}???</span>`);
@@ -687,6 +706,7 @@ function partTags(s, p) {
   if (p.broadcast && p.attack && p.integrity > 0) { const n = livingParts(s).filter((x) => x.kind === 'fragment').length, each = Math.round(p.attack.amount * (p.fanin || 0)); tags.push(`<span class="tag hot" title="${esc(`Broadcast\nBoss rule\nThe ${p.name}'s ${p.attack.name} deals ${each} more damage for each fragment on the board.${answerLine('Clear the fragments before it lands, or cut it.')}`)}">${glyph('relay')}×${n}</span>`); }
   if (p.lien && p.integrity > 0) { const n = v.liens || 0, each = Math.round(p.attack ? p.attack.amount * p.lien * (v.interest || 1) : 0); tags.push(`<span class="tag hot liens" title="${esc(`Lien\nBoss rule\nEach of your commands that a ◆ absorbs puts a Lien on the ${p.name}. Each Lien adds ${each} damage to its ${p.attack?.name || 'Collection'}${v.interest > 1 ? ' (Interest: it counts twice)' : ''}. A Collection that lands or is cut clears them.${v.repo ? ' One that lands puts a ◆ back for each Lien.' : ''}${answerLine('Take ◆ off with strips, burns or helpers, and cut the Collection.')}`)}">§${n}</span>`); }
   for (const x of p.integrity > 0 ? floorTags(s, p) : []) tags.push(x); // the floor 2 and 3 bosses (floorbosses.mjs)
+  for (const x of p.integrity > 0 ? nativeTags(s, p) : []) tags.push(x); // floor 2's lair bosses' act rules (nativeacts.mjs)
   if (p.mimic && v.round && p.integrity > 0) tags.push(`<span class="tag hot" title="${esc(`Round\nBoss rule\nOn its beat the ${p.name} plays back your last three commands: the one you fire on the beat and the two before it. A cycle you hold adds nothing.${answerLine('Hold or fire small in the two cycles before a beat.')}`)}">round</span>`);
   if (p.command && p.integrity > 0) tags.push(`<span class="tag hot" title="${esc(`${p.name}: fragments deal ${Math.round((p.gnaw ?? CONFIG.c2.gnaw) * 100)}% more damage while it stands. When it breaks, every fragment drops.`)}">commands fragments</span>`);
   const burn = (e.burns || []).filter((b) => b.target === p.id);

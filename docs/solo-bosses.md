@@ -88,6 +88,9 @@ called off, the big key on the beat) something specific.
 - **A part an act brings takes a seat** (`joinPart` seat), and the board holds act 1's Integrity (`actEven`).
 - **Pacing**: rounds and the enrage (24 cycles in) count from each act's start; hits ×0.55; each act a third of
   `ACT_BARS.share`, times the boss's `bar`.
+- **Act 1's tells come back with their parts** (built, session 3). Before, every tell died with its part as the act
+  ended, so acts 2 and 3 ran with none (HOLLOW CHOIR's Round never sang). A tell on a part an act seats away moves to
+  one that can carry it.
 - **The refill does the returning.** Re-arm, Hard fork's returns, Botnet's and Reinstatement's go in their sessions. A
   part comes back mid-act only where its system is about coming back (the Mutex's lock, Final notice, Hotfix, restores).
 - **The break can name the next act** (not built): BYZANTINE's traitor is your last break, MIRRORSHADE's Doppelganger
@@ -108,16 +111,16 @@ called off, the big key on the beat) something specific.
 | RECURSION | **Call**, its growth for the act | **Return**: no frame pushed | **Overflow**: one frame deeper, same Integrity | Letting every Call through |
 | HOLLOW CHOIR (built) | **One voice** | **Second voice**: seat Pulse Node | **Round**, one voice | The big key on the beat |
 | GRACE PERIOD | **Grace** 3, the Rider | **Reinstatement**: a lapsed part +25% until stripped; nothing returns | **Acceleration**: a lapse takes a cycle off every other part | Paying every part |
-| CENTRIFUGE | **Bidding** | **Reserve price** | **Second lot** | Commands at the Gavel |
+| CENTRIFUGE (built) | **Bidding** | **Reserve price** | **Second lot** | Commands at the Gavel |
 | The Residents (built) | **Backlash** | **Watchdog**, this act only | Worm **Outbreak** (a lash hatches); ransomware **Lockdown** (a lash encrypts you) | Hits on the beat |
-| DEADBOLT | **Lock** | **Tumblers**: a Deadbolt that lands re-locks | **Double lock**: a Mutex, seat Pulse Node | Hitting the lock |
+| DEADBOLT (built) | **Lock** | **Tumblers**: a Deadbolt that lands re-locks | **Double lock**: a Mutex, seat Pulse Node | Hitting the lock |
 | TRIPMINE | **Tripwire** | **Daisy chain**: a Tripwire, seat Pulse Node (Claymore to the Encryptor) | **Dead man**: the Pulse Node sets off every wire | The Tripwire first |
 | HASHLORD | **Pool Lock** | **Chain Fork**: a Miner, seat Pulse Node | **51%**: the Lock wards the healthiest part | Commands into the ward |
-| BACK ORIFICE | **Spam Run** | **Port knock**: one part open every 3, the rest half | **Mirror**: seat Pulse Node | Closed ports |
-| PATCH TUESDAY | **Patch** | **Out of band**: a tick crossed is patched at once | **Hotfix**: the last part broken back at 25% | Chipping the first part |
+| BACK ORIFICE (built) | **Spam Run** | **Port knock**: one part open every 3, the rest half | **Mirror**: seat Pulse Node | Closed ports |
+| PATCH TUESDAY (built) | **Patch** | **Out of band**: a tick crossed is patched at once | **Hotfix**: the last part broken back at 25% | Chipping the first part |
 | FLOODWALL | **Flood** | **Spillway**: a delay sends the ramp to the Pulse Node | **Levee**: the ramp moves on when the Flooder breaks | Never delaying |
-| MIRRORSHADE | **Feedback** | **Doppelganger**: your first break in act 1 | **Shatter**: three copies of your next command, a third each | Bursting while Scrambled |
-| SLEEPWALKER | **Dormant**, every act | **REM**: one part dozes, ×2; a hit sounds the Alarm | **Night Terror**: the dozer charges; wake it or take it | Waking it at once |
+| MIRRORSHADE (built) | **Feedback** | **Doppelganger**: your first break in act 1 | **Shatter**: three copies of your next command, a third each | Bursting while Scrambled |
+| SLEEPWALKER (built) | **Dormant**, every act | **REM**: one part dozes, ×2; a hit sounds the Alarm | **Night Terror**: the dozer charges; wake it or take it | Waking it at once |
 | ECHOLALIA | **Echo** | **Echo chamber**: echoes wait, and land when the Echo breaks | **Last Word**: the last part repeats its final 3 cycles' hits (its charge back to Feedback) | Bursting the last part |
 
 **Build order**, one session each, in sequence (every one touches the combat rules), each played before the next:
@@ -126,7 +129,14 @@ called off, the big key on the beat) something specific.
    10): Resident worm 15.3 / 15.8 / 15.3 (`bar` 0.6), ransomware 16.2 / 18.7 / 17.7 (1.2), REPO MAN 15.8 / 16.0 / 15.4
    (2.2), HOLLOW CHOIR 16.0 / 17.7 / 14.5 (3.85). RELAY-KING (0.85) is won 3 times in 48, so its acts are read over every
    act that ended: 18.8 / 17.6 / 18.0.
-3. Floor 2: DEADBOLT, BACK ORIFICE, PATCH TUESDAY, SLEEPWALKER, MIRRORSHADE, CENTRIFUGE.
+3. Floor 2: DEADBOLT, BACK ORIFICE, PATCH TUESDAY, SLEEPWALKER, MIRRORSHADE, CENTRIFUGE (built November 14,
+   nativeacts.mjs). Their acts for the planner (won fights, level 10, 12 seeds): DEADBOLT 18.1 / 18.8 / 15.1 (`bar`
+   1.1), BACK ORIFICE 15.8 / 19.9 / 14.7 (1.0), PATCH TUESDAY 16.1 / 17.7 / 17.9 (0.8), SLEEPWALKER 16.8 / 15.5 / 15.2
+   (0.76), MIRRORSHADE 16.8 / 14.9 / 18.2 (1.04), CENTRIFUGE 13.4 / 16.2 / 16.7 (1.1, unchanged: a bigger bar only
+   loses more fights, so the won ones stay short). Read as built: Hotfix brings back the act's last part as it breaks;
+   the dozer is the healthiest part, never the same twice running, every 4 cycles; Shatter splits each beat's hit; BACK
+   ORIFICE's act 3 twins reboot each other twice. The tells' return moved session 2's bosses: HOLLOW CHOIR is won 6
+   times in 48 (35 before), CENTRIFUGE 24 (47), REPO MAN 29 (24).
 4. Floor 3: SHOULDER SURFER, RECURSION, HASHLORD, FLOODWALL, ECHOLALIA.
 5. Floors 4 and 5: BYZANTINE, CAMSWARM, TRIPMINE, GRACE PERIOD, EXIT NODE.
 

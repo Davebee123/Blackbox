@@ -24,6 +24,7 @@ import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toI
 import { FAMILIES, GUARDS, STRAINS, BOSSES, ROOM_FAMILIES, ABILITIES, TELL } from './data.mjs';
 import { tellsOf, tellAnswer, tellNext, tierOf, inWindow, answers } from './tells.mjs';
 import { raidDef } from './raid.mjs';
+import { oobCrossed } from './nativeacts.mjs';
 import { ignores } from './genes.mjs';
 import { gainResearch } from './research.mjs';
 import { daemonsOn } from './daemons.mjs';
@@ -109,7 +110,7 @@ export function onHit(s, p, was, dealt, opts = {}) {
   for (const t of crossed) t.spent = true;
   e.metrics.ticks = (e.metrics.ticks || 0) + crossed.length;
   if (p.integrity <= 0) return; // it broke: everything it did stops with it
-  try { tickCut(s, p, crossed); } finally { if (v.hop === true && p.core && crossed.some((t) => t.at === 0.5)) crownHop(s, p); } // RELAY-KING's act 2: after the cut, the ♛ hops
+  try { tickCut(s, p, crossed); } finally { if (v.hop === true && p.core && crossed.some((t) => t.at === 0.5)) crownHop(s, p); if (v.oob) oobCrossed(s, p, crossed); } // RELAY-KING's act 2: after the cut, the ♛ hops; PATCH TUESDAY's Out of band
 }
 function tickCut(s, p, crossed) {
   const e = s.encounter, v = e.virus;

@@ -47,6 +47,7 @@ import { cancelAttack, crossBy, interruptMove, nextTick, fronted } from './inter
 import { ignores, CLASHES } from './genes.mjs';
 import { contractDid } from './mail.mjs';
 import { tellAct, actOf } from './acts.mjs';
+import { nativeCharge, NATIVE } from './nativeacts.mjs';
 
 // What a fight's tells did, on its metrics (the gap test reads them): said, answered, read (answered by a command
 // of yours, not by breaking the part), landed, and the Signal (or Integrity) they cost you, by tell.
@@ -472,6 +473,7 @@ export function tellLand(s) {
       const atk = chargeAttack(s, t, p), locked = s.encounter.encrypt || 0, shield = e.shield || 0;
       if (strikeWith(s, p, atk)) return done(), true;
       advance(p, e);
+      nativeCharge(s, t); // DEADBOLT's Tumblers (nativeacts.mjs)
       // Full Disk: a burst of encryption on top of its Encrypt, for TELL.burst cycles (it goes when the part breaks, or with Purge).
       if (atk.burst && (s.encounter.encrypt || 0) > locked) { // its Encrypt got through (a ◆, Null Route or Sanitize stops both)
         s.encounter.burst = { name: t.name, amount: atk.burst, left: TELL.burst, source: p.id };
@@ -738,7 +740,12 @@ export function mimicLands(s, t, p) { // (exported for exe.test.mjs)
   const amount = Math.max(1, Math.round(direct + swarm * TELL.mimic));
   const loud = copy?.loud > 1 && direct;
   emit(s, 'status', loud ? `You're Scrambled, and the ${p.name} plays ${what} back at you ${copy.loud === 2 ? 'twice' : `${copy.loud} times`} over.` : `The ${p.name} plays ${what} back at you.`, { source: p.id, tell: t.id, missed: true, ...(swarm ? { helpers: caught.length } : {}) });
-  const over = strikeWith(s, p, { name: `${direct ? (hits.length > 1 ? 'The round' : ABILITIES[hits[0].id]?.name || hits[0].name) : 'Helpers'}${direct && swarm ? ' and helpers' : ''} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id });
+  const atk = { name: `${direct ? (hits.length > 1 ? 'The round' : ABILITIES[hits[0].id]?.name || hits[0].name) : 'Helpers'}${direct && swarm ? ' and helpers' : ''} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id };
+  // MIRRORSHADE's Shatter (act 3, nativeacts.mjs): three shards, a third each, so a ◆ on you stops one.
+  const n = host.encounter.virus.shatter ? NATIVE.shards : 1;
+  if (n > 1) emit(s, 'status', `SHATTER. The ${p.name}'s playback breaks into ${n} shards.`, { source: p.id, tell: t.id, shatter: true });
+  let over = false;
+  for (let k = 0; k < n && !over; k++) over = strikeWith(s, p, n > 1 ? { ...atk, name: `Shard ${k + 1}`, amount: Math.max(1, Math.ceil(amount / n)) } : atk);
   if (!over) { if (direct) lockLast(s, t, 'MIMIC'); corrupt(s, t, p); } // your command's skill goes offline; helpers alone lock nothing
   return over;
 }

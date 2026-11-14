@@ -7,9 +7,9 @@
 //                the Decoy's bend, or a part's own attack (RELAY-KING's Broadcast, REPO MAN's Collection). What you fire
 //                on the beat, and where, is the puzzle.
 //   the acts     act n deals tell n (charge, cast, then the third); a phase's every quickens the beat. An act ends when its last part breaks (act bars, below).
-import { BOSSES } from './data.mjs';
+import { BOSSES, STRAINS, TELLS } from './data.mjs';
 import { emit, alive, part, livingParts, strikeWith, attackAmount, landingsOf, hatch, active } from './combat.mjs';
-import { tellsOf } from './tells.mjs';
+import { tellsOf, findSource } from './tells.mjs';
 
 export const ACTS = { lash: 2 }; // the Backlash's multiple
 
@@ -171,6 +171,23 @@ export function barsSnap(s) {
   e.actBoard = { at: e.cycle + 1, parts: structuredClone(board), keys: Object.keys(v).filter((k) => !KEEP.has(k)) };
   e.actMax = board.reduce((n, p) => n + p.max, 0);
 }
+// Act 1's tells as dealt (combat.mjs engage, after tellStart): every act deals them again, on its refilled board.
+export function barsTells(s) {
+  const e = s.encounter;
+  if (e?.actBoard && e.virus.tells && !e.actBoard.tells) e.actBoard.tells = structuredClone(e.virus.tells.list);
+}
+// After an act's verbs: a tell whose part left the board (a seat taken) moves to another part that can carry it, or goes.
+export function actTells(s) {
+  const v = s.encounter.virus, T = v.tells;
+  if (!T) return;
+  T.list = T.list.filter((t) => {
+    if (v.parts.some((p) => p.id === t.part && p.integrity > 0)) return true;
+    const q = t.kind !== 'mimic' && findSource(v, { ...t, part: TELLS[t.id]?.part ?? 'special' });
+    if (!q || !(q.integrity > 0)) return false;
+    Object.assign(t, { part: q.id, told: false, n: null, next: null, said: null });
+    return true;
+  });
+}
 // An act's verbs ran (combat.mjs bossPhases): a part the act brought takes a seat, so its board holds act 1's Integrity.
 export function actEven(s) {
   const e = s.encounter, ps = e?.virus?.parts.filter((p) => p.integrity > 0 && p.kind !== 'fragment') || [];
@@ -201,19 +218,27 @@ export function barsTurn(s) {
   if (!e.actBars || livingParts(s).length || !e.actBoard) return null;
   const ph = v.phases.find((x) => !x.done);
   if (!ph) return null;
-  const by = e.cycle + 1 - e.actBoard.at, board = structuredClone(e.actBoard.parts);
+  const by = e.cycle + 1 - e.actBoard.at, board = structuredClone(e.actBoard.parts), sleeps = STRAINS[v.strain]?.dormant;
   for (const p of board) {
+    const wake = p.attack?.wake; // a dormant part's: cycles after it wakes, not a cycle
     later(p, by); later(p.attack, by);
+    if (sleeps && wake != null) p.attack.wake = wake;
     for (const t of p.pending || []) t.at += by;
     p.ticks = null; p.played = []; p.lastDamaged = 0;
   }
   v.parts = board;
+  // Act 1's tells come back with their parts (every tell died as its part broke), on the same clock as the board.
+  if (v.tells && e.actBoard.tells) {
+    const have = new Set(v.tells.list.map((t) => t.id));
+    for (const t of structuredClone(e.actBoard.tells)) if (!have.has(t.id)) { for (const k of ['after', 'next', 'said', 'first']) if (t[k] != null) t[k] += by; v.tells.list.push(t); }
+  }
   if (e.actBoard.keys) for (const k of Object.keys(v)) if (!KEEP.has(k) && !e.actBoard.keys.includes(k)) delete v[k]; // what the last act's rules added (Liens, a Round) goes with it; a fight saved before keeps them
   e.burns = (e.burns || []).filter((b) => !board.some((p) => p.id === b.target));
   if (!board.some((p) => p.id === v.weakPoint)) { v.weakPoint = board[0]?.id; v.weakKnown = false; }
   e.actFrom = e.cycle + 1;
   e.turnedAt = e.cycle;
   actClock(s, e.cycle + 1);
+  if (sleeps) Object.assign(v, { dormant: true, woke: false, wakeAt: e.cycle + sleeps }); // a Sleeper boss (SLEEPWALKER) sleeps again at each act's start
   ph.at = 2;
   return ph;
 }
