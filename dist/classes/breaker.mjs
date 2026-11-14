@@ -24,7 +24,7 @@
 // Part state (Bit Rot, Exposed Wiring) lives on the shared parts and remembers whose it is.
 import { sustained, subOf, subEdge, hasTalent, rank, capValue, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable, stripMark, mirrorOn, intents, heal, healScaled, fxOn } from '../combat.mjs';
 import { ABILITIES, SKILLS, EDGE } from '../data.mjs';
-import { alliesOf } from '../combat.mjs';
+import { alliesOf, legend, legendFire } from '../combat.mjs';
 import { tellOn, tellOpen, tellAnswer, chargeSize } from '../tells.mjs';
 import { subs } from './breaker.data.mjs';
 
@@ -119,7 +119,8 @@ const use = {
     if (hasTalent(s, 'cluster-charge')) for (const p of livingParts(s)) if (p !== target && p.armor > 0) strip(s, p, 2, 'Cluster Charge');
   },
   'logic-bomb'(s, { a, target, e }) {
-    (e.bkBombs ||= []).push({ target: target.id, at: e.cycle + a.fuse, who: who(s) });
+    // Detonator Cord (a legend): a bomb on every part at once, wired together (cycle, below).
+    for (const p of legend(s, 'detonator-cord') ? [target, ...livingParts(s).filter((x) => x !== target)] : [target]) (e.bkBombs ||= []).push({ target: p.id, at: e.cycle + a.fuse, who: who(s), ...(p !== target ? { cord: true } : {}) });
     emit(s, 'status', `Logic Bomb planted in ${target.name}. It goes off in ${a.fuse} cycles.`, { target: target.id, mark: 'burn', ability: 'logic-bomb' });
   },
   // Chain Reaction: the part is wired to blow if it breaks within its cycles (broke, below).
@@ -301,7 +302,9 @@ function cycle(s) {
   const e = s.encounter;
   // Logic Bombs whose fuse ran out.
   if (e.bkBombs?.length) {
-    const due = e.bkBombs.filter((b) => b.at <= e.cycle && b.who === who(s));
+    const cord = legend(s, 'detonator-cord') && e.bkBombs.some((b) => b.at <= e.cycle && b.who === who(s)); // Detonator Cord: one going off sets off the rest
+    const due = e.bkBombs.filter((b) => (cord || b.at <= e.cycle) && b.who === who(s));
+    if (cord) legendFire(s, 'detonator-cord', Math.max(0, due.length - 1));
     e.bkBombs = e.bkBombs.filter((b) => !due.includes(b));
     for (const b of due) if (livingParts(s).length) detonate(s, b);
   }
