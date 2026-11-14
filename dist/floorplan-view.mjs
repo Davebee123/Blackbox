@@ -455,12 +455,13 @@ function lineupSvg(s, v, cx, y) {
   const n = v.fights, w = 16, gap = 4, x0 = cx - (n * w + (n - 1) * gap) / 2;
   return `<g class="fp-rv-lineup">${Array.from({ length: n }, (_, i) => { const x = n1(x0 + i * (w + gap)), done = i < v.fight; return `<g class="${done ? 'done' : i === v.fight ? 'next' : ''}"><rect x="${x}" y="${n1(y)}" width="${w}" height="14" rx="2"/><text x="${n1(x + w / 2)}" y="${n1(y + 10.5)}" text-anchor="middle">${i + 1}</text>${done ? `<line x1="${x}" y1="${n1(y + 14)}" x2="${n1(x + w)}" y2="${n1(y)}"/>` : ''}</g>`; }).join('')}</g>`;
 }
-// A rival's tooltip: its name, what it is, what it does, then the answer (muted, after ▸).
+// A rival's tooltip, lean: its name, kind and level (and your record), the race as numbers, its lineup, the answer.
 function rivalTip(s, v) {
-  const P = rivalP(v), m = memoryOf(s, v.id);
-  return [P.name, `Rival · ${crewName(v)} · level ${v.level}${m.met ? ` · ${m.won}–${m.lost}` : ''}`,
-    `${rivalLine(s)} They walk a room for each of your moves and need no key. When they reach you, they fight you: ${v.fights} viruses, one after another.`,
-    '▸ Beat them to take their pack, and the vault if they opened it.'].join('\n');
+  const P = rivalP(v), m = memoryOf(s, v.id), race = raceOf(s, v);
+  return [`${P.name}: Rival · ${crewName(v)} · level ${v.level}${m.met ? ` · ${m.won}–${m.lost}` : ''}`,
+    race ? `To the vault: ${race.it} · you ${race.you ?? '?'}` : 'Has the files · heading out',
+    `${v.fights} fights back to back · no key`,
+    '▸ Win: their pack, and the vault if open.'].join('\n');
 }
 // The 1s and 0s drifting off the room you're in: they start just outside its edge and drift 14 to 32 out.
 function bitsSvg(p, G, id) {

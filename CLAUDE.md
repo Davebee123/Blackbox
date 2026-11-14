@@ -75,7 +75,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - quest window: the *Transmission*;
   - level-up: the *Firmware update*;
   - wick's tips (the guided path's, tips.mjs `wick`): the *Transmission* (his face, the kicker, his lowercase line);
-  - pager: the *Tray*;
+  - pager: the *Log* on a desktop (ping lines in the map's left column under Contracts, above the prompt elsewhere;
+    pings.mjs), which replaced the *Tray*; a phone keeps its lamp and Comms;
   - player card: the *NET ID badge*;
   - collection log: the *Ledger*;
   - journals: one Ledger entry, a timeline over the writers, a document card on the first find (docs/journals.md);

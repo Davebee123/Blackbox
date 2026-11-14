@@ -1,0 +1,31 @@
+/* The ping log (pings.mjs): frameless lines, an icon and a short sentence each, newest at the bottom and the older
+   fading in steps (--o). Names amber (red on a threat), yours teal. A plain line fades out at the end of its 30 s
+   (ping-life, its delay set by app.js from when it came in); nothing moves. */
+.pings { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; font: 12px/1.4 var(--sans); color: var(--text); text-shadow: 0 1px 2px #000; pointer-events: none; }
+.ping { opacity: var(--o, 1); transition: opacity 0.2s; }
+.ping:hover { opacity: 1; }
+.pings .pi-in { display: flex; align-items: flex-start; gap: 7px; max-width: 100%; padding: 0; font: inherit; color: inherit; text-align: left; text-shadow: inherit; background: none; border: 0; cursor: pointer; pointer-events: auto; }
+.pings .pi-in[aria-disabled] { cursor: default; }
+.pings .pi-in:focus-visible { outline: 1px solid var(--amber); outline-offset: 2px; }
+.ping[data-t] .pi-in { animation: ping-life 30s linear both; }
+.ping.stays .pi-in { animation: ping-in 0.4s ease-out both; }
+.pi-ico { display: grid; place-items: center; flex: none; height: 17px; color: var(--amber); }
+.pi-ico .glyph { width: 13px; height: 13px; margin: 0; fill: none; stroke: currentColor; }
+.pi-t { min-width: 0; }
+.pi-t b { font-weight: 600; color: var(--amber); }
+.pi-t .you { color: var(--you); }
+.ping.threat .pi-ico, .ping.threat .pi-t b { color: var(--hot); }
+.pings .pi-in:not([aria-disabled]):hover .pi-t { color: var(--bright); }
+/* The pager's chirp (feel.mjs) and the nag for an unseen threat: a glow on the line's icon. */
+.pings.fx-pager .ping:last-child .pi-ico, .ping.fx-pager .pi-ico { animation: pagerbuzz 0.4s linear; }
+.no-motion .pings .pi-in, .no-motion .pings .pi-ico { animation: none; }
+@keyframes ping-in { from { opacity: 0; } }
+@keyframes ping-life { 0% { opacity: 0; } 1.3% { opacity: 1; } 93% { opacity: 1; } 100% { opacity: 0; } }
+
+/* On the map: in the left rail under Contracts. */
+.map-lcol .pings { padding: 2px 2px 0; }
+/* Elsewhere: above the prompt in the dock, at the left, taking its own room (nothing under it is covered). */
+.ping-dock { max-width: min(560px, 100%); }
+.ping-dock:empty { display: none; }
+/* A phone keeps its page: three lines above the prompt (the rail on the map keeps five). */
+@media (max-width: 900px) { .ping-dock .ping:nth-last-child(n + 4) { display: none; } }

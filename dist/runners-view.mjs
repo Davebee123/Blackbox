@@ -49,7 +49,7 @@ export function runnerMark(s, handle, fl, portrait = false) {
   const pts = passed.slice(from).map(P).filter(Boolean).concat(b ? [me] : []), to = headingOf(st), ring = to && revealed(s, g, to) ? P(to) : null;
   const f = (v) => Math.round(v * 10) / 10;
   const route = pts.length > 1 ? `<polyline class="mr-route" points="${pts.map((p) => `${f(p.x)},${f(p.y)}`).join(' ')}"/>` : '';
-  return `<g class="mrunner${st.stage === 'down' ? ' down' : ''}${huntsYou(s, r.handle) ? ' rival' : ''}" data-runner-mark="${esc(r.handle)}">${route}${ring ? `<circle class="mr-ring" cx="${f(ring.x)}" cy="${f(ring.y)}" r="22"/>` : ''}<g transform="translate(${f(me.x)} ${f(me.y - (b ? 0 : 16))})"><title>${esc(runnerTip(s, r, st).replace(/\n▸ /, ' '))}</title><path class="mr-dia" d="M0 -7 L7 0 L0 7 L-7 0 Z"/><text class="mr-name" y="-12" text-anchor="middle">${esc(r.handle)}</text></g></g>`;
+  return `<g class="mrunner${st.stage === 'down' ? ' down' : ''}${huntsYou(s, r.handle) ? ' rival' : ''}" data-runner-mark="${esc(r.handle)}">${route}${ring ? `<circle class="mr-ring" cx="${f(ring.x)}" cy="${f(ring.y)}" r="22"/>` : ''}<g transform="translate(${f(me.x)} ${f(me.y - (b ? 0 : 16))})" data-tt="${esc(runnerTip(s, r, st))}" data-tt-runner="${esc(r.handle)}"><path class="mr-dia" d="M0 -7 L7 0 L0 7 L-7 0 Z"/><text class="mr-name" y="-12" text-anchor="middle">${esc(r.handle)}</text></g></g>`;
 }
 // The runners the map draws on a floor: those in sight, less your crew (they're with you) and the picked one (runnerMark).
 export const runnersOn = (s, fl, pick = null) => castOf(s).filter((r) => r.handle !== pick && !hired(s, r.handle)).map((r) => ({ r, st: stateOf(s, r) })).filter((x) => x.st.floor === fl && inSight(s, x.st));
@@ -68,7 +68,7 @@ export function runnersMap(s, fl, pick = null, portrait = false, open = null) {
   const at = {};
   for (const x of here) if (!x.st.pos.next) (at[x.st.pos.at] ||= []).push(x);
   const f = (v) => Math.round(v * 10) / 10;
-  const dia = (x, p, road) => `<g class="mrun${road ? ' road' : ''}${x.st.stage === 'down' ? ' down' : ''}${huntsYou(s, x.r.handle) ? ' rival' : ''}" data-runner="${esc(x.r.handle)}" role="button" tabindex="0" aria-label="${esc(x.r.handle)}" transform="translate(${f(p.x)} ${f(p.y)})"><title>${esc(runnerTip(s, x.r, x.st).replace(/\n▸ /, ' '))}</title><circle class="mrun-hit" r="7"/><path d="${DIA}"/></g>`;
+  const dia = (x, p, road) => `<g class="mrun${road ? ' road' : ''}${x.st.stage === 'down' ? ' down' : ''}${huntsYou(s, x.r.handle) ? ' rival' : ''}" data-runner="${esc(x.r.handle)}" role="button" tabindex="0" aria-label="${esc(x.r.handle)}" data-tt="${esc(runnerTip(s, x.r, x.st))}" data-tt-runner="${esc(x.r.handle)}" transform="translate(${f(p.x)} ${f(p.y)})"><circle class="mrun-hit" r="7"/><path d="${DIA}"/></g>`;
   const crowd = (id, list, p) => { const tip = `${list.length} runners at ${shortPlace(s, g, id)}: ${list.map((x) => x.r.handle).sort().join(', ')}.`; return `<g class="mrun crowd${id === open ? ' on' : ''}" data-runners-at="${esc(id)}" role="button" tabindex="0" aria-label="${esc(tip)}" transform="translate(${f(p.x)} ${f(p.y)})"><title>${esc(tip)}</title><rect class="mrun-hit" x="-13" y="-8" width="32" height="16"/><path transform="translate(-6 0)" d="${DIA}"/><text class="mrun-n" x="2">${list.length}</text></g>`; };
   let out = '';
   for (const [id, all] of Object.entries(at)) { // a rival stands out of the count, red, beside it
@@ -147,6 +147,14 @@ function nowRow(s, r, st, busy) {
 }
 const lastLine = (s, h) => [...(s.channel?.lines || [])].reverse().find((l) => l.from === h)?.text || '';
 const row = (label, html) => `<div class="rc-r"><dt>${label}</dt><dd>${html}</dd></div>`;
+// A runner's *Badge*: their bust (portraits.mjs, from the handle), then kind, handle, class and level, and the Tier bar.
+// The card's head, and the tooltip over their diamond on the map (app.js ttCardHtml, data-tt-runner).
+export function runnerBadge(s, h) {
+  const r = runnerOf(s, h);
+  if (!r) return '';
+  const st = stateOf(s, r);
+  return `<div class="rc-head">${portraitMarkup(h, 'runner', 'rc-bust')}<div><p class="rc-kind${huntsYou(s, h) ? ' rival' : ''}">${esc(kindOf(s, r))}</p><h2 class="rc-handle">${glyph(CLASS_GLYPH[r.cls] || 'run', 'rc-cls')}${esc(h)}</h2><p class="rc-class">${esc(clsLabel(r, st.level))} · level ${st.level}</p>${tierBar(s, h)}</div></div>`;
+}
 // The runner card (a Rail row opens it beside their diamond); mode 'crew' is the crew card Hire turns it into, with
 // preset picked.
 export function runnerCard(s, h, { mode = 'runner', preset = 'rotation' } = {}) {
@@ -154,7 +162,7 @@ export function runnerCard(s, h, { mode = 'runner', preset = 'rotation' } = {}) 
   if (!r) return '';
   const st = stateOf(s, r), busy = busyOf(s, r), mine = hired(s, h), no = cantHire(s, r);
   // The head (the *Badge*): their bust (portraits.mjs, from the handle), then kind, handle, class and level, and the Tier bar.
-  const head = `<div class="rc-head">${portraitMarkup(h, 'runner', 'rc-bust')}<div><p class="rc-kind${huntsYou(s, h) ? ' rival' : ''}">${esc(kindOf(s, r))}</p><h2 class="rc-handle">${glyph(CLASS_GLYPH[r.cls] || 'run', 'rc-cls')}${esc(h)}</h2><p class="rc-class">${esc(clsLabel(r, st.level))} · level ${st.level}</p>${tierBar(s, h)}</div></div>`;
+  const head = runnerBadge(s, h);
   const x = '<button type="button" class="btn small rc-x" data-runner-close title="Close">×</button>';
   if (mode === 'crew' && !mine) {
     const fee = feePaid(s, h) ? 0 : feeOf(s, r), cut = Math.round(cutOf(r) * 100);

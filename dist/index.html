@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="terminal.css">
   <link rel="stylesheet" href="house.css">
   <link rel="stylesheet" href="pager.css">
+  <link rel="stylesheet" href="pings.css">
   <link rel="stylesheet" href="levelup.css">
   <link rel="stylesheet" href="quest.css">
   <link rel="stylesheet" href="scenes.css">
@@ -125,6 +126,8 @@
   <div id="jr-find" class="gain jr-wrap" hidden></div>
 
   <footer class="command-dock">
+    <!-- The ping log off the Map page (pings.mjs); on the Map it sits in the map's left rail. -->
+    <div class="ping-dock" id="pings"></div>
     <!-- #net (channel.mjs): the latest line over the prompt; click it for the channel. -->
     <button type="button" class="net-line" id="net-line" aria-controls="channel" aria-expanded="false" title="#net, the public channel"></button>
     <section class="channel" id="channel" aria-label="#net, the public channel" hidden>
