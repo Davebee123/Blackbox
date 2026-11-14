@@ -264,15 +264,57 @@ const SKY_LIGHT = { dawn: () => ({ L: nrm([-0.55, 0.15, -0.82]), k: 0.45, base: 
 // ---------- the stage ----------
 export function createStage({ getFloor, canMove = () => true, doc = typeof document !== 'undefined' ? document : null }) {
   let floor = null, P = null, col = '#f4b437', bright = '#fff2c8', dim = '#9e814f', t0 = 0, enterAt = -1e9, stillKey = '', tint = null, sky = 'night';
-  let base = null, baseAt = 0;
+  let base = null, baseAt = 0, lit = null, litAt = -1, litFor = null, prog = 9, progAt = -1;
   const off = doc ? doc.createElement('canvas') : null, ox = off?.getContext('2d');
   const clock = (now) => (now - t0) / 1000;
+  // A glowing glyph seen twice at the same place and alpha is drawn from a sprite: the glyph and its blur rendered once
+  // at that alpha and the same sub-pixel offset, then copied at a whole pixel (a blur a glyph a frame was the cost).
+  const glows = new Map(), seen = new Set(); let glowKey = '';
+  function glowed(ctx, ch, x, y, a, m) {
+    const k0 = `${ctx.font}|${col}|${m.dpr}`;
+    if (k0 !== glowKey) { glowKey = k0; glows.clear(); seen.clear(); }
+    const k = `${ch}|${a}|${x}|${y}`;
+    let s = glows.get(k);
+    if (!s) {
+      if (!seen.has(k)) { if (seen.size > 512) seen.clear(); seen.add(k); return false; }
+      if (glows.size > 192) glows.clear();
+      const X = x * m.dpr, Y = y * m.dpr, M = Math.ceil(m.glyph * m.dpr) + 24, ox = Math.floor(X) - M, oy = Math.floor(Y) - M;
+      const c = doc.createElement('canvas'); c.width = c.height = 2 * M;
+      const g = c.getContext('2d');
+      g.setTransform(m.dpr, 0, 0, m.dpr, -ox, -oy);
+      g.font = ctx.font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = col;
+      g.globalAlpha = a; g.shadowColor = col; g.shadowBlur = 8; g.fillText(ch, x, y);
+      glows.set(k, (s = { c, ox, oy }));
+    }
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.drawImage(s.c, s.ox, s.oy); ctx.restore();
+    return true;
+  }
+  // The lowest row (device px) with more than 6 of every third pixel over alpha 90, scanning every other row up from
+  // the bottom; 0 if none. Read off a CPU copy, a quarter of the height at a time from the bottom.
+  let probe = null, px = null;
+  function lowest(canvas) {
+    const Wd = canvas.width, Hd = canvas.height;
+    if (!probe) { probe = doc.createElement('canvas'); px = probe.getContext('2d', { willReadFrequently: true }); }
+    if (probe.width !== Wd || probe.height !== Hd) { probe.width = Wd; probe.height = Hd; } else px.clearRect(0, 0, Wd, Hd);
+    px.drawImage(canvas, 0, 0);
+    const step = Math.max(2, Math.ceil(Hd / 4));
+    for (let hi = Hd; hi > 0; hi -= step) {
+      const lo = Math.max(0, hi - step), img = px.getImageData(0, lo, Wd, hi - lo).data;
+      for (let y = Hd - 1; y > 0; y -= 2) {
+        if (y >= hi) continue;
+        if (y < lo) break;
+        let n = 0; for (let x = 0; x < Wd; x += 3) if (img[((y - lo) * Wd + x) * 4 + 3] > 90) n++;
+        if (n > 6) return y;
+      }
+    }
+    return 0;
+  }
   const api = {
     // Called every frame: is a stage up, and which.
     update(now) {
       const f = getFloor?.() || null;
       if (f !== floor) {
-        floor = f; P = PLACES[f] || null; t0 = now; stillKey = ''; base = null;
+        floor = f; P = PLACES[f] || null; t0 = now; stillKey = ''; base = null; progAt = litAt = -1;
         if (P && doc) { const cs = getComputedStyle(doc.documentElement), bg = cs.getPropertyValue('--bg').trim() || '#000000'; col = cs.getPropertyValue('--amber').trim() || col; bright = cs.getPropertyValue('--bright').trim() || bright; dim = cs.getPropertyValue('--dim').trim() || dim; tint = TINT_SKIP.has(f) ? null : { amber: col, bright, deep: mixHex(col, bg, 0.38), dim: mixHex(col, bg, 0.6) }; }
         else tint = null;
       }
@@ -284,8 +326,8 @@ export function createStage({ getFloor, canMove = () => true, doc = typeof docum
     sky: () => sky,
     tagOf: (f) => (PLACES[f] ? `${PLACES[f].tag}/render` : 'render'),
     // A new virus on this floor: it enters the floor's way (not with Motion off).
-    enter(now) { enterAt = canMove() ? now : -1e9; sky = skyOf(Date.now()); },
-    progress(now) { return P && canMove() ? (now - enterAt) / P.enter : 9; },
+    enter(now) { enterAt = canMove() ? now : -1e9; sky = skyOf(Date.now()); progAt = litAt = -1; },
+    progress(now) { if (now !== progAt) { progAt = now; prog = P && canMove() ? (now - enterAt) / P.enter : 9; } return prog; },
     cam(now) {
       if (!P) return null;
       const u = api.progress(now);
@@ -307,17 +349,21 @@ export function createStage({ getFloor, canMove = () => true, doc = typeof docum
       if (off) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(off, 0, 0); ctx.setTransform(m.dpr, 0, 0, m.dpr, 0, 0); }
       ctx.fillStyle = col;
       const cond = P.sky ? sky : 'night', hr = P.sky ? Math.round(R * P.sky) : 0;
-      const draw = (x, y, ch, a, glow) => { ctx.globalAlpha = a; if (glow) { ctx.shadowColor = col; ctx.shadowBlur = 8; } ctx.fillText(ch, x * gx, y * gy); if (glow) ctx.shadowBlur = 0; };
+      const draw = (x, y, ch, a, glow) => { if (glow && glowed(ctx, ch, x * gx, y * gy, a, m)) return; ctx.globalAlpha = a; if (glow) { ctx.shadowColor = col; ctx.shadowBlur = 8; } ctx.fillText(ch, x * gx, y * gy); if (glow) ctx.shadowBlur = 0; };
       P.live((x, y, ch, a, glow) => draw(x, y, ch, cond === 'fog' ? a * (y < hr + 2 ? 0.3 : 0.6) : cond === 'dawn' && glow ? a * 0.35 : a, glow), C, R, t);
       if (cond !== 'night') skyLive(cond, draw, C, R, t, P.sky);
       ctx.restore();
     },
+    // Called for every point of the virus: the scene's light is worked out once a frame (once per now).
     light(lum, nx, ny, nz, now) {
       if (!P) return lum;
-      const t = canMove() ? clock(now) : 0, cond = P.sky ? sky : 'night';
-      let L = cond === 'dawn' ? SKY_LIGHT.dawn() : P.light(t);
-      if (cond === 'fog') L = { ...L, k: L.k * 0.6, base: L.base + 0.08 };
-      return Math.min(1, lum * L.base + L.k * dot(L.L, nx, ny, nz));
+      if (now !== litAt || P !== litFor) {
+        const t = canMove() ? clock(now) : 0, cond = P.sky ? sky : 'night';
+        let L = cond === 'dawn' ? SKY_LIGHT.dawn() : P.light(t);
+        if (cond === 'fog') L = { ...L, k: L.k * 0.6, base: L.base + 0.08 };
+        lit = L; litAt = now; litFor = P;
+      }
+      return Math.min(1, lum * lit.base + lit.k * dot(lit.L, nx, ny, nz));
     },
     reveal(c, ch, now, W, H) {
       if (!P) return {};
@@ -328,25 +374,30 @@ export function createStage({ getFloor, canMove = () => true, doc = typeof docum
       return r;
     },
     // After the virus: its reflection, where the floor has water (the line just under the lowest thing drawn).
+    // Where the virus stands is read off a copy (lowest), never off the picture itself: a canvas read back from keeps
+    // being drawn on the CPU from then on. The reflection copies only the rows it mirrors, into a canvas it keeps.
     post(ctx, canvas, m) {
       const M = P?.mirror; if (!M || !off) return;
       const dpr = canvas.width / m.width;
       if (M.at) base = m.height * M.at;
       else if (!base || m.now - baseAt > 500) {
-        const img = ctx.getImageData(0, 0, canvas.width, canvas.height).data, Wd = canvas.width;
-        let low = 0;
-        for (let y = canvas.height - 1; y > 0 && !low; y -= 2) { let n = 0; for (let x = 0; x < Wd; x += 3) if (img[(y * Wd + x) * 4 + 3] > 90) n++; if (n > 6) low = y; }
+        const low = lowest(canvas);
         base = low ? Math.min(low / dpr + m.gy * 0.4, m.height * 0.9) : m.height * 0.84; baseAt = m.now;
       }
-      const mc = api.mirrorCanvas ||= doc.createElement('canvas'), mx = mc.getContext('2d');
-      mc.width = canvas.width; mc.height = canvas.height; mx.drawImage(canvas, 0, 0);
       const y0 = Math.round(base * dpr), h = canvas.height - y0, band = Math.max(2, Math.round(3 * dpr));
+      // The rows the bands read: from the highest one's top (less a margin for filtering) down past y0.
+      let last = 0; for (let y = 0; y < h; y += band) { if (y0 - y / M.squash < 0) break; last = y; }
+      const top = Math.max(0, Math.floor(y0 - last / M.squash - band / M.squash) - 2), bottom = Math.min(canvas.height, y0 + 2), rows = bottom - top;
+      if (rows <= 0) return;
+      const mc = api.mirrorCanvas ||= doc.createElement('canvas'), mx = mc.getContext('2d');
+      if (mc.width !== canvas.width || mc.height !== rows) { mc.width = canvas.width; mc.height = rows; } else mx.clearRect(0, 0, mc.width, rows);
+      mx.drawImage(canvas, 0, top, canvas.width, rows, 0, 0, canvas.width, rows);
       ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
       for (let y = 0; y < h; y += band) {
         const srcY = y0 - y / M.squash; if (srcY < 0) break;
         const dx = canMove() ? Math.sin(y / (6 * dpr) + m.now / 420) * M.wave * dpr : 0;
         ctx.globalAlpha = M.a * (1 - y / h) * (Math.floor(y / band) % 3 === 2 && M.wave > 2 ? 0.35 : 1);
-        ctx.drawImage(mc, 0, srcY - band / M.squash, canvas.width, band / M.squash, dx, y0 + y, canvas.width, band);
+        ctx.drawImage(mc, 0, srcY - band / M.squash - top, canvas.width, band / M.squash, dx, y0 + y, canvas.width, band);
       }
       ctx.restore();
     },
