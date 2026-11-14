@@ -2950,6 +2950,9 @@ at your wall), **WALL** (contested, a breach), **NET** (teal on a run; amber whi
 market transfer on its way), **DMN** (a daemon slotted; bright when one fires). Settings → Casing turns it off;
 phones never show it.
 
+**Grain.** Film grain moves over the immersive shell's screen. Settings → Grain (`grain on|off`) turns it off; until
+it's set, it's off in the phone layout.
+
 **The window behind it** (window.mjs; Settings → Window, on by default, at 1700px and wider): the strips beside
 and above the monitor look out through grimy glass onto the city, its sky following your clock and its weather turning
 every five minutes (`weather <…>` holds one). **Districts:** The Sprawl (always yours), Backhaul (*Down the Line*), The

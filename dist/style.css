@@ -1147,6 +1147,8 @@ html[data-sfx-floor="7"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.spa
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   animation: crt-grain 0.5s steps(3) infinite;
 }
+/* Grain (settings.grain, `grain on|off`): unset, it's off in the phone layout, where its big moving layer costs the most. */
+body.grain-off #crt::after, [data-form='phone'] body:not(.grain-on) #crt::after { display: none; }
 @keyframes crt-roll { from { transform: translateY(-25vh); } to { transform: translateY(105vh); } }
 /* the grain's layer is 1.3x the screen (inset -15%): these shifts are 14% and 10% of the screen across, 8% and 12% down */
 @keyframes crt-grain { 0% { transform: translate(0, 0); } 33% { transform: translate(-10.77%, 6.15%); } 66% { transform: translate(7.69%, -9.23%); } 100% { transform: translate(0, 0); } }
