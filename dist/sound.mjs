@@ -10,7 +10,6 @@
 import { playAbility, timingOf } from './abilitysound.mjs';
 import { playAttack, attackTiming } from './virussound.mjs';
 import { outputOf } from './mixout.mjs';
-import { texture, reverbGain } from './texture.mjs';
 
 const NOTE = (n) => 440 * Math.pow(2, (n - 69) / 12); // MIDI note → Hz
 
@@ -34,7 +33,10 @@ function osc(ctx, out, t, { type = 'sine', f0, f1 = f0, glide = 0.1, a, peak, d,
 let noiseCache = new WeakMap();
 function noiseBuf(ctx) {
   if (!noiseCache.has(ctx)) {
-    noiseCache.set(ctx, texture(ctx, 1, 1.2, (d) => { for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }));
+    const b = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 1.2), ctx.sampleRate);
+    const ch = b.getChannelData(0);
+    for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
+    noiseCache.set(ctx, b);
   }
   return noiseCache.get(ctx);
 }
@@ -566,15 +568,16 @@ const KEYS = {
 // ---------- the room ----------
 // A small, hard room: a few early reflections and a short dark tail, so layers share one space.
 function roomIR(ctx, seconds = 0.5) {
-  return texture(ctx, 2, seconds, (d, sr, c) => {
-    const n = d.length;
+  const sr = ctx.sampleRate, n = Math.floor(sr * seconds), b = ctx.createBuffer(2, n, sr);
+  for (let c = 0; c < 2; c++) {
+    const d = b.getChannelData(c);
     let lp = 0;
     for (let i = 0; i < n; i++) {
       lp += 0.35 * ((Math.random() * 2 - 1) - lp); // darker than white noise
       d[i] = lp * Math.pow(1 - i / n, 2.6) * Math.exp(-i / (sr * 0.12));
     }
     for (const [ms, g] of [[7, 0.5], [13, 0.35], [19 + c * 3, 0.28], [29, 0.2]]) d[Math.floor((sr * ms) / 1000)] += g * (c ? -1 : 1);
-  }, { wrap: false });
+  }
   return b;
 }
 
@@ -611,7 +614,7 @@ function crushBus(ctx, out, levels = 16, pre = 2.5, post = 0.5) {
 // Sample-and-hold static: a new random value every `hold` samples, so it buzzes like digital noise.
 function sahBuf(ctx, hold) {
   let m = sahCache.get(ctx); if (!m) sahCache.set(ctx, (m = new Map()));
-  if (!m.has(hold)) m.set(hold, texture(ctx, 1, 1, (d) => { let v = 0; for (let i = 0; i < d.length; i++) { if (i % hold === 0) v = Math.random() * 2 - 1; d[i] = v; } }));
+  if (!m.has(hold)) { const b = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), d = b.getChannelData(0); let v = 0; for (let i = 0; i < d.length; i++) { if (i % hold === 0) v = Math.random() * 2 - 1; d[i] = v; } m.set(hold, b); }
   return m.get(hold);
 }
 function stat(ctx, out, t, { hold = 6, dur = 0.08, peak = 0.3, hp = 600 } = {}) {
@@ -739,7 +742,7 @@ function chain(ctx) {
   c.threshold.value = -18; c.ratio.value = 4; c.attack.value = 0.003; c.release.value = 0.15;
   g.connect(c).connect(outputOf(ctx));
   const room = ctx.createConvolver(), wet = ctx.createGain();
-  room.buffer = roomIR(ctx); wet.gain.value = 0.9 * reverbGain(room.buffer);
+  room.buffer = roomIR(ctx); wet.gain.value = 0.9;
   room.connect(wet).connect(g);
   return { master: g, room };
 }
@@ -749,8 +752,9 @@ function chain(ctx) {
 const halls = new WeakMap();
 function hallOf(ctx, ch) {
   if (!halls.has(ch)) {
-    const b = texture(ctx, 2, 1.4, (d, sr) => { const n = d.length; let lp = 0; for (let i = 0; i < n; i++) { lp += 0.5 * ((Math.random() * 2 - 1) - lp); d[i] = (i < sr * 0.012 ? 0 : lp) * Math.pow(1 - i / n, 3); } }, { wrap: false });
-    const cv = ctx.createConvolver(), w = ctx.createGain(); cv.buffer = b; w.gain.value = 0.35 * reverbGain(b);
+    const sr = ctx.sampleRate, n = Math.floor(sr * 1.4), b = ctx.createBuffer(2, n, sr);
+    for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); let lp = 0; for (let i = 0; i < n; i++) { lp += 0.5 * ((Math.random() * 2 - 1) - lp); d[i] = (i < sr * 0.012 ? 0 : lp) * Math.pow(1 - i / n, 3); } }
+    const cv = ctx.createConvolver(), w = ctx.createGain(); cv.buffer = b; w.gain.value = 0.35;
     cv.connect(w).connect(ch.master);
     halls.set(ch, cv);
   }
@@ -828,7 +832,9 @@ function ambience(ctx, dest, { seeks = true } = {}) {
   lfo.frequency.value = 0.13; depth.gain.value = 0.3;
   const wob = ctx.createGain(); wob.gain.value = 1;
   // the fan: brown noise, low and wide
-  const buf = texture(ctx, 1, 4, (d) => { let b = 0; for (let i = 0; i < d.length; i++) { b = (b + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = b * 3.5; } });
+  const len = ctx.sampleRate * 4, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+  let b = 0;
+  for (let i = 0; i < len; i++) { b = (b + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = b * 3.5; }
   const fan = ctx.createBufferSource(), flp = ctx.createBiquadFilter(), fg = ctx.createGain();
   fan.buffer = buf; fan.loop = true; flp.type = 'lowpass'; flp.frequency.value = 420; fg.gain.value = 0.032;
   fan.connect(flp).connect(wob).connect(fg).connect(bus); fan.start(); nodes.push(fan);
