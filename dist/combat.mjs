@@ -3383,7 +3383,7 @@ export function hitKind(s, p, opts = {}) {
 // are. Each shows as a Packed part (A, B… when there are more), its attack's name as ???, its tags, telegraphs, rule
 // and inspect hidden; what it does still happens. p.packedAs keeps its own names until it unpacks.
 export const packerOn = (s, v = s?.encounter?.virus) => !!v && !s?.encounter?.unpacked && s?.encounter?.virus === v && v.parts.some((x) => x.packer && alive(x));
-export const packed = (s, v, p) => packerOn(s, v) && !!p && !p.packer && p.kind === 'system' && !p.special && !p.basic && p.id !== s.encounter.unpackedOne;
+export const packed = (s, v, p) => (packerOn(s, v) || (!!s?.encounter?.unpacking && s.encounter.virus === v && !!p?.packedAs)) && !!p && !p.packer && p.kind === 'system' && !p.special && !p.basic && p.id !== s.encounter.unpackedOne;
 export const PACKED_NAME = 'Packed part';
 export function packParts(s) {
   const v = s.encounter?.virus;
@@ -3395,11 +3395,12 @@ export function packParts(s) {
     if (p.attack) p.attack.name = '???';
   });
 }
-// The Packer broke (breakPart): every packed part takes its own names back. Returns the parts that unpacked.
-export function unpackParts(s) {
+// The Packer broke (breakPart): every packed part takes its own names back (a Packer.exe's, n a cycle: e.unpacking).
+// Returns the parts that unpacked.
+export function unpackParts(s, n = Infinity) {
   const out = [];
   for (const p of s.encounter?.virus?.parts || []) {
-    if (!p.packedAs) continue;
+    if (!p.packedAs || out.length >= n) continue;
     p.name = p.packedAs.name;
     if (p.attack?.name === '???' && p.packedAs.attack != null) p.attack.name = p.packedAs.attack;
     delete p.packedAs;
@@ -3515,8 +3516,10 @@ function breakPart(s, p) {
   }
   if (p.packer && !livingParts(s).some((x) => x.packer)) { // the last Packer: everything it packed unpacks, for good
     e.unpacked = true;
-    const xs = unpackParts(s);
-    if (livingParts(s).some((x) => x !== p)) emit(s, 'status', `The ${p.name} breaks, and the virus's rules unpack.${xs.length ? ` The packed ${xs.length === 1 ? 'part was' : 'parts were'} ${andList(xs.map((x) => `the ${x.name}`))}.` : ''}`, { target: p.id, unpack: true });
+    if (p.exe) e.unpacking = { from: e.cycle }; // a Packer.exe: one part a cycle, from the next (cycleClose)
+    const xs = p.exe ? [] : unpackParts(s);
+    if (p.exe) { if (livingParts(s).some((x) => x !== p)) emit(s, 'status', `The ${p.name} breaks. Its parts unpack one a cycle, from the next.`, { target: p.id, unpack: true }); }
+    else if (livingParts(s).some((x) => x !== p)) emit(s, 'status', `The ${p.name} breaks, and the virus's rules unpack.${xs.length ? ` The packed ${xs.length === 1 ? 'part was' : 'parts were'} ${andList(xs.map((x) => `the ${x.name}`))}.` : ''}`, { target: p.id, unpack: true });
   }
   if (p.loot) e.lastLoot = p.loot; // a part that drops components broke (a Harvester's and an elite's one more: floorplan.mjs)
   // Components: 60% in a room fight, an elite's always, 35% elsewhere (sockets.mjs); a network rich in components
@@ -4760,6 +4763,7 @@ function cycleFx(s) {
 function cycleClose(s, landed) {
   const e = s.encounter;
   midSeen(s); // DKOM
+  if (e.unpacking && e.cycle > e.unpacking.from) { const [x] = unpackParts(s, 1); if (x) emit(s, 'status', `The ${x.name} unpacks.`, { target: x.id, unpack: true }); if (!e.virus.parts.some((q) => q.packedAs)) e.unpacking = null; } // a Packer.exe's slow unpack
   // 4. The virus patches itself: a part left without armor too long gets one chit back.
   for (const p of livingParts(s)) {
     if (p.maxArmor > 0 && p.armor === 0 && p.patchAt !== null && e.cycle >= p.patchAt && p.revokedUntil >= e.cycle) { p.patchAt = e.cycle + 1; emit(s, 'status', `${p.name}'s patch is revoked. It cannot sign it.`, { target: p.id }); continue; } // Revoke (Sysop)
