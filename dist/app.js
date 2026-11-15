@@ -2048,6 +2048,26 @@ function put(id, html) {
   el.querySelectorAll('details').forEach((d, i) => { if (open[i]) d.open = true; });
   for (const k of el.querySelectorAll('[data-keep]')) if (kept.get(k.dataset.keep)) k.scrollTop = kept.get(k.dataset.keep);
 }
+// The fight's panels rebuild only the rows whose markup changed (docs/performance-plan.md batch 2): a kept row keeps its
+// node, so what effects added to it stays, and the steps after a render re-apply theirs as before. Anything else put
+// into the panel since (or a forced render) rebuilds it whole.
+const rowsOf = new Map(); // panel id → its top-level nodes as drawn, each with its markup
+const rowTpl = document.createElement('template');
+function putRows(id, html) {
+  if (cache.get(id) === html) return;
+  const el = $(id), was = cache.has(id) ? rowsOf.get(id) : null; // (a cleared cache: whole)
+  cache.set(id, html);
+  rowTpl.innerHTML = html;
+  const fresh = [...rowTpl.content.childNodes].map((node) => ({ node, html: node.nodeType === 1 ? node.outerHTML : '#' + node.nodeValue }));
+  if (!was || was.length !== el.childNodes.length || was.some((r, i) => el.childNodes[i] !== r.node)) { el.replaceChildren(rowTpl.content); rowsOf.set(id, fresh); return; }
+  const pool = new Map();
+  for (const r of was) (pool.get(r.html) || pool.set(r.html, []).get(r.html)).push(r);
+  const next = fresh.map((r) => pool.get(r.html)?.shift() || r), keep = new Set(next.map((r) => r.node));
+  for (const r of was) if (!keep.has(r.node)) r.node.remove();
+  next.forEach((r, i) => { if (el.childNodes[i] !== r.node) el.insertBefore(r.node, el.childNodes[i] || null); });
+  rowTpl.content.replaceChildren();
+  rowsOf.set(id, next);
+}
 
 function renderMeters() {
   const srv = campaign.server;
@@ -2359,9 +2379,10 @@ function render(force = false) {
     const cycleKey = s.encounter.virus.id + ':' + s.encounter.cycle;
     const turned = shownCycle && shownCycle !== cycleKey && shownCycle.startsWith(s.encounter.virus.id + ':') && canMove();
     const before = turned ? chipSnapshot() : null;
-    put('board', (active(s) && s.encounter.paused ? '<div class="pause-strip" role="status">PAUSED · ANY ORDER RESUMES</div>' : '') + V.boardMarkup(s, selected, aimPreview));
+    putRows('board', (active(s) && s.encounter.paused ? '<div class="pause-strip" role="status">PAUSED · ANY ORDER RESUMES</div>' : '') + V.boardMarkup(s, selected, aimPreview));
     chipfx.place($('board')); // themed chips get their effect back after the rebuild
     for (const k of spentChips) $('board').querySelector(`[data-k="${CSS.escape(k)}"]`)?.classList.add('spent'); // and one that has gone off stays gone
+    for (const c of $('board').querySelectorAll('.intent.spent[data-k]')) if (!spentChips.has(c.dataset.k)) c.classList.remove('spent'); // (a kept row: one gone off before this cycle comes back)
     if (held.size) applyHeld(); // a batch still playing: its bars hold until each hit lands
     $('board').classList.toggle('is-paused', !!(active(s) && s.encounter.paused));
     // Classes for what style.css once asked of :has() (it restyled the board every frame): a tether's gutter, a hotspot's row.
@@ -2442,7 +2463,7 @@ function render(force = false) {
   const netTray = module === 'net' && !!campaign.run;
   $('tray').hidden = !(combatLike || netTray);
   $('tray').classList.toggle('net-tray', netTray);
-  { const keys = netTray ? V.netTrayMarkup(nextActions(campaign)) : V.trayMarkup(s, selected) + scriptTray(s) + V.fleeKey(s); put('tray', keys + (combatLike && F.isPhone() ? phMenuKey(keys) : '')); $('tray').querySelectorAll(':scope > .ability').forEach((k, i) => k.classList.toggle('ph-over', i >= PH_KEYS)); } // a phone: past eight keys, under +n
+  { const keys = netTray ? V.netTrayMarkup(nextActions(campaign)) : V.trayMarkup(s, selected) + scriptTray(s) + V.fleeKey(s); (combatLike ? putRows : put)('tray', keys + (combatLike && F.isPhone() ? phMenuKey(keys) : '')); $('tray').querySelectorAll(':scope > .ability').forEach((k, i) => k.classList.toggle('ph-over', i >= PH_KEYS)); } // a phone: past eight keys, under +n
   phStage();
   phPicked();
   // An ability that just came off cooldown flashes once.
