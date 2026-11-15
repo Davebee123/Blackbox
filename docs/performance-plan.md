@@ -59,7 +59,7 @@ A first load is 328 requests and 9 MB (5.3 MB of scripts in 196 files, 2.2 MB of
 | The game's tick rests when nothing needs it (`app.js` frame) | both | batch 1 |
 | The fight screen rebuilds only what changed | both | batch 2 |
 | Samples, audio textures and fonts warmed on the loading screen | both | batch 6 |
-| One bundled, minified script and stylesheet for the hosted game | both, phones most | batch 7 (needs a build step: ask) |
+| One bundled, minified script and stylesheet for the hosted game | both, phones most | batch 7 (build step approved) |
 
 **The same look, by other means (the designer's eye before it lands):**
 
@@ -106,7 +106,7 @@ One session each, started fresh. Measure before and after with `tools/perf/phone
 | 4 | The dissolve on a canvas | `hitfx.mjs` | any time |
 | 5 | The Graphics settings: prototypes, the pick, then the build | the Settings page, `settings` in the save | after 3 and 4 (it switches them) |
 | 6 | The loading screen: prototypes, the pick, then the build and the warm-ups | `poweron.mjs`, `shell.mjs` boot, `sound.mjs` loadBank | any time |
-| 7 | A build step for the hosted game | new: decide with the designer first | last |
+| 7 | A build step for the hosted game (approved 2026-11-15); `dist/` stays runnable as plain files for development | new | last |
 
 **Batch 1 notes.** `frame` feeds: the fight's clock, `tickUi`, `chipTick`, the map's packets, the level-up, the
 scanner, co-op, the phone's pop-ups, `feel.flush`, the strikes' queue, tips, the caret, the once-a-second services.
