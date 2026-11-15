@@ -31,9 +31,9 @@ A first load is 328 requests and 9 MB (5.3 MB of scripts in 196 files, 2.2 MB of
    the main thread.
 4. **Fights: the tether's glow** (a `box-shadow` animation) and the backdrop repaint every frame: another 23% in a
    waiting fight.
-5. **Rooms map, runs, Map: SVG animations** (the bits, the flowing links, the pulsing rings, the blinking dot). The
-   browser runs SVG animation on the main thread: style, layout and paint of the map every frame. Off: 96% → 27% on
-   the rooms map, 55% → 27% on the Map.
+5. **Rooms map, runs, Map: SVG animations.** The flowing links (a dash-offset animation), the rooms' traffic and the
+   Map's moving files (script every frame) cost style, layout and paint of the map every frame; the rings, the blink
+   and the bits already ran on the graphics card. Landed (batch 3).
 6. **Every screen: the game's tick** (`app.js` frame) ran 60 times a second with nothing to do. Landed (batch 1): it
    rests, and an idle phone screen's main thread went from 117–141 ms/s to 20–30 (the Map 313 → 28), 60 frames a second
    to 1 (the status line's clock).
@@ -66,7 +66,7 @@ A first load is 328 requests and 9 MB (5.3 MB of scripts in 196 files, 2.2 MB of
 
 | What | Helps | State |
 |---|---|---|
-| Map and rooms animations the graphics card can run | both | batch 3 |
+| Map and rooms animations the graphics card can run | both | landed |
 | A part's dissolve drawn on a canvas | both | batch 4 |
 | Audio textures as they sounded at 192 kHz (commit d38e785, held by 034b166) | both | waiting on the A/B pick |
 
@@ -103,7 +103,7 @@ One session each, started fresh. Measure before and after with `tools/perf/phone
 |---|---|---|---|
 | 1 | The tick rests when idle | `app.js` frame and what it calls every frame | landed |
 | 2 | Partial rebuild of the fight screen | `app.js` render and `put`, the board's post-render steps | landed |
-| 3 | Composited map and rooms animations | the map's and floorplan's markup and CSS | any time |
+| 3 | Composited map and rooms animations | the map's and floorplan's markup and CSS | landed |
 | 4 | The dissolve on a canvas | `hitfx.mjs` | any time |
 | 5 | The Graphics settings: prototypes, the pick, then the build | the Settings page, `settings` in the save | after 3 and 4 (it switches them) |
 | 6 | The loading screen: prototypes, the pick, then the build and the warm-ups | `poweron.mjs`, `shell.mjs` boot, `sound.mjs` loadBank | any time |
@@ -129,6 +129,18 @@ side-by-side recording, kept. Same day, two runs each, before → after: phone b
 22 → 23 frames/s, `frame` 9.9 → 9.6 ms). A fight from the prompt, bars stepping hit by hit, a part's dissolve, chips
 moving between cycles, the act break's Strip, the phone's HUD cards: as before, no page errors; the board's DOM matches a
 whole rebuild of it.
+
+**Batch 3 (landed).** Flowing dashes (live links, the hunter's and Exfil's arrows, the Map's hot links, trunks and
+hunts) are clipped pieces, each a period longer than its stretch and slid along it by a transform; a curve is eight
+pieces in phase (`flowfx.mjs`). The rooms' traffic and the Map's moving files are transform and opacity animations
+(`traffic.mjs`, `mapmotion.mjs`); a file in transit is a CSS animation, not SMIL. Nothing in them runs every frame,
+and the Map no longer keeps the tick awake while hubs trade. An animation started on a map not yet laid out runs on
+the main thread for good, so the files restart two frames after a redraw (`settle`). `.no-ambient` on a container
+stills it all (for batch 5). Same day, phone, idle, two runs each, main thread ms/s before → after: rooms map 848, 873
+→ 94, 65; a run (`?playtest=run`) 907, 827 → 95, 93; the Map with two hubs trading 656, 787 → 36, 29; the Map
+without them 30 → 30. Desktop unchanged at 350–475 (its cost is elsewhere). Shown to the designer as side-by-side
+recordings (rooms map, Map, a run), kept. Walking, rooms resolving, the hunter's arrow, zoom, the phone's map, files
+after a redraw: as before, no page errors.
 
 Not yet measured: breach and campaign, hubs and shops, co-op, the class pick and tutorial, the More sheet, a phone on
 its side.
