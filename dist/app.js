@@ -2339,6 +2339,7 @@ function render(force = false) {
   renderCrewWin(s, side);
   if (combatLike && hasFight) {
     put('hud', V.hudMarkup(s, { party: !side, preview: aimPreview }) + (F.isPhone() ? V.crewLineMarkup(s) : '')); // a phone: the crew as thin violet lines under your bar
+    art.wake(); // the virus picture's loop rests between fights (virus-art.mjs)
     phHudCards();
     flyStatuses(s);
     // A new cycle: remember where every chip was, so the board can move them instead of jumping.
@@ -4097,7 +4098,7 @@ document.addEventListener('keydown', (e) => {
 
 // Protocol glyphs (protocol-glyphs.mjs): a Zero-day's scanline and a unique's flicker, wherever one is drawn (the
 // Loadout's board, datasheet and stash, the hover cards). Still with motion off.
-(function glyphLoop(t) { glyphMotion(document, t, !canMove()); requestAnimationFrame(glyphLoop); })(performance.now());
+(function glyphLoop(t) { if (glyphMotion(document, t, !canMove())) requestAnimationFrame(glyphLoop); else setTimeout(() => requestAnimationFrame(glyphLoop), 250); })(performance.now()); // no glyph on the page: look again in a quarter second, not every frame
 
 // Item hover cards (view.mjs itemTipMarkup): a protocol or filter's card beside it, a filter's ASCII model
 // spinning while it's up. Follows the row through redraws; goes when the pointer leaves it.

@@ -550,14 +550,21 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
 
   // ---------- drawing ----------
   const LIGHT = (() => { const l = [-0.45, -0.6, -0.66], n = Math.hypot(...l); return l.map((v) => v / n); })();
+  // The loop runs every frame only while there is a picture to draw (a canvas on the page, a virus in the state).
+  // Otherwise it rests: a slow timer looks again, and attach() or wake() starts it at once, so the first frame of a
+  // fight or a Codex page comes as soon as it did.
+  let resting = 0, rested = false;
+  const rest = () => { rested = true; if (!resting) resting = setTimeout(() => { resting = 0; requestAnimationFrame(draw); }, 250); };
+  const wake = () => { if (resting) { clearTimeout(resting); resting = 0; requestAnimationFrame(draw); } };
   function draw(now) {
-    requestAnimationFrame(draw);
-    if (!canvas?.isConnected || now - previous < 40) return;
-    const delta = Math.min(100, now - previous);
-    previous = now;
     const s = getState();
     const v = s?.encounter?.virus;
-    if (!v) return;
+    if (!canvas?.isConnected || !v) return rest();
+    requestAnimationFrame(draw);
+    if (rested) { rested = false; previous = now - 40; } // back from a rest: one frame's step, as if it had been running
+    if (now - previous < 40) return;
+    const delta = Math.min(100, now - previous);
+    previous = now;
     const key = v.id + v.parts.length;
     if (key !== builtFor) { builtFor = key; build(v); shards.length = 0; }
     // The floor's stage (stage.mjs): its place behind the virus, its light, its camera, and a new virus's entrance.
@@ -846,7 +853,9 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
   requestAnimationFrame(draw);
 
   return {
-    attach(el) { if (canvas !== el) { canvas = el; ctx = el.getContext('2d'); } },
+    attach(el) { if (canvas !== el) { canvas = el; ctx = el.getContext('2d'); } wake(); },
+    // A virus may have come into the state: draw from the next frame (a no-op while the loop runs).
+    wake,
     // Where a part is drawn right now, on the page: { x, y } (its centre, in viewport px) and some of the
     // characters it is drawn in (lash.mjs throws them at you). null when the render is off screen.
     anchor(id) {

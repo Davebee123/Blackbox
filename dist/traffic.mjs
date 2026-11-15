@@ -14,7 +14,7 @@ import { linksOf, neighbours, seenOf, known } from './floorplan.mjs';
 
 export const TRAFFIC = { gap: [1400, 3200], max: 3, speed: 110, slow: 45 }; // ms between packets, at once, svg units a second
 const live = [];
-let next = 0, raf = 0;
+let next = 0, raf = 0, idle = 0;
 
 const distTo = (g, from, to) => { const d = { [from]: 0 }, q = [from]; while (q.length) { const x = q.shift(); if (x === to) return d[x]; for (const y of neighbours(g, x)) if (!(y in d)) { d[y] = d[x] + 1; q.push(y); } } return 9; };
 // The traces it can use: both rooms discovered, neither yours. Weighted toward the Core.
@@ -58,12 +58,13 @@ const clear = () => { for (const pk of live.splice(0)) for (const b of pk.bodies
 
 // Run it: server() gives the campaign while the traffic should run (the rooms page, on a server, effects on), else null.
 export function startTraffic(server) {
-  cancelAnimationFrame(raf);
+  cancelAnimationFrame(raf); clearTimeout(idle);
   const tick = () => {
-    raf = requestAnimationFrame(tick);
     const s = server(), t = performance.now();
     const svg = s?.rooms?.at && [...document.querySelectorAll('#page-view .fp-svg')].find((x) => x.getBoundingClientRect().width > 0);
-    if (!svg) { clear(); next = t + 600; return; }
+    // No room map showing: look again in a quarter second, not every frame.
+    if (!svg) { clear(); next = t + 600; idle = setTimeout(() => { raf = requestAnimationFrame(tick); }, 250); return; }
+    raf = requestAnimationFrame(tick);
     for (let i = live.length - 1; i >= 0; i--) {
       const pk = live[i];
       if (pk.tall !== svg.classList.contains('tall') || t - pk.t0 > pk.dur + 260 * (pk.bodies.length - 1)) { for (const b of pk.bodies) b.remove(); live.splice(i, 1); }
