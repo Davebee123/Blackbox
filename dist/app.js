@@ -47,7 +47,7 @@ import { createChipFx, chipStrike, chipTheme, STRIKES, STRIKE_PLAN } from './chi
 import { ATTACKS, OWN_PLAN } from './virussound.mjs';
 import { voices as voicesOf, todayOf } from './virusvoice.mjs';
 import { online, listed, peopleOn } from './presence.mjs';
-import { runnerFloor } from './runners-view.mjs';
+import { runnerFloor, runnerBadge } from './runners-view.mjs';
 import { matesOf } from './crew.mjs';
 import { tickPlay } from './progression.mjs';
 import * as BR from './breach.mjs';
@@ -84,6 +84,7 @@ import { createCoop } from './coop-ui.mjs';
 import { humansReady } from './coop.mjs';
 import * as PG from './pager.mjs';
 import * as PGV from './pager-view.mjs';
+import * as PI from './pings.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
@@ -138,6 +139,7 @@ let loadoutTab = 'protocols'; // Loadout page: 'protocols' or 'skills' (skills a
 let systemTab = 'settings'; // Settings page (nav id 'system'): 'settings', or 'dev' with ?dev
 let rigTab = 'achievements'; // Rig page: a view.mjs RIG_TABS key
 let houseUi = { held: null, hover: null }; // Rig → House (house-view.mjs): the piece in hand, and where it would go
+let casingSec = 'color'; // Rig → Casing's open section (casing-view.mjs CASING_SECS)
 let achUi = { cat: 'summary', focus: null }; // the Achievements page (achievements-view.mjs): the category shown, an achievement to light
 const pd = { id: null, anchor: null, el: null, scrim: null, tap: false, html: '', mine: false, timer: 0 }; // the Loadout's item datasheet popover (pdShow)
 let pdTouch = 0; // when a touch last came down: the click after it is a tap
@@ -491,7 +493,7 @@ document.addEventListener('keydown', (e) => {
 // ---------- events → feedback ----------
 // A breach: a ring fires out of the pager's lamp (twice, a beat apart), so you notice it.
 function ledRing() {
-  const led = document.querySelector('#pager .led');
+  const led = F.isPhone() ? document.querySelector('#pager .led') : [...document.querySelectorAll('.ping.threat .pi-ico')].find((x) => x.offsetParent);
   if (!led || campaign.settings.motion === false) return;
   const r = led.getBoundingClientRect();
   for (const delay of [0, 280]) setTimeout(() => { const d = document.createElement('div'); d.className = 'led-ring'; d.style.left = r.left + r.width / 2 + 'px'; d.style.top = r.top + r.height / 2 + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 950); }, delay);
@@ -570,7 +572,7 @@ function firstLogin() {
     SC.queueScene(campaign, 'welcome'); // wick's transmission, up as the map first opens (scenes.mjs)
     go('map', true);
     uncover();
-    feel.add('pager', '#pager');
+    feel.add('pager', pingTarget());
     save();
   });
 }
@@ -2381,7 +2383,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, runnersAt: mapRunnersAt, railShut, phone: F.isPhone() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab, phone: F.isPhone() }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi, house: houseUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, runnersAt: mapRunnersAt, railShut, phone: F.isPhone() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab, phone: F.isPhone() }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi, house: houseUi, casing: casingSec }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2440,6 +2442,7 @@ function render(force = false) {
   renderPrompt();
   tourCheck();
   placeTip();
+  pingFades();
   dirty = false;
 }
 
@@ -2619,7 +2622,7 @@ function casing() {
   $('knob-speed').title = `Speed: ${s.settings.speed || 'normal'}`;
   casingLookUi(cased);
 }
-// The casing's cosmetics (casing.mjs): its colourway on <body> (casing.css: the plastic only), the plate's words, the
+// The casing's cosmetics (casing.mjs): its monitor color on <body> (casing.css: the plastic only), the plate's words, the
 // stickers anywhere on the plastic and the props on the desk or the monitor's top. Each is placed from the screen's
 // margins and the knobs, the plate and the lamps as measured (casing.mjs stickerSpot, propSpot), so none sits on the
 // screen or on any of them (placed again when the plate, the page's size, the window or a place changes). While Rig →
@@ -3101,7 +3104,7 @@ function frame(now) {
     if (pruneComms(campaign)) { save(); dirty = true; } // handled comms clear out after 5 minutes
     // Unanswered alerts shake the pager every 10 s; a breach pings every 15 s.
     const tickNow = Date.now();
-    if (unseenAlert(campaign) && !commsOpen && tickNow - (nag.pager || 0) >= 10000) { nag.pager = tickNow; const p = $('pager'); p.classList.remove('fx-pager'); void p.offsetWidth; p.classList.add('fx-pager'); }
+    if (unseenAlert(campaign) && !commsOpen && tickNow - (nag.pager || 0) >= 10000) { nag.pager = tickNow; for (const p of [$('pager'), ...document.querySelectorAll('.ping.threat.unseen')]) { p.classList.remove('fx-pager'); void p.offsetWidth; p.classList.add('fx-pager'); } }
     const inv = campaign.invasion, breached = inv?.state === 'breach' && !campaign.degraded && !(active(campaign) && campaign.encounter.invader === inv.id);
     if (breached && tickNow - (nag.breach || 0) >= 15000) { nag.breach = tickNow; feel.add('prewarn', '#meter-integrity'); feel.flush(); }
     if (!breached) nag.breach = 0;
@@ -3239,6 +3242,8 @@ document.addEventListener('click', (e) => {
   const rt = e.target.closest('[data-rtab]'); // the Rig page's tabs (view.mjs RIG_TABS)
   if (rt) { rigTab = rt.dataset.rtab; achUi.focus = null; houseUi = { held: null, hover: null }; feel.add('channel', null); dirty = true; return; }
   if (module === 'rig' && rigTab === 'house' && houseClick(e)) return;
+  const csec = e.target.closest('[data-cs-sec]'); // a section on Rig → Casing's rail
+  if (csec) { casingSec = csec.dataset.csSec; dirty = true; return; }
   const ac = e.target.closest('[data-ach-cat]'); // a category on the Achievements page
   if (ac) { achUi = { cat: ac.dataset.achCat, focus: null }; dirty = true; return; }
   // The Daemons tab (daemons-view.mjs): the party or the roster, a daemon for the panel (× clears it), a cycle's order.
@@ -3420,7 +3425,7 @@ function pagerReact(events) {
   if (!added.length) { save(); return; }
   const alert = added.some((c) => c.alert);
   const fighting = active(campaign) && module === 'combat';
-  if (alert || (!fighting && added.some((c) => c.beep))) feel.add('pager', '#pager', null, { alert });
+  if (alert || (!fighting && added.some((c) => c.beep))) feel.add('pager', pingTarget(), null, { alert });
   save();
 }
 // One tap on a page: its command, or where it is (pager.mjs actOf). Going there handles it; a command leaves it up
@@ -3450,13 +3455,36 @@ $('pg-ask').addEventListener('click', (e) => {
   if (e.target.closest('[data-command]')) { pgAsk = null; dirty = true; } // the event card's own tile: it runs, and the quest goes
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && pgAsk != null) { pgAsk = null; dirty = true; e.stopImmediatePropagation(); } }, true);
+// A desktop has no tray: the ping log (pings.mjs) is in the map's left rail, and above the prompt off the Map page (in
+// a fight, threats only). A phone keeps the lamp in its strip and Comms.
+const pingTarget = () => (F.isPhone() ? '#pager' : '.pings');
 function pagerUi() {
   renderAsk();
-  put('pager', F.isPhone() ? PGV.lampMarkup(campaign) : PGV.trayMarkup(campaign, F.narrow() ? 3 : 4)); // the tray: four slots, three under 900 px; a phone's strip shows the lamp and its count
+  const phone = F.isPhone();
+  $('pager').hidden = !phone;
+  put('pager', phone ? PGV.lampMarkup(campaign) : '');
+  put('pings', phone || CAMP || (module === 'map' && mapView === 'mine') ? '' : PI.pingsMarkup(campaign, Date.now(), module === 'combat' ? { only: (c) => PG.classOf(c) === 'threat' } : {}));
   $('pager').setAttribute('aria-expanded', String(commsOpen));
   $('comms').hidden = !commsOpen;
   if (commsOpen) put('comms', PGV.inboxMarkup(campaign, Date.now()));
 }
+// A plain ping's fade runs from when it came in, so a redraw picks it up where it was.
+function pingFades() { for (const el of document.querySelectorAll('.ping[data-t] > .pi-in')) if (!el.style.animationDelay) el.style.animationDelay = `${Number(el.parentElement.dataset.t) - Date.now()}ms`; }
+// A click on a ping: the page's thing (pagerAct), or where a line of news happened.
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-ping]');
+  if (!b) return;
+  e.stopPropagation();
+  const id = Number(b.dataset.ping), c = commsOf(campaign).find((x) => x.id === id);
+  if (!c) return;
+  if (PG.actOf(campaign, c)) return pagerAct(id);
+  if (c.go) { c.seen = true; markDone(campaign, id); save(); goTo(c.go); dirty = true; }
+}, true);
+// Hovering a ping is seeing it: the nag stops.
+document.addEventListener('pointerover', (e) => {
+  const b = e.target.closest?.('[data-ping]'), c = b && commsOf(campaign).find((x) => x.id === Number(b.dataset.ping));
+  if (c && !c.seen) { c.seen = true; save(); }
+});
 // ---------- the phone's shell (docs/phone-plan.md P1: form.mjs, phone-shell.mjs, sheet.mjs, phone.css) ----------
 // The tab bar at the bottom, More in the one sheet, the prompt behind >_, tap for info, a long press for a button's card.
 let phMore = false, phMoreHtml = '';
@@ -4326,6 +4354,8 @@ const ttSame = (a) => tt.el && !tt.el.hidden && a.dataset.tt === tt.text;
 // A rule's card (WoW's grammar: name, kind, what it does, the answer muted), as html: the hover tip and the phone's
 // peek sheet (tap for info) both show it.
 function ttCardHtml(anchor, text) {
+  // A runner on the map (runners-view.mjs): their Badge, as on their card.
+  if (anchor.dataset.ttRunner) { const b = runnerBadge(campaign, anchor.dataset.ttRunner); if (b) return `<div class="tt-runner">${b}</div>`; }
   const m = text.match(/^([^:.\n]{2,40}): ([\s\S]+)$/);
   const esc = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
   // A line that starts with ▸ is the answer (fightread.mjs answerLine): muted, on its own line, like WoW's "Use:" line.

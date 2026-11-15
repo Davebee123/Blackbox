@@ -40,6 +40,7 @@ import { eventCard, leakCard, toldCard, darknetCard, EVENT_ICON, FAM_GLYPH, blip
 import { matesOf, mateUp, mateSignal } from './crew.mjs';
 import { momentumCap } from './classes/breaker.mjs';
 import { online, listed, inSprawl, whereText, simOn, peopleOn, friends, profileOf } from './presence.mjs';
+import { pingsMarkup } from './pings.mjs';
 import { runnerRail, runnerMark, runnerCard, runnersMap, runnersList } from './runners-view.mjs';
 import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, rebooting, consortiumWall, alertsOf, tiersOf as conTiers } from './consortium.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, tierIndex, standing, tierOf, nextTier, retainer, retainerWith, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn, xpOf } from './mail.mjs';
@@ -2338,9 +2339,10 @@ function pinnedTracker(s) {
 }
 const SLOT_GLYPH = { exploit: 'exploit', proxy: 'relay', shell: 'module', script: 'cipher', implant: 'injector' };
 // The map's left column: the threat rail, then the contract tracker under it (the selected server's contract lit), then
-// the pinned earned pieces. The Runners are on the map itself (a phone still lists them in the sheet: mapRail).
-function mapLeft(s, sel, runner = null, railShut = false) {
-  const col = threatRail(s) + contractTracker(s, sel) + pinnedTracker(s);
+// the pinned earned pieces, then the ping log (pings.mjs). The Runners are on the map itself (a phone still lists them
+// in the sheet: mapRail).
+function mapLeft(s, sel) {
+  const col = threatRail(s) + contractTracker(s, sel) + pinnedTracker(s) + pingsMarkup(s);
   return col ? `<div class="map-lcol">${col}</div>` : '';
 }
 // A phone's map (docs/phone-plan.md P3): the rail and the tracker fold into a row of chips under the floors, a red
@@ -2379,12 +2381,14 @@ export function trackedJobs(s) {
     return { id: c.id, icon: jobIcon(c), name: contractTitle(s, c), from: c.from, faction: jobFaction(c), ready: ok, text: pr.text, part: Math.max(0, Math.min(1, pr.part || 0)), n: pr.n, of: pr.of, locate: place && !ok ? place.slice(4) : null, go: place || ok ? null : `mail:j${c.id}`, command: ok ? `mail deliver ${c.id}` : null, tip, pay: rewardChips(s, c) };
   });
 }
-// A tracker row's inside: whose it is over its name, then how far along (the map's tracker, and a server's strip tip).
+// A tracker row's inside (the map's tracker, and a server's strip tip), lean: its name, a count on the same line (n/N,
+// past 10 a bar too), or else its few words under it on one line. Whose it is goes in the tooltip.
+const ctCount = (j) => (j.of ? null : /^(\d+\/\d+)\b/.exec(j.text || '')?.[1]);
 const ctProg = (j) => j.ready ? `<span class="ct-turn">Turn in</span>`
   : j.of && j.of > 10 ? `<span class="ct-bar"><i style="width:${(j.part * 100).toFixed(0)}%"></i></span><small class="ct-n">${j.n}/${j.of}</small>`
+  : j.of || ctCount(j) ? `<small class="ct-n">${j.of ? `${j.n}/${j.of}` : ctCount(j)}</small>`
   : `<small class="ct-n ct-say">${esc(j.text)}</small>`;
-const ctMark = (f) => (f && FX[f] ? `<span class="fmark-i ct-f" style="--fc:${FX[f].color}">${glyph('f-' + f)}</span>` : '');
-const ctInner = (j) => `${glyph(j.icon)}<span class="ct-txt"><small class="ct-for">${ctMark(j.faction)}${esc(j.from)}</small><b>${esc(j.name)}</b></span><span class="ct-prog">${ctProg(j)}</span>`;
+const ctInner = (j) => { const p = ctProg(j), say = p.includes('ct-say'); return `${glyph(j.icon)}<span class="ct-txt"><b>${esc(j.name)}</b></span><span class="ct-prog${say ? '' : ' ct-side'}">${p}</span>`; };
 // The rows for a tooltip (floorplan-view.mjs: the strip's Contracts), one per contract, as the tracker draws them.
 export const contractTipRows = (list) => list.map((j) => `<span class="ct-row tt-ct${j.ready ? ' ready' : ''}">${ctInner(j)}</span>`).join('');
 function contractTracker(s, sel = null) {
@@ -2981,13 +2985,13 @@ function paceCard(s) {
 // wire, fight reports, the log).
 const systemTabs = (tab, dev) => dev ? `<nav class="ltabs sys-tabs" role="tablist" aria-label="Settings">${[['settings', 'Settings'], ['dev', 'Dev']].map(([k, l]) => `<button type="button" role="tab" data-stab="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</nav>` : '';
 // The Rig page: Achievements (achievements-view.mjs), and what they unlock for your machine: Casing (casing-view.mjs:
-// the monitor's colourway, plate and stickers), Terminal (terminal-view.mjs: the boot, the prompt and the cursor) and
+// the monitor's color, plate and stickers), Terminal (terminal-view.mjs: the boot, the prompt and the cursor) and
 // House (house-view.mjs: your house and its furniture).
 export const RIG_TABS = [['achievements', 'Achievements'], ['casing', 'Casing'], ['terminal', 'Terminal'], ['house', 'House']];
 const rigTabs = (s, tab) => `<nav class="ltabs sys-tabs" role="tablist" aria-label="Rig">${RIG_TABS.map(([k, l]) => `<button type="button" role="tab" data-rtab="${k}" aria-selected="${tab === k}">${esc(l)}${k === 'achievements' ? `<small class="sys-pts">${glyph('medal')}${pointsOf(s)}</small>` : ''}</button>`).join('')}</nav>`;
-export function rigMarkup(s, { tab = 'achievements', ach = {}, house = {} } = {}) {
+export function rigMarkup(s, { tab = 'achievements', ach = {}, house = {}, casing = 'color' } = {}) {
   if (tab === 'house') return rigTabs(s, tab) + housePageMarkup(s, house);
-  if (tab === 'casing') return rigTabs(s, tab) + casingPageMarkup(s);
+  if (tab === 'casing') return rigTabs(s, tab) + casingPageMarkup(s, { sec: casing });
   if (tab === 'terminal') return rigTabs(s, tab) + terminalPageMarkup(s);
   return rigTabs(s, 'achievements') + achievementsMarkup(s, ach);
 }

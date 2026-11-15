@@ -50,9 +50,9 @@ teal, violet or a threat's red.
   poster, a boss frame), a feud's two faction halves over its bar, a price tile, a price tag. Rewards are an icon and a
   number. The card's sentence is the strip's tooltip. Motion is locked to the clock (`--ph`) so a redraw never restarts
   it. The map pop-up widens to 376px while it holds one.
-- **Contract tracker** (`.ctrack`, `view.mjs` `contractTracker`): under the threat rail; its kicker counts the rows (the slots they fill of 6 in its tooltip; story and floor jobs take none); an icon column, who it's for over
-  the name, the progress in amber (its few words, *3/5 viruses killed*; past 10 a bar
-  with *n/N*); a done one has a green border and **Turn in**. A row is a
+- **Contract tracker** (`.ctrack`, `view.mjs` `contractTracker`): under the threat rail; its kicker counts the rows (the slots they fill of 6 in its tooltip; story and floor jobs take none). A row is lean:
+  its icon, its name and *n/N* on one line (past 10 a bar too), or else its few words under the name on one line;
+  who it's for is in the tooltip; a done one has a green border and **Turn in**. A row is a
   button (`data-locate`, `data-go` to Mail, or a done one's `mail deliver`); its tooltip shows the pay as icon chips. No teal.
 - **Labelled rows** (`.op-row`, `.net-row`, `.srv-line`): a fixed label column (`--label`, `--dim`) and the value
   beside it, every row in a block at one label width.
@@ -198,8 +198,8 @@ short vibration on phones that have it.
 ## The pages, at a glance
 
 - **The top bar:** the pages on the left, each with a one-line tooltip; in the middle your handle · class · level with the class's XP as a thin bar;
-  on the right the people button, the pager, then Integrity (a server tower that drains), Signal (five bars) and
-  credits, each with its **+**. At 1440 with the casing the pager's tray tightens so the class name keeps its place.
+  on the right the people button (a phone's strip: the pager's lamp), then Integrity (a server tower that drains), Signal (five bars) and
+  credits, each with its **+**.
 - **The map** shows one floor at a time. A server (the *Glyph*, `view.mjs` serverIcon) is its kind's glyph on a dark
   plate, a bar under it filling as you clear it, and a ring round one you haven't been into, a pulse going out from it;
   amber, gray when done, teal where you are and what's yours, yellow for a contract's. Its kind's rule is the glyph's
@@ -250,8 +250,8 @@ short vibration on phones that have it.
 - **The level-up** (the *Firmware update*, levelup-view.mjs): an amber *Firmware update · <class>.rom* strip, the
   level in teal dot-font digits, `[ OK ]` a row at a time with a tick each; it waits for a calm moment. It powers on
   to its sound (the lift): the strip flickers on, the bar climbs with the hum, the new level snaps in at the lock.
-- **The pager** (the *Tray*): a lamp and one icon per page (up to four on a desktop, three on a phone, then **+n**),
-  amber, red for a threat, a soft glow on one you haven't seen; its tooltip is the line and, muted, ▸ what the tap does.
+- **The pager** (the *Log*, pings.mjs/pings.css): on a desktop, frameless ping lines in the map's left column and
+  above the prompt elsewhere (see GAME_RULES.md); a phone keeps the lamp and Comms.
 - **The player card** (the *NET ID badge*, profile-view.mjs): an amber NET ID strip, the banner framed as a photo
   (teal corners), the handle large in teal, the title amber, the plan a quiet italic quote, sections on one column,
   a bar code at the foot.
@@ -355,7 +355,9 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
 
 - **The monitor casing** (immersive shell, desktop): BLACKBOX · MODEL 7, two knobs (sound, speed) and labelled lamps
   (PWR, GATE, WALL, NET, INST, DMN) that glow with real state and blink at medium and bold.
-- **Casing cosmetics** (`casing.mjs`, `casing.css`): only the casing changes, never the screen. A colourway sets only
+- **Rig → Casing** (`casing-view.mjs`): a rail of sections (Monitor color, Nameplate, Stickers, Props, Window), each
+  with what it holds now; the open one's options fill the pane beside it. On a phone the rail is a strip of tabs.
+- **Casing cosmetics** (`casing.mjs`, `casing.css`): only the casing changes, never the screen. A monitor color sets only
   `--case-*` variables, each read in style.css with the stock colour as its fallback, and fills the bezel's frame with
   the glass cut out exactly. Stickers sit anywhere on the plastic (the top, a side, where they read upward, or the
   chin, a little crooked), over each other but never over the glass, the knobs, the plate or the lamps; they drag only

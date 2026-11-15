@@ -337,7 +337,7 @@ you've never met never comes as its .exe. Its research and Codex card are the pa
 | Degausser | Its Wipe takes your two strongest keys. |
 | Prism | A cut stops only the hit it lands on, not the rest of the volley. |
 | Mimic | On its beat it plays back the dearer of your last two commands. |
-| Packer | A scan unpacks only one of the parts it hides. |
+| Packer | Broken, it unpacks one part a cycle from the next, not all at once. |
 | Damper | Drops two kinds of damage, not one. |
 | Cold Store | Thaws with one more ◆; its Chill lands the next cycle. |
 | Twin Rig | A Rig left alone takes the other's climb and 3 steps more, not 1. |
@@ -380,7 +380,7 @@ A basic with no attack is its signature's **fallback**: break the signature firs
 | Ransomware | **Tripwire** (16): 18, ◆, Ping 3 every 3 | Break it while the others stand and they go **loud** for the fight: 25% more damage and every attack a cycle sooner, but 40% more damage taken and all their ◆ gone. Trip it when you can finish them fast (*loud wins*), else break it last. Throttle quiets a loud part. |
 | Ransomware, Wiper | **Scraper** (19): 22, ◆, Scrape 4 every 4 | When its Scrape lands it takes the buffs you put up before it: your ◆, your shield after its hit, your timed buffs. Buff after it lands. |
 | Wiper | **Recycle Bin** (19): 24, ◆ | Holds the key the Wipe takes (*holds Flood*). Push it past a tick while it holds one and the key comes back, ready. |
-| Ghostroot | **Packer** (20): 20, ◆ | While it stands, the virus's rolled parts show as *Packed part* (attacks named ???) and its rules as ??? chips. A scan before you engage, or breaking it, unpacks them. |
+| Ghostroot | **Packer** (20): 20, ◆ | While it stands, the virus's rolled parts show as *Packed part* (attacks named ???) and its rules as ??? chips. Breaking it unpacks them. |
 | Ghostroot, Wiper | **Bad Block** (21): 22, ◆, Bad Write 4 every 4 | When it lands your next heals lose up to 10% of your max (*Cracked*). Purge, Scrub, Rollback, Rotate Keys and Vent clear it. |
 | Cryptominer, Wiper | **Damper** (23): 26, ◆◆ | While it wears ◆ it takes nothing from one kind (burns, helpers or area hits, crossed out on its tag), which still breaks a ◆. Strip it first. |
 | Ransomware, Wiper | **Cold Store** (24): 30, ◆, Chill 10 every 5 | Frozen and untouchable for its first 5 cycles; its first Chill comes 2 cycles after the thaw. |
@@ -874,16 +874,15 @@ objective too (it pays its archive, not the bonus).
 ### Walking and fog
 
 - **Walking** into a room for the first time on a visit costs 3% of your max Signal if you've been in it before, 5% if
-  you never have (4% and 6% from floor 5); the cost shows on its chip when you hover it (always on a phone). Rooms you've walked this visit and `wait` are free.
-- **Fog.** Every room is **unknown** until you've been in it: a dashed ghost chip with a ? and its address. You see the
-  shape of the rooms next to you and one further (an Infiltrator's two) and the Core's chip. Walk in and it's
-  **discovered** for good. A virus in an unknown room still stops you at the door (**Engage** / **Step back**).
+  you never have (seen from next door doesn't count) (4% and 6% from floor 5); the cost shows on its chip when you hover it (always on a phone). Rooms you've walked this visit and `wait` are free.
+- **Fog.** The rooms next to you are **discovered** for good: kind, virus and level. One room further (an Infiltrator's
+  two) you see only an **unknown** shape, a dashed ghost chip with a ? and its address, and always the Core's chip.
 - **A room's look.** A discovered room's outline and hue say its kind: a process a red cut-corner chip, an elite a
   magenta bevel, the Core red with a point at its foot, a socket orange with pins, a cache an amber rounded chip, the
-  vault a gold square, the rest room a green chip with deeply rounded corners, the entry and the den white hexagons. Cleared or used, it goes gray.
+  vault a gold square, the rest room a green chip with deeply rounded corners, the entry and the den white hexagons. Cleared or used, it goes gray. A live fight wears its level on the chip's bottom-right plate, red when it's over yours.
 - **Live viruses hold their rooms:** `engage`, or `back` out (the move in is spent).
-- **Scan** (`scan [room]`, or **SCAN −1** on a discovered neighbour's chip): 1 Signal (an Infiltrator's is free and
-  reads deeper) for a card naming every rule the virus carries; it unpacks a Packer.
+- **Slip** (Infiltrator): twice a visit, `slip` past the hunter, or on out of a room a virus holds (not the Core or a
+  surge). The virus stays; you can still engage it.
 - **The key walk.** The guard post sits on another branch, three or more rooms from the vault. Beat its guard and the
   key is yours for the visit; jack out holding it and it goes back to its post, guard and all. An Archive has two
   vaults and two keys; only the one before the Core unseals it. A leaked key or a key cracker puts it in your hand as
@@ -899,7 +898,7 @@ walks home. Either moves a room for every two of your moves (a Lab's awake Track
 wait. It shows its next room with a red dashed arrow and never enters the entry or the rest room. You see it in your
 room, next to you (an Infiltrator two off) or in a discovered room; within two rooms but out of sight, the room at the
 fog's edge pulses red. Meet it and you fight it (two levels over the server); beat it and it drops a script and is down
-for the visit. An Infiltrator can `slip` past it once a visit.
+for the visit. An Infiltrator can `slip` past it (one of their two slips).
 
 ### Rivals (rivals.mjs)
 
@@ -1042,8 +1041,7 @@ Rooms n/N, Mapped or a no-rest job. Invasions carry the quirk too (Invasions).
 | `cat`, `pull` | Read a cache, take it; `pull` in an open vault or at the entry takes what's waiting |
 | `open`, `force` | The vault: with its key, or for 15% of your Signal |
 | `rest` | The rest room (or a Defrag Bay: 25%), once a visit |
-| `scan [room]` | Read this room or a discovered neighbour |
-| `slip` | Slip past the hunter (Infiltrator) |
+| `slip` | Slip past the hunter, or out of a held room (Infiltrator, twice a visit) |
 | `build [program]`, `uninstall` | In a cleared socket (Sockets and programs) |
 | `install` (`plant`) | A contract's item, in its room |
 | `talk` (`read`, `take`), `talk 1`/`2` | In a thread's room |
@@ -1358,7 +1356,7 @@ free:** until any class reaches level 5, switching to a class you haven't played
 |---|---|---|---|
 | Breaker | DPS, Burst | **Momentum**: each part you break gives +10% damage for 2 cycles, up to 3 stacks | Overload, Flood, Exploit, Crack |
 | Bastion | Tank, Healer | **Hardened**: the first damaging hit on you each fight deals 25% less | Rate Limit, Firewall, Purge, Retaliate |
-| Infiltrator | DPS, Damage over time | **Ghost**: every fight opens with a Surprise window (The Sync Window), and `slip` gets you past the hunter once a visit | Inject, Backdoor, Keepalive, Tag |
+| Infiltrator | DPS, Damage over time | **Ghost**: every fight opens with a Surprise window (The Sync Window), and `slip` gets you past the hunter or out of a held room twice a visit | Inject, Backdoor, Keepalive, Tag |
 | Operator | Support, Summoner | **Extra thread**: +1 daemon slot | Deploy, Hook, Spawn, Botnet |
 
 **The bar** has up to 11 keys, each shown once unlocked:
@@ -2618,7 +2616,7 @@ no attaching, detaching or memory pips.
   Tier bar, its number and how you met in the tooltip. Known face: half again a raise, and three quarters of the fee.
 - **The runner card**: a lone diamond on the map, a row of a counted one's list or a Rail row opens it beside them
   (where it last was when the map doesn't draw them). Its head (the *Badge*): their ASCII bust (from the handle), faction,
-  handle, class and level, and the Tier bar. Then Traits (temperament first), Now (→ a server and its time, or
+  handle, class and level, and the Tier bar; hovering a diamond shows the Badge alone. Then Traits (temperament first), Now (→ a server and its time, or
   Busy with when they're free), After (their trade); their latest #net line; **Hire**, off with the reason (or the
   clock) until you can.
 - **Hiring** (`hire <runner> [preset]`, anyone on your net, from level 5, three at most): the crew card shows Pay as two
@@ -2673,7 +2671,7 @@ from the handle and when you've been on since. Explanations are tooltips.
 ### Achievements (achievements.mjs)
 
 What you've done, kept for good, WoW style: **105 achievements, 1,920 points** (5, 10, 25 or 50 each) in eight
-categories. Every cosmetic reward comes from one: titles, stickers, banners, casing colourways, window districts, desk
+categories. Every cosmetic reward comes from one: titles, stickers, banners, monitor colors, window districts, desk
 props, boots, prompts, cursors and the house's furniture. None changes a number.
 
 - **Checked cheaply:** every second, only the ones not yet earned, each a look at state the game already keeps; what
@@ -2690,7 +2688,7 @@ props, boots, prompts, cursors and the house's furniture. None changes a number.
 | Combat (19) | Process Killer (10): win 100 fights → casing Beige box, Car on blocks. Long Uptime (10): win a fight of 20+ cycles → title *the Patient*, boot POST, desk prop Coffee mug. Big Game (10): beat 25 ◆ CREW elites. Uncrowned (10): beat RELAY-KING → *Uncrowner*, Relay throne. Repossessed (10): beat REPO MAN → *Repossessor*, Repossessed armchair. Heat Death (10): beat HEATSINK → Hashboard heater. Hot Wallet (10): beat COLDWALLET → Cold-safe planter. Dead Air (25, hidden): silence the HOLLOW CHOIR → *of the Last Note*. Every Crown (25): beat RELAY-KING, REPO MAN and the farm's three → banner Crown, window Tar Beach. **Lairs:** Lair-born (10): beat a lair boss → *Lair-born*; then 10 each for each of the nine lair bosses → its sticker |
 | Exploration (17) | Cartographer (5): Map a server → cursor Underline, Milk-crate desk. Bloodhound (25): trace 100 servers → Mystery toilet. Squatter's Rights (25): play for 100 hours → the cat. **Boards:** Rack Down (10), Contained (10): win Cascade / Quarantine 25 times → CRT aquarium / Quarantine lamp. Mapper (25): Map 20 → *Mapper*, window The Stacks. Change of Hands (10), Landlord (25): take over 1 / 10 servers → Mailbox / TO LET sign. Five Points (10): find every hub → desk prop Keycard. Loose Ends (10): finish 5 threads → Washing line. **Floors:** reach floors 2 to 8 → stickers F2–F8 (Down the Line also window Backhaul; Core Sample, floor 5, *Deepwalker*; Rock Bottom, floor 8, 50 points and casing Matte black) |
 | Collection (26) | Full Page (10): fill an entry in the collection log → *the Thorough*. Family Album (25): Ransomware's, Worm's or Ghostroot's → sticker. Floor Plan (25): a floor's → sticker. Gold Star (5): find a unique. Collector (25): find 25 → *Collector*, desk prop Floppy stack. Curator (50): find 100 → banner Vault door. Assembled (10): assemble a faction piece → *the Assembler*. Five of a Kind (50): all five. Matched (10): complete a set → *the Matched*, prompt Titled. **Sets:** complete each general set → its sticker (10; Mesh, Deep Archive and Bedrock 25) |
-| Factions (10) | Reach each faction's top tier (25 each) → *of Halcyon* (and so on), its sticker, its casing colourway, its boot and the Root prompt (On the Signal also window Coldline; Preferred Customer also Claims cabinet, Cantor Choir pew). Clocked In (5): finish a LOWLIGHT job → Crew couch. Courier's Bane (10): intercept 10 couriers → Courier's bike. Tracker (10): collect 5 bounty hunts. Feudbreaker (25): win 5 feuds. On Retainer (10): deliver 25 contracts |
+| Factions (10) | Reach each faction's top tier (25 each) → *of Halcyon* (and so on), its sticker, its monitor color, its boot and the Root prompt (On the Signal also window Coldline; Preferred Customer also Claims cabinet, Cantor Choir pew). Clocked In (5): finish a LOWLIGHT job → Crew couch. Courier's Bane (10): intercept 10 couriers → Courier's bike. Tracker (10): collect 5 bounty hunts. Feudbreaker (25): win 5 feuds. On Retainer (10): deliver 25 contracts |
 | Classes (14) | Specialist (5): pick a subclass → prompt Two-line. Polyglot (25): all four classes to 10. Each class to 50 (50 each) → *the Hammer*, *the Wall*, *the Quiet*, *the Conductor*. **Mastery:** Second Nature (10): an ability at Mastery 3 → sticker Mastery 3; Muscle Memory (25): five → *the Virtuoso*; First Principles (25): Bash, Ban, Poke and Ping → banner Key one; Full Repertoire (50): key 1, the core and a whole subclass line → sticker Repertoire. **Tier sets:** complete each (25) → its sticker |
 | Daemons (5) | Process Table (10): find 10 → cursor Beam. Pandemonium (50): find all → banner Pandemonium. Full House (10): slot 4 at once. Background Process (10): daemons act 500 times. Unattended (10): win a fight in which they act 10 times |
 | Co-op (5) | Party Line (5), Full Stack (10): win with a crewmate / a crew of 3 beside you (Party Line → Oil-drum grill). Drop-in (10): win a fight a consortium member dropped into. Farmhand (25): beat the farm's three → *Farmhand*. On the Grid (25): a consortium of 12 servers → banner The grid |
@@ -2808,17 +2806,19 @@ The log and terminal still say what happened, in a line; they don't teach.
 
 ### The pager
 
-On the top bar: a lamp, then one icon per thing you can act on (`pager.mjs`). A **page** is a line you can act on (a
+World events land as pings (`pager.mjs`, `pings.mjs`). A **page** is a line you can act on (a
 threat, a world event, a contract ready, an offer, a letter, a thread, wick's lead, an invite); everything else is
 **news** (pay, the retainer, rep, restocks, finds, a blocked invasion, titles), gone 10 minutes after it came in.
 A page stays while it's true, an hour at most; the same news again replaces the old line.
 
-- **The tray:** one icon per waiting page, most urgent first (threats, then events by time left, then a ready contract,
-  letters, offers), amber, red for a threat; up to four on a desktop, three under 900 px, then **+n** (a phone shows the lamp and the count). **One tap** does
-  the page's thing (**Deliver**, **Read**, **Jack in**, **Show**…); mid-fight or on a run, anything that would start a
+- **The ping log** (desktop): frameless lines, an icon and one short sentence each, newest at the bottom, five at most,
+  the older fading in steps; names amber, red on a threat, yours teal. In the map's left column under Contracts; on
+  other pages above the prompt (in a fight, threats only). A plain line fades after 30 s; a threat, a contract to turn
+  in, an unread letter and an invite stay until dealt with. Its tooltip: the name, the line, ▸ what a click does.
+  An unseen threat glows every 10 s until you hover it. **One click** does the page's thing (**Deliver**, **Read**, **Jack in**, **Show**…); mid-fight or on a run, anything that would start a
   fight shows you where it is instead. A page that takes on a task (an offer, a world event's fight) shows its quest
   first, in the quest window's look, with **Take** (or **Intercept**, **Hunt**…) and **Cancel**.
-- **The lamp:** dark with nothing to do, lit while pages wait, blinking while one is new, red for a threat; click it for
+- **On a phone, the lamp** (in the strip, with the count): dark with nothing to do, lit while pages wait, blinking while one is new, red for a threat; click it for
   **Comms** (the pages, then the news folded under **News**, then the director's **History**).
 - **Sound:** only a new page chirps; mid-fight only a breach. A breach also flashes the Integrity meter with BREACH.
 
@@ -2962,7 +2962,7 @@ and above the monitor look out through grimy glass onto the city, its sky follow
 every five minutes (`weather <…>` holds one). **Districts:** The Sprawl (always yours), Backhaul (*Down the Line*), The
 Stacks (*Mapper*), Coldline (*On the Signal*) and Tar Beach (*Every Crown*), picked on Rig → **Casing** or with `district <name>`.
 
-**Casing cosmetics** (Rig → **Casing**), each an achievement's reward, only ever the casing: a **colourway** (Stock
+**Casing cosmetics** (Rig → **Casing**), each an achievement's reward, only ever the casing: a **monitor color** (Stock
 and eight more; `casing color <name>`), the **nameplate** (stock, a title you hold, or 16 characters of your own;
 `casing plate …`), **stickers** and **props**. Every sticker you own can go on, anywhere on the plastic: the top, either
 side or the chin. They may overlap each other, never the screen, the knobs, the plate or the lamps. Props stand on the

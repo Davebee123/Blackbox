@@ -2964,7 +2964,7 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ct-head { display: flex; align-items: center; gap: var(--s3); margin: 0; padding: 0 2px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber); }
 .ct-head .glyph { width: 12px; height: 12px; }
 .ct-head small { margin-left: auto; font: inherit; color: var(--muted); }
-.ct-row { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 4px 8px; align-items: center; padding: 6px 8px; background: rgba(12, 10, 6, 0.88); border: 1px solid var(--line); border-left: 3px solid var(--amber-deep); border-radius: var(--r-btn); color: var(--text); font: inherit; text-align: left; cursor: pointer; backdrop-filter: blur(2px); }
+.ct-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; padding: 4px 8px; background: rgba(12, 10, 6, 0.88); border: 1px solid var(--line); border-left: 3px solid var(--amber-deep); border-radius: var(--r-btn); color: var(--text); font: inherit; text-align: left; cursor: pointer; backdrop-filter: blur(2px); }
 .ct-row:hover, .ct-row:focus-visible { border-color: var(--line-strong); border-left-color: var(--amber); }
 .ct-row.on { border-color: var(--amber); background: rgba(40, 30, 10, 0.92); }
 /* Pinned (earned.mjs): an earned piece's row, set green's edge for a set piece, amber's for a unique; its cells and n/N. */
@@ -2972,20 +2972,21 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ct-row.pin-row.set > .glyph { color: var(--r-set); }
 .ct-row.pin-row .ct-prog { flex-wrap: wrap; row-gap: 3px; }
 .pin-goal { font: 10px var(--mono); color: var(--muted); white-space: normal; line-height: 1.35; font-variant-numeric: tabular-nums; } /* its goal in words: wraps under the cells, never cut */
-.ct-row > .glyph { width: 14px; height: 14px; color: var(--amber-soft); align-self: start; margin-top: 2px; }
+.ct-row > .glyph { width: 14px; height: 14px; color: var(--amber-soft); align-self: start; margin-top: 1px; }
 .ct-txt { display: grid; min-width: 0; }
 .ct-txt b { font-size: 12px; font-weight: 600; color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ct-for { display: flex; align-items: center; min-width: 0; font: 10px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ct-for .glyph { width: 10px; height: 10px; }
-.ct-prog { grid-column: 2; display: flex; align-items: center; gap: var(--s3); min-width: 0; min-height: 10px; }
+.ct-prog { grid-column: 2 / span 2; display: flex; align-items: center; gap: var(--s3); min-width: 0; min-height: 10px; }
 .ct-bar { flex: 1 1 30px; min-width: 24px; height: 3px; background: rgba(255, 255, 255, 0.06); border-radius: 2px; overflow: hidden; }
 .ct-bar i { display: block; height: 100%; background: var(--amber); }
 .ct-n { flex: 0 1 auto; min-width: 0; font: 600 10px var(--mono); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ct-n.ct-say { white-space: normal; font-weight: 400; color: var(--muted); line-height: 1.35; }
+.ct-n.ct-say { font-weight: 400; color: var(--muted); line-height: 1.35; }
+.ct-prog.ct-side { grid-column: 3; grid-row: 1; }
+.ct-prog.ct-side .ct-bar { width: 40px; flex: none; }
 .ct-turn { padding: 2px 7px; border: 1px solid var(--ready); border-radius: 3px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--ready); white-space: nowrap; }
 .ct-row.ready { grid-template-columns: 16px minmax(0, 1fr) auto; border-color: var(--ready); background: rgba(20, 32, 12, 0.92); }
-.ct-row.ready .ct-prog { grid-column: 3; grid-row: 1 / span 2; }
-.ct-row.ready .ct-txt b { white-space: normal; }
+.ct-row.ready .ct-prog { grid-column: 3; grid-row: 1; }
 .ct-row.ready:hover .ct-turn, .ct-row.ready:focus-visible .ct-turn { background: var(--ready); color: var(--bg); }
 .ct-row.ready > .glyph { color: var(--ready); }
 /* The rail and the tracker share the map's left column; the rail keeps its own rows. */
@@ -3108,7 +3109,7 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ptip-body .impl { display: block; } /* its text wraps back to the left edge, under the icon */
 .ptip-body .impl .glyph { display: inline-block; vertical-align: -2px; margin-right: 6px; }
 .ptip-body em { color: var(--muted); font-size: 11px; margin-top: 4px; }
-.ptip-body > small.zd { color: var(--text); font-size: 12px; margin-top: 2px; } /* the effect reads as rules text; flavour stays muted */
+.ptip-body > small.zd { color: var(--text); font: 13px var(--sans); margin-top: 2px; } /* the effect reads as rules text; flavour stays muted */
 .ptip-body > small.zd b { color: var(--r-zeroday); font-weight: 600; }
 .inv-card .inv-state { display: flex; align-items: center; gap: 8px; margin: 6px 0 4px; }
 .inv-card .inv-state b { font: 600 12px var(--mono); color: var(--text); }
@@ -3773,6 +3774,10 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 
 /* Themed hover tips (app.js): every title in the game, in the game's own card. */
 .tt { position: fixed; z-index: 90; max-width: calc(300px * var(--ui, 1)); padding: calc(8px * var(--ui, 1)) calc(11px * var(--ui, 1)); background: rgba(10, 8, 5, 0.97); color: var(--text); border: 1px solid var(--line-strong); border-top: 2px solid var(--amber); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55); font: calc(13px * var(--ui, 1))/1.45 var(--sans, inherit); pointer-events: none; white-space: pre-line; animation: ptip-in 0.12s ease-out; }
+.tt:has(.tt-runner) { max-width: none; white-space: normal; border-top-color: var(--bright); }
+.tt-runner .rc-head { margin: 0; padding-right: 0; }
+.tt-runner .rc-handle { margin: 0; }
+.tt .tt-runner .rc-tier b { display: inline; margin: 0; font: 600 12px var(--sans); letter-spacing: 0; color: var(--bright); }
 .tt b { display: block; margin-bottom: 3px; color: var(--amber); font: 600 calc(12px * var(--ui, 1)) var(--mono); letter-spacing: 0.5px; }
 .tt .tt-state { display: block; margin-bottom: 4px; font-size: calc(12px * var(--ui, 1)); } /* what holds now (a tray key's), coloured by its job */
 .tt .tt-state.hot { color: var(--hot); } .tt .tt-state.amber { color: var(--amber); } .tt .tt-state.you { color: var(--you); } .tt .tt-state.steel { color: var(--steel); } .tt .tt-state.muted { color: var(--muted); }
@@ -4856,3 +4861,8 @@ button.tk-b:hover, button.tk-b:focus-visible { border-color: var(--line); }
 .comm-line { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; color: var(--fc); }
 .comm-line .comm-pay { color: var(--amber); font: 600 12px var(--mono); }
 .comm-line .btn, .comm-line .tag { margin-left: auto; }
+
+/* A game, not a page: a click-drag over the UI selects nothing. What you type and what you'd copy (letters, #net, an
+   error) still select. */
+body { -webkit-user-select: none; user-select: none; }
+input, textarea, [contenteditable], .mbody, .ch-lines, .page-error pre { -webkit-user-select: text; user-select: text; }

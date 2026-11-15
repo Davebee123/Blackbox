@@ -38,7 +38,7 @@ test('the Rig holds Achievements, Casing (with the window\'s districts) and Term
   assert.doesNotMatch(html, /data-stab="(achievements|casing|terminal)"|data-rtab|cs-dist/);
   for (const t of ['achievements', 'casing', 'terminal']) assert.match(rigMarkup(s), new RegExp(`data-rtab="${t}"`));
   assert.match(rigMarkup(s), /data-rtab="achievements" aria-selected="true"/, 'opens on Achievements');
-  assert.match(rigMarkup(s, { tab: 'casing' }), /cs-page[\s\S]*data-run="district sprawl"/);
+  assert.match(rigMarkup(s, { tab: 'casing', casing: 'window' }), /cs-page[\s\S]*data-run="district sprawl"/);
 });
 
 test('Grain: on by default, off by default in the phone layout, and a choice either way overrides that', () => {

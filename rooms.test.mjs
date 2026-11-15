@@ -121,8 +121,9 @@ test('walking: a room\'s first entry on a visit costs 5% of your max Signal if y
   const deep = server({ floor: 5, size: 'small' });
   const room = FP.neighbours(deep.rooms.graph, deep.rooms.at).map((id) => deep.rooms.graph.rooms[id])[0];
   assert.equal(FP.moveCost(deep, room), Math.round(deep.rooms.max * FP.ROOMS.moveNewDeep), 'from floor 5: 6% unknown');
-  deep.rooms.seen[room.id] = 'kind';
-  assert.equal(FP.moveCost(deep, room), Math.round(deep.rooms.max * FP.ROOMS.moveDeep), 'and 4% known');
+  assert.ok(FP.known(deep, room.id), 'next to you: discovered, and still the new room\'s cost');
+  deep.rooms.been[room.id] = true;
+  assert.equal(FP.moveCost(deep, room), Math.round(deep.rooms.max * FP.ROOMS.moveDeep), 'and 4% once you\'ve been in');
 });
 
 test('a live virus holds its room: engage or step back, and the move in is spent', () => {
@@ -219,8 +220,9 @@ test('progress: rooms cleared at least once, for good; it never goes down', () =
   assert.ok(FP.roomList(s).some((x) => !R.seen[x.id]), 'some rooms out of sight');
   place(s, c.id); FP.act(s, 'pull');
   assert.ok(FP.roomList(s).every((x) => R.seen[x.id]), 'the whole graph is drawn');
-  // Drawn, not discovered: a room you've never been in is still an unknown shape.
-  for (const x of FP.roomList(s)) if (!R.cleared[x.id] && x.id !== R.at) assert.equal(R.seen[x.id], 'shape', `${x.path}: unknown`);
+  // Drawn, not discovered: a room you've never been in or stood next to is still an unknown shape.
+  const beside = (id) => FP.neighbours(R.graph, id).some((n) => R.been[n]);
+  for (const x of FP.roomList(s)) if (!R.cleared[x.id] && !R.been[x.id] && !beside(x.id)) assert.equal(R.seen[x.id], 'shape', `${x.path}: unknown`);
 });
 
 test('the key walk: beat the guard post for the key, walk it to the vault, open it, and /core unseals', () => {
@@ -318,12 +320,12 @@ test('home: Signal rests back at 20% a minute (the clock\'s speed in the playtes
   assert.equal(R.signal, 0);
 });
 
-test('fog: a room is unknown until you have been in it; you see the shapes next to you and one further, and the Core\'s chip', () => {
+test('fog: the rooms you stand in and next to are discovered; you see the shapes one further, and the Core\'s chip', () => {
   const s = server({ size: 'large', hunter: 'track', kind: 'Lab' }), R = s.rooms, g = R.graph;
   const d = FP.distances(g, R.at);
   for (const [id, n] of Object.entries(d)) {
-    if (id === R.at) assert.equal(R.seen[id], 'kind', 'the room you are in is discovered');
-    else if (id === g.core || n <= 2) assert.equal(R.seen[id], 'shape', `drawn, unknown: ${id} (${n} off)`);
+    if (n <= 1) assert.equal(R.seen[id], 'kind', `discovered: ${id} (${n} off)`);
+    else if (id === g.core || n === 2) assert.equal(R.seen[id], 'shape', `drawn, unknown: ${id} (${n} off)`);
     else assert.equal(R.seen[id], undefined, `out of sight: ${id}`);
   }
   // Walk in: discovered for good, and still discovered from afar, a visit later.
@@ -333,9 +335,14 @@ test('fog: a room is unknown until you have been in it; you see the shapes next 
   if (R.screen?.kind === 'virus') FP.act(s, 'back');
   FP.jackOut(s); tick(60000); FP.connect(s);
   assert.ok(FP.known(s, next.id), 'remembered on the server');
+  assert.ok(R.been[next.id] && !R.been[FP.neighbours(g, next.id).find((x) => x !== g.entry && !R.been[x])], 'been in: only where you stood');
   // An Infiltrator sees shapes one link further, and kinds no sooner.
   const i = server({ cls: 'infiltrator', size: 'large', hunter: 'track', kind: 'Lab' }), di = FP.distances(i.rooms.graph, i.rooms.at);
-  for (const [id, n] of Object.entries(di)) if (n >= 1 && n <= 3) assert.equal(i.rooms.seen[id], 'shape', `${id} (${n} off)`);
+  for (const [id, n] of Object.entries(di)) if (n >= 2 && n <= 3) assert.equal(i.rooms.seen[id], 'shape', `${id} (${n} off)`);
+  // An old save: what it had discovered, it had been in.
+  const old = server({ size: 'small' }).rooms; const seen = Object.keys(old.seen).filter((id) => old.seen[id] === 'kind');
+  old.fog = 2; delete old.been; FP.fogRestore(old); FP.fogRestore(old);
+  assert.deepEqual(Object.keys(old.been).sort(), seen.sort());
 });
 
 test('the hunter moves only when you walk or wait, never while you fight, loot, open or rest', () => {
@@ -443,15 +450,33 @@ test('the hunter never walks into the rest room: it waits at the door', () => {
   }
 });
 
-test('an Infiltrator slips past the hunter once a visit', () => {
-  const s = server({ cls: 'infiltrator', hunter: 'patrol' }), R = s.rooms, h = FP.hunterOf(s);
-  const next = FP.neighbours(R.graph, h.at).find((id) => !FP.FIGHTS.includes(R.graph.rooms[id].kind)) || FP.neighbours(R.graph, h.at)[0];
+test('an Infiltrator slips twice a visit: past the hunter, or on out of a room a virus holds (never the Core)', () => {
+  const s = server({ cls: 'infiltrator', hunter: 'patrol' }), R = s.rooms, g = R.graph, h = FP.hunterOf(s);
+  const next = FP.neighbours(g, h.at).find((id) => !FP.FIGHTS.includes(g.rooms[id].kind)) || FP.neighbours(g, h.at)[0];
   place(s, next); h.count = 0;
   FP.go(s, h.at);
   assert.equal(R.screen?.kind, 'hunter');
   FP.act(s, 'slip');
-  assert.ok(!active(s) && R.visit.slipped);
+  assert.ok(!active(s) && FP.slipsLeft(s) === 1);
   assert.notEqual(R.screen?.kind, 'hunter');
+  // A held room: slip, and walk on; the virus still holds it.
+  const room = roomOfKind(s, 'process'), out = FP.neighbours(g, room.id)[0];
+  R.screen = null; R.at = out; FP.go(s, room.id);
+  assert.equal(R.screen?.kind, 'virus');
+  assert.equal(FP.exits(s).length, 0, 'held');
+  FP.act(s, 'slip');
+  assert.ok(!active(s) && R.screen?.slipped && FP.slipsLeft(s) === 0);
+  assert.ok(FP.exits(s).length > 0 && FP.isUp(s, room), 'walk on; it still holds the room');
+  const on = FP.exits(s).find((x) => x.id !== out) || FP.exits(s)[0];
+  FP.go(s, on.id);
+  assert.equal(R.at, on.id);
+  // None left: Engage or Step back. A new visit: two again. Other classes: none.
+  if (R.screen) { R.screen = null; } R.at = out; FP.go(s, room.id);
+  FP.act(s, 'slip');
+  assert.equal(R.at, room.id); assert.ok(!R.screen?.slipped, 'none left');
+  const k = server({ cls: 'breaker' }); assert.equal(FP.slipsLeft(k), 0);
+  // An old visit that slipped once has one left.
+  R.visit.slips = undefined; R.visit.slipped = true; assert.equal(FP.slipsLeft(s), 1);
 });
 
 test('the terminal: ls names the exits and the hunter, cd moves, map draws what you\'ve seen', () => {
@@ -538,7 +563,8 @@ test('the map chips: one badge language for state, countdowns and rings that tic
 
 test('a room\'s look: its kind sets its outline and hue; an unknown room has none', () => {
   const s = server({ hunter: 'patrol' }), R = s.rooms, g = R.graph;
-  const fog = chipOf(wideOf(roomsMarkup(s)), FP.neighbours(g, g.entry)[0]);
+  const two = Object.entries(FP.distances(g, g.entry)).find(([, n]) => n === 2)[0];
+  const fog = chipOf(wideOf(roomsMarkup(s)), two);
   assert.doesNotMatch(fog, /look-/, 'a ghost chip keeps no kind');
   for (const id of Object.keys(g.rooms)) R.seen[id] = 'kind';
   const wide = wideOf(roomsMarkup(s)), lookOf = (id) => chipOf(wide, id).match(/<g class="fp-room [^"]*look-(\w+)/)?.[1];

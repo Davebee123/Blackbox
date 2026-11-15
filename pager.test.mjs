@@ -142,7 +142,7 @@ test('the tray draws the pages: an icon each, most urgent first, +n when more wa
   const tray = PGV.trayMarkup(s, 4);
   assert.equal((tray.match(/class="pg-tile/g) || []).length, 3, 'three icons and +2');
   assert.match(tray, />\+2</);
-  assert.match(tray, new RegExp(`class="pg-tile new" data-pact="${p[0].id}" title="Courier: [^"]+\n▸ Intercept"`), 'the courier first: a tap intercepts it, the tooltip is the line and its ▸ act');
+  assert.match(tray, new RegExp(`class="pg-tile new" data-pact="${p[0].id}" title="COURIER-\\d+: [^"]+\n▸ Intercept"`), 'the courier first: a tap intercepts it, the tooltip is the line and its ▸ act');
   assert.equal((PGV.trayMarkup(s, 3).match(/class="pg-tile/g) || []).length, 2, 'a tight bar: two icons and +3');
   assert.equal((PGV.trayMarkup(s, 6).match(/class="pg-tile/g) || []).length, 5, 'room for all five: no +n');
   assert.doesNotMatch(PGV.trayMarkup(s, 6), /pg-more/);
@@ -174,5 +174,5 @@ test('the pager keeps the rules: no teal, nothing moves, the same chirp, only fo
   assert.doesNotMatch(css.replace(/text-transform/g, ''), /transform|translate|rotate|@keyframes/, 'nothing moves (the lamp reuses the blink)');
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
   assert.match(app, /logComms\(campaign, events\)\.filter\(PG\.isPage\)/, 'news never chirps');
-  assert.match(app, /feel\.add\('pager', '#pager', null, \{ alert \}\)/, 'the pager chirp is the one it always had');
+  assert.match(app, /feel\.add\('pager', pingTarget\(\), null, \{ alert \}\)/, 'the pager chirp is the one it always had');
 });

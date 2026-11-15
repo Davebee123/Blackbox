@@ -160,6 +160,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
   let enteredFor = null, camBase = 300;
   let cam = 300, facing = false, midX = 0, midY = 0; // a boss: seen from further off, facing you, fitted to the window
   const hits = new Map();
+  const broke = new Set(); // parts whose break has played (a part at 0 Integrity waits whole for it: app.js _dyingUntil)
   let shake = null, glitch = 0;
   const shards = [];
   const flung = []; // characters a strike throws out over the page (shock rings, grind sparks)
@@ -634,7 +635,9 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       const part = partAt(p.region);
       if (!part) continue;
       const h = part.id ? hits.get(part.id) : null;
-      if (part.integrity === 0) { if (!(h?.kind === 'break' && motion)) continue; }
+      // Broken in the state, its break still on its way (it lands with the hit's number): drawn whole till then.
+      if (part.integrity > 0) broke.delete(part.id);
+      else if (!(h?.kind === 'break' && motion) && !(motion && part._dyingUntil > Date.now() && !broke.has(part.id))) continue;
       if (part.ghost) continue;
       if (p.region !== 'body' && part.phase && phased && i % 3) continue; // Flicker: the Shade is half gone on odd cycles
       const q = animate(p, clock);
@@ -676,14 +679,14 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     for (const c of cells.values()) {
       const { part, h, fresh } = c;
       if (c.step) { near.push(c); continue; }
-      const broken = part.integrity === 0;
+      const broken = part.integrity === 0 && h?.kind === 'break';
       // Broken: each point turns to a bit, then lets go as a drifting 1 or 0 (shards below).
       const done = broken && h ? (now - h.time) / BREAK_MS : 0;
       if (broken && h) {
         const at = releaseOf(c.i);
         if (done > at) { if (motion && !h.gone.has(c.i)) { h.gone.add(c.i); drift(c.x, c.y, h); } continue; }
       }
-      const ratio = part.integrity / part.max;
+      const ratio = part.integrity === 0 && !broken ? 1 / part.max : part.integrity / part.max;
       const depth = Math.max(0.35, Math.min(1, 0.95 - c.z / (radius * 2.2)));
       const faded = selected && part.id !== selected && c.region !== 'body' ? 0.55 : 1;
       const lit = 0.18 + c.lum * 0.82;
@@ -862,6 +865,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       const t = performance.now();
       const h = { time: t, kind };
       if (kind === 'break') { // where it dissolves from: its middle on the last frame
+        broke.add(id);
         const mine = lastFrame ? [...lastFrame.cells.values()].filter((c) => c.part?.id === id) : [];
         h.gone = new Set();
         h.cx = mine.length ? mine.reduce((a, c) => a + c.x, 0) / mine.length : (lastFrame?.width || 0) / 2;

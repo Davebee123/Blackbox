@@ -229,7 +229,7 @@ test('locked looks can\'t be chosen, and the unlocks follow achievements', () =>
   assert.equal(y.cosmetics.boot, undefined);
   // The rewards show on the achievement: its tooltip's words and a chip by name.
   assert.match(rewardText(achById('c-patient')), /a boot sequence/);
-  assert.match(rewardText(achById('f-kestrel')), /a casing colourway, a boot sequence and a prompt\.$/);
+  assert.match(rewardText(achById('f-kestrel')), /a monitor color, a boot sequence and a prompt\.$/);
   assert.match(rewardText(achById('x-mapped')), /^Rewards a cursor and the Milk-crate desk for your house\.$/);
   const z = me(); grant(z, 'c-patient');
   assert.match(achRow(z, achById('c-patient')), /<b>POST boot<\/b>/);

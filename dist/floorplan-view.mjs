@@ -44,7 +44,7 @@ import { OBJECTIVES, OBJ, objectiveLine } from './objectives.mjs';
 import { recapMarkup } from './recap.mjs';
 import { GUARDS, BOSSES, CONFIG } from './data.mjs';
 import { itemLabel, statLine, shownRarity } from './gear.mjs';
-import { stashItem, active, classOf } from './combat.mjs';
+import { stashItem, active, classOf, hackerLevel } from './combat.mjs';
 import { AUTHORS } from './authors.mjs';
 import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
@@ -54,7 +54,7 @@ import { rivalP, COUNTERS, READS, rivalOf, routeOf, raceOf, lineupOf, memoryOf, 
 import { GENES } from './genes.mjs';
 import { meetingOf, deadOf, runnerOf } from './runners.mjs';
 import { roomRunner, runnerRow, tierBar } from './runners-view.mjs';
-import { ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, restUsed, lureFamilies, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
+import { held, slipsLeft, slippable, ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, restUsed, lureFamilies, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
 import { puzzlePanel } from './puzzle-view.mjs';
 import { PROGRAMS, SOCKET, programCost, buildBlock, codebasesOf, costLine as programCostLine } from './sockets.mjs';
 import { materialsOf } from './combat.mjs';
@@ -455,12 +455,13 @@ function lineupSvg(s, v, cx, y) {
   const n = v.fights, w = 16, gap = 4, x0 = cx - (n * w + (n - 1) * gap) / 2;
   return `<g class="fp-rv-lineup">${Array.from({ length: n }, (_, i) => { const x = n1(x0 + i * (w + gap)), done = i < v.fight; return `<g class="${done ? 'done' : i === v.fight ? 'next' : ''}"><rect x="${x}" y="${n1(y)}" width="${w}" height="14" rx="2"/><text x="${n1(x + w / 2)}" y="${n1(y + 10.5)}" text-anchor="middle">${i + 1}</text>${done ? `<line x1="${x}" y1="${n1(y + 14)}" x2="${n1(x + w)}" y2="${n1(y)}"/>` : ''}</g>`; }).join('')}</g>`;
 }
-// A rival's tooltip: its name, what it is, what it does, then the answer (muted, after ▸).
+// A rival's tooltip, lean: its name, kind and level (and your record), the race as numbers, its lineup, the answer.
 function rivalTip(s, v) {
-  const P = rivalP(v), m = memoryOf(s, v.id);
-  return [P.name, `Rival · ${crewName(v)} · level ${v.level}${m.met ? ` · ${m.won}–${m.lost}` : ''}`,
-    `${rivalLine(s)} They walk a room for each of your moves and need no key. When they reach you, they fight you: ${v.fights} viruses, one after another.`,
-    '▸ Beat them to take their pack, and the vault if they opened it.'].join('\n');
+  const P = rivalP(v), m = memoryOf(s, v.id), race = raceOf(s, v);
+  return [`${P.name}: Rival · ${crewName(v)} · level ${v.level}${m.met ? ` · ${m.won}–${m.lost}` : ''}`,
+    race ? `To the vault: ${race.it} · you ${race.you ?? '?'}` : 'Has the files · heading out',
+    `${v.fights} fights back to back · no key`,
+    '▸ Win: their pack, and the vault if open.'].join('\n');
 }
 // The 1s and 0s drifting off the room you're in: they start just outside its edge and drift 14 to 32 out.
 function bitsSvg(p, G, id) {
@@ -606,12 +607,15 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, bl = {
   // Bottom left: its address (C2), a small plate on the chip's bottom edge (clear of a program's badge), dim; amber with
   // the contract's mark when a job points here.
   const addr = addrOf(s, room.id), job = marks[room.id];
-  let addrEnd = x0; // where the address plate ends (SCAN keeps clear of it)
   if (addr) {
     const fs = G.afs, ph = fs + 4, mark = job ? fs + 1 : 0, pw = n1(addr.length * fs * 0.62 + 8 + (mark ? mark + 2 : 0)), px = n1(x0 + (prog ? 20 : 10)), py = n1(y0 + G.nh - ph / 2);
-    addrEnd = px + pw;
     out += `<g class="fp-addr${job ? ' job' : ''}"><rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="2"/><text x="${n1(px + 4)}" y="${n1(py + ph / 2 + fs * 0.36)}" font-size="${fs}">${esc(addr)}</text>`
       + (mark ? `<use href="#fp-i-contract" x="${n1(px + pw - mark - 3)}" y="${n1(py + (ph - mark) / 2)}" width="${mark}" height="${mark}"/>` : '') + '</g>';
+  }
+  // Bottom right: the level of the virus holding it (a live fight you can see), red when it's over yours.
+  if (up && !sealed) {
+    const lv = fightOf(s, room).level, over = lv > hackerLevel(s), t = `lv ${lv}`, fs = G.afs, ph = fs + 4, pw = n1(t.length * fs * 0.62 + 8), px = n1(x0 + G.nw - 10 - pw), py = n1(y0 + G.nh - ph / 2);
+    out += `<g class="fp-lvl${over ? ' over' : ''}"><rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="2"/><text x="${n1(px + 4)}" y="${n1(py + ph / 2 + fs * 0.36)}" font-size="${fs}">${t}</text></g>`;
   }
   // Bottom right: the respawn ring (a fight down, a cache empty) fills back up, its countdown under it.
   const from = down && downAt(s, room) != null ? downAt(s, room) : empty ? R.taken[room.id] : null;
@@ -621,16 +625,6 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, bl = {
     out += `<g class="fp-respawn ${stocked && !room.mirror ? 'amber' : 'hot'}"><circle class="bg" cx="${cx}" cy="${cy}" r="${r + 3}"/><circle class="track" cx="${cx}" cy="${cy}" r="${r}"/>`
       + `<circle class="arc" cx="${cx}" cy="${cy}" r="${r}" pathLength="100" transform="rotate(-90 ${cx} ${cy})" data-ring-from="${from}" data-ring-at="${back}"/>`
       + `<text x="${cx}" y="${n1(cy + r + 13)}" text-anchor="middle"><tspan data-at="${back}" data-fmt="s"></tspan></text></g>`;
-  }
-  // Bottom right: SCAN on a room next to you that scan reads (run.mjs scanButton, through netrooms.mjs), shown on hover
-  // or focus (always on a phone's map, floorplan.css). It runs scan <room>, as the prompt does. Its cost as the corner's
-  // is, −1, or FREE for an Infiltrator. A room that's down has its ring there instead, so it never shows on one. Where
-  // the address plate leaves no room on the edge (the tall map's bigger plate), it hangs just under the chip instead.
-  const sc = can && kind && net(s, 'scan', room);
-  if (sc) {
-    const t = `SCAN ${sc.free ? 'FREE' : `−${sc.cost}`}`, w = tagW(t) - 4, bx = n1(x0 + G.nw + 4 - w), by = n1(y0 + G.nh + (bx < addrEnd + 3 ? 10 : -8));
-    const tip = sc.short ? 'Not enough Signal to scan.' : `Scan: read its virus card before you walk in.\n${sc.free ? 'As an Infiltrator, you scan free and read deeper.' : `It costs ${sc.cost} Signal.`}`;
-    out += `<g class="fp-scanbtn${sc.short ? ' off' : ''}" ${sc.short ? 'aria-disabled="true"' : `data-command="${esc(sc.cmd)}"`} role="button" tabindex="0" title="${esc(tip)}" aria-label="${esc(sc.short ? tip : `Scan ${labelOf(s, room)}`)}"><rect x="${bx}" y="${by}" width="${w}" height="16" rx="2"/><text x="${n1(bx + w / 2)}" y="${n1(by + 12)}" text-anchor="middle">${t}</text></g>`;
   }
   // A thread's file in this room: its badge and Integrity on the chip's bottom edge.
   for (const f of files) if (f.at === room.id) out += fileSvg(s, p.x + G.nw * 0.2, y0 + G.nh + 8, f.t, G.nw > 100 ? 1.25 : 1.1); // under the chip, clear of its plate
@@ -658,7 +652,7 @@ function hudMarkup(s) {
   // Wait and Jack out (Connect at home), always in reach at the strip's right.
   const c = connectOf(s);
   const acts = R.at
-    ? btn('wait', 'Wait', { small: true, disabled: !!R.screen || active(s), tip: R.screen ? 'Wait: finish what is in front of you first.' : `Wait: the hunter takes its step${filesHere(s).length ? ', and the file you carry' : ''}. Costs nothing.` })
+    ? btn('wait', 'Wait', { small: true, disabled: held(R) || active(s), tip: held(R) ? 'Wait: finish what is in front of you first.' : `Wait: the hunter takes its step${filesHere(s).length ? ', and the file you carry' : ''}. Costs nothing.` })
       + btn('jackout', 'Jack out', { small: true, hot: true, disabled: active(s), tip: 'Jack out: banks your pack. Signal rests at home.' })
     : btn('connect', 'Connect', { small: true, primary: true, disabled: !c.can, tip: c.can ? `Connect to ${R.name}.` : c.wait > 0 ? `${R.name} takes you back in ${fmtLeft(c.wait)}.` : `You need ${c.need} Signal to connect.` });
   return `<header class="fp-hud" aria-label="The server">
@@ -747,6 +741,8 @@ function rivalCard(s, room, sc) {
   const st = { word: sc.between ? `${v.fight} of ${v.fights} down` : 'challenged', cls: 'hot' };
   return cardOf(st, true, P.name, by + says + did + `<ol class="fp-rv-line">${rows}</ol>` + sig + stakes + wick, btn('engage', 'Engage', { primary: true }), true, addrOf(s, room.id));
 }
+// Slip past (an Infiltrator's): the hunter, or a virus holding the room. The room stays held.
+const slipTip = (s) => `Slip past: walk on without a fight. The virus stays.\n${slipsLeft(s)} of ${ROOMS.slips} slips left this visit.`;
 // The room you're in: what holds it and its verbs.
 function hereCard(s) {
   const R = s.rooms, g = R.graph, room = hereOf(s), sc = R.screen, h = hunterOf(s);
@@ -755,7 +751,7 @@ function hereCard(s) {
   if (sc?.kind === 'hunter') {
     st = { word: 'caught', cls: 'hot' };
     body = holder('den', `${huntName(h).toUpperCase()} ICE`, `Level ${fightOf(s, room, 'hunter').level} hunter`) + note('Beat it for a script. It stays down the rest of the visit.');
-    acts = btn('engage', 'Fight it', { primary: true }) + btn('slip', 'Slip past', { tip: 'Slip past: once a visit.' });
+    acts = btn('engage', 'Fight it', { primary: true }) + btn('slip', 'Slip past', { tip: slipTip(s) });
   } else if (sc?.kind === 'virus' && sc.as === 'surge') {
     const c = surgeAt(s, room.id);
     body = holder(iconOf(s, room), sc.name, c?.guardian ? 'Guardian · elite' : `Wave ${(c?.kills || 0) + 1} of ${RUNCARD.surge.waves}`, c ? cardTip(s, c) : '') + note(`<i class="fp-cardbar" style="--f:${c ? surgeFill(c) : 0}"></i> ${c?.guardian ? 'Beat it and the surge ends.' : 'Each kill drops a cache into your pack.'}`);
@@ -779,7 +775,9 @@ function hereCard(s) {
     body += notes.map((n) => note(n)).join('');
     const meet = R.world ? meetingOf(s, isUp) : null, helping = meet?.room.id === room.id; // a runner fighting it (runners.mjs)
     if (helping) body += roomRunner(s, meet);
-    acts = (helping ? btn('assist', 'Help', { primary: true, tip: `Help ${meet.r.handle}: they fight beside you, and take no XP.` }) : btn('engage', 'Engage', { primary: true })) + (R.visit.back ? btn('back', 'Step back', { tip: `Step back: to ${g.rooms[R.visit.back].path}. The move in stays spent.` }) : '');
+    acts = (helping ? btn('assist', 'Help', { primary: true, tip: `Help ${meet.r.handle}: they fight beside you, and take no XP.` }) : btn('engage', 'Engage', { primary: true })) + (R.visit.back ? btn('back', 'Step back', { tip: `Step back: to ${g.rooms[R.visit.back].path}. The move in stays spent.` }) : '')
+      + (slippable(s, room) && slipsLeft(s) ? btn('slip', 'Slip past', { tip: slipTip(s) }) : '');
+    if (sc.slipped) body += note('Slipped past. Walk on, or engage.', 'dim');
   } else if (isSocket(s, room) && socketOpen(s, room)) {
     ({ body, acts } = socketCard(s, room));
   } else if (fightKind(room)) {
