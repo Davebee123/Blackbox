@@ -26,7 +26,7 @@ A first load is 328 requests and 9 MB (5.3 MB of scripts in 196 files, 2.2 MB of
    with its own timer and a colour fade the graphics card can't run (`hitfx.mjs` dissolve): one style pass of 97 ms on a
    desktop, a third of a second frozen.
 2. **Fights: the screen is rebuilt whole** on every event (`app.js` render: board, HUD, tray). About 48 ms a rebuild on
-   a desktop, three a second.
+   a desktop, three a second. Landed (batch 2): the board and tray keep the rows that didn't change.
 3. **Fights: the virus picture.** On a phone it is a 32 px icon, drawn from the whole model 25 times a second: 23% of
    the main thread.
 4. **Fights: the tether's glow** (a `box-shadow` animation) and the backdrop repaint every frame: another 23% in a
@@ -58,7 +58,7 @@ A first load is 328 requests and 9 MB (5.3 MB of scripts in 196 files, 2.2 MB of
 | The stage's reflection, glows and light (`stage.mjs`); the virus's projection (`virus-art.mjs`) | both | landed |
 | Three loops rest: rooms traffic, glyph flicker, the virus pictures | both | landed |
 | The game's tick rests when nothing needs it (`app.js` frame) | both | landed |
-| The fight screen rebuilds only what changed | both | batch 2 |
+| The fight screen rebuilds only what changed (`app.js` putRows) | both | landed |
 | Samples, audio textures and fonts warmed on the loading screen | both | batch 6 |
 | One bundled, minified script and stylesheet for the hosted game | both, phones most | batch 7 (build step approved) |
 
@@ -102,7 +102,7 @@ One session each, started fresh. Measure before and after with `tools/perf/phone
 | Batch | What | Owns | Order |
 |---|---|---|---|
 | 1 | The tick rests when idle | `app.js` frame and what it calls every frame | landed |
-| 2 | Partial rebuild of the fight screen | `app.js` render and `put`, the board's post-render steps | after 1 (same file) |
+| 2 | Partial rebuild of the fight screen | `app.js` render and `put`, the board's post-render steps | landed |
 | 3 | Composited map and rooms animations | the map's and floorplan's markup and CSS | any time |
 | 4 | The dissolve on a canvas | `hitfx.mjs` | any time |
 | 5 | The Graphics settings: prototypes, the pick, then the build | the Settings page, `settings` in the save | after 3 and 4 (it switches them) |
@@ -119,9 +119,16 @@ The three earlier loops look on their timers without asking for a frame. Phone, 
 Fights unchanged (the tick runs). Desktop idle 347–374 → 331–341. A fight from the prompt, a timer's render, a level-up,
 notices, tips, the caret and the clock measured the same as before.
 
-**Batch 2 notes.** `put('board')` replaces the whole board, then re-applies what effects had added (chip effect boxes,
-spent chips, held bars, side marks, classes). Keep a row whose markup is unchanged; check every post-render step runs
-safely on a kept row. Looping animations on kept rows then stop restarting on every rebuild: show the designer.
+**Batch 2 (landed).** `putRows` replaces only the board's and tray's top-level rows whose markup changed; a kept row
+keeps its node and what effects put in it, and the steps after a render re-apply theirs (spent chips now clear both
+ways). A forced render, or anything else put in the panel, rebuilds it whole. The HUD stays whole (two blocks, cheap).
+About two thirds of the board's rows are kept between renders in a boss fight. Looping animations on kept rows no longer
+restart on every render, and one-shot flashes and typed or flipped chip names play to the end: shown to the designer as a
+side-by-side recording, kept. Same day, two runs each, before → after: phone boss 12.9 → 14.3 frames/s, `frame` 21.3 →
+17.3 ms; desk boss `frame` 9.7 → 8.4 ms; regular fights and a fight waiting for its first order unchanged (phone regular
+22 → 23 frames/s, `frame` 9.9 → 9.6 ms). A fight from the prompt, bars stepping hit by hit, a part's dissolve, chips
+moving between cycles, the act break's Strip, the phone's HUD cards: as before, no page errors; the board's DOM matches a
+whole rebuild of it.
 
 Not yet measured: breach and campaign, hubs and shops, co-op, the class pick and tutorial, the More sheet, a phone on
 its side.
