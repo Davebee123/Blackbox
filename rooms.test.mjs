@@ -627,6 +627,7 @@ test('Schematic HD: chips by kind and colour, KEY, LOCKED and SEALED, the hunter
   assert.doesNotMatch(wide, /fp-via|fp-dot/);
   assert.equal((wide.match(/class="fp-bed/g) || []).length, FP.linksOf(g).length);
   assert.equal((wide.match(/class="fp-link live/g) || []).length, FP.exits(s).length);
+  assert.equal((wide.match(/<g class="flow" aria-hidden="true">/g) || []).length, FP.exits(s).length, 'each flows (flowfx.mjs): dashes slid by a transform, no dash-offset animation');
   // No SVG filter on a straight line (a zero-height box makes it vanish).
   assert.doesNotMatch(wide, /<line[^>]*filter=/);
   // The hunter: a skull on its room and one red arrow into the room it steps into next, nothing on that room.
@@ -636,6 +637,7 @@ test('Schematic HD: chips by kind and colour, KEY, LOCKED and SEALED, the hunter
   assert.match(chipOf(wide, h.at), /class="fp-skull/);
   assert.equal((wide.match(/class="fp-route"/g) || []).length, 1, 'one route path');
   assert.match(wide, /<path class="fp-route" d="M[\d.-]+ [\d.-]+ Q[\d.-]+ [\d.-]+ [\d.-]+ [\d.-]+" marker-end="url\(#fp-arrow\)"\/>/);
+  assert.match(wide, /marker-end="url\(#fp-arrow\)"\/><g class="flow fp-route-flow" aria-hidden="true">(<g [^>]+><clipPath [^>]+><rect [^>]+><\/clipPath><line class="fp-flow route flow-run"[^>]+><\/g>){8}<\/g>/, 'its dashes flow along it in eight pieces; the path keeps the arrowhead');
   assert.doesNotMatch(chipOf(wide, nextId), /hunt-next|fp-ring|NEXT/);
   // The bits drift off your room only: twelve of them.
   assert.equal((wide.match(/<g class="fp-bits"/g) || []).length, 1);

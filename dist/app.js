@@ -91,6 +91,7 @@ import { playTravel } from './travelfx.mjs';
 import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, whenConnected, playHangup, stopHangup, whenHome } from './bootfx.mjs';
 let bootFor = null; // the fight the screen last booted into (go)
 import { startTraffic } from './traffic.mjs';
+import { watchPackets, shipOf } from './mapmotion.mjs';
 import { postFound } from './scanner.mjs';
 import { createScanner, postBanner, postOptions, postTerminalMarkup, POST } from './scanner-view.mjs';
 
@@ -2993,30 +2994,8 @@ function stepLoop() {
 // ---------- clock ----------
 let last = performance.now();
 let lastSecond = 0, wanderTick = 0;
-// Traffic on the map (view.mjs trafficMarkup): each dot runs its route on its own clock. A transfer
-// sits at its share of the way; backbone traffic loops, the far end's colour on the way back.
-function movePackets(at) {
-  for (const d of document.querySelectorAll('.map-svg .mpkt')) {
-    const path = d.ownerSVGElement?.querySelector(`[data-rid="${d.dataset.route}"]`);
-    if (!path) continue;
-    let p, back = !!d.dataset.rev;
-    if (d.dataset.period) {
-      // Hub-to-hub: each lap carries one of the route's shipments, from where it's cheap to where it pays.
-      const k = at / +d.dataset.period + +d.dataset.phase, lap = Math.floor(k);
-      const ships = d._ships ||= JSON.parse(d.dataset.ships || '[]'), sh = ships.length ? ships[lap % ships.length] : null;
-      p = k - lap; back = sh ? !!sh.back : lap % 2 === 1;
-      d._ship = sh && { ...sh, n: 4 + ((lap * 7 + ships.indexOf(sh) * 13) % 17) };
-      d.style.color = back ? d.dataset.cb : d.dataset.ca;
-    } else p = Math.max(0, Math.min(1, (at - +d.dataset.t0) / Math.max(1, +d.dataset.t1 - +d.dataset.t0)));
-    const len = path.getTotalLength(), at0 = (back ? 1 - p : p) * len, pt = path.getPointAtLength(at0);
-    // Which way it's heading: a step further along the route, in its direction of travel.
-    const q = path.getPointAtLength(Math.max(0, Math.min(len, at0 + (back ? -1 : 1))));
-    const ang = Math.atan2(q.y - pt.y, q.x - pt.x) * 180 / Math.PI;
-    d.setAttribute('transform', `translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`);
-    d.querySelector('.pk-dir')?.setAttribute('transform', `rotate(${ang.toFixed(0)})`);
-  }
-  if (pktHover) placePktTip();
-}
+// Traffic on the map (view.mjs trafficMarkup): mapmotion.mjs runs each dot on the graphics card, started as it's drawn.
+watchPackets($('page-view'));
 // Rig → House (house-view.mjs): drag a tile or a placed piece onto a spot (on the picker, a placed one is put away), or
 // click it and then a spot. The piece lands centred on the pointer. Esc puts a piece in hand back where it was.
 let hsDrag = null; // a press on a tile or a placed piece: { id, x, y, moved }
@@ -3077,13 +3056,15 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && module =
 let pktHover = null;
 function pktTipData(d) {
   if (d.dataset.tip) return JSON.parse(d.dataset.tip);
-  const sh = d._ship; if (!sh) return null;
+  const sh = shipOf(d); if (!sh) return null;
   const fa = FACTIONS[d.dataset.fa]?.short, fb = FACTIONS[d.dataset.fb]?.short;
   return { icon: sh.w, what: WARES[sh.w].name, n: sh.n, from: sh.back ? fb : fa, to: sh.back ? fa : fb, lo: sh.lo, hi: sh.hi };
 }
 function placePktTip() {
+  if (!pktHover) return;
   const { d, el } = pktHover;
   if (!d.isConnected) return hidePktTip();
+  requestAnimationFrame(placePktTip); // it follows the dot while you hover
   const data = pktTipData(d), key = JSON.stringify(data);
   if (key !== el.dataset.key) { el.innerHTML = V.packetTipMarkup(data); el.dataset.key = key; }
   const r = d.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
@@ -3100,15 +3081,14 @@ document.addEventListener('mouseover', (e) => {
   pktHover = { d, el }; placePktTip();
 });
 document.addEventListener('mouseout', (e) => { if (pktHover && e.target.closest?.('.mpkt') === pktHover.d && !pktHover.d.contains(e.relatedTarget)) hidePktTip(); });
-// What needs the tick every frame: a fight, a render or a queued effect, the Tune window, files moving on the map,
-// co-op, a moment after any input. Otherwise it rests (wakeTick).
+// What needs the tick every frame: a fight, a render or a queued effect, the Tune window, co-op, a moment after any
+// input. Otherwise it rests (wakeTick).
 function tickBusy(now) {
   return dirty || now < awakeUntil || active(campaign) || feel.pending() > 0 || attackQueue.length > 0 || attackHeld.length > 0
-    || lu.pending() > 0 || !!scanner?.isOpen() || !!coop?.busy() || (module === 'map' && !!document.querySelector('.map-svg .mpkt'));
+    || lu.pending() > 0 || !!scanner?.isOpen() || !!coop?.busy();
 }
 function frame(now) {
   loop = 0;
-  if (module === 'map') movePackets(Date.now());
   const delta = Math.min(1000, now - last);
   last = now;
   const wall = Date.now();

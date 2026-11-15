@@ -171,14 +171,22 @@ export function transitNodes(s, byId, idOf = {}, g = null) {
     const lens = pts.slice(1).map((p, i) => Math.hypot(p.x - pts[i].x, p.y - pts[i].y)), total = lens.reduce((x, y) => x + y, 0) || 1;
     let left = total / 2, mid = pts[0];
     for (let i = 0; i < lens.length; i++) { if (left <= lens[i]) { const f = left / (lens[i] || 1); mid = { x: pts[i].x + (pts[i + 1].x - pts[i].x) * f, y: pts[i].y + (pts[i + 1].y - pts[i].y) * f }; break; } left -= lens[i]; }
-    return { id: `transit-${t.id}`, kind: 'transit', t, name, x: Math.round(mid.x), y: Math.round(mid.y), route: 'M' + pts.map((p) => `${Math.round(p.x)} ${Math.round(p.y)}`).join(' L'), from, to };
+    return { id: `transit-${t.id}`, kind: 'transit', t, name, x: Math.round(mid.x), y: Math.round(mid.y), route: 'M' + pts.map((p) => `${Math.round(p.x)} ${Math.round(p.y)}`).join(' L'), pts: pts.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) })), from, to };
   }).filter(Boolean);
 }
 export const transitSvg = (n, motion = true) => {
   const file = '<rect class="tbg" x="-9" y="-11" width="18" height="22" rx="2"/><path class="tfile" d="M-5 -7 H2 L5 -4 V7 H-5 Z M2 -7 V-4 H5"/>';
   return `<g class="mnode transit" aria-label="${esc(`${n.name} in transit`)}"><title>${esc(`${n.name}: in transit. Meet it at the entry of the server it's going to.`)}</title><path class="troute" d="${n.route}"/>`
-    + (motion ? `<g class="tmover">${file}<animateMotion dur="6s" repeatCount="indefinite" path="${n.route}"/></g>` : `<g class="tmover" transform="translate(${n.x} ${n.y})">${file}</g>`) + '</g>';
+    + (motion ? `${moveAlong(n)}<g class="tmover">${file}</g></g>` : `<g class="tmover" transform="translate(${n.x} ${n.y})">${file}</g>`) + '</g>';
 };
+// The file runs its route at an even pace, every 6 s: a transform animation, so the graphics card runs it.
+function moveAlong(n) {
+  const P = n.pts || [{ x: n.x, y: n.y }], lens = P.slice(1).map((p, i) => Math.hypot(p.x - P[i].x, p.y - P[i].y)), total = lens.reduce((a, b) => a + b, 0) || 1;
+  let at = 0;
+  const keys = P.map((p, i) => { if (i) at += lens[i - 1]; return `${+((at / total) * 100).toFixed(2)}%{transform:translate(${p.x}px,${p.y}px)}`; }).join('');
+  const name = `tm-${String(n.id).replace(/[^\w-]/g, '')}`;
+  return `<style>@keyframes ${name}{${keys}}</style><g class="tmove" style="animation:${name} 6s linear infinite">`;
+}
 // A temporary server's card: what it is, its rooms, the thread it belongs to, Connect (none once it's dark).
 export function tempCard(s, l, { here = false, busy = false, relock = 0, btn = () => '' } = {}) {
   const dark = isDark(l), t = threadById(s, l.temp.thread), R = l.floorplan, rooms = R ? Object.values(R.graph.rooms).filter((x) => !x.nook && !x.optional) : [], done = rooms.filter((x) => R.cleared[x.id]).length;

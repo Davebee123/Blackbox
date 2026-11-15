@@ -62,6 +62,7 @@ import { MATERIALS } from './gear.mjs';
 import { roomSpark } from './event-cards.mjs';
 import { TH_ICONS, roomMarksOf, nookIcon, nookLive, questSvg, fileSvg, filesHere, threadHud, threadCard, threadAsks, threadPanel, thUi } from './threads-view.mjs';
 import { sweepBlock } from './view.mjs';
+import { flowSvg, quadPts } from './flowfx.mjs';
 
 // The pop-up's state, a view (never saved): the room you clicked, and where you stood when you clicked it (a step
 // or a wait drops it), and the decision you closed (it stays closed until a new one comes up).
@@ -357,7 +358,8 @@ function chipD(look, x, y, hw, hh, c) {
 }
 const hashOf = (str) => { let x = 7; for (const c of str) x = (x * 31 + c.charCodeAt(0)) % 233280; return x; };
 // A hop's trace bows out; a Tunnel's arc, from the entry to its room, bows a little less.
-const hopD = (p, q) => `M${p.x} ${p.y} Q${n1((p.x + q.x) / 2 + (q.y - p.y) * 0.35)} ${n1((p.y + q.y) / 2 - (q.x - p.x) * 0.35)} ${q.x} ${q.y}`;
+const hopC = (p, q) => ({ x: n1((p.x + q.x) / 2 + (q.y - p.y) * 0.35), y: n1((p.y + q.y) / 2 - (q.x - p.x) * 0.35) });
+const hopD = (p, q) => { const c = hopC(p, q); return `M${p.x} ${p.y} Q${c.x} ${c.y} ${q.x} ${q.y}`; };
 const tunnelD = (e, t) => `M${e.x} ${e.y} Q${n1((e.x + t.x) / 2 + (t.y - e.y) * 0.3)} ${n1((e.y + t.y) / 2 - (t.x - e.x) * 0.3)} ${t.x} ${t.y}`;
 // A Router's one-way link (floorplan.mjs oneWay): a chevron at the trace's middle, pointing the way it runs.
 function oneWayMark(g, a, b, p, q) {
@@ -402,7 +404,7 @@ function mapSvg(s, tall, pop = null) {
     const d = hop ? hopD(p, q) : '';
     const shape = (cls) => (hop ? `<path class="${cls}" d="${d}"/>` : `<line class="${cls}" x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}"/>`);
     const out = shape(`fp-bed${beat.has([a, b].sort().join('|')) ? ' beat' : ''}`) + (live ? shape('fp-under') : '') + shape(`fp-link ${fog ? 'fog' : live ? 'live' : trod ? 'walked' : 'seen'}${hop ? ' hop' : ''}`)
-      + oneWayMark(g, a, b, p, q);
+      + (live ? flowSvg(hop ? quadPts(p, hopC(p, q), q) : [p, q], 'fp-flow', 14, { id: tall ? 't' : 'w' }) : '') + oneWayMark(g, a, b, p, q);
     return revealing(s, a) || revealing(s, b) ? `<g class="reveal">${out}</g>` : out; // a hidden room's trace fades in with it
   }).join('');
   // A Tunnel's link to the entry (a program, R2): a dashed amber arc, yours to walk free; the hunter never takes it.
@@ -410,11 +412,11 @@ function mapSvg(s, tall, pop = null) {
   const tunnel = tg ? `<path class="fp-tunnel" d="${tunnelD(tg[0], tg[1])}"><title>Tunnel: a free step to the entry</title></path>` : '';
   // The hunter's next step: one red dashed arrow, bowed off the trace, from its room into the next; the Exfil's, amber.
   const next = huntStep(s), exfil = exfilShown(s), flee = exfilStep(s);
-  let arrow = next ? routeSvg(at(g.rooms[h.at]), at(g.rooms[next]), G, '') : '';
-  if (flee) arrow += routeSvg(at(g.rooms[exfil.at]), at(g.rooms[flee]), G, 'exfil');
+  let arrow = next ? routeSvg(at(g.rooms[h.at]), at(g.rooms[next]), G, '', tall) : '';
+  if (flee) arrow += routeSvg(at(g.rooms[exfil.at]), at(g.rooms[flee]), G, 'exfil', tall);
   // A thread's file walking here (threads.mjs): an amber dashed arrow into the room it walks into next.
   const files = filesHere(s);
-  for (const f of files) if (f.next && shown(f.at) && shown(f.next)) arrow += routeSvg(at(g.rooms[f.at]), at(g.rooms[f.next]), G, 'exfil');
+  for (const f of files) if (f.next && shown(f.at) && shown(f.next)) arrow += routeSvg(at(g.rooms[f.at]), at(g.rooms[f.next]), G, 'exfil', tall);
   // Out of sight but within two rooms: the room at the edge of your fog pulses red (the one between, nearest you).
   let near = null;
   if (h && !h.down && here && !hunterSeen(s, h)) {
@@ -438,7 +440,7 @@ function mapSvg(s, tall, pop = null) {
   return `<svg class="fp-svg ${tall ? 'tall' : 'wide'}" viewBox="${vb}" data-vb="${vb}" width="${vw}" height="${vh}" preserveAspectRatio="xMidYMid meet" style="--w:${vw}px;--h:${vh}px" role="group" aria-label="Room map of ${esc(R.name)}">${ground}${lines}${tunnel}${trail}${cardWay}${rooms}${arrow}${bits}</svg>`;
 }
 // A dashed arrow, bowed off the trace, from one room into the next (the hunter's red, the Exfil's amber).
-function routeSvg(p, q, G, kind) {
+function routeSvg(p, q, G, kind, tall) {
   const dx = q.x - p.x, dy = q.y - p.y, len = Math.hypot(dx, dy) || 1;
   let nx = -dy / len, ny = dx / len;
   if (ny > 0 || (ny === 0 && nx > 0)) { nx = -nx; ny = -ny; } // over the top of a row, down the left of a column (the respawn ring is on the right)
@@ -446,7 +448,8 @@ function routeSvg(p, q, G, kind) {
   const ux = dx / len, uy = dy / len, along = Math.abs(ux) > Math.abs(uy) ? G.nw / 2 : G.nh / 2, ext = Math.abs(ny) > Math.abs(nx) ? G.nh / 2 : G.nw / 2;
   const bow = Math.min(48, Math.max(28, len * 0.22)), cx = n1((p.x + q.x) / 2 + nx * (ext + bow)), cy = n1((p.y + q.y) / 2 + ny * (ext + bow));
   const a = { x: n1(p.x + ux * along * 0.45 + nx * (ext + 4)), y: n1(p.y + uy * along * 0.45 + ny * (ext + 4)) }, b = { x: n1(q.x - ux * along * 0.45 + nx * (ext + 7)), y: n1(q.y - uy * along * 0.45 + ny * (ext + 7)) };
-  return `<path class="fp-route${kind ? ' ' + kind : ''}" d="M${a.x} ${a.y} Q${cx} ${cy} ${b.x} ${b.y}" marker-end="url(#fp-arrow${kind ? '-' + kind : ''})"/>`;
+  return `<path class="fp-route${kind ? ' ' + kind : ''}" d="M${a.x} ${a.y} Q${cx} ${cy} ${b.x} ${b.y}" marker-end="url(#fp-arrow${kind ? '-' + kind : ''})"/>`
+    + flowSvg(quadPts(a, { x: cx, y: cy }, b), `fp-flow route${kind ? ' ' + kind : ''}`, 14, { wrap: 'fp-route-flow', id: tall ? 't' : 'w' }); // its dashes, flowing (flowfx.mjs); the path keeps the arrowhead
 }
 // The Exfil: a gold archive with an upload arrow in a small dark badge (filled gold once it's cornered).
 const exfilSvg = (cx, cy, k, cornered) => `<g class="fp-exfil${cornered ? ' cornered' : ''}" transform="translate(${n1(cx - 10 * k)} ${n1(cy - 10 * k)}) scale(${k})"><rect class="bg" x="0" y="0" width="20" height="20" rx="2"/><use href="#fp-i-archive" x="1.5" y="1.5" width="17" height="17"/></g>`;

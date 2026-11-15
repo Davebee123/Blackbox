@@ -88,6 +88,11 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 .fp-arrowhead { fill: var(--hot); }
 /* the Exfil's next step: amber, never the hunter's red */
 .fp-route.exfil { stroke: var(--amber); }
+.fp-svg .flow { display: none; } /* reduced motion: the still lines above */
+.fp-flow { fill: none; stroke: var(--amber); stroke-width: 2.2; stroke-dasharray: 6 8; --flow-t: 0.6s; }
+.fp-flow.route { stroke: var(--hot); stroke-width: 2; stroke-linecap: round; --flow-t: 1.2s; }
+.fp-flow.route.exfil { stroke: var(--amber); }
+.fp-route-flow { opacity: 0.9; pointer-events: none; }
 .fp-arrowhead.exfil { fill: var(--amber); }
 /* a chip: --t is its colour */
 .fp-room { --t: var(--amber); }
@@ -188,8 +193,8 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 /* the 1s and 0s drifting off your room: none with reduced motion */
 .fp-bits text { font-size: 8px; font-weight: 500; fill: var(--you); opacity: 0; pointer-events: none; }
 @media (prefers-reduced-motion: no-preference) {
-  .fp-link.live { stroke-dasharray: 6 8; animation: fp-flow 1.2s linear infinite; }
-  .fp-route { animation: fp-flow 2.4s linear infinite; }
+  .fp-svg .flow { display: inline; } /* the flowing dashes (flowfx.mjs) draw the live links and the routes */
+  .fp-link.live, .fp-route { stroke: none; } /* the route's path keeps its arrowhead */
   .fp-you-ring, .fp-near { animation: fp-ring 2s ease-out infinite; transform-box: fill-box; transform-origin: center; }
   .fp-live { animation: fp-blink 1.6s ease-in-out infinite; }
   .fp-bits text { animation: fp-bit var(--t, 2.6s) linear infinite; animation-delay: var(--d, 0s); }
@@ -210,6 +215,11 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 .fp-pkt { fill: var(--gray); pointer-events: none; }
 .fp-pkt.heavy { fill: #8d8778; }
 .fp-pkt.mail { fill: #15110a; stroke: var(--gray); stroke-width: 0.9; stroke-linejoin: round; }
+.fp-pkt-run { pointer-events: none; }
+.fp-pkt-jit { animation: fp-jit 0.24s steps(1, end) infinite; } /* a hop's packet jitters off the curve */
+@keyframes fp-jit { 0% { transform: translate(1px, 1px); } 17% { transform: translate(-2px, -2px); } 33% { transform: translate(1.5px, 1.5px); } 50% { transform: translate(-1px, -1px); } 67% { transform: translate(2px, 2px); } 83% { transform: translate(-1.5px, -1.5px); } }
+/* Ambient motion off (.no-ambient on any container): the map holds still */
+.no-ambient .fp-bits text, .no-ambient .fp-you-ring, .no-ambient .fp-near, .no-ambient .fp-live, .no-ambient .fp-pkt-jit { animation: none; }
 
 /* ---- the pop-up: the room you're in, a room you clicked, home ---- */
 .fp-map .fp-pop { z-index: 5; width: 320px; }

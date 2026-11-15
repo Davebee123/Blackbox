@@ -90,6 +90,7 @@ import { terminalPageMarkup } from './terminal-view.mjs';
 import { housePageMarkup } from './house-view.mjs';
 import { objectiveText, objectiveTip, backupAims } from './objectives.mjs';
 import { pointsOf } from './achievements.mjs';
+import { flowSvg } from './flowfx.mjs';
 export { toolkitMarkup, subPromptDue } from './skills-view.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
@@ -2402,10 +2403,11 @@ function contractTracker(s, sel = null) {
 
 // Traffic on the net: files moving between servers, as dots along the links. Your market orders
 // and payloads run home ↔ hub; the hubs trade among themselves along the backbone that joins them.
-// The markup only says where each dot runs and when (a route and its clock); app.js moves them, so
-// the map doesn't redraw to animate. Hostile or offline hubs carry no backbone traffic.
+// The markup only says where each dot runs and when (a route and its clock); mapmotion.mjs moves them, so
+// the map doesn't redraw to animate. A hub-to-hub dot carries both hubs' colours, one shown a lap.
+// Hostile or offline hubs carry no backbone traffic.
 // A file is a page with a folded corner; a payload is a spiked virus. The arrow ahead of it turns
-// with the route (app.js), so you can read which way it's going.
+// with the route (mapmotion.mjs), so you can read which way it's going.
 const PKT_ICON = {
   you: '<path class="pk-icon" d="M-4 -5.5 H2 L4.5 -3 V5.5 H-4.5 V-5.5 Z M2 -5.5 V-3 H4.5"/>',
   pay: '<path class="pk-icon" d="M0 -6.5 L1.6 -2.6 L5.6 -3.2 L3 0 L5.6 3.2 L1.6 2.6 L0 6.5 L-1.6 2.6 L-5.6 3.2 L-3 0 L-5.6 -3.2 L-1.6 -2.6 Z"/>',
@@ -2428,7 +2430,7 @@ export function trafficMarkup(s, nodes) {
       // What actually moves: each ware goes from the hub where it's cheap to the one that pays more
       // for it, the biggest gaps first. Each lap carries the next of them (app.js picks by lap).
       const ships = WARE_IDS.map((w) => { const pa = priceOf(s, a.hub.faction, w), pb = priceOf(s, b.hub.faction, w); return { w, back: pa > pb ? 1 : 0, gap: Math.max(pa, pb) / Math.max(0.01, Math.min(pa, pb)), lo: Math.round(Math.min(pa, pb)), hi: Math.round(Math.max(pa, pb)) }; }).sort((x, y) => y.gap - x.gap).slice(0, 3);
-      dots.push(`<g class="mpkt amb" data-route="${id}" data-period="${period}" data-phase="${(h % 997) / 997}" data-ca="${fa}" data-cb="${fb}" data-fa="${a.hub.faction}" data-fb="${b.hub.faction}" data-ships="${esc(JSON.stringify(ships))}"><circle r="12" class="pk-hit"/><g class="pk-file">${PKT_ICON.you}</g><path class="pk-dir" d="M13 0 L8 -4 L9.5 0 L8 4 Z"/></g>`);
+      dots.push(`<g class="mpkt amb" data-route="${id}" data-period="${period}" data-phase="${(h % 997) / 997}" data-ca="${fa}" data-cb="${fb}" data-fa="${a.hub.faction}" data-fb="${b.hub.faction}" data-ships="${esc(JSON.stringify(ships))}"><circle r="12" class="pk-hit"/>${['a', 'b'].map((k) => `<g class="pk-${k}" style="color:${k === 'a' ? fa : fb}"><g class="pk-file">${PKT_ICON.you}</g><path class="pk-dir" d="M13 0 L8 -4 L9.5 0 L8 4 Z"/></g>`).join('')}</g>`);
     });
   }
   // Yours: market orders in flight, home ↔ the hub. Outgoing runs out, incoming runs home.
@@ -2493,7 +2495,8 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     <line x1="${minX}" y1="0" x2="${maxX}" y2="0" class="maxis"/><line x1="0" y1="${minY}" x2="0" y2="${maxY}" class="maxis"/></g>` : '';
   const lines = links.map((k) => {
     const a2 = find(k.from), b2 = find(k.to);
-    return `<line x1="${a2.x}" y1="${a2.y}" x2="${b2.x}" y2="${b2.y}" class="mlink ${k.hot ? 'hot' : ''} ${k.ghost ? 'ghost' : ''} ${k.trunk ? 'trunk' : ''} ${k.temp ? 'tlink' : ''}"/>`;
+    const flow = k.hot || k.trunk ? flowSvg([a2, b2], `mlink ${k.hot ? 'hot' : 'trunk'}`, k.hot ? 8 : 10, { id: 'm' }) : ''; // its dashes, flowing (flowfx.mjs)
+    return `<line x1="${a2.x}" y1="${a2.y}" x2="${b2.x}" y2="${b2.y}" class="mlink ${k.hot ? 'hot' : ''} ${k.ghost ? 'ghost' : ''} ${k.trunk ? 'trunk' : ''} ${k.temp ? 'tlink' : ''}${flow ? ' flowed' : ''}"/>${flow}`;
   }).join('');
   // Labels that would overlap: the more important one keeps its label, the other's comes back on
   // hover, selection or zoom. Importance: selected, under threat, a contract or fresh find, an
@@ -2525,7 +2528,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const a = find(ev.loc), b = find(ev.next);
     if (!a || !b) return '';
     const d = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / d, uy = (b.y - a.y) / d, tx = b.x - ux * 16, ty = b.y - uy * 16, r = (v) => v.toFixed(1);
-    return `<g class="mhunt"><title>${esc(`${ev.name} hops to ${b.loc?.name || 'its next server'} in ${fmtLeft(hopLeft(ev))}`)}</title><line x1="${r(a.x + ux * 14)}" y1="${r(a.y + uy * 14)}" x2="${r(tx)}" y2="${r(ty)}"/><path d="M${r(tx)} ${r(ty)} L${r(tx - ux * 7 - uy * 4)} ${r(ty - uy * 7 + ux * 4)} L${r(tx - ux * 7 + uy * 4)} ${r(ty - uy * 7 - ux * 4)} Z"/></g>`;
+    return `<g class="mhunt"><title>${esc(`${ev.name} hops to ${b.loc?.name || 'its next server'} in ${fmtLeft(hopLeft(ev))}`)}</title>${flowSvg([{ x: a.x + ux * 14, y: a.y + uy * 14 }, { x: tx, y: ty }], 'mhunt-line', 8, { id: 'm' })}<path d="M${r(tx)} ${r(ty)} L${r(tx - ux * 7 - uy * 4)} ${r(ty - uy * 7 + ux * 4)} L${r(tx - ux * 7 + uy * 4)} ${r(ty - uy * 7 - ux * 4)} Z"/></g>`;
   }).join('');
   const thMarks = serverMarks(s); // the servers a thread marks (threads.mjs)
   const draw = nodes.map((n) => {
