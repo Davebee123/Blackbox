@@ -34,8 +34,9 @@ A first load is 328 requests and 9 MB (5.3 MB of scripts in 196 files, 2.2 MB of
 5. **Rooms map, runs, Map: SVG animations** (the bits, the flowing links, the pulsing rings, the blinking dot). The
    browser runs SVG animation on the main thread: style, layout and paint of the map every frame. Off: 96% → 27% on
    the rooms map, 55% → 27% on the Map.
-6. **Every screen: the game's tick** (`app.js` frame) runs 60 times a second with nothing to do, and each frame costs a
-   phone about 1.3 ms before any work. With it resting, an idle screen could sit near 0%.
+6. **Every screen: the game's tick** (`app.js` frame) ran 60 times a second with nothing to do. Landed (batch 1): it
+   rests, and an idle phone screen's main thread went from 117–141 ms/s to 20–30 (the Map 313 → 28), 60 frames a second
+   to 1 (the status line's clock).
 7. **Six full-screen layers** on every screen (the CRT's sweep and roll, the backdrop's texture, static and edge):
    about 57 MB of textures on a phone.
 
@@ -56,7 +57,7 @@ A first load is 328 requests and 9 MB (5.3 MB of scripts in 196 files, 2.2 MB of
 | Audio renders at 48 kHz on outputs set higher (`sound.mjs` openContext) | both | landed |
 | The stage's reflection, glows and light (`stage.mjs`); the virus's projection (`virus-art.mjs`) | both | landed |
 | Three loops rest: rooms traffic, glyph flicker, the virus pictures | both | landed |
-| The game's tick rests when nothing needs it (`app.js` frame) | both | batch 1 |
+| The game's tick rests when nothing needs it (`app.js` frame) | both | landed |
 | The fight screen rebuilds only what changed | both | batch 2 |
 | Samples, audio textures and fonts warmed on the loading screen | both | batch 6 |
 | One bundled, minified script and stylesheet for the hosted game | both, phones most | batch 7 (build step approved) |
@@ -100,7 +101,7 @@ One session each, started fresh. Measure before and after with `tools/perf/phone
 
 | Batch | What | Owns | Order |
 |---|---|---|---|
-| 1 | The tick rests when idle | `app.js` frame and what it calls every frame | first |
+| 1 | The tick rests when idle | `app.js` frame and what it calls every frame | landed |
 | 2 | Partial rebuild of the fight screen | `app.js` render and `put`, the board's post-render steps | after 1 (same file) |
 | 3 | Composited map and rooms animations | the map's and floorplan's markup and CSS | any time |
 | 4 | The dissolve on a canvas | `hitfx.mjs` | any time |
@@ -108,10 +109,15 @@ One session each, started fresh. Measure before and after with `tools/perf/phone
 | 6 | The loading screen: prototypes, the pick, then the build and the warm-ups | `poweron.mjs`, `shell.mjs` boot, `sound.mjs` loadBank | any time |
 | 7 | A build step for the hosted game (approved 2026-11-15); `dist/` stays runnable as plain files for development | new | last |
 
-**Batch 1 notes.** `frame` feeds: the fight's clock, `tickUi`, `chipTick`, the map's packets, the level-up, the
-scanner, co-op, the phone's pop-ups, `feel.flush`, the strikes' queue, tips, the caret, the once-a-second services.
-Rest only when none is live and no fight is on; any input wakes it at once; a timer-set `dirty` must still render
-promptly. The audit tool counts frames from the trace, so a resting page reads as 0 frames a second.
+**Batch 1 (landed).** `frame` runs every frame while `tickBusy` holds: a fight, `dirty`, a queued effect, strike or
+level-up, the Tune window, files moving on the map, co-op, or the second after an input. Otherwise a timer runs it when
+something is due (the once-a-second work, the radio's schedule, the next tip check), a quarter second at most, and
+nothing while the tab is hidden. `markDirty()`, input, `feel.add`, `lu.push` and the tab coming back wake it at once.
+The three earlier loops look on their timers without asking for a frame. Phone, idle, main thread ms/s before → after
+(same day): Settings 117 → 21, Mail 137 → 22, Loadout 141 → 30, Server 125 → 22, Codex 126 → 21, Rig 129 → 20, Map 313
+→ 28 (the tick's per-frame layout and paint; its animations still play), Rooms 729 → 702 (its own animations, batch 3).
+Fights unchanged (the tick runs). Desktop idle 347–374 → 331–341. A fight from the prompt, a timer's render, a level-up,
+notices, tips, the caret and the clock measured the same as before.
 
 **Batch 2 notes.** `put('board')` replaces the whole board, then re-applies what effects had added (chip effect boxes,
 spent chips, held bars, side marks, classes). Keep a row whose markup is unchanged; check every post-render step runs

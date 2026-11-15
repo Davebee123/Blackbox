@@ -554,7 +554,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
   // Otherwise it rests: a slow timer looks again, and attach() or wake() starts it at once, so the first frame of a
   // fight or a Codex page comes as soon as it did.
   let resting = 0, rested = false;
-  const rest = () => { rested = true; if (!resting) resting = setTimeout(() => { resting = 0; requestAnimationFrame(draw); }, 250); };
+  const rest = () => { rested = true; if (!resting) resting = setTimeout(() => { resting = 0; draw(performance.now()); }, 250); }; // the look itself asks for no frame
   const wake = () => { if (resting) { clearTimeout(resting); resting = 0; requestAnimationFrame(draw); } };
   function draw(now) {
     const s = getState();

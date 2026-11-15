@@ -115,7 +115,7 @@ const QUIET_VOICES = new Set(['cycle', 'channel']);
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
-export function createFeel({ settings, reducedMotion }) {
+export function createFeel({ settings, reducedMotion, queued = () => {} }) {
   let queue = [];
   let muting = false;
   let beatMs = 0;
@@ -199,7 +199,8 @@ export function createFeel({ settings, reducedMotion }) {
 
   return {
     // kind: a key of SIGNS; target: a CSS selector or element; label: floating text
-    add(kind, target, label, detail) { queue.push({ kind, target, label, detail, at: beatMs, mute: muting }); },
+    add(kind, target, label, detail) { queue.push({ kind, target, label, detail, at: beatMs, mute: muting }); queued(); }, // queued: the page's tick wakes to flush it
+    pending: () => queue.length,
     // What is added next keeps its look and its buzz and loses its voice (its ability's own sound plays instead), until
     // this turn of the event loop is over.
     mute(on) { muting = !!on; if (on) queueMicrotask(() => { muting = false; }); },

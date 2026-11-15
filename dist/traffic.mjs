@@ -63,7 +63,7 @@ export function startTraffic(server) {
     const s = server(), t = performance.now();
     const svg = s?.rooms?.at && [...document.querySelectorAll('#page-view .fp-svg')].find((x) => x.getBoundingClientRect().width > 0);
     // No room map showing: look again in a quarter second, not every frame.
-    if (!svg) { clear(); next = t + 600; idle = setTimeout(() => { raf = requestAnimationFrame(tick); }, 250); return; }
+    if (!svg) { clear(); next = t + 600; idle = setTimeout(tick, 250); return; } // (the look itself asks for no frame)
     raf = requestAnimationFrame(tick);
     for (let i = live.length - 1; i >= 0; i--) {
       const pk = live[i];
