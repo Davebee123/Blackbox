@@ -210,3 +210,16 @@ test('Mapped (100%) means every room discovered', () => {
   assert.ok(R.mapped, 'Mapped');
   for (const x of FP.roomList(s)) assert.ok(FP.known(s, x.id), `${x.path} discovered`);
 });
+
+test('a live fight you can see wears its level on the chip, red when it\'s over yours', () => {
+  const s = server(), R = s.rooms;
+  const fight = FP.exits(s).find((x) => FP.FIGHTS.includes(x.kind) && FP.isUp(s, x));
+  const lv = FP.fightOf(s, fight).level;
+  assert.match(tile(s, fight.id), new RegExp(`<g class="fp-lvl"><rect[^>]*/><text[^>]*>lv ${lv}</text>`));
+  R.rare[fight.id] = true; // two levels up
+  assert.match(tile(s, fight.id), new RegExp(`<g class="fp-lvl over">[\\s\\S]*>lv ${lv + FP.ROOMS.rareLevel}<`));
+  R.down[fight.id] = clock;
+  assert.doesNotMatch(tile(s, fight.id), /fp-lvl/, 'down: no level');
+  const d = FP.distances(R.graph, R.at), two = FP.roomList(s).find((x) => d[x.id] === 2 && x.id !== R.graph.core);
+  assert.doesNotMatch(tile(s, two.id), /fp-lvl/, 'unknown: no level');
+});

@@ -44,7 +44,7 @@ import { OBJECTIVES, OBJ, objectiveLine } from './objectives.mjs';
 import { recapMarkup } from './recap.mjs';
 import { GUARDS, BOSSES, CONFIG } from './data.mjs';
 import { itemLabel, statLine, shownRarity } from './gear.mjs';
-import { stashItem, active, classOf } from './combat.mjs';
+import { stashItem, active, classOf, hackerLevel } from './combat.mjs';
 import { AUTHORS } from './authors.mjs';
 import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
@@ -611,6 +611,11 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, bl = {
     const fs = G.afs, ph = fs + 4, mark = job ? fs + 1 : 0, pw = n1(addr.length * fs * 0.62 + 8 + (mark ? mark + 2 : 0)), px = n1(x0 + (prog ? 20 : 10)), py = n1(y0 + G.nh - ph / 2);
     out += `<g class="fp-addr${job ? ' job' : ''}"><rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="2"/><text x="${n1(px + 4)}" y="${n1(py + ph / 2 + fs * 0.36)}" font-size="${fs}">${esc(addr)}</text>`
       + (mark ? `<use href="#fp-i-contract" x="${n1(px + pw - mark - 3)}" y="${n1(py + (ph - mark) / 2)}" width="${mark}" height="${mark}"/>` : '') + '</g>';
+  }
+  // Bottom right: the level of the virus holding it (a live fight you can see), red when it's over yours.
+  if (up && !sealed) {
+    const lv = fightOf(s, room).level, over = lv > hackerLevel(s), t = `lv ${lv}`, fs = G.afs, ph = fs + 4, pw = n1(t.length * fs * 0.62 + 8), px = n1(x0 + G.nw - 10 - pw), py = n1(y0 + G.nh - ph / 2);
+    out += `<g class="fp-lvl${over ? ' over' : ''}"><rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="2"/><text x="${n1(px + 4)}" y="${n1(py + ph / 2 + fs * 0.36)}" font-size="${fs}">${t}</text></g>`;
   }
   // Bottom right: the respawn ring (a fight down, a cache empty) fills back up, its countdown under it.
   const from = down && downAt(s, room) != null ? downAt(s, room) : empty ? R.taken[room.id] : null;
