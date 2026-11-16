@@ -17,6 +17,19 @@ const curves = new Map(); // one per drive amount: a note no longer builds its o
 const curve = (k) => curves.get(k) || curves.set(k, curveOf(k)).get(k);
 const curveOf = (k) => { const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(k * x) / Math.tanh(k); } return c; };
 
+// The themes' reverb: 3.2 s of decaying noise, built once a context (a phone took about 180 ms a fight to build it).
+const irs = new WeakMap();
+function irOf(ctx) {
+  if (!irs.has(ctx)) {
+    const len = ctx.sampleRate * 3.2, ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2.5; }
+    irs.set(ctx, ir);
+  }
+  return irs.get(ctx);
+}
+// Built ahead on the loading screen (warm.mjs), so the first fight's theme starts without building it.
+export function warmMusic(ctx) { irOf(ctx); noiseOf(ctx); }
+
 // A theme's chain: dry and pumped (ducked by the kick) into a hard overdrive with a loud bit-crushed copy under it and a presence lift, plus reverb and a filtered feedback
 // delay, into its fader. A faint tape hiss and a low factory rumble run under it all. On an old floor (ERAS) the theme
 // plays through that floor's own hardware.
@@ -24,9 +37,8 @@ function makeBus(ctx, dest, delayTime, fb = 0.4, floor = null) {
   const fader = ctx.createGain(), dry = ctx.createGain(), pump = ctx.createGain(), rev = ctx.createGain(), del = ctx.createGain();
   const drive = ctx.createWaveShaper(), tape = ctx.createBiquadFilter();
   drive.curve = curve(7); drive.oversample = '2x'; tape.type = 'lowpass'; tape.frequency.value = 9000;
-  const conv = ctx.createConvolver(), len = ctx.sampleRate * 3.2, ir = ctx.createBuffer(2, len, ctx.sampleRate);
-  for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2.5; }
-  conv.buffer = ir;
+  const conv = ctx.createConvolver();
+  conv.buffer = irOf(ctx);
   const dl = ctx.createDelay(2), fbk = ctx.createGain(), lp = ctx.createBiquadFilter();
   dl.delayTime.value = delayTime; fbk.gain.value = fb; lp.type = 'lowpass'; lp.frequency.value = 2200;
   del.connect(dl).connect(lp).connect(fbk).connect(dl); lp.connect(drive); lp.connect(rev);

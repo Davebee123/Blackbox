@@ -4358,7 +4358,16 @@ body.no-motion .recap { animation: none; }
 .po-box { position: absolute; left: 50%; top: var(--hz); width: clamp(110px, 21vmin, 210px); aspect-ratio: 1; transform: translate(-50%, -50%); }
 .po-box::before { content: ''; position: absolute; inset: -3%; background: #ffe6a6; filter: blur(clamp(4px, 0.9vmin, 9px)); opacity: 0; animation: po-glow 1.8s 1.5s ease-out forwards; }
 .po-box::after { content: ''; position: absolute; inset: -40%; background: radial-gradient(closest-side, rgba(241, 185, 47, 0.34), transparent); opacity: 0; animation: po-glow 2.4s 1.5s ease-out forwards; }
-.po-box b { position: absolute; inset: 0; z-index: 1; background: #030201; box-shadow: 0 0 0 1px rgba(255, 242, 210, 0.7); opacity: 0; animation: po-in 0.6s 1.1s ease-out forwards; }
+.po-box b { position: absolute; inset: 0; z-index: 1; background: #030201; opacity: 0; animation: po-in 0.6s 1.1s ease-out forwards; }
+/* The Trace: the box's outline draws itself round while the game warms up (poweron.mjs sets each side's scale); its
+   light waits for the outline to close. */
+.po-edge { position: absolute; z-index: 2; background: rgba(255, 242, 210, 0.7); opacity: 0; animation: po-in 0.3s 1.1s ease-out forwards; }
+.po-edge.t { left: -1px; top: -1px; width: calc(100% + 2px); height: 1px; transform-origin: left; transform: scaleX(0); }
+.po-edge.r { right: -1px; top: -1px; width: 1px; height: calc(100% + 2px); transform-origin: top; transform: scaleY(0); }
+.po-edge.b { right: -1px; bottom: -1px; width: calc(100% + 2px); height: 1px; transform-origin: right; transform: scaleX(0); }
+.po-edge.l { left: -1px; bottom: -1px; width: 1px; height: calc(100% + 2px); transform-origin: bottom; transform: scaleY(0); }
+.poweron.loading .po-box::before, .poweron.loading .po-box::after { animation-play-state: paused; }
+.poweron.loaded .po-box::before, .poweron.loaded .po-box::after { animation-delay: var(--glow-at, 0s); }
 @keyframes po-glow { 0% { opacity: 0; } 35% { opacity: 1; } 100% { opacity: 0.8; } }
 @keyframes po-in { to { opacity: 1; } }
 .po-word { position: absolute; left: 0; right: 0; top: 72%; margin: 0; text-align: center; font: 400 clamp(15px, 2.4vmin, 22px) var(--sans); letter-spacing: 0.72em; margin-right: -0.72em; color: var(--bright); opacity: 0; animation: po-in 1.6s 2.3s ease-out forwards; }
@@ -4370,6 +4379,8 @@ body.no-motion .recap { animation: none; }
 .poweron.skip .po-flash { display: none; }
 .poweron.skip :is(.po-horizon, .po-haze, .po-box b, .po-word, .po-sub) { animation: none; opacity: 1; transform: none; }
 .poweron.skip .po-box::before, .poweron.skip .po-box::after { animation: none; opacity: 0.8; }
+.poweron.skip .po-edge { animation: none; opacity: 1; }
+.poweron.skip.loading .po-box::before, .poweron.skip.loading .po-box::after { opacity: 0; }
 /* Starting: the box's light flares and the screen goes. */
 .poweron.out { animation: po-out 0.5s ease-in forwards; }
 .poweron.out .po-box::after { animation: po-flare 0.5s ease-out forwards; }
@@ -4378,6 +4389,8 @@ body.no-motion .recap { animation: none; }
 .poweron.still .po-flash { display: none; }
 .poweron.still :is(.po-horizon, .po-haze, .po-box b, .po-word, .po-sub) { animation: none; opacity: 1; transform: none; }
 .poweron.still .po-box::before, .poweron.still .po-box::after { animation: none; opacity: 0.8; }
+.poweron.still .po-edge { animation: none; opacity: 1; }
+.poweron.still.loading .po-box::before, .poweron.still.loading .po-box::after { opacity: 0; }
 .poweron.still.ready .po-press { animation: none; opacity: 0.95; }
 .poweron.still.out { animation: none; }
 /* The unknown-server card: the way tracing it now, with pips for what's left, then the other ways (view.mjs traceWays). */

@@ -45,6 +45,8 @@ const DEFS = `<svg width="0" height="0" style="position:absolute" aria-hidden="t
 <filter id="cfx-rime" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="7"/><feGaussianBlur stdDeviation="0.8"/></filter>
 <radialGradient id="cfx-haze"><stop offset="0" stop-color="${WHITE}" stop-opacity="0.5"/><stop offset="1" stop-color="${WHITE}" stop-opacity="0"/></radialGradient>
 </defs></svg>`;
+// The filters and gradient the chips draw with, in the page before the first fight (the loading screen, warm.mjs).
+export function warmDefs() { if (!document.getElementById('cfx-defs')) document.body.insertAdjacentHTML('beforeend', DEFS); }
 const svgIn = (box) => { const s = document.createElementNS(NS, 'svg'); s.setAttribute('class', 'cfx-svg'); box.appendChild(s); return s; };
 const span = (box, cls) => { const d = document.createElement('span'); d.className = cls; box.appendChild(d); return d; };
 // Midpoint displacement: a fractal line from a to b.

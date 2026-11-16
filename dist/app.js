@@ -34,6 +34,7 @@ import { portraitMarkup } from './portraits.mjs';
 import { journalCardMarkup } from './journals-view.mjs';
 import { JOURNAL_BY } from './journals.mjs';
 import { powerOn } from './poweron.mjs';
+import { warmGame } from './warm.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
 import { flourishKey, FIN_LAND } from './abilitysound-all.mjs';
@@ -579,7 +580,7 @@ function firstLogin() {
   if (CAMP) return firstCampaign();
   introOn = true;
   const uncover = coverUp();
-  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() }).then(playColdOpen).then(() => intro.run()).then(({ handle, pwLen }) => {
+  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove(), warm: (progress) => warmGame({ audio: !!campaign.settings.sound, progress }) }).then(playColdOpen).then(() => intro.run()).then(({ handle, pwLen }) => {
     campaign.profile = { ...campaign.profile, handle, pwLen, since: Date.now() };
     return pickClass();
   }).then(() => {
@@ -605,7 +606,7 @@ const CAMPAIGN_LETTER = (handle) => [
 function firstCampaign() {
   introOn = true;
   const uncover = coverUp();
-  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() }).then(playColdOpen).then(() => intro.run({ letter: CAMPAIGN_LETTER })).then(({ handle, pwLen }) => {
+  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove(), warm: (progress) => warmGame({ audio: !!campaign.settings.sound, progress }) }).then(playColdOpen).then(() => intro.run({ letter: CAMPAIGN_LETTER })).then(({ handle, pwLen }) => {
     campaign.profile = { ...campaign.profile, handle, pwLen, since: Date.now() };
     return pickClass();
   }).then(() => {

@@ -236,6 +236,7 @@ comment saying what it does.
 | `dist/index.html`, `dist/app.js` | The page and its shell: modules, command line, clock, save, rendering, URL parameters. |
 | `dist/style.css` | Tokens and every shared component (docs/ui.md). Each page has its own stylesheet beside its view. |
 | `dist/shell.mjs`, `dist/poweron.mjs` | The CRT shell, boot lines and status line; the power-up. Its grain (`settings.grain`, off by default on a phone) is style.css `#crt::after`. |
+| `dist/warm.mjs` | The loading screen's warm-ups (docs/performance-plan.md batch 6), run under the power-up's Trace: the samples (`sound.mjs` warmBank), the hall, noises and fight music's reverb (warmTextures), the chip effects' defs. |
 | `dist/screenfx.mjs`, `dist/screenfx.css` | Screen effects: light on the glass around the game, never on it. |
 | `dist/graphics.mjs` | The Graphics settings: presets (Auto by device), the rows that cost looks, `settings.graphics` and its migration. |
 | `dist/bootfx.mjs`, `dist/bootfx.css` | A new fight: the screen boots into it, the virus first; leaving a won one, a channel cut; connecting to a server, the carrier; jacking out, the carrier backwards. |

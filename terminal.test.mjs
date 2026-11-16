@@ -175,7 +175,7 @@ test('each boot plays on the screen, ends by itself, and a key skips it; Motion 
 
 test('at launch the boot you picked plays after the power-up, and the stock one by default (shell.mjs, app.js)', () => {
   const src = read('./dist/shell.mjs');
-  assert.match(src, /powerOn\(\{ sound, reducedMotion: \(\) => !canMove\(\) \}\)\.then\(\(\) => bootLinesRun\(bootOf\(getState\(\)\)\)\)/);
+  assert.match(src, /powerOn\(\{ sound, reducedMotion: \(\) => !canMove\(\), warm: [^\n]*\}\)\.then\(\(\) => bootLinesRun\(bootOf\(getState\(\)\)\)\)/);
   assert.match(src, /function boot\(force = false\) \{\n    if \(!isOn\(\) \|\| !canMove\(\)\) return;/, 'skipped with Motion off, as it always was');
   assert.doesNotMatch(src, /sound\('(?!jackin)/, 'no new sounds');
   const app = read('./dist/app.js');

@@ -59,7 +59,7 @@ A first load is 328 requests and 9 MB (5.3 MB of scripts in 196 files, 2.2 MB of
 | Three loops rest: rooms traffic, glyph flicker, the virus pictures | both | landed |
 | The game's tick rests when nothing needs it (`app.js` frame) | both | landed |
 | The fight screen rebuilds only what changed (`app.js` putRows) | both | landed |
-| Samples, audio textures and fonts warmed on the loading screen | both | batch 6 |
+| Samples, audio textures and the chip effects' defs warmed on the loading screen (`warm.mjs`) | both | landed |
 | One bundled, minified script and stylesheet for the hosted game | both, phones most | batch 7 (build step approved) |
 
 **The same look, by other means (the designer's eye before it lands):**
@@ -92,10 +92,14 @@ column above). Performance is still virus, no ambient, a fade, Now only, steady,
 
 ## The loading screen (batch 6)
 
-Before the Horizon's *tap to start*: a boot animation while the game warms what otherwise hitches later. To warm: the
-sample bank (96 files, decoded), the audio textures (if the 192 kHz retune is kept: about 200 ms of building on a
-desktop, four times that on a phone), the fonts, the first fight's pieces (the chip effects' defs, the stage's still layer). The Horizon is a picked
-look: the loading is a phase of it or before it, never a replacement. Prototype two or three as screenshots first.
+Landed. The designer's pick: the *Trace* (poweron.mjs). The Horizon plays as picked; the box's outline draws itself
+round, clockwise from its top left, as the warm-ups report (not before the box shows); once it closes the box's light
+leaks out (not before its old 1.5 s) and the prompt follows a second later. A key while it comes on lands the picture;
+the prompt still waits for the outline, never past 6 s from power-on (`WAIT_MAX`). Motion off: no drawing, the same
+wait. Warmed (`warm.mjs`, one step a task): the sample bank (`sound.mjs` warmBank: the context is made, not started,
+and fed), the textures (warmTextures: the abilities' hall, every noise colour, the fight music's reverb, now built once
+a context, where every theme built its own), the chip effects' defs. Not warmed: fonts (none ship), the stage's still
+layer (1–7 ms, rebuilt every fight).
 
 ## Batches
 
@@ -109,7 +113,7 @@ One session each, started fresh. Measure before and after with `tools/perf/phone
 | 3 | Composited map and rooms animations | the map's and floorplan's markup and CSS | landed |
 | 4 | The dissolve on a canvas | `hitfx.mjs`, `dissolvefx.mjs` | landed |
 | 5 | The Graphics settings: prototypes, the pick, then the build | the Settings page, `settings` in the save | landed |
-| 6 | The loading screen: prototypes, the pick, then the build and the warm-ups | `poweron.mjs`, `shell.mjs` boot, `sound.mjs` loadBank | any time |
+| 6 | The loading screen: prototypes, the pick, then the build and the warm-ups | `poweron.mjs`, `shell.mjs` boot, `sound.mjs` loadBank | landed |
 | 7 | A build step for the hosted game (approved 2026-11-15); `dist/` stays runnable as plain files for development | new | last |
 
 **Batch 1 (landed).** `frame` runs every frame while `tickBusy` holds: a fight, `dirty`, a queued effect, strike or
@@ -176,6 +180,23 @@ Balanced 30.3, 34.9; Performance 44.2, 40.4 (820, 854). Rooms map idle main 67, 
 Performance 33, 36; the Map and regular fights within the noise (the window's canvas is most of a desktop's cost).
 Quality runs main's code paths. Every row takes effect at once and survives a reload; Motion off and reduced motion
 still win; no page errors in a boss fight under each preset, desktop and phone.
+
+**Batch 6 (landed).** Same day, two runs each, branch against main. The prompt from a cold load (a fresh player):
+phone 4.67, 4.80 s → 4.70, 4.76 s; desktop 3.31, 3.40 → 3.66, 3.82 s (the outline's minimum); blocks over 50 ms
+before it, phone 4, 5 → 6, 7 (the textures, 74–84 ms each). What each buys. *Samples:* on a normal network main
+already decodes the bank under the Horizon (the soundtrack makes the context at boot): 99 of 116 files in by the tap
+both ways, the first sample 110 ms after it. With each sample 4.5 s away main's prompt comes at 4.3, 4.5 s with none
+of the 96 in (the first sounds after the key play without them for 5 s); the branch's at 7.6, 8.0 s with all 96.
+*Textures:* the first real fight (Horizon, boot lines, then a fight; phone, JS profile) spent 68–71 ms in the
+abilities' hall and 11–16 ms in noise on main, 0 on the branch; the music's reverb cost a phone about 180 ms at a
+theme's first start and 35–50 ms at each one after, every fight, and is now built once. *Chip defs:* 1.3–2.1 ms
+(phone), 0.4–0.7 ms (desktop) off the first fight's first render. The first real fight's first 1.5 s, main thread
+busy (worst block): phone 1590, 1433 (238, 184) → 1438, 1449 ms (216, 178); desktop 1363, 1359 (179, 198) → 1428,
+1386 (219, 131): within the noise. Playtest fights (no Horizon) unchanged: phone boss 18.1, 20.7 → 21.1, 19.1
+frames/s and regular 30.6, 30.8 → 31.8, 32.0 (both on port 4173: one port read 2–4 frames/s lower than the other for
+the same code); desktop boss 11.0, 10.9 → 10.4, 11.0, regular 13.7, 13.8 → 13.5, 13.1. The Horizon as picked, a key
+or tap starting it, an early tap, samples 9 s away (the prompt at 8.3, 8.6 s), Motion off and a fresh player's cold
+open: as before, no page errors.
 
 Not yet measured: breach and campaign, hubs and shops, co-op, the class pick and tutorial, the More sheet, a phone on
 its side.

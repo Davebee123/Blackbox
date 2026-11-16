@@ -78,7 +78,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 
 - **Picked looks:**
   - the power-up: the *Horizon* (a line of light across the screen, the black box standing on it with its light
-    leaking round the edges, the name small and low; poweron.mjs), and the same box on a short line as the small mark
+    leaking round the edges, the name small and low; poweron.mjs), its loading phase the *Trace* (the box's outline
+    draws itself round while the game warms up, then the light leaks out); and the same box on a short line as the small mark
     (the top bar, the class pick, the favicon); a faint `/` between the top bar's tabs;
   - quest window: the *Transmission*;
   - level-up: the *Firmware update*;

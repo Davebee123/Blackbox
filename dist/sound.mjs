@@ -7,7 +7,8 @@
 //            digital blips, chimes) and stand in for everything until the samples have loaded.
 // Voices take any AudioContext and a start time, which is how `renderBoard()` bounces them to a
 // WAV for listening offline.
-import { playAbility, timingOf } from './abilitysound.mjs';
+import { playAbility, timingOf, warmNoise } from './abilitysound.mjs';
+import { warmMusic } from './fightmusic.mjs';
 import { playAttack, attackTiming } from './virussound.mjs';
 import { outputOf } from './mixout.mjs';
 
@@ -328,10 +329,11 @@ export const BANK = {
 // Whole sounds rendered ahead (tools/sound-preview/clips4.js, Ogg Vorbis in dist/sfx/wins; see CREDITS.md).
 export const CLIPS = { 'win-power-cut': 'wins/win-power-cut.ogg', 'win-blackout': 'wins/win-blackout.ogg', 'levelup-lift': 'wins/levelup-lift.ogg' };
 const CLIP_GAIN = 0.5; // the level a family's one-shot plays at (places.mjs LEVEL.shot)
-const banks = new WeakMap(); // AudioContext → { ready, buffers: Map(name → AudioBuffer[]), clips: Map(name → AudioBuffer) }
+const banks = new WeakMap(); // AudioContext → { ready, buffers: Map(name → AudioBuffer[]), clips: Map(name → AudioBuffer), got, total, on }
+const BANK_FILES = Object.values(BANK).reduce((a, n) => a + n, 0);
 function loadBank(ctx, base = new URL('./sfx/', import.meta.url)) {
   if (banks.has(ctx)) return banks.get(ctx).loading;
-  const bank = { ready: false, buffers: new Map(), clips: new Map() };
+  const bank = { ready: false, buffers: new Map(), clips: new Map(), got: 0, total: BANK_FILES, on: new Set() }; // got/on: files settled, and who's told (the loading screen)
   for (const [name, file] of Object.entries(CLIPS)) fetch(new URL(file, base)).then((r) => (r.ok ? r.arrayBuffer() : null)).then((b) => b && ctx.decodeAudioData(b)).then((buf) => buf && bank.clips.set(name, buf)).catch(() => { /* its synth stand-in plays */ });
   bank.loading = Promise.all(Object.entries(BANK).flatMap(([name, n]) => Array.from({ length: n }, async (_, i) => {
     try {
@@ -341,7 +343,7 @@ function loadBank(ctx, base = new URL('./sfx/', import.meta.url)) {
       const list = bank.buffers.get(name) || [];
       list[i] = buf;
       bank.buffers.set(name, list);
-    } catch { /* that take stays missing */ }
+    } catch { /* that take stays missing */ } finally { bank.got++; for (const f of bank.on) f(bank.got / bank.total); }
   }))).then(() => { bank.ready = bank.buffers.size > 0; return bank; });
   banks.set(ctx, bank);
   return bank.loading;
@@ -882,10 +884,14 @@ export function createSound() {
     if (ch) ch.master.gain.value = 0.55 * vol.sfx / 0.8;
     if (hum) hum.gain.value = vol.ambience / 0.8;
   };
+  // The context and the chain, without starting them: before the first key a context can be made and fed, not heard.
+  function open() {
+    ctx ||= openContext(); // the browser's own buffer: asking for a bigger one cut the sound out in fights on some outputs
+    if (!ch) { ch = chain(ctx); hum = ctx.createGain(); hum.connect(outputOf(ctx)); applyVol(); }
+  }
   function ready() {
     try {
-      ctx ||= openContext(); // the browser's own buffer: asking for a bigger one cut the sound out in fights on some outputs
-      if (!ch) { ch = chain(ctx); hum = ctx.createGain(); hum.connect(outputOf(ctx)); applyVol(); }
+      open();
       if (ctx.state === 'suspended') ctx.resume();
       loadBank(ctx);
       if (wantHum && !stopHum) stopHum = ambience(ctx, hum);
@@ -954,6 +960,21 @@ export function createSound() {
     },
     // The shared context, for the soundtrack (null if audio can't start).
     context() { return ready() ? ctx : null; },
+    // The loading screen (warm.mjs): the samples fetched and decoded before the first key, progress (0-1) as each
+    // settles; resolves when all have.
+    warmBank(progress = () => {}) {
+      try { open(); } catch { return Promise.resolve(); }
+      const p = loadBank(ctx), bank = banks.get(ctx);
+      progress(bank.got / bank.total); bank.on.add(progress);
+      return p.finally(() => bank.on.delete(progress));
+    },
+    // The textures the first fight would build on its first hit: the hall, the noises, the music's reverb. One a call
+    // (each is a block of work): warmTextures(i) builds the i-th and says whether there are more.
+    warmTextures(i = 0) {
+      try { open(); } catch { return false; }
+      [() => hallOf(ctx, ch), () => warmNoise(ctx), () => warmMusic(ctx)][i]?.();
+      return i < 2;
+    },
     // The room tone runs while Sound is on.
     ambience(on) {
       wantHum = !!on;
