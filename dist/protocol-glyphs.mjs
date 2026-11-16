@@ -253,7 +253,8 @@ export function glyphFrame(base, fx, t, rand = Math.random) {
 // Every moving glyph under root, at time t. Each redraws only when its step changes; with motion off (still), each
 // goes back to its still text once.
 export function glyphMotion(root, t, still = false) {
-  for (const el of root.querySelectorAll('[data-pg-fx]')) {
+  const all = root.querySelectorAll('[data-pg-fx]');
+  for (const el of all) {
     const fx = el.dataset.pgFx, key = still ? 'still' : fx === 'scan' ? `s${scanRow(t)}` : flickering(t) ? `f${Math.floor(t / FLICKER_MS)}` : 'still';
     if (el.dataset.pgAt === key) continue;
     el.dataset.pgAt = key;
@@ -261,4 +262,5 @@ export function glyphMotion(root, t, still = false) {
     if (key === 'still') { if (mark) el.innerHTML = mark + esc(el.dataset.base); else el.textContent = el.dataset.base; }
     else el.innerHTML = mark + glyphFrame(el.dataset.base, fx, t);
   }
+  return all.length; // how many glyphs are on the page (none: the caller's loop can rest)
 }

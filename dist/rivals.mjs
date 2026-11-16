@@ -1,23 +1,29 @@
-// Rivals (docs/rivals.md, GAME_RULES.md "Rivals"): named runners, one per crew, who race you to a server's vault and
-// fight you trainer-style. Pure like floorplan.mjs, which calls these from its moves and fights (R.visit.rival).
+// Rivals (docs/rivals.md, GAME_RULES.md "Rivals"): runners from the cast (runners.mjs) who race you to a server's vault
+// and fight you trainer-style. Pure like floorplan.mjs, which calls these from its moves and fights (R.visit.rival).
 //
+//   who          one of the network's runners, not your crew: one who has it in for you first (you lost to them, or
+//                they got away with a vault), else one picked from the roll. Their faction sets the lineup (STYLE),
+//                their temperament the counter-picks (READS_BY). R3, docs/runners.md.
 //   the roll     at most one a visit, on a traced server whose vault is shut, rolled like the Exfil (netrooms.mjs
 //                WORLD.rival: RIVAL.chance, on your own cooldown). It starts as far from the vault as the entry is.
 //   the walk     a room for each of your moves, by the shortest route to the vault (never the Core), no key needed.
-//                At the vault it opens it and takes its files, then walks to the entry and jacks out with them (got
-//                away). Its room, its route and the vault show through the fog.
-//   aggro        when it reaches your room (or you walk into its), it pulls you into its fights. No step back.
+//                At the vault they open it and take its files, then walk to the entry and jack out with them (got
+//                away). Their room, their route and the vault show through the fog.
+//   aggro        when they reach your room (or you walk into theirs), they pull you into their fights. No step back.
 //   the fights   2 on floors 1–2, 3 from floor 3, one after another, one level over you. Your Signal carries; each
-//                fight starts your cooldowns fresh. Between fights it adds one part to the next, read from how you
+//                fight starts your cooldowns fresh. Between fights they add one part to the next, read from how you
 //                won the last (readFight), shown before you engage.
-//   stakes       beat it and you take its pack, with the vault's files if it opened it. Lose and it's gone with both.
-//   memory       s.rivals[id]: meetings, your record against it, how it last ended, the command HUSH quotes.
+//   stakes       beat them and you take their pack, with the vault's files if they opened it, and you've met them:
+//                their standing rises (runners.mjs). Lose and they're gone with both, and they're hunting you (red on
+//                the map and the Rail) until you beat them.
+//   memory       s.rivals.by[handle]: meetings, your record against them, how it last ended.
 import { emit, encounterVirus, hackerLevel, addItem, classOf, hooks } from './combat.mjs';
 import { GENES } from './genes.mjs';
-import { AUTHORS } from './authors.mjs';
-import { ABILITIES } from './data.mjs';
+import { FACTIONS } from './factions.mjs';
 import { rollItem, seeded } from './gear.mjs';
 import { distances, pathTo, ROOMS, WORLD } from './floorplan.mjs';
+import { HANDLES, castOf, hired, personFor, raiseStanding, STANDING, huntsYou } from './runners.mjs';
+export { huntsYou };
 
 export const RIVAL = {
   chance: 0.2, cooldownMs: 60 * 60000, // a visit's roll, and your cooldown after one turns up
@@ -27,30 +33,33 @@ export const RIVAL = {
   rarity: 'tuned',
 };
 
-// The roster. lineup: its fights in order, a family (genes: its third) or a named build (strain). reads: [read,
-// counter] in order, the first that matches, else the last.
-export const RIVALS = {
-  kudzu: {
-    name: 'KUDZU', crew: 'swarmline', lineup: [{ family: 'trojan' }, { family: 'worm', genes: ['twin'] }, { family: 'worm' }],
-    reads: [['burst', 'patcher'], ['spread', 'hotspare'], ['slow', 'floodramp']],
-    line: (m) => (m.met > 1 ? 'hiii again!! brought friends' : 'hiii!! that vault is mine!!'),
-    wick: { first: 'kudzu. swarmline sends it. it grows back if you let it.', won: 'kudzu. you beat it last time. it\'s been practising.', counter: { patcher: 'it saw you burst the first one. it brought a patcher.' } },
-  },
-  escrow: {
-    name: 'ESCROW', crew: 'tollgate', lineup: [{ family: 'ransomware' }, { family: 'wiper' }, { family: 'cryptominer' }],
-    reads: [['burst', 'mutexlock'], ['slow', 'deadline'], ['burns', 'deadline'], ['strips', 'ward']],
-    line: (m) => `Invoice ${String(417 + (m.met || 0)).padStart(4, '0')}. Your time is billable.`,
-    wick: { first: 'escrow\'s here. it bills by the cycle. don\'t pay.', won: 'escrow again. it kept your invoice.', counter: { deadline: 'you made escrow wait. it brought a deadline.' } },
-  },
-  hush: {
-    name: 'HUSH', crew: 'palemask', lineup: [{ family: 'ghostroot' }, { strain: 'echo' }, { strain: 'sleeper' }],
-    reads: [['reads', 'veil'], ['helpers', 'phaseshift'], ['burst', 'decoymirror']],
-    line: (m) => `> ${m.quote || 'connect'}`, // it never speaks: your own last command
-    wick: { first: 'hush is on this one. you won\'t see it till it\'s next to you.', won: 'it\'s quoting you again. read the board, not the chat.', counter: {} },
-  },
+// A rival's lineup, by their faction: its fights in order, a family (genes: its third) or a named build (strain), and
+// the crew whose builds they run.
+export const STYLES = {
+  swarmline: { crew: 'swarmline', lineup: [{ family: 'trojan' }, { family: 'worm', genes: ['twin'] }, { family: 'worm' }] },
+  tollgate: { crew: 'tollgate', lineup: [{ family: 'ransomware' }, { family: 'wiper' }, { family: 'cryptominer' }] },
+  palemask: { crew: 'palemask', lineup: [{ family: 'ghostroot' }, { strain: 'echo' }, { strain: 'sleeper' }] },
 };
-for (const [id, r] of Object.entries(RIVALS)) r.id = id;
-export const WICK_WIN = { vault: 'vault and pack both. good night.', pack: 'its pack. good night.' };
+export const STYLE = { halcyon: 'tollgate', nullchoir: 'tollgate', kestrel: 'swarmline', lantern: 'swarmline', glassjaw: 'palemask' };
+// Their counter-picks, by temperament: [read, counter] in order, the first that matches, else the last.
+export const READS_BY = {
+  Careful: [['burst', 'patcher'], ['strips', 'ward'], ['reads', 'veil'], ['slow', 'mutexlock']],
+  Steady: [['spread', 'hotspare'], ['burns', 'deadline'], ['helpers', 'phaseshift'], ['slow', 'floodramp']],
+  Bold: [['burst', 'decoymirror'], ['spread', 'hotspare'], ['slow', 'deadline'], ['reads', 'floodramp']],
+};
+// What they say on the challenge card, by temperament: the first meeting, then again.
+const LINES = {
+  Careful: ['I mapped this vault last week. Step aside.', 'You again. I brought more this time.'],
+  Steady: ["The vault's on my list. You're on my way.", 'Same vault, different day.'],
+  Bold: ['Race you. Loser buys the coffee.', 'Back for more? Good.'],
+};
+const WICK_TEMPER = { Careful: 'careful one. they read how you win.', Steady: 'steady. they take it one fight at a time.', Bold: "bold. they'll come straight at you." };
+// A visit's rival as the rules read it: the handle, faction, temperament, lineup, crew and counter-picks.
+export function rivalP(v) {
+  const st = STYLES[STYLE[v.faction]] || STYLES.swarmline;
+  return { id: v.id, name: v.id, faction: v.faction, temper: v.temper, crew: st.crew, lineup: st.lineup, reads: READS_BY[v.temper] || READS_BY.Steady };
+}
+export const WICK_WIN = { vault: 'vault and pack both. good night.', pack: 'their pack. good night.' };
 
 // What it adds between fights. A third part comes from a virus of its family built with it; a named build's part from
 // that build; the Veil veils the whole next virus (each part wears a ◆ at least, so the veil holds).
@@ -75,12 +84,25 @@ const ask = (fn, ...a) => (WORLD[fn] ? WORLD[fn](...a) : undefined);
 // ---------- memory (the save) ----------
 // s.rivals: { at, n } the last roll that brought one (your cooldown), by: each rival's memory.
 export const rivalsOf = (s) => { const x = (s.rivals ||= { at: null, n: 0, by: {} }); x.by ||= {}; return x; };
-export const memoryOf = (s, id) => (rivalsOf(s).by[id] ||= { met: 0, won: 0, lost: 0, away: 0, last: null, quote: null });
-// v52: rivals' memory, made on first use; an older save starts with none (keyed on the field).
+export const memoryOf = (s, id) => (rivalsOf(s).by[id] ||= { met: 0, won: 0, lost: 0, away: 0, last: null });
+// v52: rivals' memory, made on first use; an older save starts with none (keyed on the field). R3: memory is by a
+// runner's handle, so the old named rivals' (KUDZU, ESCROW, HUSH) is dropped, and a visit's rival without a faction
+// (one of theirs, mid-run) is gone.
 export function rivalsRestore(s) {
+  const v = s.rooms?.visit?.rival;
+  if (v && !v.faction) { s.rooms.visit.rival = null; if (s.rooms.screen?.kind === 'rival') s.rooms.screen = null; }
   if (!s.rivals || typeof s.rivals !== 'object' || Array.isArray(s.rivals)) { delete s.rivals; return; }
   const x = rivalsOf(s);
-  for (const id of Object.keys(x.by)) if (!RIVALS[id]) delete x.by[id];
+  for (const id of Object.keys(x.by)) if (!HANDLES.includes(id)) delete x.by[id];
+}
+// Who races you: a runner on the net (not your crew) hunting you first, else one picked from the seed. id: a handle,
+// for the playtest.
+export function rivalWho(s, r, id = null) {
+  if (HANDLES.includes(id)) return personFor(s, id);
+  const cast = castOf(s).filter((x) => !hired(s, x.handle));
+  if (!cast.length) return personFor(s, HANDLES[Math.floor(r() * HANDLES.length)]);
+  const grudge = cast.filter((x) => huntsYou(s, x.handle)).sort((a, b) => (a.handle < b.handle ? -1 : 1));
+  return grudge[0] || cast[Math.floor(r() * cast.length)];
 }
 // The roll at a connect: a seed, or 0. One in RIVAL.chance, never while your cooldown runs.
 export function rivalRoll(s, salt, t) {
@@ -115,15 +137,15 @@ export function raceOf(s, v = rivalOf(s)) {
 export function spawnRival(s, seed, id = null) {
   const R = s.rooms, g = R.graph, vault = g.vaults[0];
   if (!vault || R.opened[vault]) return null;
-  const r = seeded((seed >>> 0) || 1), ids = Object.keys(RIVALS), who = RIVALS[id] ? id : ids[Math.floor(r() * ids.length)];
+  const r = seeded((seed >>> 0) || 1), who = rivalWho(s, r, id);
   const d = distances(g, vault, (x) => x !== g.core), near = distances(g, R.at || g.entry), far = d[g.entry] ?? 0;
   const pool = Object.keys(d).filter((x) => x !== g.entry && x !== vault && x !== g.core && (near[x] ?? 9) > 1);
   const want = pool.filter((x) => d[x] >= far), best = want.length ? Math.min(...want.map((x) => d[x])) : Math.max(...pool.map((x) => d[x]));
   const at = pool.filter((x) => d[x] === best).sort()[Math.floor(r() * pool.filter((x) => d[x] === best).length)];
   if (!at) return null;
-  R.visit.rival = { id: who, seed: (seed >>> 0) || 1, at, goal: 'vault', state: 'loose', vault: false, fight: 0, fights: RIVAL.fights(R.floor || 1), level: hackerLevel(s) + RIVAL.level, next: null };
+  R.visit.rival = { id: who.handle, faction: who.faction, temper: who.temper, seed: (seed >>> 0) || 1, at, goal: 'vault', state: 'loose', vault: false, fight: 0, fights: RIVAL.fights(R.floor || 1), level: hackerLevel(s) + RIVAL.level, next: null };
   look(s);
-  say(s, `${RIVALS[who].name} is on ${R.name}, racing you to the vault.`, 'rooms-bad');
+  say(s, `${who.handle} is on ${R.name}, racing you to the vault.`, 'rooms-bad');
   return R.visit.rival;
 }
 // Its room, its route and the vault show through the fog.
@@ -139,7 +161,7 @@ export function rivalMove(s) {
   const next = routeOf(s, v)[1];
   if (next) v.at = next;
   if (v.at === R.at) { look(s); return true; }
-  const vault = R.graph.vaults[0], P = RIVALS[v.id];
+  const vault = R.graph.vaults[0], P = rivalP(v);
   if (v.goal === 'vault' && v.at === vault) {
     if (!R.opened[vault]) { R.opened[vault] = nowOf(); v.vault = true; say(s, `${P.name} opens the vault and takes its files.`, 'rooms-bad'); }
     v.goal = 'out';
@@ -152,7 +174,7 @@ export function rivalMove(s) {
 }
 // It jacks out: with the vault's files, if it opened it.
 function getaway(s, v) {
-  const P = RIVALS[v.id];
+  const P = rivalP(v);
   v.state = 'gone';
   if (v.vault) { ask('vaultGone', s); memoryOf(s, v.id).away++; memoryOf(s, v.id).last = 'away'; }
   say(s, v.vault ? `${P.name} jacks out with the vault's files.` : `${P.name} jacks out.`, v.vault ? 'rooms-bad' : 'rooms');
@@ -164,7 +186,7 @@ export function rivalLeave(s) {
 }
 // It's on you: the challenge card, Engage only.
 export function rivalMeet(s, room, opts = {}) {
-  const R = s.rooms, v = rivalOf(s), P = RIVALS[v.id], m = memoryOf(s, v.id);
+  const R = s.rooms, v = rivalOf(s), P = rivalP(v), m = memoryOf(s, v.id);
   v.state = 'on'; v.at = room.id;
   m.met++;
   R.visit.pending = room.id;
@@ -175,24 +197,24 @@ export function rivalMeet(s, room, opts = {}) {
 export function rivalLine(s) {
   const v = rivalOf(s);
   if (!v) return '';
-  const race = raceOf(s, v), P = RIVALS[v.id];
+  const race = raceOf(s, v), P = rivalP(v);
   return race ? `${P.name} is ${race.it} ${race.it === 1 ? 'room' : 'rooms'} from the vault. You are ${race.you ?? '?'}.` : `${P.name} has the files and walks for the entry.`;
 }
 
 // ---------- the fights ----------
 // Fight i of its lineup: a family's virus (its third forced) or a named build, one level over you, its crew's.
 export const fightSpec = (v, i) => {
-  const P = RIVALS[v.id], spec = P.lineup[i] || P.lineup.at(-1);
+  const P = rivalP(v), spec = P.lineup[i] || P.lineup.at(-1);
   return { key: spec.strain || 'random', seed: ((v.seed + i * 7919) >>> 0) || 1, family: spec.family || null, opts: { mode: 'run', level: v.level, mutation: null, author: P.crew, ...(spec.strain ? {} : { family: spec.family }), ...(spec.genes ? { genes: spec.genes } : {}) } };
 };
 export function rivalFight(s, room) {
   const v = s.rooms.visit.rival, f = fightSpec(v, v.fight);
-  return { key: f.key, seed: f.seed, opts: { ...f.opts, room: room.path }, size: 'rival', name: null, level: v.level, family: f.family, author: RIVALS[v.id].crew, set: undefined };
+  return { key: f.key, seed: f.seed, opts: { ...f.opts, room: room.path }, size: 'rival', name: null, level: v.level, family: f.family, author: rivalP(v).crew, set: undefined };
 }
 // The fight's lineup: what each one is, struck once beaten.
 export function lineupOf(s, v = s.rooms?.visit?.rival) {
   if (!v) return [];
-  return RIVALS[v.id].lineup.slice(0, v.fights).map((_, i) => {
+  return rivalP(v).lineup.slice(0, v.fights).map((_, i) => {
     const f = fightSpec(v, i), vir = encounterVirus(s, f.key, f.seed, f.opts);
     return { i, name: vir.name, family: vir.family, strain: vir.strain || null, beaten: i < v.fight, next: i === v.fight };
   });
@@ -244,30 +266,30 @@ export function readFight(s, e) {
   };
 }
 // Its counter-pick from a read: the first of its reads that holds, else its last.
-export function counterFor(id, read) {
-  const xs = RIVALS[id].reads, hit = xs.find(([k]) => read[k]) || xs.at(-1);
+export function counterFor(v, read) {
+  const xs = rivalP(v).reads, hit = xs.find(([k]) => read[k]) || xs.at(-1);
   return { read: hit[0], counter: hit[1] };
 }
 // A fight in its lineup won: the next one waits behind the between-fights card, or it's down and the stakes are yours.
 export function rivalWon(s, room, e) {
-  const R = s.rooms, v = R.visit.rival, P = RIVALS[v.id], m = memoryOf(s, v.id);
-  if (e.lastSkill) m.quote = ABILITIES[e.lastSkill]?.name?.toLowerCase() || e.lastSkill;
+  const R = s.rooms, v = R.visit.rival, P = rivalP(v), m = memoryOf(s, v.id);
   v.fight++;
   if (v.fight < v.fights) {
     const read = readFight(s, e);
-    v.next = { ...counterFor(v.id, read), cycles: read.cycles };
+    v.next = { ...counterFor(v, read), cycles: read.cycles };
     R.screen = { kind: 'rival', room: room.id, between: true };
-    say(s, `${P.name}: ${v.fight} down, ${v.fights - v.fight} to go. It adds a ${COUNTERS[v.next.counter].name}.`, 'rooms-bad');
+    say(s, `${P.name}: ${v.fight} down, ${v.fights - v.fight} to go. They add a ${COUNTERS[v.next.counter].name}.`, 'rooms-bad');
     return false;
   }
   v.state = 'down'; v.next = null;
   m.won++; m.last = 'won';
   spoils(s, room, v);
+  raiseStanding(s, v.id, STANDING.help, `You beat them racing you to a vault on ${R.name}.`); // a rival you beat: you've met
   return true;
 }
 // Its pack (credits and an item one level over you) and, if it opened the vault, the vault's files: into your pack.
 function spoils(s, room, v) {
-  const R = s.rooms, P = RIVALS[v.id], r = seeded((v.seed ^ 0x5a17) >>> 0), L = hackerLevel(s) + RIVAL.level;
+  const R = s.rooms, P = rivalP(v), r = seeded((v.seed ^ 0x5a17) >>> 0), L = hackerLevel(s) + RIVAL.level;
   if (v.vault) {
     const vault = R.graph.rooms[R.graph.vaults[0]];
     if (!(R.world && ask('vault', s, vault))) { const it = addItem(s, rollItem(r, { level: R.level, rarity: (vault.loot || {}).rarity || 'tuned', cls: classOf(s) }), 'The vault: '); if (it) { if (R.world) ask('packItem', s, it); else R.pack.push(it.id); } }
@@ -276,7 +298,7 @@ function spoils(s, room, v) {
   if (R.world) { s.run.pack.push({ path: `${room.path}/#rival-${s.serial}`, name: 'pack.dat', kind: 'credits', amount: credits }); if (it) ask('packItem', s, it); }
   else { R.credits += credits; s.server.credits += credits; if (it) R.pack.push(it.id); }
   emit(s, 'spoil', `${P.name}'s pack: +${credits} credits.`, { label: 'Credits', qty: `+${credits}`, kind: 'credits', sub: `${P.name}'s pack`, pack: true });
-  say(s, `${P.name} is down. Its pack is yours${v.vault ? ', and the vault\'s files' : ''}.`, 'rooms-good');
+  say(s, `${P.name} is down. Their pack is yours${v.vault ? ', and the vault\'s files' : ''}.`, 'rooms-good');
 }
 // A fight in its lineup lost (or fled): it's gone with its pack and anything it took.
 export function rivalLost(s) {
@@ -289,13 +311,14 @@ export function rivalLost(s) {
 }
 // wick's line for a moment: the challenge, between fights, the win.
 export function wickLine(s, v, moment) {
-  const P = RIVALS[v.id], m = memoryOf(s, v.id);
-  if (moment === 'between') return P.wick.counter[v.next?.counter] || `it saw that. it brought a ${COUNTERS[v.next?.counter]?.name.toLowerCase() || 'part'}.`;
+  const m = memoryOf(s, v.id);
+  if (moment === 'between') return `they saw that. they brought a ${COUNTERS[v.next?.counter]?.name.toLowerCase() || 'part'}.`;
   if (moment === 'win') return v.vault ? WICK_WIN.vault : WICK_WIN.pack;
-  return m.met > 1 && m.last === 'won' ? P.wick.won : P.wick.first;
+  if (m.met > 1 && m.last === 'won') return `${v.id} again. you beat them last time. they've been practising.`;
+  return `${v.id}. ${(FACTIONS[v.faction]?.short || '').toLowerCase()} pays them. ${WICK_TEMPER[v.temper] || WICK_TEMPER.Steady}`;
 }
-// Its crew, for the byline.
-export const crewName = (id) => AUTHORS[RIVALS[id].crew]?.name || '';
-export const crewColour = (id) => AUTHORS[RIVALS[id].crew]?.colour || null;
-// The line it says (KUDZU's, ESCROW's invoice, HUSH quoting your last command).
-export const rivalSays = (s, id) => RIVALS[id].line(memoryOf(s, id));
+// Their faction, for the byline, and its colour.
+export const crewName = (v) => FACTIONS[v.faction]?.short || '';
+export const crewColour = (v) => FACTIONS[v.faction]?.color || null;
+// The line they say on the challenge card, by temperament.
+export const rivalSays = (s, v) => { const L = LINES[v.temper] || LINES.Steady; return memoryOf(s, v.id).met > 1 ? L[1] : L[0]; };

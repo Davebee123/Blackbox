@@ -46,6 +46,7 @@ import { addFilter, rollFilter } from './filters.mjs';
 import { invasionsLive, scoutNext, SCOUTED } from './invasion.mjs';
 import { gainPart, pieceOf } from './faction-gear.mjs';
 import { addrsOf } from './address.mjs';
+import { castOf, hired, personFor, HANDLES } from './runners.mjs';
 
 export const DIRECTOR = {
   from: 3, // class level the director starts dealing at
@@ -87,13 +88,18 @@ export const CHAIN = {
   lantern: { at: 3, ms: 15 * 60000, rep: 5 },
   zero: { at: 15, ms: 15 * 60000 },
 };
-// A faction's runner in a feud: a name of its own.
-const RUNNER = { halcyon: 'ADJUSTER', glassjaw: 'FACET', kestrel: 'TALON', lantern: 'BEACON', nullchoir: 'DISSONANCE' };
+// A faction's runner in a feud, a counter-raid or a hit (R3, docs/runners.md): one of the cast who works for it, else
+// one from the pool who does, by handle. One roll, as before. Nothing a runner does moves a faction.
+function runnerName(s, f) {
+  const x = roll(s), on = castOf(s).filter((r) => r.faction === f && !hired(s, r.handle));
+  if (on.length) return on[Math.floor(x * on.length)].handle;
+  const pool = HANDLES.filter((h) => personFor(s, h).faction === f);
+  return pool.length ? pool[Math.floor(x * pool.length)] : HANDLES[Math.floor(x * HANDLES.length)];
+}
 // How much of a feud's bar is this side's (0–1), and its pay a win.
 export const feudShare = (ev, f) => (f === ev.sides[0] ? ev.bar ?? 0.5 : 1 - (ev.bar ?? 0.5));
 export const feudPay = (level) => Math.round(bountyPay(level) * FEUD.pay);
 const rival = (ev, f) => ev.sides.find((x) => x !== f);
-const runnerName = (s, f) => `${RUNNER[f]}-${1000 + Math.floor(roll(s) * 9000)}`;
 // The feud won for your side: a part of its piece (faction-gear.mjs), its good (fixed by the event; a sealed item carries its
 // implicit), +bonusRep, its allies a quarter of a win and the bonus. No ripple.
 function feudBonus(s, ev) {
@@ -291,7 +297,7 @@ export const CARDS = {
     spots: (s) => { const held = places(s).filter((l) => (l.runs || 0) > 0 || l.takenOver); return held.length ? held : [null]; },
     make: (s, loc, f) => ({ side: f.data.side, foe: f.data.foe, family: FACTION_FAMILY[f.data.foe], level: placeLevel(s, loc), name: runnerName(s, f.data.foe), elite: true, eliteHp: FEUD.hp }),
     from: (ev) => FACTIONS[ev.foe].short,
-    text: (ev, where) => `${FACTIONS[ev.foe].short} sends ${ev.name} at ${ev.loc ? where : 'your server'} for the feud you fought for ${FACTIONS[ev.side].short}. Beat it before it leaves.`,
+    text: (ev, where) => `${FACTIONS[ev.foe].short} sends ${ev.name} at ${ev.loc ? where : 'your server'} for the feud you fought for ${FACTIONS[ev.side].short}. Beat them before they leave.`,
     reward: (ev) => `${counterPay(ev.level)} credits and ${FACTIONS[ev.side].short} +${CHAIN.counter.rep}`,
     gone: (ev) => `${ev.name} pulled back.`,
     won: (s, ev) => {
@@ -321,7 +327,7 @@ export const CARDS = {
   lantern: {
     name: "LANTERN's offer", chain: true, weight: 0, ms: CHAIN.lantern.ms, fight: true, where: () => [],
     spots: (s) => places(s),
-    make: (s, loc) => ({ family: FACTION_FAMILY.lantern, level: placeLevel(s, loc), name: `${RUNNER.lantern}-${1000 + Math.floor(roll(s) * 9000)}`, ally: hubFound(s, 'lantern') ? 'lantern' : 'halcyon' }),
+    make: (s, loc) => ({ family: FACTION_FAMILY.lantern, level: placeLevel(s, loc), name: runnerName(s, 'lantern'), ally: hubFound(s, 'lantern') ? 'lantern' : 'halcyon' }),
     from: () => 'LANTERN',
     text: (ev, where) => `LANTERN noticed the couriers you took. Its own courier ${ev.name} crosses ${where}: intercept it for a Custom protocol.`,
     reward: (ev) => `a Custom protocol and ${FACTIONS[ev.ally].short} +${CHAIN.lantern.rep}`,

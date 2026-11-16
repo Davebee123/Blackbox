@@ -7,8 +7,10 @@
 //            digital blips, chimes) and stand in for everything until the samples have loaded.
 // Voices take any AudioContext and a start time, which is how `renderBoard()` bounces them to a
 // WAV for listening offline.
-import { playAbility, timingOf } from './abilitysound.mjs';
+import { playAbility, timingOf, warmNoise } from './abilitysound.mjs';
+import { warmMusic } from './fightmusic.mjs';
 import { playAttack, attackTiming } from './virussound.mjs';
+import { outputOf } from './mixout.mjs';
 
 const NOTE = (n) => 440 * Math.pow(2, (n - 69) / 12); // MIDI note → Hz
 
@@ -327,10 +329,11 @@ export const BANK = {
 // Whole sounds rendered ahead (tools/sound-preview/clips4.js, Ogg Vorbis in dist/sfx/wins; see CREDITS.md).
 export const CLIPS = { 'win-power-cut': 'wins/win-power-cut.ogg', 'win-blackout': 'wins/win-blackout.ogg', 'levelup-lift': 'wins/levelup-lift.ogg' };
 const CLIP_GAIN = 0.5; // the level a family's one-shot plays at (places.mjs LEVEL.shot)
-const banks = new WeakMap(); // AudioContext → { ready, buffers: Map(name → AudioBuffer[]), clips: Map(name → AudioBuffer) }
+const banks = new WeakMap(); // AudioContext → { ready, buffers: Map(name → AudioBuffer[]), clips: Map(name → AudioBuffer), got, total, on }
+const BANK_FILES = Object.values(BANK).reduce((a, n) => a + n, 0);
 function loadBank(ctx, base = new URL('./sfx/', import.meta.url)) {
   if (banks.has(ctx)) return banks.get(ctx).loading;
-  const bank = { ready: false, buffers: new Map(), clips: new Map() };
+  const bank = { ready: false, buffers: new Map(), clips: new Map(), got: 0, total: BANK_FILES, on: new Set() }; // got/on: files settled, and who's told (the loading screen)
   for (const [name, file] of Object.entries(CLIPS)) fetch(new URL(file, base)).then((r) => (r.ok ? r.arrayBuffer() : null)).then((b) => b && ctx.decodeAudioData(b)).then((buf) => buf && bank.clips.set(name, buf)).catch(() => { /* its synth stand-in plays */ });
   bank.loading = Promise.all(Object.entries(BANK).flatMap(([name, n]) => Array.from({ length: n }, async (_, i) => {
     try {
@@ -340,7 +343,7 @@ function loadBank(ctx, base = new URL('./sfx/', import.meta.url)) {
       const list = bank.buffers.get(name) || [];
       list[i] = buf;
       bank.buffers.set(name, list);
-    } catch { /* that take stays missing */ }
+    } catch { /* that take stays missing */ } finally { bank.got++; for (const f of bank.on) f(bank.got / bank.total); }
   }))).then(() => { bank.ready = bank.buffers.size > 0; return bank; });
   banks.set(ctx, bank);
   return bank.loading;
@@ -725,12 +728,21 @@ function clipAt(ctx, out, t, name) {
   return true;
 }
 
+// A sound's own buses are cut from the chain once it has long rung out (at: a context time). Its echoes are feedback
+// loops, and a live context keeps a loop connected to the speakers rendering forever: a fight's worth of hits used to
+// pile up until the audio stuttered.
+const live = (ctx) => typeof OfflineAudioContext === 'undefined' || !(ctx instanceof OfflineAudioContext);
+function release(ctx, at, nodes) {
+  if (!live(ctx)) return;
+  setTimeout(() => { for (const n of nodes) try { n.disconnect(); } catch { /* already */ } }, Math.max(0, at - ctx.currentTime) * 1000);
+}
+
 // The chain everything plays into: a little headroom and a gentle compressor, with the room beside it.
 function chain(ctx) {
   const g = ctx.createGain(), c = ctx.createDynamicsCompressor();
   g.gain.value = 0.55;
   c.threshold.value = -18; c.ratio.value = 4; c.attack.value = 0.003; c.release.value = 0.15;
-  g.connect(c).connect(ctx.destination);
+  g.connect(c).connect(outputOf(ctx));
   const room = ctx.createConvolver(), wet = ctx.createGain();
   room.buffer = roomIR(ctx); wet.gain.value = 0.9;
   room.connect(wet).connect(g);
@@ -752,34 +764,42 @@ function hallOf(ctx, ch) {
 }
 const ABILITY_ROOM = { a: 0.1, b: 0.16, c: 0.1, b1: 0.12, b2: 0.1, b3: 0.14, b4: 0.2, b7: 0.3, b8: 0.45, b9: 0.24, b10: 0.24, b11: 0.24, b12: 0.24, b13: 0.24 };
 const ABILITY_HALL = { b7: 1.2, b8: 2.2, b9: 0.85, b10: 0.85, b11: 0.85, b12: 0.85, b13: 0.85 }; // how much of the whole sound rings into the hall
-// The voice cap: at most ABILITY_CAP ability sounds starting within ABILITY_SPAN s of each other; one more plays nothing
-// (its caller falls back to its result's voice, one short sample).
-const ABILITY_CAP = 4, ABILITY_SPAN = 0.25, recent = new WeakMap();
+// The voice cap: at most ABILITY_CAP ability or attack sounds landing within ABILITY_SPAN s of each other, and HEAVY_LIVE
+// within HEAVY_SPAN (a part breaking sets off a pile at once, and each is a hundred nodes); one more plays nothing (its
+// caller falls back to its result's voice, one short sample).
+const ABILITY_CAP = 4, ABILITY_SPAN = 0.25, HEAVY_LIVE = 6, HEAVY_SPAN = 1, recent = new WeakMap();
+const RING_OUT = 6; // s after its contact that a hit's own buses are cut (release): the longest rings 5 s
+function admit(ctx, T) {
+  const near = (recent.get(ctx) || []).filter((t) => Math.abs(t - T.t) < HEAVY_SPAN);
+  if (near.length >= HEAVY_LIVE || near.filter((t) => Math.abs(t - T.t) < ABILITY_SPAN).length >= ABILITY_CAP) return false;
+  recent.set(ctx, [...near, T.t]);
+  return true;
+}
 function abilityAt(ctx, ch, style, key, T) {
   if (!banks.get(ctx)?.ready) return false;
-  const live = (recent.get(ctx) || []).filter((t) => Math.abs(t - T.t) < ABILITY_SPAN);
-  if (live.length >= ABILITY_CAP) return false;
-  recent.set(ctx, [...live, T.t]);
+  if (!admit(ctx, T)) return false;
   const dry = ctx.createGain(), send = ctx.createGain(), room = ctx.createGain(), more = ctx.createGain();
   send.gain.value = ABILITY_ROOM[style] ?? 0.1; more.gain.value = 0.6;
   dry.connect(ch.master); dry.connect(send).connect(ch.room);
   room.connect(dry); room.connect(more).connect(ch.room);
-  if (ABILITY_HALL[style]) { const h = ctx.createGain(); h.gain.value = ABILITY_HALL[style]; dry.connect(h).connect(hallOf(ctx, ch)); }
-  if (['b', 'b1', 'b3', 'b4', 'b7', 'b8', 'b9', 'b10', 'b11', 'b12', 'b13'].includes(style)) { const h = ctx.createGain(); h.gain.value = 0.5; room.connect(h).connect(hallOf(ctx, ch)); } // the weighty ones: the bigger space
+  const cut = [dry, send, room, more];
+  if (ABILITY_HALL[style]) { const h = ctx.createGain(); h.gain.value = ABILITY_HALL[style]; dry.connect(h).connect(hallOf(ctx, ch)); cut.push(h); }
+  if (['b', 'b1', 'b3', 'b4', 'b7', 'b8', 'b9', 'b10', 'b11', 'b12', 'b13'].includes(style)) { const h = ctx.createGain(); h.gain.value = 0.5; room.connect(h).connect(hallOf(ctx, ch)); cut.push(h); } // the weighty ones: the bigger space
   const list = (name) => { const l = banks.get(ctx)?.buffers.get(name); return l && take(l, name); };
+  release(ctx, T.hit + T.stop + RING_OUT, cut);
   return playAbility(ctx, { dry, room }, style, key, T, list);
 }
 // A virus attack's sound (virussound.mjs) in a style, timed by T (attackTiming): the same room and hall as yours, a
 // little less of each (a dull sound muddies sooner). It shares the abilities' voice cap.
 function attackAt(ctx, ch, style, key, T) {
   if (!banks.get(ctx)?.ready) return false;
-  const live = (recent.get(ctx) || []).filter((t) => Math.abs(t - T.t) < ABILITY_SPAN);
-  if (live.length >= ABILITY_CAP) return false;
-  recent.set(ctx, [...live, T.t]);
+  if (!admit(ctx, T)) return false;
   const dry = ctx.createGain(), send = ctx.createGain(), room = ctx.createGain(), more = ctx.createGain(), hall = ctx.createGain(), far = ctx.createGain();
   send.gain.value = 0.2; more.gain.value = 0.6; hall.gain.value = 0.6; far.gain.value = 0.5;
   dry.connect(ch.master); dry.connect(send).connect(ch.room); dry.connect(hall).connect(hallOf(ctx, ch));
   room.connect(dry); room.connect(more).connect(ch.room); room.connect(far).connect(hallOf(ctx, ch));
+  const last = Math.max(T.hit, T.stop, ...Object.values(T.post).flat(), ...T.again) + T.tail + T.n * T.step;
+  release(ctx, last + RING_OUT, [dry, send, room, more, hall, far]);
   const list = (name) => { const l = banks.get(ctx)?.buffers.get(name); return l && take(l, name); };
   return playAttack(ctx, { dry, room }, style, key, T, list);
 }
@@ -789,8 +809,9 @@ function voiceAt(ctx, ch, name, t, opts = {}) {
   const r = RECIPES[name], ready = banks.get(ctx)?.ready;
   const v = ctx.createGain();
   v.connect(ch.master);
+  release(ctx, t + 20, [v]); // the longest whole clip (a boss down) is well inside this
   if (r && ready) {
-    const send = ctx.createGain(); send.gain.value = r.room; v.connect(send).connect(ch.room);
+    const send = ctx.createGain(); send.gain.value = r.room; v.connect(send).connect(ch.room); release(ctx, t + 20, [send]);
     r.play(ctx, v, t, opts, (n, at, o) => sample(ctx, v, t, n, { ...o, at }), (n) => clipAt(ctx, v, t, n));
   } else if (VOICES[name]) VOICES[name](ctx, v, t, opts);
   else if (name === 'jackin') VOICES.unlock(ctx, v, t, opts);
@@ -840,21 +861,37 @@ function ambience(ctx, dest, { seeks = true } = {}) {
   };
 }
 
+// The page's audio context, at the output's own rate up to MAX_RATE. Every node's work grows with the rate: an output
+// set to 96 or 192 kHz made the audio thread do three or four times a 44.1 kHz output's work, more than a core at
+// 192 kHz, so fights crackled and the music dropped out. Over the cap the game renders at MAX_RATE and the browser
+// resamples to the output; at or under it nothing changes. (AC: the constructor, for the test.)
+export const MAX_RATE = 48000;
+export function openContext(AC = globalThis.AudioContext) {
+  const first = new AC();
+  if (!(first.sampleRate > MAX_RATE)) return first;
+  try { const capped = new AC({ sampleRate: MAX_RATE }); first.close?.(); return capped; } catch { return first; } // a browser that can't set the rate keeps its own
+}
+
 // One sound system per page (the feel layer and the prompt share it).
 let shared = null;
 export function createSound() {
   if (shared) return shared;
   let ctx = null, ch = null, stopHum = null, wantHum = false, hum = null;
+  const lastVoice = new Map();
   const vol = { sfx: 0.8, ambience: 0.8 };
   // Sliders: effects scale the whole game-sound chain (its own 0.55 headroom stays), ambience the room tone.
   const applyVol = () => {
     if (ch) ch.master.gain.value = 0.55 * vol.sfx / 0.8;
     if (hum) hum.gain.value = vol.ambience / 0.8;
   };
+  // The context and the chain, without starting them: before the first key a context can be made and fed, not heard.
+  function open() {
+    ctx ||= openContext(); // the browser's own buffer: asking for a bigger one cut the sound out in fights on some outputs
+    if (!ch) { ch = chain(ctx); hum = ctx.createGain(); hum.connect(outputOf(ctx)); applyVol(); }
+  }
   function ready() {
     try {
-      ctx ||= new AudioContext();
-      if (!ch) { ch = chain(ctx); hum = ctx.createGain(); hum.connect(ctx.destination); applyVol(); }
+      open();
       if (ctx.state === 'suspended') ctx.resume();
       loadBank(ctx);
       if (wantHum && !stopHum) stopHum = ambience(ctx, hum);
@@ -875,6 +912,9 @@ export function createSound() {
   shared = {
     play(name, opts = {}, delay = 0) {
       if (!ready()) return;
+      const at = ctx.currentTime + Math.max(0, delay);
+      if (Math.abs((lastVoice.get(name) ?? -1) - at) < 0.06) return; // the same voice twice at once: once is as loud and half the work
+      lastVoice.set(name, at);
       try { voiceAt(ctx, ch, name, ctx.currentTime + 0.005 + Math.max(0, delay), opts); } catch { /* no audio */ }
     },
     // An ability's sound in a style (abilitysound.mjs), timed by its effect's plan ({ travel, hold, impact, stop } ms
@@ -915,11 +955,26 @@ export function createSound() {
     // An output at the effects volume for a scene with its own mix (the cold open): { ctx, out }, or null.
     out() {
       if (!ready()) return null;
-      const g = ctx.createGain(); g.gain.value = vol.sfx / 0.8; g.connect(ctx.destination);
+      const g = ctx.createGain(); g.gain.value = vol.sfx / 0.8; g.connect(outputOf(ctx));
       return { ctx, out: g };
     },
     // The shared context, for the soundtrack (null if audio can't start).
     context() { return ready() ? ctx : null; },
+    // The loading screen (warm.mjs): the samples fetched and decoded before the first key, progress (0-1) as each
+    // settles; resolves when all have.
+    warmBank(progress = () => {}) {
+      try { open(); } catch { return Promise.resolve(); }
+      const p = loadBank(ctx), bank = banks.get(ctx);
+      progress(bank.got / bank.total); bank.on.add(progress);
+      return p.finally(() => bank.on.delete(progress));
+    },
+    // The textures the first fight would build on its first hit: the hall, the noises, the music's reverb. One a call
+    // (each is a block of work): warmTextures(i) builds the i-th and says whether there are more.
+    warmTextures(i = 0) {
+      try { open(); } catch { return false; }
+      [() => hallOf(ctx, ch), () => warmNoise(ctx), () => warmMusic(ctx)][i]?.();
+      return i < 2;
+    },
     // The room tone runs while Sound is on.
     ambience(on) {
       wantHum = !!on;

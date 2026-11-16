@@ -555,9 +555,11 @@ test('a floor\'s lair boss: The Sink\'s own uniques join its network\'s natives 
     lair.spawns = {}; lair.lockUntil = 0;
     connect(s, lair.id); play(s, 'cd core'); play(s, 'attack');
     assert.ok(s.encounter?.virus.boss, 'its boss in /core');
-    for (const p of s.encounter.virus.parts) Object.assign(p, { integrity: 0, armor: 0 });
-    const p = s.encounter.virus.parts[0]; p.integrity = 1;
-    command(s, 'spike ' + p.id); resolveCycle(s);
+    for (let n = 0; n < 4 && s.encounter?.phase === 'active'; n++) { // every act (act bars)
+      for (const p of s.encounter.virus.parts) Object.assign(p, { integrity: 0, armor: 0 });
+      const p = s.encounter.virus.parts[0]; p.integrity = 1;
+      command(s, 'spike ' + p.id); resolveCycle(s);
+    }
     play(s, 'jack out');
   };
   const was = BOSS_LOOT.chance;
