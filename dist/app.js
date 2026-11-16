@@ -3576,7 +3576,12 @@ function pagerUi() {
   if (commsOpen) put('comms', PGV.inboxMarkup(campaign, Date.now()));
 }
 // A plain ping's fade runs from when it came in, so a redraw picks it up where it was.
-function pingFades() { for (const el of document.querySelectorAll('.ping[data-t] > .pi-in')) if (!el.style.animationDelay) el.style.animationDelay = `${Number(el.parentElement.dataset.t) - Date.now()}ms`; }
+// Its arrival (pings.css: the slide, the flare, the sweep) runs from then too, so a redraw never plays it again.
+function pingFades() {
+  const now = Date.now();
+  for (const el of document.querySelectorAll('.ping[data-t] > .pi-in')) if (!el.style.animationDelay) el.style.animationDelay = `${Number(el.parentElement.dataset.t) - now}ms`;
+  for (const el of document.querySelectorAll('.ping[data-at]')) if (!el.style.getPropertyValue('--since')) el.style.setProperty('--since', `${Math.min(0, Number(el.dataset.at) - now)}ms`);
+}
 // A click on a ping: the page's thing (pagerAct), or where a line of news happened.
 document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-ping]');

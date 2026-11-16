@@ -71,9 +71,13 @@ test('a line: one short sentence, names bold, yours teal, a threat red; older li
   assert.match(html, /data-t="\d+"><button/, 'a plain line carries when it came in, for its fade');
 });
 
-test('the log keeps the rules: no teal but yours, nothing moves', () => {
+test('the log keeps the rules: no teal but yours, only a new line moves, and once', () => {
   const css = readFileSync(new URL('./dist/pings.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   assert.deepEqual(css.match(/var\(--you\)/g), ['var(--you)'], 'teal only for what is yours');
-  assert.doesNotMatch(css, /transform|translate|rotate|scale/, 'it fades; nothing moves');
+  // The arrival (slide, flare, sweep) is the only motion, timed from when the line came in so a redraw never replays it.
+  const still = css.replace(/@keyframes (ping-arrive|ping-flare) \{[^@]*?\} \}/g, '');
+  assert.doesNotMatch(still, /transform|translate|rotate|scale/, 'nothing else moves');
+  for (const k of ['ping-arrive', 'ping-flare', 'ping-sweep']) assert.match(css, new RegExp(`${k} [^;]*var\\(--since, 0ms\\)`), `${k} runs from when the line came in`);
+  assert.match(css, /\.no-motion \.ping, \.no-motion \.ping::after \{ animation: none/, 'none of it with motion off');
   assert.doesNotMatch(css, /border:\s*1px|background:\s*[^n\s]/, 'frameless');
 });
