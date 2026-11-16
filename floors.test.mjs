@@ -77,7 +77,7 @@ test('the first server you find is level 1, whatever the seed and whichever fami
   }
 });
 
-test('tracing along a floor\'s links: SPRAWL-00\'s ? servers from the start, its strays trace them, a first clear on a server traces the ones linked to it, Mapped the rest', () => {
+test('tracing along a floor\'s links: SPRAWL-00\'s ? servers from the start, its strays trace them, a first clear on a server traces one linked to it, Mapped locates one', () => {
   const s = mk(1);
   const g = graphOf(s, 1);
   const first = hiddenNear(s, { id: CONFIG.zone.id });
@@ -92,7 +92,7 @@ test('tracing along a floor\'s links: SPRAWL-00\'s ? servers from the start, its
   assert.equal(loc.level, 1, 'your first server is level 1');
   assert.ok(!hiddenAt(s, loc.slot), 'no longer a ?');
   for (const id of adj(g, loc.slot)) if (g.nodes[id].kind === 'server') assert.ok(hiddenAt(s, id) || locAt(s, id), 'its neighbours show as ?');
-  // A first clear on it traces every ? linked to it (through the entry too: a junction).
+  // A first clear on it traces one ? linked to it (the most traced), so servers turn up one at a time.
   const near = hiddenNear(s, loc), before = near.map((h) => h.lead);
   loc.lockUntil = 0;
   play(s, `connect ${loc.id}`);
@@ -101,13 +101,15 @@ test('tracing along a floor\'s links: SPRAWL-00\'s ? servers from the start, its
   if (s.rooms.screen?.kind === 'virus') FP.act(s, 'engage');
   win(s);
   assert.ok(R.cleared[room.id], 'cleared');
-  near.forEach((h, i) => assert.ok(!hiddenNodes(s).includes(h) || h.lead >= Math.min(100, before[i] + HIDDEN.firstClear), `+${HIDDEN.firstClear}% on ${h.slot}`));
-  // Mapped: every ? linked to it, the rest of the way.
+  const moved = near.filter((h, i) => !hiddenNodes(s).includes(h) || h.lead > before[i]);
+  assert.equal(moved.length, 1, 'one ? traced');
+  assert.ok(!hiddenNodes(s).includes(moved[0]) || moved[0].lead >= Math.min(100, before[near.indexOf(moved[0])] + HIDDEN.firstClear), `+${HIDDEN.firstClear}%`);
+  // Mapped: one ? linked to it, the rest of the way; the others stay ?.
   play(s, 'jack out');
   const ids = hiddenNear(s, loc).map((h) => h.slot);
   s.rooms = R; FP.WORLD.mapped?.(s);
   s.rooms = null;
-  for (const id of ids) assert.ok(locAt(s, id), `${id} located by Mapped`);
+  assert.equal(ids.filter((id) => locAt(s, id)).length, Math.min(1, ids.length), 'Mapped locates one ?');
 });
 
 test('exits: hidden until a server they hang off is located, then shown and taken; the floor below opens at its landing server; back up is always open', () => {

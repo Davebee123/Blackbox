@@ -5,7 +5,7 @@
 // an entry you've reached (SPRAWL-00's on floor 1). Its trace fills to 100% to locate it, and then it's an ordinary
 // server with its own ? neighbours. Going deeper is taking an exit (floors.mjs descend).
 //
-// Its trace comes from rooms: each first clear of a fight room on a server linked to it (+10%), its vault's trace
+// Its trace comes from rooms: each first clear of a fight room on a server linked to it (+20%, one ? at a time), its vault's trace
 // record (+50%), SPRAWL-00's strays (a kill traces one of its ?s, as the old family leads did), a trace injector (+30%),
 // an invader from it beaten (+40%; your wall stopping one, +10%), and kills of its family once a relay has pinged it.
 // Invaders can set out from a ? and come in through the server it hangs off ("an unknown server past X").
@@ -27,8 +27,8 @@ export const HIDDEN = {
   killLead: 12, // a kill of a flagged node's family
   routeLead: 50, // the relay's route file, banked
   recordLead: 50, // a vault's trace record (signal.trc), banked
-  firstClear: 20, // each first clear of a fight room on a server linked to it
-  opens: true, // a Mapped server, or a rogue one cleared, traces the ? servers linked to it the rest of the way
+  firstClear: 20, // each first clear of a fight room on a server traces one ? linked to it (the most traced)
+  opens: true, // a Mapped server, or a rogue one cleared, traces one ? linked to it the rest of the way
   shown: 8, // unknown servers in the leads list at once: the most worth chasing
 };
 
@@ -76,6 +76,14 @@ export function traceNear(s, loc, amount, why = '', { one = false, family = null
   const pick = one ? [[...near].sort((a, b) => low(a, b) || b.lead - a.lead || (b.family === family) - (a.family === family) || a.level - b.level)[0]] : near;
   for (const n of pick) hiddenLead(s, n, amount, why);
   return pick;
+}
+// Mapped, or a rogue server's full clear: one ? linked to it (the most traced, then the lowest level) the rest of the
+// way, so servers turn up one at a time. Returns the node it located, or null.
+export function openNext(s, loc, why) {
+  const n = [...hiddenNear(s, loc)].sort((a, b) => b.lead - a.lead || a.level - b.level)[0];
+  if (!n) return null;
+  hiddenLead(s, n, 100 - n.lead, why);
+  return n;
 }
 // SPRAWL-00's strays and an invader beaten trace one ? like the old family leads: CONFIG.leadBase a kill, falling with
 // the level gap like XP (nothing from a grey kill), half again from the hot strain.
