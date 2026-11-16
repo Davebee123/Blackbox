@@ -8,6 +8,7 @@ The graphics are software there, so the main thread's numbers are the ones to tr
 | Screen | Main thread busy | Frames a second |
 |---|---|---|
 | Settings, Mail, Loadout, Server, Codex, Rig (idle or scrolling) | 22–29% | 60 |
+| Class pick, a drawer open (batch 8; was 33–49%, 60) | 3–4% | 1 |
 | Power-on, login prompt | 27–28% | 60 |
 | Cold open | 44% | 60 |
 | Map (idle) | 55% | 60 |
@@ -63,6 +64,7 @@ The hosted game now loads one script and one stylesheet (batch 7).
 | A click on a room swaps its card, not the rooms map (`app.js` putRooms); virus names and room outlines kept between draws. Click to frame, median: desktop 76 → 55 ms, phone 158 → 89 ms | both | landed |
 | Samples, audio textures and the chip effects' defs warmed on the loading screen (`warm.mjs`) | both | landed |
 | One bundled, minified script and stylesheet for the hosted game (`scripts/build.mjs`) | both, phones most | landed |
+| The class pick's border effects on the compositor (`pickfx.mjs`); no flex-basis transitions in its phone layout | both, phones most | landed |
 
 **The same look, by other means (the designer's eye before it lands):**
 
@@ -117,8 +119,8 @@ One session each, started fresh. Measure before and after with `tools/perf/phone
 | 5 | The Graphics settings: prototypes, the pick, then the build | the Settings page, `settings` in the save | landed |
 | 6 | The loading screen: prototypes, the pick, then the build and the warm-ups | `poweron.mjs`, `shell.mjs` boot, `sound.mjs` loadBank | landed |
 | 7 | A build step for the hosted game (approved 2026-11-15); `dist/` stays runnable as plain files for development | `scripts/build.mjs`, the Pages workflow | landed |
-| 8 | The class pick: measure it, fix what costs | the class pick (`app.js` near `classPickMarkup`, `view.mjs` classPickMarkup, its CSS) | next |
-| 9 | The CRT and the backdrop's textures merged into fewer layers: prototypes, the pick, then the build | `screenfx.css`/`.mjs`, `#crt`, `#fx-back`, `#fx-edge` | after 8 |
+| 8 | The class pick: measure it, fix what costs | the class pick (`app.js` near `classPickMarkup`, `view.mjs` classPickMarkup, its CSS) | landed |
+| 9 | The CRT and the backdrop's textures merged into fewer layers: prototypes, the pick, then the build | `screenfx.css`/`.mjs`, `#crt`, `#fx-back`, `#fx-edge` | next |
 
 **Batch 1 (landed).** `frame` runs every frame while `tickBusy` holds: a fight, `dirty`, a queued effect, strike or
 level-up, the Tune window, files moving on the map, co-op, or the second after an input. Otherwise a timer runs it when
@@ -221,5 +223,21 @@ s), unminified too, and less as everything else: 200 module loads gone. Fights l
 The Horizon and its prompt (desktop and phone), a fresh player's cold open with its samples, both playtest fights, the
 desktop window, `?dev`, `?playtest=fx` and `?bench=arena`: as on dist, no page errors, no new 404s.
 
-Not yet measured: breach and campaign, hubs and shops, co-op, the class pick and tutorial, the More sheet, a phone on
-its side.
+**Batch 8 (landed).** Reached from a fresh save (`phone-audit.mjs` step `fresh:`; mode `click` for the drawer and
+switching). With none picked the pick was already cheap (phone 28–31 ms/s, 1 frame a second). The picked square's
+border effect ran on the main thread every frame while you read its drawer: Breaker's flash (a `box-shadow`
+animation), Bastion's ward (`border-color`), Infiltrator's and Operator's lights (`offset-path`). Now the flash is a
+shadow layer fading by opacity (at its peak the same; as it fades it stays wide where the old one shrank), the ward a
+bright border fading in over the dim one (the same colours), and the lights transform keyframes along the same rounded
+border at the same speed (`pickfx.mjs`, rebuilt by a ResizeObserver as the drawer opens; within 0.3 px of the old
+path at 81 points, desktop and phone). The phone layout's cards no longer transition `flex-basis` (a grid there: it
+did nothing but lay the page out every frame). Same day, two runs each, ports alternated, before → after, main thread
+ms/s (frames a second). Phone, a drawer open: Breaker 415, 351 (60) → 40, 34 (1); Bastion 325, 349 (60) → 36, 33 (1);
+Infiltrator 446, 485 (60) → 31, 27 (1); Operator 438, 466 (60) → 28, 30 (1). Phone, a drawer opened and closed every
+1.2 s: 516, 539 → 396, 435 (layouts 28 → 4 a second, paints 131 → 38); switching classes every 1.2 s: 689, 703 → 464,
+489 (layouts 32 → 12). None picked: 29, 28 → 31, 28. Desktop: the window's canvas (184–302 ms/s, swinging run to
+run) is most of it and holds it near 17 frames/s; the rest of the main thread level or lower: a drawer open 49–56 →
+39–54, a drawer opening 109, 109 → 96, 99, switching 92, 96 → 94, 110. Each class's border, Start, keys 1–4 and Esc,
+reduced motion (the lights held still at the top left, as before), the phone's rows: as before, no page errors.
+
+Not yet measured: breach and campaign, hubs and shops, co-op, the tutorial, the More sheet, a phone on its side.

@@ -256,6 +256,7 @@ comment saying what it does.
 | `dist/boss-art.mjs` | Each boss's own body for it (`BOSS_SHAPE`, the Resident's by family): its parts are the model's regions, the ones that join mid-fight modelled from the start. A boss faces you (`BOSS_SWING`) and is fitted to the window. |
 | `dist/nocarrier.mjs`, `dist/nocarrier.css` | Losing a fight: static and NO CARRIER, then the Disconnected card. |
 | `dist/class-emblems.mjs` | The class picker's ASCII emblems. |
+| `dist/pickfx.mjs` | The class picker's border lights (Infiltrator's, Operator's) run round the picked square as transform keyframes, rebuilt when it changes size. |
 | `dist/feel.mjs` | The feedback language: each kind of event's one signature in motion and sound. |
 | `dist/sound.mjs`, `dist/sfx/` | Sound effects from recorded CC0 samples (CREDITS.md). A fight won, a boss down and a level gained are whole clips (`sfx/wins`, rendered by `tools/sound-preview/clips4.js`). The audio context runs at the output's own rate up to 48 kHz (`openContext`): over that the game renders at 48 kHz and the browser resamples. |
 | `dist/abilitysound.mjs` | Ability sounds timed to their effects (docs/ability-sounds-plan.md): the kit, the style round and each class's key 1. `app.js` strikes() plays the picked style in a fight (abilitySound, abilityVoices); `?playtest=fx` plays any. |

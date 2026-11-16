@@ -3286,7 +3286,7 @@ details.map-pick { pointer-events: auto; }
 [aria-checked='true'] > .pk-fx { display: block; }
 .pk-fx i { position: absolute; display: none; }
 /* Breaker, Fracture: cracks open across the border one at a time and throw chips; the third shatters it clean. */
-[data-pick-class='breaker'] > .pk-fx { animation: fx-shatter 3.6s ease-out infinite; }
+[data-pick-class='breaker'] > .pk-fx::before { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 0 0 1px #fff3c4, 0 0 34px rgba(255, 216, 110, 0.9); opacity: 0; animation: fx-shatter 3.6s ease-out infinite; } /* the flash as it shatters: a shadow that fades, so the compositor runs it */
 [data-pick-class='breaker'] .pk-fx i:nth-child(-n + 3) { display: block; width: 14px; height: 26px; margin-left: -7px; opacity: 0; }
 [data-pick-class='breaker'] .pk-fx i:nth-child(-n + 3)::before { content: ''; position: absolute; left: 4px; top: 11px; width: 6px; height: 4px; background: #0b0703; } /* the break in the line */
 [data-pick-class='breaker'] .pk-fx i:nth-child(-n + 3)::after { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 26'%3E%3Cpolyline points='6,0 9,7 5,12 10,18 7,26' fill='none' stroke='%23ffd86e' stroke-width='1.6' stroke-linejoin='bevel'/%3E%3Cpolyline points='9,7 12,9' fill='none' stroke='%23ffd86e' stroke-width='1.2'/%3E%3Cpolyline points='5,12 2,15' fill='none' stroke='%23ffd86e' stroke-width='1.2'/%3E%3C/svg%3E") center/contain no-repeat; filter: drop-shadow(0 0 3px var(--amber)); }
@@ -3296,7 +3296,7 @@ details.map-pick { pointer-events: auto; }
 @keyframes fx-cr1 { 0% { opacity: 0; } 1% { opacity: 1; filter: brightness(1.8); } 8%, 75% { opacity: 1; filter: none; } 80%, 100% { opacity: 0; } }
 @keyframes fx-cr2 { 0%, 22% { opacity: 0; } 23% { opacity: 1; filter: brightness(1.8); } 30%, 75% { opacity: 1; filter: none; } 80%, 100% { opacity: 0; } }
 @keyframes fx-cr3 { 0%, 45% { opacity: 0; } 46% { opacity: 1; filter: brightness(1.8); } 53%, 75% { opacity: 1; filter: none; } 80%, 100% { opacity: 0; } }
-@keyframes fx-shatter { 0%, 75% { box-shadow: 0 0 0 0 transparent; } 76% { box-shadow: 0 0 0 1px #fff3c4, 0 0 34px rgba(255, 216, 110, 0.9); } 92%, 100% { box-shadow: 0 0 0 0 transparent; } }
+@keyframes fx-shatter { 0%, 75% { opacity: 0; } 76% { opacity: 1; } 92%, 100% { opacity: 0; } }
 /* the chips: two from each crack as it opens */
 [data-pick-class='breaker'] .pk-fx i:nth-child(n + 9) { display: block; width: 3px; height: 3px; background: #ffd86e; box-shadow: 0 0 4px var(--amber); opacity: 0; animation: fx-chip 3.6s ease-out infinite; }
 [data-pick-class='breaker'] .pk-fx i:is(:nth-child(9), :nth-child(10)) { top: -2px; left: 31%; --dy: -14px; }
@@ -3317,8 +3317,9 @@ details.map-pick { pointer-events: auto; }
 [data-pick-class='breaker'] .pk-fx i:is(:nth-child(7), :nth-child(8))::after { --d: 180deg; top: 0; transform-origin: top; }
 @keyframes fx-burst { 0%, 75% { opacity: 0; scale: 0.2; } 76% { opacity: 1; scale: 0.2; } 82% { opacity: 1; scale: 1; } 90%, 100% { opacity: 0; scale: 1.15; } }
 /* Bastion, Deflect: a barrier stands off the border; shots come in, flash on it and glance off. Nothing reaches the panel. */
-[data-pick-class='bastion'] > .pk-fx::before { content: ''; position: absolute; inset: -7px; border: 1px solid rgba(241, 185, 47, 0.4); border-radius: 7px; animation: fx-ward 3.6s linear infinite; }
-@keyframes fx-ward { 0%, 8%, 18%, 58%, 68%, 100% { border-color: rgba(241, 185, 47, 0.4); } 10%, 60% { border-color: #ffd86e; } }
+[data-pick-class='bastion'] > .pk-fx::before, [data-pick-class='bastion'] > .pk-fx::after { content: ''; position: absolute; inset: -7px; border: 1px solid rgba(241, 185, 47, 0.4); border-radius: 7px; }
+[data-pick-class='bastion'] > .pk-fx::after { border-color: #ffd86e; opacity: 0; animation: fx-ward 3.6s linear infinite; } /* its flash fades in over it */
+@keyframes fx-ward { 0%, 8%, 18%, 58%, 68%, 100% { opacity: 0; } 10%, 60% { opacity: 1; } }
 [data-pick-class='bastion'] .pk-fx i:is(:nth-child(1), :nth-child(3)) { display: block; width: 2px; height: 18px; margin: -18px 0 0 -1px; transform-origin: 50% 100%; background: linear-gradient(transparent, #fff3c4); opacity: 0; animation: fx-shot 3.6s linear infinite; }
 [data-pick-class='bastion'] .pk-fx i:is(:nth-child(2), :nth-child(4)) { display: block; width: 80px; height: 2px; margin: -1px 0 0 -40px; background: linear-gradient(90deg, transparent, #fff3c4, transparent); opacity: 0; animation: fx-ripple 3.6s ease-out infinite; }
 [data-pick-class='bastion'] .pk-fx i:is(:nth-child(1), :nth-child(2)) { --sy: 1; top: -7px; left: 34%; }
@@ -3326,20 +3327,17 @@ details.map-pick { pointer-events: auto; }
 [data-pick-class='bastion'] .pk-fx i:nth-child(3) { margin-top: 0; transform-origin: 50% 0; background: linear-gradient(#fff3c4, transparent); }
 @keyframes fx-shot { 0% { opacity: 0; translate: -14px calc(var(--sy) * -22px); rotate: calc(var(--sy) * -32deg); } 4% { opacity: 1; } 10% { opacity: 1; translate: 0 0; rotate: calc(var(--sy) * -32deg); } 10.01% { rotate: calc(var(--sy) * 32deg); } 18% { opacity: 0; translate: 14px calc(var(--sy) * -22px); rotate: calc(var(--sy) * 32deg); } 100% { opacity: 0; } }
 @keyframes fx-ripple { 0%, 9% { opacity: 0; scale: 0.1 1; } 10% { opacity: 1; scale: 0.2 1; } 24% { opacity: 0; scale: 1.4 1; } 100% { opacity: 0; } }
-/* Infiltrator, Trace: the border sinks to a hairline and one light runs round it. */
+/* Infiltrator, Trace: the border sinks to a hairline and one light runs round it (pickfx.mjs runs it, and Operator's). */
 .pk-card[data-pick-class='infiltrator'][aria-checked='true'] { border-color: rgba(241, 185, 47, 0.28); box-shadow: 0 14px 44px -22px rgba(241, 185, 47, 0.35); }
-[data-pick-class='infiltrator'] .pk-fx i:nth-child(1) { display: block; width: 90px; height: 2px; offset-path: border-box; offset-rotate: auto; offset-anchor: 100% 50%; background: linear-gradient(90deg, transparent, rgba(241, 185, 47, 0.7) 70%, #fff3c4); filter: drop-shadow(0 0 3px var(--amber)); animation: fx-run 3.6s linear infinite; }
+[data-pick-class='infiltrator'] .pk-fx i:nth-child(1) { display: block; left: -90px; top: -1px; width: 90px; height: 2px; transform-origin: 100% 50%; transform: translateX(var(--r-card)); background: linear-gradient(90deg, transparent, rgba(241, 185, 47, 0.7) 70%, #fff3c4); filter: drop-shadow(0 0 3px var(--amber)); }
 /* Operator, Threads: three processes circle the border, evenly spaced. */
-[data-pick-class='operator'] .pk-fx i:nth-child(-n + 3) { display: block; width: 5px; height: 5px; offset-path: border-box; offset-rotate: 0deg; background: #ffd86e; box-shadow: 0 0 6px 1px rgba(241, 185, 47, 0.8); animation: fx-run 7.5s linear infinite; }
-[data-pick-class='operator'] .pk-fx i:nth-child(2) { animation-delay: -2.5s; }
-[data-pick-class='operator'] .pk-fx i:nth-child(3) { animation-delay: -5s; }
-@keyframes fx-run { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+[data-pick-class='operator'] .pk-fx i:nth-child(-n + 3) { display: block; left: -2.5px; top: -2.5px; width: 5px; height: 5px; transform: translateX(var(--r-card)); background: #ffd86e; box-shadow: 0 0 6px 1px rgba(241, 185, 47, 0.8); }
 
 /* A narrow screen: the squares stack as rows; the picked one opens downward, its drawer a single column. */
 @media (max-width: 900px) {
   .pk-scene { padding: 24px 16px; gap: 16px; align-content: start; }
   .pk-deck, .pk-deck.picked { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: stretch; height: auto; gap: 8px; }
-  .pk-card, .pk-deck.picked .pk-card, .pk-deck.picked .pk-card[aria-checked='true'] { flex-direction: column; height: auto; }
+  .pk-card, .pk-deck.picked .pk-card, .pk-deck.picked .pk-card[aria-checked='true'] { flex-direction: column; height: auto; transition: border-color 0.2s, box-shadow 0.25s; } /* rows of a grid: their flex-basis does nothing here, and its transition laid the page out every frame */
   .pk-sq, .pk-deck.picked .pk-card[aria-checked='true'] .pk-sq, .pk-deck.picked .pk-card:not([aria-checked='true']) .pk-sq { flex: none; height: 64px; }
   .pk-plate, [aria-checked='true'] .pk-plate, .pk-deck.picked .pk-card:not([aria-checked='true']) .pk-plate { left: 40px; top: 50%; transform: translate(-50%, -50%) scale(0.42); transform-origin: 50% 50%; }
   .pk-id, [aria-checked='true'] .pk-id, .pk-deck.picked .pk-card:not([aria-checked='true']) .pk-id { opacity: 1; left: 84px; right: 12px; bottom: auto; top: 50%; transform: translateY(-50%); justify-items: start; gap: 4px; padding: 0; text-align: left; }
@@ -3351,7 +3349,7 @@ details.map-pick { pointer-events: auto; }
   .pk-dt { width: auto; grid-template-columns: 1fr; gap: 14px; padding: 14px 16px 16px; }
   .pk-go.btn { min-width: 0; width: 100%; }
 }
-@media (prefers-reduced-motion: reduce) { .pk-card, .pk-head, .pk-foot, .pk-fx, .pk-fx i, .pk-fx i::before, .pk-fx i::after, .pk-fx::before { animation: none !important; } .pk-deck, .pk-card, .pk-sq, .pk-plate, .pk-dt { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { .pk-card, .pk-head, .pk-foot, .pk-fx, .pk-fx i, .pk-fx i::before, .pk-fx i::after, .pk-fx::before, .pk-fx::after { animation: none !important; } .pk-deck, .pk-card, .pk-sq, .pk-plate, .pk-dt { transition: none !important; } }
 
 /* Collection log (System page) */
 .coll-card .coll-bar { height: 4px; background: var(--inset); border: 1px solid var(--line); border-radius: 2px; margin: 0 0 10px; overflow: hidden; }

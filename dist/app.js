@@ -96,6 +96,7 @@ import { watchPackets, shipOf } from './mapmotion.mjs';
 import { postFound } from './scanner.mjs';
 import { createScanner, postBanner, postOptions, postTerminalMarkup, POST } from './scanner-view.mjs';
 import * as GX from './graphics.mjs';
+import { runBorder } from './pickfx.mjs';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -631,10 +632,12 @@ function pickClass() {
     el.innerHTML = V.classPickMarkup(campaign);
     document.body.append(el);
     const deck = el.querySelector('.pk-deck'), cards = [...el.querySelectorAll('[data-pick-class]')], go = el.querySelector('.pk-go');
-    let pick = null, typing = 0;
+    let pick = null, typing = 0, unrun = () => {};
     const choose = (k) => {
       pick = k === pick ? null : k;
       for (const c of cards) c.setAttribute('aria-checked', String(c.dataset.pickClass === pick));
+      unrun();
+      unrun = runBorder(cards.find((c) => c.dataset.pickClass === pick)?.querySelector('.pk-fx'), pick); // its border's lights, on the compositor (pickfx.mjs)
       deck.classList.toggle('picked', !!pick);
       go.disabled = !pick;
       go.innerHTML = V.pkGoMarkup();
@@ -648,6 +651,7 @@ function pickClass() {
     const start = () => {
       if (!pick) return;
       clearInterval(typing);
+      unrun();
       removeEventListener('keydown', keys, true);
       command(campaign, `archetype ${pick}`);
       feel.add('unlock', null);
