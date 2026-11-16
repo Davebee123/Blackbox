@@ -96,9 +96,14 @@ const ZONE_FAMILIES = ['ransomware', 'worm', 'ghostroot'];
 // past that, the fights worth having are on the servers you trace. Below level 3 no Ghostroot (it's veiled): your first fights show you what's
 // coming (Slay the Spire).
 export const kingOpen = (s) => hackerLevel(s) >= 3;
-// A SPRAWL-00 room's level band: the nearer folders lower (docs/scaling.md 4), two rooms to a band. Each stray rolls its
-// level in the band off its own seed. RELAY-KING, in /net/relay, at the top.
-export const ZONE_BAND = { '/tmp': [1, 2], '/srv': [1, 2], '/var': [2, 3], '/home': [2, 3], '/net': [3, 4], '/opt': [3, 4], '/var/log': [4, 5], '/var/cache': [4, 5] };
+// A SPRAWL-00 room's level band: the nearer folders lower (docs/scaling.md 4), at least two rooms to a band. Each
+// stray rolls its level in the band off its own seed. RELAY-KING, in /net/relay, at the top.
+export const ZONE_BAND = {
+  '/tmp': [1, 2], '/srv': [1, 2], '/home': [1, 2], '/dev': [1, 2],
+  '/var': [2, 3], '/net': [2, 3],
+  '/var/spool': [3, 4], '/var/cache': [3, 4],
+  '/var/log': [4, 5], '/home/guest': [4, 5],
+};
 export function zoneSpawns(s, now = clock()) {
   const z = zoneOf(s);
   if (!kingOpen(s)) delete z.spawns[KING_ROOM]; // a sealed Core holds nothing (a save from before held a stray, or the king)

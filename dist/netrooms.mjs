@@ -9,7 +9,7 @@
 //   wild       SPRAWL-00, a rogue server (Nest, Pit, Gauntlet), a lair, KESSLER-FARM-00, an occupied server: every
 //              room a fight, each one a folder of the old server (room.path0), so its spawns (run.mjs zoneSpawns,
 //              rogue.mjs rogueSpawns, the farm's, network.mjs lairSpawns) keep their timers, bounties, bosses and
-//              crew rules. SPRAWL-00: eight rooms of strays and RELAY-KING's Core (from level 3, 30 minutes). The farm:
+//              crew rules. SPRAWL-00: ten rooms of strays and RELAY-KING's Core (from level 3, 30 minutes). The farm:
 //              its packs and its three crew bosses, the ledger a vault that opens once the Foreman and the Heatsink
 //              are down.
 // A rogue server (Nest, Pit, Gauntlet: rogue.mjs plainRogue) is laid out as a tree of rooms from its seed (rogueGraph):
@@ -146,7 +146,7 @@ export function treeGraph(paths, { core = null, vaults = [], kinds = {}, labels 
   for (let p = core; p; p = p === '/' ? null : p.slice(0, p.lastIndexOf('/')) || '/') spine.unshift(idOf[p]);
   return graphOf(list, links, { core: core ? idOf[core] : null, vaults: vaults.map((v) => idOf[v]).filter(Boolean), spine: core ? spine : ['r0'] });
 }
-// SPRAWL-00: its nine folders, RELAY-KING's /net/relay the Core.
+// SPRAWL-00: its eleven folders, RELAY-KING's /net/relay the Core.
 export const sprawlGraph = () => treeGraph(zoneRooms(), { core: KING_ROOM });
 // A SPRAWL-00 folder's room by its name, for words about where someone is (presence.mjs).
 let sprawlNames = null;
@@ -165,13 +165,15 @@ export function rogueGraph(loc) {
   for (let t = 0; t < 80; t++) { const g = tryRogue(loc, folders, t); if (g) return g; }
   throw new Error('No rogue graph for seed ' + loc.seed);
 }
+hooks.rogueGraph = rogueGraph; // rogue.mjs rampOf: how far each folder is from the entry
 function tryRogue(loc, folders, attempt) {
   const r = seeded((((loc.seed || 1) * 7331 + attempt * 104729 + 17) >>> 0) || 1);
   const F = folders.length, Q = NET.quiet[0] + Math.floor(r() * (NET.quiet[1] - NET.quiet[0] + 1)), N = 1 + F + Q;
   const cells = [{ x: 0, y: 0, parent: null, depth: 0 }], taken = new Set(['0,0']), deg = [0];
   for (let i = 1; i < N; i++) {
     const opts = [];
-    cells.forEach((c, j) => { if (deg[j] >= (j ? 3 : 4) || c.depth >= 4) return; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = c.x + dx, y = c.y + dy; if (Math.abs(x) <= 3 && Math.abs(y) <= 2 && !taken.has(`${x},${y}`)) opts.push({ j, x, y, w: (1 + c.depth * 0.6) / (1 + deg[j]) }); } });
+    const big = loc.size ? 1 : 0; // a bigger server (rogue.mjs ROGUE.fights): a room deeper and wider
+    cells.forEach((c, j) => { if (deg[j] >= (j ? 3 : 4) || c.depth >= 4 + big) return; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = c.x + dx, y = c.y + dy; if (Math.abs(x) <= 3 + big && Math.abs(y) <= 2 + big && !taken.has(`${x},${y}`)) opts.push({ j, x, y, w: (1 + c.depth * 0.6) / (1 + deg[j]) }); } });
     if (!opts.length) return null;
     let k = r() * opts.reduce((a, o) => a + o.w, 0), o = opts[0];
     for (const c of opts) if ((k -= c.w) < 0) { o = c; break; }
@@ -663,6 +665,9 @@ export function roomsRestore(s, was) {
     if (s.run?.rooms && s.run.loc === loc.id) { const here = g.rooms[loc.floorplan.at]; if (here) { s.run.cwd = here.path; for (const c of Object.values(s.run.crew || {})) c.cwd = here.path; } }
   }
   rogueRestore(s);
+  // SPRAWL-00 grew from six rooms to eleven: an older save's rooms are laid out again (not while you stand in them).
+  const z = s.zone;
+  if (z?.floorplan && s.run?.loc !== z.id && !zoneRooms().every((p) => Object.values(z.floorplan.graph.rooms).some((r) => r.path0 === p))) delete z.floorplan;
   if (was >= 39) return socketRoomsRestore(s);
   if (s.run && !s.run.rooms) {
     const loc = s.run.loc === CONFIG.zone.id ? zoneOf(s) : findLocation(s, s.run.loc);

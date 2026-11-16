@@ -31,7 +31,7 @@ const give = (s, stats, extra) => { const it = addItem(s, item(stats, extra)); c
 const svc = (s, services) => { s.services = { ...services }; syncServer(s); s.server.integrity = s.server.max; return s; };
 // Filters in the wall's slots (two at +0), with the stats a home fight reads.
 const wall = (s, ...stats) => { s.filters = { held: stats.map((x, i) => ({ kind: 'filter', rarity: 'tuned', level: 1, name: `Filter ${i + 1}`, stats: { strength: 1, ...x } })), on: stats.map((_, i) => i) }; syncServer(s); s.server.integrity = s.server.max; return s; };
-const fight = (s, key = 'cryptjack', level = 6) => { selectEncounter(s, key, 7, { level }); command(s, 'engage'); return s; };
+const fight = (s, key = 'cryptjack', level = 6) => { selectEncounter(s, key, 7, { level }); command(s, 'engage'); s.encounter.surpriseSpent = true; return s; }; // the Infiltrator's Surprise is tested on its own (skills2.test.mjs)
 const bare = (s) => { for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, maxArmor: 0, patchAt: null }); return s; };
 const quiet = (s) => { for (const p of s.encounter.virus.parts) p.attack = null; return s; };
 const finishOne = (s) => {

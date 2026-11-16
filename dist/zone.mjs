@@ -3,16 +3,18 @@
 import { CONFIG } from './data.mjs';
 
 export const SPRAWL = {
-  '/': { dirs: ['net', 'tmp', 'var', 'srv', 'home', 'opt'], files: ['motd.txt'] },
+  '/': { dirs: ['net', 'tmp', 'var', 'srv', 'home', 'dev'], files: ['motd.txt'] },
   '/net': { dirs: ['relay'], files: ['routes.txt'] },
   '/net/relay': { dirs: [], files: [] },
   '/tmp': { dirs: [], files: [] },
-  '/var': { dirs: ['log', 'cache'], files: [] },
+  '/var': { dirs: ['log', 'spool', 'cache'], files: [] },
   '/var/log': { dirs: [], files: ['syslog'] },
+  '/var/spool': { dirs: [], files: [] },
   '/var/cache': { dirs: [], files: [] },
   '/srv': { dirs: [], files: ['junk.dat'] },
-  '/home': { dirs: [], files: [] },
-  '/opt': { dirs: [], files: [] },
+  '/home': { dirs: ['guest'], files: [] },
+  '/home/guest': { dirs: [], files: [] },
+  '/dev': { dirs: [], files: [] },
 };
 export const zoneRooms = () => Object.keys(SPRAWL).filter((p) => p !== '/');
 // The zone lives beside your traced locations (s.zone), never among them.

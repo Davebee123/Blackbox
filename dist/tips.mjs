@@ -1,7 +1,7 @@
 // First-time tips: the game's only tutorial. The screens show names, numbers and state; the
 // first time you meet something, a tip points at it and says how it works, once. One tip at a
 // time; fight tips pause the fight until you close them. Seen tips live in settings, so a
-// reset game doesn't repeat them (System → Replay tips does).
+// reset game doesn't repeat them (System → Replay tips does). wick narrates them all, in his lowercase.
 //
 // Each tip: id · page (a module, or '*' for any) · at (a CSS selector; the tip waits until it's
 // on screen) · when (optional: state it needs) · text · pause (fight tips) · under (optional:
@@ -30,19 +30,19 @@ const hereKind = (s) => s.rooms?.at && s.rooms.graph.rooms[s.rooms.at]?.kind;
 const movesOf = (s) => s.rooms?.stats?.moves || 0;
 const TOUR_STEPS = [
   { id: 'tour-walk', at: '.fp-room.reach', when: (s) => !!visitOf(s) && !s.rooms.screen, mark: movesOf, done: (s, m) => movesOf(s) > m,
-    wick: true, text: 'pick a room with a number on its corner. that\'s the signal it costs to walk in.' },
+    text: 'pick a room with a number on its corner. that\'s the signal it costs to walk in.' },
   { id: 'tour-engage', at: '#fp-pop [data-rooms="engage"]', also: '#fp-pop [data-rooms="back"]', after: ['tour-walk'], when: (s) => s.rooms?.screen?.kind === 'virus', done: (s) => s.rooms?.screen?.kind !== 'virus',
-    wick: true, text: 'something\'s living in there. engage, or step back the way you came.' },
+    text: 'something\'s living in there. engage, or step back the way you came.' },
   { id: 'tour-cache', at: '#fp-pop [data-rooms="pull"]', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'cache' && !s.rooms.screen,
     mark: (s) => `${s.rooms.at}:${s.rooms.taken[s.rooms.at] ?? ''}`, done: (s, m) => `${s.rooms?.at}:${s.rooms?.taken[s.rooms?.at] ?? ''}` !== m,
-    wick: true, text: 'a cache: credits and code. one in four is bait, and its card says which.' },
+    text: 'that\'s a cache of credits and code. one in four is bait, and its card says which.' },
   { id: 'tour-hunter', at: '.fp-hunt:not(.out)', after: ['tour-walk'], when: (s) => !!visitOf(s) && !s.rooms.screen, mark: movesOf, done: (s, m) => movesOf(s) > m,
-    wick: true, text: 'that\'s the hunter: it moves when you walk or wait, and this says when.', more: (s) => (classOf(s) === 'infiltrator' ? 'if it reaches you, slip past it or fight it.' : 'if it reaches you, you fight it.') },
+    text: 'that\'s the hunter: it moves when you walk or wait, and this says when.', more: (s) => (classOf(s) === 'infiltrator' ? 'if it reaches you, slip past it or fight it.' : 'if it reaches you, you fight it.') },
   { id: 'tour-rest', at: '#fp-pop [data-rooms="rest"]:not([disabled])', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'rest',
     mark: (s) => s.rooms.at, done: (s, m) => !!s.rooms?.visit?.rested || s.rooms?.at !== m,
-    wick: true, text: 'rest here once a visit for some signal back. the hunter never comes in.' },
+    text: 'rest here once a visit for some signal back. the hunter never comes in.' },
   { id: 'tour-jackout', at: '.fp-acts [data-rooms="jackout"]:not([disabled])', after: ['tour-engage'], when: (s) => !!visitOf(s) && !s.rooms.screen && (s.rooms.stats?.won || 0) > 0, done: (s) => !s.rooms?.at,
-    wick: true, text: 'jack out and the pack\'s banked. the server lets you back in 30 seconds later.' },
+    text: 'jack out and the pack\'s banked. the server lets you back in 30 seconds later.' },
 ];
 export const TOUR = TOUR_STEPS.map((t) => ({ ...t, page: 'rooms', tour: true }));
 export const tourIds = TOUR.map((t) => t.id);
@@ -54,114 +54,114 @@ export function skipTour(s) { s.tour ||= {}; for (const id of tourIds) s.tour[id
 export const TIPS = [
   ...TOUR, // first, on the rooms page: the tour of your first server (above)
   // ---------- anywhere ----------
-  { id: 'degraded', page: '*', at: '#integrity-note.degraded', urgent: true, text: 'Your server crashed and rebooted at half Integrity. For the next 10 minutes your wall is down, your max Signal and damage are lower, and any swarm at a hub you hold is paused.' },
-  { id: 'code', page: '*', at: '.modules [data-module="server"]', when: (s, m) => m !== 'server' && Object.values(s.materials || {}).some((n) => n > 0), text: 'Kills drop code. You spend it on programs in a server\'s sockets and on your firewall\'s tiers.' },
+  { id: 'degraded', page: '*', at: '#integrity-note.degraded', urgent: true, text: 'your server crashed and rebooted at half integrity. for 10 minutes the wall\'s down, your max signal and damage are lower, and any swarm at a hub you hold is paused.' },
+  { id: 'code', page: '*', at: '.modules [data-module="server"]', when: (s, m) => m !== 'server' && Object.values(s.materials || {}).some((n) => n > 0), text: 'kills drop code. spend it on programs in a server\'s sockets and on your firewall\'s tiers.' },
   // Your first protocol: Loadout → the Protocols tab → Load. Three short steps, each pointing at the next click.
-  { id: 'protocol', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && spare(s), text: 'You have a protocol to equip. Open Loadout to equip it. You can only equip at home, not on a run or in a fight.' },
-  { id: 'protocol-tab', page: 'loadout', at: '[data-ltab="protocols"][aria-selected="false"]', when: (s) => spare(s), text: 'Your protocols are on this tab.' },
-  { id: 'protocol-home', page: 'loadout', at: '.inv-btn.load[disabled]', when: (s) => !!s.run || s.encounter?.phase === 'active', text: 'You can only equip protocols at home. Jack out and finish any fight first, then come back and click Load.' },
-  { id: 'protocol-load', page: 'loadout', at: '.inv-btn.load:not([disabled])', text: 'Click Load to equip it. Every protocol you load adds its stats to yours in every fight.' },
-  { id: 'top-up', page: '*', at: '#meter-signal .meter-buy', text: 'Signal refills on its own at home, and the clock shows how long that takes. Click + to refill it now for credits.' },
-  { id: 'repair', page: '*', at: '#meter-integrity .meter-buy', text: 'Your server repairs on its own. Click + to repair it now for credits.' },
-  { id: 'routines', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && hackerLevel(s) >= 5, text: 'From level 5, when the timer runs out, your program moves for you. Set it up on Loadout → Program.' },
-  { id: 'level', page: '*', at: '#whoami', when: (s) => hackerLevel(s) >= 2, text: 'This is you: your handle, your class and its level. Each level makes you 4% stronger, and some levels unlock new skills.' },
+  { id: 'protocol', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && spare(s), text: 'you\'ve got a protocol sitting idle. open loadout to equip it. you can only equip at home, off a run and out of a fight.' },
+  { id: 'protocol-tab', page: 'loadout', at: '[data-ltab="protocols"][aria-selected="false"]', when: (s) => spare(s), text: 'your protocols are on this tab.' },
+  { id: 'protocol-home', page: 'loadout', at: '.inv-btn.load[disabled]', when: (s) => !!s.run || s.encounter?.phase === 'active', text: 'you can only equip at home. jack out, finish any fight, then come back and hit load.' },
+  { id: 'protocol-load', page: 'loadout', at: '.inv-btn.load:not([disabled])', text: 'hit load. every protocol you load adds its stats to yours, every fight.' },
+  { id: 'top-up', page: '*', at: '#meter-signal .meter-buy', text: 'signal refills on its own at home, and the clock says how long. hit + to buy it back now with credits.' },
+  { id: 'repair', page: '*', at: '#meter-integrity .meter-buy', text: 'your server patches itself up. hit + to do it now with credits.' },
+  { id: 'routines', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && hackerLevel(s) >= 5, text: 'from level 5, when the timer runs out, your program moves for you. set it up on loadout → program.' },
+  { id: 'level', page: '*', at: '#whoami', when: (s) => hackerLevel(s) >= 2, text: 'that\'s you: your handle, your class and its level. each level makes you 4% stronger, and some unlock new skills.' },
 
   // ---------- map ----------
   // Your first move: the one tip on the opening map. It stays until you connect.
-  { id: 'map-start', page: 'map', at: '.mnode.zone .mhex', when: (s) => !s.rooms, done: (s) => !!s.rooms, wick: true, text: 'sprawl-00. strays everywhere, nobody owns it. click it and connect.' },
+  { id: 'map-start', page: 'map', at: '.mnode.zone .mhex', when: (s) => !s.rooms, done: (s) => !!s.rooms, text: 'that\'s sprawl-00. nobody owns it, and strays roam all over it. click it and connect.' },
   // Your server and its gate wait for the first intrusion; the ? servers, for the first trace on one.
-  { id: 'map-server', page: 'map', at: '.mnode.server', when: atGate, joins: ['map-intrusion'], text: 'This is your server. It sits above the net, and viruses attacking it appear next to it.' },
+  { id: 'map-server', page: 'map', at: '.mnode.server', when: atGate, joins: ['map-intrusion'], text: 'that\'s your server. it sits above the net, and anything attacking it shows up beside it.' },
   // ---------- the rooms (the Run tab) ----------
-  { id: 'socket', page: 'rooms', at: '.fp-room.k-socket', text: 'This is a socket room. Clear its guard once and you can build here. A program in a socket changes this server\'s rules, and only this server\'s.' },
+  { id: 'socket', page: 'rooms', at: '.fp-room.k-socket', text: 'this is a socket room. clear its guard once and you can build here. a program in a socket changes this server\'s rules, and only this server\'s.' },
   // A server's takeover path, the first time you see each step: the vault, its key, the sealed Core.
-  { id: 'room-vault', page: 'rooms', at: '.fp-room.k-vault', wick: true, text: 'the vault. the server\'s files are in there. the elite on the guard post has the key, or you force it and pay in signal.' },
-  { id: 'room-core', page: 'rooms', at: '.fp-room.k-core', wick: true, text: 'the core. the resident lives there, sealed till the vault\'s open. beat it and the server\'s yours.' },
-  { id: 'room-elite', page: 'rooms', at: '.fp-room.k-elite', text: `An elite room. Its virus is tougher and brings one more tell, and it enrages from cycle ${ROOM_RULES.enrage.elite}. It drops a blue or better.` },
-  { id: 'room-thread', page: 'rooms', at: '.fp-quest.m-start', text: 'Someone in this room has work for you. Walk in to talk. Threads you take are tracked in Mail.' },
-  { id: 'run-signal', page: 'rooms', at: '.fp-sig.mid, .fp-sig.low', after: ['tour-walk'], wick: true, text: 'your signal\'s getting thin. at 0 you\'re home and the pack stays here. find a rest room or jack out.' },
-  { id: 'run-rival', page: 'rooms', at: '.fp-rvstat', wick: true, lead: (s) => (rivalOf(s) ? wickLine(s, rivalOf(s)) : ''), text: 'they\'re racing you to the vault. if they reach you, you fight the lot. beat them and their pack is yours.' },
-  { id: 'exfil', page: 'rooms', at: '.fp-exfil', text: 'An Exfil is uploading a stolen archive from this server, and it runs from you. Corner it and break its Uplink before the upload finishes.' },
+  { id: 'room-vault', page: 'rooms', at: '.fp-room.k-vault', text: 'this is the vault, where the server keeps its files. the elite on the guard post has the key, or you force it and pay in signal.' },
+  { id: 'room-core', page: 'rooms', at: '.fp-room.k-core', text: 'this is the core, where the resident lives. it stays sealed till the vault\'s open. beat it and the server\'s yours.' },
+  { id: 'room-elite', page: 'rooms', at: '.fp-room.k-elite', text: `this is an elite room. its virus is tougher and has one more tell, and it enrages from cycle ${ROOM_RULES.enrage.elite}. it drops a blue or better.` },
+  { id: 'room-thread', page: 'rooms', at: '.fp-quest.m-start', text: 'someone in here has work for you. walk in and talk. threads you take are tracked in mail.' },
+  { id: 'run-signal', page: 'rooms', at: '.fp-sig.mid, .fp-sig.low', after: ['tour-walk'], text: 'your signal\'s getting thin. at 0 you\'re home and the pack stays here. find a rest room or jack out.' },
+  { id: 'run-rival', page: 'rooms', at: '.fp-rvstat', lead: (s) => (rivalOf(s) ? wickLine(s, rivalOf(s)) : ''), text: 'they\'re racing you to the vault. if they reach you, you fight the lot. beat them and their pack is yours.' },
+  { id: 'exfil', page: 'rooms', at: '.fp-exfil', text: 'an exfil\'s uploading a stolen archive off this server, and it runs from you. corner it and break its uplink before the upload finishes.' },
   // A puzzle room's board, the first time you see each one (puzzle-view.mjs). One go a board: played to its end, it refills in two hours.
-  { id: 'pz-quarantine', page: 'rooms', at: '.pz-panel.k-quarantine .pz-well', text: 'After each firewall you place, the worm copies into the marked node. Wall it in early, against an edge. Every node it never reaches pays this server\'s code.' },
-  { id: 'pz-chase', page: 'rooms', at: '.pz-panel.k-chase .pz-well', text: 'The Tracker always moves the same way: sideways toward you, then up or down. It never goes around a wall, so lead it into one. Red rooms are where it would catch you.' },
-  { id: 'pz-cascade', page: 'rooms', at: '.pz-panel.k-cascade .pz-well', text: 'A node pushed past 3 discharges too, and that can set off a chain. Find the tap that brings down half the rack.' },
-  { id: 'pz-sweep', page: 'rooms', at: '.pz-panel.k-sweep .pz-well', text: 'A ping tells you how many steps away the cache is, counting across and down. The faint ring shows every cell at that distance. Dig where the rings cross.' },
-  { id: 'map-intrusion', page: 'map', at: '.mnode.intrusion', text: 'An intrusion is waiting at your gate. Select it and press Engage when you are ready. Nothing happens until you do.' },
-  { id: 'map-exit', page: 'map', at: '.mnode.exit', text: 'This is the way down to the next floor, beside a server you located. Go down from that server\'s card. The floor below has higher-level servers.' },
-  { id: 'map-origin', page: 'map', at: '.mnode.loc', text: 'You found a server. Select it and press Connect to hack in. It uses memory while it\'s on your network, and its ring fills as you explore it.' },
-  { id: 'map-memory', page: 'map', at: '.mem-join', text: 'These pips are your free memory: how many more servers your network can hold. The blinking pip is the one this server would take. Detach a server to free one.' },
-  { id: 'map-invader', page: 'map', at: '.mnode.invader[data-select="invader"]', text: 'An invasion is heading for your wall. Your firewall\'s strength decides whether it is blocked, contested or breaks through.' },
-  { id: 'map-contested', page: 'map', at: '.mnode.invader.siege[data-select="invader"]', text: 'Your wall is wearing this invasion down, but it costs you Integrity. Jack in to finish it now, or raise the wall to block it next time.' },
-  { id: 'map-breach', page: 'map', at: '.mnode.invader.breach', text: 'A breach costs you some Integrity every minute. Jack in to fight it yourself, and it counts as a full kill.' },
-  { id: 'map-contract', page: 'map', at: '.mnode.job', text: 'A contract points at this server. Open its vault to find the file you were sent for, or beat the Resident in /core to take the server over.' },
-  { id: 'pager', page: '*', at: '#pager .led.on', text: 'This is your pager. New mail, offers, finished contracts, your retainer and news from the network show up here. Click it to see the list.' },
-  { id: 'mail', page: '*', at: '.modules [data-module="mail"]', when: (s, m) => m !== 'mail' && (s.mail?.list || []).some((x) => !x.read), text: 'You have mail. Your crew, LOWLIGHT and Halcyon Mutual send you contracts here.' },
+  { id: 'pz-quarantine', page: 'rooms', at: '.pz-panel.k-quarantine .pz-well', text: 'after each firewall you place, the worm copies into the marked node. wall it in early, against an edge. every node it never reaches pays this server\'s code.' },
+  { id: 'pz-chase', page: 'rooms', at: '.pz-panel.k-chase .pz-well', text: 'the tracker always moves the same way: sideways toward you, then up or down. it never goes around a wall, so lead it into one. red rooms are where it\'d catch you.' },
+  { id: 'pz-cascade', page: 'rooms', at: '.pz-panel.k-cascade .pz-well', text: 'push a node past 3 and it discharges too, which can set off a chain. find the tap that brings down half the rack.' },
+  { id: 'pz-sweep', page: 'rooms', at: '.pz-panel.k-sweep .pz-well', text: 'a ping says how many steps to the cache, counting across and down. the faint ring is every cell at that distance. dig where the rings cross.' },
+  { id: 'map-intrusion', page: 'map', at: '.mnode.intrusion', text: 'something\'s waiting at your gate. select it and hit engage when you\'re ready. it sits there till you do.' },
+  { id: 'map-exit', page: 'map', at: '.mnode.exit', text: 'this is the way down to the next floor. it sits beside a server you located. go down from that server\'s card. the floor below runs higher-level servers.' },
+  { id: 'map-origin', page: 'map', at: '.mnode.loc', text: 'you found a server. select it and connect. it takes memory while it\'s on your network, and its ring fills as you explore it.' },
+  { id: 'map-memory', page: 'map', at: '.mem-join', text: 'these pips are your free memory: how many more servers your network holds. the blinking one is what this server would take. detach a server to free one.' },
+  { id: 'map-invader', page: 'map', at: '.mnode.invader[data-select="invader"]', text: 'an invasion\'s heading for your wall. your firewall\'s strength decides whether it\'s blocked, contested or breaks through.' },
+  { id: 'map-contested', page: 'map', at: '.mnode.invader.siege[data-select="invader"]', text: 'your wall\'s wearing this one down, and it\'s costing you integrity. jack in to finish it now, or raise the wall to block it next time.' },
+  { id: 'map-breach', page: 'map', at: '.mnode.invader.breach', text: 'a breach eats integrity every minute. jack in and fight it yourself, and it counts as a full kill.' },
+  { id: 'map-contract', page: 'map', at: '.mnode.job', text: 'a contract points here. open the vault for the file you were sent for, or beat the resident in /core and take the server.' },
+  { id: 'pager', page: '*', at: '#pager .led.on', text: 'this is your pager. mail, offers, finished contracts, your retainer and news off the net land here. click it for the list.' },
+  { id: 'mail', page: '*', at: '.modules [data-module="mail"]', when: (s, m) => m !== 'mail' && (s.mail?.list || []).some((x) => !x.read), text: 'you\'ve got mail. your crew, lowlight and halcyon mutual send you contracts here.' },
 
   // ---------- mail ----------
-  { id: 'mail-standing', page: 'mail', at: '.standing', text: 'This is your standing with Halcyon Mutual. It pays you a retainer every 30 minutes, and more as your standing grows. Contracts raise it, and a crash on your own server lowers it.' },
-  { id: 'mail-contract', page: 'mail', at: '.contract', text: 'A contract tracks your progress as you play. When it\'s done, deliver it here to get paid.' },
-  { id: 'mail-board', page: 'mail', at: '.mlist.mboard', text: 'This is Halcyon\'s board. Offers come and go on their own, and you can take up to three at a time. Only contracts you\'ve taken count.' },
-  { id: 'hub-shop', page: 'hub', at: '.hub-win .shop-shelf .ptile', text: 'Every hub has a Shop with that faction\'s own goods. Better rep unlocks more of the shelf and trims the price.' },
-  { id: 'store-codebases', page: 'hub', at: '.hub-win .shop-cbs', text: 'These are codebases. Buy one once and you can build its program in any socket you\'ve cleared.' },
+  { id: 'mail-standing', page: 'mail', at: '.standing', text: 'this shows your standing with halcyon mutual. they pay you a retainer every 30 minutes, and more as it grows. contracts raise it, and a crash on your own server drops it.' },
+  { id: 'mail-contract', page: 'mail', at: '.contract', text: 'a contract tracks itself as you play. when it\'s done, deliver it here and get paid.' },
+  { id: 'mail-board', page: 'mail', at: '.mlist.mboard', text: 'this is halcyon\'s board. offers come and go on their own, and you can hold three at a time. only the ones you take count.' },
+  { id: 'hub-shop', page: 'hub', at: '.hub-win .shop-shelf .ptile', text: 'every hub has a shop with its faction\'s own goods. better rep opens more of the shelf and trims the price.' },
+  { id: 'store-codebases', page: 'hub', at: '.hub-win .shop-cbs', text: 'these are codebases. buy one once and you can build its program in any socket you\'ve cleared.' },
   // ---------- hub sessions ----------
-  { id: 'hub-menu', page: 'hub', at: '.hub-row', text: 'You\'re connected to a faction hub. Click a line or type its number to open that window: its market, its work, its payloads and more.' },
+  { id: 'hub-menu', page: 'hub', at: '.hub-row', text: 'you\'re on a faction hub. click a line or type its number to open that window: its market, its work, its payloads and more.' },
   // The market, one step per tip in the order you meet it: rows, ▲/▼, the news, then the ticket.
-  { id: 'hub-market', page: 'hub', at: '.mk-wares .mk-row', text: 'Each row shows how many of a ware you hold, what this hub pays for one (Sell) and what it charges (Buy). Click a ware to trade it.' },
-  { id: 'hub-compare', page: 'hub', at: '.mk-wares .mk-d', text: '▲ means this hub pays more than the average hub, and ▼ means it pays less. Prices differ from hub to hub, so sell where a ware is ▲ and buy where it is cheap.' },
-  { id: 'hub-news', page: 'hub', at: '.mk-tags .tag', text: 'This shows what this hub wants and today\'s news across the net. News pushes some prices up and others down. Hover an item to see which.' },
-  { id: 'hub-slider', page: 'hub', at: '.mk-ticket input[data-mk-n]', text: 'Drag to choose how many. Each one you sell lowers this hub\'s price a little, and each one you buy raises it, so a big order gets a worse price per unit.' },
-  { id: 'hub-preview', page: 'hub', at: '.mk-ticket .mk-prev', text: 'This is your order before you place it: the total, the price per unit, and how it compares with the same order elsewhere. Amber means it\'s better here.' },
-  { id: 'hub-go', page: 'hub', at: '.mk-ticket .mk-go', text: 'Orders take the minutes shown next to ⇄ to arrive, and relays make that shorter. Prices you\'ve moved drift back over a few hours.' },
-  { id: 'hub-xfers', page: 'hub', at: '.mk-xfers', text: 'These are your orders in transit. → is outgoing and pays its credits when it lands. ← is incoming. Each bar fills as its order arrives.' },
-  { id: 'store-chase', page: 'hub', at: '.hub-win .shop-rail', text: 'These are this faction\'s own protocols, each with a signature rule. Better rep opens the higher tiers.' },
-  { id: 'map-drop', page: 'map', at: '.mnode.drop', text: 'Something is happening on this server. Its card says what, and how long you have to act.' },
-  { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'This is a rogue server: nobody has ever taken it over. Viruses hold its rooms and come back a few minutes after you kill them.' },
-  { id: 'map-build', page: 'map', at: '.prog-row', text: 'These are its sockets and the programs in them. Clear a socket room on a run, then build in it from its pop-up. A program only works on its own server.' },
-  { id: 'map-owned', page: 'map', at: '.mnode.loc.owned', text: 'This server is yours now. Put a relay on it from its card to ping the unknown servers next to it.' },
-  { id: 'map-hidden', page: 'map', at: '.mnode.hidden', when: (s) => (s.hidden || []).some((n) => n.lead > 0), text: 'This is an unknown server. Clear the servers linked to it to trace it: first clears, Mapped servers and vault trace records all count. Once a relay flags it, kills count too.' },
+  { id: 'hub-market', page: 'hub', at: '.mk-wares .mk-row', text: 'each row shows how many of a ware you hold, what this hub pays for one (sell) and what it charges (buy). click a ware to trade it.' },
+  { id: 'hub-compare', page: 'hub', at: '.mk-wares .mk-d', text: '▲ means this hub pays more than the average hub, ▼ less. prices differ hub to hub, so sell where a ware\'s ▲ and buy where it\'s cheap.' },
+  { id: 'hub-news', page: 'hub', at: '.mk-tags .tag', text: 'this shows what this hub wants, and today\'s news across the net. news pushes some prices up and others down. hover one to see which.' },
+  { id: 'hub-slider', page: 'hub', at: '.mk-ticket input[data-mk-n]', text: 'drag for how many. each one you sell drops this hub\'s price a little and each one you buy raises it, so a big order gets a worse price per unit.' },
+  { id: 'hub-preview', page: 'hub', at: '.mk-ticket .mk-prev', text: 'this is your order before you place it: the total, the price per unit, and how it stacks up against the same order elsewhere. amber means it\'s better here.' },
+  { id: 'hub-go', page: 'hub', at: '.mk-ticket .mk-go', text: 'orders take the minutes next to ⇄ to arrive, and relays cut that down. prices you\'ve pushed drift back over a few hours.' },
+  { id: 'hub-xfers', page: 'hub', at: '.mk-xfers', text: 'these are your orders in transit. → is outgoing and pays when it lands. ← is incoming. each bar fills as its order arrives.' },
+  { id: 'store-chase', page: 'hub', at: '.hub-win .shop-rail', text: 'these are this faction\'s own protocols, each with a signature rule. better rep opens the higher tiers.' },
+  { id: 'map-drop', page: 'map', at: '.mnode.drop', text: 'something\'s happening on this server. its card says what, and how long you\'ve got.' },
+  { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'this is a rogue server. nobody\'s ever taken it. viruses hold its rooms and come back a few minutes after you kill them.' },
+  { id: 'map-build', page: 'map', at: '.prog-row', text: 'this row shows the server\'s sockets and the programs built in them. clear a socket room on a run, then build in it from its pop-up here. a program only works on the server it\'s built on.' },
+  { id: 'map-owned', page: 'map', at: '.mnode.loc.owned', text: 'this one\'s yours now. put a relay on it from its card to ping the unknown servers next to it.' },
+  { id: 'map-hidden', page: 'map', at: '.mnode.hidden', when: (s) => (s.hidden || []).some((n) => n.lead > 0), text: 'this is an unknown server. clear the servers linked to it to trace it: first clears, mapped servers and vault trace records all count. once a relay flags it, kills count too.' },
 
   // ---------- fight ----------
   // Your first fight: one pause, not four. The board, the keys, armor and the Sync Window are
   // clicked through as steps of one tip, each pointing at its own thing; each still shows alone
   // if it turns up later.
-  { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-ticks', 'fight-armor', 'sync'], wick: true, text: 'this is the combat console halcyon installed to fight viruses. it shows their attacks: the now column is this cycle, each column right of it one later. you move first, and then the virus attacks back.' },
-  { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', wick: true, text: 'type a skill and a part, then enter. or press its number and click the part. let the timer run out and key 1 hits your last target again.' },
+  { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-ticks', 'fight-armor', 'sync'], text: 'this is the combat console halcyon installed to fight viruses. it shows their attacks: the now column is this cycle, each column right of it one later. you move first, and then the virus attacks back.' },
+  { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', text: 'type a skill and a part, then enter. or press its number and click the part. let the timer run out and key 1 hits your last target again.' },
   // The interrupt (interrupt.mjs): the ticks, and a tick spent for nothing.
-  { id: 'fight-ticks', page: 'combat', pause: true, at: '.board .ptick', under: '#board', when: (s) => s.encounter?.phase === 'active', wick: true, text: 'two marks on each bar, at 50% and 25%. push a part past one on the cycle its attack is due and that attack\'s cancelled. each mark works once.' },
-  { id: 'fight-wasted', page: 'combat', pause: true, at: '.board .ptick.spent', under: '#board', when: (s) => (s.encounter?.metrics?.wasted || 0) > 0, text: 'You crossed that tick when no attack was due, so it\'s spent for nothing. Save big hits for the cycle an attack lands.' },
-  { id: 'fight-armor', page: 'combat', pause: true, at: '.board .chits', under: '#board', wick: true, text: 'see the ◆? armor. each hit knocks one off and does nothing else. chip it bare with the small stuff, then hit it hard.' },
-  { id: 'sync', page: 'combat', at: '#sync-win', pause: true, wick: true, text: 'the bar under now fills as the cycle runs. hit enter inside the bright window and you deal 10% more.', more: (s) => `as ${/^[AEIOU]/.test(ARCHETYPES[classOf(s)].name) ? 'an' : 'a'} ${ARCHETYPES[classOf(s)].name.toLowerCase()}, it also ${SYNC[classOf(s)].rule.replace(/^./, (c) => c.toLowerCase())}` },
-  { id: 'fight-patch', page: 'combat', pause: true, at: '.board .intent.patch', under: '#board', text: 'A part with no ◆ left grows one back five cycles later, unless you break it first.' },
+  { id: 'fight-ticks', page: 'combat', pause: true, at: '.board .ptick', under: '#board', when: (s) => s.encounter?.phase === 'active', text: 'two marks on each bar, at 50% and 25%. push a part past one on the cycle its attack is due and that attack\'s cancelled. each mark works once.' },
+  { id: 'fight-wasted', page: 'combat', pause: true, at: '.board .ptick.spent', under: '#board', when: (s) => (s.encounter?.metrics?.wasted || 0) > 0, text: 'you crossed that tick with no attack due, so it\'s spent for nothing. save the big hits for the cycle an attack lands.' },
+  { id: 'fight-armor', page: 'combat', pause: true, at: '.board .chits', under: '#board', text: 'see the ◆? that\'s armor. each hit knocks one off and does nothing else. chip it bare with the small stuff, then hit it hard.' },
+  { id: 'sync', page: 'combat', at: '#sync-win', pause: true, text: 'the bar under now fills as the cycle runs. hit enter inside the bright window and you deal 10% more.', more: (s) => `as ${/^[AEIOU]/.test(ARCHETYPES[classOf(s)].name) ? 'an' : 'a'} ${ARCHETYPES[classOf(s)].name.toLowerCase()}, it also ${SYNC[classOf(s)].rule.replace(/^./, (c) => c.toLowerCase())}` },
+  { id: 'fight-patch', page: 'combat', pause: true, at: '.board .intent.patch', under: '#board', text: 'a part with no ◆ left grows one back five cycles later, unless you break it first.' },
   // Bosses: the ♛ part's ticks start acts (interrupt.mjs rule a).
-  { id: 'fight-crown', page: 'combat', pause: true, at: '.board .tag.crown', under: '#board', wick: true, text: 'the ♛ part is the boss. push it past a mark and it starts its next act, and the fight changes.' },
+  { id: 'fight-crown', page: 'combat', pause: true, at: '.board .tag.crown', under: '#board', text: 'the ♛ part is the boss. push it past a mark and it starts its next act, and the fight changes.' },
   // Levers (docs/puzzle-levers.md): an elite's clash, then a plain fight's one lever, from level 6.
-  { id: 'fight-clash', page: 'combat', pause: true, at: '.board .tag.clash', under: '#board', text: 'This elite\'s two rules pull against each other, so answering one makes the other harder. Hover ⇄ to see the pull and the answer.' },
-  { id: 'fight-lever', page: 'combat', pause: true, at: '.board .bpart.lever', under: '#board', text: 'This part has a rule that makes your usual move the wrong one. Hover the red tag on its row to read it before you hit.' },
-  { id: 'fight-objective', page: 'combat', pause: true, at: '.phase-strip .ps-obj', text: 'This fight has an objective. Hover it to see what it asks. Meet it and the loot rolls again, with half again the XP.' },
-  { id: 'fight-cracked', page: 'combat', pause: true, at: '#hud .cracked-cells', text: 'Cracked cells: your next heals lose this much. Purge, Scrub, Rollback or Rotate Keys clears them.' },
-  { id: 'fight-status', page: 'combat', at: '#hud .hud-status .st', when: (s) => s.encounter?.phase === 'active', text: 'Effects on you show here. Hover one to see what it does and how long it lasts.' },
-  { id: 'fight-miss', page: 'combat', at: '#board', when: (s) => (s.encounter?.metrics?.misses || 0) > 0, text: 'You missed. A miss deals no damage but still uses the cooldown. Enemies above your level make you miss more often.' },
-  { id: 'fight-daemon', page: 'combat', at: '.board .intent.daemon:not(.cron)', under: '#board', text: 'That\'s your daemon. It acts on its own cooldown, in the cycle where its chip sits, on top of your own move.' },
-  { id: 'fight-proc', page: 'combat', pause: true, at: '#tray .lit', text: 'A skill lit up. It only works for a cycle or two after something happens, so use it while it glows.' },
+  { id: 'fight-clash', page: 'combat', pause: true, at: '.board .tag.clash', under: '#board', text: 'this elite\'s two rules pull against each other, so answering one makes the other harder. hover ⇄ for the pull and the answer.' },
+  { id: 'fight-lever', page: 'combat', pause: true, at: '.board .bpart.lever', under: '#board', text: 'this part has a rule that makes your usual move the wrong one. read the red tag on its row before you hit.' },
+  { id: 'fight-objective', page: 'combat', pause: true, at: '.phase-strip .ps-obj', text: 'this fight has an objective. hover it to see what it wants. meet it and the loot rolls again, with half again the xp.' },
+  { id: 'fight-cracked', page: 'combat', pause: true, at: '#hud .cracked-cells', text: 'these are cracked cells. your next heals lose this much. purge, scrub, rollback or rotate keys clears them.' },
+  { id: 'fight-status', page: 'combat', at: '#hud .hud-status .st', when: (s) => s.encounter?.phase === 'active', text: 'effects on you show here. hover one for what it does and how long it lasts.' },
+  { id: 'fight-miss', page: 'combat', at: '#board', when: (s) => (s.encounter?.metrics?.misses || 0) > 0, text: 'you missed. a miss deals no damage, and the cooldown\'s still spent. enemies above your level make you miss more often.' },
+  { id: 'fight-daemon', page: 'combat', at: '.board .intent.daemon:not(.cron)', under: '#board', text: 'that\'s your daemon. it acts on its own cooldown, in the cycle where its chip sits, on top of your own move.' },
+  { id: 'fight-proc', page: 'combat', pause: true, at: '#tray .lit', text: 'a skill lit up. it only works for a cycle or two after something happens, so use it while it glows.' },
 
   // ---------- server ----------
-  { id: 'server-level', page: 'server', at: '.hsv-top', text: 'Your server\'s level matches your highest class level. Its wall holds invasions back, and your codebases let you build programs on other servers.' },
-  { id: 'server-wall', page: 'server', at: '.hsv-level', text: 'Your firewall stops invasions up to its level. Servers on your network send them, even while you\'re away. Amber or red at the top means one can get through.' },
-  { id: 'fw-upgrade', page: 'server', at: '#hsv-panel [data-act="upgrade"]', text: 'Your firewall keeps up with the servers on your network on its own. An upgrade adds a margin on top, up to +6, for credits and code.' },
-  { id: 'fw-frag', page: 'server', at: '.hsv-ring .blk.frag', text: 'Each invasion breaks some blocks, and every 4 broken blocks cost a level. Defrag repairs them for credits, but the wall is weaker while it runs.' },
+  { id: 'server-level', page: 'server', at: '.hsv-top', text: 'your server\'s level matches your highest class level. its wall holds invasions back, and your codebases let you build programs on other servers.' },
+  { id: 'server-wall', page: 'server', at: '.hsv-level', text: 'your firewall stops invasions up to its level. servers on your network send them, even while you\'re away. amber or red up top means one can get through.' },
+  { id: 'fw-upgrade', page: 'server', at: '#hsv-panel [data-act="upgrade"]', text: 'your firewall keeps up with your network on its own. an upgrade adds a margin on top, up to +6, for credits and code.' },
+  { id: 'fw-frag', page: 'server', at: '.hsv-ring .blk.frag', text: 'each invasion breaks some blocks, and every 4 broken blocks cost a level. defrag repairs them for credits. the wall\'s weaker while it runs.' },
 
   // ---------- loadout ----------
-  { id: 'loadout-status', page: 'loadout', at: '.sk-status', text: 'Your skills put this status on parts. Hover it to see what it does.' },
-  { id: 'loadout-bar', page: 'loadout', at: '.cls-toolkit', text: 'Your keys live in the Toolkit (T). Drag an ability onto a key, or tap it and then a key. Key 1 is your basic attack.' },
-  { id: 'loadout-classes', page: 'loadout', at: '.arch-tabs', text: 'There are four classes, and each one levels up separately. You can switch between them at home.' },
-  { id: 'loadout-talents', page: 'loadout', at: '.cls-tree', when: (s) => hackerLevel(s) >= 10, text: 'From level 10 a talent tier opens every six levels in your subclass\'s tree. Pick one of its three talents. Changing picks at home is free.' },
+  { id: 'loadout-status', page: 'loadout', at: '.sk-status', text: 'your skills put this status on parts. hover it to see what it does.' },
+  { id: 'loadout-bar', page: 'loadout', at: '.cls-toolkit', text: 'your keys live in the toolkit (t). drag an ability onto a key, or tap it and then a key. key 1 is your basic attack.' },
+  { id: 'loadout-classes', page: 'loadout', at: '.arch-tabs', text: 'there are four classes, and each one levels up on its own. you can switch between them at home.' },
+  { id: 'loadout-talents', page: 'loadout', at: '.cls-tree', when: (s) => hackerLevel(s) >= 10, text: 'from level 10 a talent tier opens every six levels in your subclass\'s tree. pick one of its three. changing picks at home is free.' },
   // Your program (routines.mjs): the handler editor on Loadout → Program.
-  { id: 'program-editor', page: 'loadout', at: '.rt-editor', text: 'When the timer runs out, your program moves. Pick a virus, then a ready-made routine, or drag WHEN, DO and TARGET chips onto a handler. The first that fits fires, else the rotation.' },
+  { id: 'program-editor', page: 'loadout', at: '.rt-editor', text: 'when the timer runs out, your program moves. pick a virus, then a ready-made routine, or drag when, do and target chips onto a handler. the first that fits fires, else the rotation.' },
 
   // ---------- daemons ----------
-  { id: 'daemons', page: 'loadout', at: '.daemon-slots', text: 'Daemons come from invasions. A slotted daemon fights beside you, on its own cooldown or when its moment comes. A higher-level copy replaces the one you have.' },
+  { id: 'daemons', page: 'loadout', at: '.daemon-slots', text: 'daemons come from invasions. a slotted one fights beside you, on its own cooldown or when its moment comes. a higher-level copy replaces the one you have.' },
   // The Codex tab, once there's something in it: your first decoded part (and never mid-fight).
-  { id: 'codex', page: '*', at: '.modules [data-module="codex"]', when: (s, m) => m !== 'codex' && s.encounter?.phase !== 'active' && Object.values(s.research || {}).some((n) => n > 0), text: 'You decoded your first part. The Codex keeps each part\'s research: break it, cut it and answer its tells to learn its rule.' },
+  { id: 'codex', page: '*', at: '.modules [data-module="codex"]', when: (s, m) => m !== 'codex' && s.encounter?.phase !== 'active' && Object.values(s.research || {}).some((n) => n > 0), text: 'you decoded your first part. the codex keeps each part\'s research: break it, cut it and answer its tells to learn its rule.' },
 ];
 
 // ---------- pacing ----------

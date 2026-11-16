@@ -913,16 +913,26 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 }
 
 /* ---------- loadout: the class cards (the Skills and talents page is skills-view.mjs: the sk- block at the end) ---------- */
-.loadout { display: grid; gap: 12px; }
-.arch-tabs { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; }
-.arch { display: inline-flex; align-items: baseline; gap: var(--s4); min-width: 0; padding: 6px 12px; border: 1px solid var(--line); border-radius: var(--r-btn); background: var(--panel); color: var(--muted); cursor: pointer; }
-.arch b { font: 600 12px var(--mono); letter-spacing: 1px; color: var(--text); }
-.arch span { font: 500 11px var(--mono); }
+.loadout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: var(--s5); align-items: start; }
+/* The left column, drawn like Achievements' categories (achievements.css .ach-cat): the classes, then the sections. */
+.lo-side { display: grid; gap: var(--s5); position: sticky; top: 0; }
+.lo-main { min-width: 0; display: grid; gap: 12px; }
+.arch-tabs { display: grid; gap: var(--s2); }
+.arch { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s2) var(--s4); width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--panel); color: var(--text); text-align: left; cursor: pointer; }
+.arch b { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font: 600 12px var(--mono); }
+.arch span { font: 600 11px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.arch .arch-xp { grid-column: 1 / -1; display: block; height: 4px; background: var(--inset); border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
+.arch .arch-xp b { display: block; height: 100%; background: var(--you); opacity: 0.7; }
 .arch:hover { border-color: var(--line-strong); }
-.arch.on { border-color: var(--amber); background: var(--panel-2); }
-.arch.on b { color: var(--bright); }
-.arch-inuse { align-self: center; width: 6px; height: 6px; border-radius: 50%; background: var(--you); box-shadow: 0 0 6px var(--you); }
-.arch-use { margin-left: auto; }
+.arch.on { border-color: var(--amber); color: var(--amber); box-shadow: inset 3px 0 0 var(--amber); }
+.arch.on b { color: var(--amber); }
+.arch-inuse { width: 6px; height: 6px; border-radius: 50%; background: var(--you); box-shadow: 0 0 6px var(--you); }
+.arch-use { width: 100%; }
+.lo-side .ltabs { display: grid; gap: 2px; margin: 0 0 var(--s2) 10px; padding-left: 10px; border: 0; border-left: 1px solid var(--line-strong); }
+.lo-side .ltabs button { width: 100%; padding: 6px 10px; margin: 0; text-align: left; font: 600 12px var(--mono); letter-spacing: 0; text-transform: none; color: var(--muted); background: none; border: 1px solid transparent; border-radius: var(--r-card); }
+.lo-side .ltabs button:hover { color: var(--text); border-color: var(--line); }
+.lo-side .ltabs button[aria-selected='true'] { color: var(--amber); border-color: var(--line); background: var(--panel); box-shadow: inset 3px 0 0 var(--amber); }
+.lo-side .ltabs button.ltab-locked { color: var(--gray); }
 .tag.you { color: var(--you); border-color: var(--you); }
 
 .thead { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; }
@@ -1122,7 +1132,7 @@ html[data-sfx-floor="7"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.spa
 .tip-off[hidden] { display: none; }
 .tip-off { background: none; border: 0; color: var(--muted); font: 12px var(--mono); cursor: pointer; padding: 0; }
 .tip-off:hover { color: var(--text); }
-/* wick's tips (tips.mjs wick): the Transmission, the quest window's look in small. His face left, then the kicker, his
+/* wick's tips (every tip): the Transmission, the quest window's look in small. His face left, then the kicker, his
    name and his line in mono; amber, his channel's colour. */
 .tip.wick { width: min(400px, calc((100vw - 24px) / var(--ui, 1))); border: 1px solid var(--amber); border-top-width: 2px; border-radius: var(--r-card); }
 .tip.wick::before { border-color: var(--amber); }
@@ -1963,8 +1973,6 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .meter[data-command]:hover, .meter[data-command]:focus-visible { background: var(--panel-2); outline: 1px solid var(--line-strong); }
 
 /* Infiltrator Surprise: the first cycle's window glows blue, not yellow. */
-.sync-win.surprise { border-color: rgba(108, 156, 255, 0.6); background: rgba(108, 156, 255, 0.14); }
-.sync-win.surprise.live { background: rgba(108, 156, 255, 0.5); border-color: #6c9cff; box-shadow: 0 0 12px rgba(108, 156, 255, 0.8); }
 .fx-float.surprise { margin-top: -26px; color: #8fb4ff; letter-spacing: 2px; font-size: calc(15px * var(--size)); text-shadow: 0 0 10px rgba(108, 156, 255, 0.85), 0 0 8px rgba(0, 0, 0, 0.9); }
 .fx-surprise { animation: fx-surprise 0.45s ease-out; }
 @keyframes fx-surprise { 0% { box-shadow: inset 0 0 0 2px rgba(108, 156, 255, 0.9); background: rgba(108, 156, 255, 0.15); } 100% { box-shadow: inset 0 0 0 0 rgba(108, 156, 255, 0); background: transparent; } }
@@ -4849,9 +4857,9 @@ button.cls-ab:hover .cls-fr, button.cls-ab:focus-visible .cls-fr { border-color:
   .cls-card.reg .cls-sub .cls-abil { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
 }
 @media (max-width: 900px) {
-  .arch-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .arch { justify-content: space-between; }
-  .arch-use { grid-column: 1 / -1; margin-left: 0; }
+  .loadout { grid-template-columns: minmax(0, 1fr); }
+  .lo-side { position: static; }
+  .lo-side .ltabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cls-top { flex-wrap: wrap; gap: var(--s5); }
   .cls-xp { width: 100px; }
   .cls-col { padding: 16px 14px; }

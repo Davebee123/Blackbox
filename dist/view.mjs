@@ -952,7 +952,7 @@ export function boardMarkup(s, selected, preview = null) {
   const gearCyc = (c) => { const names = fighting ? cycleGear(s, e.cycle + c) : []; return names.length ? `<i class="gcyc" title="${esc(`${list2(names)}: live on cycle ${e.cycle + c}.`)}">${glyph('clock')}</i>` : ''; };
   const live = fighting ? gearLive(s) : [], onParts = gearOnParts(live);
   const head = `<div class="brow bhead"><div class="bcell bname">Part</div>
-    <div class="bcell bnow${gearCyc(0) ? ' gear-cyc' : ''}"><span>Now <small class="cyc">cycle ${e.cycle}</small>${gearCyc(0)}</span><span class="countdown" id="countdown">${!fighting ? '—' : e.paused ? 'II' : remaining.toFixed(1)}</span><div class="cyclebar">${e.sync && fighting ? `<i class="sync-win${e.sync.surprise ? ' surprise' : ''}" id="sync-win" style="left:${(e.sync.at * 100).toFixed(1)}%;width:${(e.sync.width * 100).toFixed(1)}%" title="${esc(e.sync.surprise ? `Surprise: fire while the bar is here. Inject ticks at once, Tag lasts ${CONFIG.surprise.tagCycles} cycles with burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, Keepalive stretches burns ${CONFIG.surprise.keepalive} cycles.` : `Sync Window: fire your command while the bar is here for +${Math.round(CONFIG.sync.bonus * 100)}% damage. ${SYNC[classOf(s)]?.rule || ''}`)}"></i>` : ''}<span id="cyclebar" style="transform:scaleX(${e.elapsedMs / cycleLength(s)})"></span></div></div>
+    <div class="bcell bnow${gearCyc(0) ? ' gear-cyc' : ''}"><span>Now <small class="cyc">cycle ${e.cycle}</small>${gearCyc(0)}</span><span class="countdown" id="countdown">${!fighting ? '—' : e.paused ? 'II' : remaining.toFixed(1)}</span><div class="cyclebar">${e.sync && fighting ? `<i class="sync-win" id="sync-win" style="left:${(e.sync.at * 100).toFixed(1)}%;width:${(e.sync.width * 100).toFixed(1)}%" title="${esc(`Sync Window: fire your command while the bar is here for +${Math.round(CONFIG.sync.bonus * 100)}% damage. ${SYNC[classOf(s)]?.rule || ''}`)}"></i>` : ''}<span id="cyclebar" style="transform:scaleX(${e.elapsedMs / cycleLength(s)})"></span></div></div>
     ${[1, 2, 3].map((c) => `<div class="bcell${gearCyc(c) ? ' gear-cyc' : ''}">+${c}${gearCyc(c)}${quietCol(c) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div>`).join('')}</div>`;
   // Your row mirrors the parts: what you'll do in each upcoming cycle.
   const cutNote = (q) => { const x = q?.target && e.ticked ? crossBy(s, q.ability, part(s, q.target)) : null; return x === 'cut' ? ' <small class="cuts">cuts</small>' : x === 'both' ? ' <small class="cuts">cuts · −tick</small>' : x === 'waste' ? ' <small class="cuts waste">−tick</small>' : ''; };
@@ -2070,17 +2070,19 @@ export function loadoutMarkup(s, view, tab = 'protocols', ui = {}) {
   const busy = active(s) || !!s.run; // classes change at home, between fights
   const free = subOf(s, id) ? freeTiers(s, id) + (capState(s, id) === 'open' ? 1 : 0) : 0; // with no subclass, its tiers wait for the tree
 
-  // The classes, one slim button each (its level, a teal lamp on the one in use): click to look at it. Looking at
-  // one you aren't playing, Use switches to it, at home (and while trying classes out, your level comes with you).
-  const tabs = Object.entries(ARCHETYPES).map(([k, x]) => `<button type="button" class="arch${k === id ? ' on' : ''}" data-arch="${k}" aria-pressed="${k === id}" title="${esc(x.role.join(' · '))}"><b>${esc(x.name)}</b><span>Lv ${hackerLevel(s, k)}</span>${k === equippedArch ? '<i class="arch-inuse" title="In use"></i>' : ''}</button>`).join('')
+  // A left column like Achievements' categories: the classes (level, XP, a teal lamp on the one in use), and under the
+  // one you're looking at, its sections as sub-folders. Looking at one you aren't playing, Use switches to it, at home
+  // (and while trying classes out, your level comes with you).
+  const xpBar = (k) => { const h = hackerOf(s, k), f = Math.max(0, Math.min(1, (h.xp || 0) / xpToNext(h.level))); return `<span class="arch-xp"><b style="width:${Math.round(f * 100)}%"></b></span>`; };
+  const sections = `<nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', 'Protocols'], ['daemons', `Daemons${newOn(s, 'daemons') ? ` · ${newOn(s, 'daemons')} new` : ''}`], ['program', 'Program'], ['skills', `Skills and talents${free ? ` · ${free} free` : ''}`]].map(([k, l]) => (k === 'program' && !routinesOpen(s) ? `<button type="button" role="tab" class="ltab-locked" data-ltab="${k}" aria-selected="${tab === k}" aria-disabled="true" title="${esc(ROUTINES_LOCKED)}">${esc(l)}</button>` : `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`)).join('')}</nav>`;
+  const tabs = Object.entries(ARCHETYPES).map(([k, x]) => `<button type="button" class="arch${k === id ? ' on' : ''}" data-arch="${k}" aria-pressed="${k === id}" title="${esc(x.role.join(' · '))}"><b>${esc(x.name)}${k === equippedArch ? '<i class="arch-inuse" title="In use"></i>' : ''}</b><span>Lv ${hackerLevel(s, k)}</span>${xpBar(k)}</button>${k === id ? sections : ''}`).join('')
     + (id === equippedArch ? '' : `<button type="button" class="btn small arch-use" data-command="archetype ${id}" ${busy ? 'disabled title="At home only"' : `title="Play ${esc(a.name)}"`}>Use ${esc(a.name)}</button>`);
 
   return `<div class="loadout">
-    <nav class="arch-tabs" aria-label="Classes">${tabs}</nav>
-    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', 'Protocols'], ['daemons', `Daemons${newOn(s, 'daemons') ? ` · ${newOn(s, 'daemons')} new` : ''}`], ['program', 'Program'], ['skills', `Skills and talents${free ? ` · ${free} free` : ''}`]].map(([k, l]) => (k === 'program' && !routinesOpen(s) ? `<button type="button" role="tab" class="ltab-locked" data-ltab="${k}" aria-selected="${tab === k}" aria-disabled="true" title="${esc(ROUTINES_LOCKED)}">${esc(l)}</button>` : `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`)).join('')}</nav>
-    ${tab === 'daemons' ? daemonsMarkup(s) : tab === 'program' ? programMarkup(s) : tab === 'skills' ? skillsTabMarkup(s, view || id) : id === equippedArch ? `
+    <div class="lo-side"><nav class="arch-tabs" aria-label="Classes">${tabs}</nav></div>
+    <div class="lo-main">${tab === 'daemons' ? daemonsMarkup(s) : tab === 'program' ? programMarkup(s) : tab === 'skills' ? skillsTabMarkup(s, view || id) : id === equippedArch ? `
     <div class="loadout-protocols silk">${protocolGearMarkup(s)}</div>` : `
-    <div class="loadout-protocols one"><section class="card"><h2>Protocols</h2><p class="svc-line"><span class="tag dim" title="Protocols belong to the class in use">${esc(a.name)} only</span></p></section></div>`}
+    <div class="loadout-protocols one"><section class="card"><h2>Protocols</h2><p class="svc-line"><span class="tag dim" title="Protocols belong to the class in use">${esc(a.name)} only</span></p></section></div>`}</div>
     </div>`;
 }
 
@@ -2395,9 +2397,10 @@ const ctProg = (j) => j.ready ? `<span class="ct-turn">Turn in</span>`
   : j.of && j.of > 10 ? `<span class="ct-bar"><i style="width:${(j.part * 100).toFixed(0)}%"></i></span><small class="ct-n">${j.n}/${j.of}</small>`
   : j.of || ctCount(j) ? `<small class="ct-n">${j.of ? `${j.n}/${j.of}` : ctCount(j)}</small>`
   : `<small class="ct-n ct-say">${esc(j.text)}</small>`;
-const ctInner = (j) => { const p = ctProg(j), say = p.includes('ct-say'); return `${glyph(j.icon)}<span class="ct-txt"><b>${esc(j.name)}</b></span><span class="ct-prog${say ? '' : ' ct-side'}">${p}</span>`; };
+// One line on the map: a row with no count leaves its few words to the tooltip. A tooltip's rows keep them under the name.
+const ctInner = (j, words = false) => { const p = ctProg(j), say = p.includes('ct-say'); return `${glyph(j.icon)}<span class="ct-txt"><b>${esc(j.name)}</b></span>${say && !words ? '' : `<span class="ct-prog${say ? '' : ' ct-side'}">${p}</span>`}`; };
 // The rows for a tooltip (floorplan-view.mjs: the strip's Contracts), one per contract, as the tracker draws them.
-export const contractTipRows = (list) => list.map((j) => `<span class="ct-row tt-ct${j.ready ? ' ready' : ''}">${ctInner(j)}</span>`).join('');
+export const contractTipRows = (list) => list.map((j) => `<span class="ct-row tt-ct${j.ready ? ' ready' : ''}">${ctInner(j, true)}</span>`).join('');
 function contractTracker(s, sel = null) {
   const list = trackedJobs(s);
   if (!list.length) return '';

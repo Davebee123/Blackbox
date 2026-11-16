@@ -55,7 +55,8 @@ test('only the contracts you hold: not the board, not the delivered ones', () =>
   assert.doesNotMatch(kill, /ct-for/, 'no line for who it is for');
   assert.match(kill, /ct-prog ct-side"><small class="ct-n">3\/5</, 'a count as n/N beside its name');
   assert.match(take, new RegExp(`Take over ${loc.name}`));
-  assert.match(take, /ct-say">Vault shut</, 'anything else as its few words');
+  assert.doesNotMatch(take, /ct-say|ct-prog/, 'no count: one line, its few words in the tooltip');
+  assert.match(take, /title="[^"]*Vault shut\./);
   assert.match(item, /<b>Recover ledger\.db<\/b>/);
   assert.match(item, /Contract for wick · LOWLIGHT/);
   assert.match(item, new RegExp(`In the vault on ${loc.name}`));

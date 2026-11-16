@@ -32,6 +32,7 @@ const start = (sub, { talents = [], id = 'cryptjack', seed = 7 } = {}) => {
   s.loadout.equipped.infiltrator = [];
   selectEncounter(s, id, seed, { level: 6 });
   command(s, 'engage');
+  s.encounter.surpriseSpent = true; // the Infiltrator's Surprise is tested on its own (skills2.test.mjs)
   return s;
 };
 // Fire a command (putting the skill on the bar first) and play the cycle out.
