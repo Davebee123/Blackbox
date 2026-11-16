@@ -72,7 +72,7 @@ test('the generator: the same seed draws the same floors; each its shape, its se
 test('the first server you find is level 1, whatever the seed and whichever family the strays were', () => {
   for (const seed of [1, 2, 3, 7, 11, 42, 99, 1234]) {
     const s = mk(1, seed);
-    for (let i = 0; i < 8 && !s.locations.length; i++) addLead(s, ['worm', 'trojan', 'ransomware'][i % 3], CONFIG.leadBase, '', { id: CONFIG.zone.id });
+    for (let i = 0; i < 20 && !s.locations.length; i++) addLead(s, ['worm', 'trojan', 'ransomware'][i % 3], CONFIG.leadBase, '', { id: CONFIG.zone.id });
     assert.equal(s.locations[0]?.level, 1, `seed ${seed}`);
   }
 });
@@ -85,8 +85,8 @@ test('tracing along a floor\'s links: SPRAWL-00\'s ? servers from the start, its
   assert.ok(first.every((h) => h.level === g.nodes[h.slot].level && h.depth === 1));
   assert.equal(s.locations.length, 0);
   // Strays: a kill traces one ? (the most traced), CONFIG.leadBase a kill.
-  for (let i = 0; i < 4; i++) addLead(s, 'worm', CONFIG.leadBase, '', { id: CONFIG.zone.id });
-  assert.equal(s.locations.length, 1, 'four strays: one server, at its slot');
+  for (let i = 0; i < 10; i++) addLead(s, 'worm', CONFIG.leadBase, '', { id: CONFIG.zone.id });
+  assert.equal(s.locations.length, 1, 'ten strays: one server, at its slot');
   const loc = s.locations[0];
   assert.ok(adj(g, g.entry).includes(loc.slot) && loc.depth === 1 && loc.level === g.nodes[loc.slot].level, 'its level is its slot\'s');
   assert.equal(loc.level, 1, 'your first server is level 1');

@@ -5,7 +5,7 @@
 // an entry you've reached (SPRAWL-00's on floor 1). Its trace fills to 100% to locate it, and then it's an ordinary
 // server with its own ? neighbours. Going deeper is taking an exit (floors.mjs descend).
 //
-// Its trace comes from rooms: each first clear of a fight room on a server linked to it (+20%, one ? at a time), its vault's trace
+// Its trace comes from rooms: each first clear of a fight room on a server linked to it (+10%, one ? at a time), its vault's trace
 // record (+50%), SPRAWL-00's strays (a kill traces one of its ?s, as the old family leads did), a trace injector (+30%),
 // an invader from it beaten (+40%; your wall stopping one, +10%), and kills of its family once a relay has pinged it.
 // Invaders can set out from a ? and come in through the server it hangs off ("an unknown server past X").
@@ -27,7 +27,7 @@ export const HIDDEN = {
   killLead: 12, // a kill of a flagged node's family
   routeLead: 50, // the relay's route file, banked
   recordLead: 50, // a vault's trace record (signal.trc), banked
-  firstClear: 20, // each first clear of a fight room on a server traces one ? linked to it (the most traced)
+  firstClear: 10, // each first clear of a fight room on a server traces one ? linked to it (the most traced)
   opens: true, // a Mapped server, or a rogue one cleared, traces one ? linked to it the rest of the way
   shown: 8, // unknown servers in the leads list at once: the most worth chasing
 };

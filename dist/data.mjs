@@ -165,7 +165,7 @@ export const CONFIG = {
   depthLoot: 0.4, // caches hold 40% more credits per old layer down (layerOf: floors 1, 2, 3–4, 5–6, 7–8)
   maxSignal: 100, // your health out in the net (it carries between connections and rests back up)
   cdCost: 1, // Signal spent per move between directories
-  leadBase: 25, // lead progress every neutralized virus gives (four kills; a Route Logger adds more)
+  leadBase: 10, // lead progress every neutralized virus gives (ten kills)
   cacheCredits: 30,
   hoardBonus: 0.5, // Hoard quirk: caches pay 50% more
   trapSignal: 10, // pulling honeypot bait
