@@ -1122,7 +1122,7 @@ html[data-sfx-floor="7"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.spa
 .tip-off[hidden] { display: none; }
 .tip-off { background: none; border: 0; color: var(--muted); font: 12px var(--mono); cursor: pointer; padding: 0; }
 .tip-off:hover { color: var(--text); }
-/* wick's tips (tips.mjs wick): the Transmission, the quest window's look in small. His face left, then the kicker, his
+/* wick's tips (every tip): the Transmission, the quest window's look in small. His face left, then the kicker, his
    name and his line in mono; amber, his channel's colour. */
 .tip.wick { width: min(400px, calc((100vw - 24px) / var(--ui, 1))); border: 1px solid var(--amber); border-top-width: 2px; border-radius: var(--r-card); }
 .tip.wick::before { border-color: var(--amber); }

@@ -2921,11 +2921,8 @@ function checkTips(now) {
 function showStep() {
   const steps = tip.t.steps;
   tip.cur = steps ? steps[tip.step] : tip.t;
-  // wick narrates the guided path (tips.mjs wick): the Transmission, his face beside his line.
-  const wick = !!tip.cur.wick;
-  $('tip').classList.toggle('wick', wick);
-  $('tip-from').hidden = !wick;
-  $('tip-face').innerHTML = wick ? portraitMarkup('wick', 'npc') : '';
+  // wick narrates every tip: the Transmission, his face beside his line.
+  if (!$('tip-face').firstChild) $('tip-face').innerHTML = portraitMarkup('wick', 'npc');
   $('tip-text').textContent = tip.cur.text;
   $('tip-step').textContent = steps ? `${tip.step + 1}/${steps.length}` : tip.t.tour ? `${tourDone(campaign) + 1}/${TOUR.length}` : '';
   $('tip-ok').textContent = steps && tip.step < steps.length - 1 ? 'Next' : 'Got it';
