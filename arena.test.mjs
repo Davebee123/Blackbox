@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, active, hackerLevel, resolveCycle } from './dist/combat.mjs';
 import { FAMILIES, STRAINS, BOSSES, SUBS } from './dist/data.mjs';
-import { RIVALS } from './dist/rivals.mjs';
+import { STYLE, rivalP } from './dist/rivals.mjs';
 import { KINDS } from './dist/invasion.mjs';
 import { arenaList, arenaEntry, arenaLevel, ARENA_GROUPS } from './dist/arena.mjs';
 import * as B from './dist/bench.mjs';
@@ -28,7 +28,7 @@ test('the list is built from the tables: every family, strain, boss, rival fight
   for (const k of Object.keys(FAMILIES)) assert.ok(ids.has(`family:${k}`), k);
   for (const k of Object.keys(STRAINS)) assert.ok(ids.has(`strain:${k}`), k);
   for (const k of Object.keys(BOSSES)) assert.ok(ids.has(`boss:${k}`), k);
-  for (const [k, R] of Object.entries(RIVALS)) R.lineup.forEach((_, i) => assert.ok(ids.has(`rival:${k}.${i + 1}`), k));
+  for (const k of Object.keys(STYLE)) rivalP({ faction: k }).lineup.forEach((_, i) => assert.ok(ids.has(`rival:${k}.${i + 1}`), k));
   for (const k of Object.keys(KINDS)) assert.ok(ids.has(`invader:${k}`), k);
   assert.ok(ids.has('part:zipbomb') && ids.has('part:zipbomb.exe') && ids.has('elite:blastseal'));
   // A boss another session adds shows up by itself, in its group.
@@ -51,7 +51,7 @@ test('level, seed, leaning and objective', () => {
   assert.equal(arenaLevel(s, 'boss:nb-hashlord'), 16);
   assert.equal(arenaLevel(s, 'family:worm'), hackerLevel(s));
   assert.equal(arenaLevel(s, 'part:zipbomb'), 5);
-  assert.equal(arenaLevel(s, 'rival:kudzu.1'), hackerLevel(s) + 1);
+  assert.equal(arenaLevel(s, 'rival:kestrel.1'), hackerLevel(s) + 1);
   // Bad words warn, and start nothing.
   for (const bad of ['developer fight boss:nobody', 'developer fight family:worm 10 1 leaning=nope', 'developer fight family:worm 10 1 objective=exfil', 'developer fight family:worm x']) {
     const t = bench('phantom', 10);
@@ -82,7 +82,7 @@ test('again refights the last pick from the start, and again refill fills you fi
 
 test('a rival\'s second fight carries its counter', () => {
   const s = bench('phantom', 10);
-  command(s, 'developer fight rival:kudzu.2');
+  command(s, 'developer fight rival:kestrel.2');
   assert.ok(active(s));
   assert.ok(s.encounter.virus.parts.some((p) => p.rival), 'the counter part is on it');
   assert.match(s.encounter.virus.name, / \+ /);

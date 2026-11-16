@@ -142,7 +142,7 @@ test('the tray draws the pages: an icon each, most urgent first, +n when more wa
   const tray = PGV.trayMarkup(s, 4);
   assert.equal((tray.match(/class="pg-tile/g) || []).length, 3, 'three icons and +2');
   assert.match(tray, />\+2</);
-  assert.match(tray, new RegExp(`class="pg-tile new" data-pact="${p[0].id}" title="Courier: [^"]+\n▸ Intercept"`), 'the courier first: a tap intercepts it, the tooltip is the line and its ▸ act');
+  assert.match(tray, new RegExp(`class="pg-tile new" data-pact="${p[0].id}" title="COURIER-\\d+: [^"]+\n▸ Intercept"`), 'the courier first: a tap intercepts it, the tooltip is the line and its ▸ act');
   assert.equal((PGV.trayMarkup(s, 3).match(/class="pg-tile/g) || []).length, 2, 'a tight bar: two icons and +3');
   assert.equal((PGV.trayMarkup(s, 6).match(/class="pg-tile/g) || []).length, 5, 'room for all five: no +n');
   assert.doesNotMatch(PGV.trayMarkup(s, 6), /pg-more/);
@@ -168,11 +168,14 @@ test('one pager, no switch: the classic list, its filters and the trial styles a
   assert.equal(s.settings.pager, undefined, 'pager b is no command');
 });
 
-test('the pager keeps the rules: no teal, nothing moves, the same chirp, only for a page', () => {
+test('the pager keeps the rules: no teal, only a light sweep moves, the same chirp, only for a page', () => {
   const css = readFileSync(new URL('./dist/pager.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   assert.doesNotMatch(css, /--you|#7fd1c7/, 'teal is only ever you');
-  assert.doesNotMatch(css.replace(/text-transform/g, ''), /transform|translate|rotate|@keyframes/, 'nothing moves (the lamp reuses the blink)');
+  // The only motion: a light sweeping a new page's tile, and the tray once as a page arrives (both off with motion off).
+  assert.doesNotMatch(css.replace(/text-transform/g, ''), /transform|translate|rotate/, 'nothing moves but the light');
+  assert.deepEqual([...css.matchAll(/@keyframes (\S+)/g)].map((m) => m[1]), ['pgsweep'], 'one sweep, nothing else animates');
+  assert.match(css, /\.no-motion \.pg-tile\.new, \.no-motion \.pager\.fx-pager::after \{ animation: none/, 'the sweep stops with motion off');
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
   assert.match(app, /logComms\(campaign, events\)\.filter\(PG\.isPage\)/, 'news never chirps');
-  assert.match(app, /feel\.add\('pager', '#pager', null, \{ alert \}\)/, 'the pager chirp is the one it always had');
+  assert.match(app, /feel\.add\('pager', pingTarget\(\), null, \{ alert \}\)/, 'the pager chirp is the one it always had');
 });

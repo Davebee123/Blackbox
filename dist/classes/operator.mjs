@@ -27,6 +27,7 @@
 // On the encounter: e.opOnce { [talent]: cycle }, the cycle a once-a-cycle talent last fired.
 import { alliesOf, subOf, subEdge, hasTalent, rank, capValue, emit, hit, heal, part, alive, livingParts, helpersOn, helperCap, on, buffed, scaled, soonestAttacker, classOf, attackAmount, toIntent, usable, intents, defender, previewDamage, readyIn, patchDelay, restoreMult, openProc, attackers, fxOn, delayAttack, delayHeld, heldNote } from '../combat.mjs';
 import { ABILITIES } from '../data.mjs';
+import { legend, legendFire } from '../combat.mjs';
 import { chargeNow, tellOn, tellOpen, landsAt, tellAnswer, chargeSize } from '../tells.mjs';
 
 const A = (id) => ABILITIES[id];
@@ -132,7 +133,9 @@ function resolveHeld(s) {
       continue;
     }
     // Takeover: for its cycles, every attack it makes turns on its own side at full size.
-    const took = p.takeoverUntil >= e.cycle ? { left: Infinity, share: 1, cap: Infinity, cross: false, at: p.takeoverAt, takeover: true } : null;
+    const took = p.takeoverUntil >= e.cycle ? { left: Infinity, share: 1, cap: Infinity, cross: false, at: p.takeoverAt, takeover: true }
+      : p.jammedUntil >= e.cycle && !p.hijack && livingParts(s).length > 1 && legend(s, 'crossed-wires') ? { left: 1, share: e.virus.boss ? 0.5 : 1, cap: Infinity, cross: true, at: e.cycle, crossed: true } : null; // Crossed Wires (a legend): on its own side
+    if (took?.crossed) { legendFire(s, 'crossed-wires'); p.jammedUntil = 0; }
     if (p.hijack || took) {
       const hj = p.hijack || took;
       // A charge riding this attack: it's yours, at its full charged size (tells.mjs).
@@ -144,6 +147,7 @@ function resolveHeld(s) {
       if (atk.windup) atk.wound = 0;
       e.metrics.interrupts++;
       if (hj.takeover) jamMark(s, p);
+      else if (hj.crossed) { /* the jam is spent */ }
       else if (--hj.left <= 0) delete p.hijack; else jamMark(s, p);
       if (size > 0) {
         const others = livingParts(s).filter((x) => x !== p);
@@ -209,7 +213,7 @@ function herderPlan(s, t) {
   if (finishable(s)) return null;
   // Crontab once, on the part that will stand longest: it hits every other cycle until the fight ends.
   const long = [...living].sort((a, b) => b.integrity - a.integrity)[0];
-  if (long && long.integrity >= scaled(s, 60) && !e.crontab && ok(s, 'crontab ' + long.id)) return 'crontab ' + long.id;
+  if (long && long.integrity >= scaled(s, 60) && (!e.crontab || legend(s, 'cron-farm')) && ok(s, 'crontab ' + long.id)) return 'crontab ' + long.id; // cron-farm: the legends sim's one-line nudge
   const [, , told] = tellSoon(s, ['charge', 'cast']); // Kill Switch counts in the window
   const frags = living.filter((p) => p.kind === 'fragment').length;
   const armor = living.reduce((k, p) => k + (p.armor || 0), 0);
@@ -335,6 +339,7 @@ export default {
       emit(s, 'status', `Load Shed splits the next attack on you over your ${e.helpers.length === 1 ? 'helper' : e.helpers.length + ' helpers'}.`, { mark: 'shield', ability: 'load-shed' });
     },
     crontab: (s, { a, target, e }) => {
+      if (e.crontab && legend(s, 'cron-farm')) (e.crontabs ||= []).push(e.crontab); // Cron Farm (a legend): the last one runs on
       e.crontab = { target: target.id, damage: scaled(s, a.hit), from: e.cycle };
       emit(s, 'status', `Crontab schedules a job that hits the ${target.name} for ${e.crontab.damage} every other cycle until the fight ends.`, { target: target.id, mark: 'helper', ability: 'crontab' });
     },
@@ -439,7 +444,9 @@ export default {
     replay: (s, { a, target }) => {
       if (!alive(target)) return;
       const ch = chargeSize(s, target); // a charge winding up plays back at its charged size, up to twice the cap
-      const amount = clamp(ch ? ch.amount : attackSize(s, target), scaled(s, a.floor), scaled(s, a.cap) * (ch ? 2 : 1)) + (hasTalent(s, 'packet-capture') ? scaled(s, 15) : 0); // Packet Capture: +15
+      const back = s.encounter.lastTellHit > 0 && legend(s, 'instant-replay') ? 2 * s.encounter.lastTellHit : 0; // Instant Replay (a legend): the last tell that hit you, at double
+      if (back) legendFire(s, 'instant-replay');
+      const amount = back || clamp(ch ? ch.amount : attackSize(s, target), scaled(s, a.floor), scaled(s, a.cap) * (ch ? 2 : 1)) + (hasTalent(s, 'packet-capture') ? scaled(s, 15) : 0); // Packet Capture: +15
       emit(s, 'status', `Replay plays the ${target.name}'s ${target.attack?.name || 'attack'} back at it.`, { target: target.id, ability: 'replay' });
       hit(s, target, amount, { mine: true, pierce: true, by: 'Replay' });
     },
@@ -475,8 +482,7 @@ export default {
     e.expiring = e.helpers.filter((h) => h.left === 1);
     for (const h of e.helpers) h.seen = true;
     // Crontab (Herder): every other cycle, until the fight ends; it moves on when its part breaks.
-    const ct = e.crontab;
-    if (ct && (e.cycle - ct.from) % 2 === 0 && livingParts(s).length) {
+    for (const ct of [e.crontab, ...(e.crontabs || [])]) if (ct && (e.cycle - ct.from) % 2 === 0 && livingParts(s).length) {
       let t = part(s, ct.target);
       if (!alive(t)) { t = soonestAttacker(s) || livingParts(s)[0]; if (t) ct.target = t.id; }
       if (t) hit(s, t, ct.damage, { by: 'Crontab', dot: true, src: 'helper' });

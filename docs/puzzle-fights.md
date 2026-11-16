@@ -39,7 +39,7 @@ The designer: *"The mechanics should be difficult and rewarding to learn. Think 
 | **Strip before** | A seal re-arms by the ◆ left on its part. | Seals. |
 | **Save the key** | A cast and a charge compete for one SIGINT. | Casts, charges and SIGINT. |
 | **Two clocks** | Two tells due on one cycle, on different parts: answer one early. | Elites and bosses only (*no pile-ups* lifted, checked fight by fight). |
-| **The one to leave** | A part that must stand until a phase is done. | A boss's ♛ part. |
+| **The one to leave** | A part that must stand until a phase is done. | Cut from bosses with act bars (docs/solo-bosses.md). |
 | **Phases** | Three or four short phases, so three or four tells get their turn. | Boss phases, in place of more Integrity. |
 
 An ordinary fight takes one of the first four, an elite two, a boss two or three.
@@ -139,7 +139,7 @@ P0 to P3 are built, and P4's first four. Each phase is played by the designer be
 | Phase | What ships | Done when |
 |---|---|---|
 | P3 (built) | Elites: Integrity down, two conflicts from docs/puzzle-levers.md 4, *no pile-ups* lifted and checked on the roll (a failed roll rerolls). | Elites meet their row (floors met; first try open, as section 5 says). |
-| P4 (first six built) | Bosses: a beat that repeats, acts, the one to leave (7.1), and a part, a rule and a mechanic an act of their own (docs/solo-bosses.md). Built: the worm and ransomware Residents and the three solo bosses; the nine lair bosses are proposed in docs/solo-bosses.md. Then the rest, and feuds. | Every boss meets its row, solved, not outgeared, at its level (decision 14), and the designer has played the first four. |
+| P4 (first six built) | Bosses: a beat that repeats, acts on bars of their own (docs/solo-bosses.md; the one to leave, 7.1, was cut with them), and a part, a rule and a mechanic an act of their own (docs/solo-bosses.md). Built: the worm and ransomware Residents and the three solo bosses; the nine lair bosses are proposed in docs/solo-bosses.md. Then the rest, and feuds. | Every boss meets its row, solved, not outgeared, at its level (decision 14), and the designer has played the first four. |
 
 ## 8. Decided
 

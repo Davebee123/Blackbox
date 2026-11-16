@@ -7,13 +7,14 @@
 // A fight here is a home fight, engaged at once and flagged e.arena (objectives.mjs reads it for its clock).
 import { selectEncounter, encounterVirus, command, warn, active, hackerLevel, hooks } from './combat.mjs';
 import { FAMILIES, STRAINS, GUARDS, FIXTURES, BOSSES, FLOORS, LOADOUT, partGenesFor } from './data.mjs';
+import { FACTIONS } from './factions.mjs';
 import { CLASHES } from './genes.mjs';
 import { PARTS } from './parts.mjs';
 import { EXE } from './exe.mjs';
 import { FLOOR } from './floors.mjs';
 import { FARM } from './rogue.mjs';
 import { AUTHORS } from './authors.mjs';
-import { RIVAL, RIVALS, COUNTERS, fightSpec, rivalArm, readFight, counterFor } from './rivals.mjs';
+import { RIVAL, STYLE, rivalP, COUNTERS, fightSpec, rivalArm, readFight, counterFor } from './rivals.mjs';
 import { INVADER, KINDS, CHAMPION } from './invasion.mjs';
 import { LEANINGS } from './leanings.mjs';
 import { OBJECTIVES, armObjective } from './objectives.mjs';
@@ -60,10 +61,10 @@ export function arenaList() {
   for (const c of CLASHES) { const fams = clashFamilies(c); if (fams.length) add('elite', `elite:${c.id}`, c.name, clashOpens(c, fams), [c.pull, c.answer]); }
   for (const [id, B] of Object.entries(BOSSES)) add(bossGroup(id, B), `boss:${id}`, B.name, bossOpens(id, B), [B.about || B.signature?.rule]);
   if (!Object.values(BOSSES).some((B) => B.holder)) for (const a of Object.keys(FLOOR.holders.writes)) add('holder', `holder:${a}`, AUTHORS[a]?.name || a.toUpperCase(), band(FLOOR.holders.from), [`It writes ${FLOOR.holders.writes[a].map((f) => FAMILIES[f]?.name || f).join(', ')} servers.`]);
-  for (const [id, R] of Object.entries(RIVALS)) R.lineup.forEach((_, i) => {
+  for (const f of Object.keys(STYLE)) { const R = rivalP({ id: f, faction: f, temper: 'Steady' }); R.lineup.forEach((_, i) => { // a rival by their faction's lineup, Steady's counter-picks
     let floor = 1; while (floor < FLOORS.length && RIVAL.fights(floor) <= i) floor++;
-    add('rival', `rival:${id}.${i + 1}`, `${R.name} ${i + 1}/${R.lineup.length}`, band(floor), [i ? 'It adds its counter to how you won the fight before.' : null]);
-  });
+    add('rival', `rival:${f}.${i + 1}`, `${FACTIONS[f].short} rival ${i + 1}/${R.lineup.length}`, band(floor), [i ? 'They add a counter to how you won the fight before.' : null]);
+  }); }
   for (const [k, K] of Object.entries(KINDS)) add('invader', `invader:${k}`, K.name, K.from, [K.lvl ? `It comes ${K.lvl > 0 ? `${K.lvl} over` : `${-K.lvl} under`} its level.` : null]);
   return out;
 }
@@ -162,7 +163,7 @@ function fightOf(s, what, L, seed, free) {
     // if that was this one's (rivals.mjs readFight), else its last read's.
     const [rid, n] = id.split('.'), i = Number(n) - 1, prev = s.encounter;
     const read = prev?.arena === `rival:${rid}.${i}` && prev.phase === 'victory' ? readFight(s, prev) : {};
-    const v = { id: rid, seed, level: L, next: i ? counterFor(rid, read) : null }, f = fightSpec(v, i);
+    const v0 = { id: rid, faction: rid, temper: 'Steady' }, v = { ...v0, seed, level: L, next: i ? counterFor(v0, read) : null }, f = fightSpec(v, i);
     return { key: f.key, seed: f.seed, opts: { ...f.opts, mode: 'home' }, after: (e) => { if (v.next) { rivalArm(s, e, v); e.virus.name += ` + ${COUNTERS[v.next.counter].name}`; } } };
   }
   if (kind === 'invader') {

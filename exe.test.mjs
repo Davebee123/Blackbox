@@ -240,3 +240,22 @@ test('an .exe part broken: one more component, and its Codex card names the buil
   assert.equal(s.exeSeen?.lockbox, true);
   assert.match(codexPageMarkup(s, 'family:ransomware'), /cxp-exe[^>]*><span class="pexe">\.exe<\/span> Floor 4\+: Its ward caps/);
 });
+
+test('Packer.exe: broken, it unpacks its parts one a cycle; a plain Packer unpacks them all at once', () => {
+  const run = (exe) => {
+    const s = fight(22, 'ghostroot', { basic: null, genes: ['packer'], exe: exe ? ['packer'] : [] }), v = s.encounter.virus;
+    const hidden = () => v.parts.filter((p) => p.packedAs).length;
+    const n0 = hidden();
+    Object.assign(part(s, 'packer'), { armor: 0, veiled: false });
+    hit(s, part(s, 'packer'), 999, { mine: true });
+    return { s, n0, hidden };
+  };
+  const plain = run(false);
+  assert.ok(plain.n0 >= 1, 'something packed');
+  assert.equal(plain.hidden(), 0, 'all at once');
+  const x = run(true);
+  assert.equal(x.hidden(), x.n0, 'none on the break');
+  step(x.s); assert.equal(x.hidden(), x.n0, 'nor the rest of that cycle');
+  for (let i = 1; i <= x.n0; i++) { step(x.s); assert.equal(x.hidden(), x.n0 - i, `one more on cycle ${i}`); }
+  assert.ok(!x.s.encounter.unpacking);
+});

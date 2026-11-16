@@ -76,6 +76,8 @@ function noiseOf(ctx, color = 'white') {
   }
   return m[color];
 }
+// Every colour built ahead (the loading screen, warm.mjs), so no hit builds one.
+export function warmNoise(ctx) { for (const c of ['white', 'pink', 'brown', 'sah', 'crackle']) noiseOf(ctx, c); }
 function curve(key, fn) {
   if (!curves.has(key)) { const n = 2048, c = new Float32Array(n); for (let i = 0; i < n; i++) c[i] = fn((i / (n - 1)) * 2 - 1); curves.set(key, c); }
   return curves.get(key);

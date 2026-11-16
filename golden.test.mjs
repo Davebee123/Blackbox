@@ -30,9 +30,9 @@ const nameOk = (a, b) => {
 const strip = (v) => { const o = structuredClone(v); for (const k of ADDED) delete o[k]; return o; };
 // Bosses rebuilt on purpose (GAME_RULES.md "Solo bosses"): HASHLORD and MIRRORSHADE (docs/genome.md 5.3), P4's Resident (its
 // ransomware and worm acts, the only family this file gives it; acts.test.mjs), and the three solo bosses' own parts and
-// acts (docs/solo-bosses.md, bosses.test.mjs). Every other boss is the same fight it was; the floor bosses built since
+// acts (docs/solo-bosses.md, bosses.test.mjs), and floor 2's lair bosses' acts (nativeacts.test.mjs). Every other boss is the same fight it was; the floor bosses built since
 // (own: parts of their own, floorbosses.mjs) are new, with nothing frozen to match.
-const REBUILT = ['nb-hashlord', 'nb-mirrorshade', 'resident', 'choir', 'relayking', 'repoman'];
+const REBUILT = ['nb-hashlord', 'nb-mirrorshade', 'resident', 'choir', 'relayking', 'repoman', 'nb-deadbolt', 'nb-backorifice', 'nb-patchday', 'nb-sleepwalker'];
 const SOLO = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid && !BOSSES[k].own && !REBUILT.includes(k));
 
 // 10,000 seeds over everything a virus can be: wild viruses of every family at every level, strains, grades, run
@@ -88,5 +88,5 @@ test('golden: the same fights end the same way, wild, strain, grade, guard and b
     }
   }
   for (const id of SOLO.filter((k) => k !== 'resident')) for (const L of [10, 18, 30]) for (const [cls, sub] of [['breaker', 'demolitionist'], ['operator', 'herder']]) { same(`${id} ${L} ${sub}`, () => bossFight(id, L, cls, sub, 1)); n++; }
-  assert.ok(n > 500, `${n} fights`);
+  assert.ok(n > 450, `${n} fights`); // 482 since floor 2's lair bosses were rebuilt (REBUILT)
 });

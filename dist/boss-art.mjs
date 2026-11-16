@@ -9,7 +9,7 @@
 // Which body a boss wears. The Resident's is by its server's family: the oldest orphan there.
 export const BOSS_SHAPE = {
   relayking: 'crownmast', repoman: 'towhook', choir: 'organ', foreman: 'hardhat', heatsink: 'fins', coldwallet: 'vault',
-  centrifuge: 'centrifuge', shakedown: 'ransomclock', shouldersurfer: 'lurker', recursion: 'stack', nightdesk: 'desk', byzantine: 'domes', camswarm: 'cameras',
+  centrifuge: 'centrifuge', shakedown: 'ransomclock', shouldersurfer: 'lurker', recursion: 'stack', nightdesk: 'desk', byzantine: 'domes', camswarm: 'cameras', graceperiod: 'hourglass', exitnode: 'shells',
   'nb-deadbolt': 'deadbolt', 'nb-tripmine': 'mine', 'nb-hashlord': 'crowncube', 'nb-backorifice': 'skull', 'nb-patchday': 'quilt', 'nb-floodwall': 'dam',
   'nb-mirrorshade': 'shades', 'nb-sleepwalker': 'walker', 'nb-echolalia': 'horn',
 };
@@ -31,6 +31,8 @@ export const BOSS_STRIKES = {
   desk: { core: 'volley', limb: 'pulse' }, // the traders throw slips; the Desk throbs
   domes: { core: 'beam', limb: 'shock' }, // a Node's message sweeps you
   cameras: { core: 'beam', limb: 'swarm' }, // a lens sweeps you; the Hive swarms
+  hourglass: { core: 'snap', limb: 'spill' }, // a clause snaps shut; the glass pours
+  shells: { core: 'phase', limb: 'beam' }, // a backup blinks forward; the Core looks through
   deadbolt: { core: 'pulse', limb: 'headbutt' }, // the turn throbs; the bolt slams
   mine: { core: 'pulse', limb: 'shock' }, // the plate throbs; the prongs blast rings
   crowncube: { core: 'volley', limb: 'grind' }, // the core spits; the cube grinds
@@ -281,6 +283,30 @@ export const BOSS_BUILD = {
   },
 
   // CAMSWARM: a hive with one great lens under its C2 mast, and the Cameras it grows, each panning on its arm.
+  // GRACE PERIOD: an hourglass on its stand (the Policy), the Notice pinned to its left, the Collector's hook on its
+  // right, the Rider a band round its waist.
+  hourglass(k) {
+    const { tube, ring, orb, box, path, loop, anim } = k;
+    tube([0, -46, 0], [0, -3, 0], 26, 3, 'policy'); tube([0, 3, 0], [0, 46, 0], 3, 26, 'policy');
+    for (const y of [-48, 48]) ring(0, y, 0, 30, 1.2, 'policy');
+    for (const x of [-30, 30]) tube([x, -48, 0], [x, 48, 0], 1.6, 1.6, 'policy');
+    for (let i = 0; i < 4; i++) orb(0, -2 + i * 9, 0, 1.8, 1.8, 1.8, 'policy', anim({ k: 'bob', amp: 4, speed: 2.4, phase: i }), 0.8); // the sand
+    orb(0, 38, 0, 18, 6, 18, 'policy', 0, 0.4);
+    loop(0, 0, 0, 14, 2.2, 'rider', anim({ k: 'breathe', c: [0, 0, 0], amp: 0.06, speed: 1.4 }), Math.PI / 2);
+    box(-68, -6, 0, 18, 26, 1.2, 'notice', anim({ k: 'swing', c: [-68, -32, 0], amp: 0.08, speed: 0.8 }), 3.2);
+    tube([-50, -32, 0], [-30, -32, 0], 1.2, 1.2, 'notice');
+    path([[66, -44, 0], [66, 6, 0], [60, 20, 0], [48, 22, 0], [42, 12, 0]], 2.6, 1.6, 'collector');
+    tube([30, -44, 0], [66, -44, 0], 1.6, 1.6, 'collector');
+  },
+  // EXIT NODE: the Core inside three shells, the backups, v7 outermost; each turns on its own axis.
+  shells(k) {
+    const { orb, loop, anim } = k;
+    orb(0, 0, 0, 14, 14, 14, 'core', anim({ k: 'breathe', c: [0, 0, 0], amp: 0.1, speed: 1.6 }), 0.4);
+    [['v5', 26, 0.4], ['v6', 40, 1.1], ['v7', 56, 1.9]].forEach(([id, R, tilt], i) => {
+      const spin = anim({ k: 'breathe', c: [0, 0, 0], amp: 0.02, speed: 0.6 + i * 0.3 });
+      loop(0, 0, 0, R, 2.2, id, spin, tilt); loop(0, 0, 0, R, 2.2, id, spin, tilt + Math.PI / 2); loop(0, 0, 0, R * 0.98, 1.6, id, spin, tilt + Math.PI / 4);
+    });
+  },
   cameras(k) {
     const { tube, orb, disc, path, loop, anim, has } = k;
     orb(0, 6, 0, 30, 24, 26, 'hive', anim({ k: 'breathe', c: [0, 6, 0], amp: 0.03, speed: 1.8 }));

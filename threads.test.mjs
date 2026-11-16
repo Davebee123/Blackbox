@@ -17,6 +17,7 @@ import { roomsMarkup } from './dist/floorplan-view.mjs';
 import { mailMarkup, mapMarkup } from './dist/view.mjs';
 import { offerMarkup, threadPanel } from './dist/threads-view.mjs';
 import { RIVAL } from './dist/rivals.mjs';
+import * as SC from './dist/scanner.mjs';
 RIVAL.chance = 0; // a rival rolls at connect (rivals.mjs): these walks are scripted (rivals.test.mjs plays them)
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false; CONFIG.exfil.chance = 0;
@@ -202,6 +203,30 @@ test('Restore Point (floor 1): talk at its start, reach the archive, walk the fi
   assert.ok(t.reward);
 });
 
+test('Nine Days Deaf: the radio clue pins it on a server of yours near your level; read the repeater, restart its relay, talk to LANTERN, and the Listening Post shows on the map', () => {
+  const s = setup(6, { n1: 5 });
+  const S = SC.scannerOf(s);
+  assert.equal(SC.findPost(s, clock), null, 'nothing on the air');
+  SC.startBroadcast(s, clock, 'sparrow');
+  const loc = SC.findPost(s, clock);
+  assert.ok(loc && TH.startHere(s, loc)?.chain === 'listening-post');
+  assert.equal(S.clue, loc.id);
+  assert.equal(SC.findPost(s, clock), null, 'once');
+  assert.equal(SC.postFound(s), false, 'not until the thread is done');
+  connect(s, loc);
+  walk(s, TH.startHere(s, loc).room);
+  assert.match(said(FP.act(s, 'talk')), /repeater · lantern[\s\S]*The relay is on [A-Z]+-[A-Z]+-\d+, [A-Z]\d+\./);
+  const t = TH.activeThreads(s).at(-1), relay = locOf(s, t.places.relay.loc);
+  if (relay.id !== loc.id) connect(s, relay);
+  walk(s, t.places.relay.room);
+  assert.equal(t.step, 2);
+  assert.equal(SC.postFound(s), false);
+  assert.match(said(FP.act(s, 'talk')), /Our Listening Post is next to your HOME server/);
+  assert.equal(t.state, 'done');
+  assert.equal(SC.postFound(s), true);
+  assert.equal(SC.findPost(s, clock), null);
+});
+
 test('a chain\'s reward: three blues at its level, a yellow among them one time in ten; a one-off\'s blue or white', () => {
   const s = setup(10, { n1: 3 });
   let gold = 0, n = 0;
@@ -337,7 +362,7 @@ test('never timed, nothing missable: set a thread aside and pick it up again (fr
 });
 
 test('the save (v43): an older save starts with no threads and pins starts as you connect; a save keeps threads, a temporary server and a file mid-walk', () => {
-  assert.equal(SAVE_VERSION, 62); // v62 runners; v61 one shop shape; v60 payloads cut; v59 journals; v58 one rep scale; v57 the talent tiers; v56 floors as tiers; v55 gear carries your power; v54 the compounding curve; v53 (the cryptogram key); // v44 (whole-number stats), v45 (sets), v46 (no default subclass), v47 (one kind of component), v48 (Indemnity retires), v49 (crafting goes), v50 (specials) and v51 (the scanner) and v52 (rivals) came after
+  assert.equal(SAVE_VERSION, 63); // v63 graphics settings; v62 runners; v61 one shop shape; v60 payloads cut; v59 journals; v58 one rep scale; v57 the talent tiers; v56 floors as tiers; v55 gear carries your power; v54 the compounding curve; v53 (the cryptogram key); // v44 (whole-number stats), v45 (sets), v46 (no default subclass), v47 (one kind of component), v48 (Indemnity retires), v49 (crafting goes), v50 (specials) and v51 (the scanner) and v52 (rivals) came after
   const old = setup(6, { n1: 4 });
   delete old.threads; old.version = 42;
   const back = restore(JSON.parse(JSON.stringify(old)));

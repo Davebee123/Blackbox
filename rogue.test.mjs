@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, finish, addLocation, hooks } from './dist/combat.mjs';
 import { play, layoutOf, takeable } from './dist/run.mjs';
-import { ROGUE, rogueRooms, rogueSpawns, relockLeft } from './dist/rogue.mjs';
+import { ROGUE, rogueRooms, rogueSpawns, relockLeft, rampOf } from './dist/rogue.mjs';
 import { pickOrigin } from './dist/hidden.mjs';
 import { sweepKind } from './dist/forensics.mjs';
 import { MEMORY } from './dist/memory.mjs';
@@ -43,7 +43,7 @@ test('a rogue server is wild: folders of viruses, no vault, nothing to take, no 
   addLocation(s, 'worm', 1); addLocation(s, 'worm', 1);
   const loc = rogueOf(s);
   const rooms = rogueRooms(loc);
-  assert.ok(rooms.length >= 4 && rooms.length <= 8);
+  assert.ok(rooms.length >= ROGUE.fights[0] && rooms.length <= ROGUE.fights[1]);
   assert.ok(!Object.values(layoutOf(loc)).some((d) => d.locked || d.guard));
   assert.deepEqual(takeable(loc), []);
   assert.equal(sweepKind(loc), null);
@@ -53,13 +53,26 @@ test('a rogue server is wild: folders of viruses, no vault, nothing to take, no 
   for (const sp of Object.values(spawns)) assert.ok(sp.grade === 2, 'layer 2: v2');
 });
 
-test('kinds: a Nest is one family, a Pit runs 2 levels hot', () => {
+test('kinds: a Nest is one family, a Pit runs 2 levels hot at its deepest, a level lower a room nearer the entry', () => {
   const s = world();
   addLocation(s, 'worm', 1); addLocation(s, 'worm', 1);
   const nest = rogueOf(s, 'nest');
   for (const sp of Object.values(rogueSpawns(s, nest))) assert.equal(sp.family, nest.family);
   const pit = rogueOf(s, 'pit');
-  for (const sp of Object.values(rogueSpawns(s, pit))) assert.equal(sp.level, pit.level + ROGUE.pitLevels);
+  const ramp = rampOf(pit), top = pit.level + ROGUE.pitLevels;
+  assert.ok(Object.values(ramp).includes(0) && Object.values(ramp).some((n) => n > 0), 'deepest rooms at the top, nearer ones lower');
+  for (const [room, sp] of Object.entries(rogueSpawns(s, pit))) assert.equal(sp.level, Math.max(1, top - ramp[room]));
+  assert.ok(Math.max(...Object.values(ramp)) <= ROGUE.ramp);
+});
+
+test('an older rogue server (no size) keeps its 4 to 8 rooms', () => {
+  const s = world();
+  addLocation(s, 'worm', 1); addLocation(s, 'worm', 1);
+  const loc = rogueOf(s);
+  const big = rogueRooms(loc).length;
+  delete loc.size;
+  const n = rogueRooms(loc).length;
+  assert.ok(n >= 4 && n <= 8 && big >= ROGUE.fights[0]);
 });
 
 test('a kill empties the room for 3 to 5 minutes; every room cleared in one visit pays the Gauntlet, once a visit', () => {

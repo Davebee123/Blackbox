@@ -10,7 +10,7 @@ import { levelUpSummary, firmwareMarkup } from './levelup-view.mjs';
 
 const STAY = 12000; // how long it stays up once the flash is done (Continue, Enter, Esc or × close it sooner)
 const FLASH = 900, STEP = 120; // the progress line's run, then one [ OK ] line every STEP ms
-export function createLevelUpUi({ calm, fighting, feel, keys = () => [], motion = () => true }) {
+export function createLevelUpUi({ calm, fighting, feel, keys = () => [], motion = () => true, queued = () => {} }) {
   const host = document.getElementById('levelup');
   let queue = [], up = null, timer = 0, sounds = [];
   const clear = () => { clearTimeout(timer); sounds.forEach(clearTimeout); sounds = []; };
@@ -54,7 +54,7 @@ export function createLevelUpUi({ calm, fighting, feel, keys = () => [], motion 
   host?.addEventListener('click', (e) => { if (e.target.closest('[data-lu-close], [data-module]')) hide(); });
   addEventListener('resize', () => { if (up) place(); });
   return {
-    push(e) { if (e) queue.push(e); },
+    push(e) { if (e) { queue.push(e); queued(); } }, // queued: the page's tick wakes to show it
     // Every frame: up at the next calm moment, away when a fight comes up.
     tick() {
       if (up && fighting()) hide(true);

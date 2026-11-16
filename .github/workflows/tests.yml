@@ -32,6 +32,7 @@ jobs:
             { echo '### Conflicts with main'; echo; echo 'Land it with `node scripts/land.mjs` and resolve these on the branch:'; echo; git diff --name-only --diff-filter=U | sed 's/^/- `/; s/$/`/'; } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
+      - run: npm ci
       - name: npm run test:full
         shell: bash
         run: |

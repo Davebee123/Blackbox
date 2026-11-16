@@ -365,7 +365,7 @@ test('an old save\'s rogue server gains its quiet rooms on load, its fight rooms
 });
 
 // The fog (fog.test.mjs): an Exfil shows in your room, a room next to you (known or not) and a discovered room.
-test('the Exfil shows next to you, in a room you have never been in too, and in a discovered room from afar; deeper in the fog it is out of sight', () => {
+test('the Exfil shows next to you and in a discovered room from afar; deeper in the fog it is out of sight', () => {
   const { s, loc } = rogueSave();
   connect(s, loc);
   const R = s.rooms, g = R.graph;
@@ -375,13 +375,10 @@ test('the Exfil shows next to you, in a room you have never been in too, and in 
   const door = FP.neighbours(g, deep.id).find((x) => d0[x] < d0[deep.id]);
   R.seen = {}; place(s, door);
   const m = exfil(s, deep.id);
-  assert.equal(FP.known(s, deep.id), false);
   assert.equal(FP.exfilSeen(s, m), true, 'next to you');
   let html = roomsMarkup(s);
-  assert.match(html, /class="fp-exfil( cornered)?"/, 'its glyph on the ? chip');
+  assert.match(html, /class="fp-exfil( cornered)?"/, 'its glyph on the chip');
   assert.match(html, /fp-exfilstat/);
-  assert.doesNotMatch(FP.exfilLine(s), new RegExp(g.rooms[deep.id].path), 'never names a room you have not been in');
-  assert.match(FP.exfilLine(s), /in an unknown room/);
   // Two off, unknown: out of sight, nothing on the map or the strip.
   const back = FP.neighbours(g, door).find((x) => x !== deep.id && FP.distances(g, x)[deep.id] === 2);
   assert.ok(back, 'a room two off the Exfil');

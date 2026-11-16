@@ -297,7 +297,7 @@ const POST_WINDOWS = {
 export function postTerminalMarkup(s, lines, win, at = Date.now()) {
   const W = POST_WINDOWS[win];
   const term = `<section class="panel net-one hub-term" data-pane="ssh ${esc(s.profile?.handle || 'rookie')}@${POST.host}">
-    <header class="net-head"><div class="net-where"><span class="fmark-i" style="--fc:${POST.color}">${g('antenna')}</span><b>${POST.host.toUpperCase()}</b></div><span class="post-by" title="LANTERN: The voice on the numbers station.">${glyph('f-lantern')}LANTERN</span><button type="button" class="btn small" data-hub-close title="Disconnect">×</button></header>
+    <header class="net-head"><div class="net-where"><span class="fmark-i" style="--fc:${POST.color}">${g('antenna')}</span><b>${POST.host.toUpperCase()}</b></div><span class="post-by" title="LANTERN: The crew that runs this post.">${glyph('f-lantern')}LANTERN</span><button type="button" class="btn small" data-hub-close title="Disconnect">×</button></header>
     <ol class="term" id="hubterm">${lines.map((l) => `<li class="${l.cls}">${l.menu ? postMenuLine(s, at, win).html : l.motd ? postMotd(s, at) : l.html}</li>`).join('')}</ol>
   </section>`;
   const w = W ? `<section class="card hub-win post-win${win === 'tune' ? ' tune' : ''}" data-keep="post ${W.title}"><h2>${W.title}<button type="button" class="btn small x" data-hub-opt="" title="Close">×</button></h2>${W.body(s, at)}</section>` : '';
@@ -306,7 +306,8 @@ export function postTerminalMarkup(s, lines, win, at = Date.now()) {
 
 // ---------- the controller ----------
 // opts: state() the save, changed() after the save changes (save and redraw), busy() true in a fight, sound() and
-// volume() the Sound setting and the Effects volume, played() after Play back, found() when the clue finds the post.
+// volume() the Sound setting and the Effects volume, played() after Play back, found(loc) when the clue pins Nine Days
+// Deaf on a server.
 // Tune is built once and painted in place (the status line when it changes, the pad's SVG every frame at up to 30 fps);
 // app.js mounts it in the Tune window after every redraw. The attempt lives here: closing Tune drops it, with no loss.
 const NOISE = '·:.░▒ ·.:  ';
@@ -427,6 +428,7 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
       if (!open) show();
     },
     isOpen: () => open,
+    due: () => lastSched + 500, // when tick() next looks at the schedule (Date.now() ms)
     // Every frame: the schedule, the attempt, the paint, the sound.
     tick(now = Date.now()) {
       const s = state(), dt = Math.min(0.1, Math.max(0, (now - (last || now)) / 1000)), t = now / 1000;
@@ -434,7 +436,8 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
       if (now - lastSched >= 500) {
         lastSched = now;
         const ev = SC.tickScanner(s, now);
-        if (!SC.postFound(s) && !busy() && SC.findPost(s, now)) { found(); changed(); } // the clue: numbers in the chatter
+        const clue = !SC.postFound(s) && !busy() && SC.findPost(s, now);
+        if (clue) { found(clue); changed(); } // the clue: numbers in the chatter, from a repeater on one of your servers
         else if (ev === 'start' && SC.postFound(s) && sound() && !busy()) radio.cue(volume());
         if (ev) changed();
       }
