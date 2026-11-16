@@ -9,7 +9,7 @@
 //   wild       SPRAWL-00, a rogue server (Nest, Pit, Gauntlet), a lair, KESSLER-FARM-00, an occupied server: every
 //              room a fight, each one a folder of the old server (room.path0), so its spawns (run.mjs zoneSpawns,
 //              rogue.mjs rogueSpawns, the farm's, network.mjs lairSpawns) keep their timers, bounties, bosses and
-//              crew rules. SPRAWL-00: five rooms of strays and RELAY-KING's Core (from level 3, 30 minutes). The farm:
+//              crew rules. SPRAWL-00: eight rooms of strays and RELAY-KING's Core (from level 3, 30 minutes). The farm:
 //              its packs and its three crew bosses, the ledger a vault that opens once the Foreman and the Heatsink
 //              are down.
 // A rogue server (Nest, Pit, Gauntlet: rogue.mjs plainRogue) is laid out as a tree of rooms from its seed (rogueGraph):
@@ -146,7 +146,7 @@ export function treeGraph(paths, { core = null, vaults = [], kinds = {}, labels 
   for (let p = core; p; p = p === '/' ? null : p.slice(0, p.lastIndexOf('/')) || '/') spine.unshift(idOf[p]);
   return graphOf(list, links, { core: core ? idOf[core] : null, vaults: vaults.map((v) => idOf[v]).filter(Boolean), spine: core ? spine : ['r0'] });
 }
-// SPRAWL-00: its six folders, RELAY-KING's /net/relay the Core.
+// SPRAWL-00: its nine folders, RELAY-KING's /net/relay the Core.
 export const sprawlGraph = () => treeGraph(zoneRooms(), { core: KING_ROOM });
 // A SPRAWL-00 folder's room by its name, for words about where someone is (presence.mjs).
 let sprawlNames = null;
