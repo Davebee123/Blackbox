@@ -26,6 +26,7 @@ export const start = (cls, level = 22, id = 'cryptjack', seed = 7) => {
   if (level >= SUBCLASS.from) s.loadout.sub = { [cls]: defaultSub(cls) }; // the old-edge subclass, picked (its edge: Overkill, Grudge, Weak Spot, Last Gasp)
   selectEncounter(s, id, seed, { level: 6 }); // a mid-level enemy: the numbers these tests check
   command(s, 'engage');
+  s.encounter.surpriseSpent = true; // the Infiltrator's Surprise is tested on its own (skills2.test.mjs)
   return s;
 };
 export const act = (s, text) => {

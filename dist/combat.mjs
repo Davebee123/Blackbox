@@ -3454,7 +3454,7 @@ function breakPart(s, p) {
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
   if ((e.once?.['zero-day'] || e.readyAt?.['zero-day'] > e.cycle) && legend(s, 'patch-gap')) { delete e.once['zero-day']; delete e.readyAt['zero-day']; legendFire(s, 'patch-gap'); emit(s, 'proc', 'Patch Gap: Zero-day is ready again.', { ability: 'zero-day' }); } // a legend
-  if (legend(s, 'first-light')) e.firstLight = e.cycle + 1; // First Light (a legend): rollSync opens it
+  if (legend(s, 'first-light')) e.firstLight = true; // First Light (a legend): your next command is a Surprise (surpriseNow)
   mechBroke(s, p); // Vendetta (mechanics.mjs)
   fbBroke(s, p); // RECURSION's Return, Tail Call, Stack Guard (floorbosses.mjs)
   objectiveBroke(s, p); // a Priority's part (objectives.mjs)
@@ -3777,7 +3777,7 @@ function useAbility(s, intent, auto = false) {
   }
   if (a.tick && a.verb === 'burn' && target) {
     // Inject: Long Fuse makes it longer. Reapplied, it refreshes the one already on the part (the longer
-    // duration of the two) instead of adding a second. Fired in the Surprise window it also ticks at once.
+    // duration of the two) instead of adding a second. As a Surprise it also ticks at once.
     const ticks = id === 'inject' ? injectTicks(s) : a.ticks;
     const tick = scaled(s, id === 'inject' ? injectTick(s) : a.tick);
     const was = a.refresh && burnsOn(s, target).some((b) => b.id === id);
@@ -4416,7 +4416,8 @@ export function playerPhase(s, phase = 'all') {
     e.metrics.holds++;
   } else if (e.queue) {
     const q = e.queue;
-    e.surprise = !!(e.synced && e.sync?.surprise && q.ability !== 'hold'); // Infiltrator Surprise (see CONFIG.surprise)
+    e.surprise = surpriseNow(s, q); // Infiltrator Surprise (see CONFIG.surprise): it lands synced
+    if (e.surprise) e.synced = true;
     e.aim = { cycle: e.cycle, target: q.target || null }; // the part your command aims at (Brownout, leanings.mjs)
     e.commanding = { id: q.ability, target: q.target || null, at: q.at ?? e.cycle, auto: false }; // your command: a tell on its part may count it (tells.mjs)
     const before = beforeCommand(e);
@@ -4930,15 +4931,21 @@ export function rollSync(s) {
   // Its own hash of the fight and the cycle, so it never shifts the game's dice.
   const hash = (k) => { const x = Math.sin((e.seed || 1) * 12.9898 + e.cycle * 78.233 + k) * 43758.5453; return x - Math.floor(x); };
   const keylogger = livingParts(s).some((x) => x.syncOnly);
-  const light = classOf(s) === 'infiltrator' && e.cycle > 1 && e.firstLight === e.cycle && legend(s, 'first-light'); // First Light (a legend): a break opens one
-  if (light) legendFire(s, 'first-light');
-  const surprise = classOf(s) === 'infiltrator' && (e.cycle === 1 || light);
-  const width = (surprise ? CONFIG.surprise.width : keylogger ? 0.14 : c.width) * (fxHas(s, 'sync-wide') ? 1.5 : 1);
-  const pitch = !keylogger && !surprise && hash(311.7) >= CONFIG.sync.chance + gearStat(s, 'sync', 'hacker') / 100 && hash(311.7) < syncChance(s);
+  const width = (keylogger ? 0.14 : c.width) * (fxHas(s, 'sync-wide') ? 1.5 : 1);
+  const pitch = !keylogger && hash(311.7) >= CONFIG.sync.chance + gearStat(s, 'sync', 'hacker') / 100 && hash(311.7) < syncChance(s);
   if (pitch) legendFire(s, 'perfect-pitch');
-  if (!keylogger && !surprise && hash(311.7) >= syncChance(s)) { e.sync = null; return; }
-  if (surfShut(s) && !surprise) { e.sync = null; return; } // SHOULDER SURFER: a window every other cycle
-  e.sync = { at: c.from + hash(0) * (c.to - width - c.from), width, ...(surprise ? { surprise: true } : {}) };
+  if (!keylogger && hash(311.7) >= syncChance(s)) { e.sync = null; return; }
+  if (surfShut(s)) { e.sync = null; return; } // SHOULDER SURFER: a window every other cycle
+  e.sync = { at: c.from + hash(0) * (c.to - width - c.from), width };
+}
+// Infiltrator Surprise: an Infiltrator's first command of a fight (and with First Light, the next one after a break)
+// lands as if synced, with Surprise's extras. No window to hit.
+function surpriseNow(s, q) {
+  const e = s.encounter;
+  if (classOf(s) !== 'infiltrator' || q.ability === 'hold') return false;
+  if (!e.surpriseSpent) { e.surpriseSpent = true; e.firstLight = false; return true; }
+  if (e.firstLight && legend(s, 'first-light')) { e.firstLight = false; legendFire(s, 'first-light'); return true; }
+  return false;
 }
 // Chance a cycle opens a window: 25%, plus the Sync stat on your protocols.
 export const syncChance = (s) => Math.min(1, (CONFIG.sync.chance + gearStat(s, 'sync', 'hacker') / 100) * (legend(s, 'perfect-pitch') ? 2 : 1)); // Perfect Pitch (a legend): twice as often
@@ -4961,8 +4968,8 @@ function syncBonus(s, intent) {
     for (const h of [...e.helpers]) { const ht = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s); if (ht) hit(s, ht, h.damage, { by: 'Helper', dot: true, src: 'helper' }); if (virusIntegrity(s).current === 0) break; }
     what = 'helpers strike again';
   }
-  const surprise = e.surprise && ['inject', 'tag', 'keepalive'].includes(intent?.ability);
-  emit(s, 'synced', `${surprise ? 'SURPRISE' : 'SYNCED'}: +${Math.round(CONFIG.sync.bonus * 100)}% damage${what ? `, ${what}` : ''}${surprise ? `, ${{ inject: 'Inject ticks at once', tag: `Tag for ${CONFIG.surprise.tagCycles} cycles, burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%`, keepalive: `burns +${CONFIG.surprise.keepalive} cycles` }[intent.ability]}` : ''}.`, { target: intent?.target || null, surprise, bonus: what ? b.tag : '' });
+  const surprise = !!e.surprise, extra = surprise && ['inject', 'tag', 'keepalive'].includes(intent?.ability);
+  emit(s, 'synced', `${surprise ? 'SURPRISE' : 'SYNCED'}: +${Math.round(CONFIG.sync.bonus * 100)}% damage${what ? `, ${what}` : ''}${extra ? `, ${{ inject: 'Inject ticks at once', tag: `Tag for ${CONFIG.surprise.tagCycles} cycles, burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%`, keepalive: `burns +${CONFIG.surprise.keepalive} cycles` }[intent.ability]}` : ''}.`, { target: intent?.target || null, surprise, bonus: what ? b.tag : '' });
 }
 
 // The part your last command hit, if it still stands.

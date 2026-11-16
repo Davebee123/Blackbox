@@ -173,9 +173,8 @@ from the fight and the cycle, never the game's dice.
 | Infiltrator | Extends your burns on the part you hit by 1 cycle |
 | Operator | Each helper strikes once more |
 
-**Infiltrator Surprise:** an Infiltrator's first cycle always opens a wider window (15%), glowing blue. Fired in it, on
-top of the sync bonus: Inject ticks once at once, Tag lasts 6 cycles and its burns tick +75%, and Keepalive stretches
-burns 4 cycles. Auto-repeat, your routine's moves and later steps of a `;` plan never sync.
+**Infiltrator Surprise:** an Infiltrator's first command of a fight lands synced, no window needed. On top of the sync
+bonus: Inject ticks once at once, Tag lasts 6 cycles and its burns tick +75%, and Keepalive stretches burns 4 cycles. Auto-repeat, your routine's moves and later steps of a `;` plan never sync.
 
 ### Planning ahead
 
@@ -1360,7 +1359,7 @@ free:** until any class reaches level 5, switching to a class you haven't played
 |---|---|---|---|
 | Breaker | DPS, Burst | **Momentum**: each part you break gives +10% damage for 2 cycles, up to 3 stacks | Overload, Flood, Exploit, Crack |
 | Bastion | Tank, Healer | **Hardened**: the first damaging hit on you each fight deals 25% less | Rate Limit, Firewall, Purge, Retaliate |
-| Infiltrator | DPS, Damage over time | **Ghost**: every fight opens with a Surprise window (The Sync Window), and `slip` gets you past the hunter or out of a held room twice a visit | Inject, Backdoor, Keepalive, Tag |
+| Infiltrator | DPS, Damage over time | **Ghost**: your first command of every fight is a Surprise (The Sync Window), and `slip` gets you past the hunter or out of a held room twice a visit | Inject, Backdoor, Keepalive, Tag |
 | Operator | Support, Summoner | **Extra thread**: +1 daemon slot | Deploy, Hook, Spawn, Botnet |
 
 **The bar** has up to 11 keys, each shown once unlocked:
