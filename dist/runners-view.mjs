@@ -2,7 +2,7 @@
 // drawn on it: a paper-white diamond with the handle, a dotted route through the servers they've passed, a dashed ring
 // on where they're heading. Paper white throughout (--bright); a runner hunting you (R3) is the one red.
 // The map draws a runner only where you've revealed (runners.mjs revealed, inSight); the Rail gives the rest a floor.
-import { castOf, knownOf, runnerOf, stateOf, clsLabel, doing, shortPlace, headingOf, revealed, inSight, hash, TRAITS, standingOf, tierOf, busyOf, cantHire, feeOf, feePaid, cutOf, hired, clockOf, gainOf, PRESET_PLAY, PRESET_TIP, huntsYou } from './runners.mjs';
+import { castOf, knownOf, runnerOf, stateOf, clsLabel, doing, shortPlace, headingOf, revealed, inSight, hash, TRAITS, standingOf, tierOf, busyOf, cantHire, feeOf, feePaid, cutOf, hired, clockOf, gainOf, PRESET_PLAY, PRESET_TIP, huntsYou, RUNNERS } from './runners.mjs';
 import { FACTIONS } from './factions.mjs';
 import { glyph } from './glyphs.mjs';
 import { portraitMarkup } from './portraits.mjs';
@@ -49,7 +49,7 @@ export function runnerMark(s, handle, fl, portrait = false) {
   const pts = passed.slice(from).map(P).filter(Boolean).concat(b ? [me] : []), to = headingOf(st), ring = to && revealed(s, g, to) ? P(to) : null;
   const f = (v) => Math.round(v * 10) / 10;
   const route = pts.length > 1 ? `<polyline class="mr-route" points="${pts.map((p) => `${f(p.x)},${f(p.y)}`).join(' ')}"/>` : '';
-  return `<g class="mrunner${st.stage === 'down' ? ' down' : ''}${huntsYou(s, r.handle) ? ' rival' : ''}" data-runner-mark="${esc(r.handle)}">${route}${ring ? `<circle class="mr-ring" cx="${f(ring.x)}" cy="${f(ring.y)}" r="22"/>` : ''}<g transform="translate(${f(me.x)} ${f(me.y - (b ? 0 : 16))})"${glideAttr(s, st, me, b)} data-tt="${esc(runnerTip(s, r, st))}" data-tt-runner="${esc(r.handle)}"><path class="mr-dia" d="M0 -7 L7 0 L0 7 L-7 0 Z"/><text class="mr-name" y="-12" text-anchor="middle">${esc(r.handle)}</text></g></g>`;
+  return `<g class="mrunner${st.stage === 'down' ? ' down' : ''}${huntsYou(s, r.handle) ? ' rival' : ''}" data-runner-mark="${esc(r.handle)}">${route}${ring ? `<circle class="mr-ring" cx="${f(ring.x)}" cy="${f(ring.y)}" r="22"/>` : ''}<g transform="translate(${f(me.x)} ${f(me.y - (b ? 0 : 16))})"${glideAttr(s, r, st, me, b)} data-tt="${esc(runnerTip(s, r, st))}" data-tt-runner="${esc(r.handle)}"><path class="mr-dia" d="M0 -7 L7 0 L0 7 L-7 0 Z"/><text class="mr-name" y="-12" text-anchor="middle">${esc(r.handle)}</text></g></g>`;
 }
 // The runners the map draws on a floor: those in sight, less your crew (they're with you) and the picked one (runnerMark).
 export const runnersOn = (s, fl, pick = null) => castOf(s).filter((r) => r.handle !== pick && !hired(s, r.handle)).map((r) => ({ r, st: stateOf(s, r) })).filter((x) => x.st.floor === fl && inSight(s, x.st));
@@ -64,7 +64,10 @@ const DIA = 'M0 -4.5 L4.5 0 L0 4.5 L-4.5 0 Z';
 // On a road: where they're drawn (a), the road's end (b), the ms to it and the wall time the runner clock was read at
 // (invasion.mjs tickNetwork), so mapmotion.mjs glides the diamond between ticks instead of stepping it each second.
 const r1 = (v) => Math.round(v * 10) / 10;
-const glideAttr = (s, st, a, b) => (st.pos.next && b ? ` data-glide="${r1(a.x)} ${r1(a.y)} ${r1(b.x)} ${r1(b.y)} ${st.pos.ms || 0} ${s.net?.wall || 0}"` : '');
+const STAGE = Object.fromEntries(RUNNERS.stages);
+// Logged-on ms to the road's end: a road is its stage's share of the cycle over the route's roads (runners.mjs stateOf).
+export const roadLeft = (r, st) => Math.round(((1 - st.pos.f) * STAGE[st.stage] * r.cycle) / (st.path.length - 1));
+const glideAttr = (s, r, st, a, b) => (st.pos.next && b ? ` data-glide="${r1(a.x)} ${r1(a.y)} ${r1(b.x)} ${r1(b.y)} ${roadLeft(r, st)} ${s.net?.wall || 0}"` : '');
 export function runnersMap(s, fl, pick = null, portrait = false, open = null) {
   const here = runnersOn(s, fl, pick);
   if (!here.length) return '';
@@ -72,7 +75,7 @@ export function runnersMap(s, fl, pick = null, portrait = false, open = null) {
   const at = {};
   for (const x of here) if (!x.st.pos.next) (at[x.st.pos.at] ||= []).push(x);
   const f = (v) => Math.round(v * 10) / 10;
-  const dia = (x, p, road) => `<g class="mrun${road ? ' road' : ''}${x.st.stage === 'down' ? ' down' : ''}${huntsYou(s, x.r.handle) ? ' rival' : ''}" data-runner="${esc(x.r.handle)}" role="button" tabindex="0" aria-label="${esc(x.r.handle)}" data-tt="${esc(runnerTip(s, x.r, x.st))}" data-tt-runner="${esc(x.r.handle)}" transform="translate(${f(p.x)} ${f(p.y)})"${road ? glideAttr(s, x.st, p, P(x.st.pos.next)) : ''}><circle class="mrun-hit" r="7"/><path d="${DIA}"/></g>`;
+  const dia = (x, p, road) => `<g class="mrun${road ? ' road' : ''}${x.st.stage === 'down' ? ' down' : ''}${huntsYou(s, x.r.handle) ? ' rival' : ''}" data-runner="${esc(x.r.handle)}" role="button" tabindex="0" aria-label="${esc(x.r.handle)}" data-tt="${esc(runnerTip(s, x.r, x.st))}" data-tt-runner="${esc(x.r.handle)}" transform="translate(${f(p.x)} ${f(p.y)})"${road ? glideAttr(s, x.r, x.st, p, P(x.st.pos.next)) : ''}><circle class="mrun-hit" r="7"/><path d="${DIA}"/></g>`;
   const crowd = (id, list, p) => { const tip = `${list.length} runners at ${shortPlace(s, g, id)}: ${list.map((x) => x.r.handle).sort().join(', ')}.`; return `<g class="mrun crowd${id === open ? ' on' : ''}" data-runners-at="${esc(id)}" role="button" tabindex="0" aria-label="${esc(tip)}" transform="translate(${f(p.x)} ${f(p.y)})"><title>${esc(tip)}</title><rect class="mrun-hit" x="-13" y="-8" width="32" height="16"/><path transform="translate(-6 0)" d="${DIA}"/><text class="mrun-n" x="2">${list.length}</text></g>`; };
   let out = '';
   for (const [id, all] of Object.entries(at)) { // a rival stands out of the count, red, beside it

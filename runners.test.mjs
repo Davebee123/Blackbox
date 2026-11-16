@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh } from './dist/combat.mjs';
 import { castOf, stateOf, tickRunners, runnersOf, know, knownOf, RUNNERS, TRAITS, TEMPERS, levelOf, leavesAt, runnerOf } from './dist/runners.mjs';
-import { runnerRail, runnerMark } from './dist/runners-view.mjs';
+import { runnerRail, runnerMark, roadLeft } from './dist/runners-view.mjs';
 import { addLocation } from './dist/combat.mjs';
 import { graphOf, floorsOf } from './dist/floors.mjs';
 import { online } from './dist/presence.mjs';
@@ -499,7 +499,7 @@ test('a runner on a road glides to its end by the time the clock gets them there
   const s = world(4242, 6);
   const on = moment(s, 1, (xs) => xs.some((x) => x.st.pos.next && x.st.pos.f < 0.8));
   const x = on.find((y) => y.st.pos.next && y.st.pos.f < 0.8);
-  const { ms } = x.st.pos;
+  const ms = roadLeft(x.r, x.st);
   assert.ok(ms > 0);
   const before = stateOf(s, x.r, runnersOf(s).ms + ms - 50), after = stateOf(s, x.r, runnersOf(s).ms + ms + 50);
   assert.equal(before.pos.next, x.st.pos.next, 'still on the same road just before');
