@@ -1291,7 +1291,7 @@ function react(events) {
         const bp = part(campaign, e.target);
         // (It waits for the number of the hit that broke it.)
         const wait = delay(e);
-        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => { hitfx.dissolve(partRow(e.target)); if (e === last) slowmo(); })); }
+        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => { bp._dyingUntil = Date.now() + DISSOLVE_MS; dirty = true; hitfx.dissolve(partRow(e.target)); if (e === last) slowmo(); setTimeout(() => { dirty = true; }, DISSOLVE_MS + 50); })); }
         if (e === last) pendingStrikes.push(() => later(wait, winSound)); // your class's flourish over the break's voice
       }
         artHit(e.target, 'break'); feel.add(() => flash(e.message)); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
