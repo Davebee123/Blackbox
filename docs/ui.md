@@ -284,8 +284,8 @@ short vibration on phones that have it.
 The designer's rules for anything that sets a mood: **everything is light on glass**, and **nothing interferes with the
 interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the screen).
 
-- An effect lives behind or around the interface: the backdrop (`#fx-back`, z-index −1 inside `.app`, carrying the
-  screen's own background), the tube's edge (`#crt-bezel`), the casing's lamps, and the virus picture (`#virus-canvas`,
+- An effect lives behind or around the interface: the backdrop (`#fx-back`, z-index −1 inside `.app`, drawn only while
+  a floor's texture, Low Signal or a tear shows; the casing's screen background), the tube's edge (`#crt-bezel`), the casing's lamps, and the virus picture (`#virus-canvas`,
   a crit's tear through the `#sfx-tear-a/b` SVG filters). `screenfx.test.mjs` fails on any rule that styles anything
   else.
 - Text, numbers, bars, chips and the board never move, dim, blur or get covered; no effect shifts layout or takes a

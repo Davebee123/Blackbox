@@ -40,7 +40,7 @@ The hosted game now loads one script and one stylesheet (batch 7).
    rests, and an idle phone screen's main thread went from 117–141 ms/s to 20–30 (the Map 313 → 28), 60 frames a second
    to 1 (the status line's clock).
 7. **Six full-screen layers** on every screen (the CRT's sweep and roll, the backdrop's texture, static and edge):
-   about 57 MB of textures on a phone.
+   about 57 MB of textures on a phone. Landed (batch 9): a phone's Settings 66 → 27 MB, the Map 73 → 45 MB.
 
 ## The rules (the designer, November 2026)
 
@@ -72,6 +72,7 @@ The hosted game now loads one script and one stylesheet (batch 7).
 |---|---|---|
 | Map and rooms animations the graphics card can run | both | landed |
 | A part's dissolve drawn on a canvas | both | landed |
+| The screen's layers merged: the backdrop only while it shows, one glass over the UI (`screenfx.css`, `#crt`) | both, phones most | landed |
 | Audio textures as they sounded at 192 kHz (commit d38e785, held by 034b166) | both | waiting on the A/B pick |
 
 **Settings (each costs looks):**
@@ -120,7 +121,7 @@ One session each, started fresh. Measure before and after with `tools/perf/phone
 | 6 | The loading screen: prototypes, the pick, then the build and the warm-ups | `poweron.mjs`, `shell.mjs` boot, `sound.mjs` loadBank | landed |
 | 7 | A build step for the hosted game (approved 2026-11-15); `dist/` stays runnable as plain files for development | `scripts/build.mjs`, the Pages workflow | landed |
 | 8 | The class pick: measure it, fix what costs | the class pick (`app.js` near `classPickMarkup`, `view.mjs` classPickMarkup, its CSS) | landed |
-| 9 | The CRT and the backdrop's textures merged into fewer layers: prototypes, the pick, then the build | `screenfx.css`/`.mjs`, `#crt`, `#fx-back`, `#fx-edge` | next |
+| 9 | The CRT and the backdrop's textures merged into fewer layers: prototypes, the pick, then the build | `screenfx.css`/`.mjs`, `#crt`, `#fx-back`, `#fx-edge` | landed |
 
 **Batch 1 (landed).** `frame` runs every frame while `tickBusy` holds: a fight, `dirty`, a queued effect, strike or
 level-up, the Tune window, files moving on the map, co-op, or the second after an input. Otherwise a timer runs it when
@@ -239,5 +240,23 @@ Infiltrator 446, 485 (60) → 31, 27 (1); Operator 438, 466 (60) → 28, 30 (1).
 run) is most of it and holds it near 17 frames/s; the rest of the main thread level or lower: a drawer open 49–56 →
 39–54, a drawer opening 109, 109 → 96, 99, switching 92, 96 → 94, 110. Each class's border, Start, keys 1–4 and Esc,
 reduced motion (the lights held still at the top left, as before), the phone's rows: as before, no page errors.
+
+**Batch 9 (landed).** One layer at the bottom (the texture's `will-change`, set even with no texture up) forced the
+whole UI, the edge flash and the CRT's glass above it into layers of their own; a phone gives every fixed element one
+too. Now the backdrop (`#fx-back`) draws only while a floor's texture, Low Signal or a tear shows (the page's own
+background is the screen's; in the casing the backdrop still carries it); its static, vignette and tear only while
+they show. Everything over the UI is `#crt`, clipped to the screen: the hit's edge flash (`#fx-edge`, moved inside it
+from z-index 40 to the tube's 70), the sweep (drawn only while it sweeps), the bezel and the scanlines, with the roll
+and grain on top (z-index 1) so nothing above them needs a layer. The haze layer is 118% of the screen, not 140% (its
+geometry and drift kept); the grain's one tile bigger than the screen, not 130% (it jumps within the tile). Shown to
+the designer against main as three prototypes (A: nothing idle keeps a layer; B: and one glass; C: and the page draws
+the backdrop's base); all three matched main within 0.2% of pixels stilled, scrolled pages and the hit flash included;
+the designer picked C. Texture memory drawn (layers): phone Map 73 → 45 MB (16 → 14), Settings 66 → 27 (14 → 9), a
+regular fight at home 56 → 21, a boss 69 → 42; desktop (cased) Map 324 → 280 MB (32 → 31), Settings 262 → 230 (20 →
+17), fights 280 → 248 and 317 → 273 (the window and casing are most of the rest). Same day, two runs each, ports
+swapped between them, main → branch, frames a second (main thread ms/s): phone Map idle 34, 35 → 34, 31 ms/s;
+Settings 38, 23 → 26, 25; regular fight 19.0, 31.5 (958, 947) → 26.5, 27.6 (949, 946); boss 13.2, 19.4 (974, 965) →
+15.5, 18.3 (968, 963). Desktop Map 17.3, 20.5 (426, 400) → 22.0, 21.7 (397, 399); Settings 29.4, 28.6 (338, 363) →
+42.4, 45.6 (408, 393: more frames drawn); regular 10.9, 12.6 → 13.3, 15.2; boss 9.2, 9.9 → 9.8, 10.6. No page errors.
 
 Not yet measured: breach and campaign, hubs and shops, co-op, the tutorial, the More sheet, a phone on its side.
