@@ -14,7 +14,7 @@ Phone, main thread busy (frames a second), the first audit (2026-11-15) against 
 | Power-on; the class pick | 27–49% (60) | 2% (1) |
 | Map (idle; scrolling) | 55% (60) | 3% (1); 32% (60) |
 | Run on a server; rooms map (idle) | 91–96% (51–53) | 6% (1–2) |
-| Fight, waiting for the first order | 73% (59) | 22% (60) |
+| Fight, waiting for the first order | 73% (59) | 22% (60); 13% (12) after batch 16 |
 | Regular fight, playing | 75% (30) | 70% (37) |
 | Boss fight, playing | 98% (12) | 92% (28) |
 
@@ -50,7 +50,6 @@ it is 109 requests and 6.3 MB (a 3.1 MB script, a 0.6 MB stylesheet) against 334
 | 13 | **Scrolling paints twice a frame** and runs a layout a frame (Map 32%, Settings 14%, Skills 16%); five scroll listeners in `app.js` run on every scroll event. Find what repaints; listeners passive and once a frame. | both | none |
 | 14 | **The strike layer** (`virus-art.mjs` `art-out`) stays a full-screen canvas (3840 × 2160 on a desktop, about 33 MB) between strikes: free it when nothing is on it. The desktop's virus picture is 11 ms a draw in a boss fight. | desktops most | none |
 | 15 | **A queued effect** (`feel.mjs` play) costs 3.4–3.8 ms on a phone, six or seven a second in a fight: profile which. | both | landed |
-| 16 | **The tick runs every frame in a waiting fight** (`app.js` tickBusy holds while `active`, paused or not): 52–62 ms/s and 60 frames a second on a phone with nothing moving. Since batch 11 it is the only thing asking for frames there; with it rested the waiting fight is 8 frames a second (95 ms/s). | both, phones most | none |
 | 17 | **What still forces a layout each fight frame**, now render reads none: the chips' effects (`chipfx.mjs` tick, a new chip before its ResizeObserver has measured it), the virus picture (`virus-art.mjs` draw), the prompt's caret (`shell.mjs` caret, 15 a second on a desktop). Whichever reads first pays the frame's layout. | both | none |
 
 ## The rules (the designer, November 2026)
@@ -71,6 +70,7 @@ it is 109 requests and 6.3 MB (a 3.1 MB script, a 0.6 MB stylesheet) against 334
 | The stage's reflection, glows and light (`stage.mjs`); the virus's projection (`virus-art.mjs`) | both | landed |
 | Three loops rest: rooms traffic, glyph flicker, the virus pictures | both | landed |
 | The game's tick rests when nothing needs it (`app.js` frame) | both | landed |
+| A paused fight lets the tick rest (`app.js` tickBusy) | both, phones most | landed |
 | The fight screen rebuilds only what changed (`app.js` putRows) | both | landed |
 | A click on a room swaps its card, not the rooms map (`app.js` putRooms); virus names and room outlines kept between draws. Click to frame, median: desktop 76 → 55 ms, phone 158 → 89 ms | both | landed |
 | Samples, audio textures and the chip effects' defs warmed on the loading screen (`warm.mjs`) | both | landed |
@@ -139,6 +139,7 @@ One session each, started fresh. Measure before and after with `tools/perf/phone
 | 9 | The CRT and the backdrop's textures merged into fewer layers: prototypes, the pick, then the build | `screenfx.css`/`.mjs`, `#crt`, `#fx-back`, `#fx-edge` | landed |
 | 10 | The fight's render reads no layout | `app.js` render, `fitTopbar`, `uiScale`, `casingLookUi`, the board's `.dense` | landed |
 | 11 | The virus picture asks for a frame only when a draw is due | `virus-art.mjs` draw loop | landed |
+| 16 | A paused fight lets the tick rest | `app.js` tickBusy, `wakeTick` | landed |
 
 **Batch 1 (landed).** `frame` runs every frame while `tickBusy` holds: a fight, `dirty`, a queued effect, strike or
 level-up, the Tune window, files moving on the map, co-op, or the second after an input. Otherwise a timer runs it when
@@ -320,7 +321,22 @@ ms. Frames and the main thread level or a little better: phone boss 21.2, 21.1, 
 958, 958 → 934, 938, 938 ms/s); regular 24.2, 23.0, 26.1 → 23.3, 23.3; desktop boss 10.0, 12.3 → 12.0, regular 18.8 →
 18.5. No page errors.
 
-**The flashes under the text (landed, after batch 15).** A flash on a part's row (`.brow`), its name block
+**Batch 16 (landed).** `tickBusy` held for any live fight, paused or not, so a fight waiting for its first order ran
+`frame` 60 times a second with nothing moving: its bar and countdown (`II`) stand still, the closing and prewarn
+checks are off while paused, and the chips' effects get no time. Now only a running fight keeps every frame; a paused
+one rests on the tick's timer like an idle page. Whatever resumes it wakes the tick at once: an order (input, and
+`run`'s `markDirty`), the empty Enter's `now`, a tip closing (`hideTip`), the Fight page coming back (`go`), the tab
+shown; a co-op guest stays awake on `coop.busy()`. `wakeTick` restarts the chips' clock with the fight's, so the
+first frame after a rest doesn't step them 100 ms. Same day, two runs each, main → branch, frames a second (main thread
+ms/s): phone, waiting (`?playtest=random&level=20`, idle) 60, 60 (270, 277) → 12, 12 (137, 134), `frame` 69–75 ms/s →
+gone (the picture's 11 draws a second keep it alive); desktop waiting 28, 25 (492, 519) → 28, 27 (508, 509), the
+picture at full fills the frames. Boss fights level: phone 22.5, 18.2 → 21.3, 22.4 (943, 954 → 953, 938); desktop,
+ports swapped, 10.4, 9.4 → 10.2, 9.6 (686, 672 → 661, 643). The paused board, the first order (the countdown moves
+within a frame of it, as on main), leaving the Fight page and coming back, the tab hidden and shown, the first fight's
+tour over a paused fight, phone and desktop: as before, no page errors. A paused fight's chips no longer flicker the
+few themes that drew random noise with no time passing (zap, byte, thorn, in a fight paused in its last 1.5 s).
+
+**The flashes under the text (landed, after batch 16).** A flash on a part's row (`.brow`), its name block
 (`.part-top`) or a HUD bar animated `background` and `box-shadow`; the hit's edge (`#fx-edge`) an inset shadow over the
 screen. Shown to the designer as frozen frames (today, a layer over the text, a layer under it); the designer picked
 under. Now the hosts are positioned and isolated for good, each with a `::before` under its text at opacity 0; a flash

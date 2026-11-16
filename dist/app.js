@@ -147,7 +147,7 @@ function wakeTick(input = false) {
   if (input) awakeUntil = performance.now() + AWAKE_MS;
   if (loop < 2) return;
   clearTimeout(restTimer);
-  loop = 1; last = performance.now(); // the clock counts from the wake, as a running tick's would
+  loop = 1; last = chipLast = performance.now(); // the clocks count from the wake, as a running tick's would
   requestAnimationFrame(frame);
 }
 function markDirty() { dirty = true; wakeTick(); return true; }
@@ -3154,10 +3154,12 @@ document.addEventListener('mouseover', (e) => {
   pktHover = { d, el }; placePktTip();
 });
 document.addEventListener('mouseout', (e) => { if (pktHover && e.target.closest?.('.mpkt') === pktHover.d && !pktHover.d.contains(e.relatedTarget)) hidePktTip(); });
-// What needs the tick every frame: a fight, a render or a queued effect, the Tune window, co-op, a moment after any
-// input. Otherwise it rests (wakeTick).
+// What needs the tick every frame: a running fight, a render or a queued effect, the Tune window, co-op, a moment after
+// any input. Otherwise it rests (wakeTick). A paused fight rests too: its bar, countdown, chips and closing check stand
+// still, and whatever resumes it (an order, a tip closing, the Fight page coming back, the tab shown, the host's
+// snapshot) comes with an input or markDirty().
 function tickBusy(now) {
-  return dirty || now < awakeUntil || active(campaign) || feel.pending() > 0 || attackQueue.length > 0 || attackHeld.length > 0
+  return dirty || now < awakeUntil || (active(campaign) && !campaign.encounter.paused) || feel.pending() > 0 || attackQueue.length > 0 || attackHeld.length > 0
     || lu.pending() > 0 || !!scanner?.isOpen() || !!coop?.busy();
 }
 function frame(now) {
