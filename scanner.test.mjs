@@ -1,5 +1,5 @@
-// The scanner (dist/scanner.mjs, GAME_RULES.md "The scanner"): the schedule, what goes on the air, the reel (a bite,
-// the hold zone, holding still never catches one), what a logged station pays, and the view's markup.
+// The scanner (dist/scanner.mjs, GAME_RULES.md "The scanner"): the schedule, what goes on the air, Tune's pad (finding,
+// the lock, the symbols, the air window, lost and the tape), what a logged station pays, and the view's markup.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, hooks } from './dist/combat.mjs';
@@ -8,7 +8,7 @@ import { priceOf } from './dist/market.mjs';
 import { startHere, chainDef } from './dist/threads.mjs';
 import { serverMarks } from './dist/threads.mjs';
 import * as SC from './dist/scanner.mjs';
-import { stripMarkup, tapeMarkup, postBanner, postOptions, postTerminalMarkup, postTitle } from './dist/scanner-view.mjs';
+import { tuneMarkup, padSvg, playAt, tapeMarkup, postBanner, postOptions, postTerminalMarkup, postTitle } from './dist/scanner-view.mjs';
 import { mapMarkup } from './dist/view.mjs';
 import './dist/netrooms.mjs';
 
@@ -29,24 +29,36 @@ function setup({ servers = 5, hubs = true } = {}) {
 }
 // Puts a station on the air from now, fully faded in.
 function air(s, id) { SC.scannerOf(s); SC.startBroadcast(s, clock, id); clock += 5000; return SC.stationById(id); }
-// The needle a player puts on a station: dead on, then it bites.
-function bite(s, st) {
-  const tune = { f: st.f, hook: null, lock: 0 };
-  assert.equal(SC.tuneStep(s, tune, 0.05, t()), 'bite', `${st.name} bites dead on`);
-  return tune;
-}
-// Seconds of reeling: the player follows the carrier lag seconds late (Infinity: holds still). The time to catch, or null.
-function reel(s, st, tune, lag, limit = 60) {
-  const dt = 0.05;
-  for (let k = 0; k * dt < limit; k++) {
+// Steps an attempt dt at a time for up to `secs`; me(A, t) places your dot each step (null: it stays). Stops early when
+// until(events, A) is true. Returns every event, each with its time.
+function run(s, A, secs, { me = null, until = () => false, onStep = null } = {}) {
+  const dt = 0.05, out = [];
+  for (let k = 0; k * dt < secs; k++) {
     clock += dt * 1000;
-    if (Number.isFinite(lag)) SC.setFreq(tune, SC.carrier(st, t() - lag, tune.hook));
-    const r = SC.tuneStep(s, tune, dt, t());
-    if (r === 'catch') return (k + 1) * dt;
-    if (r === 'lost') return null;
+    if (me) { const p = me(A, t()); if (p) A.me = p; }
+    onStep?.(A, t());
+    const ev = SC.padStep(s, A, dt, t());
+    for (const e of ev) out.push({ ...e, t: t() });
+    if (until(ev, A)) break;
   }
-  return null;
+  return out;
 }
+const follow = (A, t) => SC.cloudOf(A, t); // dead on the cloud
+// An attempt taken to sync: found, then the dot kept on the cloud with the right decoder.
+function synced(s, id) {
+  air(s, id);
+  const A = SC.attempt(s, t(), { decoder: SC.PLAY[SC.stationById(id).kind].decoder });
+  run(s, A, 30, { me: follow, until: () => A.stage === 'sym' });
+  assert.equal(A.stage, 'sym', `${id} syncs`);
+  return A;
+}
+// Catches every symbol as it lights (a hold for a long one).
+const catcher = (s) => (A, now) => {
+  if (A.stage !== 'sym') return;
+  if (A.dec.hold) return;
+  const dot = A.dec.dots.find((d) => SC.symLive(d, now) && now - d.born > 0.15);
+  if (dot) SC.tap(s, A, [dot.x, dot.y], now);
+};
 
 test('the schedule: the first broadcast after 5 minutes, on 2–3 minutes, then 15–30 minutes quiet', () => {
   const s = setup(), S = SC.scannerOf(s);
@@ -80,27 +92,166 @@ test('what goes on the air: stations not yet logged first, then the ones that pa
   assert.match(SC.textOf(s, SC.stationById('kade'), d), new RegExp(s.locations.find((l) => l.id === d.loc).name.toLowerCase()));
 });
 
-test('a station bites close in and strong enough, never a logged one', () => {
+test('search: the station is found when your light is over its cloud, not before; a logged one has no attempt', () => {
   const s = setup(), st = air(s, 'sparrow');
-  const far = { f: st.f + 0.1, hook: null, lock: 0 };
-  assert.ok(SC.heard(s, far, t()).s > 0, 'heard within 0.15 MHz');
-  assert.equal(SC.tuneStep(s, far, 0.05, t()), null, 'no bite at 0.1 MHz');
-  assert.equal(SC.heard(s, { f: st.f + 0.2, hook: null }, t()).s, 0, 'nothing past 0.15 MHz');
-  const tune = bite(s, st);
-  assert.equal(tune.hook.id, 'sparrow');
-  SC.setFreq(tune, st.f + 0.5);
-  assert.equal(tune.hook, null, 'leaving the fine window lets go');
-  SC.scannerOf(s).log.sparrow = { at: clock };
-  assert.equal(SC.tuneStep(s, { f: st.f, hook: null, lock: 0 }, 0.05, t()), null);
+  const A = SC.attempt(s, t(), { me: [10, 10] });
+  assert.equal(A.stage, 'search');
+  assert.deepEqual(run(s, A, 2, { me: (A, now) => { const p = SC.cloudOf(A, now); return [p[0] + 200, p[1]]; } }), [], 'two lights away: nothing');
+  const ev = run(s, A, 1, { me: (A, now) => { const p = SC.cloudOf(A, now); return [p[0] + SC.PAD.light * 0.85, p[1]]; }, until: (e) => e.length });
+  assert.deepEqual(ev.map((e) => e.e), ['found']);
+  assert.equal(A.stage, 'lock');
+  SC.catchStation(s, st.id, clock);
+  air(s, 'sparrow');
+  assert.equal(SC.attempt(s, t()), null, 'a logged numbers station: nothing to catch');
 });
 
-test('the reel: holding still never catches one, and following a beat late catches each kind', () => {
-  for (const id of ['sparrow', 'tarbeach', 'kade']) {
-    const s = setup(), st = air(s, id);
-    assert.equal(reel(s, st, bite(s, st), Infinity, 60), null, `${st.name}: held still for a minute`);
-    const s2 = setup(), st2 = air(s2, id), secs = reel(s2, st2, bite(s2, st2), 0.25, 30);
-    assert.ok(secs && secs >= SC.SCANNER.fill && secs <= 9, `${st2.name}: caught 0.25 s late in ${secs} s`);
+test('the lock fills in 5 s in the hold ring and drains at 1/8 a second outside; the wrong decoder fills at half speed', () => {
+  const syncAt = (decoder) => {
+    const s = setup(); air(s, 'sparrow');
+    const A = SC.attempt(s, t(), { decoder });
+    const ev = run(s, A, 30, { me: follow, until: () => A.stage === 'sym' });
+    return ev.at(-1).t - ev[0].t;
+  };
+  const right = syncAt('vox'), wrong = syncAt('data');
+  assert.ok(Math.abs(right - SC.PAD.fill) < 0.15, `VOX on a numbers station: ${right} s`);
+  assert.ok(Math.abs(wrong - 2 * SC.PAD.fill) < 0.15, `DATA on it: ${wrong} s`);
+  const s = setup(); air(s, 'sparrow');
+  const A = SC.attempt(s, t());
+  run(s, A, 3, { me: follow });
+  const lk = A.lock;
+  run(s, A, 1, { me: (A, now) => { const p = SC.cloudOf(A, now); return [p[0] + SC.PAD.hold + 20, p[1]]; } });
+  assert.ok(Math.abs(lk - A.lock - 1 / SC.PAD.drain) < 0.02, 'a second out of the ring drains an eighth');
+});
+
+test('a distress call: it fades, and the lock waits while it does; it is never found faded', () => {
+  const s = setup(); air(s, 'kade');
+  const A = SC.attempt(s, t(), { decoder: 'cw' });
+  let pausedSteps = 0, foundFaded = false;
+  run(s, A, 12, {
+    me: follow,
+    onStep: (A, now) => {
+      if (A.stage === 'lock' && SC.fadedNow(A, now)) { const before = A.lock; SC.padStep(s, A, 0.05, now); if (A.lock === before) pausedSteps++; }
+    },
+    until: (ev) => { if (ev.some((e) => e.e === 'found') && SC.visOf(A, t()) < SC.PAD.faded) foundFaded = true; return A.stage === 'sym'; },
+  });
+  assert.ok(pausedSteps > 5, `the lock held still while it faded (${pausedSteps} steps)`);
+  assert.equal(foundFaded, false);
+});
+
+test('the symbols: numbers one at a time, pirates in bursts of 3, a distress call SOS in order with its long ones held', () => {
+  const s = setup(), A = synced(s, 'sparrow'), t0 = t();
+  const syms = run(s, A, 3, { onStep: catcher(s) }).filter((e) => e.e === 'sym');
+  assert.ok(Math.abs(syms[0].t - t0 - SC.PAD.sync) < 0.06, 'the first lights after the sync');
+  assert.ok(syms.every((e) => e.delay === 0));
+  assert.ok(Math.abs(syms[1].t - syms[0].t - SC.PLAY.numbers.every) < 0.06, 'then every 0.62 s');
+  const s2 = setup(), P = synced(s2, 'tarbeach'), burst = run(s2, P, 2).filter((e) => e.e === 'sym').slice(0, 3);
+  assert.deepEqual(burst.map((e) => +e.delay.toFixed(2)), [0, 0.16, 0.32], 'a pirate: three, 0.16 s apart');
+  assert.equal(new Set(burst.map((e) => e.i)).size, 3, 'at three positions');
+  assert.ok(P.dec.dots.every((d) => d.life >= 0.55 && d.life <= 1.1));
+  const s3 = setup(), D = synced(s3, 'kade');
+  const kinds = [];
+  run(s3, D, 40, { onStep: (A, now) => { const d = A.dec?.dots.find((x) => SC.symLive(x, now) && now - x.born > 0.15); if (!d || A.dec.hold) return; kinds.push(d.dash ? '-' : '.'); SC.tap(s3, A, [d.x, d.y], now); }, until: () => D.stage !== 'sym' });
+  assert.equal(kinds.join(''), '...---...');
+  assert.equal(D.stage, 'logged');
+});
+
+test('a long one needs 0.5 s held; let go early and it waits, and a missed one comes back', () => {
+  const s = setup(), D = synced(s, 'kade');
+  run(s, D, 20, { onStep: catcher(s), until: () => D.dec.got === 3 });
+  run(s, D, 5, { until: () => D.dec.dots.some((d) => SC.symLive(d, t())) });
+  const dash = D.dec.dots.find((d) => SC.symLive(d, t()));
+  assert.ok(dash.dash, 'the fourth is a long one');
+  SC.tap(s, D, [dash.x, dash.y], t());
+  run(s, D, 0.3);
+  SC.release(D);
+  assert.equal(D.dec.got, 3, 'let go after 0.3 s: not caught');
+  const ev = run(s, D, 5, { until: (e) => e.some((x) => x.e === 'miss') });
+  assert.ok(ev.some((e) => e.e === 'miss'));
+  run(s, D, 2, { until: (e) => e.some((x) => x.e === 'sym') });
+  const again = D.dec.dots.find((d) => !d.done);
+  assert.ok(again?.dash, 'it comes back');
+  SC.tap(s, D, [again.x, again.y], t());
+  run(s, D, 0.6);
+  assert.equal(D.dec.got, 4, 'held 0.5 s: caught');
+});
+
+test('catching every symbol logs it and pays; too many misses lose the frame', () => {
+  for (const id of ['sparrow', 'tarbeach']) {
+    const s = setup(), A = synced(s, id);
+    run(s, A, 30, { onStep: catcher(s), until: () => A.stage !== 'sym' });
+    assert.equal(A.stage, 'logged', `${id}: logged`);
+    assert.equal(A.dec.got, SC.needOf(A.kind));
+    assert.ok(SC.logged(s, id));
   }
+  for (const id of ['sparrow', 'tarbeach', 'kade']) {
+    const s = setup(), A = synced(s, id), K = SC.PLAY[A.kind];
+    const ev = run(s, A, 30, { until: () => A.stage !== 'sym' });
+    assert.equal(A.stage, 'lost');
+    assert.equal(A.out.why, 'frame');
+    assert.equal(ev.filter((e) => e.e === 'miss').length, K.strikes, `${id}: lost on miss ${K.strikes}`);
+    assert.ok(!SC.logged(s, id));
+  }
+});
+
+test('the air window: the lesser of the kind\'s window and the broadcast\'s time left; lost when it runs out before sync', () => {
+  const s = setup(); air(s, 'tarbeach');
+  const A = SC.attempt(s, t());
+  assert.equal(Math.round(SC.airLeft(s, A, t())), SC.PLAY.pirate.air);
+  SC.scannerOf(s).air.end = clock + 12000;
+  assert.equal(Math.round(SC.airLeft(s, A, t())), 12, 'the broadcast has less');
+  const s2 = setup(); air(s2, 'sparrow');
+  const B = SC.attempt(s2, t(), { me: [10, 10] });
+  const ev = run(s2, B, 60, { until: () => B.stage === 'lost' });
+  assert.equal(B.out.why, 'air');
+  assert.ok(Math.abs(ev.at(-1).t - B.t0 - SC.PLAY.numbers.air) < 0.1, 'at 45 s');
+});
+
+test('lost: it signs off onto the tape, Play back puts it on the air once; lost again, nothing left', () => {
+  const s = setup(); air(s, 'sparrow');
+  const A = SC.attempt(s, t(), { me: [10, 10] });
+  run(s, A, 60, { until: () => A.stage === 'lost' });
+  assert.equal(SC.onAir(s, clock), null, 'it signed off');
+  assert.equal(SC.playable(s, clock), '', 'on tape');
+  assert.ok(!playAt(s, A, t()), 'Play back shows once the loss has typed out');
+  assert.ok(playAt(s, A, t() + 2.5));
+  assert.ok(SC.playBack(s, clock));
+  const B = SC.attempt(s, t(), { me: [10, 10] });
+  assert.ok(B, 'a new search on the tape');
+  run(s, B, 60, { until: () => B.stage === 'lost' });
+  assert.match(SC.playable(s, clock), /Already played back/);
+  assert.equal(playAt(s, B, t() + 3), null);
+  assert.match(padSvg(s, B, t() + 3), /nothing left on tape/);
+  assert.ok(!SC.logged(s, 'sparrow'), 'a loss costs nothing');
+});
+
+test('Tune: lantern-rx on post-07, the signal as 9 cells, the decoders with WoW tooltips; the pad at each stage', () => {
+  const s = setup();
+  const idle = tuneMarkup(s, null, t());
+  assert.match(idle, /lantern-rx <em>post-07<\/em>/);
+  assert.equal((idle.match(/<i[ >]/g) || []).length, 9);
+  assert.match(idle, /title="VOX: Decoder\. Reads numbers stations\./);
+  assert.match(idle, /aria-pressed="true"[^>]*>VOX|data-sc-dec="vox" aria-pressed="true"/);
+  assert.match(idle, /viewBox="0 0 900 562"/);
+  assert.match(idle, /DEAD AIR/);
+  assert.doesNotMatch(idle, /MHz|S\d/, 'no dial, no S-meter readout');
+  air(s, 'sparrow');
+  const A = SC.attempt(s, t());
+  assert.match(padSvg(s, A, t()), /class="p-air"/, 'the air bar');
+  assert.doesNotMatch(padSvg(s, A, t()), /PHASE/);
+  run(s, A, 1, { me: follow });
+  assert.match(padSvg(s, A, t()), /PHASE/, 'locking: the axes');
+  assert.match(padSvg(s, A, t()), /class="p-arc/, 'the lock arc');
+  run(s, A, 10, { me: follow, until: () => A.stage === 'sym' });
+  run(s, A, 1.2);
+  const sym = padSvg(s, A, t());
+  assert.doesNotMatch(sym, /PHASE|p-air"/, 'synced: no axes, no air bar');
+  assert.match(sym, /class="p-sym"/);
+  run(s, A, 30, { onStep: catcher(s), until: () => A.stage === 'logged' });
+  const done = padSvg(s, A, t() + 4);
+  assert.match(done, /LOGGED/);
+  assert.match(done, /SPARROW-9/);
+  assert.match(done, /Retired · lore/);
+  assert.match(done, /p-ascii/);
 });
 
 test('a numbers station logs its lore line and signs off 8 s later', () => {
@@ -134,35 +285,17 @@ test('a distress call starts a thread on the server it names, its ! on the map',
   assert.ok(!SC.distressTargets(s).includes(loc), 'one thread a server');
 });
 
-test('the radio: the frequency, the S-meter, the log counts, ??? until clear, the tape, and tooltips in the WoW grammar', () => {
-  const s = setup(), st = air(s, 'sparrow');
-  const html = stripMarkup(s, { f: 7.415, hook: null, lock: 0 }, t());
-  assert.match(html, /7\.415/);
-  assert.match(html, /class="sc-meter"/);
-  assert.match(html, />0\/4</, 'numbers stations logged');
-  assert.match(html, /no carrier/);
-  const near = stripMarkup(s, { f: st.f + 0.08, hook: null, lock: 0 }, t());
-  assert.match(near, /\?\?\?/, 'a faint station has no name yet');
-  SC.catchStation(s, 'sparrow', clock);
-  const done = stripMarkup(s, { f: st.f, hook: null, lock: 0 }, t());
-  assert.match(done, /SPARROW-9/);
-  assert.match(done, /LOGGED/);
-  assert.match(done, /class="sc-tape q".*recording/, "on the air: the tape is recording");
-  assert.match(postTitle(s, clock), /^Listening Post: /);
-  assert.match(postTitle(s, clock), /\n▸ Something is on the air/, 'on the air: the answer line');
-});
-
 test('a numbers station pays once; a pirate and a distress call pay again on a later broadcast, once a broadcast', () => {
   const s = setup(), owl = air(s, 'owl');
   SC.catchStation(s, 'owl', clock);
   air(s, 'owl');
-  assert.equal(SC.tuneStep(s, { f: owl.f, hook: null, lock: 0 }, 0.05, t()), null, 'a logged numbers station never bites again');
+  assert.equal(SC.attempt(s, t()), null, 'a logged numbers station is nothing to catch again');
   assert.equal(SC.catchStation(s, 'owl', clock), null);
   const tar = air(s, 'tarbeach');
   SC.catchStation(s, 'tarbeach', clock);
-  assert.equal(SC.tuneStep(s, { f: tar.f, hook: null, lock: 0 }, 0.05, t()), null, 'not twice in one broadcast');
+  assert.equal(SC.attempt(s, t()), null, 'not twice in one broadcast');
   air(s, 'tarbeach');
-  assert.equal(bite(s, tar).hook.id, 'tarbeach', 'it bites again on the next');
+  assert.equal(SC.attempt(s, t()).id, 'tarbeach', 'again on the next');
   assert.ok(SC.catchStation(s, 'tarbeach', clock));
   assert.equal(SC.scannerOf(s).log.tarbeach.n, 2);
   air(s, 'kade');
@@ -201,12 +334,14 @@ test('the tape: it holds the last broadcast, Play back puts it back on the air o
   assert.equal(SC.tapeOf(s).played, undefined);
 });
 
-test('the tape: a played-back station reels in as usual, and one caught live leaves nothing to play back', () => {
-  const s = setup(), st = air(s, 'tarbeach'), S = SC.scannerOf(s);
+test('the tape: a played-back station is caught as usual, and one caught live leaves nothing to play back', () => {
+  const s = setup(); air(s, 'tarbeach'); const S = SC.scannerOf(s);
   clock = S.air.end; SC.tickScanner(s, clock);
-  SC.playBack(s, clock); clock += 5000;
-  assert.ok(reel(s, st, bite(s, st), 0.25, 30), 'caught off the tape');
-  assert.ok(SC.catchStation(s, 'tarbeach', clock));
+  SC.playBack(s, clock);
+  const A = SC.attempt(s, t(), { decoder: 'data' });
+  run(s, A, 30, { me: follow, until: () => A.stage === 'sym' });
+  run(s, A, 30, { onStep: catcher(s), until: () => A.stage !== 'sym' });
+  assert.equal(A.stage, 'logged', 'caught off the tape');
   assert.equal(S.log.tarbeach.n, 1);
   const s2 = setup(), S2 = SC.scannerOf(s2);
   air(s2, 'owl'); SC.catchStation(s2, 'owl', clock);
