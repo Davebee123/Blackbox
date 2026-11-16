@@ -2224,8 +2224,8 @@ minutes after you take it.
 | Past the Tracker | Bank a file planted in a Tracker server's vault from a visit it never reached you (waking is fine) | 8 | 65 + 10L, +8, a protocol half the time |
 
 A contract that points at a room marks it on that server's map (its address amber, the contract's mark), and so does any
-job a room's live virus would count for. The strip shows **Contract** and its progress (its tip has each one, a row each as
-the map's tracker draws it), the map's card each contract on that server. Pinned earned pieces sit under the tracker
+job a room's live virus would count for. The strip shows **Contract** and its progress (its tip has each one, a row each with
+its progress; the map's tracker keeps a row to one line, the rest in its tooltip), the map's card each contract on that server. Pinned earned pieces sit under the tracker
 (*Earned pieces*). A takeover or recovery points at a server you've found, or at an **unknown server** one hop past one: you
 trace it to find it.
 

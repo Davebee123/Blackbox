@@ -2397,9 +2397,10 @@ const ctProg = (j) => j.ready ? `<span class="ct-turn">Turn in</span>`
   : j.of && j.of > 10 ? `<span class="ct-bar"><i style="width:${(j.part * 100).toFixed(0)}%"></i></span><small class="ct-n">${j.n}/${j.of}</small>`
   : j.of || ctCount(j) ? `<small class="ct-n">${j.of ? `${j.n}/${j.of}` : ctCount(j)}</small>`
   : `<small class="ct-n ct-say">${esc(j.text)}</small>`;
-const ctInner = (j) => { const p = ctProg(j), say = p.includes('ct-say'); return `${glyph(j.icon)}<span class="ct-txt"><b>${esc(j.name)}</b></span><span class="ct-prog${say ? '' : ' ct-side'}">${p}</span>`; };
+// One line on the map: a row with no count leaves its few words to the tooltip. A tooltip's rows keep them under the name.
+const ctInner = (j, words = false) => { const p = ctProg(j), say = p.includes('ct-say'); return `${glyph(j.icon)}<span class="ct-txt"><b>${esc(j.name)}</b></span>${say && !words ? '' : `<span class="ct-prog${say ? '' : ' ct-side'}">${p}</span>`}`; };
 // The rows for a tooltip (floorplan-view.mjs: the strip's Contracts), one per contract, as the tracker draws them.
-export const contractTipRows = (list) => list.map((j) => `<span class="ct-row tt-ct${j.ready ? ' ready' : ''}">${ctInner(j)}</span>`).join('');
+export const contractTipRows = (list) => list.map((j) => `<span class="ct-row tt-ct${j.ready ? ' ready' : ''}">${ctInner(j, true)}</span>`).join('');
 function contractTracker(s, sel = null) {
   const list = trackedJobs(s);
   if (!list.length) return '';
