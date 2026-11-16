@@ -46,12 +46,12 @@ it is 109 requests and 6.3 MB (a 3.1 MB script, a 0.6 MB stylesheet) against 334
 
 | # | What | Helps | Look |
 |---|---|---|---|
-| 10 | **The fight's render reads layout.** The board's overflow check (`app.js`, `bd.scrollHeight` after `putRows`) is about 28% of `render` on a phone; `fitTopbar` measures the bar on every render (about 9%); `turnTimeline`, `cycleChanged` and `phStage` call `getBoundingClientRect` after writes. Measure only when what they depend on changes (a ResizeObserver, a row added or removed). | both | none |
 | 11 | **The virus picture's loop asks for every frame** just to check the clock: a fight waiting for an order runs 60 frames a second (22% of a phone) though a phone's picture draws 8 a second. A timer until the next draw is due, then one frame. | both, phones most | none |
 | 12 | **The start.** About 2.7 s on a phone's CPU before the power-on shows, one block of 1.3 s evaluating the bundle; the app's start builds what isn't on screen (`invasion.mjs` 169 ms, `profile.mjs` 143, `collection-log.mjs` 114, `codex.mjs` 93). The Horizon drawn before the script runs (HTML and CSS); pages built and modules loaded on first open. | phones most | none |
 | 13 | **Scrolling paints twice a frame** and runs a layout a frame (Map 32%, Settings 14%, Skills 16%); five scroll listeners in `app.js` run on every scroll event. Find what repaints; listeners passive and once a frame. | both | none |
 | 14 | **The strike layer** (`virus-art.mjs` `art-out`) stays a full-screen canvas (3840 × 2160 on a desktop, about 33 MB) between strikes: free it when nothing is on it. The desktop's virus picture is 11 ms a draw in a boss fight. | desktops most | none |
 | 15 | **A queued effect** (`feel.mjs` play) costs 3.4–3.8 ms on a phone, six or seven a second in a fight: profile which. | both | none |
+| 16 | **What still forces a layout each fight frame**, now render reads none: the chips' effects (`chipfx.mjs` tick, a new chip before its ResizeObserver has measured it), the virus picture (`virus-art.mjs` draw), the prompt's caret (`shell.mjs` caret, 15 a second on a desktop). Whichever reads first pays the frame's layout. | both | none |
 
 ## The rules (the designer, November 2026)
 
@@ -76,6 +76,7 @@ it is 109 requests and 6.3 MB (a 3.1 MB script, a 0.6 MB stylesheet) against 334
 | Samples, audio textures and the chip effects' defs warmed on the loading screen (`warm.mjs`) | both | landed |
 | One bundled, minified script and stylesheet for the hosted game (`scripts/build.mjs`) | both, phones most | landed |
 | The class pick's border effects on the compositor (`pickfx.mjs`); no flex-basis transitions in its phone layout | both, phones most | landed |
+| The fight's render reads no layout (`app.js`): the board's overflow, the log's scroll, the top bar's fit and the UI scale measured after layout | both | landed |
 
 **The same look, by other means (the designer's eye before it lands):**
 
@@ -269,5 +270,21 @@ swapped between them, main → branch, frames a second (main thread ms/s): phone
 Settings 38, 23 → 26, 25; regular fight 19.0, 31.5 (958, 947) → 26.5, 27.6 (949, 946); boss 13.2, 19.4 (974, 965) →
 15.5, 18.3 (968, 963). Desktop Map 17.3, 20.5 (426, 400) → 22.0, 21.7 (397, 399); Settings 29.4, 28.6 (338, 363) →
 42.4, 45.6 (408, 393: more frames drawn); regular 10.9, 12.6 → 13.3, 15.2; boss 9.2, 9.9 → 9.8, 10.6. No page errors.
+
+**Batch 10 (landed).** The fight's render forced a layout two or three times a render: `fitTopbar` read the bar's
+size, `uiScale` the body's and `casingLookUi` the window's (`innerWidth`, a style pass) on every render; the board's
+overflow check read `scrollHeight` after the rows went in; the log read it to scroll to its newest line. Now the top bar
+refits on a key read without layout (tabs, the integrity note, People, the pager) and on a ResizeObserver for its size;
+the UI scale's room comes from one on the body (measured at once when the casing changes); the window's size is kept
+from its resizes; the board tightens (`.dense`) from one on the board and each row; the log scrolls from one that fires
+on observing. Each runs after the frame's layout, before paint. What measures the board in the same render (a turn's
+FLIP, the strikes, the phone's stage) tightens it first, as before. `turnTimeline`, `cycleChanged` and `phStage` already
+measured once a cycle, not a render: kept. Forced layout and style from render (profiled, phone, regular fight): about
+47 ms/s → 19 (only at a turn, a strike or the stage), but the next reader in the frame now pays it (16). Dense board, the log's end,
+the top bar's fit steps (640–1920 px) and the scale: as on main, no page errors. Same day, two runs each, ports
+alternated, main → branch, frames a second (main thread ms/s; the game's tick ms/s): phone boss 17.4, 19.0 (958, 958;
+292, 258) → 17.3, 24.9 (966, 939; 268, 213); regular 28.0, 29.8 (949, 940; 247, 251) → 31.8, 33.5 (921, 934; 217, 228).
+Desktop boss 10.7, 10.8 (639, 667; 73, 78) → 12.3, 10.8 (639, 649; 64, 66); regular 15.9, 13.7 (589, 603; 66, 74) →
+16.9, 12.6 (579, 648; 63, 78).
 
 Not yet measured: breach and campaign, hubs and shops, co-op, the tutorial, the More sheet, a phone on its side.
