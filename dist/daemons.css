@@ -1,6 +1,6 @@
 /* The Loadout's Daemons tab (daemons-view.mjs): the party. A card with your class at the top, then the party (you
    and your daemons, a bar of 12 cycles each), the bench and the roster, and beside it a sticky panel for the daemon
-   you pick: a bottom sheet on a phone. Teal is you, violet your daemons, red the virus; structure stays amber.
+   you pick: in the one sheet on a phone. Teal is you, violet your daemons, red the virus; structure stays amber.
    The sprites (daemon-sprites.mjs) blink; reduced motion and Motion off stop it. Nothing here moves the layout. */
 
 .dm-page { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--s6); align-items: start; }
@@ -131,7 +131,8 @@ button.dm-who:hover:not(:disabled) { border-color: var(--line-strong); }
   .dm-sec { grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
   .dm-h small { display: inline; margin-left: var(--s4); }
 }
-/* A phone: one column; the panel is a bottom sheet while a daemon is picked, shut by its × or Escape. */
+/* One column: the panel sits under the page while a daemon is picked, shut by its × or Escape. On a phone it is in
+   the one sheet (phone.css, app.js phPops). */
 @media (max-width: 900px) {
   .dm-page { grid-template-columns: minmax(0, 1fr); }
   .dm-head { padding: var(--s3) 14px; }
@@ -150,8 +151,7 @@ button.dm-who:hover:not(:disabled) { border-color: var(--line-strong); }
   .dm-row[data-shown] { background: none; box-shadow: none; }
   .dm-turns > .dm-lane .dm-lt { white-space: normal; text-align: center; font-size: 10px; line-height: 1.25; }
   .dm-st { height: auto; min-height: var(--h-chip); padding: 2px var(--s4); white-space: normal; }
-  .dm-page:has(.dm-panel.open) { padding-bottom: 60vh; }
-  .dm-panel { display: none; position: fixed; top: auto; left: 0; right: 0; bottom: 0; z-index: 30; max-height: 62vh; overflow-y: auto; padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); border-radius: 0; border-width: 2px 0 0; box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.6); }
+  .dm-panel { display: none; position: static; padding: 14px 16px 18px; }
   .dm-panel.open { display: grid; }
   .dm-close { display: block; position: absolute; top: 6px; right: 8px; width: 36px; height: 36px; padding: 0; font-size: 20px; line-height: 1; color: var(--muted); }
   .dm-ph { grid-template-columns: 80px minmax(0, 1fr); padding-right: 36px; }

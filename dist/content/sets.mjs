@@ -917,6 +917,285 @@ export default {
       }
     },
     {
+      "id": "switchback",
+      "name": "Switchback",
+      "levels": [
+        8,
+        14
+      ],
+      "pieces": [
+        "dead-end",
+        "one-way",
+        "turnout"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% Stealth.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "stealth",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "On the cycle after one of your delays lands, your hits deal 15% more.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 15,
+              "if": "after-delay"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "coldstart",
+      "name": "Cold Start",
+      "levels": [
+        19,
+        26
+      ],
+      "pieces": [
+        "ice-pick",
+        "rime",
+        "thaw"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+8% damage to a part that hasn't attacked yet this fight.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 8,
+              "if": "target-unacted"
+            }
+          ]
+        },
+        "3": {
+          "text": "Your first damaging skill each fight is a critical strike.",
+          "fx": [
+            {
+              "when": "start",
+              "do": "first-skill-crit",
+              "value": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bootloader",
+      "name": "Bootloader",
+      "levels": [
+        31,
+        38
+      ],
+      "pieces": [
+        "grub",
+        "chainload",
+        "post"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% Clock Speed.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "clock",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "Cooldowns start each fight 1 cycle shorter.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "cd-start",
+              "value": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "atoll",
+      "name": "Atoll",
+      "levels": [
+        43,
+        50
+      ],
+      "pieces": [
+        "lagoon",
+        "reef",
+        "causeway"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+6% max Signal.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "signal%",
+              "value": 6
+            }
+          ]
+        },
+        "3": {
+          "text": "While one part is left, it takes 15% more from you, and when it becomes the last its next attack comes a cycle later.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 15,
+              "if": "target-last"
+            },
+            {
+              "when": "break",
+              "do": "delay-last",
+              "value": 1,
+              "if": "one-left"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "fullcoverage",
+      "name": "Full Coverage",
+      "levels": [
+        25,
+        38
+      ],
+      "pieces": [
+        "plumb-line",
+        "field-book",
+        "hi-vis",
+        "datum"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+2 Regen.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "regen",
+              "value": 2
+            }
+          ]
+        },
+        "3": {
+          "text": "A room's first clear pays 25% of a kill's XP.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "clear-xp",
+              "value": 25
+            }
+          ]
+        },
+        "4": {
+          "text": "Your first fight in each room starts with a ◆, and you deal 10% more damage.",
+          "fx": [
+            {
+              "when": "start",
+              "do": "chit",
+              "value": 1,
+              "if": "room-new"
+            },
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 10
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "longhaul",
+      "name": "Long Haul",
+      "levels": [
+        10,
+        24
+      ],
+      "pieces": [
+        "waybill",
+        "dray",
+        "tailgate"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "Contracts pay 10% more XP.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "contract-xp%",
+              "value": 10
+            }
+          ]
+        },
+        "3": {
+          "text": "Delivering a contract fills your Signal, and kills pay 10% more XP.",
+          "fx": [
+            {
+              "when": "deliver",
+              "do": "fill-signal"
+            },
+            {
+              "when": "custom",
+              "do": "kill-xp%",
+              "value": 10
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tenure",
+      "name": "Tenure",
+      "levels": [
+        33,
+        48
+      ],
+      "pieces": [
+        "freehold",
+        "deed",
+        "sitting-tenant"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+8% max Signal on a server you hold.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "signal%",
+              "value": 8,
+              "if": "server-held"
+            }
+          ]
+        },
+        "3": {
+          "text": "Kills on a server you hold roll for an item twice.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "held-roll",
+              "value": 1
+            }
+          ]
+        }
+      }
+    },
+    {
       "id": "bedrock",
       "name": "Bedrock",
       "levels": [
@@ -968,6 +1247,447 @@ export default {
               "when": "custom",
               "do": "last-stand",
               "value": 20
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "catchment",
+      "name": "Catchment",
+      "levels": [
+        37,
+        44
+      ],
+      "pieces": [
+        "gully",
+        "storm-drain",
+        "basin",
+        "reservoir"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% damage, +5% max Signal.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 5
+            },
+            {
+              "when": "always",
+              "do": "signal%",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "Breaking a part heals you for 3% of your max Signal.",
+          "fx": [
+            {
+              "when": "break",
+              "do": "break-heal%",
+              "value": 3
+            }
+          ]
+        },
+        "4": {
+          "text": "Each part you break adds 5% damage for the fight, up to 20%.",
+          "fx": [
+            {
+              "when": "break",
+              "do": "buff",
+              "value": 5,
+              "cycles": 99,
+              "stacks": 4
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "fineprint",
+      "name": "Fine Print",
+      "levels": [
+        26,
+        32
+      ],
+      "pieces": [
+        "rider",
+        "copay",
+        "exclusion",
+        "premium"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+8% max Signal.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "signal%",
+              "value": 8
+            }
+          ]
+        },
+        "3": {
+          "text": "A tell that lands on you shields you for 5% of your max Signal.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "tell-shield",
+              "value": 5
+            }
+          ]
+        },
+        "4": {
+          "text": "While a shield holds, your hits deal 10% more.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 10,
+              "if": "shielded"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "contiguous",
+      "name": "Contiguous",
+      "levels": [
+        27,
+        31
+      ],
+      "pieces": [
+        "sector",
+        "cluster",
+        "allocation-table"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% Clock Speed.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "clock",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "Each command in a row on the same part deals 6% more than the last, up to 18%.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "row%",
+              "value": 6,
+              "cap": 18
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "crypter",
+      "name": "Crypter",
+      "levels": [
+        26,
+        31
+      ],
+      "pieces": [
+        "stub",
+        "junk-code",
+        "decryptor"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% crit.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "crit",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "When you break a part's last ◆, your next hit on another part is a critical strike.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "strip-crit"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "domainadmin",
+      "name": "Domain Admin",
+      "levels": [
+        32,
+        37
+      ],
+      "pieces": [
+        "ticket",
+        "group-policy",
+        "schema",
+        "admin-rights"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% damage, +5% max Signal.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 5
+            },
+            {
+              "when": "always",
+              "do": "signal%",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "When you strip a part's last ◆, your shortest cooldown drops by 1.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "strip-cd",
+              "value": 1
+            }
+          ]
+        },
+        "4": {
+          "text": "From the third part you break in a fight, your cooldowns are 1 cycle shorter.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "late-cd",
+              "value": 1,
+              "n": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "semaphore",
+      "name": "Semaphore",
+      "levels": [
+        33,
+        37
+      ],
+      "pieces": [
+        "spinlock",
+        "semaphore",
+        "critical-section"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% Clock Speed.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "clock",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "An attack you delay leaves its part Open for 1 cycle.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "delay-open",
+              "value": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "hiddenprocess",
+      "name": "Hidden Process",
+      "levels": [
+        32,
+        36
+      ],
+      "pieces": [
+        "unlink",
+        "hollow",
+        "driver"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+6% damage.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 6
+            }
+          ]
+        },
+        "3": {
+          "text": "Your burns keep ticking on a part that can't be hit.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "burn-through"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "watertight",
+      "name": "Watertight",
+      "levels": [
+        34,
+        38
+      ],
+      "pieces": [
+        "hatch",
+        "seal-plate",
+        "pressure-door"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+3 Block.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "reduction",
+              "value": 3
+            }
+          ]
+        },
+        "3": {
+          "text": "When a hit takes more than 15% of your max Signal, the next hit on you within 2 cycles deals 20% less.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "big-guard",
+              "value": 20,
+              "over": 15,
+              "cycles": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "smashandgrab",
+      "name": "Smash and Grab",
+      "levels": [
+        38,
+        42
+      ],
+      "pieces": [
+        "grabber",
+        "clipper",
+        "dropzone"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+6% damage.",
+          "fx": [
+            {
+              "when": "hit",
+              "do": "dmg%",
+              "value": 6
+            }
+          ]
+        },
+        "3": {
+          "text": "When your hit breaks a part's shield, a third of it shields you for 2 cycles.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "shield-steal",
+              "value": 33,
+              "cycles": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "payroll",
+      "name": "Payroll",
+      "levels": [
+        39,
+        43
+      ],
+      "pieces": [
+        "pay-slip",
+        "direct-deposit",
+        "year-end"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+8% max Signal.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "signal%",
+              "value": 8
+            }
+          ]
+        },
+        "3": {
+          "text": "Every 4th cycle, heals you for 4% of your max Signal.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "heal-every",
+              "value": 4,
+              "every": 4
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "backbone",
+      "name": "Backbone",
+      "levels": [
+        38,
+        44
+      ],
+      "pieces": [
+        "hop",
+        "crc",
+        "broadcast-storm"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+5% Clock Speed.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "clock",
+              "value": 5
+            }
+          ]
+        },
+        "3": {
+          "text": "A hit that reaches several parts deals 8% more for each part past the first, up to 24%.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "reach%",
+              "value": 8,
+              "cap": 24
             }
           ]
         }

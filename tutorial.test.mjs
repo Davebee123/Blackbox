@@ -68,7 +68,7 @@ const winRoom = (s) => { s.encounter.virus.parts.forEach((p) => { p.integrity = 
 const newPlayer = () => { const s = fresh(); s.tutorialCompleted = true; return s; };
 
 test('the rooms tour: every step one or two short sentences, on the rooms page, kept apart from the tips', () => {
-  assert.deepEqual(TOUR.map((t) => t.id), ['tour-walk', 'tour-engage', 'tour-scan', 'tour-cache', 'tour-hunter', 'tour-rest', 'tour-jackout']);
+  assert.deepEqual(TOUR.map((t) => t.id), ['tour-walk', 'tour-engage', 'tour-cache', 'tour-hunter', 'tour-rest', 'tour-jackout']);
   for (const t of TOUR) {
     assert.equal(t.page, 'rooms');
     assert.ok(t.done, `${t.id} moves on when you do it`);
@@ -100,7 +100,7 @@ test('the rooms tour on SPRAWL-00, in order: walk in, the virus\'s card, then Ja
   winRoom(s);
   t = tour(s);
   assert.equal(t.id, 'tour-jackout', 'a fight won: Jack out (SPRAWL-00 has no cache, hunter or rest room)');
-  assert.match(t.text, /bank your pack/);
+  assert.match(t.text, /pack's banked/);
   play(s, 'jack out');
   assert.equal(t.done(s, t.mark?.(s)), true);
   markSeen(s, t.id);
@@ -184,4 +184,28 @@ test('the rooms tour shows once a save: done steps stay done through a save, a n
   play(u, 'connect sprawl');
   closePop(u);
   assert.equal(nextTip(u, 'rooms', shows(u)), null);
+});
+
+// A server's takeover path and its run threats, each taught the first time it's on the map (tips.mjs room-*, run-*).
+test('a server map teaches its vault, Core, elite, a rival and low Signal, once each', async () => {
+  const RV = await import('./dist/rivals.mjs');
+  const s = newPlayer();
+  s.hackers = { [s.loadout.archetype]: { level: 12, xp: 0 } };
+  FP.startRooms(s, { seed: 7, size: 'medium', floor: 3, level: 12 });
+  FP.connect(s);
+  skipTour(s);
+  const g = s.rooms.graph;
+  for (const r of Object.values(g.rooms)) s.rooms.seen[r.id] = 'kind'; // the whole map drawn
+  RV.spawnRival(s, 99, 'sable');
+  const tipsHere = () => { const ids = []; for (let t; (t = nextTip(s, 'rooms', shows(s))) && ids.length < 12;) { ids.push(t.id); markSeen(s, t.id); } return ids; };
+  const kinds = new Set(Object.values(g.rooms).map((r) => r.kind));
+  const ids = tipsHere();
+  if (kinds.has('vault')) assert.ok(ids.includes('room-vault'), ids.join());
+  if (kinds.has('core')) assert.ok(ids.includes('room-core'), ids.join());
+  if (kinds.has('elite')) assert.ok(ids.includes('room-elite'), ids.join());
+  assert.ok(ids.includes('run-rival'), ids.join());
+  assert.ok(!ids.includes('run-signal'), 'full Signal: no warning yet');
+  s.rooms.signal = Math.floor(s.rooms.max * 0.2);
+  assert.deepEqual(tipsHere(), ['run-signal'], 'low Signal: the warning, once');
+  assert.deepEqual(tipsHere(), []);
 });

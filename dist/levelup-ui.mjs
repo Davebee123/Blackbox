@@ -1,5 +1,6 @@
 // The level-up on the page (levelup-view.mjs has the markup): when it comes up, where it sits, how long it stays and
-// its sounds (existing ones only: the level's win, a cycle tick per [ OK ] line). app.js makes one, pushes each
+// its sounds (the level's own, the lift, which the card's flash is timed to in levelup.css, and a cycle tick per
+// [ OK ] line). app.js makes one, pushes each
 // level-up event to it, calls tick() every frame and dismiss() on Enter or Esc.
 //   A level-up never comes up during a fight or over a card that waits for you (calm()): it waits, and comes up at the
 //   next calm moment (after a won fight, once you have left it). A fight that starts while it is up sends it away.
@@ -9,7 +10,7 @@ import { levelUpSummary, firmwareMarkup } from './levelup-view.mjs';
 
 const STAY = 12000; // how long it stays up once the flash is done (Continue, Enter, Esc or × close it sooner)
 const FLASH = 900, STEP = 120; // the progress line's run, then one [ OK ] line every STEP ms
-export function createLevelUpUi({ calm, fighting, feel, keys = () => [], motion = () => true }) {
+export function createLevelUpUi({ calm, fighting, feel, keys = () => [], motion = () => true, queued = () => {} }) {
   const host = document.getElementById('levelup');
   let queue = [], up = null, timer = 0, sounds = [];
   const clear = () => { clearTimeout(timer); sounds.forEach(clearTimeout); sounds = []; };
@@ -42,7 +43,7 @@ export function createLevelUpUi({ calm, fighting, feel, keys = () => [], motion 
     host.hidden = false;
     void host.offsetWidth; host.classList.add('show');
     up = { sum };
-    feel.add('win', null);
+    feel.add('levelup', null);
     const n = sum.items.length;
     if (motion()) for (let i = 0; i < n; i++) sounds.push(setTimeout(() => up && feel.add('cycle', null), FLASH + (i + 1) * STEP));
     stay(STAY + (motion() ? FLASH + n * STEP : 0));
@@ -53,7 +54,7 @@ export function createLevelUpUi({ calm, fighting, feel, keys = () => [], motion 
   host?.addEventListener('click', (e) => { if (e.target.closest('[data-lu-close], [data-module]')) hide(); });
   addEventListener('resize', () => { if (up) place(); });
   return {
-    push(e) { if (e) queue.push(e); },
+    push(e) { if (e) { queue.push(e); queued(); } }, // queued: the page's tick wakes to show it
     // Every frame: up at the next calm moment, away when a fight comes up.
     tick() {
       if (up && fighting()) hide(true);

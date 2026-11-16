@@ -210,13 +210,14 @@ test('the page keeps the wall, filters and code, and repeats nothing: daemons, s
   assert.match(panelOf(page), /class="hi"/);
 });
 
-test('a phone: one column, no sideways scroll, the panel a bottom sheet of a fixed height; motion is light only', () => {
+test('a narrow screen: one column, no sideways scroll, the panel under the page (a phone: in the one sheet); motion is light only', () => {
   const css = readFileSync(new URL('./dist/server.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   const phone = css.slice(css.indexOf('@media (max-width: 900px)'));
   assert.match(phone, /\.hsv-page \{ grid-template-columns: minmax\(0, 1fr\);/);
   assert.match(phone, /\.hsv-sec \{ grid-template-columns: minmax\(0, 1fr\);/);
   assert.match(phone, /\.hsv-wall, \.hsv-chips \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}/);
-  assert.match(phone, /\.hsv-panel \{ display: none; position: sticky;[^}]*bottom: var\(--dock-h, 0px\);[^}]*height: min\(/, 'a sheet of a fixed height above the prompt');
+  assert.match(phone, /\.hsv-panel \{ display: none; position: static;/, 'no sheet of its own: a phone lifts it into the one sheet (phone.test.mjs)');
+  assert.match(readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8'), /\{ id: 'server', page: '#hsv-panel\.open', through: true, height: 'half'/); // a fixed height, so what it shows never moves what's in it
   assert.match(phone, /\.hsv-panel\.open \{ display: grid; \}/);
   // Every grid column can shrink; nothing in a cell holds the page wider.
   for (const [, cols] of phone.matchAll(/grid-template-columns: ([^;]+);/g)) assert.match(cols, /^(repeat\(\d, )?minmax\(0, 1fr\)\)?$|^\d{2,3}px minmax\(0, 1fr\)$/, `phone columns shrink: ${cols}`);

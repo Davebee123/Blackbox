@@ -30,9 +30,7 @@ test('friends: add, list first in the panel, remove; only real handles', () => {
     play(s, 'friend add ' + someone);
     assert.ok(isFriend(s, someone));
     assert.equal(online(s)[0].handle, someone, 'friends first');
-    assert.match(peopleMarkup(s, 'friends', t), new RegExp(`data-run="crew invite ${someone}"`));
-    play(s, 'crew invite ' + someone);
-    assert.equal(s.crewSim.at(-1).name, someone, 'a friend online joins the crew in their class');
+    assert.doesNotMatch(peopleMarkup(s, 'friends', t), /crew invite/, 'crews come from hiring runners now (runners.mjs R2)');
     play(s, 'friend remove ' + someone);
     assert.ok(!isFriend(s, someone));
   } finally { hooks.now = null; }
@@ -51,8 +49,8 @@ test('SPRAWL-00 is shared: ls shows who is in each room, and arriving says who i
     for (const sp of Object.values(s.zone.spawns)) Object.assign(sp, { alive: false, respawnAt: t + 3600000 }); // a clear way
     const top = '/' + folder.split('/')[1], named = (f) => FP.roomList(s).find((r) => r.path0 === f).path; // rooms are named for what they are; cd still takes the folder
     const ls = play(s, 'ls').find((e) => e.type === 'rooms-out').message;
-    // Rooms are unknown until you've been in them (floorplan.mjs fog): its line is a ?, the people in it still show.
-    if (top === folder) assert.match(ls, new RegExp(`\\n\\d+  [A-Z]+\\d+  \\?  \\[\\?\\][^\\n]*${who[0].handle}`), 'their room shows them, unknown as it is');
+    // A room next to you is discovered (floorplan.mjs fog): its line names it, with the people in it.
+    if (top === folder) assert.match(ls, new RegExp(`\\n\\d+  [A-Z]+\\d+  ${named(folder)}  [^\\n]*${who[0].handle}`), 'their room shows them');
     const said = play(s, 'cd ' + folder).map((e) => e.message).join(' ');
     assert.equal(s.run.cwd, named(folder));
     const here = inFolder(s, folder).map((x) => x.handle);

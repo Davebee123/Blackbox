@@ -33,7 +33,7 @@ import { FAMILIES, ROOM_FAMILIES, CONFIG, STRAINS, along, killXp } from './data.
 import { ROOT } from './root.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { LOOT, MATERIALS, rollItem, seeded } from './gear.mjs';
-import { emit, warn, hackerLevel, serverLevel, gainXp, deedXpFor, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem, setDeliver } from './combat.mjs';
+import { emit, warn, hackerLevel, serverLevel, gainXp, deedXpFor, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem, setDeliver, fxPct } from './combat.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { hiddenNodes, hiddenNode, syncFlags, items, flagged, spawnHidden } from './hidden.mjs';
 import { hiddenNear } from './floors.mjs';
@@ -831,7 +831,9 @@ export function mailCommand(s, text, at = now()) {
     (c.reward.drop || c.reward.daemon) && { label: 'Protocol', qty: '', kind: 'item', text: 'a protocol' },
   ].filter(Boolean);
   emit(s, 'contract-done', `DELIVERED: ${title(s, c)}. +${c.reward.credits} credits.`, { contract: c.id, credits: c.reward.credits, gains, name: title(s, c) });
-  if (xp) gainXp(s, xp, 'contract', null, CONTRACT_KIND[c.type] || 'fight'); // no Fresh bonus: it counts as the work behind it
+  const haul = Math.round((xp * fxPct(s, 'contract-xp%')) / 100); // Long Haul (2)
+  if (xp) gainXp(s, xp + haul, 'contract', null, CONTRACT_KIND[c.type] || 'fight');
+  hooks.earnEvent?.(s, { kind: 'contract' }); // Long Haul's count (earned.mjs) // no Fresh bonus: it counts as the work behind it
   setDeliver(s); // set bonuses on a delivery (LOWLIGHT Kit: your Signal full, the next kill's XP up; sets.mjs)
   if (fifth) { emit(s, 'streak', `Streak ${s.slayer.streak}. ${title(s, c)} pays double.`, { streak: s.slayer.streak }); const it = rollDrop(s, { kind: 'rogue', strain: c.strain, rolls: 3, trophy: true }, paidAt); if (it) addItem(s, it, 'Streak reward: '); }
   if (repN) changeRep(s, giver, repN, 'Contract delivered');

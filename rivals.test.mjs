@@ -1,4 +1,4 @@
-// Rivals (GAME_RULES.md "Rivals", docs/rivals.md): named runners who race you to a server's vault and fight you
+// Rivals (GAME_RULES.md "Rivals", docs/rivals.md): runners from the cast who race you to a server's vault and fight you
 // trainer-style. rivals.mjs (the roll, the walk, the lineup, the counter-pick, stakes and memory), floorplan.mjs (the
 // hooks on moves and fights), netrooms.mjs (the roll on the network, the files that go with it), the map and board marks.
 import test from 'node:test';
@@ -25,11 +25,13 @@ function onServer({ floor = 3, seed = 7, level = 12 } = {}) {
 const kill = (s) => { for (let i = 0; i < 40 && active(s); i++) { for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: Math.min(p.integrity, 1) }); const p = s.encounter.virus.parts.find((x) => x.integrity > 0); if (p) command(s, 'spike ' + p.id); resolveCycle(s); } FP.settle(s); };
 const lose = (s) => { for (let i = 0; i < 200 && active(s); i++) { s.run.integrity = 1; s.rooms.signal = 1; for (const p of s.encounter.virus.parts) if (p.attack) p.attack.due = s.encounter.cycle; resolveCycle(s); } FP.settle(s); };
 // Wait until the rival has you (or it's gone).
+// Three runners on the seed fresh() falls back to, one for each lineup (STYLE), all Steady.
+const K = 'sable', E = 'lint', H = 'byte';
 const until = (s) => { for (let i = 0; i < 40 && RV.rivalOf(s) && s.rooms.screen?.kind !== 'rival'; i++) FP.wait(s); };
 
 test('a rival starts as far from the vault as the entry is, never next to you, and walks a room a move toward it', () => {
   for (const seed of [3, 7, 11, 19]) {
-    const s = onServer({ seed }), R = s.rooms, g = R.graph, v = RV.spawnRival(s, 99, 'kudzu');
+    const s = onServer({ seed }), R = s.rooms, g = R.graph, v = RV.spawnRival(s, 99, K);
     const d = FP.distances(g, g.vaults[0], (x) => x !== g.core);
     assert.ok(d[v.at] >= d[g.entry], `seed ${seed}: ${d[v.at]} ≥ ${d[g.entry]}`);
     assert.ok((FP.distances(g, R.at)[v.at] ?? 9) > 1, 'never next to you');
@@ -44,21 +46,21 @@ test('a rival starts as far from the vault as the entry is, never next to you, a
 });
 
 test('at the vault it takes the files and walks out; reaching the entry with them, it got away', () => {
-  const s = onServer(), R = s.rooms, g = R.graph, v = RV.spawnRival(s, 99, 'escrow');
+  const s = onServer(), R = s.rooms, g = R.graph, v = RV.spawnRival(s, 99, E);
   R.at = g.core; // out of its way (a room it never walks)
   for (let i = 0; i < 30 && v.state === 'loose'; i++) RV.rivalMove(s);
   assert.equal(v.vault, true);
   assert.ok(R.opened[g.vaults[0]], 'the vault is open');
   assert.equal(v.state, 'gone');
-  assert.deepEqual(RV.memoryOf(s, 'escrow'), { met: 0, won: 0, lost: 0, away: 1, last: 'away', quote: null });
+  assert.deepEqual(RV.memoryOf(s, E), { met: 0, won: 0, lost: 0, away: 1, last: 'away' });
 });
 
 test('aggro: when it reaches you it has you; no step back, no jack out, no wait, Engage only', () => {
-  const s = onServer(), R = s.rooms, v = RV.spawnRival(s, 99, 'kudzu');
+  const s = onServer(), R = s.rooms, v = RV.spawnRival(s, 99, K);
   until(s);
   assert.equal(R.screen?.kind, 'rival');
   assert.equal(v.state, 'on');
-  assert.equal(RV.memoryOf(s, 'kudzu').met, 1);
+  assert.equal(RV.memoryOf(s, K).met, 1);
   const at = R.at;
   const next = FP.exits(s)[0];
   FP.go(s, FP.neighbours(R.graph, at)[0]);
@@ -75,7 +77,7 @@ test('aggro: when it reaches you it has you; no step back, no jack out, no wait,
 });
 
 test('walking into its room starts it too', () => {
-  const s = onServer(), R = s.rooms, v = RV.spawnRival(s, 99, 'hush');
+  const s = onServer(), R = s.rooms, v = RV.spawnRival(s, 99, H);
   const n = FP.neighbours(R.graph, R.at).find((id) => id !== R.graph.core);
   v.at = n;
   FP.go(s, n);
@@ -84,7 +86,7 @@ test('walking into its room starts it too', () => {
 
 test('the lineup: 2 fights on floors 1–2, 3 from floor 3, one after another; Signal carries, a counter-pick between', () => {
   for (const [floor, n] of [[1, 2], [2, 2], [3, 3], [5, 3]]) assert.equal(RV.RIVAL.fights(floor), n);
-  const s = onServer({ floor: 2 }), R = s.rooms, v = RV.spawnRival(s, 99, 'escrow');
+  const s = onServer({ floor: 2 }), R = s.rooms, v = RV.spawnRival(s, 99, E);
   assert.equal(v.fights, 2);
   assert.equal(RV.lineupOf(s).length, 2);
   until(s);
@@ -103,22 +105,26 @@ test('the lineup: 2 fights on floors 1–2, 3 from floor 3, one after another; S
   assert.ok(Object.keys(s.encounter.readyAt).length === 0, 'cooldowns start fresh');
   kill(s);
   assert.equal(v.state, 'down');
-  assert.equal(RV.memoryOf(s, 'escrow').won, 1);
+  assert.equal(RV.memoryOf(s, E).won, 1);
 });
 
-test('the counter-pick reads how you won: each rival its three reads, one part each, built at its level', () => {
-  assert.deepEqual(RV.counterFor('kudzu', { burst: true }), { read: 'burst', counter: 'patcher' });
-  assert.deepEqual(RV.counterFor('kudzu', { spread: true }), { read: 'spread', counter: 'hotspare' });
-  assert.deepEqual(RV.counterFor('kudzu', {}), { read: 'slow', counter: 'floodramp' });
-  assert.deepEqual(RV.counterFor('escrow', { burst: true }), { read: 'burst', counter: 'mutexlock' });
-  assert.deepEqual(RV.counterFor('escrow', { burns: true }), { read: 'burns', counter: 'deadline' });
-  assert.deepEqual(RV.counterFor('escrow', {}), { read: 'strips', counter: 'ward' });
-  assert.deepEqual(RV.counterFor('hush', { reads: true, burst: true }), { read: 'reads', counter: 'veil' });
-  assert.deepEqual(RV.counterFor('hush', { helpers: true }), { read: 'helpers', counter: 'phaseshift' });
-  assert.deepEqual(RV.counterFor('hush', {}), { read: 'burst', counter: 'decoymirror' });
+test('the counter-pick reads how you won, by temperament; the lineup by faction; one part each, built at its level', () => {
+  const T = (temper) => ({ temper });
+  assert.deepEqual(RV.counterFor(T('Careful'), { burst: true, spread: true }), { read: 'burst', counter: 'patcher' });
+  assert.deepEqual(RV.counterFor(T('Careful'), { reads: true }), { read: 'reads', counter: 'veil' });
+  assert.deepEqual(RV.counterFor(T('Careful'), {}), { read: 'slow', counter: 'mutexlock' });
+  assert.deepEqual(RV.counterFor(T('Steady'), { spread: true }), { read: 'spread', counter: 'hotspare' });
+  assert.deepEqual(RV.counterFor(T('Steady'), { helpers: true }), { read: 'helpers', counter: 'phaseshift' });
+  assert.deepEqual(RV.counterFor(T('Steady'), {}), { read: 'slow', counter: 'floodramp' });
+  assert.deepEqual(RV.counterFor(T('Bold'), { burst: true }), { read: 'burst', counter: 'decoymirror' });
+  assert.deepEqual(RV.counterFor(T('Bold'), {}), { read: 'reads', counter: 'floodramp' });
+  for (const k of Object.keys(RV.READS_BY)) for (const [, c] of RV.READS_BY[k]) assert.ok(RV.COUNTERS[c], c);
+  assert.equal(RV.rivalP({ faction: 'glassjaw' }).crew, 'palemask');
+  assert.equal(RV.rivalP({ faction: 'halcyon' }).lineup[0].family, 'ransomware');
+  assert.equal(RV.rivalP({ faction: 'lantern' }).crew, 'swarmline');
   // Every counter adds exactly one part that carries its gene (the Veil veils the virus instead).
   for (const [id, c] of Object.entries(RV.COUNTERS)) {
-    const s = onServer(), R = s.rooms, v = RV.spawnRival(s, 99, 'escrow');
+    const s = onServer(), R = s.rooms, v = RV.spawnRival(s, 99, E);
     v.next = { read: 'burst', counter: id, cycles: 3 };
     R.screen = { kind: 'rival', room: R.at, between: true }; v.state = 'on'; v.at = R.at;
     const bare = encounterVirus(s, ...Object.values((({ key, seed, opts }) => ({ key, seed, opts }))(RV.rivalFight(s, FP.hereOf(s))))).parts.length;
@@ -130,7 +136,7 @@ test('the counter-pick reads how you won: each rival its three reads, one part e
     assert.ok(GENES[c.gene].carried(p), `${id} carries ${c.gene}`);
     assert.equal(p.special, false);
     for (const k of ['ward', 'lock', 'twin', 'fallback']) if (p[k]) assert.ok(parts.some((x) => x.id === p[k]), `${id}: its ${k} points at a part of this virus`);
-    assert.match(boardMarkup(s), /\+ ESCROW/, 'its board mark');
+    assert.match(boardMarkup(s), new RegExp(`\\+ ${E}`), 'its board mark');
   }
 });
 
@@ -148,7 +154,7 @@ test('readFight: burst, spread, slow, burns, helpers, reads and strips from the 
 });
 
 test('stakes: beat it and its pack is yours, with the vault it opened; lose and it is gone with both', () => {
-  const s = onServer(), R = s.rooms, g = R.graph, v = RV.spawnRival(s, 99, 'kudzu');
+  const s = onServer(), R = s.rooms, g = R.graph, v = RV.spawnRival(s, 99, K);
   until(s);
   assert.ok(v.vault, 'it got to the vault first (you waited)');
   const credits = R.credits, packed = R.pack.length;
@@ -159,46 +165,47 @@ test('stakes: beat it and its pack is yours, with the vault it opened; lose and 
   assert.ok(s.logs.some((e) => e.type === 'spoil' && e.kind === 'credits'), 'a row on the spoils card');
   assert.equal(R.screen, null);
   // Lost: gone with its pack, your record says so, and you're disconnected as from any lost fight.
-  const t = onServer({ seed: 11 }), w = RV.spawnRival(t, 5, 'hush');
+  const t = onServer({ seed: 11 }), w = RV.spawnRival(t, 5, H);
   until(t);
   FP.act(t, 'engage');
   lose(t);
   assert.equal(w.state, 'gone');
-  assert.equal(RV.memoryOf(t, 'hush').lost, 1);
+  assert.equal(RV.memoryOf(t, H).lost, 1);
   assert.equal(t.rooms.at, null, 'disconnected');
 });
 
 test('a vault it holds: you cannot pull its files; got away, the files go with it', () => {
-  const s = onServer(), R = s.rooms, g = R.graph, v = RV.spawnRival(s, 99, 'escrow');
+  const s = onServer(), R = s.rooms, g = R.graph, v = RV.spawnRival(s, 99, E);
   v.vault = true; R.opened[g.vaults[0]] = clock;
   R.at = g.vaults[0]; R.screen = null;
   const ev = FP.act(s, 'pull');
-  assert.match(ev.map((e) => e.message).join(' '), /ESCROW took the files/);
+  assert.match(ev.map((e) => e.message).join(' '), new RegExp(`${E} took the files`));
 });
 
 test('memory: meetings and your record, its line and wick\'s, kept on the save (v52, keyed on the field)', () => {
-  const s = onServer(), v = RV.spawnRival(s, 99, 'kudzu');
+  const s = onServer(), v = RV.spawnRival(s, 99, K);
   until(s);
-  assert.equal(RV.rivalSays(s, 'kudzu'), 'hiii!! that vault is mine!!');
-  assert.equal(RV.wickLine(s, v, 'challenge'), RV.RIVALS.kudzu.wick.first);
+  assert.equal(RV.rivalSays(s, v), "The vault's on my list. You're on my way.");
+  assert.match(RV.wickLine(s, v, 'challenge'), /^sable\. lantern pays them\. steady/);
   for (let i = 0; i < v.fights; i++) { FP.act(s, 'engage'); kill(s); }
-  const m = RV.memoryOf(s, 'kudzu');
-  assert.equal(m.won, 1); assert.equal(m.last, 'won'); assert.equal(m.quote, 'spike', 'HUSH would quote your last command');
+  const m = RV.memoryOf(s, K);
+  assert.equal(m.won, 1); assert.equal(m.last, 'won');
   m.met = 2;
-  assert.equal(RV.rivalSays(s, 'kudzu'), 'hiii again!! brought friends');
-  assert.equal(RV.wickLine(s, v, 'challenge'), RV.RIVALS.kudzu.wick.won);
-  assert.equal(RV.rivalSays(s, 'escrow'), 'Invoice 0417. Your time is billable.');
-  assert.equal(RV.rivalSays(s, 'hush'), '> connect');
+  assert.equal(RV.rivalSays(s, v), 'Same vault, different day.');
+  assert.match(RV.wickLine(s, v, 'challenge'), /you beat them last time/);
+  assert.equal(RV.rivalSays(s, { id: 'nyx', temper: 'Careful' }), 'I mapped this vault last week. Step aside.');
   v.next = { counter: 'patcher' };
   assert.match(RV.wickLine(s, v, 'between'), /brought a patcher/);
-  // The save: an older one has no field and gets none; a broken one is dropped; an unknown rival is forgotten.
-  const old = { by: { kudzu: m, cantor: { met: 1 } }, at: null, n: 1 };
-  const t = { rivals: structuredClone(old) }; RV.rivalsRestore(t);
-  assert.deepEqual(Object.keys(t.rivals.by), ['kudzu']);
-  RV.rivalsRestore(t); assert.deepEqual(Object.keys(t.rivals.by), ['kudzu'], 'safe to run twice');
+  // The save: an older one has no field and gets none; a broken one is dropped; the old named rivals are forgotten,
+  // and one of theirs mid-run (no faction) is gone.
+  const old = { by: { [K]: m, kudzu: { met: 1 } }, at: null, n: 1 };
+  const t = { rivals: structuredClone(old), rooms: { visit: { rival: { id: 'kudzu', state: 'on' } }, screen: { kind: 'rival' } } }; RV.rivalsRestore(t);
+  assert.deepEqual(Object.keys(t.rivals.by), [K]);
+  assert.equal(t.rooms.visit.rival, null); assert.equal(t.rooms.screen, null);
+  RV.rivalsRestore(t); assert.deepEqual(Object.keys(t.rivals.by), [K], 'safe to run twice');
   const u = { rivals: [] }; RV.rivalsRestore(u); assert.equal(u.rivals, undefined);
   const back = restore(JSON.parse(JSON.stringify(s)));
-  assert.equal(RV.memoryOf(back, 'kudzu').won, 1);
+  assert.equal(RV.memoryOf(back, K).won, 1);
 });
 
 test('the roll: one in RIVAL.chance, then your cooldown', () => {
@@ -211,22 +218,70 @@ test('the roll: one in RIVAL.chance, then your cooldown', () => {
 });
 
 test('the map: its ring and name tab, its route, its lineup chips, the race on the vault; the strip', () => {
-  const s = onServer(), v = RV.spawnRival(s, 99, 'kudzu');
+  const s = onServer(), v = RV.spawnRival(s, 99, K);
   const html = roomsMarkup(s);
   assert.match(html, /fp-rv-ring/);
-  assert.match(html, /fp-rv-tab[^]*KUDZU/);
+  assert.match(html, /fp-rv-tab[^]*sable/);
   assert.match(html, /fp-rv-route/);
   assert.match(html, /fp-rv-lineup/);
   assert.match(html, /YOU \d/);
-  assert.match(html, /KUDZU \d<\/text>/);
+  assert.match(html, /sable \d<\/text>/);
   assert.match(html, /fp-rvstat[^]*to vault/);
-  assert.match(html, /Rival · SWARMLINE · level 13/, 'its tooltip: name, kind, what it does');
+  assert.match(html, /Rival · LANTERN · level 13/, 'its tooltip: name, kind, what it does');
   until(s);
   const card = roomsMarkup(s);
   assert.match(card, /challenged/);
-  assert.match(card, /hiii!! that vault is mine!!/);
+  assert.match(card, /The vault&#39;s on my list/);
   assert.match(card, /fp-rv-stakes/);
   assert.match(card, /data-rooms="engage"/);
   assert.doesNotMatch(card, /data-rooms="back"/, 'Engage only');
   assert.ok(v.state === 'on');
+});
+
+// ---------- R3: rivals from the cast (docs/runners.md) ----------
+import { castOf, standingOf, huntsYou, runnersOf, personFor } from './dist/runners.mjs';
+import { runnerRail, runnersMap } from './dist/runners-view.mjs';
+import { CARDS } from './dist/events.mjs';
+const onNet = () => { const s = onServer(); s.netSeed = 1054899509; return s; };
+
+test('R3: a rival is a runner on the net, not your crew; one hunting you comes first', () => {
+  const s = onNet(), cast = castOf(s).map((r) => r.handle);
+  const v = RV.spawnRival(s, 99);
+  assert.ok(cast.includes(v.id), `${v.id} is on the net`);
+  const r = castOf(s).find((x) => x.handle === v.id);
+  assert.equal(v.faction, r.faction); assert.equal(v.temper, r.temper);
+  // a grudge: you lost to one of them, and they come back for you
+  const t = onNet(), mark = castOf(t).at(-1).handle;
+  RV.memoryOf(t, mark).last = 'lost';
+  assert.equal(RV.spawnRival(t, 12345).id, mark);
+  t.crewSim = [{ name: mark, runner: true }]; t.rooms.visit.rival = null; delete t.rooms.opened[t.rooms.graph.vaults[0]];
+  assert.notEqual(RV.spawnRival(t, 12345)?.id, mark, 'never your own crew');
+});
+
+test('R3: hunting you is red on the map and the Rail until you beat them; beating them raises their standing', () => {
+  const s = onNet(), v = RV.spawnRival(s, 99), h = v.id;
+  assert.ok(huntsYou(s, h), 'racing you now');
+  runnersOf(s).known[h] = { by: 'net', at: 0 };
+  assert.match(runnerRail(s), new RegExp(`rr-row[^"]* rival" data-runner="${h}"`));
+  assert.match(runnerRail(s), /data-tt-kind="Rival · /);
+  until(s);
+  for (let i = 0; i < v.fights; i++) { FP.act(s, 'engage'); kill(s); }
+  assert.equal(v.state, 'down');
+  assert.ok(!huntsYou(s, h), 'beaten: square');
+  assert.ok(standingOf(s, h) > 0, 'a rival you beat: you have met them');
+  assert.doesNotMatch(runnerRail(s), / rival"/);
+  RV.memoryOf(s, h).last = 'lost';
+  assert.ok(huntsYou(s, h), 'you lost to them: hunting you');
+  // The map: a red diamond of their own, out of any count (in sight or not, the class rides the diamond when drawn).
+  const fl = 1, html = runnersMap(s, fl);
+  if (html.includes(`data-runner="${h}"`)) assert.match(html, new RegExp(`mrun[^"]* rival" data-runner="${h}"`));
+});
+
+test('R3: a feud card names a runner who works for the side that sends them', () => {
+  const s = onNet();
+  for (let i = 0; i < 20; i++) {
+    s.rng = 42 + i;
+    const ev = CARDS.call.make(s, { faction: 'halcyon', level: 10, slot: null });
+    assert.equal(personFor(s, ev.name).faction, ev.by, `${ev.name} works for ${ev.by}`);
+  }
 });

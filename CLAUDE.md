@@ -11,7 +11,10 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   merged with main first). Check it when a session starts: a red main is the first thing to fix. A cloud session
   takes about two hours over the full suite, so leave it to the workflow. Commit or land only on `# fail 0`. The `todo`
   tests in the full suite are expected. When reading a test log, grep for its totals and its `not ok`
-  lines; never read the whole log.
+  lines; never read the whole log. Run `npm ci` once a session (esbuild, for the build and its test).
+- **The hosted build** (scripts/build.mjs): Pages serves `dist/` bundled into one script and one stylesheet. A new
+  stylesheet goes in index.html's links; a file fetched by URL is page-relative, or `new URL(x, import.meta.url)` from
+  a module at `dist/`'s root (the bundle sits there).
 - **Landing.** Every session lands its own work: commit on its branch, then `node scripts/land.mjs`. It merges
   origin/main in, tests the merged tree, pushes it to main, and starts over if main moved meanwhile. Resolve its
   conflicts yourself, keeping both sides' intent. Where two changes collide in design (one removes what the other
@@ -36,6 +39,14 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   bots to pass it.
 - **Sessions.** Start a fresh session for each batch of work, after the last one is pushed. A long session re-reads
   its whole context on every step, and that is most of the token cost.
+- **Performance** (docs/performance-plan.md). Phones are the bar. New code costs nothing while idle: no loop, timer or
+  infinite animation runs when its thing isn't on screen. Animate `transform` and `opacity` only; never `box-shadow`,
+  `filter`, colours or SVG attributes in a loop. Update the DOM in place rather than rebuilding it, never read layout
+  (`getBoundingClientRect`, `offsetWidth`, `scrollHeight`) right after writing it, and build per-sample or per-pixel
+  work once, not per frame. A change to a fight, a map or anything that animates gets a before and after from
+  `tools/perf/phone-audit.mjs` (phone, and `DEVICE=desk`), and it lands only if it doesn't get slower. What nobody can
+  see ships for everyone; what costs looks goes behind a Graphics setting, full by default on a desktop. Keep the
+  plan's table current.
 - **Screenshots.** One good set per feature, looked at before showing. Scripts and screenshots go in the session's
   scratchpad, never in the repo. Chromium is preinstalled for Playwright; never run `playwright install`.
 - **Processes.** Never `pkill -f`; kill by PID.
@@ -58,6 +69,7 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **No intrusion metaphors** (keyhole, way in, backdoor).
 - **No canvas or PixiJS for new UI.** Screen effects never cover or interfere with the UI, and there is no rain on
   the screen.
+- **No slogans on a class**, anywhere (its `idea`, `solo` and `crew` lines stay off the screen).
 - **Busy designs get rejected.** Improve by aligning and spacing, not by adding decoration. Keep the original map.
 - **Sounds:** the designer hears a sound before it is added.
 - **Design choices:** for a look with real alternatives, show two or three options as screenshots and let the
@@ -68,29 +80,60 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 ## Decisions so far (don't undo these without asking)
 
 - **Picked looks:**
+  - the power-up: the *Horizon* (a line of light across the screen, the black box standing on it with its light
+    leaking round the edges, the name small and low; poweron.mjs), its loading phase the *Trace* (the box's outline
+    draws itself round while the game warms up, then the light leaks out); and the same box on a short line as the small mark
+    (the top bar, the class pick, the favicon); a faint `/` between the top bar's tabs;
   - quest window: the *Transmission*;
   - level-up: the *Firmware update*;
-  - pager: the *Tray*;
+  - wick's tips (the guided path's, tips.mjs `wick`): the *Transmission* (his face, the kicker, his lowercase line);
+  - pager: the *Log* on a desktop (ping lines in the map's left column under Contracts, above the prompt elsewhere;
+    pings.mjs), which replaced the *Tray*; a phone keeps its lamp and Comms;
   - player card: the *NET ID badge*;
   - collection log: the *Ledger*;
   - journals: one Ledger entry, a timeline over the writers, a document card on the first find (docs/journals.md);
-  - runners on the map: the *Rail* (a Runners list under Contracts; the map draws only the runner you pick, its route
-    and where it's heading; docs/runners.md);
+  - runners on the map: the *Diamonds* (one small paper-white diamond under a place you've revealed that has runners,
+    how many beside it from two up, a hollow one each on the road; none under a ? or anywhere else you haven't
+    revealed; a lone diamond opens their card to hire them, a counted one the list of who's there; the runner you pick
+    gets their route and where they're heading, as far as you've revealed); the *Rail* (a Runners list) is off the
+    desktop map (the designer reads the map instead) and stays only in a phone's sheet; runners stay off the Online
+    list (docs/runners.md);
   - meeting and hiring runners: a paper-white tab on the room, Help / Step back on its card; cards with rows split by
     hairlines; traits as named chips, temperament first; standing as the *Tier bar* (the tier, a bar to the next); a
     hired runner's bar picked from their *Presets* (a tile each: name and how it plays, keys in its tooltip);
+  - a boss's loot page: *Grouped* (every kill, its uniques, its set piece, each with the next kill's odds as a bar);
+  - a boss's act break: the *Strip* (after a breath the board's strip flares in with the act's name, holds about 4 s
+    and fades out blurred; the boss's emote types under its bar; then the parts come back in, top to bottom; the clock
+    holds; the *Tritone*: a heavy break, then a low G against its tritone droning under the strip);
+  - a boss's bar: the *Segments* (one segment an act, the acts done dark, the act now draining);
+  - connecting to a server: the *Carrier* (a teal line from HOME to its node, the rooms open in a circle from there;
+    eased, no black screen, no readout), and jacking out plays it backwards (your room locks teal, the rooms close in
+    a circle onto the node, the line runs home);
   - network map servers: the *Glyph* (each server its kind's glyph, a bar of what's cleared, a ring round a new one);
   - network map ground: the *Chart* (faint crosshairs and hairlines that pan and zoom with the map);
+  - fights by floor: the *Place* (the floor's scene in characters inside the render, its light and camera on the virus,
+    the floor's entrance and break physics; stage.mjs), the fight log on its newest line (▴ opens it), chips typed or
+    flipped in on some floors (their look never changes), the theme's *era* on Coldline and Bedrock; the picture's
+    *Era* and board skins that change the chips were rejected; then the visit's sky (fog, a low sun), the virus in the
+    floor's colour (not Deep Core or the Sink), the spoils arriving the floor's way, the rooms map's floor as a
+    *material* (a picture under the map was rejected: its landmarks fell under rooms); the *Swap* (the picture left of
+    the board, the virus's bar over it, yours over the board); the board's *frame* by floor (playhead form, rules,
+    headings; never chips); strikes throwing the floor's material were rejected;
   - rooms map: each room kind its own outline and hue (the *Hues*: magenta elite, orange socket, green rest, gold
     vault, white entry and den), thick borders. The one place a colour means a kind.
+  - class picker: the *Drawer* (four squares; the picked one slides its traits, starting skills and subclasses out of
+    its side, the rest narrow to strips) with a class border each (Breaker *Fracture*, Bastion *Deflect*, Infiltrator
+    *Trace*, Operator *Threads*) and Start as a lit command, `> start --as <class>` (docs/ui.md);
   - phone shell (docs/phone-plan.md): five tabs at the bottom (Map, Mail, Loadout, Server, More); in a fight no top
-    strip, the HUD with the virus's window top right (it slides out beside the board in its half, covering no chip),
+    strip, the HUD as one line (*C*: your bar left, the virus's right with its ◆, its window at the end; the rest in
+    the bars' cards; it slides out beside the board in its half, covering no chip),
     two rows of four keys with the menu key at the row's end; on its side, the same shell with a wider board.
 - **Rejected looks:**
   - the *View* background behind the monitor; keep the original city, with more detail at the same size;
   - card-first clicks on the rooms map; one click walks;
   - Roomy, the extra monitor size;
-  - runner pips or counts on every server (the Rail instead);
+  - a diamond for every runner, side by side under a server (one diamond and a count instead); runners listed in the
+    Online panel;
   - runner standing as pips or as the steps each tier opens; a runner's bar set in their Toolkit or key by key; traits
     as bare icons.
 - **The monitor** takes up most of the screen. UI scale is a setting, 100% by default.
@@ -106,10 +149,19 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **Phones:** combat on a phone never opens the keyboard.
 - **Fights** (docs/puzzle-fights.md): every fight is a little tricky, elites and bosses harder, and the game challenging.
   Puzzles, never walls: hard and rewarding to learn, like Elden Ring. A blind player loses; watching or a correct
-  routine wins. A boss's signature changes the fight and ties to its lore; shutting a skill off is a side rule at
+  routine wins. Hard means several threats at once, each choice a lesser evil (docs/puzzle-fights.md decision 15);
+  about 30% Signal a same-level fight, and gear matters. A boss's signature changes the fight and ties to its lore; shutting a skill off is a side rule at
   most.
+- **Act bars:** every solo boss fights in three acts, each a fresh bar: every part back at full, with the act's rules
+  on top. An act ends when its last part breaks. Acts run about even, with no hard ratio: a boss can carry a bit more
+  health, and bosses needn't be perfectly balanced. Uneven acts get behaviour or mechanics changed, never the split
+  (acts.mjs `ACT_BARS`). An act runs 15 to 20 cycles
+  and starts from act 1's board and rules, with one rule of its own. The ♛ carries the boss's signature, and its ticks
+  are a part's. Parts come back mid-act only where a boss's system fits it.
 
 ## Backlog
 
-- **Backlog:** Silos, more event cards, parts plan P4, co-op's rough edges, and runners (docs/runners.md: build R1
-  next).
+- **Enhance, don't add** (the designer, November 2026). In order: the fights (the main loop); then every floor's
+  content, its bosses finished (floors 5–8 have none of their own); then itemization on the deeper floors. Every floor
+  should have content. Runners go on slice by slice (R2 built; R3 next, then R4: docs/runners.md). Other new
+  systems (off-map servers, co-op, crises) wait.

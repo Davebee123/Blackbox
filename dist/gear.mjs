@@ -5,7 +5,7 @@
 // like Corepunk. Loot and salvage build you.
 // Your server runs no services any more (R2): the home fight is the firewall's job (filters, tiers) and the daemons',
 // and a server's programs (sockets.mjs) are the building. Code builds them, and the wall.
-import { power, line, lift, lifted, filled, gearFill, runLate } from './data.mjs';
+import { CONFIG, power, line, lift, lifted, filled, gearFill, runLate } from './data.mjs';
 import SET_TEXT from './content/sets.mjs';
 
 // Slots by class level: 4 to start, 5 at 15, 6 at 30. Each slot takes one kind of item (SLOTS).
@@ -373,7 +373,7 @@ export const grows = (k) => !!STATS[k]?.flat && k !== 'ram' && k !== 'lead';
 export const FILLS = new Set(['damage', 'critDamage', 'payload', 'signal', 'regen', 'leech']);
 const up = (k, n, L) => (FILLS.has(k) ? filled(n, L) : lifted(n, L));
 // Effect kinds whose value is a flat number (damage, healing, shield, burn growth), and those that add a stat.
-const FLAT_FX = new Set(['damage+', 'heal', 'shield', 'break-hit', 'read-hit', 'burn-grow']), STAT_FX = new Set(['stat+', 'stack', 'stat', 'buff']);
+const FLAT_FX = new Set(['damage+', 'heal', 'shield', 'break-hit', 'read-hit', 'burn-grow', 'slow-hit', 'break-frags']), STAT_FX = new Set(['stat+', 'stack', 'stat', 'buff']);
 export const liftsFx = (fx) => !!fx && Number.isFinite(Number(fx.value)) && (FLAT_FX.has(fx.do) || (STAT_FX.has(fx.do) && grows(fx.stat)));
 // An effect block at an item level: its flat value (and cap) lifted, and its written text with it. Others as they are.
 export function liftFx(fx, level) {
@@ -538,6 +538,11 @@ export function curveRestore(s) {
 // "+6% Damage · +2% Crit"
 export const fmtStat = (k, v) => `${Math.round(v)}${STATS[k].unit}`; // whole numbers only
 export const statLine = (stats) => Object.entries(stats).filter(([k]) => STATS[k]).map(([k, v]) => `${v < 0 ? '−' + fmtStat(k, -v) : '+' + fmtStat(k, v)} ${STATS[k].name}`).join(' · ');
+// The level an item loads from: CONFIG.gearReq under its own, so a reward a level or two over you loads at once and
+// gear from far deeper waits for you.
+export const reqLevel = (item) => Math.max(1, (item?.level || 1) - CONFIG.gearReq);
+// Whether this save's hacker can load it. The breach campaign (its own save, its own gear curve) has no requirement.
+export const meetsReq = (s, item, level) => !!(s.camp || s.breach) || level >= reqLevel(item);
 export const itemLabel = (item) => `${item.name} v${item.level}`;
 
 // ---------- code materials ----------

@@ -8,8 +8,9 @@
 //   steps    each wraps an existing activity as a contract (mail.mjs runs it): map, rooms, takeover, item, install,
 //            sweep, heist (past the Tracker) and bounty (a named process in SPRAWL-00, floor 1 only), plus three of
 //            its own, polled here: puzzle (win a puzzle board on the server), lair (beat the floor's lair boss) and
-//            boss (a named boss in a Core, with its challenge and fall lines: until it's built, the floor's lair boss
-//            stands in, or SPRAWL-00's RELAY-KING on floor 1, at: 'sprawl').
+//            boss (a named boss in a Core, with its challenge and fall lines: once built (namedBoss), it holds that
+//            server's Core in the Resident's place for good (jobBossAt); until then the floor's lair boss stands in, or
+//            SPRAWL-00's RELAY-KING on floor 1, at: 'sprawl').
 //   letters  a step's letter: one with no job, from someone else, sent when the step is delivered.
 //   targets  fixed by the floor's diagram (floors.mjs), so every save of a network gets the same ones: the landing
 //            server, a server along the main road (never a rogue server or the lair) by its place from the entry, the
@@ -27,7 +28,7 @@
 import { emit, warn, hackerLevel, hooks, addItem, classOf, subOf } from './combat.mjs';
 import { BOSSES, SUBS, defaultSub, CONFIG } from './data.mjs';
 import { seeded, rollItem, itemLabel } from './gear.mjs';
-import { graphOf, locAt, hiddenAt, neighbours, floorName, reached, serverSlot } from './floors.mjs';
+import { graphOf, locAt, hiddenAt, neighbours, floorName, reached, serverSlot, floorOfSlot } from './floors.mjs';
 import { lairBoss, NETWORK } from './network.mjs';
 import { addrsOf, sweepRooms } from './address.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
@@ -89,7 +90,17 @@ const where = (s, c) => {
 };
 const bossOf = (s, n) => BOSSES[(n && graphOf(s, n).lairBoss) || lairBoss(s, 'you')]?.name || 'the lair boss';
 const KING_ROOM = '/net/relay'; // SPRAWL-00's Core (run.mjs KING_ROOM): RELAY-KING, floor 1's stand-in
-const standIn = (s, c) => (c.type === 'boss' && !c.slot ? BOSSES.relayking.name : bossOf(s, c.chain)); // who a Boss step's fight is, until its boss is built
+const standIn = (s, c) => (c.type === 'boss' && namedBoss(c.named) ? BOSSES[namedBoss(c.named)].name : c.type === 'boss' && !c.slot ? BOSSES.relayking.name : bossOf(s, c.chain)); // who a Boss step's fight is, until its boss is built
+// A Boss step's named boss once it is built (BOSSES by name: a floor job's own, never a lair's or a throne's), or null.
+export const namedBoss = (name) => (name && Object.keys(BOSSES).find((k) => BOSSES[k].name === name && !BOSSES[k].native && !BOSSES[k].lair && !BOSSES[k].throne && !BOSSES[k].raid)) || null;
+const bossStep = (n) => { const ch = chainOf(n), k = ch ? ch.steps.findIndex((x) => x.kind === 'boss') : -1; return k >= 0 ? { k, step: ch.steps[k] } : null; };
+// The floor job's boss in a server's Core (netrooms.mjs): the server its chain's Boss step points at, once the chain has
+// reached that step, for good (come back for its uniques). Its id, or null (the Resident holds the Core).
+export function jobBossAt(s, loc) {
+  const n = floorOfSlot(loc?.slot), b = n && bossStep(n), id = b && namedBoss(b.step.boss), st = id && arcsOf(s)[n];
+  if (!st || (!st.done && (st.step ?? -1) < b.k)) return null;
+  return slotFor(s, n, b.step) === loc.slot ? id : null;
+}
 
 // ---------- posting a step ----------
 function pay(s, n, step) {
@@ -132,6 +143,9 @@ function varsOf(s, j) {
 }
 // A step's target located: the plain contract from here (its install room, its file planted, a map already done).
 function setup(s, c) {
+  // A Boss step posted before its boss was built pointed at the lair: its built boss is in its own server's Core.
+  // Keyed on the slot, so it runs once.
+  if (c.type === 'boss' && c.slot && namedBoss(c.named)) { const at = slotFor(s, c.chain, chainOf(c.chain)?.steps[c.step]); if (at && at !== c.slot) { c.slot = at; delete c.loc; delete c.hidden; c.ok = false; } }
   if (c.ok) return;
   if (c.type === 'bounty' || (c.type === 'boss' && !c.slot)) { c.ok = true; return; }
   const loc = c.loc ? locById(s, c.loc) : c.slot ? locAt(s, c.slot) : null;
@@ -171,7 +185,7 @@ export function arcTick(s, at = nowOf()) {
   for (const c of openContracts(s).filter((x) => x.chain)) {
     setup(s, c);
     if (c.got || !c.ok || !ARC.own.includes(c.type)) continue;
-    if (c.type === 'puzzle' ? puzzleWon(s, c) : c.type === 'boss' && !c.slot ? kingDown(s, c) : lairDown(s, c)) {
+    if (c.type === 'puzzle' ? puzzleWon(s, c) : c.type === 'boss' && !c.slot ? kingDown(s, c) : c.type === 'boss' && namedBoss(c.named) ? jobDown(s, c) : lairDown(s, c)) {
       c.got = 1;
       if (c.fall) emit(s, 'arc-fall', c.fall, { contract: c.id, chain: c.chain });
       emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
@@ -197,6 +211,8 @@ function lairDown(s, c) {
   const sp = locById(s, c.loc)?.spawns?.['/core'];
   return !!sp && !sp.alive && sp.respawnAt != null && sp.respawnAt - NETWORK.lairMs >= c.at;
 }
+// A floor job's built boss beaten in its Core since (netrooms.mjs won: loc.jobFell).
+const jobDown = (s, c) => (locById(s, c.loc)?.jobFell || 0) >= c.at;
 // SPRAWL-00's RELAY-KING beaten since (back CONFIG.zone.bossRespawnMs after it fell).
 function kingDown(s, c) {
   const sp = zoneOf(s).spawns?.[KING_ROOM];

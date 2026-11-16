@@ -1,6 +1,12 @@
 # Runners: the people on the net
 
-**Status.** Decided direction, not built. The looks are picked: the map (the *Rail*), and meeting and hiring (below).
+**Status.** R1 and R2 built (the cast, the loop, the Rail, #net lines; meeting, standing and hiring). R3 in part:
+rivals are runners (the *red diamond*, picked; beating one raises their standing), feuds name runners, and dead
+runner rooms (a crash marks an existing room, a skull beside the handle on its tab, picked; win it to pull them out). In
+SPRAWL-00 a runner between jobs wears a paper-white tab on their room's chip (the *Tab*, picked); walk in to meet them.
+R4 to come. R2's follow-ups: trait
+effects in fights (only Known face and Haggler are in play), temperament steering the planner, Known's leads and
+Close's consortium. The looks are picked: the map (the *Rail*), and meeting and hiring (below).
 Talked through with the designer, November 2026.
 
 ## Why
@@ -22,8 +28,10 @@ be on the net, like Guild Wars 1's heroes and Starsector's officers and fleets.
   work is kept on the runner; a server's state stays yours. Rivals racing you to a vault stay as built.
 - **No entropy.** Factions are fixed backdrops. A runner works for one, and nothing a runner does moves a faction's
   power, territory or prices. Feuds stay director cards; runners appear in them by name.
-- **A stable cast.** A few dozen per network, from its seed. Their levels keep to a band around yours. A crashed
-  runner is pulled out and comes back. No permanent death; none quits on you.
+- **A rotating cast.** Eight on a network at once, from its seed and a pool of 60 handles, so each new game has its
+  own. Each stays 2–4 hours of logged-on time, then moves on and the next takes their place; they come back later in
+  the playthrough as the same person, standing kept. A hire stays while they're with you. Their levels keep to a band
+  around yours. A crashed runner is pulled out and comes back. No permanent death.
 - **Cheap to run.** Each runner is a loop (hub, job, travel, work), worked out from the seed and logged-on time the
   way presence.mjs places people today. Off-screen outcomes are rolled from a runner's level against the server's,
   never fought. Saved: standing with you, goal progress.
@@ -35,18 +43,29 @@ be on the net, like Guild Wars 1's heroes and Starsector's officers and fleets.
 | **Work** | The table is filling again. Paymasters pay per process ended: Halcyon pays crews like LOWLIGHT; the factions run contracts. A runner does your job for their own paymaster | Hub → a server near their level → work it → back to the hub to be paid |
 | **Someone's money** | In 2091 nearly everyone has a payment frozen in the table: a pension, a shop that died mid-trade. Each runner is after one trade, on a fixed floor | Over weeks they climb toward it (#net shows it). Arriving is a story beat: a letter, or a request to help with the last server |
 
-## On the map: the *Rail* (picked)
+## On the map: the *Diamonds* and the *Rail* (picked)
 
 - **The rail:** a Runners list under Contracts, the runners you know: handle, class and level, and where they are
-  (`→` a server for one travelling).
-- **The map** draws only the runner you pick: a paper-white diamond with their handle, a dotted route through the
-  servers they've passed, a dashed ring on where they're heading.
-- **Tooltip:** the handle; *Runner · <faction>*; class, level and what they're doing; then, muted, how you know them
-  and what they're after.
+  (`→` a server for one travelling). A server you haven't located is only its floor (*F1*, *→ F1*).
+- **The map** draws the runners in places you've revealed (the *Diamonds*, picked November 2026 over a list in the
+  server card and named diamonds behind a toggle): one small paper-white diamond under a place with runners, how many
+  beside it from two up (*◆ 6*), and a hollow diamond each on the road. A lone diamond opens their card, where you
+  hire them. A counted one opens the list of who's there beside it (rows like the Rail's: handle, class and level); a
+  row opens that runner's card. The one you pick also gets their handle, a dotted route through the servers they've
+  passed, a dashed ring on where they're heading, and leaves the count.
+- **Only where you've revealed** (the designer's rule, November 2026): located servers, SPRAWL-00 and the up-links,
+  hubs you've found and exits on your map. A `?` doesn't count. No diamond under a `?`, at a server or hub off your
+  map, or on a road with an unrevealed end. The picked runner's route stops at the first unrevealed place, their ring
+  is drawn only on a revealed one, and out of sight they have no mark: their card opens beside their Rail row.
+- **The Rail** is off the desktop map (November 2026: the diamonds do its job); a phone's sheet keeps it, folding to its head; runners stay off the Online list (it keeps friends, members and crew).
+- **Tooltip:** the handle; *Runner · <faction>*; class, level and what they're doing (*working a server on floor 1*
+  where you haven't located it); then, muted, how you know them and what they're after. Their own #net lines keep the
+  server's kind (*on a Lab on floor 1 now*).
 - **Colour:** paper white (`--bright`). Teal, red, amber, violet and steel keep their meanings; a runner hunting you is
   the one red.
 
-Rejected: a pip under each server per runner (*Pips*), and a count tag per server with travelling dashes (*Counts*).
+Rejected: a count tag per server with travelling dashes (*Counts*); a diamond for every runner, side by side under a
+server; runners in the Online list.
 
 ## Meeting and hiring (picked)
 
@@ -58,11 +77,13 @@ Rejected: a pip under each server per runner (*Pips*), and a count tag per serve
 - **The room's card:** the virus, then the runner's row (handle, faction mark, class and level, their Signal), their
   line, the standing it pays as an icon, and **Help** / **Step back**. Win, and it shows the room cleared and their
   standing up a tier.
-- **Standing:** 0–100 in four tiers: Stranger, Known (leads), Friend (hire), Close (consortium). Drawn as the tier's
+- **Standing:** 0–100 in four tiers: Stranger, Known (leads), Friend, Close (consortium); anyone can be hired, and each
+  tier makes the fee smaller (a stranger's is double). Drawn as the tier's
   name, a bar to the next and the next one's name (the *Tier bar*); the number and how you met are its tooltip.
-- **The runner card** (a Rail row opens it beside their diamond): *Runner · faction*, the handle, class glyph, class
-  and level; rows, split by hairlines and each label level with its row's first line, for Traits (temperament first, dashed, then the traits as named chips, ★ on a
-  starred one), Standing, Now (→ a server and its time) and After (the trade in words and the
+- **The runner card** (a Rail row opens it beside their diamond): the head is the *Badge* (picked November 2026 over
+  the bust on top or in a sidebar): a small backlit ASCII bust from their handle (portraits.mjs), then *Runner ·
+  faction*, the handle, class glyph, class and level, and the Tier bar; rows, split by hairlines and each label level with its row's first line, for Traits (temperament first, dashed, then the traits as named chips, ★ on a
+  starred one), Now (→ a server and its time) and After (the trade in words and the
   floor it's frozen on); their latest line; **Hire**.
 - **The crew card** (Hire turns the runner card into it): Pay as two icons, both owed (MOO2's leaders): a credits fee
   once, the first time you hire that runner, and a cut of the credits each run pays while they're with you (items and
@@ -91,8 +112,8 @@ make a dearer fee. No drawbacks for now.
 - **Party, never self.** Every trait helps the crew (you included) or the run. A runner's own power is their level and
   gear.
 - **Once per crew.** Two runners with the same trait don't stack; the crew gets its best version.
-- **The pool:** a few dozen runners per network, new ones arriving and old ones moving on over weeks. Runners with
-  several starred traits are rare.
+- **The pool:** eight runners on a network at once, rotating (*A rotating cast*, above). Runners with several starred
+  traits are rare.
 
 | Trait | Does (MOO2) |
 |---|---|
@@ -119,7 +140,8 @@ make a dearer fee. No drawbacks for now.
 ## Friends
 
 A friend is a runner in your world, from their **record**: handle, level, character (`coop-char.mjs characterOf`),
-network seed, servers traced and held, project contributions, when it was posted. A few KB. Each player writes only
+network seed, servers traced and held, project contributions, deepest flash rank and the build that cleared it
+(docs/coop.md), when it was posted. A few KB. Each player writes only
 their own record, and shared things are read from everyone's: a consortium's tier counts records, a project sums
 contributions, a member's network is drawn from their seed. Records travel peer to peer when friends connect, or
 through a small mailbox (a file store, no game logic). Live co-op puts the person in their ghost's place.

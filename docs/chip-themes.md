@@ -22,5 +22,7 @@ docs/ui.md "Themed chips".
 | plate | plates slide in and clang shut over a hex shield, sparks, a ripple | the joined plate flies over and slams down, a hex ripple | Front End, Bodyguard, Mutex, Lockbox, Limiter |
 | ledger | odometer reels tick over ruled lines, spinning as the cycle runs out | reels lock a number, its digits fly in, count down, a strike-through | Buffer, Cooler, Damper |
 | mask | a line-drawn mask turns like a coin between two faces, eyes glinting | it flies over turning, lands frowning, eyes flare, it splits | Turncoat, Backtrace, C&C |
+| byte | eight bit cells along the foot, eaten from the right as the cycle runs out; the last ones flicker | a byte flies to the end of your bar and clamps on, a chunk tears out and breaks into 1s and 0s | Fragment, Hatchling (a Gnaw) |
 
-Every part in `FAMILIES` wears a theme; a part a family shares wears one theme in every family.
+Every part in `FAMILIES` wears a theme; a part a family shares wears one theme in every family. What a fight spawns (a
+numbered Fragment or Hatchling) wears byte; spawns that go off together bite one after another, each further back.

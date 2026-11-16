@@ -27,9 +27,9 @@ export const WEATHER = {
 const ODDS = [['rain', 30], ['drizzle', 22], ['storm', 16], ['fog', 16], ['clear', 16]];
 export const SPELL_MS = 5 * 60000; // how long a spell of weather lasts
 const BLEND_S = 40; // seconds to fade from one to the next
-// The signs' tubes: rose, sodium peach, amber and a pale warm white. Never the player's teal, a threat's red or a
-// daemon's violet.
-export const NEON = ['#e8707f', '#ffa860', '#f1b92f', '#f2dcb8'];
+// The signs' tubes and the districts (districts.mjs).
+import { NEON, DISTRICTS, DISTRICT_IDS } from './districts.mjs';
+export { NEON, DISTRICTS, DISTRICT_IDS };
 // The hour's light: the sky's stops (top to the street), the smog's glow, how many windows are lit and how bright the
 // signs read. Night is the city as it always was; the rest only tint it. Dark throughout: it sits behind the screen.
 export const HOURS = {
@@ -43,17 +43,6 @@ export function hourOf(date) {
   return h >= 21 || h < 5 ? 'night' : h < 7 ? 'dawn' : h < 18 ? 'day' : 'dusk';
 }
 const SKY_AT = [0, 0.07, 0.4, 0.7, 0.86, 1];
-// The districts: their name, a line on what you see, the lights each one adds (warm, like the signs: never teal,
-// violet or a threat's red) and how much fog it keeps of its own (a harbour's). The Sprawl is the default and always
-// open; the rest come with achievements (casing.mjs DISTRICT_FROM).
-export const DISTRICTS = {
-  sprawl: { name: 'The Sprawl', tip: 'Stacked towers, fire escapes and neon down a wet street.', palette: NEON, fog: 0 },
-  backhaul: { name: 'Backhaul', tip: 'Rail yards: floodlight masts, signal gantries and catenary, and now and then a slow train\'s lit windows.', palette: ['#f1b92f', '#f2dcb8', '#ffa860'], fog: 0.04 },
-  stacks: { name: 'The Stacks', tip: 'Server towers: rack-faced blocks with tiny blinking status lights, cooling stacks venting steam.', palette: ['#f1b92f', '#f2dcb8', '#ffa860', '#e8707f'], fog: 0.02 },
-  coldline: { name: 'Coldline', tip: 'The harbour: cranes, container stacks, black water, fog, and a lighthouse sweeping far off.', palette: ['#f1b92f', '#f2dcb8', '#ffa860'], boxes: ['#4a2e22', '#4a3c24', '#33302a', '#3d2a2c', '#2e2c28', '#46381f'], fog: 0.18 },
-  tarbeach: { name: 'Tar Beach', tip: 'Up on the roofs: water tanks close by, bulkheads and a sign\'s bulbs, the skyline across the way.', palette: ['#ffd9a0', '#f1b92f', '#ffa860'], fog: 0.03 },
-};
-export const DISTRICT_IDS = Object.keys(DISTRICTS);
 // Each district's own randomness (the Sprawl's pair is the one it always had), so each is the same place every visit.
 const SEEDS = { sprawl: [4242, 8117], backhaul: [5151, 9203], stacks: [6173, 7741], coldline: [8269, 3319], tarbeach: [7307, 1559] };
 

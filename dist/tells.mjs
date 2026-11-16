@@ -35,7 +35,8 @@
 //         opened, once logged) }]
 //   tier  the level tier's numbers (count, live, lead, mult, cap, dot, after, burn, hang), with an elite's or a
 //         boss's extra cap
-import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, alliesOf, fxAnswer, fxOn, cooldownOf, armorTakes, ignoresArmor } from './combat.mjs';
+import { screened, sellingGavel, fbSlowed, callingNow, stopCall } from './floorbosses.mjs';
+import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, alliesOf, fxAnswer, fxOn, cooldownOf, armorTakes, ignoresArmor, tellStarted } from './combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES } from './data.mjs';
 import { previewDamage, delayAttack, blocked, scaled, gearDamage } from './combat.mjs';
 import { raidDef } from './raid.mjs';
@@ -46,6 +47,7 @@ import { cancelAttack, crossBy, interruptMove, nextTick, fronted } from './inter
 import { ignores, CLASHES } from './genes.mjs';
 import { contractDid } from './mail.mjs';
 import { tellAct, actOf } from './acts.mjs';
+import { nativeCharge, NATIVE } from './nativeacts.mjs';
 
 // What a fight's tells did, on its metrics (the gap test reads them): said, answered, read (answered by a command
 // of yours, not by breaking the part), landed, and the Signal (or Integrity) they cost you, by tell.
@@ -227,6 +229,7 @@ function say(s, t, p, next, n) {
   logTell(s.host || s, t); // the Codex tab: this tell, by name
   emit(s, 'telegraph', sayOf(s, t, p), { source: p.id, tell: t.id, kind: t.kind, at: next, name: label(t) });
   daemonsOn(s, 'told', { part: p.id }); // Lookout
+  if (t.kind !== 'mimic') tellStarted(s); // Notice Period (combat.mjs)
   if (t.kind === 'charge') daemonsOn(s, 'charge', { part: p.id }); // Lightning Rod
   const w = windowOf(s, t);
   if (w && w.from <= e.cycle) t.opened = e.cycle; // said inside its window: the line above says so
@@ -243,15 +246,14 @@ export function answerOf(t, p, sig = false) {
 }
 // When its window opens, as the log says it: 'now', or 'next cycle', 'in 2 cycles'.
 function windowWhen(s, t) { const w = windowOf(s, t); return w ? Math.max(0, w.from - s.encounter.cycle) : 0; }
-// What the log says when a tell is announced, as short as its chip's tooltip (fightread.mjs tellTip): what, when, on
-// which part, and the answer. The Encryptor's FULL DISK lands in 3 cycles. Cut it on that cycle.
+// What the log says when a tell is announced: what, when, on which part, and what it does. The answer is the chip's
+// tooltip's (fightread.mjs tellTip). The Encryptor's FULL DISK lands in 3 cycles.
 export function sayOf(s, t, p = sourceOf(s, t)) {
   const n = tellNext(s, t) - s.encounter.cycle, L = label(t), head = t.kind === 'mimic' ? `The ${p.name} plays you back ${when(n)}.` : `The ${p.name}'s ${L} lands ${when(n)}.`;
-  if (t.kind === 'charge') return `${head} Cut it on that cycle${p.armor > 0 ? `, past its ${p.armor} ◆` : ''}.`;
-  if (t.kind === 'cast') return `${head} SIGINT or cut it in its window${n > 0 && windowWhen(s, t) <= 0 ? ', open now' : ''}.`;
-  if (t.kind === 'seal') return `${head} Each ◆ it still wears then comes back on every part: strip its ${p.armor} ◆ first.`;
-  if (t.kind === 'lock') return `${head} It locks your next command for ${cycles(t.cycles || 3)}. Break it, or feed it a cooling skill.`;
-  return `${head} It copies what you fire then and turns it on you. Fire what costs least to have copied, or cut it.`;
+  if (t.kind === 'seal') return `${head} Each ◆ it still wears then comes back on every part.`;
+  if (t.kind === 'lock') return `${head} It locks your next command for ${cycles(t.cycles || 3)}.`;
+  if (t.kind === 'mimic') return `${head} It copies what you fire then and turns it on you.`;
+  return head;
 }
 // A tell's window opens (a new cycle): the log says so, once.
 function windowOpens(s, t, p) {
@@ -323,7 +325,7 @@ function rest(s, t, from, answered = false) {
   const p = t.kind === 'charge' && t.n != null ? sourceOf(s, t) : null;
   if (p?.attack && alive(p)) from = Math.max(from, landsAt(p, t.n));
   t.told = false; t.count++; t.n = null;
-  if (answered) { t.answered = (t.answered || 0) + 1; tally(s, t, 'answered'); }
+  if (answered) { t.answered = (t.answered || 0) + 1; tally(s, t, 'answered'); const e = s.encounter; e.cuts = [...(e.cuts || []).filter((x) => x.cycle === e.cycle), { id: t.id, name: t.name, part: t.part, kind: t.kind, cycle: e.cycle }]; } // this cycle's cuts (floorbosses.mjs: EXIT NODE's Kept charges)
   if (t.once) { t.gone = true; const T = tellsOf(s); T.list = T.list.filter((x) => x !== t); return; }
   if (t.kind === 'mimic') { t.next = null; return; }
   t.after = from + (TELL.rest[t.kind] ?? 3) + jitter(s.encounter.virus, t);
@@ -363,6 +365,32 @@ export function hotCharge(s, hot) {
   say(s, t, best.p, best.x, best.n);
   return t;
 }
+// A floor boss's rule turns a part's attack into a charge (floorbosses.mjs: GRACE PERIOD's lapse, EXIT NODE's kept
+// charge), said at once: its first landing `lead` or more cycles away (2 by default; up to `upto` away first, if one
+// is) that no other tell rides. One of each id at a time.
+export function forceCharge(s, p, name, id, mult = 1, lead = 2, upto = null) {
+  const T = tellsOf(s), e = s.encounter;
+  if (!T?.tier || !p?.attack || p.attack.due >= 900 || T.list.some((t) => t.id === id)) return null;
+  const c = e.cycle, taken = new Set(T.list.filter((t) => t.told).map((t) => tellNext(s, t)));
+  const ns = Array.from({ length: 4 }, (_, k) => (p.attack.n || 0) + k).filter((n) => landsAt(p, n) - c >= lead && !taken.has(landsAt(p, n)));
+  const fit = upto == null ? ns : [...ns.filter((n) => landsAt(p, n) - c <= upto), ...ns]; // upto: a landing that close first, if there is one
+  for (const n of fit.slice(0, 1)) {
+    const x = landsAt(p, n);
+    const t = { kind: 'charge', name, gene: 'overcharge', id, part: p.id, once: true, ...(mult !== 1 ? { mult } : {}), told: false, next: null, n: null, said: null, count: 0, after: c };
+    T.list.push(t);
+    say(s, t, p, x, n);
+    return t;
+  }
+  return null;
+}
+// One told tell called off by a floor boss's rule (floorbosses.mjs: GRACE PERIOD's lapse, paid up): answered, no stagger.
+export function callOff(s, t, msg) {
+  const p = sourceOf(s, t);
+  emit(s, 'blocked', msg, { source: p?.id, target: p?.id, tell: t.id, answered: true });
+  contractDid(s, 'interrupt');
+  rest(s, t, s.encounter.cycle, true);
+  if (p) credit(s, t, p);
+}
 // A part broke (combat.mjs breakPart): its tells stop for good (they sit on a fixed part).
 export function tellBroke(s, p) {
   const T = tellsOf(s);
@@ -383,8 +411,8 @@ function chargeAttack(s, t, p) {
   const enr = p.enrage && p.integrity < p.max / 2 ? CONFIG.enrage : 1; // attackAmount counts Bricker's rage again: take it out
   const more = (T.tier.mult - 1) * (T.tier.extra ?? 1), big = (n, share = 1) => Math.max(1, Math.round(n + n * more * share * k));
   const base = { ...a, name: t.name, ramp: 0, step: 0, rampBy: 0, bonus: 0, grow: 0, windup: 0, wound: 0, noCrit: true, tell: t.id, spawn: t.spawn || 0 };
-  if (a.effect === 'damage') return { ...base, amount: Math.max(1, Math.round(big(attackAmount(p)) / enr)) };
-  if (a.effect === 'encrypt') return { ...base, burst: Math.round(a.amount * more * k) }; // its Encrypt, and a burst on top (TELL.burst cycles)
+  if (a.effect === 'damage') return { ...base, amount: Math.max(1, Math.round((big(attackAmount(p)) * (t.mult || 1)) / enr)) }; // t.mult: a floor boss's own (GRACE PERIOD's compounding lapse)
+  if (a.effect === 'encrypt') return { ...base, burst: Math.round(a.amount * more * k * (t.mult || 1)) }; // its Encrypt, and a burst on top (TELL.burst cycles)
   if (a.effect === 'scramble') return { ...base, amount: a.amount + Math.round((t.longer || 0) * k), hit: a.hit ? (t.plain ? a.hit : big(a.hit)) : 0 }; // Possession: the same hit, a longer scramble
   if (a.effect === 'heal') return { ...base, amount: Math.round(a.amount * (1 + (T.tier.mult - 1) * k)) };
   return { ...base, hit: a.hit ? big(a.hit, 0.5) : 0 }; // replicate: the spawns come on top (spawn)
@@ -445,6 +473,7 @@ export function tellLand(s) {
       const atk = chargeAttack(s, t, p), locked = s.encounter.encrypt || 0, shield = e.shield || 0;
       if (strikeWith(s, p, atk)) return done(), true;
       advance(p, e);
+      nativeCharge(s, t); // DEADBOLT's Tumblers (nativeacts.mjs)
       // Full Disk: a burst of encryption on top of its Encrypt, for TELL.burst cycles (it goes when the part breaks, or with Purge).
       if (atk.burst && (s.encounter.encrypt || 0) > locked) { // its Encrypt got through (a ◆, Null Route or Sanitize stops both)
         s.encounter.burst = { name: t.name, amount: atk.burst, left: TELL.burst, source: p.id };
@@ -685,12 +714,13 @@ export function mimicLands(s, t, p) { // (exported for exe.test.mjs)
   const was = prev ? copyOf(host, prev.id, part(host, prev.target)) : null;
   const copy = was && (!mine || (was.cost || 0) > (mine.cost || 0)) ? was : mine;
   // Echo Cancel blinds it to your helpers too (it turns your command on the Mimic, below).
-  const caught = blind || p.echoCancelUntil >= e.cycle ? [] : caughtHelpers(s, t, p), swarm = caught.reduce((n, h) => n + h.damage, 0);
+  const caught = blind || p.echoCancelUntil >= e.cycle || fxOn(s, 'helpers-safe') ? [] : caughtHelpers(s, t, p), swarm = caught.reduce((n, h) => n + h.damage, 0);
   // HOLLOW CHOIR's Round (v.round, docs/solo-bosses.md): the beat sings back the commands of the cycles before it too, three
   // cycles in all. A cycle you held adds nothing.
   const sung = blind ? [] : sungOf(host, p), notes = [...sung, ...(copy ? [copy] : [])], hits = notes.filter((c) => c.kind === 'hit');
   const direct = hits.reduce((n, c) => n + (sung.includes(c) ? Math.round(c.amount * ROUND.echo) : c.amount), 0); // a sung hit lands at half
   if (!notes.length && !swarm) { emit(s, 'blocked', `The ${p.name} has nothing to copy.`, { source: p.id, tell: t.id }); return false; }
+  if (screened(host, p, 'copy')) return false; // Privacy Screen (floorbosses.mjs): the first playback each fight misses
   const names = notes.map((c) => c.name).join(notes.length > 2 ? ', ' : ' and ').replace(/, ([^,]*)$/, ' and $1');
   const what = !swarm ? `your ${names}` : `${notes.length ? `your ${names} and ` : 'your '}${caught.length === 1 ? 'helper' : `${caught.length} helpers`}`;
   // Reflector (a native unique): a played-back hit lands on the Mimic instead, at a share of it. Echo Cancel: all of it,
@@ -710,7 +740,12 @@ export function mimicLands(s, t, p) { // (exported for exe.test.mjs)
   const amount = Math.max(1, Math.round(direct + swarm * TELL.mimic));
   const loud = copy?.loud > 1 && direct;
   emit(s, 'status', loud ? `You're Scrambled, and the ${p.name} plays ${what} back at you ${copy.loud === 2 ? 'twice' : `${copy.loud} times`} over.` : `The ${p.name} plays ${what} back at you.`, { source: p.id, tell: t.id, missed: true, ...(swarm ? { helpers: caught.length } : {}) });
-  const over = strikeWith(s, p, { name: `${direct ? (hits.length > 1 ? 'The round' : ABILITIES[hits[0].id]?.name || hits[0].name) : 'Helpers'}${direct && swarm ? ' and helpers' : ''} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id });
+  const atk = { name: `${direct ? (hits.length > 1 ? 'The round' : ABILITIES[hits[0].id]?.name || hits[0].name) : 'Helpers'}${direct && swarm ? ' and helpers' : ''} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id };
+  // MIRRORSHADE's Shatter (act 3, nativeacts.mjs): three shards, a third each, so a ◆ on you stops one.
+  const n = host.encounter.virus.shatter ? NATIVE.shards : 1;
+  if (n > 1) emit(s, 'status', `SHATTER. The ${p.name}'s playback breaks into ${n} shards.`, { source: p.id, tell: t.id, shatter: true });
+  let over = false;
+  for (let k = 0; k < n && !over; k++) over = strikeWith(s, p, n > 1 ? { ...atk, name: `Shard ${k + 1}`, amount: Math.max(1, Math.ceil(amount / n)) } : atk);
   if (!over) { if (direct) lockLast(s, t, 'MIMIC'); corrupt(s, t, p); } // your command's skill goes offline; helpers alone lock nothing
   return over;
 }
@@ -743,7 +778,7 @@ function landCopy(s, t, p, c) {
     return say('status', `Throttles you for ${cycles(c.cycles)}, so your hits deal ${Math.round(TELL.copy.throttled * 100)}%.`, { mark: 'throttled', missed: true });
   }
   if (c.kind === 'gift') {
-    p.armor = (p.armor || 0) + c.gift; p.maxArmor = Math.max(p.maxArmor || 0, p.armor); p.patchAt = null;
+    p.armor = (p.armor || 0) + c.gift; p.maxArmor = Math.max(p.maxArmor || 0, p.armor); p.patchAt = null; p.repatched = true; // Late Fee
     return say('patch', `re-arms to ${p.armor} ◆.`, { target: p.id, missed: true });
   }
   if (c.kind === 'heal') {
@@ -786,7 +821,7 @@ export function tellCast(s) {
 export const sigintTarget = (s) => { const xs = sigintable(s).filter((t) => inWindow(s, t)); return xs.find((t) => t.kind === 'cast') || xs[0] || null; }; // a cast first: a charge open with it can still be cut
 // Why SIGINT can't fire on a solo fight now, or null: nothing compiling or charging, or no window open yet.
 export function tellSigintCheck(s) {
-  if (sigintTarget(s)) return null;
+  if (sigintTarget(s) || sellingGavel(s) || callingNow(s)) return null; // CENTRIFUGE's selling Surge, RECURSION's Call (floorbosses.mjs)
   const t = sigintable(s)[0];
   const what = sigintCharges(s) ? 'a cast or a charge' : 'a cast';
   if (!t) return `Nothing is compiling${sigintCharges(s) ? ' or charging' : ''}. SIGINT stops ${what}.`;
@@ -794,6 +829,9 @@ export function tellSigintCheck(s) {
 }
 export function tellSigint(s) {
   const t = sigintTarget(s), e = s.encounter;
+  const g = !t && sellingGavel(s);
+  if (!t && !g && callingNow(s)) { e.metrics.interrupts++; stopCall(s); return true; } // RECURSION's Call (floorbosses.mjs)
+  if (g) { e.metrics.interrupts++; emit(s, 'interrupt', `SIGINT cuts the ${g.name}'s selling Surge.`, { target: g.id }); cancelAttack(s, g); fbSlowed(s, g, 'SIGINT'); return true; } // CENTRIFUGE (floorbosses.mjs)
   if (!t) return false;
   const p = sourceOf(s, t);
   t.interrupted = (t.interrupted || 0) + 1;

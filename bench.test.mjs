@@ -40,7 +40,7 @@ test('a bench saves under its own key: never the real save\'s, never the campaig
     assert.notEqual(k, B.SAVE_KEY); assert.notEqual(k, CAMPAIGN_KEY);
   }
   // app.js reads, writes and wipes its save only through KEY, which pageSave picks.
-  assert.match(app, /const \{ key: KEY, bench: BENCH, camp: CAMP \} = BN\.pageSave\(location\.search, CP\.CAMPAIGN_KEY\);/);
+  assert.match(app, /const \{ key: KEY, bench: BENCH, camp: CAMP \} = BK\.pageSave\(location\.search, CP\.CAMPAIGN_KEY\);/);
   assert.ok(!app.includes("'blackbox-v6'"), 'the real key is named only in bench.mjs');
   const saves = app.match(/localStorage\.(getItem|setItem|removeItem)\(([^,)]+)/g).filter((x) => !/'bb-/.test(x));
   assert.ok(saves.length >= 4);

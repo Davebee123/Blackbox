@@ -51,6 +51,7 @@
 import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, gainXp, gainCode, xpFor, deedXpFor, rollDrop, fxPct, puzzleUnique } from './combat.mjs';
 import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, CONFIG, ELITE, ROLLED_MUTATIONS, SERVER, xpToNext, spreadOf } from './data.mjs';
 import { botTiers } from './talents.mjs';
+import { clearXp } from './sets.mjs';
 import { LOOT, vaultRarity, seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat, MATERIALS } from './gear.mjs';
 import { AUTHORS } from './authors.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
@@ -66,7 +67,8 @@ import { rollObjective, armObjective } from './objectives.mjs';
 import { GENES } from './genes.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
 import { PUZZLES, PUZZLE_KINDS, isPuzzle, cipherOf, cgOpen, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
-import { RIVALS, spawnRival, rivalOf, rivalAt, rivalMove, rivalMeet, rivalLeave, rivalFight, rivalArm, rivalWon, rivalLost, rivalLine } from './rivals.mjs';
+import { spawnRival, rivalOf, rivalAt, rivalMove, rivalMeet, rivalLeave, rivalFight, rivalArm, rivalWon, rivalLost, rivalLine } from './rivals.mjs';
+import { meetingOf, pulledOut, know, runnerOf } from './runners.mjs';
 import { dealCard, cardLeave, surgeAt, surgeScreen, surgeFight, surgeWon, escortMove, escortArm, escortAfter, packAt, packMove, packFight, packWon } from './runcards.mjs';
 
 // ---------- tuning ----------
@@ -99,6 +101,7 @@ export const ROOMS = {
   // nest: a Worm server's nest, elite-lite: the Crawler and its two hatchlings cost about 40% of your Signal over the
   // classes at levels 6, 12 and 20 (a process there about 35%, an elite 53%), and almost never lose.
   size: { process: { hp: 1.3, dmg: 0.9 }, elite: { hp: 1, dmg: 1 }, nest: { hp: 2.3, dmg: 1 }, guard: { hp: 1.2, dmg: 0.85 }, hunter: { hp: 1.6, dmg: 0.7 }, boss: { hp: 1.25, dmg: 0.9 }, stray: { hp: 1, dmg: 0.8 }, exfil: { hp: 1.5, dmg: 0.35 }, rival: { hp: 1.3, dmg: 0.9 } },
+  slips: 2, // an Infiltrator's slips a visit: past the hunter, or out of a room a virus holds (not the Core)
   hunter: { pace: 2, lose: 5, level: 2 }, // a room per 2 of your moves; a Tracker loses you 5 rooms away; 2 levels over the server (its size: twice a guard's Integrity)
   cache: { credits: [18, 36], code: [2, 4], script: 0.15 },
   purse: (level) => 4 + Math.floor(level / 2), // a rogue server's Stash: credits (and 1 code one time in five, netrooms.mjs)
@@ -647,7 +650,7 @@ export function newRooms(s, { seed = 1, size = 'medium', kind = 'Mailhub', level
   const R = {
     v: 1, fog: FOG, seed, size, kind, level, floor, author, speed, bossRule: world ? null : BOSS_RULES[boss] ? boss : 'a', graph,
     id: (name || serverName(seed, kind)).toLowerCase(), name: name || serverName(seed, kind),
-    at: null, visit: null, visits: 0, cleared: {}, seen: {}, down: {}, spawns: {}, rare: {}, taken: {}, opened: {},
+    at: null, visit: null, visits: 0, cleared: {}, seen: {}, been: {}, down: {}, spawns: {}, rare: {}, taken: {}, opened: {},
     signal: max, max, homeAt: nowOf(), reconnectAt: 0, deaths: 0, screen: null, pack: [], banked: [], credits: 0, xpStart: 0,
     log: [], scripts: [], codex: {}, mapped: false, last: null, rolls: 0,
     stats: { fights: 0, won: 0, lost: 0, cuts: 0, wasted: 0, ticks: 0, signalBy: {}, boss: { tries: 0, won: 0 }, hunted: 0, moves: 0, cycles: 0 },
@@ -754,6 +757,8 @@ function clear(s, room, quiet = false) {
   const R = s.rooms;
   if (R.cleared[room.id]) return false;
   R.cleared[room.id] = nowOf();
+  const xs = R.world && FIGHTS.includes(room.kind) ? clearXp(s) : 0; // Full Coverage (3): a share of a kill's XP (sets.mjs)
+  if (xs > 0) gainXp(s, Math.max(1, Math.round((xpFor(s, R.level) * xs) / 100)), 'First clear', 'breakin');
   const p = progressOf(s);
   if (!quiet) say(s, `${room.path} cleared.`, 'rooms-good');
   if (p.done * 2 >= p.total && !R.drawn) { R.drawn = true; for (const x of roomList(s)) R.seen[x.id] ||= 'shape'; say(s, 'Half cleared: the whole map is drawn.', 'rooms-good'); }
@@ -784,20 +789,21 @@ function mapped(s) {
 
 // ---------- fog (2.6) ----------
 // A room is unknown until you've been in it. R.seen[id]:
-//   'kind'   discovered: you've stood in it (on this server, ever). Its icon, name, state and badges show from then
-//            on, from anywhere.
-//   'shape'  drawn but unknown: a "?" chip, nothing about what it is. The rooms next to you and one link further (an
-//            Infiltrator's two further), the Core's chip, and every room once half the server is cleared.
+//   'kind'   discovered: you've stood in it or next to it (on this server, ever). Its icon, name, state and badges
+//            show from then on, from anywhere. R.been: the rooms you've stood in (a first step costs less: moveCost).
+//   'shape'  drawn but unknown: a "?" chip, nothing about what it is. Two links off (an Infiltrator's two and three),
+//            the Core's chip, and every room once half the server is cleared.
 // What you've seen stays seen. The hunter and the Exfil show in your room, in a room next to you (an Infiltrator's
 // two off) and in a discovered room; anywhere else they're out of sight.
-export const FOG = 2; // R.fog: discovered means been in (a save from before is migrated: fogRestore)
+export const FOG = 3; // R.fog: 2 discovered means been in, 3 next to it too, with R.been (a save from before is migrated: fogRestore)
 export const reachOf = (s) => (classOf(s) === 'infiltrator' ? 2 : 1);
 export function look(s) {
   const R = s.rooms, g = R.graph, here = R.at;
   if (!here) return;
   const reach = reachOf(s), d = distances(g, here);
-  for (const [id, n] of Object.entries(d)) if (n <= reach + 1 && !R.seen[id]) R.seen[id] = 'shape';
+  for (const [id, n] of Object.entries(d)) if (n === 1) R.seen[id] = 'kind'; else if (n <= reach + 1 && !R.seen[id]) R.seen[id] = 'shape';
   R.seen[here] = 'kind';
+  (R.been ||= {})[here] = true;
   if (g.core) R.seen[g.core] ||= 'shape';
 }
 export const seenOf = (s, id) => s.rooms.seen[id] || null;
@@ -819,13 +825,15 @@ export function inSight(s, id) {
 const WALK_CLEARS = ['entry', 'junction', 'den', 'empty', 'purse'];
 export function fogRestore(R) {
   if (!R?.graph || (R.fog || 0) >= FOG) return;
-  for (const [id, lv] of Object.entries(R.seen || {})) {
+  if ((R.fog || 0) < 2) for (const [id, lv] of Object.entries(R.seen || {})) {
     const room = R.graph.rooms[id];
     if (lv !== 'kind' || !room) continue;
     const been = !!R.cleared?.[id] || R.at === id || !!R.visit?.walked?.[id];
     if (been) continue;
     if (WALK_CLEARS.includes(room.kind)) R.seen[id] = 'shape';
   }
+  // Fog 3: a room next to you shows too, so been-in moves to R.been; everything discovered before was been in.
+  if (!R.been) R.been = Object.fromEntries(Object.entries(R.seen || {}).filter(([, lv]) => lv === 'kind').map(([id]) => [id, true]));
   R.fog = FOG;
 }
 
@@ -974,7 +982,7 @@ export function enter(s, now = nowOf(), { keys = [] } = {}) {
   R.fightFrom = null; // in with the Signal you connected with, never a fight's from an earlier visit
   R.at = R.graph.entry;
   R.inSince = now;
-  R.visit = { n: R.visits, walked: { [R.graph.entry]: true }, keys: [...keys], rested: false, moves: 0, hunter: newHunter(s), slipped: false, back: null, xp0: xpTotal(s) };
+  R.visit = { n: R.visits, walked: { [R.graph.entry]: true }, keys: [...keys], rested: false, moves: 0, hunter: newHunter(s), slips: 0, back: null, xp0: xpTotal(s) };
   R.screen = null;
   look(s);
   const fresh = clear(s, R.graph.rooms[R.graph.entry], true);
@@ -991,7 +999,7 @@ export function jackOut(s, why = '') {
   settle(s);
   if (!R?.at) { deny(s, 'You are not on the server.'); return out(s, first); }
   if (active(s)) { deny(s, 'No jacking out mid-fight. Win it, or lose the pack.'); return out(s, first); }
-  if (R.screen?.kind === 'rival') { deny(s, `${RIVALS[rivalOf(s).id].name} has you. No stepping back.`); return out(s, first); }
+  if (R.screen?.kind === 'rival') { deny(s, `${rivalOf(s).id} has you. No stepping back.`); return out(s, first); }
   keysBack(s);
   if (R.world) {
     R.last = { result: 'out', xp: xpTotal(s) - R.visit.xp0, banked: s.run.pack.length, visit: R.visit.n };
@@ -1046,9 +1054,11 @@ function disconnected(s, why) {
 
 // ---------- moving ----------
 // The rooms you can walk to from here: linked ones (a Relay's hops too), /core once the vault is open.
+// Something in front of you that keeps you in the room (a room you slipped into doesn't).
+export const held = (R) => !!R?.screen && !R.screen.slipped;
 export function exits(s) {
   const R = s.rooms;
-  if (!R?.at || R.screen || active(s)) return [];
+  if (!R?.at || held(R) || active(s)) return [];
   return walkable(s, R.at).map((id) => R.graph.rooms[id]).filter((x) => x.kind !== 'core' || coreOpen(s));
 }
 export const moveCost = (s, room) => {
@@ -1056,7 +1066,7 @@ export const moveCost = (s, room) => {
   if (R.visit?.walked[room.id]) return 0; // walked this visit: free to cross again
   if (tunnelLink(s, R.at, room.id)) return 0; // a Tunnel: free both ways
   const crew = Object.values(R.graph.rooms).some((x) => x.farm); // the crew dungeon is tuned on its flat cost (its attrition carries fight to fight)
-  const k = crew || known(s, room.id) ? (deep ? ROOMS.moveDeep : ROOMS.move) : (deep ? ROOMS.moveNewDeep : ROOMS.moveNew);
+  const k = crew || R.been?.[room.id] ? (deep ? ROOMS.moveDeep : ROOMS.move) : (deep ? ROOMS.moveNewDeep : ROOMS.moveNew);
   return Math.max(1, Math.round(R.max * k));
 };
 // Walk into a room. opts.pause: a fight starts paused (the browser).
@@ -1067,9 +1077,9 @@ export function go(s, id, opts = {}) {
   const named = R.graph.rooms[id] || roomList(s).find((x) => x.dir === id || x.path === id) || R.graph.rooms[byAddr(R.graph, id)], room = named && onMap(named) ? named : null;
   if (!R.at) deny(s, 'You are not on the server. Connect first.');
   else if (active(s)) deny(s, 'Finish the fight first.');
-  else if (R.screen?.kind === 'virus') deny(s, `The ${R.screen.name} holds ${hereOf(s).path}. Engage it, or step back.`);
+  else if (R.screen?.kind === 'virus' && !R.screen.slipped) deny(s, `The ${R.screen.name} holds ${hereOf(s).path}. Engage it, or step back.`);
   else if (R.screen?.kind === 'hunter') deny(s, 'The hunter is on you.');
-  else if (R.screen?.kind === 'rival') deny(s, `${RIVALS[rivalOf(s).id].name} has you. No stepping back.`);
+  else if (R.screen?.kind === 'rival') deny(s, `${rivalOf(s).id} has you. No stepping back.`);
   else if (!room || !walkable(s, R.at).includes(room.id)) deny(s, room ? `${room.path} is not next to ${hereOf(s).path}.` : `No room ${id}.`);
   else if (room.kind === 'core' && !coreOpen(s)) deny(s, R.world ? `The Core is sealed. ${WORLD.view?.sealed?.(s) || (R.graph.vaults[0] ? `Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.` : '')}`.trim() : `The Core is sealed. Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.`);
   else { step(s, room, opts); hooks.railCheck?.(s); } // routines.mjs: a move that took you under your jack-out line
@@ -1077,6 +1087,7 @@ export function go(s, id, opts = {}) {
 }
 function step(s, room, opts) {
   const R = s.rooms, cost = moveCost(s, room);
+  if (R.screen?.slipped) R.screen = null; // walking on from a room you slipped into
   if (cost) setSig(s, Math.max(1, sigOf(s) - cost));
   R.visit.back = R.at;
   R.at = room.id;
@@ -1103,7 +1114,7 @@ function step(s, room, opts) {
 export function wait(s, opts = {}) {
   const R = s.rooms, first = s.serial;
   settle(s);
-  if (!R?.at || active(s) || R.screen) { deny(s, R?.screen ? 'Finish what is in front of you first.' : 'Nothing to wait for.'); return out(s, first); }
+  if (!R?.at || active(s) || (R.screen && !R.screen.slipped)) { deny(s, R?.screen ? 'Finish what is in front of you first.' : 'Nothing to wait for.'); return out(s, first); }
   R.visit.moves++; R.stats.moves++;
   say(s, 'wait', 'rooms-cmd');
   if (hunterMove(s)) meet(s, hereOf(s), opts);
@@ -1127,6 +1138,7 @@ function arrive(s, room, opts = {}) {
   const R = s.rooms;
   const people = R.world ? ask('people', s, room) || [] : [];
   if (people.length) say(s, `${people.join(', ')} ${people.length === 1 ? 'is' : 'are'} here.`, 'rooms');
+  for (const h of people) if (runnerOf(s, h)) know(s, h, 'met'); // a runner in the room (SPRAWL-00): you've met them
   if (['junction', 'den', 'empty'].includes(room.kind)) clear(s, room);
   if (room.kind === 'purse' && cacheFull(s, room)) takePurse(s, room); // a rogue server's Stash: taken as you walk in
   if (surgeAt(s, room.id)) { surgeScreen(s, room, opts, virusName(s, room, 'surge')); return; } // a lit surge room: its next wave (runcards.mjs)
@@ -1134,6 +1146,8 @@ function arrive(s, room, opts = {}) {
     const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts), name = f.name || v.name;
     R.screen = { kind: 'virus', room: room.id, name, pause: !!opts.pause };
     say(s, `${name} holds ${room.path}.${R.rare[room.id] ? ' A rare spawn.' : ''}`, 'intrusion');
+    const m = R.world ? meetingOf(s, isUp) : null; // a runner fighting it (runners.mjs): Help, or step back
+    if (m?.room.id === room.id) say(s, `The runner ${m.r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Signal.`, 'rooms');
   } else stood(s, room);
 }
 // You stand in a room with nothing live in it (walked in, or what held it beaten): this visit's tally (a no-rest map
@@ -1144,15 +1158,22 @@ function stood(s, room) {
   (R.visit.stood ||= {})[room.id] = true;
   if (R.world) ask('stood', s, room);
 }
+// An Infiltrator's slips left this visit (ROOMS.slips): past the hunter, or out of a room a virus holds.
+export const slipsLeft = (s) => (classOf(s) === 'infiltrator' && s.rooms?.visit ? Math.max(0, ROOMS.slips - (s.rooms.visit.slips ?? (s.rooms.visit.slipped ? 1 : 0))) : 0);
+const useSlip = (R) => { R.visit.slips = (R.visit.slips ?? (R.visit.slipped ? 1 : 0)) + 1; };
+// A room you can slip out of: a virus holds it, and it isn't the Core or a surge.
+export const slippable = (s, room) => s.rooms.screen?.kind === 'virus' && !s.rooms.screen.slipped && s.rooms.screen.as !== 'surge' && !['core', 'boss'].includes(room?.kind);
 function meet(s, room, opts = {}) {
   const R = s.rooms, h = hunterOf(s);
   R.stats.hunted++;
   R.visit.caught = true; // the hunter reached you this visit (a contract's file past a Tracker: mail.mjs)
   say(s, `The ${HUNTERS[h.kind].name} is on you.`, 'rooms-bad');
-  if (classOf(s) === 'infiltrator' && !R.visit.slipped) { R.screen = { kind: 'hunter', room: room.id, pause: !!opts.pause }; return; }
+  if (slipsLeft(s) > 0) { R.screen = { kind: 'hunter', room: room.id, pause: !!opts.pause }; return; }
   R.visit.pending = room.id;
   fight(s, room, { as: 'hunter', pause: !!opts.pause });
 }
+
+const slipLine = (s) => (slipsLeft(s) ? `${slipsLeft(s)} slip${slipsLeft(s) === 1 ? '' : 's'} left this visit.` : 'No slips left this visit.');
 
 // A run card's pack on you (runcards.mjs): the fight starts, then the room you walked into.
 function packMeet(s, room, opts = {}) {
@@ -1179,14 +1200,28 @@ export function act(s, verb, arg = null, opts = {}) {
   if (active(s)) { deny(s, 'Finish the fight first.'); return out(s, first); }
   const sc = R.screen;
   if (sc?.kind === 'hunter') {
-    if (verb === 'slip') { R.visit.slipped = true; R.screen = null; say(s, `You slip past the ${HUNTERS[hunterOf(s).kind].name}.`, 'rooms-good'); hunterOf(s).held = 1; arrive(s, here, opts); }
+    if (verb === 'slip') { useSlip(R); R.screen = null; say(s, `You slip past the ${HUNTERS[hunterOf(s).kind].name}. ${slipLine(s)}`, 'rooms-good'); hunterOf(s).held = 1; arrive(s, here, opts); }
     else if (verb === 'engage' || verb === 'fight') { R.screen = null; R.visit.pending = here.id; fight(s, here, { as: 'hunter', pause: !!opts.pause || !!sc.pause }); }
     else deny(s, 'Fight it, or slip past it.');
     return out(s, first);
   }
   if (sc?.kind === 'rival') {
     if (verb === 'engage' || verb === 'fight') { R.screen = null; fight(s, here, { as: 'rival', pause: !!opts.pause || !!sc.pause }); }
-    else deny(s, `${RIVALS[rivalOf(s).id].name} has you. Engage.`);
+    else deny(s, `${rivalOf(s).id} has you. Engage.`);
+    return out(s, first);
+  }
+  // Help a runner fighting in this room (runners.mjs meetingOf): they fight beside you (crew.mjs), and a win raises
+  // their standing.
+  if (verb === 'assist') {
+    const m = R.world && sc?.kind === 'virus' ? meetingOf(s, isUp) : null;
+    if (m?.room.id !== here.id) deny(s, 'No runner here to help.');
+    else { R.visit.helping = { h: m.r.handle, room: here.id, sig: m.sig }; R.screen = null; fight(s, here, { pause: !!opts.pause || !!sc.pause, as: sc.as || null }); }
+    return out(s, first);
+  }
+  if (verb === 'slip' && sc?.kind === 'virus') {
+    if (!slippable(s, here)) deny(s, `You can't slip past the ${sc.name}.`);
+    else if (!slipsLeft(s)) deny(s, classOf(s) === 'infiltrator' ? 'No slips left this visit.' : 'slip is the Infiltrator\'s.');
+    else { useSlip(R); sc.slipped = true; say(s, `You slip past the ${sc.name}. ${slipLine(s)}`, 'rooms-good'); }
     return out(s, first);
   }
   if (verb === 'engage') {
@@ -1202,7 +1237,7 @@ export function act(s, verb, arg = null, opts = {}) {
   }
   if ((verb === 'pull' || verb === 'pull all') && (here.kind === 'cache' || here.kind === 'secret')) { pull(s, here, opts); return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'stash') { if (!cacheFull(s, here)) deny(s, `The stash is empty. It fills again in ${fmtLeft(refillAt(s, here) - nowOf())}.`); else { ask('stash', s, here); R.taken[here.id] = nowOf(); clear(s, here); } return out(s, first); }
-  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'vault' && rivalHolds(s, here)) { deny(s, `${RIVALS[R.visit.rival.id].name} took the files.`); return out(s, first); }
+  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'vault' && rivalHolds(s, here)) { deny(s, `${R.visit.rival.id} took the files.`); return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'vault' && R.world && opened(s, here)) { if (!ask('pull', s, here)) deny(s, 'Nothing left in the vault.'); return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'entry' && R.world) { if (!ask('entryPull', s)) deny(s, 'Nothing here to take.'); return out(s, first); }
   if ((verb === 'open' || verb === 'force') && here.kind === 'vault') { openVault(s, here, verb === 'force'); return out(s, first); }
@@ -1254,6 +1289,8 @@ function pull(s, room, opts) {
 function takeCache(s, room) {
   const R = s.rooms, r = rnd(R, 21), C = ROOMS.cache, mill = runs(s, 'mill') && room.kind === 'cache' ? 1.5 : 1, rich = ((R.world && ask('cacheMult', s, room)) || 1) * mill; // a Cache Mill: half again
   if (isBait(s, room)) { const lost = Math.round(R.max * ROOMS.bait); setSig(s, Math.max(1, sigOf(s) - lost)); say(s, `The canary costs you ${lost} Signal.`, 'rooms-bad'); }
+  const mend = Math.round((R.max * fxPct(s, 'cache-heal%')) / 100); // Sweetener (a floor feat's unique, earned.mjs)
+  if (mend > 0) { setSig(s, Math.min(R.max, sigOf(s) + mend)); say(s, `+${mend} Signal from the cache.`, 'rooms-good'); }
   const bait = baitPays(s, room), credits = Math.round((C.credits[0] + Math.floor(r() * (C.credits[1] - C.credits[0] + 1))) * rich * (1 + R.level / 20) * bait);
   const fam = roomList(s).find((x) => x.family)?.family, kind = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher', botnet: 'worm', logicbomb: 'cipher' }[fam] || 'cipher';
   const code = Math.round((C.code[0] + Math.floor(r() * (C.code[1] - C.code[0] + 1))) * mill * bait);
@@ -1466,10 +1503,16 @@ function exfilFight(s, room) {
 // room.pin holds one set for every spawn (tests).
 export const spawnSet = (family, author, seed) => (setsOf(family) ? rollSet(family, author, seeded((seed ^ 0x5e75) >>> 0)) : null);
 // A virus's name before you fight it (the room card): the same build the fight makes, built and thrown away.
+// The build is the same for the same fight, place and parts met, so its name is kept (the map names every room on
+// every draw, and a build costs about a millisecond).
+const VIRUS_NAMES = new Map();
 export function virusName(s, room, as = null) {
   const f = fightOf(s, room, as);
   if (f.name) return f.name;
-  return encounterVirus(s, f.key, f.seed, f.opts).name;
+  const k = `${f.key}|${f.seed}|${JSON.stringify(f.opts)}|${s.run?.loc}|${s.rooms?.floor}|${!!s.metAll}|${s.research ? Object.keys(s.research).length : 0}`;
+  let n = VIRUS_NAMES.get(k);
+  if (n === undefined) { if (VIRUS_NAMES.size > 500) VIRUS_NAMES.clear(); VIRUS_NAMES.set(k, (n = encounterVirus(s, f.key, f.seed, f.opts).name)); }
+  return n;
 }
 // The virus itself, built and thrown away the same way: what a contract asks of it (its family, strain, level, parts).
 export const virusOf = (s, room, as = null) => { const f = fightOf(s, room, as); return encounterVirus(s, f.key, f.seed, f.opts); };
@@ -1607,6 +1650,8 @@ hooks.roomEnd = (s, result) => {
   }
   R.stats.won++;
   if (e.virus.boss) R.stats.boss.won++;
+  const out = R.world ? pulledOut(s, room.id) : null; // a crashed runner in it (runners.mjs R3): pulled out
+  if (out) { R.visit.metWon = { h: out.h, room: room.id }; say(s, `You pull ${out.h} out. Standing ${out.standing}.`, 'rooms-good'); }
   setSig(s, Math.max(1, Math.min(s.run.max, s.run.integrity, R.fightFrom ?? s.run.max)));
   if (e.roomsLoot?.credits) { if (R.world) s.run.pack.push({ path: `${room.path}/#loot-${s.serial}`, name: 'loot.dat', kind: 'credits', amount: e.roomsLoot.credits }); else { R.credits += e.roomsLoot.credits; s.server.credits += e.roomsLoot.credits; } }
   if (as === 'exfil') {

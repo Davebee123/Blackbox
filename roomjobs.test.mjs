@@ -100,7 +100,7 @@ test('addresses show on every chip, an unknown room\'s too (only ? and its addre
   // ls and map.
   const ls = said(play(s, 'ls'));
   assert.match(ls, new RegExp(`^${A[here.id]}  Entry  \\[entry\\]`));
-  for (const x of FP.exits(s)) assert.match(ls, new RegExp(`\\n\\d+  ${A[x.id]}  \\?  \\[\\?\\]`));
+  for (const x of FP.exits(s)) assert.match(ls, new RegExp(`\\n\\d+  ${A[x.id]}  ${x.path}  \\[`));
   const map = said(play(s, 'map'));
   for (const x of unknown) assert.match(map, new RegExp(`\\? ${A[x.id]}  \\?`), 'an unknown room: ? and its address');
   // go and cd take an address, any case; one you can't see yet says only that.

@@ -8,12 +8,15 @@
 :root[data-sfx="subtle"] { --sfx-k: 0.5; }
 :root[data-sfx="bold"] { --sfx-k: 1.6; }
 
-/* The backdrop: the screen's own background, moved onto a layer behind everything in the page (z-index -1, out of
-   the grid), so its light shows between and behind the panels. With nothing on, it looks as the screen always did. */
-#fx-back { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; background: var(--bg) url('ui/textures/grime-overlay-subtle.png'); transition: filter 0.8s; }
+/* The backdrop: a layer behind everything in the page (z-index -1, out of the grid), so its light shows between and
+   behind the panels. The page's own background (style.css body) is the screen's; the backdrop draws only while
+   something shows in it (a floor's texture, Low Signal, a tear), so a phone keeps no full-screen layers for it at
+   rest. In the casing it carries the screen's background, as the app's is clear there. */
+#fx-back { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; transition: filter 0.8s; }
 #fx-back > i { position: absolute; inset: 0; display: block; opacity: 0; }
+:root:not([data-sfx-tex]) body:not(.cased) #fx-back:not(.low):not(.tear) { display: none; }
 @media (min-width: 1100px) and (min-height: 720px) {
-  body.cased #fx-back { position: absolute; border-radius: inherit; }
+  body.cased #fx-back { position: absolute; border-radius: inherit; background: var(--bg) url('ui/textures/grime-overlay-subtle.png'); }
   body.cased .app { background: transparent; box-shadow: 0 0 0 2px #000, 0 0 30px 6px color-mix(in srgb, var(--amber) 8%, transparent); }
 }
 /* The map's field is the floor's own backdrop: with a floor's texture up, it lets it through (its nodes and labels
@@ -23,13 +26,17 @@
 .window-out { z-index: -2; }
 
 /* ---------- floor textures (one a floor, in the floor's accent; light, behind the panels) ---------- */
-/* .fx-tex wears the accent through a mask: the pattern is the mask, so it takes the floor's colour. */
-#fx-back .fx-tex { background: var(--amber); -webkit-mask-repeat: repeat; mask-repeat: repeat; will-change: transform; }
+/* .fx-tex wears the accent through a mask: the pattern is the mask, so it takes the floor's colour. It holds a layer
+   only while a floor's texture is up. */
+#fx-back .fx-tex { background: var(--amber); -webkit-mask-repeat: repeat; mask-repeat: repeat; }
+:root:not([data-sfx-tex]) #fx-back .fx-tex { display: none; }
+:root[data-sfx-tex] #fx-back .fx-tex { will-change: transform; }
 :root[data-sfx-tex] #fx-back .fx-tex { opacity: calc(0.07 * var(--sfx-k)); }
-/* The Sprawl: neon haze, drifting slowly sideways. Nothing falls. */
+/* The Sprawl: neon haze, drifting slowly sideways. Nothing falls. The layer is 118% of the screen, its haze drawn
+   as on a 140% one (the drift's 6% of that, 7.12% of this). */
 :root[data-sfx-tex="haze"] #fx-back .fx-tex {
-  left: -20%; right: -20%; -webkit-mask-image: none; mask-image: none; opacity: calc(0.08 * var(--sfx-k));
-  background: radial-gradient(ellipse 38% 22% at 28% 38%, var(--amber), transparent 70%), radial-gradient(ellipse 30% 18% at 74% 68%, var(--amber), transparent 70%);
+  left: -9%; right: -9%; -webkit-mask-image: none; mask-image: none; opacity: calc(0.08 * var(--sfx-k));
+  background: radial-gradient(ellipse 38% 22% at 28% 38%, var(--amber), transparent 70%) center / 118.64% 100% no-repeat, radial-gradient(ellipse 30% 18% at 74% 68%, var(--amber), transparent 70%) center / 118.64% 100% no-repeat;
   animation: sfx-haze 40s ease-in-out infinite alternate;
 }
 /* Backhaul: sodium lamps passing overhead, a slow band of orange light. */
@@ -84,12 +91,16 @@
 :root[data-sfx-tex="static"] #fx-back .fx-tex { opacity: 0; }
 :root[data-sfx-tex="static"] #fx-back .fx-static { opacity: calc(0.07 * var(--sfx-k)); }
 
-/* ---------- static (Bedrock, and Low Signal) ---------- */
+/* ---------- static (Bedrock, and Low Signal); drawn only while it shows, as is the vignette ---------- */
+#fx-back .fx-static, #fx-back .fx-vig { display: none; }
+:root[data-sfx-tex="static"] #fx-back .fx-static, #fx-back.low .fx-static, #fx-back.tear .fx-static { display: block; }
+:root[data-sfx-tex="frost"] #fx-back .fx-vig, :root[data-sfx-tex="heat"] #fx-back .fx-vig, #fx-back.low .fx-vig { display: block; }
 #fx-back .fx-static {
-  inset: -50%;
+  inset: -15%;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  animation: sfx-grain 0.45s steps(3) infinite;
 }
+/* It moves only while it shows (Bedrock's texture, Low Signal); :where keeps a tear's shift (below) on top. */
+:where(:root[data-sfx-tex="static"]) #fx-back .fx-static, #fx-back:where(.low) .fx-static { animation: sfx-grain 0.45s steps(3) infinite; }
 
 /* ---------- Low Signal: the edges grey out, light static, a slow vignette breathing ---------- */
 #fx-back.low { filter: grayscale(0.85) brightness(0.9); }
@@ -123,7 +134,8 @@
     linear-gradient(to bottom, transparent 0 84%, rgba(90, 220, 255, 0.2) 84% 84.3%, var(--sfx-glow) 84.3% 84.6%, color-mix(in srgb, var(--amber) 7%, transparent) 84.6% 88.5%, rgba(255, 70, 60, 0.2) 88.5% 88.8%, transparent 88.8% 100%),
     color-mix(in srgb, var(--amber) 2.5%, transparent);
 }
-#fx-back.tear .fx-tear { animation: sfx-tear 0.28s steps(1) 1; }
+#fx-back .fx-tear { display: none; }
+#fx-back.tear .fx-tear { display: block; animation: sfx-tear 0.28s steps(1) 1; }
 #fx-back.tear.tear-big .fx-tear { animation: sfx-tear 0.22s steps(1) 2; }
 #fx-back.tear .fx-tex, #fx-back.tear .fx-static { animation-name: sfx-tear-shift; animation-duration: 0.28s; animation-timing-function: steps(1); animation-iteration-count: 1; }
 #fx-back.tear .fx-static { opacity: calc(0.12 * var(--sfx-k)); }
@@ -147,11 +159,12 @@
 @keyframes sfx-rise { from { transform: translateY(0); } to { transform: translateY(var(--rise, -40px)); } }
 @keyframes sfx-drift { from { transform: translate(0, 0); } to { transform: translate(140px, 140px); } }
 @keyframes sfx-drip { from { transform: translateY(0); } to { transform: translateY(240px); } }
-@keyframes sfx-haze { from { transform: translateX(-6%); } to { transform: translateX(6%); } }
+@keyframes sfx-haze { from { transform: translateX(-7.12%); } to { transform: translateX(7.12%); } }
 @keyframes sfx-sweep { from { transform: translateY(-30%); } to { transform: translateY(30%); } }
 @keyframes sfx-breathe { 0%, 100% { filter: brightness(0.75); } 50% { filter: brightness(1.25); } }
 @keyframes sfx-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
-@keyframes sfx-grain { 0% { transform: translate(0, 0); } 33% { transform: translate(-7%, 4%); } 66% { transform: translate(5%, -6%); } 100% { transform: translate(0, 0); } }
+/* as style.css crt-grain: a layer 1.3x the screen, shifted as far as the old 2x one */
+@keyframes sfx-grain { 0% { transform: translate(0, 0); } 33% { transform: translate(-10.77%, 6.15%); } 66% { transform: translate(7.69%, -9.23%); } 100% { transform: translate(0, 0); } }
 @keyframes sfx-tear { 0% { opacity: 1; transform: translate(-14px, 0); } 30% { opacity: 1; transform: translate(10px, -9%); } 60% { opacity: 0.8; transform: translate(-6px, 14%); } 100% { opacity: 0; transform: none; } }
 @keyframes sfx-tear-shift { 0% { transform: translateX(-18px); clip-path: inset(18% 0 60% 0); } 35% { transform: translateX(14px); clip-path: inset(55% 0 30% 0); } 70% { transform: translateX(-6px); clip-path: inset(0 0 0 0); } 100% { transform: none; clip-path: none; } }
 @keyframes sfx-crit { 0% { filter: url(#sfx-tear-a); } 45% { filter: url(#sfx-tear-b); } 100% { filter: none; } }
@@ -160,9 +173,11 @@
 @keyframes lamp-busy { 0%, 41%, 47%, 63%, 100% { filter: none; } 38%, 44%, 60% { filter: brightness(0.45); box-shadow: none; } }
 
 /* ---------- off, and still ---------- */
-:root[data-sfx="off"] #fx-back > i { display: none; }
+:root[data-sfx="off"] #fx-back > i { display: none !important; }
 :root[data-sfx="subtle"] #fx-back .fx-tex, :root[data-sfx="subtle"] #fx-back .fx-vig { animation: none; }
 /* Motion off or reduced motion: everything here holds still (a floor keeps its colours and a still texture). */
+/* Ambient motion off (the Graphics settings, graphics.mjs): the backdrop holds still; Low Signal still pulses. */
+.no-ambient #fx-back .fx-tex, .no-ambient #fx-back:not(.low) .fx-vig, .no-ambient #fx-back:not(.low) .fx-static { animation: none; }
 .no-motion #fx-back, .no-motion #fx-back > i, .no-motion #crt-bezel.low::after, .no-motion .lamp i, .no-motion #virus-canvas.sfx-tear { animation: none !important; transition: none; }
 .no-motion #fx-back .fx-tear { display: none; }
 @media (prefers-reduced-motion: reduce) {

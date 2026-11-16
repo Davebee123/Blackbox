@@ -71,13 +71,15 @@ before it ships. Numbers are at level 6 scale and grow 4% a level. Each comes wi
 |---|---|---|---|---|---|
 | Botnet (*built*) | MIRAINET | 8, floor 2 | SWARMLINE | Worm | C&C: cancel a volley |
 | Logic Bomb (*built*) | TIMEBOMB | 12, floor 2 | TOLLGATE | Cipher | Trigger: cancel. Payload: shorten the fuse. |
-| Polymorph | SHAPESHIFT | 14, floor 3 | PALEMASK, NULL CHOIR | Kernel | cancel, and lock its form 2 cycles |
+| Polymorph | SHAPESHIFT | 26, floor 5 | ACTUARY, PALEMASK, NULL CHOIR | Kernel | cancel, and lock its form 2 cycles |
 | RAT | DARKCOMET | 16, floor 3 | NULL CHOIR, GLASSJAW | Kernel | Operator: release your key |
-| Rootkit | KERNELHOOK | 18, floor 3 | PALEMASK, NULL CHOIR | Kernel | surface the next part |
-| Stealer | INFOSTEAL | 22, floor 4 | GLASSJAW, LANTERN | Cipher | Siphon: return what it stole |
+| Rootkit | KERNELHOOK | 32, floor 6 | PALEMASK, NULL CHOIR | Kernel | surface the next part |
+| Stealer | INFOSTEAL | 38, floor 7 | GLASSJAW, LANTERN | Cipher | Siphon: return what it stole |
+| Bootkit | BOOTSECTOR | 44, floor 8 | PALEMASK, SWARMLINE | Kernel | Loader: cancel the load |
 | Fileless | LOLBIN | 26, floor 4 | NULL CHOIR, PALEMASK | Kernel | evict it from that process |
 
-Invasions can be any family but the Fileless, which lives only in rooms.
+One new family a floor from 3 (the designer, November 2026): Polymorph, Rootkit and the Stealer moved deeper, the
+Bootkit is new. Invasions can be any family but the Fileless, which lives only in rooms.
 
 ### 4.3 The families
 
@@ -156,6 +158,21 @@ has an area hit.
   of the room's loot (a pile bar over the board). Overkill's spill burns loot here instead of the next part.
 - The lesson: precise crossings, not burst.
 
+**11. Bootkit. Stop it booting.** (*New*, floor 8.)
+
+| Part | Integrity | ◆ | Move |
+|---|---:|---:|---|
+| Loader | 40 | 2 | none; loads the next stage every 4 cycles (a cast) |
+| Stage 1 | 30 | 1 | Surge 12 every 4 |
+| Stage 2 | 30 | 2 | Encrypt every 3 |
+| Stage 3 | 30 | 1 | Wipe 30, a charge |
+
+- A stage loads as a new part. One broken while the Loader stands loads again at the next boot. Breaking the Loader
+  stops every load still to come; what has loaded stays.
+- Sets: **Cold boot** (Stage 1 up, the rest in order) and **Warm boot** (two up; the third waits 3 boots).
+- Ticks on the Loader cancel the load it is casting.
+- The lesson: the armored Loader under fire, or the stages on a treadmill.
+
 ### 4.4 Nest rooms: two viruses at once
 
 A nest room holds two viruses of the author as one fight: their parts share one board, each keeps its own body's
@@ -167,11 +184,12 @@ moves due, the same two ticks a part. Mixing two bodies' rules on one board is t
 | Author | New families | Sets it favours |
 |---|---|---|
 | TOLLGATE | Logic Bomb | Contact |
-| SWARMLINE | Botnet | Barrage |
-| PALEMASK | Polymorph, Rootkit, Fileless | Hook last, Nest |
+| SWARMLINE | Botnet, Bootkit | Barrage, Warm boot |
+| PALEMASK | Polymorph, Rootkit, Fileless, Bootkit | Hook last, Nest, Cold boot |
 | NULL CHOIR | Polymorph, RAT, Rootkit, Fileless | Roulette, Hop |
 | GLASSJAW | RAT, Stealer | Profiler, Smash and grab |
 | LANTERN | Stealer | Pickpocket |
+| ACTUARY | Polymorph | Drifting |
 
 A floor's holder (docs/content.md 3.1) decides most of its families.
 
