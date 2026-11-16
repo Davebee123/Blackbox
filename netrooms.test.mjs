@@ -33,7 +33,7 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   play(s, 'connect sprawl');
   assert.ok(s.run?.rooms && s.rooms?.world, 'a run on rooms');
   const g = s.rooms.graph;
-  assert.deepEqual(Object.values(g.rooms).filter((r) => r.path0 !== '/').map((r) => r.path0).sort(), ['/net', '/net/relay', '/srv', '/tmp', '/var', '/var/log']);
+  assert.deepEqual(Object.values(g.rooms).filter((r) => r.path0 !== '/').map((r) => r.path0).sort(), ['/dev', '/home', '/home/guest', '/net', '/net/relay', '/srv', '/tmp', '/var', '/var/log', '/var/spool']);
   assert.equal(g.rooms[g.core].path0, KING_ROOM);
   for (const [a, b] of g.links) { const pa = g.rooms[a].path0, pb = g.rooms[b].path0; assert.ok(pb.startsWith(pa === '/' ? '/' : pa + '/'), `${pa} → ${pb}: a folder next to its parent`); }
   assert.deepEqual(sprawlGraph(), g, 'the same graph every time');
@@ -42,12 +42,12 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   assert.match(net.path, /^Process \d$/, 'named for what it is, never a folder');
   assert.equal(g.rooms[g.core].path, 'Core');
   assert.doesNotMatch(ls, /\/(net|var|tmp|srv)/, 'no folder names on screen');
-  // A fresh visit: every room but the entry unknown, the ones next to you listed as ? with their cost.
-  assert.ok(Object.values(g.rooms).every((r) => (r.id === g.entry) === FP.known(s, r.id)), 'all unknown but the entry');
-  assert.match(ls, /\n1  [A-Z]+\d+  \?  \[\?\]  −\d+ Signal/); // its address, and nothing about what it is
-  assert.doesNotMatch(ls, /fight|Process/, 'nothing about what they are');
+  // A fresh visit: the entry and the rooms next to it discovered, the rest unknown; a first walk in still costs 5%.
+  const next = new Set(FP.neighbours(g, g.entry));
+  assert.ok(Object.values(g.rooms).every((r) => (r.id === g.entry || next.has(r.id)) === FP.known(s, r.id)), 'the entry and its neighbours');
+  assert.match(ls, /\n1  [A-Z]+\d+  Process \d  \[fight · \w+ lv \d+\]  −\d+ Signal/); // what it is, its level, its cost
   assert.match(play(s, 'cd net/relay').map((e) => e.message).join(' '), new RegExp(`\\w+-\\d+ holds ${net.path}`), 'what holds it stops the walk; cd still takes the folder');
-  assert.equal(s.rooms.screen?.kind, 'virus', 'an unknown room\'s virus still asks: Engage or Step back');
+  assert.equal(s.rooms.screen?.kind, 'virus', 'a virus still asks: Engage or Step back');
   play(s, 'back');
   assert.match(play(s, 'ls').find((e) => e.type === 'rooms-out').message, new RegExp(`${net.path}  \\[fight · \\w+ lv ${ZONE_LEVEL['/net']}\\]`), 'been in: discovered, at its room\'s level');
   Object.assign(s.zone.spawns['/net'], { alive: false, respawnAt: clock + 3600000 });
@@ -77,7 +77,7 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   assert.equal(s.encounter.bossRule, 'a');
 });
 
-test('the terminal on rooms: ls, cd, cd .., map, go, wait, back, engage, pack, help, scan and jack out all work; a typo says so', () => {
+test('the terminal on rooms: ls, cd, cd .., map, go, wait, back, engage, pack, help and jack out all work; a typo says so', () => {
   const { s, loc } = traced();
   play(s, 'connect ' + loc.id);
   const R = s.rooms;
@@ -87,7 +87,6 @@ test('the terminal on rooms: ls, cd, cd .., map, go, wait, back, engage, pack, h
   assert.match(said('help'), /go <room>[\s\S]*jack out/);
   assert.match(said('pack'), /pack is empty/);
   const next = FP.neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]).find((r) => FP.isUp(s, r));
-  assert.match(said('scan ' + next.dir), /./, 'a genome card');
   said('go ' + next.dir);
   assert.equal(R.at, next.id);
   assert.equal(R.screen?.kind, 'virus');

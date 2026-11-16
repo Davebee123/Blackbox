@@ -96,6 +96,7 @@ export function createCoop(app) {
   // ---------- the page's hooks ----------
   C.hosting = () => !!C.H && C.H.guests.some((g) => g.joined);
   C.live = () => !!(C.H || C.G);
+  C.busy = () => C.live() || !!(C.el && !C.el.hidden); // tick() has work every frame
   C.tick = () => { C.H?.tick(); C.G?.tick(); if (C.el && !C.el.hidden && performance.now() - (C.drawn || 0) > 500) draw(); };
   // A guest's typed line: a fight command goes to the host; a loadout change runs on the guest's own save and goes to
   // the host as their character; anything else on the host's world is the host's to do. True when it's handled.

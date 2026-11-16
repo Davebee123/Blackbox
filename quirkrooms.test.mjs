@@ -178,7 +178,7 @@ test('the quirks\' rules say what they do on rooms, one sentence each; an invasi
     assert.equal(q.rule.split(/\. /).length, 1, `${q.name}: one sentence`);
     assert.doesNotMatch(q.rule, /ls -a|\/nest|folder|\.ghost/, `${q.name}: nothing from the old file system`);
   }
-  for (const id of Object.keys(QUIRKS)) assert.ok(TIPS.some((t) => t.id === `quirk-${id}` && t.text.endsWith(QUIRKS[id].rule)), `the ${id} tip`);
+  assert.ok(!TIPS.some((t) => t.id.startsWith('quirk-')), 'a quirk is taught by its tag\'s hover, never a tip');
   assert.match(quirkLine({ quirk: 'nest' }), /brood from its Nest/);
   // On the map card and the strip's tooltip.
   const { s, loc } = traced('ghostroot', { seed: 5 });

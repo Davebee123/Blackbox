@@ -45,9 +45,8 @@ import { giveScript, rollScript } from './scripts.mjs';
 import { arcChallenge, jobBossAt } from './arcs.mjs';
 import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
-import { traceNear, hiddenLead, HIDDEN } from './hidden.mjs';
-import { hiddenNear } from './floors.mjs';
-import { zoneSpawns, kingOpen, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn, scanButton } from './run.mjs';
+import { traceNear, openNext, HIDDEN } from './hidden.mjs';
+import { zoneSpawns, kingOpen, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn } from './run.mjs';
 import { blipStood, blipRooms, runCardRoll, runCardUp, runCardEnd } from './events.mjs';
 import { RUN_CARDS } from './runcards.mjs';
 import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
@@ -166,13 +165,15 @@ export function rogueGraph(loc) {
   for (let t = 0; t < 80; t++) { const g = tryRogue(loc, folders, t); if (g) return g; }
   throw new Error('No rogue graph for seed ' + loc.seed);
 }
+hooks.rogueGraph = rogueGraph; // rogue.mjs rampOf: how far each folder is from the entry
 function tryRogue(loc, folders, attempt) {
   const r = seeded((((loc.seed || 1) * 7331 + attempt * 104729 + 17) >>> 0) || 1);
   const F = folders.length, Q = NET.quiet[0] + Math.floor(r() * (NET.quiet[1] - NET.quiet[0] + 1)), N = 1 + F + Q;
   const cells = [{ x: 0, y: 0, parent: null, depth: 0 }], taken = new Set(['0,0']), deg = [0];
   for (let i = 1; i < N; i++) {
     const opts = [];
-    cells.forEach((c, j) => { if (deg[j] >= (j ? 3 : 4) || c.depth >= 4) return; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = c.x + dx, y = c.y + dy; if (Math.abs(x) <= 3 && Math.abs(y) <= 2 && !taken.has(`${x},${y}`)) opts.push({ j, x, y, w: (1 + c.depth * 0.6) / (1 + deg[j]) }); } });
+    const big = loc.size ? 1 : 0; // a bigger server (rogue.mjs ROGUE.fights): a room deeper and wider
+    cells.forEach((c, j) => { if (deg[j] >= (j ? 3 : 4) || c.depth >= 4 + big) return; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = c.x + dx, y = c.y + dy; if (Math.abs(x) <= 3 + big && Math.abs(y) <= 2 + big && !taken.has(`${x},${y}`)) opts.push({ j, x, y, w: (1 + c.depth * 0.6) / (1 + deg[j]) }); } });
     if (!opts.length) return null;
     let k = r() * opts.reduce((a, o) => a + o.w, 0), o = opts[0];
     for (const c of opts) if ((k -= c.w) < 0) { o = c; break; }
@@ -323,8 +324,8 @@ WORLD_hook('drops', () => {}); // what a kill drops comes with what it pays (won
 WORLD_hook('won', (s, room, e, { first = false, mirror = false, rare = false } = {}) => {
   const loc = locOf(s), R = s.rooms;
   if (!loc) return;
-  // A first clear on a server traces the ? servers linked to it on its floor (floors.mjs, GAME_RULES.md "The hidden network").
-  if (first && !loc.zone && !loc.member) traceNear(s, loc, HIDDEN.firstClear, `${room.path} cleared: `);
+  // A first clear on a server traces one ? linked to it on its floor (the most traced) (floors.mjs, GAME_RULES.md "The hidden network").
+  if (first && !loc.zone && !loc.member) traceNear(s, loc, HIDDEN.firstClear, `${room.path} cleared: `, { one: true });
   if (room.wild) return wildWon(s, loc, room, e);
   // Earned counts (earned.mjs): a Cold storage fight won before its viruses wake; an Armored server's Core beaten.
   if (R.kind === 'Cold' && e.cycle < 6) earnEvent(s, { kind: 'cold-quick', floor: loc.depth || 1 });
@@ -411,7 +412,7 @@ function wildWon(s, loc, room, e) {
   if (sp) { sp.diedAt = t; if (named) delete sp.bounty; }
   if (loc.zone) { if (sp) { sp.alive = false; sp.respawnAt = t + (sp.boss ? CONFIG.zone.bossRespawnMs : CONFIG.zone.respawnMs); } }
   else if (rogueKill(s, loc, room.path0, t, () => { const more = ctx?.more?.(); if (more) addItem(s, more, 'The Pit gives up more: '); }) && !loc.member && HIDDEN.opens) {
-    for (const n of hiddenNear(s, loc)) hiddenLead(s, n, 100 - n.lead, 'Full clear: '); // a full clear opens its links, as Mapped does
+    openNext(s, loc, 'Full clear: '); // a full clear opens one link, as Mapped does
   }
 }
 // A wild room's loss: a named target or a boss stays put (a named one that beat you twice wears down to v1); a Pit
@@ -604,8 +605,6 @@ FP.WORLD.view = {
   jobs: (s) => { const loc = locOf(s); return loc ? jobsOn(s, loc) : []; },
   // The director's blips on this server (events.mjs): { roomId: { kind, name, text } }, a spark on the chip.
   blips: (s) => { const loc = locOf(s); return loc ? blipRooms(s, loc) : {}; },
-  // A room next to you that scan reads (run.mjs scanRoom): its card's Scan button runs scan <room>.
-  scan: (s, room) => scanButton(s, room),
 };
 
 // The live viruses in the rooms you know on this server, as a contract reads a kill (roomKill's terms): the marks.
@@ -633,8 +632,8 @@ WORLD_hook('mapped', (s) => {
   if (!loc) return;
   contractMapped(s, loc);
   if (!s.rooms.mappedRest) earnEvent(s, { kind: 'map-norest', floor: loc.depth || 1 }); // No Rest's count (earned.mjs)
-  // Mapped: every ? linked to it is traced the rest of the way (floors.mjs), so a floor always opens outward.
-  if (!loc.zone && !loc.member && HIDDEN.opens) for (const n of hiddenNear(s, loc)) hiddenLead(s, n, 100 - n.lead, 'Mapped: ');
+  // Mapped: one ? linked to it is traced the rest of the way (floors.mjs), so a floor opens outward one server at a time.
+  if (!loc.zone && !loc.member && HIDDEN.opens) openNext(s, loc, 'Mapped: ');
   if (s.rooms.type === 'server') { const n = NET.mapped(levelOf(loc)); s.server.credits += n; emit(s, 'info', `Mapped: +${n} credits.`, { credits: n }); }
 });
 
@@ -666,6 +665,9 @@ export function roomsRestore(s, was) {
     if (s.run?.rooms && s.run.loc === loc.id) { const here = g.rooms[loc.floorplan.at]; if (here) { s.run.cwd = here.path; for (const c of Object.values(s.run.crew || {})) c.cwd = here.path; } }
   }
   rogueRestore(s);
+  // SPRAWL-00 grew from six rooms to ten: an older save's rooms are laid out again (not while you stand in them).
+  const z = s.zone;
+  if (z?.floorplan && s.run?.loc !== z.id && !zoneRooms().every((p) => Object.values(z.floorplan.graph.rooms).some((r) => r.path0 === p))) delete z.floorplan;
   if (was >= 39) return socketRoomsRestore(s);
   if (s.run && !s.run.rooms) {
     const loc = s.run.loc === CONFIG.zone.id ? zoneOf(s) : findLocation(s, s.run.loc);

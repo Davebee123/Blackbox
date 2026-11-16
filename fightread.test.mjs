@@ -269,6 +269,13 @@ test('a tether between the Mutex and the Encryptor: ? and ??? until decoded, glo
   Object.defineProperty(mx, '_dyingUntil', { value: Date.now() + 600, writable: true, configurable: true, enumerable: false });
   ts = tethersOf(boardMarkup(s, null), 'lock');
   assert.ok(ts.length && ts.every((t) => /\bsnap\b/.test(t.cls)), 'it snaps as the Mutex dissolves');
+  const rowOf = (h) => h.match(/<button[^>]*class="brow bpart [^"]*"[^>]*data-target="mutex"/)?.[0] || '';
+  assert.match(rowOf(boardMarkup(s, null)), /class="brow bpart dying/, 'its last second: dissolving');
+  // Broken by a hit that lands later (a burn's tick, a long effect): it stands whole until then, its snap waiting.
+  mx._dyingUntil = Date.now() + 1800;
+  html = boardMarkup(s, null);
+  assert.ok(rowOf(html) && !/\bdying\b/.test(rowOf(html)), 'not dissolving before its hit lands');
+  assert.match(html, /--snap:[1-9]\d*ms/, 'its snap waits');
   mx._dyingUntil = 0;
   html = boardMarkup(s, null);
   assert.doesNotMatch(html, /class="tether k-/);

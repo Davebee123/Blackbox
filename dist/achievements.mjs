@@ -190,7 +190,7 @@ export function rewardText(a) {
   if (r.title) out.push(`the title ${titleById(r.title)?.name}`);
   if (r.sticker) out.push('a sticker');
   if (r.banner) out.push('a banner');
-  if (r.casing) out.push('a casing colourway');
+  if (r.casing) out.push('a monitor color');
   if (r.district) out.push(`the window district ${DISTRICT_NAMES[r.district] || r.district}`);
   if (r.prop) out.push(`a desk prop, the ${PROP_NAMES[r.prop] || r.prop}`);
   out.push(...terminalRewardWords(a.id)); // a boot sequence, a prompt, a cursor: the block at the end of this file

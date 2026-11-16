@@ -18,7 +18,9 @@ export const ROGUE = {
   pity: 5, // after this many in a row that aren't, the next one is
   firstTame: 2, // the first two servers you trace are never rogue
   kinds: { nest: { name: 'Nest', rule: 'Holds one family only, and strains turn up twice as often.' }, pit: { name: 'Pit', rule: 'Holds mixed families 2 levels above the server, with better drops.' }, gauntlet: { name: 'Gauntlet', rule: 'Clear every room in one visit for a bonus cache.' }, farm: { name: 'Crew dungeon', rule: 'Built for a crew. Three bosses, and the third behind a key the first two hold.' }, lair: { name: 'Lair', rule: "The floor's lair boss holds the Core, back an hour after it falls. Two rooms of its family guard the way." } }, // farm: KESSLER-FARM-00 only; lair: a network's (network.mjs). Never rolled
-  rooms: ['hive', 'pit', 'spool', 'cells', 'drain', 'nursery', 'crypt', 'sump', 'rack', 'void'],
+  rooms: ['hive', 'pit', 'spool', 'cells', 'drain', 'nursery', 'crypt', 'sump', 'rack', 'void', 'heap', 'burrow', 'coil', 'well', 'shard', 'midden'], // the first ten: a server traced before rooms grew (no loc.size)
+  fights: [8, 11], // fight rooms (loc.size 2; an older server: 4–8)
+  ramp: 3, // each room nearer the entry is a level lower than the deepest, at most this many
   respawnMs: [180000, 300000], // 3–5 minutes
   pitLevels: 2,
   relockMs: CONFIG.relockMs, // after you leave a wild server it won't take you back for 30 seconds
@@ -51,15 +53,16 @@ export function rollRogue(s, loc) {
   loc.special = null;
   loc.spawns = {};
   loc.serial = 0;
+  loc.size = 2; // ROGUE.fights rooms, from the longer folder list
 }
 
-// Its folders: 4–8 of them, one level deep, chosen by its seed.
+// Its folders: ROGUE.fights of them (4–8 on an older server), one level deep, chosen by its seed.
 // An occupied server (consortium.mjs) has its own folders.
 export function rogueLayout(loc) {
   if (loc.farm) return FARM.layout;
   const r = seeded((loc.seed || 1) * 67 + 3);
-  const n = 4 + Math.floor(r() * 5);
-  const rooms = loc.rooms || ROGUE.rooms.map((x) => [r(), x]).sort((a, b) => a[0] - b[0]).slice(0, n).map((x) => x[1]);
+  const [lo, hi] = loc.size ? ROGUE.fights : [4, 8], n = lo + Math.floor(r() * (hi - lo + 1));
+  const rooms = loc.rooms || ROGUE.rooms.slice(0, loc.size ? undefined : 10).map((x) => [r(), x]).sort((a, b) => a[0] - b[0]).slice(0, n).map((x) => x[1]);
   const out = { '/': { dirs: rooms, files: ['motd.txt'] } };
   for (const room of rooms) out['/' + room] = { dirs: [], files: [] };
   return out;
@@ -88,16 +91,16 @@ export function rogueSpawns(s, loc, now = clock()) {
   // A rogue server keeps up with you inside its floor's band, then tops out (you've outgrown it).
   if (!loc.member && !loc.trunk) loc.level = Math.max(loc.level || 1, SERVER.keepUp(hackerLevel(s), loc.depth || 1));
   const who = netOf(s, loc), native = nativeStrain(s, who); // its network's lean and native strain (network.mjs)
-  const throne = throneOf(loc);
+  const throne = throneOf(loc), ramp = rampOf(loc);
   for (const room of rogueRooms(loc)) {
     const sp = loc.spawns[room];
     if (sp?.alive || (sp && (sp.respawnAt > now || loc.occupied))) continue; // an occupation doesn't come back
     const n = (loc.serial = (loc.serial || 0) + 1);
     const seed = ((loc.seed || 1) * 131 + n * 7919) >>> 0;
     const r = seeded(seed);
-    const level = (loc.level || 1) + (loc.rogue.kind === 'pit' ? ROGUE.pitLevels : 0);
+    const top = (loc.level || 1) + (loc.rogue.kind === 'pit' ? ROGUE.pitLevels : 0), level = Math.max(1, top - (ramp[room] || 0));
     // Its last room holds its floor's boss (BOSSES throne: SHAKEDOWN on floor 2's Pits, RECURSION on floor 3's Gauntlets).
-    if (throne && room === throne.room) { const B = BOSSES[throne.boss]; loc.spawns[room] = { alive: true, bornAt: now, family: B.family, boss: throne.boss, level: Math.max(level, B.floor || 1), seed, name: B.name }; continue; }
+    if (throne && room === throne.room) { const B = BOSSES[throne.boss]; loc.spawns[room] = { alive: true, bornAt: now, family: B.family, boss: throne.boss, level: Math.max(top, B.floor || 1), seed, name: B.name }; continue; }
     const family = loc.rogue.kind === 'nest' ? loc.family : leanPick(s, who, r(), { level, floor: loc.depth || 1 }); // the later families too, once open
     let { grade, strain } = variantFor(family, level, loc.depth || 1, seed, native);
     if (!strain && loc.rogue.kind === 'nest') strain = variantFor(family, level, loc.depth || 1, seed ^ 0x9e37, native).strain; // twice the chances
@@ -106,6 +109,23 @@ export function rogueSpawns(s, loc, now = clock()) {
     loc.spawns[room] = { alive: true, bornAt: now, family, level, seed, strain, grade, ...(elite ? { elite: true } : {}), name: `${elite ? 'elite ' : ''}${label}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
   }
   return loc.spawns;
+}
+// How many levels below the deepest room each folder's spawn runs: one a room nearer the entry, at most ROGUE.ramp.
+// Plain rogue servers only (rogueGraph's rooms; a lair, the farm and an occupation run level).
+const ramps = new Map();
+export function rampOf(loc) {
+  if (!plainRogue(loc) || !hooks.rogueGraph) return {}; // the layout comes from netrooms.mjs
+  const key = `${loc.id}:${loc.seed}:${loc.size || 1}`;
+  if (ramps.has(key)) return ramps.get(key);
+  let out = {};
+  try {
+    const g = hooks.rogueGraph(loc), hops = { [g.entry]: 0 }, q = [g.entry];
+    while (q.length) { const a = q.shift(); for (const [x, y] of g.links) for (const [u, v] of [[x, y], [y, x]]) if (u === a && hops[v] == null) { hops[v] = hops[a] + 1; q.push(v); } }
+    const fights = Object.values(g.rooms).filter((x) => x.path0 && x.path0 !== '/'), deep = Math.max(...fights.map((x) => hops[x.id] || 0));
+    out = Object.fromEntries(fights.map((x) => [x.path0, Math.min(ROGUE.ramp, deep - (hops[x.id] || 0))]));
+  } catch { out = {}; }
+  ramps.set(key, out);
+  return out;
 }
 // A Pit's or a Gauntlet's boss and the room it holds (its last folder, the deepest fight room of rogueGraph), or null.
 export function throneOf(loc) {

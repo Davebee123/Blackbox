@@ -16,22 +16,23 @@
 //                     the next delivery. Those work whenever they're crossed.
 //
 // Bosses (3.4) ship under three rules, switchable for the playtest (BOSS_RULES):
-//   a  the boss's core part (its signature part, ♛) has phase ticks instead, at 60% and 30% (TICKS.act): crossing one starts its next phase. Its
-//      other parts interrupt as usual, and its phases no longer follow its total Integrity.
+//   a  the boss's core part is its signature part (♛), and its phases are acts on bars of their own (acts.mjs): each act
+//      a fresh board, the next starting when every part is broken. Every part interrupts as usual, the ♛ too.
 //   b  every part interrupts; phases stay on total Integrity; it brings one more charge.
 //   c  phases at 50% and 25% of total; ticks interrupt, but the fight has a budget of TICKS.budget cancels.
-import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toIntent, usable, readyIn, fxOn, frontOf, liensPaid, fireEvent } from './combat.mjs';
+import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toIntent, usable, readyIn, fxOn, frontOf, liensPaid, fireEvent, crownHop, legend, legendFire } from './combat.mjs';
 import { FAMILIES, GUARDS, STRAINS, BOSSES, ROOM_FAMILIES, ABILITIES, TELL } from './data.mjs';
 import { tellsOf, tellAnswer, tellNext, tierOf, inWindow, answers } from './tells.mjs';
 import { raidDef } from './raid.mjs';
+import { oobCrossed } from './nativeacts.mjs';
 import { ignores } from './genes.mjs';
 import { gainResearch } from './research.mjs';
 import { daemonsOn } from './daemons.mjs';
-import { crossed as actCrossed } from './acts.mjs';
+import { barsStart } from './acts.mjs';
 
-export const TICKS = { at: [0.5, 0.25], act: [0.6, 0.3], small: 20, budget: 3 }; // act: every boss's ♛ ticks, the same for all (docs/solo-bosses.md "Act length": a boss whose acts run uneven gets its mechanics changed, never its ticks)
+export const TICKS = { at: [0.5, 0.25], small: 20, budget: 3 };
 export const BOSS_RULES = {
-  a: { name: 'Core ticks are phases', short: 'phases on its ♛ part', text: "The boss's core part (♛) has phase ticks at 60% and 30% instead of interrupts. Taking it across one starts the next phase. Its other parts interrupt as usual." },
+  a: { name: 'Acts on bars', short: 'an act a bar', text: 'The boss fights in three acts, each a fresh bar: break every part and the next act begins with them all back at full. Every part interrupts as usual, its ♛ too.' },
   b: { name: 'Every part interrupts', short: 'every part interrupts', text: 'Every part has normal ticks. Phases stay on total Integrity, and the boss brings one more charge.' },
   c: { name: 'Phases plus a budget', short: `${TICKS.budget} interrupts a fight`, text: `Phases come at 50% and 25% of total Integrity. Ticks interrupt, but only ${TICKS.budget} times a fight, shown as pips on its bar.` },
 };
@@ -72,8 +73,8 @@ export function bossRule(s, rule = 'a') {
   if (e.bossRule === 'a') {
     const B = BOSSES[v.boss], core = (B?.crown && v.parts.find((p) => p.id === B.crown)) || v.parts.find((p) => p.special) || v.parts[0];
     core.core = true;
-    core.ticks = TICKS.act.map((at, i) => ({ at, spent: false, phase: i })); // act ticks at 60% and 30%, every boss alike
-    for (const ph of v.phases || []) ph.at = -1; // never by its total: the ticks start them
+    barsStart(s); // its acts are bars (acts.mjs): its ♛ keeps the plain ticks armTicks gave it
+    for (const ph of v.phases || []) ph.at = -1; // never by its total: the last part's break starts them (acts.mjs barsTurn)
   } else if (e.bossRule === 'b') {
     if (v.boss === 'nb-deadbolt') v.tellSet = [...new Set([...(v.tellSet || []), 'deadbolt', 'extortion', 'overcharge', 'fulldisk'])];
     v.extraTells = TELL.boss.count + 1 - tierOf(v.level).count; // its set, and one more charge (a boss's count is at least TELL.boss.count)
@@ -104,22 +105,18 @@ export function onHit(s, p, was, dealt, opts = {}) {
   if (!ticked(e) || dealt <= 0 || opts.blast) return; // a Zip Bomb's blast cuts on its own (blastCut), and spends no tick
   if (!p.ticks && hasTicks(v, p)) p.ticks = fresh();
   if (!p.ticks) return;
+  if (!p.ticks.some((t) => t.at === 0.75) && legend(s, 'third-rail')) p.ticks.unshift({ at: 0.75, spent: false }); // Third Rail (a legend)
   const crossed = p.ticks.filter((t) => !t.spent && was > t.at * p.max && p.integrity <= t.at * p.max);
   if (!crossed.length) return;
+  if (crossed[0].at === 0.75 && p.integrity > 0 && dueOf(s, p).length && !(e.cutBudget != null && e.cutBudget <= 0) && (hooks.tickVerb?.(s, p) || 'cancel') === 'cancel') legendFire(s, 'third-rail');
   for (const t of crossed) t.spent = true;
   e.metrics.ticks = (e.metrics.ticks || 0) + crossed.length;
   if (p.integrity <= 0) return; // it broke: everything it did stops with it
+  try { tickCut(s, p, crossed); } finally { if (v.hop === true && p.core && crossed.some((t) => t.at === 0.5)) crownHop(s, p); if (v.oob) oobCrossed(s, p, crossed); } // RELAY-KING's act 2: after the cut, the ♛ hops; PATCH TUESDAY's Out of band
+}
+function tickCut(s, p, crossed) {
+  const e = s.encounter, v = e.virus;
   const verb = hooks.tickVerb?.(s, p) || 'cancel';
-  // (a) a boss's core part: each tick starts a phase, at the end of this cycle.
-  if (p.core) {
-    for (const t of crossed) {
-      const ph = v.phases?.[t.phase];
-      if (ph && !ph.done) ph.at = 2;
-      emit(s, 'cut', `You take ${v.name}'s ${p.name} under ${pct(t.at)}. Its next phase starts.`, { target: p.id, tick: t.at, phase: true });
-    }
-    actCrossed(s, p); // a P4 boss: under its tick before this act's beat played, every part re-arms (acts.mjs)
-    return;
-  }
   if (verb !== 'cancel') { for (const t of crossed) hooks.tickDo?.(s, p, verb, t); return; }
   const due = dueOf(s, p);
   if (!due.length) { for (const t of crossed) wasted(s, p, t, 'with nothing due'); return; }

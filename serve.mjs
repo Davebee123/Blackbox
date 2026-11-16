@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { readFile, writeFile, rename } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 
-const root = resolve('dist');
+const root = resolve('dist'), PORT = +process.env.PORT || 4173; // PORT=4174 node serve.mjs: a second server (the perf audit alternates ports)
 const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.md': 'text/markdown; charset=utf-8' };
 const CONTENT = ['story', 'contracts', 'items'];
 const HEADER = "// Written in the content editor (editor.html). Safe to edit by hand too: it's JSON after 'export default'.\n";
@@ -33,4 +33,4 @@ createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': mime[extname(path)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
     res.end(file);
   } catch { res.writeHead(404); res.end('Not found'); }
-}).listen(4173, '127.0.0.1', () => console.log('Game:   http://127.0.0.1:4173\nEditor: http://127.0.0.1:4173/editor.html'));
+}).listen(PORT, '127.0.0.1', () => console.log(`Game:   http://127.0.0.1:${PORT}\nEditor: http://127.0.0.1:${PORT}/editor.html`));

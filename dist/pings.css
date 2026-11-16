@@ -1,0 +1,43 @@
+/* The ping log (pings.mjs): frameless lines, an icon and a short sentence each, newest at the bottom and the older
+   fading in steps (--o). Names amber (red on a threat), yours teal. A plain line fades out at the end of its 30 s
+   (ping-life, its delay set by app.js from when it came in). A new line arrives to catch the eye: it slides in from
+   the left at full brightness before settling to its step, its icon flares and a light sweeps across it twice (--since: how long ago it came in, so a redraw
+   never replays it). A line that waits on you and hasn't been seen sweeps again every few seconds. */
+.pings { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; font: 12px/1.4 var(--sans); color: var(--text); text-shadow: 0 1px 2px #000; pointer-events: none; }
+.ping { opacity: var(--o, 1); transition: opacity 0.2s; }
+.ping:hover { opacity: 1; }
+.pings .pi-in { display: flex; align-items: flex-start; gap: 7px; max-width: 100%; padding: 0; font: inherit; color: inherit; text-align: left; text-shadow: inherit; background: none; border: 0; cursor: pointer; pointer-events: auto; }
+.pings .pi-in[aria-disabled] { cursor: default; }
+.pings .pi-in:focus-visible { outline: 1px solid var(--amber); outline-offset: 2px; }
+.ping[data-t] .pi-in { animation: ping-life 30s linear both; }
+.ping.stays .pi-in { animation: ping-in 0.4s ease-out both; }
+.pi-ico { display: grid; place-items: center; flex: none; height: 17px; color: var(--amber); }
+.pi-ico .glyph { width: 13px; height: 13px; margin: 0; fill: none; stroke: currentColor; }
+.pi-t { min-width: 0; }
+.pi-t b { font-weight: 600; color: var(--amber); }
+.pi-t .you { color: var(--you); }
+.ping.threat .pi-ico, .ping.threat .pi-t b { color: var(--hot); }
+.pings .pi-in:not([aria-disabled]):hover .pi-t { color: var(--bright); }
+/* The pager's chirp (feel.mjs) and the nag for an unseen threat: a glow on the line's icon. */
+.pings.fx-pager .ping:last-child .pi-ico, .ping.fx-pager .pi-ico { animation: pagerbuzz 0.4s linear; }
+.no-motion .pings .pi-in, .no-motion .pings .pi-ico { animation: none; }
+@keyframes ping-in { from { opacity: 0; } }
+.ping { position: relative; animation: ping-arrive 3.5s ease-out var(--since, 0ms) both; }
+.ping::after { content: ''; position: absolute; inset: -2px 0; pointer-events: none; opacity: 0; background-image: linear-gradient(100deg, transparent 35%, rgba(255, 228, 165, 0.6) 50%, transparent 65%); background-size: 300% 100%; background-repeat: no-repeat; mix-blend-mode: screen; animation: ping-sweep 1.1s ease-in-out var(--since, 0ms) 2; }
+.ping.threat::after { background-image: linear-gradient(100deg, transparent 35%, rgba(255, 120, 90, 0.6) 50%, transparent 65%); }
+.ping.stays.unseen::after { animation: ping-sweep 1.1s ease-in-out var(--since, 0ms) 2, ping-nag 4s ease-in-out 2.2s infinite; }
+.ping .pi-ico { animation: ping-flare 0.9s ease-out var(--since, 0ms) both; }
+@keyframes ping-arrive { 0% { opacity: 0; transform: translateX(-24px); } 10% { opacity: 1; transform: none; } 70% { opacity: 1; } 100% { opacity: var(--o, 1); } }
+@keyframes ping-flare { 0% { transform: scale(1.9); filter: drop-shadow(0 0 6px currentColor); } 60% { filter: drop-shadow(0 0 4px currentColor); } 100% { transform: none; filter: none; } }
+@keyframes ping-sweep { 0% { opacity: 1; background-position: 100% 0; } 80% { opacity: 1; background-position: 0 0; } 100% { opacity: 0; background-position: 0 0; } }
+@keyframes ping-nag { 0% { opacity: 1; background-position: 100% 0; } 28% { opacity: 1; background-position: 0 0; } 32%, 100% { opacity: 0; background-position: 0 0; } }
+.no-motion .ping, .no-motion .ping::after { animation: none; }
+@keyframes ping-life { 0% { opacity: 0; } 1.3% { opacity: 1; } 93% { opacity: 1; } 100% { opacity: 0; } }
+
+/* On the map: in the left rail under Contracts. */
+.map-lcol .pings { padding: 2px 2px 0; }
+/* Elsewhere: above the prompt in the dock, at the left, taking its own room (nothing under it is covered). */
+.ping-dock { max-width: min(560px, 100%); }
+.ping-dock:empty { display: none; }
+/* A phone keeps its page: three lines above the prompt (the rail on the map keeps five). */
+@media (max-width: 900px) { .ping-dock .ping:nth-last-child(n + 4) { display: none; } }

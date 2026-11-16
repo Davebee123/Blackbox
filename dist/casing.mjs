@@ -104,7 +104,7 @@ export function casingCommand(s, raw) {
   if (!verb) return emit(s, 'info', `Casing: ${COLORWAYS[C.case].name}, plate ${casingLook(s).plate}, ${casingLook(s).decals.length} stickers, ${propsLook(s).length} props. casing color|plate|sticker|prop`);
   if (verb === 'color' || verb === 'colour') {
     const want = rest.toLowerCase(), id = COLORWAY_IDS.find((k) => k === want || COLORWAYS[k].name.toLowerCase() === want);
-    if (!id) return warn(s, `No colourway called ${rest || 'that'}. ${COLORWAY_IDS.join(', ')}.`);
+    if (!id) return warn(s, `No monitor color called ${rest || 'that'}. ${COLORWAY_IDS.join(', ')}.`);
     if (!colorwayOpen(s, id)) { const a = colorwayFrom(id); return warn(s, `${COLORWAYS[id].name} comes with ${a?.hidden ? 'a hidden achievement' : a?.name || 'an achievement'}.`); }
     C.case = id;
     return emit(s, 'info', `Casing: ${COLORWAYS[id].name}.`);

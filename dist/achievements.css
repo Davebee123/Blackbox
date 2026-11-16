@@ -1,6 +1,6 @@
 /* ---------- Achievements (achievements-view.mjs): System → Achievements, and their row on the profile card ----------
    Amber is what you've earned and what it brings (loot and what you use); progress bars are amber; dim is not yet.
-   Teal stays yours alone, so nothing here is teal. The rule of each row is its tooltip. */
+   Teal stays yours alone, so nothing here is teal. Each row shows its rule under its name. */
 .sys-tabs { margin-top: 0; }
 .sys-tabs .sys-pts { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; font: 600 11px var(--mono); letter-spacing: 0; color: var(--amber-soft); text-transform: none; }
 .sys-tabs .sys-pts .glyph { width: 12px; height: 12px; margin: 0; }
@@ -34,6 +34,8 @@
 .ach-prog { display: flex; align-items: center; gap: var(--s3); max-width: 280px; }
 .ach-prog .ach-bar { flex: 1; min-width: 60px; }
 .ach-prog small { font: 600 11px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.ach-rule { font: 12px var(--sans); color: var(--muted); }
+.ach-row.got .ach-rule { color: var(--text); }
 .ach-hint { font: italic 12px var(--sans); color: var(--dim); }
 .ach-row.hidden .ach-name { font-family: var(--mono); color: var(--dim); letter-spacing: 2px; }
 .ach-row.part .ach-name { color: var(--text); }
