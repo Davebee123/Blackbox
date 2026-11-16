@@ -56,7 +56,7 @@ export function lineOf(s, c) {
   return marks(esc(sentence(/^[a-z]/i.test(said) ? said : `${c.label}: ${said}`))); // "+38 credits." says whose it is
 }
 
-// The log: a frameless list, oldest at the top. Each line is a button (a click does the page's thing: app.js pingAct) with its tooltip in WoW grammar (pager.mjs tipOf and kindOf). data-t: when it came in (app.js starts its
+// The log: a frameless list, oldest at the top. data-at: when a line came in, for its arrival (app.js pingFades). Each line is a button (a click does the page's thing: app.js pingAct) with its tooltip in WoW grammar (pager.mjs tipOf and kindOf). data-t: when it came in (app.js starts its
 // fade from there); a line that stays has none.
 export function pingsMarkup(s, now = Date.now(), opts = {}) {
   const list = pingsOf(s, now, opts);
@@ -64,7 +64,7 @@ export function pingsMarkup(s, now = Date.now(), opts = {}) {
   const n = list.length;
   const row = (c, i) => {
     const stay = sticks(c), t = threat(c), act = actOf(s, c) || (c.go ? { go: c.go } : null), step = PINGS.steps[Math.min(n - 1 - i, PINGS.steps.length - 1)];
-    return `<li class="ping${t ? ' threat' : ''}${stay ? ' stays' : ''}${c.seen ? '' : ' unseen'}" style="--o:${step}"${stay ? '' : ` data-t="${c.t}"`}><button type="button" class="pi-in" data-ping="${c.id}" title="${esc(tipOf(s, c))}" data-tt-kind="${esc(kindOf(c))}"${act ? '' : ' aria-disabled="true"'}><span class="pi-ico">${glyphOf(c)}</span><span class="pi-t">${lineOf(s, c)}</span></button></li>`;
+    return `<li class="ping${t ? ' threat' : ''}${stay ? ' stays' : ''}${c.seen ? '' : ' unseen'}" style="--o:${step}" data-at="${c.t}"${stay ? '' : ` data-t="${c.t}"`}><button type="button" class="pi-in" data-ping="${c.id}" title="${esc(tipOf(s, c))}" data-tt-kind="${esc(kindOf(c))}"${act ? '' : ' aria-disabled="true"'}><span class="pi-ico">${glyphOf(c)}</span><span class="pi-t">${lineOf(s, c)}</span></button></li>`;
   };
   return `<ol class="pings" aria-label="Pings">${list.map(row).join('')}</ol>`;
 }

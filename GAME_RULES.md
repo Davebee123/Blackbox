@@ -2629,7 +2629,8 @@ no attaching, detaching or memory pips.
   logged-on time). At 0 they disconnect (*Signal's going. I'm out.*) and are Busy until full. If you drop to 0 you both
   jack out, the hire at whatever Signal they had.
 - **On the map**: a place you've revealed on the floor drawn has one small paper-white diamond under it while runners
-  are there, and how many beside it from two up; a runner on the road between two is a hollow diamond of their own;
+  are there, and how many beside it from two up; a runner on the road between two is a hollow diamond of their own,
+  gliding along it (`mapmotion.mjs` `runRunners`, `runners-view.mjs` `roadLeft`);
   your crew isn't drawn. A lone diamond's tooltip says who and what they're doing, and a click opens their card. A
   counted one's names who's there, and a click opens the list beside it (handle, class and level; again, or ×, shuts
   it); a row opens that runner's card. The picked runner has their own mark and leaves the count.
@@ -2795,7 +2796,7 @@ opening map has one tip: click SPRAWL-00, then Connect. Connecting reads it, sho
 **Pacing** (tips.mjs `paceOf`). A map, room or menu tip shows at most once a screen visit, and 2 minutes after the last
 one closed. A fight tip about what the fight opened with shows only while it's paused (a room fight opens paused until
 your first order), one a fight; your first fight's is one tip you step through (the timeline, your skills, the
-interrupt's ticks, armor, the Sync Window). What lands mid-fight (a spent tick, a patch, a miss) pauses it. A part's, a virus's or a mutation's own rule gets no tip: its tag's hover teaches it.
+interrupt's ticks, armor, the Sync Window). What lands mid-fight (a spent tick, a patch, a miss) pauses it. A part's, a virus's, a mutation's or a quirk's own rule gets no tip: its tag's hover teaches it.
 The rooms tour and a crash skip the pacing. **Turn tips off** on any tip or the Settings page; **Replay tips** shows
 them again.
 
