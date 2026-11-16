@@ -14,6 +14,7 @@ import * as BFX from './boardfx.mjs';
 import { codexPageMarkup, codexEntry } from './codex-view.mjs';
 import { collectionPageMarkup, finds as findsLog } from './collection-view.mjs';
 import { createFeel } from './feel.mjs';
+import { restartClass } from './restart.mjs';
 import { createActBreak, actBreakMs } from './actbreak.mjs';
 import { placeOf, familyCues } from './places.mjs';
 import { createShell } from './shell.mjs';
@@ -705,7 +706,7 @@ const juice = {
     const st = document.querySelector('.virus-stage');
     if (!st) return;
     st.style.setProperty('--punch', power.toFixed(2));
-    st.classList.remove('fx-punch'); void st.offsetWidth; st.classList.add('fx-punch');
+    restartClass(st, 'fx-punch');
   },
   // Sparks off the hit part's row, flying away from the impact.
   sparks(id, n, cls = '') {
@@ -748,7 +749,7 @@ const juice = {
     const ring = document.createElement('i');
     ring.className = 'fx-crackring'; ring.style.left = x + 'px'; ring.style.top = y + 'px';
     document.body.appendChild(ring); setTimeout(() => ring.remove(), 500);
-    rowEl.classList.remove('fx-crack'); void rowEl.offsetWidth; rowEl.classList.add('fx-crack');
+    restartClass(rowEl, 'fx-crack');
     setTimeout(() => rowEl.classList.remove('fx-crack'), 500);
   },
   // A Mutex's lock took a hit (view.mjs guardMarks): the slice it lost lingers on the part's bar and drains (a..b: where

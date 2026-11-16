@@ -51,7 +51,7 @@ it is 109 requests and 6.3 MB (a 3.1 MB script, a 0.6 MB stylesheet) against 334
 | 12 | **The start.** About 2.7 s on a phone's CPU before the power-on shows, one block of 1.3 s evaluating the bundle; the app's start builds what isn't on screen (`invasion.mjs` 169 ms, `profile.mjs` 143, `collection-log.mjs` 114, `codex.mjs` 93). The Horizon drawn before the script runs (HTML and CSS); pages built and modules loaded on first open. | phones most | none |
 | 13 | **Scrolling paints twice a frame** and runs a layout a frame (Map 32%, Settings 14%, Skills 16%); five scroll listeners in `app.js` run on every scroll event. Find what repaints; listeners passive and once a frame. | both | none |
 | 14 | **The strike layer** (`virus-art.mjs` `art-out`) stays a full-screen canvas (3840 × 2160 on a desktop, about 33 MB) between strikes: free it when nothing is on it. The desktop's virus picture is 11 ms a draw in a boss fight. | desktops most | none |
-| 15 | **A queued effect** (`feel.mjs` play) costs 3.4–3.8 ms on a phone, six or seven a second in a fight: profile which. | both | none |
+| 15 | **A queued effect** (`feel.mjs` play) costs 3.4–3.8 ms on a phone, six or seven a second in a fight: profile which. | both | landed |
 
 ## The rules (the designer, November 2026)
 
@@ -76,11 +76,14 @@ it is 109 requests and 6.3 MB (a 3.1 MB script, a 0.6 MB stylesheet) against 334
 | Samples, audio textures and the chip effects' defs warmed on the loading screen (`warm.mjs`) | both | landed |
 | One bundled, minified script and stylesheet for the hosted game (`scripts/build.mjs`) | both, phones most | landed |
 | The class pick's border effects on the compositor (`pickfx.mjs`); no flex-basis transitions in its phone layout | both, phones most | landed |
+| A fight's effects put on the page in one batch a frame, with no forced layout to restart a flash (`feel.mjs` show, `restart.mjs`) | both | landed |
 
 **The same look, by other means (the designer's eye before it lands):**
 
 | What | Helps | State |
 |---|---|---|
+| A fight's flashes (`fx-hit`, `fx-hurt`, `fx-break`, `fx-strike`, `fx-mark` and the rest, `style.css`) and the hit's edge (`#fx-edge`) animate `background`, `box-shadow`, `border-color` and `filter`: restyled and repainted every frame they play. As an overlay fading by opacity (batch 8's flash) they'd look nearly the same: the tint over the row's text, not under it, and a shadow that fades where it shrank. Knocked out on a phone, paint 26 → 9 ms/s under a steady stream of effects | both | for the designer |
+| A synthesized voice (hit, crit, chit, break, patch, interrupt: `sound.mjs`) builds 30–100 audio nodes each time, about half of a delayed effect's 1.1–1.3 ms left on a phone. Rendered once into a few variants each, they'd cost a sample's play, but every hit would no longer be its own | both | for the designer (to hear) |
 | Map and rooms animations the graphics card can run | both | landed |
 | A part's dissolve drawn on a canvas | both | landed |
 | The screen's layers merged: the backdrop only while it shows, one glass over the UI (`screenfx.css`, `#crt`) | both, phones most | landed |
@@ -269,5 +272,22 @@ swapped between them, main → branch, frames a second (main thread ms/s): phone
 Settings 38, 23 → 26, 25; regular fight 19.0, 31.5 (958, 947) → 26.5, 27.6 (949, 946); boss 13.2, 19.4 (974, 965) →
 15.5, 18.3 (968, 963). Desktop Map 17.3, 20.5 (426, 400) → 22.0, 21.7 (397, 399); Settings 29.4, 28.6 (338, 363) →
 42.4, 45.6 (408, 393: more frames drawn); regular 10.9, 12.6 → 13.3, 15.2; boss 9.2, 9.9 → 9.8, 10.6. No page errors.
+
+**Batch 15 (landed).** Profiled on a phone (a JS profile under `play`, boss fight, 25 s): two thirds of a delayed effect
+was forced layout, a third Web Audio. Each flash restarted its class with `void el.offsetWidth` (a layout of the screen,
+even when the class wasn't on), then each number read its element's box after those writes; `juice` (shatter, punch),
+`lash.mjs` and `screenfx.mjs` restarted theirs the same way. Now `feel.mjs` puts an effect's look up in a batch (`show`):
+the classes it restarts come off, every box is read, then everything goes on, one style pass and layout a batch. The
+flush's own effects are one batch; a delayed one's sound and buzz go off on its timer as before, its look in the next
+frame's batch (what a timer writes shows no sooner). The others restart through `restart.mjs` (a style pass only, none
+when the class isn't on). An echo loop released at 5 s rather than its voice's 20 (`sound.mjs`) left the audio thread
+level (24–26% both ways), so it was dropped. The same stream of numbers and flashes on main and the branch: the same 24
+numbers, text, class and position to the pixel, the same flashes, a re-fired one restarting. Same day, before → after,
+the delayed effect alone: phone regular 3.83, 3.71 → 1.49, 1.33 ms each; phone boss 3.38, 3.38, 3.59 → 1.23, 1.13, 1.26
+ms; the frame's batch 5–7 ms at 1–1.6 a second, most of it the layout the frame does anyway. Effects together, phone
+boss 23.5, 23.2, 25.3 → 16.9, 16.9, 19.2 ms/s; a fixed stream of effects over a boss fight (sound off) 31.8, 30.0, 29.8
+→ 21.4, 23.3, 17.2 ms/s, style passes 85–88 → 71–72 a second. Desktop regular 1.36 → 0.41 ms, boss 1.17 → 0.51 ms.
+Frames and the whole main thread within the noise (phone boss 22.6, 22.4 → 24.4, 19.9 frames/s; regular 37.7, 38.0 →
+37.5, 39.3). No page errors.
 
 Not yet measured: breach and campaign, hubs and shops, co-op, the tutorial, the More sheet, a phone on its side.

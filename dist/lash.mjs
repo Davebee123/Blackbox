@@ -1,3 +1,4 @@
+import { restartClass } from './restart.mjs';
 // A virus attack lashing at your screen, in place of a plain red flash (the designer: "1s and 0s and the
 // virus lashing out at the screen"). The attacking part throws a tendril of its own characters (the ones
 // the render panel draws it in, or its row on the board) across the screen into your Signal bar; where it
@@ -128,7 +129,7 @@ export function createLash() {
 
   function jolt(bar, cls, ms) {
     if (!bar) return;
-    bar.classList.remove(cls); void bar.offsetWidth; bar.classList.add(cls);
+    restartClass(bar, cls);
     setTimeout(() => bar.classList.remove(cls), ms);
   }
 
