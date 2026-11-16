@@ -28,6 +28,8 @@
 //   e.bsRebound, e.bsClean  Rebound (next Reject x2) and Clean Slate (next heal +50%) armed
 import { sustained, skillBase, slotsOf, subOf, subEdge, hasTalent, capValue, soonestAttacker, rank, emit, heal, hit, alive, part, livingParts, defender, alliesOf, buffed, on, scaled, attackAmount, gapTaken, levelGap, classOf, usable, intents, toIntent, readyIn, knownSkills, healScaled, restoreMult, previewDamage, attackers, openProc } from '../combat.mjs';
 import { ABILITIES, SKILLS } from '../data.mjs';
+import { legend, legendFire } from '../combat.mjs';
+import { LEG } from '../legends.mjs';
 import { tankMove, healMove, cleanse, savePatch, saveBulkhead } from '../raid.mjs';
 import { tellOn, tellOpen, tellAnswer, undoCast, landsAt } from '../tells.mjs';
 import { subs as SUBS_BASTION } from './bastion.data.mjs';
@@ -47,7 +49,7 @@ const aim = (s, id, st) => (st === s ? id : `${id} ${nameOf(st)}`);
 
 // Overprovision (Sysop's edge): healing past full turns into a shield, up to 20 (40 with Overcommit).
 // cap: the healer's, worked out when the heal was cast.
-const capOf = (s) => (subEdge(s, 'sysop') ? scaled(s, hasTalent(s, 'overcommit') ? 40 : 20) : 0);
+const capOf = (s) => (subEdge(s, 'sysop') ? (legend(s, 'headroom') ? Infinity : scaled(s, hasTalent(s, 'overcommit') ? 40 : 20)) : 0); // Headroom (a legend): no cap
 // A talent that works once per cycle: true the first time this cycle, and stamps it.
 function onceACycle(s, id) {
   const e = s.encounter, o = (e.bsOnce ||= {});
@@ -67,6 +69,7 @@ function overprovision(to, over, cap) {
   if (!e || over <= 0 || cap <= 0) return 0;
   const add = Math.min(over, Math.max(0, cap - (e.shield || 0)));
   if (add <= 0) return 0;
+  if (cap === Infinity && e.shield + add > scaled(to, hasTalent(to, 'overcommit') ? 40 : 20)) legendFire(to, 'headroom:cap');
   e.shield = (e.shield || 0) + add;
   emit(to, 'status', `Overprovision: ${add} of it becomes a shield (${e.shield}).`, { mark: 'shield' });
   return add;
@@ -114,6 +117,20 @@ function lastHeal(to, label) {
   return null;
 }
 
+// Bleach (a legend): Scrub also bleaches a part (the one compiling a cast, else the one whose attack lands soonest): its
+// cast stopped, its boost and its loudness gone, and its ◆ can't patch for 3 cycles (combat.mjs's patching reads bleachUntil).
+function bleach(s, e) {
+  const p = livingParts(s).find((x) => tellOn(s, x, 'cast')) || soonestAttacker(s);
+  if (!p) return;
+  const c = tellOn(s, p, 'cast'), buffs = !!(p.boosted || p.loud);
+  if (c) tellAnswer(s, c, p, `Bleach: the ${p.name} loses ${c.name.toUpperCase()}.`);
+  p.boosted = false; p.loud = false;
+  p.bleachUntil = e.cycle + 2;
+  legendFire(s, 'bleach');
+  if (c) legendFire(s, 'bleach:cast');
+  if (buffs) legendFire(s, 'bleach:buff');
+  emit(s, 'status', `Bleach: the ${p.name} is scrubbed, and its ◆ can't patch for 3 cycles.`, { target: p.id });
+}
 // The size of an attack as it reaches you, before shields, cuts and armor (Blowback's ledger).
 function attackSize(s, atk, p) {
   const throttled = on(s, p, 'throttled') ? SKILLS.throttled : 1;
@@ -121,7 +138,7 @@ function attackSize(s, atk, p) {
   return Math.round(atk.hit ? (power * atk.hit) / Math.max(1, atk.amount) : power);
 }
 // Deep Buffer (Warden): +25%, past the cap.
-const blowbackOf = (s) => Math.round(Math.min(scaled(s, A('blowback').cap), s.encounter.ledger || 0) * (hasTalent(s, 'deep-buffer') ? 1.25 : 1));
+const blowbackOf = (s) => Math.round(Math.min(legend(s, 'stress-test') ? Infinity : scaled(s, A('blowback').cap), s.encounter.ledger || 0) * (hasTalent(s, 'deep-buffer') ? 1.25 : 1)); // Stress Test (a legend): no cap
 // Retaliate lit (Flow Control, Retransmit): twice the last hit that reached you, or twice `size` if that is bigger.
 const lightRetaliate = (s, size = 0) => openProc(s, 'struck', { amount: Math.max(s.encounter.procs?.struck?.amount || 0, size) });
 // The player in this fight with the lowest share of their Signal (Trickle Charge).
@@ -195,6 +212,8 @@ const use = {
   },
   blowback(s, { target, e }) {
     const amount = blowbackOf(s);
+    if (legend(s, 'stress-test') && (e.ledger || 0) > Math.min(e.ledgerPlain || 0, scaled(s, A('blowback').cap))) legendFire(s, 'stress-test'); // more than it would have sent
+    e.ledgerPlain = 0;
     e.ledger = 0;
     if (alive(target) && amount > 0) hit(s, target, amount, { mine: true, chits: A('blowback').chits });
     // Retaliate is lit for the next cycle: the soak-and-return loop.
@@ -274,6 +293,7 @@ const use = {
     if (cleared.length) emit(to, 'decrypted', `${label}: ${cleared.join(' and ')} cleared.`);
     if (to.encounter.virus?.raid) cleanse(to, ['dots', 'absorb']); // a crew boss's Corruption and encrypted sectors (raid.mjs)
     mend(s, to, Math.round(healScaled(s, a.heal) * (cleared.length ? 1.5 : 1)), label); // half again with something to clean
+    if (legend(s, 'bleach')) bleach(s, e);
   },
   rollback(s, { a, to }) {
     const e = to.encounter, u = e.undo, label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
@@ -537,7 +557,7 @@ export default {
     if (p?.revokedUntil >= e.cycle) m *= 1 - A('revoke').weaken;
     // Heartbeat (Sysop) running on you: a charged hit deals half.
     if (atk.tell && e.hots?.some((h) => h.id === 'heartbeat' && h.left > 0)) m *= 0.75;
-    if (classOf(s) === 'bastion' && subOf(s) === 'warden' && usable(s).includes('blowback')) e.ledger = (e.ledger || 0) + attackSize(s, atk, p);
+    if (classOf(s) === 'bastion' && subOf(s) === 'warden' && usable(s).includes('blowback')) { const n = attackSize(s, atk, p), st = atk.tell && legend(s, 'stress-test'); e.ledger = (e.ledger || 0) + n * (st ? 2 : 1); if (LEG.on) e.ledgerPlain = (e.ledgerPlain || 0) + n; } // Stress Test (a legend): a charge counts double
     // Iron Curtain (Warden capstone): the part that last hit you hits you softer.
     const curtain = capValue(s, 'iron-curtain');
     if (curtain && p && e.grudge === p.id) m *= 1 - curtain;

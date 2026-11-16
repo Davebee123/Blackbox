@@ -7,9 +7,11 @@
 // its window, drawn bigger and nearer on a layer over the page (#art-out), and snaps back. Reads
 // state; never changes it.
 
+import { GFX } from './graphics.mjs';
 import { bossShape, bossKit, BOSS_BUILD, BOSS_STRIKES } from './boss-art.mjs';
 
 const COLORS = { amber: '#f1b92f', bright: '#fff2c8', hot: '#ff5b3d', dim: '#7e5311', gold: '#ffd85c', deep: '#a8741c' };
+const BASE = { ...COLORS }; // a floor's stage tints the body (stage.mjs colors); hot, a strike, stays red
 const RAMP = ' .,:-=+*#%@'; // dark → lit
 const SHARDS = '#*+=:.01';
 const BITS = '0101010#*';
@@ -153,11 +155,13 @@ export const sprayAt = (u) => (u > 0.15 && u < 0.75 ? Math.sin(((u - 0.15) / 0.6
 // When a broken part's point lets go, 0–1 of the dissolve: stable per point, so it crumbles in a scatter.
 export const releaseOf = (i) => ((i * 0.6180339887) % 1) * 0.8;
 
-export function createArt({ getState, canMove, getSelected, getNowSources, breakout = () => true }) {
+export function createArt({ getState, canMove, getSelected, getNowSources, breakout = () => true, stage = null, rate = () => 'full' }) {
   let canvas = null, ctx = null, previous = 0, angle = 0, clock = 0;
   let builtFor = '', points = [], anims = [], radius = 1, rx = 1, ry = 1, style = { core: 'lunge', limb: 'lunge' };
+  let enteredFor = null, camBase = 300;
   let cam = 300, facing = false, midX = 0, midY = 0; // a boss: seen from further off, facing you, fitted to the window
   const hits = new Map();
+  const broke = new Set(); // parts whose break has played (a part at 0 Integrity waits whole for it: app.js _dyingUntil)
   let shake = null, glitch = 0;
   const shards = [];
   const flung = []; // characters a strike throws out over the page (shock rings, grind sparks)
@@ -461,7 +465,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     ry = Math.max(40, ...points.map((p) => Math.abs(p.y) + 8));
     // A boss is wide, and faces you: it swings side to side without turning away, from far enough off that its near
     // end doesn't swell, and it is fitted to the window as it is drawn at the ends of its swing.
-    facing = !plain; cam = plain ? 300 : 300 * Math.max(1, radius / 70); midX = midY = 0;
+    facing = !plain; cam = camBase = plain ? 300 : 300 * Math.max(1, radius / 70); midX = midY = 0;
     if (facing) {
       let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
       for (const yaw of [-BOSS_SWING, 0, BOSS_SWING]) for (const pitch of [0.14, 0.26]) {
@@ -500,42 +504,84 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
   }
 
   // ---------- animation ----------
-  const rotY = (x, z, a) => [x * Math.cos(a) + z * Math.sin(a), -x * Math.sin(a) + z * Math.cos(a)];
-  const rotZ = (x, y, a) => [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
+  // One point moved by its animation, into Q (reused: read it before the next call). What an animation does to every
+  // point alike (its angle, that angle's sine and cosine, its scale) is worked out once a frame, in F.
+  const Q = { x: 0, y: 0, z: 0, nx: 0, ny: 0, nz: 0 };
+  let F = [], fAt = NaN, fFor = null;
+  function frameOf(t) {
+    if (t === fAt && fFor === anims) return;
+    fAt = t; fFor = anims;
+    F = anims.map((A) => {
+      const [cx, cy, cz] = A.c || [0, 0, 0], f = { cx, cy, cz, k: 0, a: 0, c: 0, s: 0 };
+      switch (A.k) {
+        case 'breathe': f.k = 1 + Math.sin(t * A.speed + (A.phase || 0)) * A.amp; break;
+        case 'ripple': f.k = 1 + Math.sin(t * A.speed - A.phase) * A.amp; break;
+        case 'bob': case 'slide': f.k = Math.sin(t * A.speed + (A.phase || 0)) * A.amp; break;
+        case 'swing': f.a = Math.sin(t * A.speed + (A.phase || 0)) * A.amp; break;
+        case 'sway': f.a = Math.sin(t * A.speed + A.phase) * A.amp; break;
+        case 'sweep': f.a = Math.sin(t * A.speed) * A.amp; break;
+        case 'orbit': case 'spin': f.a = t * A.speed; break;
+      }
+      f.c = Math.cos(f.a); f.s = Math.sin(f.a);
+      return f;
+    });
+  }
   function animate(p, t) {
     const A = anims[p.a];
-    let { x, y, z, nx, ny, nz } = p;
-    if (!A || A.k === 'none') return { x, y, z, nx, ny, nz };
-    const [cx, cy, cz] = A.c || [0, 0, 0];
-    switch (A.k) {
-      case 'breathe': { const k = 1 + Math.sin(t * A.speed + (A.phase || 0)) * A.amp; x = cx + (x - cx) * k; y = cy + (y - cy) * k; z = cz + (z - cz) * k; break; }
-      case 'ripple': { const k = 1 + Math.sin(t * A.speed - A.phase) * A.amp; x = cx + (x - cx) * k; z = cz + (z - cz) * k; break; }
-      case 'wave': y += Math.sin(t * A.speed + x * A.freq) * A.amp; z += Math.cos(t * A.speed * 0.7 + x * A.freq) * A.amp * 0.5; break;
-      case 'bob': y += Math.sin(t * A.speed + (A.phase || 0)) * A.amp; break;
-      case 'slide': x += Math.sin(t * A.speed + (A.phase || 0)) * A.amp; break;
-      case 'rise': x += Math.sin(t * A.speed - y * A.freq + (A.phase || 0)) * A.amp; break; // heat off a surface: a wobble that climbs
-      case 'swing': { const a = Math.sin(t * A.speed + (A.phase || 0)) * A.amp; [x, y] = rotZ(x - cx, y - cy, a); x += cx; y += cy; [nx, ny] = rotZ(nx, ny, a); break; } // rigid, about its pivot
-      case 'sway': { const a = Math.sin(t * A.speed + A.phase) * A.amp; const d = Math.hypot(x - cx, y - cy, z - cz) / 40; [x, y] = rotZ(x - cx, y - cy, a * d); x += cx; y += cy; [nx, ny] = rotZ(nx, ny, a * d); break; }
-      case 'sweep': { const a = Math.sin(t * A.speed) * A.amp; [x, z] = rotY(x - cx, z - cz, a); x += cx; z += cz; [nx, nz] = rotY(nx, nz, a); break; }
-      case 'orbit': { const a = t * A.speed; [x, z] = rotY(x - cx, z - cz, a); x += cx; z += cz; [nx, nz] = rotY(nx, nz, a); break; }
-      case 'spin': { const a = t * A.speed; if (A.axis === 'y') { [x, z] = rotY(x - cx, z - cz, a); x += cx; z += cz; [nx, nz] = rotY(nx, nz, a); } else { [x, y] = rotZ(x - cx, y - cy, a); x += cx; y += cy; [nx, ny] = rotZ(nx, ny, a); } break; }
+    let x = p.x, y = p.y, z = p.z, nx = p.nx, ny = p.ny, nz = p.nz;
+    if (A && A.k !== 'none') {
+      frameOf(t);
+      const f = F[p.a], { cx, cy, cz } = f;
+      switch (A.k) {
+        case 'breathe': { const k = f.k; x = cx + (x - cx) * k; y = cy + (y - cy) * k; z = cz + (z - cz) * k; break; }
+        case 'ripple': { const k = f.k; x = cx + (x - cx) * k; z = cz + (z - cz) * k; break; }
+        case 'wave': y += Math.sin(t * A.speed + x * A.freq) * A.amp; z += Math.cos(t * A.speed * 0.7 + x * A.freq) * A.amp * 0.5; break;
+        case 'bob': y += f.k; break;
+        case 'slide': x += f.k; break;
+        case 'rise': x += Math.sin(t * A.speed - y * A.freq + (A.phase || 0)) * A.amp; break; // heat off a surface: a wobble that climbs
+        case 'swing': { const c = f.c, s = f.s, X = x - cx, Y = y - cy; x = X * c - Y * s + cx; y = X * s + Y * c + cy; const NX = nx; nx = NX * c - ny * s; ny = NX * s + ny * c; break; } // rigid, about its pivot
+        case 'sway': { const d = Math.hypot(x - cx, y - cy, z - cz) / 40, a = f.a * d, c = Math.cos(a), s = Math.sin(a), X = x - cx, Y = y - cy; x = X * c - Y * s + cx; y = X * s + Y * c + cy; const NX = nx; nx = NX * c - ny * s; ny = NX * s + ny * c; break; }
+        case 'spin': if (A.axis !== 'y') { const c = f.c, s = f.s, X = x - cx, Y = y - cy; x = X * c - Y * s + cx; y = X * s + Y * c + cy; const NX = nx; nx = NX * c - ny * s; ny = NX * s + ny * c; break; } // falls through: about y
+        case 'sweep': case 'orbit': { const c = f.c, s = f.s, X = x - cx, Z = z - cz; x = X * c + Z * s + cx; z = -X * s + Z * c + cz; const NX = nx; nx = NX * c + nz * s; nz = -NX * s + nz * c; break; }
+      }
     }
-    return { x, y, z, nx, ny, nz };
+    Q.x = x; Q.y = y; Q.z = z; Q.nx = nx; Q.ny = ny; Q.nz = nz;
+    return Q;
   }
 
   // ---------- drawing ----------
   const LIGHT = (() => { const l = [-0.45, -0.6, -0.66], n = Math.hypot(...l); return l.map((v) => v / n); })();
+  // The loop asks for a frame only when a draw is due: a timer until half a frame before the Graphics setting's step
+  // (graphics.mjs frameMs) is up, then frames until it is. With no picture to draw (no canvas on the page, no virus in
+  // the state) it rests: a slow timer looks again, and attach() or wake() starts it at once, so the first frame of a
+  // fight or a Codex page comes as soon as it did.
+  let timer = 0, queued = false, rested = false;
+  const ask = () => { if (!queued) { queued = true; requestAnimationFrame(draw); } };
+  const after = (ms) => { if (!timer) timer = setTimeout(() => { timer = 0; ask(); }, ms); };
+  const EARLY = 8; // half a frame: the timer wakes this early, and a wait shorter than it waits in frames
+  const rest = () => { rested = true; after(250); }; // the look itself asks for no frame
+  const wake = () => { if (rested && timer) { clearTimeout(timer); timer = 0; ask(); } };
   function draw(now) {
-    requestAnimationFrame(draw);
-    if (!canvas?.isConnected || now - previous < 40) return;
-    const delta = Math.min(100, now - previous);
-    previous = now;
+    queued = false;
     const s = getState();
     const v = s?.encounter?.virus;
-    if (!v) return;
+    if (!canvas?.isConnected || !v) return rest();
+    const r = rate(), step = GFX.frameMs[r] || 40; // the Graphics setting (graphics.mjs): full, slow or still
+    if (rested) { rested = false; previous = now - step; } // back from a rest: one frame's step, as if it had been running
+    const wait = step - (now - previous);
+    if (wait > 0) { if (wait > EARLY) after(wait - EARLY); else ask(); return; }
+    after(step - EARLY);
+    const delta = Math.min(100, now - previous);
+    previous = now;
     const key = v.id + v.parts.length;
     if (key !== builtFor) { builtFor = key; build(v); shards.length = 0; }
-    const motion = canMove();
+    // The floor's stage (stage.mjs): its place behind the virus, its light, its camera, and a new virus's entrance.
+    const S = stage?.update(now) ? stage : null;
+    if (S && v.id !== enteredFor) { enteredFor = v.id; S.enter(now); }
+    const shot = S?.cam(now);
+    Object.assign(COLORS, S?.colors() || BASE);
+    cam = shot?.dist && !facing ? shot.dist : camBase; // a boss keeps its own distance, fitted to the window
+    const motion = canMove() && r !== 'still';
     const moving = motion && s.encounter.phase === 'active' && !s.encounter.paused;
     if (moving) angle += delta * 0.00016;
     if (motion) clock += delta / 1000;
@@ -552,8 +598,9 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Behind it: a faint data rain.
-    if (motion) {
+    // Behind it: the floor's place, or else a faint data rain.
+    if (S) S.back(ctx, { width, height, glyph, gx, gy, now, dpr });
+    else if (motion) {
       while (rain.length < Math.floor(width / 26)) rain.push({ x: Math.random() * width, y: Math.random() * height, v: 30 + Math.random() * 60, c: Math.random() < 0.5 ? '0' : '1' });
       ctx.fillStyle = COLORS.dim;
       for (const d of rain) {
@@ -565,8 +612,10 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       }
     }
 
-    const yaw = facing ? Math.sin(angle) * BOSS_SWING : Math.sin(angle) * 0.9 + angle * 0.15, pitch = 0.2 + Math.sin(clock * 0.4) * 0.06;
+    const yaw = facing ? Math.sin(angle) * BOSS_SWING : Math.sin(angle) * 0.9 + angle * 0.15, pitch = (shot?.pitch ?? 0.2) + Math.sin(clock * 0.4) * 0.06;
     const cyw = Math.cos(yaw), syw = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    // Each region's part once a frame (the body sums every part's armor); the yaw turns points with cyw/syw (about y).
+    const regions = new Map(), partAt = (region) => { if (!regions.has(region)) regions.set(region, resolvePart(v, region)); return regions.get(region); };
     for (const [id, h] of hits) if (now - h.time > (h.kind === 'break' ? BREAK_MS : 900)) hits.delete(id);
     const striking = motion && breakout();
     const quake = motion && shake && now - shake.time < 350 ? (1 - (now - shake.time) / 350) ** 2 * shake.power : 0;
@@ -574,7 +623,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     const tearing = motion && now < glitch; // a hit tears a few rows sideways
     const tearRows = tearing ? new Set(Array.from({ length: 4 }, () => Math.floor(Math.random() * (height / gy)))) : null;
     const selected = getSelected(), nowSources = getNowSources();
-    const scale = facing ? Math.min((width * 0.48) / rx, (height * 0.47) / ry) : Math.min((width * 0.47) / rx, (height * 0.42) / ry);
+    const scale = (facing ? Math.min((width * 0.48) / rx, (height * 0.47) / ry) : Math.min((width * 0.47) / rx, (height * 0.42) / ry)) * (shot?.zoom || 1);
     const pulse = 0.55 + 0.45 * Math.sin(now / 160); // parts about to attack throb
     const phased = s.encounter.cycle % 2 === 1;
 
@@ -587,9 +636,9 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       if (u > 0 && u < 1 && who?.integrity > 0) strikes.set(id, { u, h, how, c: { x: 0, y: 0 }, n: 0 });
     }
     if (strikes.size) for (const p of points) {
-      const part = resolvePart(v, p.region), st = part?.id && strikes.get(part.id);
+      const part = partAt(p.region), st = part?.id && strikes.get(part.id);
       if (!st) continue;
-      const q = animate(p, clock), [x1, z1] = rotY(q.x, q.z, yaw);
+      const q = animate(p, clock), x1 = q.x * cyw + q.z * syw, z1 = -q.x * syw + q.z * cyw;
       st.c.x += x1; st.c.y += q.y * cp - z1 * sp; st.n++;
     }
     for (const st of strikes.values()) if (st.n) { st.c.x /= st.n; st.c.y /= st.n; }
@@ -598,16 +647,18 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     const cells = new Map();
     for (let i = 0; i < points.length; i++) {
       const p = points[i];
-      const part = resolvePart(v, p.region);
+      const part = partAt(p.region);
       if (!part) continue;
       const h = part.id ? hits.get(part.id) : null;
-      if (part.integrity === 0) { if (!(h?.kind === 'break' && motion)) continue; }
+      // Broken in the state, its break still on its way (it lands with the hit's number): drawn whole till then.
+      if (part.integrity > 0) broke.delete(part.id);
+      else if (!(h?.kind === 'break' && motion) && !(motion && part._dyingUntil > Date.now() && !broke.has(part.id))) continue;
       if (part.ghost) continue;
       if (p.region !== 'body' && part.phase && phased && i % 3) continue; // Flicker: the Shade is half gone on odd cycles
       const q = animate(p, clock);
-      let [x1, z1] = rotY(q.x, q.z, yaw);
+      const x1 = q.x * cyw + q.z * syw; let z1 = -q.x * syw + q.z * cyw;
       const y1 = q.y * cp - z1 * sp; z1 = q.y * sp + z1 * cp;
-      let [nx1, nz1] = rotY(q.nx, q.nz, yaw);
+      const nx1 = q.nx * cyw + q.nz * syw; let nz1 = -q.nx * syw + q.nz * cyw;
       const ny1 = q.ny * cp - nz1 * sp; nz1 = q.ny * sp + nz1 * cp;
       const age = h ? (now - h.time) / 900 : 0;
       const fresh = h && part.integrity > 0 && motion ? (1 - age) ** 2 : 0;
@@ -623,8 +674,8 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       const jolt = fresh * (h?.kind === 'crit' ? 12 : h?.kind === 'attack' ? 0 : h?.kind === 'chit' ? 4 : 7);
       // A boss's parts stand well off its middle: one that strikes swells out from where it stands, not from the middle.
       const ax = facing && m ? st.c.x : 0, ay = facing && m ? st.c.y : 0, kc = k0 + (k - k0) * 0.2;
-      let sx = width / 2 + qx + (ax * kc + (x1 + (m?.dx || 0) - ax) * k - midX) * scale + Math.sin(i * 7.3) * jolt;
-      let sy = height / 2 + qy + (ay * kc + (y1 + (m?.dy || 0) - ay) * k - midY) * scale + Math.cos(i * 3.1) * jolt;
+      let sx = width * (0.5 + (shot?.dx || 0)) + qx + (ax * kc + (x1 + (m?.dx || 0) - ax) * k - midX) * scale + Math.sin(i * 7.3) * jolt;
+      let sy = height * (0.5 + (shot?.dy || 0)) + qy + (ay * kc + (y1 + (m?.dy || 0) - ay) * k - midY) * scale + Math.cos(i * 3.1) * jolt;
       const lunging = striking && grow > 1.12;
       const step = lunging ? Math.round(grow * 4) / 4 : 1; // near characters sit on a coarser grid, bigger
       const row = Math.round(sy / (gy * step));
@@ -633,7 +684,8 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       const cell = lunging ? -(step * 4 * 1e8 + cx * 10000 + cyc) : cx * 10000 + cyc;
       const was = cells.get(cell);
       if (was && was.z <= z1) continue;
-      const lum = Math.max(0, nx1 * LIGHT[0] + ny1 * LIGHT[1] + nz1 * LIGHT[2]);
+      let lum = Math.max(0, nx1 * LIGHT[0] + ny1 * LIGHT[1] + nz1 * LIGHT[2]);
+      if (S) lum = S.light(lum, nx1, ny1, nz1, now);
       cells.set(cell, { x: cx * gx * step, y: cyc * gy * step, z: z1, lum, part, h, fresh, i, region: p.region, step: lunging ? step : 0, glitch: m?.glitch });
     }
 
@@ -642,14 +694,14 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     for (const c of cells.values()) {
       const { part, h, fresh } = c;
       if (c.step) { near.push(c); continue; }
-      const broken = part.integrity === 0;
+      const broken = part.integrity === 0 && h?.kind === 'break';
       // Broken: each point turns to a bit, then lets go as a drifting 1 or 0 (shards below).
       const done = broken && h ? (now - h.time) / BREAK_MS : 0;
       if (broken && h) {
         const at = releaseOf(c.i);
         if (done > at) { if (motion && !h.gone.has(c.i)) { h.gone.add(c.i); drift(c.x, c.y, h); } continue; }
       }
-      const ratio = part.integrity / part.max;
+      const ratio = part.integrity === 0 && !broken ? 1 / part.max : part.integrity / part.max;
       const depth = Math.max(0.35, Math.min(1, 0.95 - c.z / (radius * 2.2)));
       const faded = selected && part.id !== selected && c.region !== 'body' ? 0.55 : 1;
       const lit = 0.18 + c.lum * 0.82;
@@ -666,6 +718,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       ctx.fillStyle = flare || (attacking ? COLORS.hot : part.id === selected ? COLORS.gold : c.region === 'body' ? (ratio < 0.4 ? COLORS.dim : COLORS.deep) : ratio < 0.4 ? COLORS.dim : lit > 0.7 ? COLORS.bright : COLORS.amber);
       const age = h ? (now - h.time) / 900 : 0;
       ctx.globalAlpha = Math.min(1, depth * faded * (attacking && !flare ? pulse + 0.25 : 1) * (broken ? 1 - done * 0.4 : 1) * (0.55 + lit * 0.6));
+      if (S) { const rv = S.reveal(c, ch, now, width, height); if (!rv) continue; if (rv.ch) ch = rv.ch; if (rv.a != null) ctx.globalAlpha *= rv.a; if (rv.color) ctx.fillStyle = rv.color; }
       ctx.fillText(ch, c.x, c.y);
       c.ch = ch;
     }
@@ -767,6 +820,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
         const d = shards[i];
         d.life -= delta;
         if (d.life <= 0) { shards.splice(i, 1); continue; }
+        if (d.bit && S?.bit(ctx, d, delta, { width, height, gx, gy })) continue;
         if (d.bit) { // a dissolving point: drifts up and out, wavering, flipping between 1 and 0, dimming
           d.t += delta;
           d.x += (d.vx + Math.sin(d.t / 140 + d.ph) * 0.35) * delta / 16; d.y += d.vy * delta / 16; d.vy *= 0.995;
@@ -783,6 +837,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       }
     }
     ctx.globalAlpha = 1;
+    S?.post(ctx, canvas, { width, height, gy, now });
     lastFrame = { cells, width, height };
   }
   let lastFrame = null;
@@ -803,10 +858,12 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       shards.push({ x: from.x, y: from.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2, c: set[Math.floor(Math.random() * set.length)], life: 700 + Math.random() * 500 });
     }
   }
-  requestAnimationFrame(draw);
+  ask();
 
   return {
-    attach(el) { if (canvas !== el) { canvas = el; ctx = el.getContext('2d'); } },
+    attach(el) { if (canvas !== el) { canvas = el; ctx = el.getContext('2d'); } wake(); },
+    // A virus may have come into the state: draw from the next frame (a no-op while the loop runs).
+    wake,
     // Where a part is drawn right now, on the page: { x, y } (its centre, in viewport px) and some of the
     // characters it is drawn in (lash.mjs throws them at you). null when the render is off screen.
     anchor(id) {
@@ -825,6 +882,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       const t = performance.now();
       const h = { time: t, kind };
       if (kind === 'break') { // where it dissolves from: its middle on the last frame
+        broke.add(id);
         const mine = lastFrame ? [...lastFrame.cells.values()].filter((c) => c.part?.id === id) : [];
         h.gone = new Set();
         h.cx = mine.length ? mine.reduce((a, c) => a + c.x, 0) / mine.length : (lastFrame?.width || 0) / 2;

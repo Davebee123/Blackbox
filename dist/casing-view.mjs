@@ -1,17 +1,34 @@
-// Rig → Casing (casing.mjs): the colourway, the plate, the stickers, the props and the district out the window. Pure
+// Rig → Casing (casing.mjs): the monitor color, the plate, the stickers, the props and the district out the window. Pure
 // functions of state. A sticker or a prop goes on with a click here and is dragged into place on the casing itself
 // (app.js, while this page is open).
 import { glyph } from './glyphs.mjs';
-import { COLORWAYS, COLORWAY_IDS, CASING, colorwayOpen, colorwayFrom, casingLook, decalsOwned, decalMarkup, districtOf, districtOpen, districtFrom, PROPS, PROP_IDS, propOpen, propFrom, propsLook, propsOwned, propSvg } from './casing.mjs';
+import { COLORWAYS, COLORWAY_IDS, CASING, colorwayOpen, colorwayFrom, casingLook, decalsOwned, decalMarkup, districtOf, districtOpen, districtFrom, PROPS, PROP_IDS, propOpen, propFrom, propsLook, propSvg } from './casing.mjs';
 import { DISTRICTS, DISTRICT_IDS } from './districts.mjs';
 import { titleById } from './profile.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-export function casingPageMarkup(s) {
-  const C = s.cosmetics || {}, look = casingLook(s), cur = look.color || 'stock';
-  const off = s.settings?.casing === false || s.settings?.shell === 'plain';
-  // The colourways: yours to pick, the rest locked with the achievement that brings each on hover.
+// The sections down the rail, each with what it holds now; the open one's options fill the pane beside it.
+export const CASING_SECS = ['color', 'plate', 'stickers', 'props', 'window'];
+
+export function casingPageMarkup(s, { sec = 'color' } = {}) {
+  if (!CASING_SECS.includes(sec)) sec = 'color';
+  const look = casingLook(s), cur = look.color || 'stock', decalsOn = look.decals.length, decalsMine = decalsOwned(s).length;
+  const propsOn = propsLook(s).length, n = (ids, open) => `${ids.filter((id) => open(s, id)).length} of ${ids.length}`;
+  const rail = [
+    ['color', 'Monitor color', COLORWAYS[cur]?.name || 'Stock', n(COLORWAY_IDS, colorwayOpen)],
+    ['plate', 'Nameplate', look.plate],
+    ['stickers', 'Stickers', decalsMine ? `${decalsOn} on` : 'None yet', decalsMine ? `${decalsMine} yours` : ''],
+    ['props', 'Props', `${propsOn} out`, n(PROP_IDS, propOpen)],
+    ['window', 'Window', DISTRICTS[districtOf(s)]?.name || '', n(DISTRICT_IDS, districtOpen), 'The district out the window beside the monitor, on screens 1700px wide and more.'],
+  ].map(([id, name, now, count, tip]) => `<button type="button" role="tab" data-cs-sec="${id}" aria-selected="${sec === id}"${tip ? ` title="${esc(tip)}"` : ''}><b>${name}</b><small>${esc(now)}${count ? ` <i>· ${count}</i>` : ''}</small></button>`).join('');
+  const pane = { color: colorPaneMarkup, plate: platePaneMarkup, stickers: stickerPaneMarkup, props: deskCardMarkup, window: districtCardMarkup }[sec](s);
+  return `<section class="card cs-page"><nav class="cs-rail" role="tablist" aria-label="Casing">${rail}</nav><div class="cs-pane" role="tabpanel" data-case="${cur}">${pane}</div></section>`;
+}
+
+// Rig → Casing → Monitor color: yours to pick, the rest locked with the achievement that brings each on hover.
+function colorPaneMarkup(s) {
+  const cur = casingLook(s).color || 'stock', off = s.settings?.casing === false || s.settings?.shell === 'plain';
   const sw = COLORWAY_IDS.map((id) => {
     const a = colorwayFrom(id), open = colorwayOpen(s, id);
     const tip = `${COLORWAYS[id].name}: ${COLORWAYS[id].tip}${a ? ` Comes with ${a.hidden && !open ? 'a hidden achievement' : a.name}.` : ''}`;
@@ -19,24 +36,26 @@ export function casingPageMarkup(s) {
       ? `<button type="button" class="cs-sw" data-case="${id}" data-run="casing color ${id}" aria-pressed="${cur === id}" title="${esc(tip)}"><i class="cs-chip" aria-hidden="true"></i><span>${esc(COLORWAYS[id].name)}</span></button>`
       : `<span class="cs-sw locked" data-case="${id}" title="${esc(tip)}"><i class="cs-chip" aria-hidden="true"></i><span>${esc(COLORWAYS[id].name)}</span>${glyph('lock')}</span>`;
   }).join('');
-  // The plate: stock, a title of yours, or your own words.
+  return `${off ? `<p class="cs-note">${esc('Casing off. Settings turns it on.')}</p>` : ''}<div class="cs-swatches">${sw}</div>`;
+}
+
+// Rig → Casing → Nameplate: stock, a title of yours, or your own words.
+function platePaneMarkup(s) {
+  const C = s.cosmetics || {}, look = casingLook(s);
   const titles = (s.profile?.titles || []).map(titleById).filter(Boolean);
   const plates = [`<button type="button" class="cs-pl" data-run="casing plate stock" aria-pressed="${!C.plate}" title="As it shipped">${esc(CASING.stock)}</button>`,
     ...titles.map((t) => `<button type="button" class="cs-pl" data-run="casing plate title ${esc(t.id)}" aria-pressed="${C.plate?.title === t.id}" title="${esc(`Your title ${t.name}`)}">MODEL 7 · ${esc(t.name.toUpperCase())}</button>`)].join('');
-  // The stickers: yours, the ones on the casing lit. A click puts one on or takes it off.
-  const owned = decalsOwned(s), on = new Set(look.decals.map((x) => x.id));
-  const chips = owned.map((x) => `<button type="button" class="cs-decal" data-run="casing sticker ${esc(x.id)}${on.has(x.id) ? ' off' : ''}" aria-pressed="${on.has(x.id)}" title="${esc(`${x.tip}.${on.has(x.id) ? ' Drag it anywhere on the casing.' : ''}`)}">${decalMarkup(x)}</button>`).join('');
-  return `<div class="cs-page">
-    <section class="card cs-card"><h2>Colourway</h2>${off ? `<p class="cs-note">${esc('Casing off. Settings turns it on.')}</p>` : ''}<div class="cs-swatches">${sw}</div></section>
-    <div class="cs-stack"><section class="card cs-card" data-case="${cur}"><h2>Nameplate</h2><span class="cs-plate" title="The plate on the chin">${esc(look.plate)}</span>
+  return `<span class="cs-plate" title="The plate on the chin">${esc(look.plate)}</span>
       <div class="cs-plates">${plates}</div>
-      <form class="cs-own" data-cs-plate><input id="cs-plate-in" maxlength="${CASING.plate}" value="${esc(C.plate?.text || '')}" placeholder="Your own, ${CASING.plate} characters" spellcheck="false" autocomplete="off" aria-label="Your own plate"><button type="submit" class="btn small primary">Use</button></form></section>
-    <section class="card cs-card" data-case="${cur}"><h2>Stickers</h2>
-      <div class="cs-row"><span>On · ${on.size} / ${owned.length}</span>${on.size ? '<button type="button" class="act dim ach-pin" data-run="casing sticker off">Clear</button>' : ''}</div>
-      ${owned.length ? `<div class="cs-decals">${chips}</div>` : `<p class="cs-note">${esc('None yet. Achievements bring them.')}</p>`}</section></div>
-    ${deskCardMarkup(s)}
-    ${districtCardMarkup(s)}
-  </div>`;
+      <form class="cs-own" data-cs-plate><input id="cs-plate-in" maxlength="${CASING.plate}" value="${esc(C.plate?.text || '')}" placeholder="Your own, ${CASING.plate} characters" spellcheck="false" autocomplete="off" aria-label="Your own plate"><button type="submit" class="btn small primary">Use</button></form>`;
+}
+
+// Rig → Casing → Stickers: yours, the ones on the casing lit. A click puts one on or takes it off.
+function stickerPaneMarkup(s) {
+  const owned = decalsOwned(s), on = new Set(casingLook(s).decals.map((x) => x.id));
+  const chips = owned.map((x) => `<button type="button" class="cs-decal" data-run="casing sticker ${esc(x.id)}${on.has(x.id) ? ' off' : ''}" aria-pressed="${on.has(x.id)}" title="${esc(`${x.tip}.${on.has(x.id) ? ' Drag it anywhere on the casing.' : ''}`)}">${decalMarkup(x)}</button>`).join('');
+  if (!owned.length) return `<p class="cs-note">${esc('None yet. Achievements bring them.')}</p>`;
+  return `${on.size ? '<div class="cs-row"><button type="button" class="act dim ach-pin" data-run="casing sticker off">Clear</button></div>' : ''}<div class="cs-decals">${chips}</div>`;
 }
 
 // ---------- the window's district and the desk's props (Rig → Casing) ----------
@@ -62,7 +81,7 @@ const MINI = {
 export const districtMini = (id) => `<svg class="cs-mini-d" viewBox="0 0 64 24" width="64" height="24" aria-hidden="true" preserveAspectRatio="xMidYMax slice">${MINI[id] || MINI.sprawl}</svg>`;
 const comes = (a, open) => (a ? ` Comes with ${a.hidden && !open ? 'a hidden achievement' : a.name}.` : '');
 
-// Rig → Casing → Window: the districts, yours to pick, the rest dim with the achievement that brings each.
+// Rig → Casing → Window (the pane): the districts, yours to pick, the rest dim with the achievement that brings each.
 export function districtCardMarkup(s) {
   const cur = districtOf(s), off = s.settings?.window === false || s.settings?.casing === false || s.settings?.shell === 'plain';
   const items = DISTRICT_IDS.map((id) => {
@@ -71,10 +90,10 @@ export function districtCardMarkup(s) {
       ? `<button type="button" class="cs-dist" data-run="district ${id}" aria-pressed="${cur === id}" title="${esc(tip)}">${districtMini(id)}<span>${esc(DISTRICTS[id].name)}</span></button>`
       : `<span class="cs-dist locked" title="${esc(tip)}">${districtMini(id)}<span>${esc(DISTRICTS[id].name)}</span>${glyph('lock')}</span>`;
   }).join('');
-  return `<section class="card cs-card cs-dists-card"><h2>Window</h2><p class="cs-note">${esc(off ? 'The window is off. Casing and Window on show it, beside the monitor on screens 1700px wide and more.' : 'Out the window beside the monitor, on screens 1700px wide and more.')}</p><div class="cs-dists">${items}</div></section>`;
+  return `${off ? `<p class="cs-note">${esc('Off. Settings turns on Casing and Window.')}</p>` : ''}<div class="cs-dists">${items}</div>`;
 }
 
-// Rig → Casing → Props: yours, the ones standing lit, the rest dim. A click stands one on the desk or takes it off.
+// Rig → Casing → Props (the pane): yours, the ones standing lit, the rest dim. A click stands one on the desk or takes it off.
 export function deskCardMarkup(s) {
   const look = propsLook(s), on = new Set(look.map((p) => p.id));
   const items = PROP_IDS.map((id) => {
@@ -83,7 +102,5 @@ export function deskCardMarkup(s) {
       ? `<button type="button" class="cs-prop" data-run="casing prop ${id}${on.has(id) ? ' off' : ''}" aria-pressed="${on.has(id)}" title="${esc(tip)}">${propSvg(id)}<span>${esc(PROPS[id].name)}</span></button>`
       : `<span class="cs-prop locked" title="${esc(tip)}">${propSvg(id)}<span>${esc(PROPS[id].name)}</span>${glyph('lock')}</span>`;
   }).join('');
-  return `<section class="card cs-card"><h2>Props</h2>
-      <div class="cs-row"><span>Out · ${on.size} / ${propsOwned(s).length}</span>${on.size ? '<button type="button" class="act dim ach-pin" data-run="casing prop off">Clear</button>' : ''}</div>
-      <div class="cs-props">${items}</div></section>`;
+  return `${on.size ? '<div class="cs-row"><button type="button" class="act dim ach-pin" data-run="casing prop off">Clear</button></div>' : ''}<div class="cs-props">${items}</div>`;
 }

@@ -7,7 +7,7 @@
 // on screen) · when (optional: state it needs) · text · pause (fight tips) · under (optional:
 // sit below this container instead, so the thing it explains stays in view).
 import { keyMap } from './combat.mjs';
-import { MUTATIONS, QUIRKS, STRAINS, GUARDS, ARCHETYPES, SYNC } from './data.mjs';
+import { ARCHETYPES, SYNC } from './data.mjs';
 import { GENES } from './genes.mjs';
 import { rivalOf, wickLine } from './rivals.mjs';
 import { ROOM_RULES } from './families.mjs';
@@ -22,23 +22,17 @@ const atGate = (s) => { const e = s.encounter; return !!((e && e.mode !== 'run' 
 // A short guided tour of a server's room map (the Run tab), a step at a time, each pointing at the thing to do and
 // moving on when you do it (click it, or type its command): walk into a room, a virus's card, then Jack out once
 // you've won a fight. A cache, the hunter and the rest room get their step the first time you meet them (SPRAWL-00,
-// where you start, has none), and Scan the first time a room next to you that scan reads is on the map. Got it
-// closes a step, Skip tour ends them all, and tips off stops it. The tour is kept on the save (s.tour), so it shows
+// where you start, has none). Got it closes a step, Skip tour ends them all, and tips off stops it. The tour is kept on the save (s.tour), so it shows
 // once a save. Each step: mark(s) is taken as it shows, done(s, mark) says you did it,
 // also is another click that does it (Step back, Leave it).
 const visitOf = (s) => (s.rooms?.at ? s.rooms : null);
 const hereKind = (s) => s.rooms?.at && s.rooms.graph.rooms[s.rooms.at]?.kind;
 const movesOf = (s) => s.rooms?.stats?.moves || 0;
-const scansOf = (s) => s.run?.scans || 0; // scans on this run (run.mjs scanRoom)
 const TOUR_STEPS = [
   { id: 'tour-walk', at: '.fp-room.reach', when: (s) => !!visitOf(s) && !s.rooms.screen, mark: movesOf, done: (s, m) => movesOf(s) > m,
     wick: true, text: 'pick a room with a number on its corner. that\'s the signal it costs to walk in.' },
   { id: 'tour-engage', at: '#fp-pop [data-rooms="engage"]', also: '#fp-pop [data-rooms="back"]', after: ['tour-walk'], when: (s) => s.rooms?.screen?.kind === 'virus', done: (s) => s.rooms?.screen?.kind !== 'virus',
     wick: true, text: 'something\'s living in there. engage, or step back the way you came.' },
-  // Scan: the first time a room next to you that scan reads is on the map, its chip's SCAN (floorplan-view.mjs; it shows
-  // on hover, and while the step points at it). Walking into a room instead closes it too.
-  { id: 'tour-scan', at: '.fp-scanbtn:not([aria-disabled])', also: '.fp-room.reach', after: ['tour-walk'], when: (s) => !!visitOf(s) && !!s.run?.rooms, mark: scansOf, done: (s, m) => scansOf(s) > m,
-    wick: true, text: 'scan a room next to you to see what\'s in it before you walk in.', more: (s) => (classOf(s) === 'infiltrator' ? 'you scan free, and you read deeper.' : 'costs 1 signal.') },
   { id: 'tour-cache', at: '#fp-pop [data-rooms="pull"]', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'cache' && !s.rooms.screen,
     mark: (s) => `${s.rooms.at}:${s.rooms.taken[s.rooms.at] ?? ''}`, done: (s, m) => `${s.rooms?.at}:${s.rooms?.taken[s.rooms?.at] ?? ''}` !== m,
     wick: true, text: 'a cache: credits and code. one in four is bait, and its card says which.' },
@@ -85,7 +79,7 @@ export const TIPS = [
   { id: 'room-elite', page: 'rooms', at: '.fp-room.k-elite', text: `An elite room. Its virus is tougher and brings one more tell, and it enrages from cycle ${ROOM_RULES.enrage.elite}. It drops a blue or better.` },
   { id: 'room-thread', page: 'rooms', at: '.fp-quest.m-start', text: 'Someone in this room has work for you. Walk in to talk. Threads you take are tracked in Mail.' },
   { id: 'run-signal', page: 'rooms', at: '.fp-sig.mid, .fp-sig.low', after: ['tour-walk'], wick: true, text: 'your signal\'s getting thin. at 0 you\'re home and the pack stays here. find a rest room or jack out.' },
-  { id: 'run-rival', page: 'rooms', at: '.fp-rvstat', wick: true, lead: (s) => (rivalOf(s) ? wickLine(s, rivalOf(s)) : ''), text: 'it\'s racing you to the vault. if it reaches you, you fight the lot. beat it and its pack is yours.' },
+  { id: 'run-rival', page: 'rooms', at: '.fp-rvstat', wick: true, lead: (s) => (rivalOf(s) ? wickLine(s, rivalOf(s)) : ''), text: 'they\'re racing you to the vault. if they reach you, you fight the lot. beat them and their pack is yours.' },
   { id: 'exfil', page: 'rooms', at: '.fp-exfil', text: 'An Exfil is uploading a stolen archive from this server, and it runs from you. Corner it and break its Uplink before the upload finishes.' },
   // A puzzle room's board, the first time you see each one (puzzle-view.mjs). One go a board: played to its end, it refills in two hours.
   { id: 'pz-quarantine', page: 'rooms', at: '.pz-panel.k-quarantine .pz-well', text: 'After each firewall you place, the worm copies into the marked node. Wall it in early, against an edge. Every node it never reaches pays this server\'s code.' },
@@ -138,65 +132,17 @@ export const TIPS = [
   { id: 'fight-armor', page: 'combat', pause: true, at: '.board .chits', under: '#board', wick: true, text: 'see the ◆? armor. each hit knocks one off and does nothing else. chip it bare with the small stuff, then hit it hard.' },
   { id: 'sync', page: 'combat', at: '#sync-win', pause: true, wick: true, text: 'the bar under now fills as the cycle runs. hit enter inside the bright window and you deal 10% more.', more: (s) => `as ${/^[AEIOU]/.test(ARCHETYPES[classOf(s)].name) ? 'an' : 'a'} ${ARCHETYPES[classOf(s)].name.toLowerCase()}, it also ${SYNC[classOf(s)].rule.replace(/^./, (c) => c.toLowerCase())}` },
   { id: 'fight-patch', page: 'combat', pause: true, at: '.board .intent.patch', under: '#board', text: 'A part with no ◆ left grows one back five cycles later, unless you break it first.' },
-  { id: 'fight-veiled', page: 'combat', pause: true, at: '.board .intent.hidden', under: '#board', text: 'This part hides when it will attack. Strip its ◆ to see its timer.' },
-  // The parts plan's P3 families (families.mjs).
-  { id: 'fight-heat', page: 'combat', pause: true, at: '.board .tag.heat', under: '#board', text: 'The Rig hits harder each time its Hash lands, and heats up every cycle. At 100 heat it stops and burns itself out. Push it past a tick to vent it, or leave it to cook.' },
-  { id: 'fight-twin', page: 'combat', pause: true, at: '.board .tag.twin', under: '#board', text: 'Two Rigs share one heat gauge. Break one and the other takes its climb, so bring both down close together.' },
-  { id: 'fight-bin', page: 'combat', pause: true, at: '.board .tag.bin', under: '#board', text: 'The Recycle Bin holds the skill the Wipe took. Push it past a tick to get that skill back, ready.' },
-  { id: 'fight-wipe', page: 'combat', pause: true, at: '.board .tag.wipe', under: '#board', text: 'When the Wipe lands, it takes your strongest ready skill off your bar for 3 cycles. Fire that skill before then.' },
-  // Priority 3's floor 2 bodies (families.mjs).
-  { id: 'fight-cnc', page: 'combat', pause: true, at: '.board .tag.cnc', under: '#board', text: 'The C&C fires every Zombie at once. Clear the Zombies and the kill pays more. Break the C&C and the fight ends now, for less.' },
-  { id: 'fight-payload', page: 'combat', pause: true, at: '.board .tag.payload', under: '#board', text: 'Your hits on the Payload burn its fuse. At 0 it blows up on you, and its loot is gone. Count your hits.' },
-  { id: 'fight-encrypt', page: 'combat', pause: true, at: '.board .intent.crypt', under: '#board', text: 'Encryption damages you every cycle and grows each time it lands. It stops when you break the Encryptor.' },
-  // Tells (tells.mjs): a part announces a move ahead, and the chip says what answers it.
-  { id: 'fight-tell', page: 'combat', pause: true, at: '.board .intent.tell.t-charge', under: '#board', text: 'This part is charging a much bigger hit. Push it past a tick on the cycle the hit lands to call it off. The chip shows NOW on that cycle.' },
-  { id: 'fight-cast', page: 'combat', pause: true, at: '.board .intent.tell.t-cast', under: '#board', text: 'This part is compiling a buff for the virus. During its last 2 cycles, SIGINT (the - key) stops it, and so does pushing the part past a tick.' },
-  { id: 'fight-seal', page: 'combat', pause: true, at: '.board .intent.tell.t-seal', under: '#board', text: 'If this part still has ◆ when the seal lands, it gains an extra ◆, and every part you stripped gets one ◆ back. Strip it first.' },
-  { id: 'fight-mimic', page: 'combat', pause: true, at: '.board .intent.tell.t-mimic', under: '#board', text: 'The Mimic copies the command you use that cycle and hits you with it. Use something that deals no damage then: a debuff, an armor strip, a burn or a shield.' },
-  { id: 'fight-lock', page: 'combat', pause: true, at: '.board .intent.tell.t-lock', under: '#board', text: 'When this lands, the next skill you fire is locked for 3 cycles. Break the part first, or feed it a skill that is already cooling down.' },
   // Bosses: the ♛ part's ticks start acts (interrupt.mjs rule a).
   { id: 'fight-crown', page: 'combat', pause: true, at: '.board .tag.crown', under: '#board', wick: true, text: 'the ♛ part is the boss. push it past a mark and it starts its next act, and the fight changes.' },
   // Levers (docs/puzzle-levers.md): an elite's clash, then a plain fight's one lever, from level 6.
   { id: 'fight-clash', page: 'combat', pause: true, at: '.board .tag.clash', under: '#board', text: 'This elite\'s two rules pull against each other, so answering one makes the other harder. Hover ⇄ to see the pull and the answer.' },
   { id: 'fight-lever', page: 'combat', pause: true, at: '.board .bpart.lever', under: '#board', text: 'This part has a rule that makes your usual move the wrong one. Hover the red tag on its row to read it before you hit.' },
   { id: 'fight-objective', page: 'combat', pause: true, at: '.phase-strip .ps-obj', text: 'This fight has an objective. Hover it to see what it asks. Meet it and the loot rolls again, with half again the XP.' },
-  // The parts plan's board elements (docs/parts-plan.md P1): one tip each, the first time it shows.
-  { id: 'fight-fuse', page: 'combat', pause: true, at: '.board .intent.fuse', under: '#board', text: 'A broken Zip Bomb\'s fuse is burning. When it runs out, it hits you for a fifth of your max. A ◆ or a shield takes it, and ending the fight first puts it out.' },
-  { id: 'fight-front', page: 'combat', pause: true, at: '.board .tether.k-front', under: '#board', text: 'This tether bends your hits. While the Front End wears ◆, a command aimed at its partner lands on it. Strip its ◆, or use burns and helpers.' },
-  { id: 'fight-idle', page: 'combat', pause: true, at: '.board .tag.idlepips', under: '#board', text: 'These pips count down. Each hit from your command on this part starts them over. At zero, every part re-arms to full ◆.' },
-  { id: 'fight-volley', page: 'combat', pause: true, at: '.board .intent.tap', under: '#board', text: 'These hits are one volley, on back to back cycles. Cut it on its first hit and the rest goes too. A delay moves them all.' },
-  { id: 'fight-buffer', page: 'combat', pause: true, at: '.board .lockseg.bufseg', under: '#board', text: 'This shield takes the hits from your commands first. Burns and helpers go under it. The Buffer puts it back every few cycles.' },
-  { id: 'fight-hotspot', page: 'combat', pause: true, at: '.board .tag.hotspot', under: '#board', text: 'A hit from your command on this part charges the virus\'s next attack. Burns and helpers don\'t set it off.' },
-  { id: 'fight-syn', page: 'combat', pause: true, at: '.board .intent.syn', under: '#board', text: 'When this lands, the skill you used that cycle cools down 2 cycles longer. Use a skill with no cooldown then.' },
-  { id: 'fight-accum', page: 'combat', pause: true, at: '.board .tag.accum', under: '#board', text: 'This bar fills toward one big hit. Break the part before it is full, or have ◆ or a shield up when it lands.' },
-  // The parts plan's P2 (floors 3 and 4): one tip for each new board element, the first time it shows.
-  { id: 'fight-cap', page: 'combat', pause: true, at: '.board .tag.limcap', under: '#board', text: 'No single hit takes more than this off the part. Use many small hits: burns, helpers and quick skills.' },
-  { id: 'fight-standby', page: 'combat', pause: true, at: '.board .tag.standby', under: '#board', text: 'This part sleeps under heavy ◆ until the signature part breaks. Then it boots with its attack and drops its ◆. Break it now, or once it boots.' },
-  { id: 'fight-scrape', page: 'combat', pause: true, at: '.board .intent.scrape', under: '#board', text: 'When this lands, it takes your shield, your ◆ and your timed buffs. Buff after it lands, not before.' },
   { id: 'fight-cracked', page: 'combat', pause: true, at: '#hud .cracked-cells', text: 'Cracked cells: your next heals lose this much. Purge, Scrub, Rollback or Rotate Keys clears them.' },
-  { id: 'fight-damper', page: 'combat', pause: true, at: '.board .tag.damper', under: '#board', text: 'While this part wears ◆, the crossed-out kind of hit deals it nothing. That kind still breaks ◆, so strip it first.' },
-  { id: 'fight-frost', page: 'combat', pause: true, at: '.board .tag.frost', under: '#board', text: 'This part is frozen: nothing reaches it until the bar fills. Break the others now, and be ready when it thaws.' },
   { id: 'fight-status', page: 'combat', at: '#hud .hud-status .st', when: (s) => s.encounter?.phase === 'active', text: 'Effects on you show here. Hover one to see what it does and how long it lasts.' },
   { id: 'fight-miss', page: 'combat', at: '#board', when: (s) => (s.encounter?.metrics?.misses || 0) > 0, text: 'You missed. A miss deals no damage but still uses the cooldown. Enemies above your level make you miss more often.' },
   { id: 'fight-daemon', page: 'combat', at: '.board .intent.daemon:not(.cron)', under: '#board', text: 'That\'s your daemon. It acts on its own cooldown, in the cycle where its chip sits, on top of your own move.' },
   { id: 'fight-proc', page: 'combat', pause: true, at: '#tray .lit', text: 'A skill lit up. It only works for a cycle or two after something happens, so use it while it glows.' },
-  ...Object.entries({
-    keylogger: 'This is a Keylogger. Only moves made inside the Sync Window hurt the Logger. Three moves outside it come back at you as a Dump.',
-    hashrat: 'This is a Hashrat. While its Miner lives, your cooldowns run at half speed. The Miner attacks only once it is the last part left, so break it first.',
-    floodgate: 'This is a Floodgate. Its Flooder hits every cycle, a little harder each time. Any delay resets it.',
-    leech: 'This is a Leech. Its Tap heals the most damaged part for what it bites, and removes a burn from it.',
-    sleeper: 'This is a Sleeper. It does nothing until you hit it or cycle 6 begins. Set up first, because when it wakes, its Alarm lands at once.',
-    patchwork: 'This is a Patchwork. Its Patcher heals the most damaged part every 3 cycles. Break the Patcher first, or finish a part between heals.',
-    flicker: 'This is a Flicker. Its Shade is only there on even cycles. On odd cycles your hits pass through it.',
-    extortion: 'This is an Extortion. The Demand winds up a big Deadline. Hit it hard in the 2 cycles before it lands and the Deadline is called off.',
-    echo: 'This is an Echo. While the Echo lives, every hit you take repeats a cycle later at half damage. Break it early.',
-    bricker: 'This is a Bricker. Each part hits 30% harder once it drops below half health. Finish a part quickly once you start on it.',
-    overrun: 'This is an Overrun. Its fragments bite harder every cycle they live. Clear them while they are young, or break the Hive.',
-    bouncer: 'Bouncer ICE: its Keyring re-arms the Gate every 4 cycles, and takes over the Gate\'s Ram if the Gate breaks first. Break the Gate between re-arms, then the Keyring.',
-    tracer: 'This is Tracer ICE. Its Trace-back deals more damage every cycle the fight lasts, so finish it fast.',
-  }).filter(([id]) => STRAINS[id] || GUARDS[id]).map(([id, text]) => ({ id: 'strain-' + id, page: 'combat', pause: true, at: `.tag-strain[data-strain="${id}"]`, text })),
-  ...Object.entries(MUTATIONS).map(([id, m]) => ({ id: 'mut-' + id, page: '*', pause: true, at: `.tag-mut[data-mut="${id}"]`, text: `This virus is ${m.name}. ${m.rule}` })),
-  ...Object.entries(QUIRKS).map(([id, q]) => ({ id: 'quirk-' + id, page: '*', at: `.tag-quirk[data-quirk="${id}"]`, text: `This location has the ${q.name} quirk. ${q.rule}` })),
 
   // ---------- server ----------
   { id: 'server-level', page: 'server', at: '.hsv-top', text: 'Your server\'s level matches your highest class level. Its wall holds invasions back, and your codebases let you build programs on other servers.' },
@@ -259,6 +205,12 @@ export function nextTip(s, page, visible, pace = {}) {
 // Seen: a tip with your settings (a new game keeps them), a tour step on the save itself (s.tour: once a save).
 const isTour = (id) => tourIds.includes(id);
 export const seenOf = (s, id) => !!(isTour(id) ? s.tour?.[id] : s.settings?.seen?.[id]);
+// A tip that waits for you (done, no mark: map-start) is seen once you've done it, shown or not: connect from
+// anywhere and the opening pointer never comes back.
+export function settleTips(s) {
+  if (!s?.settings) return;
+  for (const t of TIPS) if (t.done && !t.mark && !seenOf(s, t.id) && t.done(s)) markSeen(s, t.id);
+}
 export function markSeen(s, id) {
   if (isTour(id)) { (s.tour ||= {})[id] = 1; return; }
   s.settings.seen ||= {};
