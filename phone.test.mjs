@@ -16,7 +16,7 @@ const controls = (html) => html.match(/<button\b[^>]*>/g) || [];
 const who = { handle: 'tester', cls: 'Breaker', level: 20, xp: 0.4 };
 
 test('every control in the tab bar and More carries a data- command', () => {
-  for (const html of [tabBarMarkup(home, { module: 'map' }), tabBarMarkup({ ...home, rooms: {} }, { module: 'map', active: true }), moreMarkup(home, { who, consortium: true, people: true }), tabBarMarkup(home, { camp: true })]) {
+  for (const html of [tabBarMarkup(home, { module: 'map' }), tabBarMarkup({ ...home, rooms: {} }, { module: 'map', active: true }), moreMarkup(home, { who, consortium: true, people: true })]) {
     const bs = controls(html);
     assert.ok(bs.length >= 4);
     for (const b of bs) assert.match(b, /data-(module|phone|finger)="[^"]+"/, b);
@@ -38,7 +38,6 @@ test('the first slot is the live context in Map\'s place, a red dot while you ar
   assert.equal(tabsOf(home, { module: 'combat', active: true })[0].dot, false);
   assert.equal(contextOf({ rooms: {} }).module, 'rooms');
   assert.equal(contextOf({ run: {} }).module, 'net');
-  assert.equal(contextOf({ breach: {} }).module, 'breach');
   assert.match(tabBarMarkup(home, { module: 'mail' }), /data-module="mail" aria-current="page"/);
   assert.match(tabBarMarkup(home, { module: 'codex' }), /data-phone="more"[^>]*aria-current="page"/); // a More page lights More
   assert.match(tabBarMarkup(home, { counts: { mail: 1 } }), /ph-n">1</);

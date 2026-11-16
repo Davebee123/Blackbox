@@ -41,7 +41,6 @@ import { owned, rootOf, ROOT, ROOT_PERKS } from './root.mjs';
 import { earnEvent } from './earned.mjs';
 import { journalFor, findJournal } from './journals.mjs';
 import { contractTakeover, contractRooms, contractMapped, contractConnect, contractInstall, contractStood, contractExfil, payloadFor, roomMarks, jobsOn } from './mail.mjs';
-import { giveScript, rollScript } from './scripts.mjs';
 import { arcChallenge, jobBossAt } from './arcs.mjs';
 import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
@@ -333,7 +332,6 @@ WORLD_hook('won', (s, room, e, { first = false, mirror = false, rare = false } =
   const guard = room.kind === 'guard' || room.kind === 'elite' || room.kind === 'core' || mirror || !!e.virus.elite;
   roomKill(s, e, { pack: true, guard, family: lineageOf(e.virus.family), loc, rare });
   if (room.kind === 'guard') clearedFor(s, loc); // a faction's server: they notice (factions.mjs)
-  if (e.virus.elite && seeded((e.seed * 31 + R.stats.fights) >>> 0)() < 0.25) giveScript(s, rollScript(seeded((e.seed * 17 + 3) >>> 0)), 'The elite carried: ');
   if (room.kind === 'core' && e.virus.boss && e.virus.boss === jobBossAt(s, loc)) loc.jobFell = now(); // a floor job's boss: no takeover (arcs.mjs)
   else if (room.kind === 'core') { if (loc.temp) tempKilled(s, loc); else takeover(s, loc, room); } // a temporary server's kill switch: dark for good (threads.mjs)
   // Root (2.8): a respawned fight room cleared on a server you hold.

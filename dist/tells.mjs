@@ -77,8 +77,7 @@ export function findSource(v, def) {
   if (fits(pick)) return pick;
   return [sys.find((x) => x.special), ...basics, ...sys].find(fits) || null;
 }
-// Two tells from the roguelite redesign (GAME_RULES.md "Side modes"), brought by breach viruses only (breach.mjs sets
-// v.tellSet): each asks for its own verb, and letting it land can be the right call.
+// Two tells from the roguelite redesign, brought by a virus whose v.tellSet names them: each asks for its own verb, and letting it land can be the right call.
 //   overclock  a cast (SIGINT or two hits in its window). If it lands, for `lasts` cycles every part takes `mult`×
 //              damage and every attack comes a cycle sooner: a gamble for whoever holds a big cooldown.
 //   lock       no answer but breaking the part. When it lands it arms: the first command you fire after it is locked
@@ -330,22 +329,6 @@ function rest(s, t, from, answered = false) {
   if (t.kind === 'mimic') { t.next = null; return; }
   t.after = from + (TELL.rest[t.kind] ?? 3) + jitter(s.encounter.virus, t);
   t.next = null;
-}
-// Every tell that's been said and hasn't landed is called off, as if answered, with no stagger (a breach's Ripple20
-// script, scripts.mjs). The Mimic's beat isn't a tell you can call off. Returns how many.
-export function tellCallOff(s, by) {
-  const T = tellsOf(s), e = s.encounter;
-  let n = 0;
-  for (const t of T?.list || []) {
-    if (!t.told || t.kind === 'mimic') continue;
-    const p = sourceOf(s, t);
-    emit(s, t.kind === 'cast' ? 'interrupt' : 'blocked', `${by} calls off ${label(t)}.`, { source: p?.id, target: p?.id, tell: t.id, answered: true });
-    contractDid(s, 'interrupt');
-    rest(s, t, e.cycle, true);
-    if (p) credit(s, t, p);
-    n++;
-  }
-  return n;
 }
 // Hotspot (genes.mjs hotspot): a command hit on it turns the virus's next attack 2 or more cycles away into a charge,
 // said at once (a Hot Charge on that part's row). One at a time; never on a Hotspot's own row or a part a charge
@@ -810,7 +793,7 @@ function shred(s, p, t) {
 // The tells SIGINT can stop: a told cast, and a told charge (TELL.sigintCharge), soonest first.
 // SIGINT cuts charges from TELL.sigintChargeFrom (a virus's level), where a charge and a cast compete for it. The breach
 // build keeps its own rules (GAME_RULES.md "Tells"): there SIGINT stops casts only.
-export const sigintCharges = (s) => !!TELL.sigintCharge && !s.encounter?.breach && (s.encounter?.virus?.level || 0) >= (TELL.sigintChargeFrom || 0);
+export const sigintCharges = (s) => !!TELL.sigintCharge && (s.encounter?.virus?.level || 0) >= (TELL.sigintChargeFrom || 0);
 const sigintable = (s) => (tellsOf(s)?.list || []).filter((t) => t.told && (t.kind === 'cast' || (t.kind === 'charge' && sigintCharges(s))) && alive(sourceOf(s, t))).sort((a, b) => tellNext(s, a) - tellNext(s, b));
 // The cast compiling now (the one landing soonest).
 export function tellCast(s) {

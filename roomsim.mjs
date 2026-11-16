@@ -6,10 +6,9 @@
 // home and the reconnect wait, with the respawns on their real clocks.
 //   node roomsim.mjs [runs=6] [level=10] [size=medium]     every class under each boss rule (a, b, c): win rates,
 //                                                          Signal lost a fight, minutes to Mapped, XP an hour
-import { fresh, command, resolveCycle, active, finish, hooks, defender, attackers, hackerLevel, materialsOf } from './dist/combat.mjs';
+import { fresh, command, resolveCycle, active, finish, hooks, hackerLevel, materialsOf } from './dist/combat.mjs';
 import { xpToNext } from './dist/data.mjs';
 import { planner } from './dist/planner.mjs';
-import { runScript, scriptsOf } from './dist/scripts.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { buildBlock as programBlock } from './dist/sockets.mjs';
 import { botMove } from './dist/puzzles.mjs';
@@ -26,13 +25,11 @@ export const BUILD = { order: ['harvester', 'cron', 'siphon', 'mill', 'defrag', 
 // Puzzle-room moves the bot has made (a sim's tally).
 export const PLAY = { moves: 0 };
 
-// A room fight played out by the planner (and a script when it's worth it). Returns the cycles.
+// A room fight played out by the planner. Returns the cycles.
 export const TRACE = { fn: null }; // a sim's eye on each command (scratch tracing)
 export function fightOut(s, max = 90) {
   let n = 0;
   for (; n < max && active(s); n++) {
-    botScript(s);
-    if (!active(s)) break;
     const text = planner(s) || 'hold';
     TRACE.fn?.(s, text);
     command(s, text);
@@ -40,20 +37,6 @@ export function fightOut(s, max = 90) {
   }
   if (active(s)) finish(s, 'crashed'); // a stalemate counts as a loss
   return n;
-}
-// A heal when low, a shield before a heavy hit, the burst ones in a big fight.
-function botScript(s) {
-  const e = s.encounter, bag = scriptsOf(s);
-  if (!e?.rooms || e.scriptUsed || !bag.length) return;
-  const d = defender(s), low = d.integrity / Math.max(1, d.max), big = e.virus.boss || e.virus.elite || e.rooms.as === 'hunter';
-  const heavy = attackers(s).some((p) => p.attack.due <= e.cycle + 1 && (p.attack.amount || 0) >= d.integrity * 0.3);
-  const at = (ids) => bag.findIndex((id) => ids.includes(id));
-  let i = -1;
-  if (low < 0.35) i = at(['sasser', 'krack', 'slowloris', 'shellshock']);
-  if (i < 0 && heavy) i = at(['krack', 'shellshock', 'slowloris']);
-  if (i < 0 && big && e.cycle <= 2) i = at(['bluekeep', 'spectre', 'mirai', 'conficker']);
-  if (i < 0 && big && e.cycle >= 6) i = at(['conficker', 'meltdown', 'mirai', 'ripple20']);
-  if (i >= 0) runScript(s, i);
 }
 const sig = (s) => FP.sigOf(s) / Math.max(1, s.rooms.max); // the playtest's Signal, or the run's on the network
 const needOf = (s, room) => (room.kind === 'core' ? NEED.core : room.kind === 'elite' || room.mirror ? NEED.elite : room.kind === 'guard' ? NEED.guard : room.kind === 'nest' ? NEED.nest : NEED.process);

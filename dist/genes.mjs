@@ -417,7 +417,7 @@ export function budgetFor(level, { grade = 1, elite = false, champion = false } 
   return base + (BUDGET.grade[grade] || 0) + (elite ? BUDGET.elite : 0) + (champion ? BUDGET.champion : 0);
 }
 
-// ---------- the roll (GAME_RULES.md "Side modes"), for breach nodes (breach.mjs) ----------
+// ---------- the roll ----------
 // How many genes a wild virus rolls at a level (an elite one more), and how many of them may be mutations (rule
 // genes): one on a wild virus, two on an elite (the designer's cap). A third part is a gene too, and a body has room
 // for one.

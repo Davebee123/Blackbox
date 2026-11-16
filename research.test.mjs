@@ -16,7 +16,6 @@ import { boardMarkup, hudMarkup, systemMarkup, forecast } from './dist/view.mjs'
 import { partTip } from './dist/fightread.mjs';
 import { tellsOf, tellSigint } from './dist/tells.mjs';
 import { TIPS } from './dist/tips.mjs';
-import { REWRITES } from './dist/rewrites.mjs';
 import { play } from './dist/run.mjs';
 import { matesOf } from './dist/crew.mjs';
 import { FRESH } from './dist/combat.mjs';
@@ -281,7 +280,7 @@ test('crewmates\' fights don\'t count for you: their breaks earn nothing, and yo
   assert.ok(mastered(s, s.encounter.virus, q) && !mastered(m, s.encounter.virus, q), 'the perk is yours, not theirs');
 });
 
-test('no player text says gene: the Codex, the System page, the fight board, the HUD, the log, a scan and inspect, tips and rewrites', () => {
+test('no player text says gene: the Codex, the System page, the fight board, the HUD, the log, a scan and inspect, and tips', () => {
   const s = fight({ opts: { elite: true } });
   s.met = { ransomware: true, worm: true, ghostroot: true, keylogger: true, watchdog: true };
   s.dex.fought['nb-deadbolt'] = 1;
@@ -293,7 +292,6 @@ test('no player text says gene: the Codex, the System page, the fight board, the
   const texts = [boardMarkup(s, null), hudMarkup(s), systemMarkup(s), ...s.logs.map((e) => e.message)];
   for (const g of entries(s)) for (const r of g.rows) texts.push(codexPageMarkup(s, r.key));
   for (const t of TIPS) texts.push(t.text);
-  for (const r of Object.values(REWRITES)) texts.push(...(r.output || []));
   const GENE = /\bgene(s|tic)?\b|genom/i; // a word, so Regenerative is no gene
   for (const t of texts) assert.doesNotMatch(readable(t), GENE, readable(t).match(/.{0,60}\bgen(e|om).{0,60}/i)?.[0]);
   assert.ok(s.logs.some((e) => e.type === 'codex'), 'a decode is in the log');

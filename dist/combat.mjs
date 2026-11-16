@@ -694,7 +694,7 @@ export const bossOdds = (boss) => (BOSSES[boss]?.raid ? BOSS_LOOT.raid : BOSS_LO
 // A boss that drops each of its own only once (BOSS_LOOT.once: the Resident, met on every takeover) is done once you
 // hold them all: no more roll for them, and nothing in its place (it drops only as an elite).
 export const bossDone = (s, boss) => BOSS_LOOT.once.includes(boss) && bossUniques(boss).every((u) => s.collection?.[u.id]);
-export const bossChance = (s, boss) => Math.min(1, (bossOdds(boss).chance + bossOdds(boss).pity * (s.pity?.[boss] || 0)) * (bossUniques(boss).some((u) => u.id === s.listen) ? listenBoost(s) : 1) * (s.breach?.fx?.listen || 1) + (s.breach?.fx?.unique || 0)); // a breach's Listening Post (rewrites.mjs), and a dig in's +10% (world.mjs)
+export const bossChance = (s, boss) => Math.min(1, (bossOdds(boss).chance + bossOdds(boss).pity * (s.pity?.[boss] || 0)) * (bossUniques(boss).some((u) => u.id === s.listen) ? listenBoost(s) : 1));
 // Does this boss always drop an item (BOSS_LOOT.resident: the Resident's switch)?
 export const sureDrop = (boss) => !!BOSSES[boss] && (boss !== 'resident' || BOSS_LOOT.resident === 'boss');
 // What a boss kill drops (WoW's dungeon boss): one item at its level from its table (a blue, or a yellow BOSS_LOOT.yellow
@@ -795,7 +795,7 @@ function nativeBossUnique(s, boss, level) {
   lairFell(s, who, boss);
   if (!pool.length) return;
   const heard = pool.includes(s.listen) && postsOf(s) ? listenBoost(s) : 1;
-  if (rand(s) < Math.min(1, lairChance(s, who) * heard + (s.breach?.fx?.unique || 0))) { // a dig in's +10% (world.mjs)
+  if (rand(s) < Math.min(1, lairChance(s, who) * heard)) {
     (s.pity ||= {})[key] = 0;
     const from = lairPick(s, own, pool);
     const it = uniqueItem(UNIQUES[from[Math.floor(rand(s) * from.length)]], level, () => rand(s));
@@ -1340,7 +1340,6 @@ export function emit(s, type, message, detail = {}) {
   const event = { id: ++s.serial, cycle: s.encounter?.cycle || 0, type, message, ...(s.who ? { who: s.who } : {}), ...detail }; // who: a crewmate's name (crew.mjs)
   s.logs.push(event);
   if (s.logs.length > 600) s.logs.shift();
-  hooks.emitted?.(s, event); // your gear's skill rules react to what happens (skillrules.mjs, through breach.mjs)
   return event;
 }
 
@@ -2369,13 +2368,6 @@ export function finish(s, result) {
   s.reports.push(structuredClone(e.metrics));
   if (s.reports.length > 50) s.reports.shift();
   fightOver(s, e, result); // what the fight did toward an achievement (achievements.mjs): counts and one-fight feats, nothing else
-  // A breach node (breach.mjs): the kill's XP here. The draft, the pack and the map are the breach's.
-  if (e.breach) {
-    emit(s, result === 'victory' ? 'victory' : 'crashed', result === 'victory' ? `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.` : `${e.virus.name} burned your Signal to zero.`, { mode: 'breach' });
-    if (result === 'victory') payKill(s, e, XP.guard * (e.breachXp || 1), `${e.virus.name} neutralized`); // a campaign breach pays its own (breach.mjs)
-    hooks.breachEnd?.(s, result);
-    return;
-  }
   // A server room (floorplan.mjs, the rooms playtest): the kill's XP here. Progress, loot and the pack are the room's.
   if (e.rooms) {
     if (result === 'escaped') emit(s, 'escaped', 'Upload complete. The archive is gone.', { mode: 'rooms', cycles: e.cycle }); // a runner got away (the Exfil: its upload completed)
@@ -3898,7 +3890,6 @@ function useAbility(s, intent, auto = false) {
   // A subclass skill's own effect (dist/classes/<class>.mjs). to: the crewmate an ally skill was aimed at.
   classUse(id)?.(s, { a, id, target, to: (intent.ally && allyOf(s, intent.ally)) || s, res, base, intent, auto, e, moved });
   classEach('used', s, { id, target, res, before }); // set bonuses on what the skill did (sets.mjs)
-  hooks.commanded?.(s, { id, target, res, auto }); // a skill rule acts after the command it changes (skillrules.mjs)
 }
 // Who's standing beside you in this fight, by name ('you' is the player): for ally skills and class modules.
 export const alliesOf = (s) => hooks.crewAllies?.(s) || [];
@@ -3918,11 +3909,11 @@ export function stretchBurns(s, t, cycles, label) {
 
 // Who else is standing in this fight, by name ('you' for the player, to a crewmate): crew.mjs.
 const allyOf = (s, who) => hooks.crewAllies?.(s)?.find((x) => x.who === who)?.st || null;
-// How high healing can take you. In a breach, never past the Signal you brought into the fight (breach.mjs
-// fightFrom): heals and shields count inside a fight, defrag and patches between them. The bar marks it (healCap).
-const fightFromOf = (s) => (s.run?.breach ? s.breach?.fightFrom : s.run?.rooms ? s.rooms?.fightFrom : null); // a breach's, or a server room's (floorplan.mjs)
+// How high healing can take you. In a server room, never past the Signal you brought into the fight (floorplan.mjs
+// fightFrom): heals and shields count inside a fight, rests between them. The bar marks it (healCap).
+const fightFromOf = (s) => (s.run?.rooms ? s.rooms?.fightFrom : null);
 export const healCap = (s) => { const d = defender(s), from = fightFromOf(s); return from != null ? Math.min(d.max, from) : d.max; };
-// lift: a restore that counts like a patch (the Sasser script): it ignores the cap and raises it with you.
+// lift: a restore that counts like a rest: it ignores the cap and raises it with you.
 export function heal(s, amount, label, { lift = false, gear = null, drawn = false, potent = false } = {}) {
   const d = defender(s);
   const more = s.encounter ? fxSum(s, 'always', 'heal%') : 0; // the healing you receive (Sump Pump, Bedframe)
@@ -3936,7 +3927,6 @@ export function heal(s, amount, label, { lift = false, gear = null, drawn = fals
   d.integrity += healed;
   if (healed < amount && d.integrity >= d.max) classEach('overheal', s, amount - healed); // healing past full (On-Call: sets.mjs)
   if (s.encounter?.commanding && healed) fxState(s.encounter).healed = (fxState(s.encounter).healed || 0) + healed; // what your command healed (Anchor Chain's next heal)
-  if (lift && s.run?.breach && s.breach?.fightFrom != null) s.breach.fightFrom = Math.max(s.breach.fightFrom, d.integrity);
   if (lift && s.run?.rooms && s.rooms?.fightFrom != null) s.rooms.fightFrom = Math.max(s.rooms.fightFrom, d.integrity);
   emit(s, 'heal', `${label} +${healed}${healed < amount && cap < d.max ? ` (capped at ${cap}, the Signal you came in with)` : ''}. ${s.encounter.mode === 'run' ? 'Signal' : 'Server'} ${d.integrity}/${d.max}.`, { amount: healed, ...(gear ? { gear } : {}) });
 }
@@ -3949,7 +3939,6 @@ function survive(s, d, dmg) {
     emit(s, 'heal', 'Uptime holds you at 1.');
     return Math.max(0, d.integrity - 1);
   }
-  if (d.integrity - dmg <= 0 && hooks.lastBlow) { const kept = hooks.lastBlow(s, d, dmg); if (kept != null) return kept; } // a breach's Restore Point (breach.mjs)
   if (d.integrity - dmg <= 0) { const kept = classFirst('lastBlow', s, d, dmg); if (kept != null) return kept; } // Bedrock (4) (sets.mjs)
   if (d.integrity - dmg <= 0) { const kept = lifeline(s, d, dmg); if (kept != null) return kept; } // the Lifeline daemon
   return dmg;
@@ -4868,12 +4857,6 @@ function cycleClose(s, landed) {
     if (cooling.length && !e.once.taxed) { e.once.taxed = true; emit(s, 'status', 'The Miner is eating your cycles. Your cooldowns run at half speed while it lives.'); }
   }
   cycleFx(s);
-  // A breach's end of cycle (breach.mjs): an enrage, a Lab's overheat. It can end the fight either way.
-  if (hooks.cycleEnd && e.breach) {
-    hooks.cycleEnd(s);
-    if (virusIntegrity(s).current === 0) return finish(s, 'victory');
-    if (defender(s).integrity <= 0) return finish(s, 'crashed');
-  }
   // A server room's end of cycle (floorplan.mjs): an elite's enrage, a Lab's overheat, the room bodies' clocks.
   if (hooks.roomCycle && bodyRules(e)) {
     hooks.roomCycle(s);

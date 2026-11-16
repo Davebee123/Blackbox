@@ -294,7 +294,7 @@
 [data-form='phone'] body.ph-rooms #page-view .fp-hud { position: static; display: flex; flex: none; flex-wrap: nowrap; align-items: center; gap: 12px; height: var(--tap); padding: 0 12px; background: var(--bg); border: 0; border-bottom: 1px solid var(--line-strong); border-radius: 0; box-shadow: none; overflow: hidden; }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud::before, [data-form='phone'] body.ph-rooms #page-view .fp-hud::after { display: none; }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud > :not(.fp-id, .fp-sig, .fp-prog, .fp-hunt, .fp-tools) { display: none; }
-[data-form='phone'] body.ph-rooms #page-view .fp-hud :is(.lbl, .fp-id small, .fp-id .ico, .fp-sig small, .sigbar, .pbar, .fp-mapped, .fp-rules, .fp-perks, .sig-sick) { display: none; }
+[data-form='phone'] body.ph-rooms #page-view .fp-hud :is(.lbl, .fp-id small, .fp-id .ico, .fp-sig small, .sigbar, .pbar, .fp-mapped, .fp-rules, .sig-sick) { display: none; }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud .fp-tools { display: contents; }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud .fp-in { display: none; }
 [data-form='phone'] body.ph-rooms #page-view .fp-id { display: flex; flex: 1; flex-wrap: nowrap; order: 0; align-items: center; gap: 6px; min-width: 0; min-height: var(--tap); }

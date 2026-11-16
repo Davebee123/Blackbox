@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { fresh, restore, hackerLevel, classOf, subOf, subWaiting, freeTiers, tiersOf, equippedSkills, presetKeys, maxSignal, active } from './dist/combat.mjs';
 import { protocolSlots, SLOT_KINDS } from './dist/gear.mjs';
 import { SUBS, ARCHETYPES, FLOORS, floorFor } from './dist/data.mjs';
-import { CAMPAIGN_KEY } from './dist/campaign.mjs';
+const CAMPAIGN_KEY = 'blackbox-campaign-v1'; // the old breach campaign's save, left on some browsers: a bench never touches it
 import { PARTS } from './dist/parts.mjs';
 import { play, signalNow } from './dist/run.mjs';
 import * as B from './dist/bench.mjs';
@@ -23,33 +23,32 @@ const benched = (what, level, name = 'x') => { const s = fresh(); s.netSeed = 42
 const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
 
 // ---------- the save keys ----------
-test('a bench saves under its own key: never the real save\'s, never the campaign\'s, whatever the name', () => {
-  assert.deepEqual(B.pageSave('?bench=phantom10', CAMPAIGN_KEY), { key: 'blackbox-bench-phantom10', bench: 'phantom10', camp: false });
-  assert.equal(B.pageSave('', CAMPAIGN_KEY).key, B.SAVE_KEY);
-  assert.equal(B.pageSave('?dev', CAMPAIGN_KEY).key, 'blackbox-v6');
-  assert.equal(B.pageSave('?bench=Lv-10', CAMPAIGN_KEY).bench, 'lv-10', 'letters, digits and dashes, lower case');
-  assert.equal(B.pageSave('?bench=a&campaign=breach', CAMPAIGN_KEY).key, 'blackbox-bench-a', 'a bench is never the campaign');
-  assert.equal(B.pageSave('?bench=a&playtest=random', CAMPAIGN_KEY).bench, null, 'a playtest is never saved, bench or not');
+test('a bench saves under its own key: never the real save\'s, whatever the name', () => {
+  assert.deepEqual(B.pageSave('?bench=phantom10'), { key: 'blackbox-bench-phantom10', bench: 'phantom10' });
+  assert.equal(B.pageSave('').key, B.SAVE_KEY);
+  assert.equal(B.pageSave('?dev').key, 'blackbox-v6');
+  assert.equal(B.pageSave('?bench=Lv-10').bench, 'lv-10', 'letters, digits and dashes, lower case');
+  assert.equal(B.pageSave('?bench=a&playtest=random').bench, null, 'a playtest is never saved, bench or not');
   for (const bad of ['', '../blackbox-v6', 'v6 ', 'a/b', 'x'.repeat(40), '-x', 'é']) {
-    const p = B.pageSave('?bench=' + encodeURIComponent(bad), CAMPAIGN_KEY);
+    const p = B.pageSave('?bench=' + encodeURIComponent(bad));
     assert.equal(p.bench, null, bad);
   }
   for (const name of ['v6', 'blackbox-v6', 'campaign-v1', 'a', '0']) {
-    const k = B.pageSave('?bench=' + name, CAMPAIGN_KEY).key;
+    const k = B.pageSave('?bench=' + name).key;
     assert.ok(k.startsWith(B.BENCH_PREFIX), name);
     assert.notEqual(k, B.SAVE_KEY); assert.notEqual(k, CAMPAIGN_KEY);
   }
   // app.js reads, writes and wipes its save only through KEY, which pageSave picks.
-  assert.match(app, /const \{ key: KEY, bench: BENCH, camp: CAMP \} = BK\.pageSave\(location\.search, CP\.CAMPAIGN_KEY\);/);
+  assert.match(app, /const \{ key: KEY, bench: BENCH \} = BK\.pageSave\(location\.search\);/);
   assert.ok(!app.includes("'blackbox-v6'"), 'the real key is named only in bench.mjs');
   const saves = app.match(/localStorage\.(getItem|setItem|removeItem)\(([^,)]+)/g).filter((x) => !/'bb-/.test(x));
   assert.ok(saves.length >= 4);
-  for (const x of saves) assert.match(x, /\((KEY|CP\.CAMPAIGN_KEY)$/, x);
+  for (const x of saves) assert.match(x, /\(KEY$/, x);
 });
 
 test('loading, saving and resetting a bench never cross the real save', () => {
   const store = storage({ [B.SAVE_KEY]: REAL, [CAMPAIGN_KEY]: '{"camp":1}' });
-  const { key } = B.pageSave('?bench=phantom10', CAMPAIGN_KEY);
+  const { key } = B.pageSave('?bench=phantom10');
   // Load: nothing there yet, so a fresh state, and the real save is not read into it.
   assert.equal(store.getItem(key), null);
   const { s } = benched('phantom', 10, 'phantom10');

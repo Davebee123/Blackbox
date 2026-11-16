@@ -656,7 +656,7 @@ function programHook(s) {
 // Auto jack-out: on a run, crossing your line jacks you out with your pack (in a fight, the emergency jack out).
 export function railCheck(s) {
   const r = rails(s), run = s.run;
-  if (!r.jackOut || !run || run.breach || s.who || !unlocked(s)) return false;
+  if (!r.jackOut || !run || s.who || !unlocked(s)) return false;
   const max = run.max || maxSignal(s), pct = max ? (run.integrity / max) * 100 : 100;
   const was = run.railAt;
   run.railAt = pct;
