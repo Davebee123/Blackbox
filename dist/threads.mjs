@@ -52,7 +52,7 @@ export const THREAD = {
 };
 export const CHAINS = CONTENT.chains;
 export const TEMPLATES = CONTENT.templates;
-const START_LABEL = { 'restore-point': 'Stalled job', 'night-operator': 'Ops room', mirror: 'Index', escort: 'Lost file', talk: 'Idle session', temp: 'Beacon' };
+const START_LABEL = { 'restore-point': 'Stalled job', 'night-operator': 'Ops room', mirror: 'Index', 'listening-post': 'Repeater', escort: 'Lost file', talk: 'Idle session', temp: 'Beacon' };
 
 const nowOf = () => hooks.now?.() ?? Date.now();
 const mix = (...xs) => xs.reduce((h, x) => (Math.imul(h ^ (typeof x === 'string' ? [...x].reduce((a, c) => Math.imul(a ^ c.charCodeAt(0), 16777619) >>> 0, 2166136261) : (x >>> 0)), 2654435761) + 0x9e3779b9) >>> 0, 0x7417) || 1;
@@ -392,6 +392,7 @@ function finish(s, t) {
   const ch = (c.steps.at(-1).choice || []).find((x) => x.id === t.choice);
   t.lore = fill(s, t, ch?.lore || c.lore || '');
   T.offer = { tid: t.id, items: offerItems(s, t) };
+  if (c.opens === 'post') (s.scanner ||= {}).found = true; // Nine Days Deaf: the Listening Post shows on the map (scanner.mjs)
   if (T.track === t.id) T.track = activeThreads(s).at(-1)?.id || null;
   emit(s, 'thread-done', `THREAD DONE: ${c.title}. ${t.lore}`, { thread: t.id });
   // Its set roll (sets.mjs: Night Shift's pieces), by the deepest floor it ran on, at the thread's level.

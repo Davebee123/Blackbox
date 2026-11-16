@@ -995,7 +995,7 @@ export async function renderBoard(names = Object.keys(RECIPES), gap = 1.3, { syn
   const sr = 44100, nc = channels === 2 ? 2 : 1, ctx = new OfflineAudioContext(nc, Math.ceil(sr * (Math.max(...cues.map((c) => c[1])) + 2)), sr);
   if (!synth) await loadBank(ctx, base);
   const ch = chain(ctx);
-  if (hum) ambience(ctx, ctx.destination, { seeks: false });
+  if (hum) ambience(ctx, outputOf(ctx), { seeks: false });
   for (const [n, t, o = {}] of cues) {
     if (n.startsWith('key:')) (KEYS[n.slice(4)] || KEYS.char)((s, at, x) => sample(ctx, ch.master, t, s, { ...x, at }));
     else if (n.startsWith('ability:')) { const [, style, key] = n.split(':'); abilityAt(ctx, ch, style, key, timingOf(t, o.plan || {}, o)); }

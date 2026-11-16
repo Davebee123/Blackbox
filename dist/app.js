@@ -119,7 +119,7 @@ GX.migrateGraphics(campaign); GX.applyAuto(campaign, F.isPhone()); // the Graphi
 if (DEV) Object.defineProperty(window, '__bb', { get: () => campaign }); // dev only: the live state, for tests
 // The scanner (scanner.mjs): its own clock, saved as it changes; the radio sits in the Listening Post's Tune window
 // (render mounts it). Not in the breach campaign.
-const scanner = CAMP ? null : createScanner({ state: () => campaign, changed: () => { save(); markDirty(); }, busy: () => active(campaign), sound: () => !!campaign.settings.sound, volume: () => V.volumesOf(campaign).sfx, played: () => { if (hubSel === POST.id && hubShown()) { hubWin = 'tune'; markDirty(); } }, found: () => { feel.numbers(); notice('Numbers under the radio chatter. A Listening Post shows on your map, beside HOME.'); } });
+const scanner = CAMP ? null : createScanner({ state: () => campaign, changed: () => { save(); markDirty(); }, busy: () => active(campaign), sound: () => !!campaign.settings.sound, volume: () => V.volumesOf(campaign).sfx, played: () => { if (hubSel === POST.id && hubShown()) { hubWin = 'tune'; markDirty(); } }, found: (loc) => { feel.numbers(); notice(`A numbers broadcast cuts through the radio chatter. It's coming from a LANTERN repeater on ${loc.name}.`); } });
 if (DEV && scanner) window.__scan = scanner; // dev only: the needle and the strip, for tests
 let module = playtest === 'story' ? 'mail' : playtest === 'rooms' ? 'rooms' : CAMP ? 'campaign' : 'map';
 let selected = null;
@@ -2447,6 +2447,7 @@ function render(force = false) {
     const cycleKey = s.encounter.virus.id + ':' + s.encounter.cycle;
     const turned = shownCycle && shownCycle !== cycleKey && shownCycle.startsWith(s.encounter.virus.id + ':') && canMove();
     const before = turned ? chipSnapshot() : null;
+    if (before) before.cycle = Number(shownCycle.slice(shownCycle.lastIndexOf(':') + 1)); // the cycle that just resolved
     putRows('board', (active(s) && s.encounter.paused ? '<div class="pause-strip" role="status">PAUSED · ANY ORDER RESUMES</div>' : '') + V.boardMarkup(s, selected, aimPreview));
     chipfx.place($('board')); // themed chips get their effect back after the rebuild
     for (const k of spentChips) $('board').querySelector(`[data-k="${CSS.escape(k)}"]`)?.classList.add('spent'); // and one that has gone off stays gone
@@ -2643,7 +2644,7 @@ function turnTimeline(before) {
       const dx = b.rect.left - r.left, dy = b.rect.top - r.top;
       if (Math.abs(dx) + Math.abs(dy) > 1) { el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 440, easing: ease }); BFX.move(el, floorMotion); }
       if (el.classList.contains('now') && !/\bnow\b/.test(b.cls)) el.animate([{ boxShadow: '0 0 0 0 rgba(255, 91, 61, 0.7)' }, { boxShadow: '0 0 0 6px rgba(255, 91, 61, 0)' }], { duration: 700, delay: 380, easing: 'ease-out' });
-    } else if (!spentChips.delete(b.k)) fire(b, spawned); // (one that struck at its own step has gone off)
+    } else if (!spentChips.delete(b.k)) fire(b, spawned, before.cycle); // (one that struck at its own step has gone off)
   }
   spentChips.clear();
   const was = new Set(before.map((b) => b.k));
@@ -2653,8 +2654,10 @@ function turnTimeline(before) {
 }
 // What resolved this cycle: a ghost of the chip plays out where it was.
 const ghostOf = (b) => { const g = document.createElement('div'); g.className = 'fx-ghost'; g.innerHTML = b.html; Object.assign(g.style, { left: b.rect.left + 'px', top: b.rect.top + 'px', width: b.rect.width + 'px', height: b.rect.height + 'px' }); document.body.appendChild(g); return g; };
-function fire(b, spawned = []) {
-  const theirs = /\bnow\b/.test(b.cls) && !/mine|daemon|patch/.test(b.cls);
+function fire(b, spawned = [], cycle = null) {
+  // An attack you cut on the cycle it was due (interrupt.mjs cancelAttack) never goes off: its chip fizzles in place.
+  const cut = cycle != null && b.src && part(campaign, b.src)?.cutAt === cycle;
+  const theirs = !cut && /\bnow\b/.test(b.cls) && !/mine|daemon|patch/.test(b.cls);
   // A replicate aims at the fragment it spawned (one each), not your bar; one that fizzled plays out in place.
   const replicate = theirs && /\breplicate\b/.test(b.cls);
   const spawn = replicate ? spawned.shift() : null;
@@ -2923,11 +2926,8 @@ function checkTips(now) {
 function showStep() {
   const steps = tip.t.steps;
   tip.cur = steps ? steps[tip.step] : tip.t;
-  // wick narrates the guided path (tips.mjs wick): the Transmission, his face beside his line.
-  const wick = !!tip.cur.wick;
-  $('tip').classList.toggle('wick', wick);
-  $('tip-from').hidden = !wick;
-  $('tip-face').innerHTML = wick ? portraitMarkup('wick', 'npc') : '';
+  // wick narrates every tip: the Transmission, his face beside his line.
+  if (!$('tip-face').firstChild) $('tip-face').innerHTML = portraitMarkup('wick', 'npc');
   $('tip-text').textContent = tip.cur.text;
   $('tip-step').textContent = steps ? `${tip.step + 1}/${steps.length}` : tip.t.tour ? `${tourDone(campaign) + 1}/${TOUR.length}` : '';
   $('tip-ok').textContent = steps && tip.step < steps.length - 1 ? 'Next' : 'Got it';

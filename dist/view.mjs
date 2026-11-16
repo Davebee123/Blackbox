@@ -49,7 +49,7 @@ import { commsOf } from './comms.mjs';
 import { shopOf, chaseItem, blockOf } from './store.mjs';
 import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, connectedTo, viaName } from './hidden.mjs';
 import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend, waypointOf, holderOf } from './floors.mjs';
-import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
+import { ROOT, ROOT_RULES, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, FILTER_CAP, baseName as filterBase } from './filters.mjs';
 import { situationOf } from './situations.mjs';
@@ -2071,17 +2071,19 @@ export function loadoutMarkup(s, view, tab = 'protocols', ui = {}) {
   const busy = active(s) || !!s.run; // classes change at home, between fights
   const free = subOf(s, id) ? freeTiers(s, id) + (capState(s, id) === 'open' ? 1 : 0) : 0; // with no subclass, its tiers wait for the tree
 
-  // The classes, one slim button each (its level, a teal lamp on the one in use): click to look at it. Looking at
-  // one you aren't playing, Use switches to it, at home (and while trying classes out, your level comes with you).
-  const tabs = Object.entries(ARCHETYPES).map(([k, x]) => `<button type="button" class="arch${k === id ? ' on' : ''}" data-arch="${k}" aria-pressed="${k === id}" title="${esc(x.role.join(' · '))}"><b>${esc(x.name)}</b><span>Lv ${hackerLevel(s, k)}</span>${k === equippedArch ? '<i class="arch-inuse" title="In use"></i>' : ''}</button>`).join('')
+  // A left column like Achievements' categories: the classes (level, XP, a teal lamp on the one in use), and under the
+  // one you're looking at, its sections as sub-folders. Looking at one you aren't playing, Use switches to it, at home
+  // (and while trying classes out, your level comes with you).
+  const xpBar = (k) => { const h = hackerOf(s, k), f = Math.max(0, Math.min(1, (h.xp || 0) / xpToNext(h.level))); return `<span class="arch-xp"><b style="width:${Math.round(f * 100)}%"></b></span>`; };
+  const sections = `<nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', 'Protocols'], ['daemons', `Daemons${newOn(s, 'daemons') ? ` · ${newOn(s, 'daemons')} new` : ''}`], ['program', 'Program'], ['skills', `Skills and talents${free ? ` · ${free} free` : ''}`]].map(([k, l]) => (k === 'program' && !routinesOpen(s) ? `<button type="button" role="tab" class="ltab-locked" data-ltab="${k}" aria-selected="${tab === k}" aria-disabled="true" title="${esc(ROUTINES_LOCKED)}">${esc(l)}</button>` : `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`)).join('')}</nav>`;
+  const tabs = Object.entries(ARCHETYPES).map(([k, x]) => `<button type="button" class="arch${k === id ? ' on' : ''}" data-arch="${k}" aria-pressed="${k === id}" title="${esc(x.role.join(' · '))}"><b>${esc(x.name)}${k === equippedArch ? '<i class="arch-inuse" title="In use"></i>' : ''}</b><span>Lv ${hackerLevel(s, k)}</span>${xpBar(k)}</button>${k === id ? sections : ''}`).join('')
     + (id === equippedArch ? '' : `<button type="button" class="btn small arch-use" data-command="archetype ${id}" ${busy ? 'disabled title="At home only"' : `title="Play ${esc(a.name)}"`}>Use ${esc(a.name)}</button>`);
 
   return `<div class="loadout">
-    <nav class="arch-tabs" aria-label="Classes">${tabs}</nav>
-    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', 'Protocols'], ['daemons', `Daemons${newOn(s, 'daemons') ? ` · ${newOn(s, 'daemons')} new` : ''}`], ['program', 'Program'], ['skills', `Skills and talents${free ? ` · ${free} free` : ''}`]].map(([k, l]) => (k === 'program' && !routinesOpen(s) ? `<button type="button" role="tab" class="ltab-locked" data-ltab="${k}" aria-selected="${tab === k}" aria-disabled="true" title="${esc(ROUTINES_LOCKED)}">${esc(l)}</button>` : `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`)).join('')}</nav>
-    ${tab === 'daemons' ? daemonsMarkup(s) : tab === 'program' ? programMarkup(s) : tab === 'skills' ? skillsTabMarkup(s, view || id) : id === equippedArch ? `
+    <div class="lo-side"><nav class="arch-tabs" aria-label="Classes">${tabs}</nav></div>
+    <div class="lo-main">${tab === 'daemons' ? daemonsMarkup(s) : tab === 'program' ? programMarkup(s) : tab === 'skills' ? skillsTabMarkup(s, view || id) : id === equippedArch ? `
     <div class="loadout-protocols silk">${protocolGearMarkup(s)}</div>` : `
-    <div class="loadout-protocols one"><section class="card"><h2>Protocols</h2><p class="svc-line"><span class="tag dim" title="Protocols belong to the class in use">${esc(a.name)} only</span></p></section></div>`}
+    <div class="loadout-protocols one"><section class="card"><h2>Protocols</h2><p class="svc-line"><span class="tag dim" title="Protocols belong to the class in use">${esc(a.name)} only</span></p></section></div>`}</div>
     </div>`;
 }
 
@@ -2396,9 +2398,10 @@ const ctProg = (j) => j.ready ? `<span class="ct-turn">Turn in</span>`
   : j.of && j.of > 10 ? `<span class="ct-bar"><i style="width:${(j.part * 100).toFixed(0)}%"></i></span><small class="ct-n">${j.n}/${j.of}</small>`
   : j.of || ctCount(j) ? `<small class="ct-n">${j.of ? `${j.n}/${j.of}` : ctCount(j)}</small>`
   : `<small class="ct-n ct-say">${esc(j.text)}</small>`;
-const ctInner = (j) => { const p = ctProg(j), say = p.includes('ct-say'); return `${glyph(j.icon)}<span class="ct-txt"><b>${esc(j.name)}</b></span><span class="ct-prog${say ? '' : ' ct-side'}">${p}</span>`; };
+// One line on the map: a row with no count leaves its few words to the tooltip. A tooltip's rows keep them under the name.
+const ctInner = (j, words = false) => { const p = ctProg(j), say = p.includes('ct-say'); return `${glyph(j.icon)}<span class="ct-txt"><b>${esc(j.name)}</b></span>${say && !words ? '' : `<span class="ct-prog${say ? '' : ' ct-side'}">${p}</span>`}`; };
 // The rows for a tooltip (floorplan-view.mjs: the strip's Contracts), one per contract, as the tracker draws them.
-export const contractTipRows = (list) => list.map((j) => `<span class="ct-row tt-ct${j.ready ? ' ready' : ''}">${ctInner(j)}</span>`).join('');
+export const contractTipRows = (list) => list.map((j) => `<span class="ct-row tt-ct${j.ready ? ' ready' : ''}">${ctInner(j, true)}</span>`).join('');
 function contractTracker(s, sel = null) {
   const list = trackedJobs(s);
   if (!list.length) return '';
@@ -2706,7 +2709,14 @@ export function serverNext(lvl) {
 
 // An event on a server (events.mjs): a mark on the map node, and what's happening on its card.
 // Root access (root.mjs): five pips, the perks on hover; and the process a log rotation brought in.
-const rootPips = (l) => { const r = rootOf(l), p = rootProgress(l); return `<span class="root-pips" title="${esc(Array.from({ length: ROOT.max }, (_, i) => `${i < r ? '■' : '□'} Root ${i + 1}: ${ROOT_PERKS[i + 1]}`).join('\n') + (p ? `\n\n${p.have}/${p.need} respawned rooms cleared for Root ${r + 1}` : ''))}">${'■'.repeat(r)}<i>${'□'.repeat(ROOT.max - r)}</i></span>`; };
+// The Root pips (root.mjs) and their tooltip, WoW's grammar: Root N, its kind line, the rule, then Root 2-5 as a ladder
+// (reached teal, the next bright, the rest muted) and the answer: how many more clears to the next.
+const rootPips = (l) => {
+  const r = rootOf(l), p = rootProgress(l);
+  const ladder = Array.from({ length: ROOT.max - 1 }, (_, i) => i + 2).map((n) => `<span class="rt-step${n <= r ? ' on' : n === r + 1 ? ' next' : ''}"><i>${n <= r ? '■' : '□'} ${n}</i>${esc(ROOT_RULES[n])}</span>`).join('');
+  const tip = `Root ${r}: Clearing respawned fight rooms on this server raises its Root.${p ? `\n▸ Clear ${p.need - p.have} more for Root ${r + 1}.` : ''}`;
+  return `<span class="root-pips" title="${esc(tip)}" data-tt-kind="Held server · ${r} of ${ROOT.max}"><template class="tt-more">${ladder}</template>${'■'.repeat(r)}<i>${'□'.repeat(ROOT.max - r)}</i></span>`;
+};
 const rotMark = (l) => { const p = procOf(l); return p ? `<g class="rotmark${p.rare ? ' rare' : ''}" transform="translate(-13 -12)"><title>${esc(`${p.rare ? 'Rare virus' : 'Log rotation'}: ${p.name} lv ${p.level} in ${p.room}`)}</title><text>${p.rare ? '★' : '↻'}</text></g>` : ''; };
 const hm = (ms) => (ms >= 3600000 ? `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m` : fmtLeft(ms));
 const rotLine = (s, l) => {

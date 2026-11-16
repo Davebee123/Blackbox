@@ -37,7 +37,7 @@
 // codebase you know, what it costs here and what you hold, and Build.
 // Countdowns are empty <… data-at> slots (and rings with data-ring-*) that fillClocks writes every second (app.js), so
 // the markup only changes when the server does and a hovered chip keeps its tooltip.
-import { esc, deathMark, sickPct, sickTip, trackedJobs, contractTipRows } from './view.mjs';
+import { esc, conClass, deathMark, sickPct, sickTip, trackedJobs, contractTipRows } from './view.mjs';
 import { glyph } from './glyphs.mjs';
 import { groundSvg } from './ground.mjs';
 import { OBJECTIVES, OBJ, objectiveLine } from './objectives.mjs';
@@ -573,6 +573,8 @@ function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, fi
     if (room.kind === 'vault' && !opened(s, room)) tags.push(R.visit?.keys.includes(room.id) ? ['KEY FITS', 'key'] : ['LOCKED', 'lock']);
     if (sealed) tags.push(['SEALED', 'hot']);
     if (up && R.rare[room.id]) tags.push(['★', 'rare']);
+    const gap = up && !room.mirror ? (fightOf(s, room).level || 0) - hackerLevel(s) : 0; // its virus above your level: ▲n
+    if (gap > 0) tags.push([`▲${gap}`, `lvup ${upCon(gap)}`, null, `Level ${fightOf(s, room).level}: ${gap} ${gap === 1 ? 'level' : 'levels'} above you.`]);
     const ob = objOf(s, room);
     if (ob) tags.push([OBJECTIVES[ob].n ? String(OBJECTIVES[ob].n) : '', 'obj', OBJ_ICON[ob], `${OBJECTIVES[ob].name}: ${objectiveLine(ob)}`]);
     if (denEdge) tags.push(['WAKES', 'hot']);
@@ -669,7 +671,7 @@ function hudMarkup(s) {
   return `<header class="fp-hud" aria-label="The server">
     <span class="fp-id" title="${esc(net(s, 'idTip') ?? `${R.name}: ${author} ${kindName(R.kind)}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`)}"><span class="ico" ${icon('server')}></span><b>${esc(R.name)}</b><small>${esc(net(s, 'idLine') ?? `${kindName(R.kind)} · lv ${R.level} · ${K.rule}`)}</small></span>
     <div class="fp-sig ${lvl}" title="${esc(`Signal: carries from fight to fight and rests back at home.\nA room's first step each visit costs ${step}, or ${stepNew} into one you've never been in.`)}"><span class="lbl">Signal</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small>${R.world && sickPct(s) ? `<em class="sig-sick" title="${esc(sickTip(s))}">−${sickPct(s)}%</em>` : ''}</div>
-    <div class="fp-prog" title="${esc(`Rooms cleared for good: at ${Math.ceil(prog.total / 2)} the whole map is drawn, at ${prog.total} the server is Mapped.`)}"><span class="lbl">Rooms</span><span class="pbar"><span style="width:${(prog.done / prog.total) * 100}%"></span><i style="left:50%"></i></span><b>${prog.done}/${prog.total}</b>${R.mapped ? '<small class="fp-mapped">MAPPED</small>' : ''}</div>
+    <div class="fp-prog" title="${esc(`Rooms cleared: ${prog.done} of ${prog.total}. ${R.mapped ? 'The server is Mapped.' : `At ${Math.ceil(prog.total / 2)} the whole map is drawn. At ${prog.total} the server is Mapped.`}`)}"><span class="lbl">Rooms</span><span class="pbar"><span style="width:${(prog.done / prog.total) * 100}%"></span><i style="left:50%"></i></span><b>${prog.done}/${prog.total}</b>${R.mapped ? '<small class="fp-mapped">MAPPED</small>' : ''}</div>
     ${keys}${hunt}${rival}${cardStat}${ml}${pack}${job}${R.world && s.threads ? threadHud(s) : ''}
     <span class="fp-tools">${R.world ? '' : `<span class="fp-rules" role="group" aria-label="Boss rule"><span class="lbl" title="${esc(`Boss rule: how ${BOSSES[RESIDENT].name}'s ticks work. It applies to your next fight with it.`)}">Boss</span>${rule}</span>`}
     <ul class="fp-perks" aria-label="Scripts"><li class="lbl" title="Scripts: run one a fight, from the fight's tray. It takes no cycle.">Scripts ${bag.length}/${slotsOf(s)}</li>${scripts}</ul>
@@ -719,7 +721,14 @@ const btn = (verb, label, { arg = null, primary = false, hot = false, small = fa
 function cardTip(s, c) { const C = RUN_CARDS[c.kind]; return `${C.name}\nRun card\n${C.tip}\n${C.muted}`; }
 const note = (html, cls = '') => `<p class="fp-note${cls ? ' ' + cls : ''}">${html}</p>`;
 // What holds the room: its icon, its name, and its line.
-const holder = (name, title, sub, tip = '', cls = 'hot') => `<div class="fp-virus ${cls}"${tip ? ` title="${esc(tip)}"` : ''}>${ic(name)}<span><b>${esc(title)}</b><small>${esc(sub)}</small></span></div>`;
+// A level above yours reads orange (red from 5 above), never yellow: it should look like a step up.
+const upCon = (gap) => (gap >= 5 ? 'con-red' : gap > 0 ? 'con-orange' : conClass(gap));
+// Its level against yours (L), in WoW's colours, with ▲n when it's above you.
+const lvMark = (sub, L) => (L == null ? esc(sub) : esc(sub).replace(/\b(lv|Level) (\d+)/, (_, w, n) => {
+  const gap = +n - L, tip = gap > 0 ? `${gap} ${gap === 1 ? 'level' : 'levels'} above you` : gap < 0 ? `${-gap} ${gap === -1 ? 'level' : 'levels'} below you` : 'Your level';
+  return `<b class="fp-lv ${upCon(gap)}" title="${tip}">${w} ${n}${gap > 0 ? `<i class="fp-up">▲${gap}</i>` : ''}</b>`;
+}));
+const holder = (name, title, sub, tip = '', cls = 'hot', L = null) => `<div class="fp-virus ${cls}"${tip ? ` title="${esc(tip)}"` : ''}>${ic(name)}<span><b>${esc(title)}</b><small>${lvMark(sub, L)}</small></span></div>`;
 // The card's one state line: the room's address (dim, first, like a number on a door), here, live, cleared ↻ 4:12,
 // locked, stocked…
 const kicker = (st, here = false, at = '') => {
@@ -761,7 +770,7 @@ function hereCard(s) {
   if (sc?.kind === 'rival') return rivalCard(s, room, sc);
   if (sc?.kind === 'hunter') {
     st = { word: 'caught', cls: 'hot' };
-    body = holder('den', `${huntName(h).toUpperCase()} ICE`, `Level ${fightOf(s, room, 'hunter').level} hunter`) + note('Beat it for a script. It stays down the rest of the visit.');
+    body = holder('den', `${huntName(h).toUpperCase()} ICE`, `Level ${fightOf(s, room, 'hunter').level} hunter`, '', 'hot', hackerLevel(s)) + note('Beat it for a script. It stays down the rest of the visit.');
     acts = btn('engage', 'Fight it', { primary: true }) + btn('slip', 'Slip past', { tip: slipTip(s) });
   } else if (sc?.kind === 'virus' && sc.as === 'surge') {
     const c = surgeAt(s, room.id);
@@ -771,8 +780,8 @@ function hereCard(s) {
     const k = whoOf(s, room), G = room.kind === 'guard' ? GUARDS[room.guard] : null;
     const tip = G ? `${G.name}: ${G.summary.split('. ').slice(1).join('. ') || G.summary}` : room.kind === 'core' && !R.world ? `${BOSSES[RESIDENT].name}: ${BOSSES[RESIDENT].about}` : '';
     // A plain process or elite: the card's title is its name, so the holder says what it is (its family), as from afar.
-    body = fightKind(room) && !['guard', 'core', 'boss'].includes(room.kind) && !room.wild && labelOf(s, room) === sc.name ? holder(iconOf(s, room), k.short, k.sub, tip)
-      : holder(iconOf(s, room), sc.name, fightKind(room) && !['guard', 'core', 'boss'].includes(room.kind) && !room.wild ? `${k.short} · ${k.sub}` : k.sub, tip);
+    body = fightKind(room) && !['guard', 'core', 'boss'].includes(room.kind) && !room.wild && labelOf(s, room) === sc.name ? holder(iconOf(s, room), k.short, k.sub, tip, 'hot', hackerLevel(s))
+      : holder(iconOf(s, room), sc.name, fightKind(room) && !['guard', 'core', 'boss'].includes(room.kind) && !room.wild ? `${k.short} · ${k.sub}` : k.sub, tip, 'hot', hackerLevel(s));
     const notes = [];
     if (R.rare[room.id]) notes.push(`<span class="fp-tag-inline next">★ rare</span> ${ROOMS.rareLevel} levels up, better loot.`);
     if (room.queue && R.kind === 'Mailhub') notes.push('A Spam Flood joins the fight.');
@@ -793,7 +802,7 @@ function hereCard(s) {
     ({ body, acts } = socketCard(s, room));
   } else if (fightKind(room)) {
     const k = whoOf(s, room);
-    body = holder(iconOf(s, room), k.short, k.sub, '', 'down') + (R.down[room.id] != null ? note(esc(net(s, 'downNote', room) || `Back ${fmtLeft(respawnMs(s, room))} after it falls${farmed(s) ? ' (fast: this server is Mapped or yours)' : ', faster once the server is Mapped'}. Never while you stand in it.`), 'dim') : '');
+    body = holder(iconOf(s, room), k.short, k.sub, '', 'down', hackerLevel(s)) + (R.down[room.id] != null ? note(esc(net(s, 'downNote', room) || `Back ${fmtLeft(respawnMs(s, room))} after it falls${farmed(s) ? ' (fast: this server is Mapped or yours)' : ', faster once the server is Mapped'}. Never while you stand in it.`), 'dim') : '');
     const won = R.visit?.metWon; // a room you won beside a runner: their standing, up
     if (won?.room === room.id && runnerOf(s, won.h)) body += `<div class="rc-room">${runnerRow(s, runnerOf(s, won.h))}<p class="rc-line">${tierBar(s, won.h)}</p></div>`;
   } else if (room.kind === 'cache') {
@@ -885,8 +894,8 @@ function farCard(s, room) {
   }
   if (fightKind(room) || room.mirror) {
     const k = whoOf(s, room), up = isUp(s, room) && !(room.kind === 'core' && !coreOpen(s)), f = room.mirror ? fightOf(s, room, 'mirror') : null;
-    body += room.mirror ? holder('mirror', `Elite ${familyName(room.family)}`, `behind a mirror · lv ${f.level}`, '', cacheFull(s, room) ? 'hot' : 'down')
-      : holder(iconOf(s, room), k.short, k.sub, '', up ? 'hot' : 'down');
+    body += room.mirror ? holder('mirror', `Elite ${familyName(room.family)}`, `behind a mirror · lv ${f.level}`, '', cacheFull(s, room) ? 'hot' : 'down', hackerLevel(s))
+      : holder(iconOf(s, room), k.short, k.sub, '', up ? 'hot' : 'down', hackerLevel(s));
   } else if (who) body += note(esc(who));
   if (rule) body += note(esc(rule), /hunter is here|wakes the Tracker/.test(rule) ? 'hot' : 'dim');
   if (s.rooms.world && s.threads) { const th = threadCard(s, room, false, holder, note, btn); if (th.body) body = room.nook ? th.body : body + th.body; }
