@@ -2290,7 +2290,28 @@ function pageOrError(draw) {
     return `<section class="card page-error"><h2>This page hit an error</h2><p class="svc-line">The rest of the game still works. Send this text with your bug report.</p><pre>${esc(text)}</pre><div class="row"><button type="button" class="btn primary" data-module="map">Back to the map</button></div></section>`;
   }
 }
+// The fight log scrolls to its newest line once the frame has laid out (a ResizeObserver: observing fires once), not by
+// forcing a layout from render (docs/performance-plan.md batch 10).
+let logDue = false;
+const logRO = new ResizeObserver(() => { if (!logDue) return; logDue = false; const l = $('log'); l.scrollTop = l.scrollHeight; });
+function logEnd() { const l = $('log'); logDue = true; logRO.unobserve(l); logRO.observe(l); }
 const fitBoard = { key: null }; // the fight whose board went dense (render)
+// Every part on screen: if the rows overflow the board, tighten them (style.css .dense) for the rest of the fight.
+// Checked once the frame has laid out (a ResizeObserver on the board and each row: a row added, or one growing), never
+// by forcing a layout from render (docs/performance-plan.md batch 10). What measures the board itself calls it first.
+const denseRows = new Set();
+const denseRO = new ResizeObserver(() => fitDense());
+function fitDense() {
+  const bd = $('board');
+  if (!bd.classList.contains('dense') && bd.scrollHeight > bd.clientHeight + 2) bd.classList.add('dense');
+  if (bd.classList.contains('dense') && denseRows.size) { denseRO.disconnect(); denseRows.clear(); }
+}
+function watchDense(bd) {
+  if (bd.classList.contains('dense')) return;
+  if (!denseRows.has(bd)) { denseRO.observe(bd); denseRows.add(bd); }
+  for (const r of denseRows) if (r !== bd && r.parentNode !== bd) { denseRO.unobserve(r); denseRows.delete(r); }
+  for (const r of bd.children) if (!denseRows.has(r)) { denseRO.observe(r); denseRows.add(r); }
+}
 // A thread's reward (threads.mjs): pick one of three, over the page until you pick one or put it off (Later; it waits
 // in Mail, where Pick your reward brings it back).
 const thOffer = { later: null };
@@ -2431,8 +2452,8 @@ function render(force = false) {
     $('board').classList.toggle('is-paused', !!(active(s) && s.encounter.paused));
     // Classes for what style.css once asked of :has() (it restyled the board every frame): a tether's gutter, a hotspot's row.
     { const bd = $('board'); bd.classList.toggle('tt-gut', !!bd.querySelector('.tether')); bd.classList.toggle('tt-lane1', !!bd.querySelector('.tether.lane1')); for (const r of bd.querySelectorAll('.brow.bpart')) r.classList.toggle('has-hotspot', !!r.querySelector('.tag.hotspot')); }
-    // Every part on screen: if the rows overflow the board, tighten them (style.css .dense) for the rest of the fight.
-    { const bd = $('board'), key = s.encounter.virus.id; if (fitBoard.key !== key) { fitBoard.key = key; bd.classList.remove('dense'); } if (!bd.classList.contains('dense') && bd.scrollHeight > bd.clientHeight + 2) bd.classList.add('dense'); }
+    { const bd = $('board'), key = s.encounter.virus.id; if (fitBoard.key !== key) { fitBoard.key = key; bd.classList.remove('dense'); } watchDense(bd); } // tightened once it overflows (fitDense)
+    if (pendingStrikes.length || before) fitDense(); // what follows measures the board: tightened first, as it will be drawn
     for (const f of pendingStrikes.splice(0)) f();
     if (before) turnTimeline(before);
     cycleChanged(s);
@@ -2442,7 +2463,7 @@ function render(force = false) {
     phTicker();
     if (cache.get('log') !== logBefore) {
       if (logBefore !== undefined) shell.typeIn($('log'), s.logs.length - (render.logLen ?? s.logs.length));
-      $('log').scrollTop = $('log').scrollHeight;
+      logEnd();
       $('log-hidden').textContent = Math.max(0, $('log').children.length - 1);
     }
     render.logLen = s.logs.length;
@@ -2671,8 +2692,12 @@ let uiShown = 0;
 // places divided by it.
 const Z = () => uiShown || 1;
 const zr = (r) => { const z = Z(); return { left: r.left / z, top: r.top / z, right: r.right / z, bottom: r.bottom / z, width: r.width / z, height: r.height / z }; };
-function uiScale() {
-  const cs = getComputedStyle(document.body), avail = document.body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+// The room is measured when the casing changes, the window resizes, or the body's width does (a ResizeObserver, once
+// the frame has laid out), not on every render (docs/performance-plan.md batch 10).
+let uiAvail = null;
+function uiScale(measure = false) {
+  if (measure || uiAvail == null) { const cs = getComputedStyle(document.body); uiAvail = document.body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight); }
+  const avail = uiAvail;
   UI.ROOM.avail = avail;
   const z = UI.scaleFor(campaign.settings.uiScale ?? 1, avail);
   if (z === uiShown) return;
@@ -2692,7 +2717,7 @@ function casing() {
   if (moved && win) outside.remeasure();
   if (win !== outsideShown || moved) { outsideShown = win; feel.rain(win ? outsideRain : 0); }
   if (moved) { fitKey = ''; requestAnimationFrame(() => { fitKey = ''; fitTopbar(); }); } // the screen's width changed (casing or window on or off): fit the top bar to it again
-  uiScale(); // the room changed with the casing: the scale that fits may too
+  uiScale(moved); // the room changed with the casing: the scale that fits may too
   feel.street(win);
   screenFx();
   const s = campaign;
@@ -2708,6 +2733,8 @@ function casing() {
 // screen or on any of them (placed again when the plate, the page's size, the window or a place changes). While Rig →
 // Casing is open they drag (#casing.edit); a drop saves the place.
 let caseKey = '', caseM = null, caseKeep = [], caseDrag = null;
+const caseView = { w: innerWidth, h: innerHeight }; // the window's size, kept from its resizes: reading it on a render forces a style pass
+addEventListener('resize', () => { caseView.w = innerWidth; caseView.h = innerHeight; });
 const casePut = (el, p) => { el.style.transform = `translate(${Math.round(p.x - caseM.box.left)}px, ${Math.round(p.y - caseM.box.top)}px)${p.rot ? ` rotate(${p.rot}deg)` : ''}`; };
 const caseSize = (el) => ({ w: el.offsetWidth, h: el.offsetHeight });
 function casingLookUi(cased) {
@@ -2722,8 +2749,9 @@ function casingLookUi(cased) {
   const props = propsLook(campaign), PR = host.querySelector('.props'), pk = props.map((p) => p.id).join(',');
   if (PR.dataset.k !== pk) { PR.innerHTML = props.map((p) => propMarkup(p)).join(''); PR.dataset.k = pk; caseKey = ''; } // only on a change, so the mug's steam runs on
   const win = body.classList.contains('window-on');
-  const key = `${cased}:${look.plate}:${innerWidth}:${innerHeight}:${win}:${look.decals.map((x) => `${x.id} ${x.side} ${x.u} ${x.v}`)}:${props.map((p) => `${p.id} ${p.on} ${p.u}`)}`;
-  if (!cased || key === caseKey) return;
+  if (!cased) return;
+  const key = `${cased}:${look.plate}:${caseView.w}:${caseView.h}:${win}:${look.decals.map((x) => `${x.id} ${x.side} ${x.u} ${x.v}`)}:${props.map((p) => `${p.id} ${p.on} ${p.u}`)}`;
+  if (key === caseKey) return;
   const box = host.getBoundingClientRect();
   if (!box.width) return;
   caseKey = key;
@@ -3679,6 +3707,7 @@ function phStage() {
   phOut = campaign.encounter.cycle;
   const now = document.querySelector('#board .bhead .bnow'), bd = $('board');
   if (!now || !bd) return;
+  fitDense(); // it measures the board: tightened first, as it will be drawn
   const home = st.getBoundingClientRect(), left = now.getBoundingClientRect().right + 4, right = bd.getBoundingClientRect().right - 4;
   const busy = [...bd.querySelectorAll('.intent, .tell, .hpips')].map((c) => c.getBoundingClientRect()).filter((r) => r.right > left && r.width);
   const top0 = now.getBoundingClientRect().bottom + 4, bottom = bd.getBoundingClientRect().bottom - 4, need = Math.min(home.height, right - left);
@@ -4008,25 +4037,28 @@ $('comms').addEventListener('click', (e) => {
   if (h) { markDone(campaign, Number(h.dataset.cid)); save(); setComms(false); goTo(h.dataset.hgo); }
 });
 // The top bar stays on one line: when it would wrap (more tabs, a narrow screen, the monitor
-// casing), it tightens a step at a time (style.css .fit-1 … .fit-4). Only re-measured when the
-// tabs shown or the bar's width change.
-let fitKey = '';
-function fitTopbar() {
+// casing), it tightens a step at a time (style.css .fit-1 … .fit-4). Refit when the tabs or what the bar holds change
+// (a breach adds a chip, the pager an alert), read without layout on every render; its width or height changing
+// (growing onto a second row) comes from a ResizeObserver once the frame has laid out (docs/performance-plan.md batch 10).
+let fitKey = '', fitSize = '';
+function fitTopbar(sized = false) {
   const bar = document.querySelector('.topbar');
-  if (!bar.clientWidth) return; // not laid out yet (the casing boots)
   const tabs = document.querySelector('.modules'), n = String([...tabs.children].filter((b) => !b.hidden).length);
   if (tabs.dataset.tabs !== n) tabs.dataset.tabs = n; // how many tabs show: a phone sizes them down from seven (style.css)
-  // Refit when the tabs, the width, or what the bar holds changes (a breach adds a chip, the pager an alert):
-  // the bar's height after the last fit is part of the key, so growing onto a second row refits it.
-  const sig = () => [...document.querySelectorAll('.modules button')].map((b) => (b.hidden ? 0 : 1)).join('') + ':' + bar.clientWidth + ':' + bar.offsetHeight + ':' + ($('integrity-note')?.hidden ? 0 : $('integrity-note')?.textContent) + ':' + $('people')?.hidden + ':' + $('pager').childElementCount; // the pager's icons change its width
-  if (sig() === fitKey) return;
+  const key = [...document.querySelectorAll('.modules button')].map((b) => (b.hidden ? 0 : 1)).join('') + ':' + ($('integrity-note')?.hidden ? 0 : $('integrity-note')?.textContent) + ':' + $('people')?.hidden + ':' + $('pager').childElementCount; // the pager's icons change its width
+  if (key === fitKey && !sized) return;
+  if (!bar.clientWidth) { fitKey = key; fitSize = ''; return; } // not laid out (the casing boots, a phone's fight): fitted when it shows
+  const size = () => bar.clientWidth + ':' + bar.offsetHeight;
+  if (key === fitKey && size() === fitSize) return;
   // Wrapped: something starts below where something else ends.
   const wraps = () => { const kids = [...bar.children].filter((x) => !x.hidden && x.offsetHeight); return kids.some((a) => kids.some((b) => a.offsetTop >= b.offsetTop + b.offsetHeight)); };
   for (let i = 1; i <= 4; i++) bar.classList.remove('fit-' + i);
   for (let i = 1; i <= 4 && wraps(); i++) bar.classList.add('fit-' + i);
-  fitKey = sig();
+  fitKey = key; fitSize = size();
 }
-addEventListener('resize', () => { fitKey = ''; fitTopbar(); uiScale(); });
+new ResizeObserver(() => fitTopbar(true)).observe(document.querySelector('.topbar'));
+addEventListener('resize', () => { fitKey = ''; fitTopbar(); uiScale(true); });
+new ResizeObserver(() => uiScale(true)).observe(document.body);
 document.fonts?.ready.then(() => { fitKey = ''; fitTopbar(); });
 
 // "where:what" from a pager entry or a button elsewhere: a page, and what to show on it.
