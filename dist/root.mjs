@@ -5,7 +5,7 @@
 // fight rooms you clear on a server you hold (netrooms.mjs rootClear), ROOT.need of them for each pip:
 //   Root 1  taken over
 //   Root 2  (5 clears) a stash room opens by the Core: the server's code, refilled every two hours
-//   Root 3  (15) it stops sending invasions, and stops costing memory
+//   Root 3  (15) its kills roll for loot once more (combat.mjs roomKill), and it stops costing memory
 //   Root 4  (30) one more socket room, beside the Core, open at once (netrooms.mjs extraSockets)
 //   Root 5  (50) its rare spawns come twice as often
 // The old log rotations (a process in a folder, a rotated cache) only ran on the file-system servers; nothing on rooms
@@ -22,7 +22,7 @@ export const ROOT = {
   rotateMs: 2 * 3600000, // then every two hours
   rareChance: 0.25, rareMs: 60 * 60000, rareLevels: 2,
   levelXp: 0.75, // kills of XP for each Root level
-  freeMemory: 3, portAt: 4, yieldAt: 4, yield: 0.25, wallAt: 5, wallPlus: 3, doubleAt: 5,
+  freeMemory: 3, lootAt: 3, portAt: 4, yieldAt: 4, yield: 0.25, wallAt: 5, wallPlus: 3, doubleAt: 5,
   cache: (level, root) => Math.round((20 + 4 * level) * (1 + 0.25 * (root - 1))), // credits in a rotated cache
   spread: 6, // more servers than this spread the same cache money thinner (each pays spread/owned of it)
   stash: (level) => 4 + Math.floor(level / 4), // code in /root's stash
@@ -37,8 +37,8 @@ const rootState = (loc) => (loc.root ||= { level: 1, cleared: 0, n: 0, nextAt: n
 export const rootProgress = (loc) => { const r = rootState(loc); return r.level >= ROOT.max ? null : { have: r.cleared, need: ROOT.need[r.level + 1] }; };
 // Root 3+: off your memory (memory.mjs).
 export const freeOfMemory = (loc) => rootOf(loc) >= ROOT.freeMemory;
-// Root 3 (without memory): the server stops sending invasions at you.
-export const quietAtRoot = (loc) => rootOf(loc) >= ROOT.freeMemory;
+// Root 3: its kills roll for loot once more (combat.mjs roomKill).
+export const rootRoll = (loc) => (rootOf(loc) >= ROOT.lootAt ? 1 : 0);
 export const rootPorts = (loc) => (rootOf(loc) >= ROOT.portAt ? 1 : 0);
 // (Root 4's harvester +25% and Root 5's firewall +3 and doubled yield went with the R1 table: 2.8.)
 export const rootYield = () => 1;
@@ -122,5 +122,5 @@ export function processWon(s, e) {
   }
 }
 // The same perks as whole sentences, for the Root pips' tooltip (view.mjs rootPips).
-export const ROOT_RULES = { 2: 'A stash room opens by the Core. Its code comes back every two hours.', 3: 'It stops sending invasions.', 4: 'One more socket room opens beside the Core.', 5: 'Its rare spawns come twice as often.' };
-export const ROOT_PERKS = { 1: 'taken over', 2: 'a stash room opens by the Core, its code back every two hours', 3: 'it stops sending invasions', 4: 'one more socket room, beside the Core, open at once', 5: 'its rare spawns come twice as often' };
+export const ROOT_RULES = { 2: 'A stash room opens by the Core. Its code comes back every two hours.', 3: 'Its kills roll for loot once more.', 4: 'One more socket room opens beside the Core.', 5: 'Its rare spawns come twice as often.' };
+export const ROOT_PERKS = { 1: 'taken over', 2: 'a stash room opens by the Core, its code back every two hours', 3: 'its kills roll for loot once more', 4: 'one more socket room, beside the Core, open at once', 5: 'its rare spawns come twice as often' };

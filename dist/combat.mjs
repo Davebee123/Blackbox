@@ -33,7 +33,7 @@ import { FB, fbBid, fbStart, fbPower, fbLanded, fbMisses, fbSlowed, fbBroke, fbA
 import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
-import { tickRoot, processWon } from './root.mjs';
+import { tickRoot, processWon, rootRoll } from './root.mjs';
 import { firewallCommand, wear, raidShare, hardenRestore } from './firewall.mjs';
 import { tiersRestore, LEGACY_TREES } from './talents.mjs';
 import { rollSpecials, specialsRestore, hasSpecial, SPECIAL, leaningOf } from './specials.mjs';
@@ -2332,7 +2332,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
   if (!s.run) return {};
   const tag = `${e.room}/#${e.seed}-${s.serial}`, src = guard ? 'guard' : 'home';
   // A Honeytoken on the server (sockets.mjs): its kills roll for loot once more.
-  for (let i = (programsOn(loc).includes('honeytoken') ? 2 : 1) + (heldLoc(loc) && fxPct(s, 'held-roll') ? 1 : 0), n = 0; n < i; n++) { // Tenure (3): a held server's kills roll once more
+  for (let i = (programsOn(loc).includes('honeytoken') ? 2 : 1) + (heldLoc(loc) && fxPct(s, 'held-roll') ? 1 : 0) + rootRoll(loc), n = 0; n < i; n++) { // Tenure (3): a held server's kills roll once more; Root 3 once more again (root.mjs)
     const item = rollDrop(s, { kind: guard ? 'guard' : 'home', id: e.key, layer: layerOf(loc?.depth || 1), floor: loc?.depth || null, family: loc?.family || family, elite: !!v.elite, boss: v.boss || null, rare }, lvl);
     if (item) { s.run.pack.push({ path: `${tag}/drop${n || ''}`, name: 'protocol.bin', kind: 'gear', size: '32k', item }); emit(s, 'drop', `${v.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true }); }
   }

@@ -330,7 +330,7 @@ const tame = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member && i
 export const invasionsLive = (s) => tame(s).length > 0;
 
 // ---------- what reaches your wall: the Safe readout ----------
-// The servers that send invasions to your wall (one you hold at Root 3 or have only found sends none).
+// The servers that send invasions to your wall (one you have only found sends none).
 export const sendersOf = (s) => tame(s);
 // The grade a server's invasions come at: its floor's, as unit() rolls them (variantFor, data.mjs gradeFor).
 export const senderGrade = (loc) => gradeFor(loc?.depth || 1);

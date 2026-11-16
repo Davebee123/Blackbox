@@ -2131,7 +2131,7 @@ kill's deed XP, and a held server's respawned rooms count as Building XP.
 |---|---|
 | 1 | Taken over |
 | 2 | A **stash room** beside the Core: the server's code (4 + level/4), back every two hours |
-| 3 | It stops sending invasions |
+| 3 | Its kills roll for loot once more |
 | 4 | One more socket room, beside the Core, open at once |
 | 5 | Its rare spawns come twice as often |
 
@@ -2451,7 +2451,7 @@ docs/invasions.md). On the map an invasion moves in from its server; its card, t
 it is, what it does and what it pays (`invasions` in the terminal).
 
 - **When.** The first sets out 3 minutes after you first connect to a server; the next 20–30 minutes after the last is
-  dealt with. Logged off, one every 2–4 hours. A server you hold at Root 3 sends none.
+  dealt with. Logged off, one every 2–4 hours.
 - **Who.** Half the time your strongest server sends it, otherwise any, a Volatile server counted twice and a Stable
   one half. A virus of that server's family **at its level** (Volatile and an Amplifier +2, a Lockdown −2) and floor
   grade, maybe a strain, maybe mutated (from level 4). The very first is a plain raider.
