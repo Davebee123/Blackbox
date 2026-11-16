@@ -11,7 +11,10 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   merged with main first). Check it when a session starts: a red main is the first thing to fix. A cloud session
   takes about two hours over the full suite, so leave it to the workflow. Commit or land only on `# fail 0`. The `todo`
   tests in the full suite are expected. When reading a test log, grep for its totals and its `not ok`
-  lines; never read the whole log.
+  lines; never read the whole log. Run `npm ci` once a session (esbuild, for the build and its test).
+- **The hosted build** (scripts/build.mjs): Pages serves `dist/` bundled into one script and one stylesheet. A new
+  stylesheet goes in index.html's links; a file fetched by URL is page-relative, or `new URL(x, import.meta.url)` from
+  a module at `dist/`'s root (the bundle sits there).
 - **Landing.** Every session lands its own work: commit on its branch, then `node scripts/land.mjs`. It merges
   origin/main in, tests the merged tree, pushes it to main, and starts over if main moved meanwhile. Resolve its
   conflicts yourself, keeping both sides' intent. Where two changes collide in design (one removes what the other

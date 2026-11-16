@@ -3,8 +3,8 @@
 A hacking game in the browser, played on a terminal. You fight viruses part by part, walk servers room by room down
 eight floors of a network, and climb one of four hacker classes to level 50.
 
-**Play:** [davebee123.github.io/Blackbox](https://davebee123.github.io/Blackbox/) (GitHub Pages deploys `dist/` on
-every push to main). The game saves in your browser.
+**Play:** [davebee123.github.io/Blackbox](https://davebee123.github.io/Blackbox/) (GitHub Pages deploys the build of
+`dist/` on every push to main). The game saves in your browser.
 
 **Website:** [`site/`](site/) is the game's website (static, no build step), deployed by Cloudflare Pages on every push
 to main (build command: none; build output directory: `site`).
@@ -18,6 +18,10 @@ node serve.mjs
 ```
 
 Open http://127.0.0.1:4173. The content editor is at `/editor.html`.
+
+**The hosted build.** `npm ci && node scripts/build.mjs` writes `build/`: `dist/` as one minified script
+(`app-<hash>.js`, esbuild, its dynamic imports inlined) and one stylesheet (`index.html`'s sheets in order), every
+other file copied but the editor. The Pages workflow (`.github/workflows/pages.yml`) builds it and deploys `build/`.
 
 ## How a session goes
 
@@ -284,6 +288,7 @@ comment saying what it does.
 | `serve.mjs` | The local server, and the editor's save endpoint. Listens on 127.0.0.1 only. |
 | `scripts/test.mjs` | The test runner: fast files, plus slow simulations whose imports changed. |
 | `scripts/land.mjs` | Lands a branch on main, tested against the main it lands on. |
+| `scripts/build.mjs` | The hosted game: `dist/` bundled into one minified script and stylesheet, in `build/`. |
 | `balance.mjs` | Class balance by level → [`docs/BALANCE.md`](docs/BALANCE.md). |
 | `bot.mjs` | A scripted player from a fresh save to a level, through the real commands. |
 | `pacing.mjs` | Hours of real play to each level, against the targets. |
