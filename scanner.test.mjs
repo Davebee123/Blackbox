@@ -233,15 +233,23 @@ test('the Listening Post: an ssh banner, LANTERN on the line, the menu, ON THE A
   assert.match(page, /\[?0?.*disconnect/);
 });
 
-test('the clue: the post is off the map until the first broadcast is on the air, then found once; an old radio save knows it', () => {
+test('the clue: numbers in the chatter pin Nine Days Deaf on a server of yours (none yet: it waits); the post is off the map until that thread is done; an old radio save knows it', () => {
   const s = fresh(); s.tutorialCompleted = true;
   const S = SC.scannerOf(s);
   assert.equal(SC.postFound(s), false);
   assert.doesNotMatch(mapMarkup(s, 'server'), /data-select="post"/);
-  assert.equal(SC.findPost(s, clock), false, 'nothing on the air yet');
+  assert.equal(SC.findPost(s, clock), null, 'nothing on the air yet');
   clock = S.next; SC.tickScanner(s, clock);
-  assert.equal(SC.findPost(s, clock), true);
-  assert.equal(SC.findPost(s, clock), false, 'once');
+  assert.equal(SC.findPost(s, clock), null, 'no server of yours to hear it from yet');
+  s.hackers = { [s.loadout.archetype]: { level: 6, xp: 0 } };
+  command(s, 'developer location worm');
+  const loc = SC.findPost(s, clock);
+  assert.equal(startHere(s, loc)?.chain, SC.CLUE);
+  assert.equal(chainDef(SC.CLUE).opens, 'post');
+  assert.equal(SC.findPost(s, clock), null, 'once');
+  assert.match(serverMarks(s)[loc.id]?.text || '', /Nine Days Deaf/, 'its ! on the map');
+  assert.doesNotMatch(mapMarkup(s, 'server'), /data-select="post"/);
+  S.found = true; // the thread's end (threads.test.mjs plays it)
   assert.match(mapMarkup(s, 'server'), /data-select="post"/);
   const old = fresh(); old.scanner = { log: {}, tips: [], n: 3, air: null, next: clock };
   assert.equal(SC.postFound(old), false);

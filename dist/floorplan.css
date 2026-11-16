@@ -140,6 +140,7 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 .fp-tag.key text { fill: #1a1400; font-weight: 700; }
 .fp-tag.hot rect { stroke: var(--hot); } .fp-tag.hot text { fill: var(--hot); }
 .fp-tag.rare rect { stroke: var(--next); } .fp-tag.rare text { fill: var(--next); font-size: 10px; }
+.fp-tag.lvup text { font-size: 10px; font-weight: 700; } .fp-tag.lvup.con-orange rect { stroke: #ff9a3d; } .fp-tag.lvup.con-orange text { fill: #ff9a3d; } .fp-tag.lvup.con-red rect { stroke: #ff5b3d; } .fp-tag.lvup.con-red text { fill: #ff5b3d; }
 .fp-cost rect { fill: #0a0703; stroke: var(--amber); stroke-width: 1; }
 .fp-cost text { font-size: 10px; fill: var(--amber); font-variant-numeric: tabular-nums; }
 /* A step's Signal cost shows on hover or focus only, like SCAN; on a phone's map (no hover) it always shows (the
@@ -265,6 +266,9 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 .bp-cost .bc .glyph, .bp-cost .bc svg { width: 11px; height: 11px; }
 .fp-virus b { display: block; font: 600 15px var(--sans); color: var(--bright); overflow-wrap: anywhere; }
 .fp-virus small { font: 11px var(--mono); color: var(--muted); }
+.fp-virus small .fp-lv { display: inline; font: 700 12px var(--mono); color: inherit; }
+.fp-virus small .fp-lv.con-red { color: #ff5b3d; } .fp-virus small .fp-lv.con-orange { color: #ff9a3d; } .fp-virus small .fp-lv.con-yellow { color: #f1d02f; } .fp-virus small .fp-lv.con-green { color: #7fd67a; } .fp-virus small .fp-lv.con-gray { color: #8a8174; }
+.fp-virus small .fp-up { font-style: normal; margin-left: 5px; padding: 0 4px; border: 1px solid currentColor; border-radius: 3px; font-size: 11px; }
 .fp-tag-inline { display: inline-flex; align-items: center; height: 16px; padding: 0 4px; border: 1px solid currentColor; border-radius: var(--r-tag); font: 600 10px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
 .fp-tag-inline.hot { color: var(--hot); } .fp-tag-inline.next { color: var(--next); }
 .fp-sec { margin: 0; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--muted); display: flex; gap: var(--s3); align-items: baseline; }
