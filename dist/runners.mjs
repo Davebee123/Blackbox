@@ -158,6 +158,7 @@ export function stateOf(s, r, t = clockOf(s)) {
   const trade = tradeOf(r, k, fl);
   const st = { handle: r.handle, stage, floor: fl, base, target: target.id, path, f, k, ok, level: L, trade, g, left: Math.round((from + w - u) * r.cycle) }; // left: ms to the stage's end
   st.pos = posOf(st);
+  if (st.pos.next) st.pos.ms = Math.round(((1 - st.pos.f) * w * r.cycle) / (path.length - 1)); // logged-on ms to the road's end (the map glides them there: mapmotion.mjs)
   return st;
 }
 // How far along their trade (frozen one to three floors below where they work): a new one each time they reach the last.

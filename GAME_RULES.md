@@ -2629,7 +2629,8 @@ no attaching, detaching or memory pips.
   logged-on time). At 0 they disconnect (*Signal's going. I'm out.*) and are Busy until full. If you drop to 0 you both
   jack out, the hire at whatever Signal they had.
 - **On the map**: a place you've revealed on the floor drawn has one small paper-white diamond under it while runners
-  are there, and how many beside it from two up; a runner on the road between two is a hollow diamond of their own;
+  are there, and how many beside it from two up; a runner on the road between two is a hollow diamond of their own,
+  gliding along it (`mapmotion.mjs` `runRunners`);
   your crew isn't drawn. A lone diamond's tooltip says who and what they're doing, and a click opens their card. A
   counted one's names who's there, and a click opens the list beside it (handle, class and level; again, or ×, shuts
   it); a row opens that runner's card. The picked runner has their own mark and leaves the count.

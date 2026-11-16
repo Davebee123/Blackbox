@@ -492,3 +492,24 @@ test('SPRAWL-00: a runner standing in a room wears a paper-white tab (+n for mor
     assert.equal(runnersOf(s).known[a]?.by, 'met'); assert.equal(runnersOf(s).known[b]?.by, 'met');
   } finally { FP.WORLD.people = was; }
 });
+
+// Gliding (mapmotion.mjs): a runner on a road carries the road's end and the ms to it, and that's where the clock has
+// them that many ms on; the wall time the clock was read goes with it, so the slide picks up from the last tick.
+test('a runner on a road glides to its end by the time the clock gets them there', () => {
+  const s = world(4242, 6);
+  const on = moment(s, 1, (xs) => xs.some((x) => x.st.pos.next && x.st.pos.f < 0.8));
+  const x = on.find((y) => y.st.pos.next && y.st.pos.f < 0.8);
+  const { ms } = x.st.pos;
+  assert.ok(ms > 0);
+  const before = stateOf(s, x.r, runnersOf(s).ms + ms - 50), after = stateOf(s, x.r, runnersOf(s).ms + ms + 50);
+  assert.equal(before.pos.next, x.st.pos.next, 'still on the same road just before');
+  assert.equal(after.pos.at, x.st.pos.next, 'at its end just after');
+  revealFloor(s, 1);
+  s.net = { wall: 123456 };
+  const P = (id) => x.st.g.nodes[id];
+  const m = runnersMap(s, 1).match(new RegExp(`data-runner="${x.r.handle}"[^>]*data-glide="([^"]+)"`));
+  assert.ok(m, 'its diamond carries the glide');
+  const [, , bx, by, gms, t0] = m[1].split(' ').map(Number);
+  assert.deepEqual([bx, by, gms, t0], [Math.round(P(x.st.pos.next).x * 10) / 10, Math.round(P(x.st.pos.next).y * 10) / 10, ms, 123456]);
+  assert.match(runnerMark(s, x.r.handle, 1), /data-glide="/, 'and so does the picked one');
+});

@@ -1,4 +1,4 @@
-// Files moving on the map (view.mjs trafficMarkup), run by the graphics card: each dot gets transform and opacity
+// Files and runners moving on the map (view.mjs trafficMarkup, runners-view.mjs), run by the graphics card: each dot gets transform and opacity
 // animations when the map is drawn, its clock read from the time, so nothing runs every frame. Hub-to-hub dots loop:
 // each lap carries the route's next shipment, from where it's cheap to where it pays, in the colour of the hub it left.
 // Your transfers run once, home ↔ the hub, and stop at the end. A container's .no-ambient holds them still.
@@ -74,7 +74,24 @@ export function runPackets(root = document) {
   }
   settle(fresh);
 }
-// Watch the page: a dot drawn anywhere in it starts before it's painted.
+// Runners on a road (runners-view.mjs data-glide: from, to, ms to the road's end, the wall time the clock was read):
+// each diamond slides on toward the road's end from when it was drawn, so it moves smoothly between ticks, and stops
+// there until the next redraw moves it on.
+export function runRunners(root = document) {
+  const now = Date.now(), fresh = [];
+  for (const d of root.querySelectorAll('.map-svg [data-glide]')) {
+    if (d._run) continue;
+    d._run = true;
+    const [ax, ay, bx, by, ms, t0] = d.dataset.glide.split(' ').map(Number);
+    if (!(ms > 0)) continue;
+    const a = d.animate([{ transform: at({ x: ax, y: ay }) }, { transform: at({ x: bx, y: by }) }], { duration: ms, fill: 'forwards' });
+    a.currentTime = Math.max(0, Math.min(ms, t0 ? now - t0 : 0));
+    if (d.closest('.no-ambient')) a.pause();
+    fresh.push(a);
+  }
+  settle(fresh);
+}
+// Watch the page: a dot or a runner drawn anywhere in it starts before it's painted.
 export function watchPackets(page) {
-  new MutationObserver(() => { if (page.querySelector('.map-svg .mpkt')) runPackets(page); }).observe(page, { childList: true, subtree: true });
+  new MutationObserver(() => { if (page.querySelector('.map-svg .mpkt')) runPackets(page); if (page.querySelector('.map-svg [data-glide]')) runRunners(page); }).observe(page, { childList: true, subtree: true });
 }
