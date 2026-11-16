@@ -187,7 +187,7 @@ test('cracked cells have a tip, and it shows when you carry them', async () => {
   const off = fight([]);
   assert.ok(!onPage(hudMarkup(off) + boardMarkup(off))(t.at), 'not without its part');
 });
-// A part's own rule is taught by its tag's hover, never a tip.
+// A part's, a virus's or a mutation's own rule is taught by its tag's hover, never a tip.
 test('no tip teaches how to deal with a part', () => {
   for (const id of ['veiled', 'heat', 'twin', 'bin', 'wipe', 'cnc', 'payload', 'encrypt', 'tell', 'cast', 'seal', 'mimic', 'lock', 'fuse', 'front', 'idle', 'volley', 'buffer', 'hotspot', 'syn', 'accum', 'cap', 'standby', 'scrape', 'damper', 'frost'])
     assert.ok(!TIPS.some((t) => t.id === 'fight-' + id), id);
