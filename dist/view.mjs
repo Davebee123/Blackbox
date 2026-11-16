@@ -2070,17 +2070,19 @@ export function loadoutMarkup(s, view, tab = 'protocols', ui = {}) {
   const busy = active(s) || !!s.run; // classes change at home, between fights
   const free = subOf(s, id) ? freeTiers(s, id) + (capState(s, id) === 'open' ? 1 : 0) : 0; // with no subclass, its tiers wait for the tree
 
-  // The classes, one slim button each (its level, a teal lamp on the one in use): click to look at it. Looking at
-  // one you aren't playing, Use switches to it, at home (and while trying classes out, your level comes with you).
-  const tabs = Object.entries(ARCHETYPES).map(([k, x]) => `<button type="button" class="arch${k === id ? ' on' : ''}" data-arch="${k}" aria-pressed="${k === id}" title="${esc(x.role.join(' · '))}"><b>${esc(x.name)}</b><span>Lv ${hackerLevel(s, k)}</span>${k === equippedArch ? '<i class="arch-inuse" title="In use"></i>' : ''}</button>`).join('')
+  // A left column like Achievements' categories: the classes (level, XP, a teal lamp on the one in use), and under the
+  // one you're looking at, its sections as sub-folders. Looking at one you aren't playing, Use switches to it, at home
+  // (and while trying classes out, your level comes with you).
+  const xpBar = (k) => { const h = hackerOf(s, k), f = Math.max(0, Math.min(1, (h.xp || 0) / xpToNext(h.level))); return `<span class="arch-xp"><b style="width:${Math.round(f * 100)}%"></b></span>`; };
+  const sections = `<nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', 'Protocols'], ['daemons', `Daemons${newOn(s, 'daemons') ? ` · ${newOn(s, 'daemons')} new` : ''}`], ['program', 'Program'], ['skills', `Skills and talents${free ? ` · ${free} free` : ''}`]].map(([k, l]) => (k === 'program' && !routinesOpen(s) ? `<button type="button" role="tab" class="ltab-locked" data-ltab="${k}" aria-selected="${tab === k}" aria-disabled="true" title="${esc(ROUTINES_LOCKED)}">${esc(l)}</button>` : `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`)).join('')}</nav>`;
+  const tabs = Object.entries(ARCHETYPES).map(([k, x]) => `<button type="button" class="arch${k === id ? ' on' : ''}" data-arch="${k}" aria-pressed="${k === id}" title="${esc(x.role.join(' · '))}"><b>${esc(x.name)}${k === equippedArch ? '<i class="arch-inuse" title="In use"></i>' : ''}</b><span>Lv ${hackerLevel(s, k)}</span>${xpBar(k)}</button>${k === id ? sections : ''}`).join('')
     + (id === equippedArch ? '' : `<button type="button" class="btn small arch-use" data-command="archetype ${id}" ${busy ? 'disabled title="At home only"' : `title="Play ${esc(a.name)}"`}>Use ${esc(a.name)}</button>`);
 
   return `<div class="loadout">
-    <nav class="arch-tabs" aria-label="Classes">${tabs}</nav>
-    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', 'Protocols'], ['daemons', `Daemons${newOn(s, 'daemons') ? ` · ${newOn(s, 'daemons')} new` : ''}`], ['program', 'Program'], ['skills', `Skills and talents${free ? ` · ${free} free` : ''}`]].map(([k, l]) => (k === 'program' && !routinesOpen(s) ? `<button type="button" role="tab" class="ltab-locked" data-ltab="${k}" aria-selected="${tab === k}" aria-disabled="true" title="${esc(ROUTINES_LOCKED)}">${esc(l)}</button>` : `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`)).join('')}</nav>
-    ${tab === 'daemons' ? daemonsMarkup(s) : tab === 'program' ? programMarkup(s) : tab === 'skills' ? skillsTabMarkup(s, view || id) : id === equippedArch ? `
+    <div class="lo-side"><nav class="arch-tabs" aria-label="Classes">${tabs}</nav></div>
+    <div class="lo-main">${tab === 'daemons' ? daemonsMarkup(s) : tab === 'program' ? programMarkup(s) : tab === 'skills' ? skillsTabMarkup(s, view || id) : id === equippedArch ? `
     <div class="loadout-protocols silk">${protocolGearMarkup(s)}</div>` : `
-    <div class="loadout-protocols one"><section class="card"><h2>Protocols</h2><p class="svc-line"><span class="tag dim" title="Protocols belong to the class in use">${esc(a.name)} only</span></p></section></div>`}
+    <div class="loadout-protocols one"><section class="card"><h2>Protocols</h2><p class="svc-line"><span class="tag dim" title="Protocols belong to the class in use">${esc(a.name)} only</span></p></section></div>`}</div>
     </div>`;
 }
 
