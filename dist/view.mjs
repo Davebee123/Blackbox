@@ -370,8 +370,10 @@ function rivalTag(s) {
 function roomBossTag(s) {
   const e = s.encounter;
   if (!e?.rooms || !e.bossRule) return '';
-  const R = BOSS_RULES[e.bossRule], pips = e.cutBudget != null ? ` <span class="cut-pips">${'●'.repeat(Math.max(0, e.cutBudget))}<i>${'○'.repeat(Math.max(0, TICKS.budget - e.cutBudget))}</i></span>` : '';
-  return `<span class="tag hot boss-rule" title="${esc(`Boss rule (${e.bossRule}): ${R.name}. ${R.text}`)}">rule ${e.bossRule}${pips}</span>`;
+  // No "rule a" label: only the cut budget's pips, when the rule has one (its rule in the hover).
+  if (e.cutBudget == null) return '';
+  const R = BOSS_RULES[e.bossRule];
+  return `<span class="tag hot boss-rule" title="${esc(`Boss rule (${e.bossRule}): ${R.name}. ${R.text}`)}"><span class="cut-pips">${'●'.repeat(Math.max(0, e.cutBudget))}<i>${'○'.repeat(Math.max(0, TICKS.budget - e.cutBudget))}</i></span></span>`;
 }
 
 // Clock Speed (gear.mjs STATS.clock, capped at 25%): a thin meter under your bar that fills each cycle by your Clock Speed
