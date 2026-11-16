@@ -5,7 +5,12 @@
 //   DEVICE=desk node tools/perf/phone-audit.mjs boss '?playtest=boss:resident&level=20' fight 12
 // DEVICE=phone (default): 412x839 at 2.625x, touch, the CPU slowed 4x (THROTTLE). DEVICE=desk: 1920x1080 at 2x, no slowing.
 // Steps run after the load, before measuring: wait:<ms> | js:<code> | touch:x,y | go:<module> (map, mail, loadout, server,
-// codex, rig, system...). Modes: idle (hands off), scroll (a thumb flicking the page), fight (every ready key pressed).
+// codex, rig, system...) | fresh: (walks a fresh save through the power-on, cold open and login, to the class pick).
+// Modes: idle (hands off), scroll (a thumb flicking the page), fight (every ready key pressed), click (CLICK=<sel>|<sel>...
+// clicked in turn, one every CLICK_MS, 1200 by default). The class pick idle, a drawer opening and closing, switching:
+//   node tools/perf/phone-audit.mjs pick '' idle 8 fresh:
+//   CLICK='[data-pick-class=bastion] .pk-sq' node tools/perf/phone-audit.mjs drawer '' click 8 fresh:
+//   CLICK='[data-pick-class=breaker] .pk-sq|[data-pick-class=bastion] .pk-sq|[data-pick-class=infiltrator] .pk-sq|[data-pick-class=operator] .pk-sq' node tools/perf/phone-audit.mjs switch '' click 8 fresh:
 // DROP_RAF=<regex> drops animation-frame callbacks by function name (a knock-out: what a loop is worth).
 // OUT=<file> writes everything as JSON. Prints: frames a second, the renderer's main thread by kind of work and by
 // script entry point, long blocks, the animations running, canvases and layers. The graphics are software here, so
@@ -47,6 +52,11 @@ const TRACE = `${process.env.TMPDIR || '/tmp'}/phone-audit-${process.pid}.json`;
     if (k === 'wait') await page.waitForTimeout(+v);
     else if (k === 'js') await page.evaluate(v);
     else if (k === 'touch') { const [x, y] = v.split(',').map(Number); await page.touchscreen.tap(x, y); }
+    else if (k === 'fresh') for (let n = 0; n < 200 && !(await page.$('.class-pick')); n++) {
+      const inp = await page.$('.intro-field input');
+      if (inp && (await inp.isVisible())) { await inp.type((await inp.evaluate((e) => e.classList.contains('intro-secret'))) ? 'hunter22' : 'tester'); await page.keyboard.press('Enter'); } else await page.keyboard.press('Space');
+      await page.waitForTimeout(400);
+    }
     else if (k === 'go') await page.evaluate((m) => document.querySelector(`.modules [data-module="${m}"]`).click(), v);
   }
   await page.waitForTimeout(2500);
@@ -61,7 +71,9 @@ const TRACE = `${process.env.TMPDIR || '/tmp'}/phone-audit-${process.pid}.json`;
     const loop = (async () => { let dir = -1; while (Date.now() < end - 900) { await cdp.send('Input.synthesizeScrollGesture', { x: VIEW.viewport.width / 2, y: VIEW.viewport.height * 0.57, yDistance: dir * 700, speed: 1400, gestureSourceType: 'touch' }).catch(() => {}); dir = -dir; await page.waitForTimeout(250); } })();
     await loop;
   }
+  const clicks = (process.env.CLICK || '').split('|').filter(Boolean), every = +(process.env.CLICK_MS || 1200);
   while (Date.now() < end) {
+    if (mode === 'click' && clicks.length) { await page.click(clicks[taps++ % clicks.length]).catch(() => {}); await page.waitForTimeout(every - 300); }
     if (mode === 'fight' && (await page.evaluate(() => { const el = document.querySelector('.tray .ability.ready'); if (el) el.click(); return !!el; }))) taps++;
     await page.waitForTimeout(300);
   }
