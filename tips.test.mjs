@@ -162,41 +162,22 @@ test('every threat on the map has a tip, and none speaks of outposts (gone in R2
   for (const t of TIPS) assert.doesNotMatch(t.text, /outpost|bandwidth|salvage|take (it|the outpost) back|cut off/i, t.id);
 });
 
-// The parts plan's P2 (docs/parts-plan.md): one tip for each new board element, and each element is on the board in
-// a fight with its part (selectEncounter's forced genes, as ?playtest=part:<id> builds it).
-test('the P2 parts\' board elements each have a tip, and each shows in a fight with its part', async () => {
+// Cracked cells (a mark on you, not a part) keep their tip; it shows in a fight with a Bad Block.
+test('cracked cells have a tip, and it shows when you carry them', async () => {
   const { selectEncounter } = await import('./dist/combat.mjs');
-  const fight = (family, level, genes) => { const s = fresh(); s.metAll = true; selectEncounter(s, 'random', 77, { level, family, basic: 'pulse', genes, mutation: null, quiet: true }); command(s, 'engage'); return s; };
-  const cases = {
-    'fight-cap': ['ransomware', 13, ['limiter']],
-    'fight-standby': ['worm', 14, ['spare']],
-    'fight-scrape': ['ransomware', 19, ['scraper']],
-    'fight-cracked': ['ghostroot', 21, ['badblock']],
-    'fight-damper': ['cryptominer', 23, ['damper']],
-    'fight-frost': ['ransomware', 24, ['coldstore']],
-  };
-  for (const [id, [family, level, genes]] of Object.entries(cases)) {
-    const t = TIPS.find((x) => x.id === id);
-    assert.ok(t?.pause && t.page === 'combat' && t.text.length <= 200, id);
-    const s = fight(family, level, genes);
-    if (id === 'fight-cracked') { s.server.integrity = Math.round(s.server.max / 2); s.encounter.badBlock = { left: 10, max: 10, source: 'badblock', name: 'Bad Block' }; }
-    const html = hudMarkup(s) + boardMarkup(s);
-    assert.ok(onPage(html)(t.at), `${id}: ${t.at} is on the board`);
-    const off = fight(family, level, []);
-    assert.ok(!onPage(hudMarkup(off) + boardMarkup(off))(t.at), `${id}: not without its part`);
-  }
+  const fight = (genes) => { const s = fresh(); s.metAll = true; selectEncounter(s, 'random', 77, { level: 21, family: 'ghostroot', basic: 'pulse', genes, mutation: null, quiet: true }); command(s, 'engage'); return s; };
+  const t = TIPS.find((x) => x.id === 'fight-cracked');
+  assert.ok(t?.pause && t.page === 'combat' && t.text.length <= 200);
+  const s = fight(['badblock']);
+  s.server.integrity = Math.round(s.server.max / 2); s.encounter.badBlock = { left: 10, max: 10, source: 'badblock', name: 'Bad Block' };
+  assert.ok(onPage(hudMarkup(s) + boardMarkup(s))(t.at), `${t.at} is on the HUD`);
+  const off = fight([]);
+  assert.ok(!onPage(hudMarkup(off) + boardMarkup(off))(t.at), 'not without its part');
 });
-// The parts plan's P3 and priority 3: the Rig's heat, the Degausser's Wipe, the C&C and the Payload each have a tip, on the board in a fight of its family.
-test('the P3 families\' board elements each have a tip, and each shows in a fight of its family', async () => {
-  const { selectEncounter } = await import('./dist/combat.mjs');
-  const fight = (family, level, genes = []) => { const s = fresh(); s.metAll = true; selectEncounter(s, 'random', 77, { level, family, basic: 'pulse', genes, mutation: null, quiet: true }); command(s, 'engage'); return s; };
-  for (const [id, family, level, genes] of [['fight-heat', 'cryptominer', 9], ['fight-wipe', 'wiper', 19], ['fight-twin', 'cryptominer', 9, ['twinrig']], ['fight-cnc', 'botnet', 8], ['fight-payload', 'logicbomb', 12]]) {
-    const t = TIPS.find((x) => x.id === id);
-    assert.ok(t?.pause && t.page === 'combat' && t.text.length <= 200, id);
-    const s = fight(family, level, genes), off = fight('ransomware', level);
-    assert.ok(onPage(hudMarkup(s) + boardMarkup(s))(t.at), `${id}: ${t.at} is on the board`);
-    assert.ok(!onPage(hudMarkup(off) + boardMarkup(off))(t.at), `${id}: not on a Ransomware's`);
-  }
+// A part's own rule is taught by its tag's hover, never a tip.
+test('no tip teaches how to deal with a part', () => {
+  for (const id of ['veiled', 'heat', 'twin', 'bin', 'wipe', 'cnc', 'payload', 'encrypt', 'tell', 'cast', 'seal', 'mimic', 'lock', 'fuse', 'front', 'idle', 'volley', 'buffer', 'hotspot', 'syn', 'accum', 'cap', 'standby', 'scrape', 'damper', 'frost'])
+    assert.ok(!TIPS.some((t) => t.id === 'fight-' + id), id);
 });
 
 // A tip whose selector names a class or id no markup ever writes can never show (the old file-system runs' tips, the
