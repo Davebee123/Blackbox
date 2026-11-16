@@ -43,14 +43,14 @@ test('the Rig holds Achievements, Casing (with the window\'s districts) and Term
 
 test('Grain: on by default, off by default in the phone layout, and a choice either way overrides that', () => {
   const s = fresh();
-  assert.match(systemMarkup(s), /data-run="grain off" aria-pressed="true"[^>]*>Grain on</);
-  assert.match(systemMarkup(s, { phone: true }), /data-run="grain on" aria-pressed="false"[^>]*>Grain off</);
+  assert.match(systemMarkup(s), /data-run="grain off" checked [^>]*><span>Grain</);
+  assert.match(systemMarkup(s, { phone: true }), /data-run="grain on"  [^>]*><span>Grain</);
   s.settings.grain = true;
-  assert.match(systemMarkup(s, { phone: true }), />Grain on</);
+  assert.match(systemMarkup(s, { phone: true }), /data-run="grain off" checked/);
   s.settings.grain = false;
-  assert.match(systemMarkup(s), />Grain off</);
+  assert.match(systemMarkup(s), /data-run="grain on" /);
   s.settings.shell = 'plain';
-  assert.match(systemMarkup(s), /data-run="grain on"[^>]* disabled /, 'no CRT, no grain to switch');
+  assert.match(systemMarkup(s), /data-run="grain on"[^>]* disabled>/, 'no CRT, no grain to switch');
   const css = readFileSync(new URL('./dist/style.css', import.meta.url), 'utf8');
   assert.match(css, /body\.grain-off #crt::after, \[data-form='phone'\] body:not\(\.grain-on\) #crt::after \{ display: none; \}/);
 });

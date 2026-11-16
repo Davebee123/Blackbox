@@ -165,6 +165,8 @@
 :root[data-sfx="off"] #fx-back > i { display: none; }
 :root[data-sfx="subtle"] #fx-back .fx-tex, :root[data-sfx="subtle"] #fx-back .fx-vig { animation: none; }
 /* Motion off or reduced motion: everything here holds still (a floor keeps its colours and a still texture). */
+/* Ambient motion off (the Graphics settings, graphics.mjs): the backdrop holds still; Low Signal still pulses. */
+.no-ambient #fx-back .fx-tex, .no-ambient #fx-back:not(.low) .fx-vig, .no-ambient #fx-back:not(.low) .fx-static { animation: none; }
 .no-motion #fx-back, .no-motion #fx-back > i, .no-motion #crt-bezel.low::after, .no-motion .lamp i, .no-motion #virus-canvas.sfx-tear { animation: none !important; transition: none; }
 .no-motion #fx-back .fx-tear { display: none; }
 @media (prefers-reduced-motion: reduce) {

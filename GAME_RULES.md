@@ -2824,9 +2824,10 @@ A page stays while it's true, an hour at most; the same news again replaces the 
 
 ### Settings
 
-On the **Settings** page: **speed** (relaxed 12 s, normal 8 s, fast 5 s a cycle), **sound** with four sliders (Music,
-Ambience, Places, Effects), **motion**, **vibration** (on phones that have it), **Screen effects**, **UI scale** and the
-casing's options. Nothing plays before your first click or key. With `?dev` a **Dev** tab adds co-op, pace, a sound
+On the **Settings** page, a slider for a setting with steps and a checkbox for one that is on or off: **Sound** (four
+sliders: Music, Ambience, Places, Effects), **Options** (speed: relaxed 12 s, normal 8 s, fast 5 s a cycle; UI scale;
+sound, music, radio, vibration on phones that have it, tips, #net) and **Graphics**. Nothing plays before your first
+click or key. With `?dev` a **Dev** tab adds co-op, pace, a sound
 test, the wire, fight reports and the log (`logs` opens it).
 
 - **Sound** is recorded CC0 samples and a little synthesis in an old-hardware palette (`dist/sfx/CREDITS.md`), with a
@@ -2843,6 +2844,20 @@ test, the wire, fight reports and the log (`logs` opens it).
 - **Music:** a track on your server and another on a run. Each virus family's fights have their own theme (dark,
   gritty industrial synthwave, synthesized live): it fades in as the fight starts, builds as the virus breaks, and fades
   back to the track when the fight is over. It plays a little under the track, on the Music slider.
+- **Graphics** (graphics.mjs): a preset (`graphics auto|quality|balanced|performance`) over the rows that cost looks,
+  and the screen's own (Motion, the immersive shell, Casing, Window, Grain, the Screen effects' parts). **Auto** reads
+  the device on every load: a desktop plays Quality, a phone Balanced. Changing a row by hand (`graphics virus
+  full|slow|still`, `graphics dissolve all|fewer|fade`, `graphics ambient|chips|tether on|off`, `screen fx <level>`)
+  makes it Custom. Motion off and reduced motion still everything, whatever the rows say.
+
+  | Row | Quality | Balanced | Performance |
+  |---|---|---|---|
+  | Virus picture (frames a second) | Full (25) | Slow (8) | Still |
+  | Part dissolve | All bits | Fewer (a third) | Fade |
+  | Screen effects | Medium | Medium | Subtle |
+  | Ambient motion (the maps, the backdrop's drift, the CRT's roll) | on | on | off |
+  | Chip effects at +1 | on | on | off (Now only) |
+  | Breathing tether | on | off (steady) | off |
 - **UI scale** (Settings, `ui scale <auto|80–200>`, 100% by default) draws the whole screen larger or smaller;
   it grows only while the screen stays 1700px wide in its own pixels. **Auto** sizes it to 1800px.
 - **On a phone** (up to 600 px wide, or 500 px tall on a touch screen) the top bar is one strip (the pager's lamp and

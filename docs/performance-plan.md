@@ -75,18 +75,21 @@ A first load is 328 requests and 9 MB (5.3 MB of scripts in 196 files, 2.2 MB of
 
 | Setting | Helps | Desktop default | Phone default |
 |---|---|---|---|
-| Virus picture: full motion, slow, or still | phones (an icon there) | full | to pick |
-| Ambient motion: the map's pulses, the rooms' bits and links, the backdrop's drift, the CRT's roll | both | on | to pick |
-| Part dissolve: all its bits, fewer, or a fade | both | all | to pick |
-| Chip effects: Now and +1, or Now only (about 4%) | both | both columns | to pick |
-| Tether glow: breathing or steady | both | breathing | to pick |
-| Fight effects level (today's Screen effects: off, subtle, medium, bold) | both | medium | to pick |
+| Virus picture: full motion, slow, or still | phones (an icon there) | full | slow |
+| Ambient motion: the map's pulses, the rooms' bits and links, the backdrop's drift, the CRT's roll | both | on | on |
+| Part dissolve: all its bits, fewer, or a fade | both | all | fewer |
+| Chip effects: Now and +1, or Now only (about 4%) | both | both columns | both columns |
+| Tether glow: breathing or steady | both | breathing | steady |
+| Fight effects level (today's Screen effects: off, subtle, medium, bold) | both | medium | medium |
 
 ## The settings screen (batch 5)
 
-A Graphics block on the Settings page: a preset (Auto, Quality, Balanced, Performance; Auto reads the device) over the
-rows above, each row marked as costing looks. Motion, Screen effects, Shell, Casing and Window already live there and
-fold into it. Prototype two or three layouts as screenshots first (desktop and phone); the designer picks.
+Landed. The designer's pick: one screen, a checkbox for what is on or off, a slider for what has steps (the whole page,
+Options too). Graphics is the right column: the preset over a *Costs looks* heading (Virus picture, Part dissolve and
+Screen effects as sliders; Ambient motion, Chip effects at +1, Breathing tether as checkboxes), then *Screen* (Motion,
+the shell, Casing, Window, Grain, the Screen effects' parts). Auto: a desktop Quality, a phone Balanced (the phone
+column above). Performance is still virus, no ambient, a fade, Now only, steady, subtle. `graphics.mjs`; GAME_RULES.md
+"Settings".
 
 ## The loading screen (batch 6)
 
@@ -106,7 +109,7 @@ One session each, started fresh. Measure before and after with `tools/perf/phone
 | 2 | Partial rebuild of the fight screen | `app.js` render and `put`, the board's post-render steps | landed |
 | 3 | Composited map and rooms animations | the map's and floorplan's markup and CSS | landed |
 | 4 | The dissolve on a canvas | `hitfx.mjs`, `dissolvefx.mjs` | landed |
-| 5 | The Graphics settings: prototypes, the pick, then the build | the Settings page, `settings` in the save | after 3 and 4 (it switches them) |
+| 5 | The Graphics settings: prototypes, the pick, then the build | the Settings page, `settings` in the save | landed |
 | 6 | The loading screen: prototypes, the pick, then the build and the warm-ups | `poweron.mjs`, `shell.mjs` boot, `sound.mjs` loadBank | any time |
 | 7 | A build step for the hosted game (approved 2026-11-15); `dist/` stays runnable as plain files for development | new | last |
 
@@ -164,6 +167,16 @@ over 50 ms 74, 68 → 72, 57; (desktop): paints 403, 472 → 148, 154, raster ta
 606 → 610, 583 ms/s. Regular fights broke no part in the audit's 12 s: unchanged. Boss fights to their act break (the
 Strip plays), Motion off (no canvas), the phone's layout, several parts at once: as before, no canvas left behind, no
 page errors.
+
+**Batch 5 (landed).** Each preset against main, same day, two runs each, frames a second (main thread ms/s). Phone:
+boss fight main 18.4, 21.7 (977, 972); Quality 21.4, 20.5 (957, 971); Balanced 26.3, 26.0 (945, 944); Performance
+32.3, 31.8 (910, 926), long blocks 71, 65 → 44, 41. Regular fight main 36.1, 35.4 (911, 921); Quality 29.5, 34.6;
+Balanced 30.3, 34.9; Performance 44.2, 40.4 (820, 854). Rooms map idle main 67, 70 ms/s; Quality 83, 58; Balanced 78,
+77; Performance 53, 50. Map idle 25–30 ms/s under every preset. Desktop: boss main 11.4, 11.3 (574, 640); Quality
+12.1, 10.6; Balanced 11.0, 11.3 (504, 532); Performance 11.3, 12.8 (538, 500); rooms map main 26, 24 frames/s,
+Performance 33, 36; the Map and regular fights within the noise (the window's canvas is most of a desktop's cost).
+Quality runs main's code paths. Every row takes effect at once and survives a reload; Motion off and reduced motion
+still win; no page errors in a boss fight under each preset, desktop and phone.
 
 Not yet measured: breach and campaign, hubs and shops, co-op, the class pick and tutorial, the More sheet, a phone on
 its side.
