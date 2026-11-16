@@ -94,6 +94,7 @@ test('a fight plays them: react() asks for the batch\'s voices, fire() holds a c
   const src = fs.readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
   assert.match(src, /const incoming = [^\n]*attackVoices\(events, /);
   assert.match(src, /feel\.mute\(voiced\.has\(e\) \|\| incoming\.voiced\.has\(e\)\)/);
-  assert.match(src, /function fire\(b, spawned = \[\]\) \{[^]*?takeStrike\(/);
+  assert.match(src, /function fire\(b, spawned = \[\], cycle = null\) \{[^]*?takeStrike\(/);
+  assert.match(src, /function fire\(b, spawned = \[\], cycle = null\) \{[^]*?cutAt === cycle/); // a chip you cut fizzles; it never strikes
   assert.equal(src.match(/feel\.attack\(/g)?.length, 1, 'one place plays them: attackSound');
 });

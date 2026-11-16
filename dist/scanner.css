@@ -9,59 +9,74 @@
 .hub-term .post-by { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font: var(--label); letter-spacing: var(--label-track); color: var(--muted); }
 .hub-term .post-by svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
 
-/* The radio, in the Tune window: the frequency and counts | the dial and the transcript | the station and the lock;
-   the tape under them. */
-.sc-strip { display: grid; grid-template-columns: 190px minmax(0, 1fr) 260px; border: 1px solid var(--line); border-radius: var(--r-card); background: #0a0703; }
-.sc-strip > * { padding: 10px 12px; min-width: 0; }
-.sc-strip .glyph, .post-win .glyph { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-.sc-l { display: grid; align-content: space-between; gap: 12px; border-right: 1px solid var(--line); }
-.sc-freq { font: 500 22px var(--mono); color: var(--bright); letter-spacing: 0.5px; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; }
-.sc-freq small { font-size: 11px; color: var(--muted); margin-left: 3px; }
-.sc-counts { display: flex; gap: 10px; }
-.sc-counts button { display: inline-flex; gap: 4px; align-items: center; color: var(--amber); font: 500 11px var(--mono); padding: 1px 2px; background: none; border: 1px solid transparent; border-radius: var(--r-btn); cursor: pointer; }
-.sc-counts button:hover { border-color: var(--line-strong); }
-.sc-counts em { font-style: normal; color: var(--muted); }
-.sc-strip .sc-counts .glyph { width: 12px; height: 12px; }
+/* Tune: lantern-rx's status line over the pad (an SVG that scales with the window). Teal is only you (your light, dot,
+   reticle and lock), amber the station and its pay, red the air bar's last seconds, misses and losses. */
+.post-win .glyph { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.sc-rx { display: grid; grid-template-rows: auto minmax(0, 1fr); border: 1px solid var(--line); border-radius: var(--r-card); background: #0a0703; font: 500 11px/1.45 var(--mono); overflow: hidden; }
+.sc-status { display: flex; align-items: center; padding: 9px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; color: var(--muted); }
+.sc-status > * + * { margin-left: 16px; padding-left: 16px; border-left: 1px solid var(--line); }
+.sc-app { color: var(--amber); font-weight: 600; letter-spacing: 0.5px; }
+.sc-app em { font-style: normal; color: var(--dim); font-weight: 500; }
+.sc-sig { display: inline-flex; gap: 2px; align-items: center; }
+.sc-sig i { width: 4px; height: 10px; border: 1px solid var(--amber-deep); }
+.sc-sig i.on { background: var(--amber); border-color: var(--amber); }
+.sc-status > .sc-decs { margin-left: auto; padding-left: 0; display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--r-btn); overflow: hidden; }
+.sc-decs button { border: 0; border-radius: 0; background: none; padding: 3px 10px; font: 600 10px var(--mono); letter-spacing: 1px; color: var(--dim); cursor: pointer; min-height: 24px; }
+.sc-decs button + button { border-left: 1px solid var(--line); }
+.sc-decs button:hover { color: var(--text); }
+.sc-decs button[aria-pressed="true"] { background: rgba(127, 209, 199, 0.14); color: var(--you); }
+.sc-pad { margin: 10px; border-radius: 3px; background: radial-gradient(circle, rgba(241, 185, 47, 0.045) 0.8px, transparent 1.3px) 10px 10px / 20px 20px, radial-gradient(ellipse 70% 65% at 50% 45%, #0c0905, #040302 85%); box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6); cursor: crosshair; touch-action: none; user-select: none; -webkit-user-select: none; outline: none; min-height: 0; }
+.sc-pad:focus-visible { box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--line-strong); }
+.sc-pad svg { display: block; width: 100%; height: auto; aspect-ratio: 900 / 562; }
+.sc-pad .p-corner { fill: none; stroke: var(--line-strong); stroke-width: 1.2; }
+.sc-pad .p-mid { stroke: rgba(241, 185, 47, 0.09); }
+.sc-pad .p-axis { font: 600 9px var(--mono); letter-spacing: 1px; fill: var(--dim); }
+.sc-pad .p-you { fill: var(--you); }
+.sc-pad .p-ring { fill: rgba(127, 209, 199, 0.04); stroke: rgba(127, 209, 199, 0.55); stroke-width: 1; }
+.sc-pad .p-ring.in { fill: rgba(127, 209, 199, 0.1); stroke: var(--you); stroke-width: 1.2; }
+.sc-pad .p-tick { stroke: rgba(127, 209, 199, 0.55); stroke-width: 1.2; } .sc-pad .p-tick.in { stroke: var(--you); }
+.sc-pad .p-arc { fill: none; stroke: var(--you); stroke-width: 3; stroke-linecap: round; opacity: 0.45; }
+.sc-pad .p-arc.in { opacity: 1; filter: drop-shadow(0 0 4px rgba(127, 209, 199, 0.7)); }
+.sc-pad .p-reach { fill: none; stroke: rgba(127, 209, 199, 0.18); stroke-dasharray: 1 4; }
+.sc-pad .p-found { fill: none; stroke: var(--you); stroke-width: 1.5; }
+.sc-pad .p-aim { stroke: rgba(127, 209, 199, 0.35); stroke-dasharray: 2 3; }
+.sc-pad .p-pt { fill: var(--amber); } .sc-pad .p-pt.hi { fill: var(--next); } .sc-pad .p-pt.dead { fill: var(--gray); }
+.sc-pad .p-core { fill: var(--next); }
+.sc-pad .p-shock, .sc-pad .p-flare, .sc-pad .p-burst { fill: none; stroke: var(--next); stroke-width: 1.5; }
+.sc-pad .p-slot { fill: none; stroke: rgba(241, 185, 47, 0.2); } .sc-pad .p-slot.hot { stroke: var(--hot); }
+.sc-pad .p-sym { fill: var(--amber); filter: drop-shadow(0 0 6px rgba(241, 185, 47, 0.8)); }
+.sc-pad .p-sym.miss { fill: var(--hot); filter: none; }
+.sc-pad .p-symhalo { fill: var(--amber); opacity: 0.15; }
+.sc-pad .p-count { fill: none; stroke: var(--amber); stroke-width: 1.5; opacity: 0.6; }
+.sc-pad .p-count.quick { stroke: var(--next); stroke-width: 2; opacity: 1; }
+.sc-pad .p-dash { fill: var(--amber); } .sc-pad .p-dash-fill { fill: var(--next); }
+.sc-pad .p-cell { fill: none; stroke: var(--amber-deep); } .sc-pad .p-cell.on { fill: var(--amber); stroke: var(--amber); }
+.sc-pad .p-strike { fill: none; stroke: rgba(255, 91, 61, 0.35); stroke-width: 1.5; stroke-linecap: round; } .sc-pad .p-strike.on { stroke: var(--hot); }
+.sc-pad .p-airtrack { stroke: rgba(241, 185, 47, 0.12); stroke-width: 2; }
+.sc-pad .p-air { stroke: var(--amber); stroke-width: 2; } .sc-pad .p-air.hot { stroke: var(--hot); }
+.sc-pad .p-airt { font: 600 10px var(--mono); fill: var(--muted); } .sc-pad .p-airt.hot { fill: var(--hot); }
+.sc-pad .p-tick-text { font: 500 12px var(--mono); fill: var(--amber); opacity: 0.55; }
+.sc-pad .p-tick-text .n { fill: var(--amber-deep); } .sc-pad .p-tick-text .s { fill: var(--gray); opacity: 0.6; }
+.sc-pad .p-tick-text .g { fill: var(--next); } .sc-pad .p-tick-text .y { fill: var(--you); }
+.sc-pad .p-head { fill: var(--amber); opacity: 0.5; }
+.sc-pad .p-ascii { font: 600 15px var(--mono); fill: var(--amber); filter: drop-shadow(0 0 5px rgba(241, 185, 47, 0.75)); }
+.sc-pad .p-ascii .fl { fill: var(--bright); }
+.sc-pad .p-k { font: 600 10px var(--mono); letter-spacing: 3px; fill: var(--muted); } .sc-pad .p-k.hot { fill: var(--hot); }
+.sc-pad .p-name { font: 600 15px var(--mono); letter-spacing: 1px; fill: var(--bright); } .sc-pad .p-name.dim { fill: var(--muted); }
+.sc-pad .p-note { font: 500 11px var(--mono); fill: var(--dim); }
+.sc-pad .p-pay { font: 600 12px var(--mono); fill: var(--next); }
+.sc-pad .p-ico { color: var(--next); }
+.sc-pad .p-ico .glyph { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.sc-pad .p-btn { cursor: pointer; } .sc-pad .p-btn rect { fill: rgba(241, 185, 47, 0.08); stroke: var(--line-strong); }
+.sc-pad .p-btn:hover rect { fill: rgba(241, 185, 47, 0.16); stroke: var(--amber); }
+.sc-pad .p-btn path { fill: var(--amber); } .sc-pad .p-btn text { font: 600 10px var(--mono); letter-spacing: 1.5px; fill: var(--amber); }
 
-.sc-m { display: grid; align-content: start; gap: 4px; padding-top: 8px; }
-.sc-dial { position: relative; height: 50px; cursor: ew-resize; touch-action: none; user-select: none; overflow: hidden; outline: none; border-radius: var(--r-tag); }
-.sc-dial:focus-visible { box-shadow: inset 0 0 0 1px var(--line-strong); }
-.sc-dial.fine { background: var(--amber-wash); }
-.sc-band { position: absolute; top: 0; bottom: 0; left: 10px; right: 10px; }
-.sc-scale { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.sc-scale line { stroke: var(--amber-deep); }
-.sc-scale line.big { stroke: var(--muted); }
-.sc-scale text { fill: var(--dim); font: 10px var(--mono); }
-.sc-glow { position: absolute; top: 3px; height: 24px; width: 56px; margin-left: -28px; background: radial-gradient(closest-side, rgba(241, 185, 47, 0.55), rgba(241, 185, 47, 0)); pointer-events: none; }
-.sc-glow.old { background: radial-gradient(closest-side, rgba(185, 157, 97, 0.4), rgba(185, 157, 97, 0)); }
-.sc-carrier { position: absolute; top: 2px; height: 30px; width: 2px; margin-left: -1px; background: var(--amber); box-shadow: 0 0 6px rgba(241, 185, 47, 0.9); pointer-events: none; }
-.sc-zone { position: absolute; top: -2px; height: 36px; background: rgba(127, 209, 199, 0.12); border-left: 1px solid rgba(127, 209, 199, 0.45); border-right: 1px solid rgba(127, 209, 199, 0.45); pointer-events: none; }
-.sc-needle { position: absolute; top: -2px; height: 36px; width: 2px; margin-left: -1px; background: var(--you); box-shadow: 0 0 6px rgba(127, 209, 199, 0.6); pointer-events: none; }
-.sc-needle::before { content: ''; position: absolute; top: -2px; left: -4px; border: 5px solid transparent; border-top-color: var(--you); }
-.sc-tx { font: 500 12px/1.5 var(--mono); color: var(--text); letter-spacing: 0.3px; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
-.sc-tx.static { color: var(--gray); }
-.sc-tx.tr { color: var(--muted); }
-
-.sc-r { border-left: 1px solid var(--line); display: grid; align-content: start; gap: 10px; }
-.sc-who-row { display: flex; align-items: center; gap: var(--s4); color: var(--amber); min-width: 0; }
-.sc-who { display: flex; align-items: center; gap: var(--s4); min-width: 0; }
-.sc-who b { font: 600 12px var(--mono); color: var(--bright); letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sc-who b.q { color: var(--dim); font-weight: 500; }
-.sc-meter { display: flex; align-items: center; gap: 2px; margin-left: auto; }
-.sc-meter i { width: 5px; height: 10px; border: 1px solid var(--amber-deep); }
-.sc-meter i.on { background: var(--amber); border-color: var(--amber); }
-.sc-meter b { width: 22px; margin-left: 5px; font: 600 11px var(--mono); color: var(--muted); }
-.sc-lock { height: 2px; background: rgba(127, 209, 199, 0.12); }
-.sc-lock i { display: block; height: 100%; width: 0; background: var(--you); }
-.sc-result { display: flex; align-items: center; gap: var(--s4); min-height: var(--h-chip); }
+/* The tape (in Recordings) and the log's pay chips */
 .sc-ok { margin-left: auto; display: inline-flex; gap: 4px; align-items: center; color: var(--amber); font: 600 11px var(--mono); letter-spacing: 1px; }
 .sc-ok .glyph { width: 13px; height: 13px; }
 .sc-chip { display: inline-flex; align-items: center; gap: 6px; height: var(--h-chip); padding: 0 7px; border: 1px solid var(--line-strong); border-radius: var(--r-btn); color: var(--amber); font: 600 11px var(--mono); white-space: nowrap; background: rgba(10, 7, 3, 0.9); }
 .sc-chip small { color: var(--muted); font-weight: 400; }
 .sc-chip .glyph { width: 13px; height: 13px; }
-
-/* The tape: one row, under the radio and in Recordings */
-.sc-foot { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 8px 12px; }
 .sc-tape { display: flex; align-items: center; gap: 10px; color: var(--amber); font: 500 12px var(--mono); min-height: 26px; }
 .sc-tape b { color: var(--bright); font-weight: 600; letter-spacing: 0.5px; }
 .sc-tape-k { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--muted); min-width: 64px; }
@@ -79,12 +94,14 @@
 .sc-row-l { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; font: 500 12px var(--mono); color: var(--text); }
 .sc-row-l.q { color: var(--dim); }
 
-.hub-session.with-win:has(.post-win.tune) { grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); }
+/* The Tune window: wider than a hub's usual, the pad filling it. */
+@media (min-width: 901px) { .hub-session.with-win:has(.post-win.tune) { grid-template-columns: minmax(0, 0.6fr) minmax(0, 1.4fr); } }
+.post-win.tune { display: grid; grid-template-rows: auto minmax(0, 1fr); }
 .no-motion .mnode.post .post-ping { animation: none; opacity: 0.6; }
 @media (prefers-reduced-motion: reduce) { .mnode.post .post-ping { animation: none; opacity: 0.6; } }
-/* A narrow screen: the three columns stack */
-@media (max-width: 1100px) {
-  .sc-strip { grid-template-columns: minmax(0, 1fr); }
-  .sc-l { grid-auto-flow: column; justify-content: space-between; align-items: center; border-right: 0; border-bottom: 1px solid var(--line); }
-  .sc-r { border-left: 0; border-top: 1px solid var(--line); }
+/* A phone: the status line wraps, the decoder switch keeps a thumb's height. */
+@media (max-width: 700px) {
+  .sc-status { flex-wrap: wrap; row-gap: 6px; padding: 8px 10px; }
+  .sc-pad { margin: 6px; }
+  .sc-decs button { min-height: 36px; padding: 3px 14px; }
 }
