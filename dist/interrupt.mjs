@@ -140,6 +140,7 @@ export function cancelAttack(s, p) {
     a.tap = 0; a.volley = null;
   }
   a.n = (a.n || 0) + 1;
+  p.cutAt = e.cycle; // (the board: its chip fizzles instead of striking)
   if (a.windup) a.wound = 0;
   liensPaid(s, p); // REPO MAN's Collection, cut: its Liens are paid off too
 }
