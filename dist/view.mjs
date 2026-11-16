@@ -49,7 +49,7 @@ import { commsOf } from './comms.mjs';
 import { shopOf, chaseItem, blockOf } from './store.mjs';
 import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, connectedTo, viaName } from './hidden.mjs';
 import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend, waypointOf, holderOf } from './floors.mjs';
-import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
+import { ROOT, ROOT_RULES, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, FILTER_CAP, baseName as filterBase } from './filters.mjs';
 import { situationOf } from './situations.mjs';
@@ -2705,7 +2705,14 @@ export function serverNext(lvl) {
 
 // An event on a server (events.mjs): a mark on the map node, and what's happening on its card.
 // Root access (root.mjs): five pips, the perks on hover; and the process a log rotation brought in.
-const rootPips = (l) => { const r = rootOf(l), p = rootProgress(l); return `<span class="root-pips" title="${esc(Array.from({ length: ROOT.max }, (_, i) => `${i < r ? '■' : '□'} Root ${i + 1}: ${ROOT_PERKS[i + 1]}`).join('\n') + (p ? `\n\n${p.have}/${p.need} respawned rooms cleared for Root ${r + 1}` : ''))}">${'■'.repeat(r)}<i>${'□'.repeat(ROOT.max - r)}</i></span>`; };
+// The Root pips (root.mjs) and their tooltip, WoW's grammar: Root N, its kind line, the rule, then Root 2-5 as a ladder
+// (reached teal, the next bright, the rest muted) and the answer: how many more clears to the next.
+const rootPips = (l) => {
+  const r = rootOf(l), p = rootProgress(l);
+  const ladder = Array.from({ length: ROOT.max - 1 }, (_, i) => i + 2).map((n) => `<span class="rt-step${n <= r ? ' on' : n === r + 1 ? ' next' : ''}"><i>${n <= r ? '■' : '□'} ${n}</i>${esc(ROOT_RULES[n])}</span>`).join('');
+  const tip = `Root ${r}: Clearing respawned fight rooms on this server raises its Root.${p ? `\n▸ Clear ${p.need - p.have} more for Root ${r + 1}.` : ''}`;
+  return `<span class="root-pips" title="${esc(tip)}" data-tt-kind="Held server · ${r} of ${ROOT.max}"><template class="tt-more">${ladder}</template>${'■'.repeat(r)}<i>${'□'.repeat(ROOT.max - r)}</i></span>`;
+};
 const rotMark = (l) => { const p = procOf(l); return p ? `<g class="rotmark${p.rare ? ' rare' : ''}" transform="translate(-13 -12)"><title>${esc(`${p.rare ? 'Rare virus' : 'Log rotation'}: ${p.name} lv ${p.level} in ${p.room}`)}</title><text>${p.rare ? '★' : '↻'}</text></g>` : ''; };
 const hm = (ms) => (ms >= 3600000 ? `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m` : fmtLeft(ms));
 const rotLine = (s, l) => {

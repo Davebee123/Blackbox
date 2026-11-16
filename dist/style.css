@@ -3214,6 +3214,9 @@ details.map-pick { pointer-events: auto; }
 /* Root access (root.mjs): pips on the server card, a ↻ (or ★ rare) on the map node */
 .root-pips { letter-spacing: 1px; color: var(--teal, #6fd3c1); }
 .root-pips i { font-style: normal; opacity: 0.35; }
+.tt .tt-more .rt-step { flex: 1 1 100%; display: grid; grid-template-columns: 3.2ch 1fr; gap: 6px; color: var(--muted); font-size: calc(12px * var(--ui, 1)); } /* a Root level in the pips' tooltip (view.mjs rootPips) */
+.tt .tt-more .rt-step i { font: normal calc(11px * var(--ui, 1)) var(--mono); }
+.tt .tt-more .rt-step.on { color: var(--you); } .tt .tt-more .rt-step.next { color: var(--text); }
 .mnode .rotmark text { font-size: 11px; fill: var(--teal, #6fd3c1); text-anchor: middle; dominant-baseline: central; }
 .mnode .rotmark.rare text { fill: var(--amber, #ffb84d); }
 .motion .mnode .rotmark { animation: drop-ping 2.4s ease-in-out infinite; }
