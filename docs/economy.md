@@ -118,7 +118,7 @@ Root still rewards cleared respawns on a server you hold, but no longer opens a 
 | Root | After | Perk |
 |---|---|---|
 | 1 | the takeover | taken over |
-| 2 | 5 cleared respawns | stops costing memory; its kills roll for loot once more *(today's Root 3)* |
+| 2 | 5 cleared respawns | stops costing memory; its elites and guard posts roll for loot once more *(today's Root 3)* |
 | 3 | 15 | +1 socket room beside the Core *(today's Root 4)* |
 | 4 | 30 | rare spawns twice as often *(today's Root 5)* |
 

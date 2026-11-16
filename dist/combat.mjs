@@ -2332,7 +2332,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
   if (!s.run) return {};
   const tag = `${e.room}/#${e.seed}-${s.serial}`, src = guard ? 'guard' : 'home';
   // A Honeytoken on the server (sockets.mjs): its kills roll for loot once more.
-  for (let i = (programsOn(loc).includes('honeytoken') ? 2 : 1) + (heldLoc(loc) && fxPct(s, 'held-roll') ? 1 : 0) + rootRoll(loc), n = 0; n < i; n++) { // Tenure (3): a held server's kills roll once more; Root 3 once more again (root.mjs)
+  for (let i = (programsOn(loc).includes('honeytoken') ? 2 : 1) + (heldLoc(loc) && fxPct(s, 'held-roll') ? 1 : 0) + (guard ? rootRoll(loc) : 0), n = 0; n < i; n++) { // Tenure (3): a held server's kills roll once more; Root 3 its elites and guard posts once more again (root.mjs)
     const item = rollDrop(s, { kind: guard ? 'guard' : 'home', id: e.key, layer: layerOf(loc?.depth || 1), floor: loc?.depth || null, family: loc?.family || family, elite: !!v.elite, boss: v.boss || null, rare }, lvl);
     if (item) { s.run.pack.push({ path: `${tag}/drop${n || ''}`, name: 'protocol.bin', kind: 'gear', size: '32k', item }); emit(s, 'drop', `${v.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true }); }
   }

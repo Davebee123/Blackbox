@@ -2134,7 +2134,7 @@ kill's deed XP, and a held server's respawned rooms count as Building XP.
 |---|---|
 | 1 | Taken over |
 | 2 | A **stash room** beside the Core: the server's code (4 + level/4), back every two hours |
-| 3 | Its kills roll for loot once more |
+| 3 | Its elites and guard posts roll for loot once more |
 | 4 | One more socket room, beside the Core, open at once |
 | 5 | Its rare spawns come twice as often |
 
