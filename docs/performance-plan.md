@@ -59,6 +59,7 @@ A first load is 328 requests and 9 MB (5.3 MB of scripts in 196 files, 2.2 MB of
 | Three loops rest: rooms traffic, glyph flicker, the virus pictures | both | landed |
 | The game's tick rests when nothing needs it (`app.js` frame) | both | landed |
 | The fight screen rebuilds only what changed (`app.js` putRows) | both | landed |
+| A click on a room swaps its card, not the rooms map (`app.js` putRooms); virus names and room outlines kept between draws. Click to frame, median: desktop 76 → 55 ms, phone 158 → 89 ms | both | landed |
 | Samples, audio textures and the chip effects' defs warmed on the loading screen (`warm.mjs`) | both | landed |
 | One bundled, minified script and stylesheet for the hosted game | both, phones most | batch 7 (build step approved) |
 

@@ -339,7 +339,15 @@ const lookOf = (s, room) => (!known(s, room.id) || room.nook ? null : room.kind 
 // Its outline as a path, centred on (x, y): process (and anything without a look) the cut-corner chip; an elite deep
 // bevels; the Core a point at the foot; a socket a bus slot's pins on both sides; a cache rounded; the vault square;
 // the rest room deeply rounded; the entry and the den a hexagon.
+// Kept by its arguments: the map draws every room's outline on every redraw, and they rarely move.
+const CHIPS = new Map();
 function chipD(look, x, y, hw, hh, c) {
+  const k = `${look}|${x}|${y}|${hw}|${hh}|${c}`;
+  let d = CHIPS.get(k);
+  if (d === undefined) { if (CHIPS.size > 2000) CHIPS.clear(); CHIPS.set(k, (d = chipPath(look, x, y, hw, hh, c))); }
+  return d;
+}
+function chipPath(look, x, y, hw, hh, c) {
   const P = (pts) => 'M' + pts.map(([a, b]) => `${n1(a)} ${n1(b)}`).join('L') + 'Z';
   const L = x - hw, T = y - hh, R = x + hw, B = y + hh;
   const round = (r) => `M${n1(L + r)} ${n1(T)}H${n1(R - r)}A${n1(r)} ${n1(r)} 0 0 1 ${n1(R)} ${n1(T + r)}V${n1(B - r)}A${n1(r)} ${n1(r)} 0 0 1 ${n1(R - r)} ${n1(B)}H${n1(L + r)}A${n1(r)} ${n1(r)} 0 0 1 ${n1(L)} ${n1(B - r)}V${n1(T + r)}A${n1(r)} ${n1(r)} 0 0 1 ${n1(L + r)} ${n1(T)}Z`;
@@ -386,7 +394,7 @@ export function stepPath(s, from, to, tall) {
   }
   return null;
 }
-function mapSvg(s, tall, pop = null) {
+function mapSvg(s, tall) {
   const R = s.rooms, g = R.graph, { at, G, width, height } = frame(s, tall), here = R.at, h = hunterOf(s);
   const reach = new Set(exits(s).map((x) => x.id)), walked = R.visit?.walked || {};
   const shown = (id) => !!seenOf(s, id), found = (id) => known(s, id);
@@ -429,7 +437,7 @@ function mapSvg(s, tall, pop = null) {
   // A run card's way (runcards.mjs): the courier's route to its drop, violet dots; the pack's way to you, red dashes.
   const line = (ids, cls) => (ids.length > 1 ? `<polyline class="${cls}" points="${ids.map((id) => { const p = at(g.rooms[id]); return `${p.x},${p.y}`; }).join(' ')}"/>` : '');
   const cardWay = line(escortRoute(s), 'fp-cr-route') + line(packRoute(s), 'fp-pk-route');
-  const ctx = { reach, next, pop, near, G, marks: net(s, 'marks') || {}, th: R_th(s), bl: net(s, 'blips') || {}, files, rv, mt: meetingOf(s, isUp), dd: deadOf(s, isUp) };
+  const ctx = { reach, next, near, G, marks: net(s, 'marks') || {}, th: R_th(s), bl: net(s, 'blips') || {}, files, rv, mt: meetingOf(s, isUp), dd: deadOf(s, isUp) };
   ctx.pp = (room) => (R.world && WORLD.people ? (WORLD.people(s, room) || []).filter((h) => runnerOf(s, h)) : []); // runners standing in a room (SPRAWL-00)
   const rooms = roomList(s).filter((r) => shown(r.id)).map((room) => roomSvg(s, room, at(room), ctx)).join('');
   const bits = here ? bitsSvg(at(g.rooms[here]), G, here) : '';
@@ -517,7 +525,7 @@ function revealing(s, id) {
 const standTip = (s, room, hs) => `${hs.join(' and ')} ${hs.length === 1 ? 'is' : 'are'} here between jobs.${s.rooms.at === room.id ? '' : `\n▸ Walk in to meet ${hs.length === 1 ? 'them' : 'them all'}.`}`;
 const deadRoomTip = (d) => `The runner ${d.r.handle} crashed here.\n▸ Win the room to pull them out.`;
 const runnerRoomTip = (s, m) => `The runner ${m.r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Signal.${s.rooms.at === m.room.id ? '' : '\n▸ Walk in to help.'}`;
-function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, bl = {}, files = [], rv = null, mt = null, dd = null, pp = null }) {
+function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, files = [], rv = null, mt = null, dd = null, pp = null }) {
   const R = s.rooms, g = R.graph, kind = known(s, room.id), h = hunterOf(s);
   const look = lookOf(s, room);
   const sock = kind && isSocket(s, room) && socketOpen(s, room), prog = sock ? programIn(s, room.id) : null; // an open socket (a held server's Core too) and what runs in it
@@ -532,12 +540,12 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, bl = {
   const denEdge = kind && g.hunter === 'track' && g.den && neighbours(g, g.den).includes(room.id) && h && !h.awake && !h.down;
   // Its colour: you, a live threat, used up (or a plain room you've cleared), or something there for you.
   const tone = here ? 'you' : !kind ? 'fog' : room.nook ? (nookLive(s, room, th) ? 'amber' : 'gray') : live ? 'hot' : down || used || (['entry', 'junction', 'den', 'empty'].includes(room.kind) && R.cleared[room.id]) ? 'gray' : 'amber';
-  const cls = ['fp-room', revealing(s, room.id) ? 'reveal' : '', `k-${kind ? room.kind : 'fog'}`, `t-${tone}`, prog ? `prog p-${prog}` : sock ? 'open' : '', prog && socketOff(s, room) ? 'off' : '', here ? 'here' : can ? 'reach' : kind ? 'seen' : 'shape', up ? 'up' : '', down ? 'down' : '', used ? 'used' : '', room.mirror && kind ? 'mirror' : '', sealed ? 'sealed' : '', hunted ? 'hunted' : '', pop === room.id ? 'sel' : '', look ? `look-${look}` : ''].filter(Boolean).join(' ');
+  const cls = ['fp-room', revealing(s, room.id) ? 'reveal' : '', `k-${kind ? room.kind : 'fog'}`, `t-${tone}`, prog ? `prog p-${prog}` : sock ? 'open' : '', prog && socketOff(s, room) ? 'off' : '', here ? 'here' : can ? 'reach' : kind ? 'seen' : 'shape', up ? 'up' : '', down ? 'down' : '', used ? 'used' : '', room.mirror && kind ? 'mirror' : '', sealed ? 'sealed' : '', hunted ? 'hunted' : '', look ? `look-${look}` : ''].filter(Boolean).join(' ');
   // A room you can walk into walks on one click (Enter too); any other room on the map opens its pop-up.
   const attrs = can ? ` data-rooms="go" data-arg="${esc(room.id)}" tabindex="0" role="button"` : ` data-fp-sel="${esc(room.id)}" tabindex="0" role="button" aria-haspopup="dialog"`;
   const hw = G.nw / 2, hh = G.nh / 2, x0 = n1(p.x - hw), y0 = n1(p.y - hh), d = chipD(look, p.x, p.y, hw, hh, G.ch), ring = chipD(look, p.x, p.y, hw + 5, hh + 5, G.ch + 2);
   const meet = mt?.room.id === room.id ? mt : null, dead = dd?.room.id === room.id ? dd : null, met = meet || dead ? [] : pp?.(room) || [];
-  let out = `<g class="${cls}" data-room="${esc(room.id)}"${attrs}${pop === room.id ? '' : ` title="${esc(tileTip(s, room, marks) + (meet ? '\n' + runnerRoomTip(s, meet) : '') + (dead ? '\n' + deadRoomTip(dead) : '') + (met.length ? '\n' + standTip(s, room, met) : ''))}"`} aria-label="${esc(kind ? labelOf(s, room) : 'Unknown room')}">`;
+  let out = `<g class="${cls}" data-room="${esc(room.id)}"${attrs} title="${esc(tileTip(s, room, marks) + (meet ? '\n' + runnerRoomTip(s, meet) : '') + (dead ? '\n' + deadRoomTip(dead) : '') + (met.length ? '\n' + standTip(s, room, met) : ''))}" aria-label="${esc(kind ? labelOf(s, room) : 'Unknown room')}">`;
   // You: a soft teal glow and a pulsing outline. The hunter just out of sight next door: a red pulse.
   if (here) out += `<path class="fp-you-glow" d="${d}" filter="url(#fp-glow)"/><path class="fp-you-ring" d="${d}"/>`;
   const rival = rv?.at === room.id;
@@ -920,14 +928,18 @@ function popCard(s, id) {
   return id === R.at ? hereCard(s) : farCard(s, R.graph.rooms[id]);
 }
 
-export function roomsMarkup(s, ui = fpUi) {
+// The page in two parts: the map (its pop-up's place a marker) and the pop-up, so a click that only opens or closes a
+// pop-up swaps the card and leaves the map's nodes alone (app.js). The popped room's tooltip is held off there too.
+export const POP_MARK = '<!--fp-pop-->';
+export function roomsMarkup(s, ui = fpUi) { const v = roomsView(s, ui); return v.shell.replace(POP_MARK, v.pop); }
+export function roomsView(s, ui = fpUi) {
   const R = s.rooms;
-  if (!R) return '<section class="card"><h2>Rooms</h2><h1>No server</h1></section>';
+  if (!R) return { shell: '<section class="card"><h2>Rooms</h2><h1>No server</h1></section>', pop: '', id: null };
   const pz = puzzlePanel(s) || (R.world && s.threads ? threadPanel(s, thUi, sweepBlock) : ''), id = pz ? null : popOf(s, ui); // a puzzle room's board, or a thread's dialogue, over the map: the pop-up stands aside
   // Placed beside its room by app.js (placeRoomsPop) once it's drawn: hidden until then.
   const pop = id ? `<div class="map-pop fp-pop" id="fp-pop" data-pop="${esc(id)}" role="dialog" aria-label="${esc(R.at || id !== R.graph.entry ? (known(s, id) ? labelOf(s, R.graph.rooms[id]) : 'Unknown room') : 'Home')}" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-fp-pop-close title="Close (Esc)" aria-label="Close">×</button>${popCard(s, id)}</div>` : '';
-  return `<div class="fp${R.at ? '' : ' home'}">
+  return { shell: `<div class="fp${R.at ? '' : ' home'}">
     ${sprite()}${hudMarkup(s)}
-    <section class="panel fp-map${pz ? ' pz-on' : ''}" data-pane="map"><div class="fp-scroll">${mapSvg(s, false, id)}${mapSvg(s, true, id)}</div><button type="button" class="btn small fp-zoom" data-fp-zoom title="Fit the server (double-click the map too). Scroll to zoom, drag to pan." aria-label="Fit the server">⤢</button>${traceMarkup(s, ui)}${pop}${pz}</section>
-  </div>`;
+    <section class="panel fp-map${pz ? ' pz-on' : ''}" data-pane="map"><div class="fp-scroll">${mapSvg(s, false)}${mapSvg(s, true)}</div><button type="button" class="btn small fp-zoom" data-fp-zoom title="Fit the server (double-click the map too). Scroll to zoom, drag to pan." aria-label="Fit the server">⤢</button>${traceMarkup(s, ui)}${POP_MARK}${pz}</section>
+  </div>`, pop, id };
 }

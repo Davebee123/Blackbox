@@ -1503,10 +1503,16 @@ function exfilFight(s, room) {
 // room.pin holds one set for every spawn (tests).
 export const spawnSet = (family, author, seed) => (setsOf(family) ? rollSet(family, author, seeded((seed ^ 0x5e75) >>> 0)) : null);
 // A virus's name before you fight it (the room card): the same build the fight makes, built and thrown away.
+// The build is the same for the same fight, place and parts met, so its name is kept (the map names every room on
+// every draw, and a build costs about a millisecond).
+const VIRUS_NAMES = new Map();
 export function virusName(s, room, as = null) {
   const f = fightOf(s, room, as);
   if (f.name) return f.name;
-  return encounterVirus(s, f.key, f.seed, f.opts).name;
+  const k = `${f.key}|${f.seed}|${JSON.stringify(f.opts)}|${s.run?.loc}|${s.rooms?.floor}|${!!s.metAll}|${s.research ? Object.keys(s.research).length : 0}`;
+  let n = VIRUS_NAMES.get(k);
+  if (n === undefined) { if (VIRUS_NAMES.size > 500) VIRUS_NAMES.clear(); VIRUS_NAMES.set(k, (n = encounterVirus(s, f.key, f.seed, f.opts).name)); }
+  return n;
 }
 // The virus itself, built and thrown away the same way: what a contract asks of it (its family, strain, level, parts).
 export const virusOf = (s, room, as = null) => { const f = fightOf(s, room, as); return encounterVirus(s, f.key, f.seed, f.opts); };
