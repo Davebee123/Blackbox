@@ -1200,7 +1200,7 @@ until a relay pings it or it sends an invader at you).
 | Trace from | Adds |
 |---|---|
 | A stray killed in SPRAWL-00 | +10% to one ? (the most traced first; your first, the level-1 one), falling with the level gap like XP |
-| A first clear of a fight room on a server linked to it | +10% to one ? (the most traced first) |
+| A first clear of a fight room on a server linked to it | +20% to one ? (the most traced first) |
 | A vault's trace record (`signal.trc`), banked | +50% on one ? (a flagged one first) |
 | Mapping the server it hangs off, or a rogue server's full clear | the rest of the way, for one ? (the most traced, then the lowest level) |
 | An invader from a ? beaten by you / stopped by your wall | +40% / +10% |
