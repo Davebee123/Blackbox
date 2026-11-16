@@ -97,7 +97,7 @@ const ZONE_FAMILIES = ['ransomware', 'worm', 'ghostroot'];
 // coming (Slay the Spire).
 export const kingOpen = (s) => hackerLevel(s) >= 3;
 // A SPRAWL-00 room's level: the nearer folders lower (docs/scaling.md 4). RELAY-KING, in /net/relay, at its top.
-export const ZONE_LEVEL = { '/tmp': 1, '/srv': 1, '/var': 2, '/net': 3, '/var/log': 4 };
+export const ZONE_LEVEL = { '/tmp': 1, '/srv': 1, '/home': 1, '/dev': 1, '/var': 2, '/net': 2, '/home/guest': 2, '/var/spool': 3, '/var/log': 4 };
 export function zoneSpawns(s, now = clock()) {
   const z = zoneOf(s);
   if (!kingOpen(s)) delete z.spawns[KING_ROOM]; // a sealed Core holds nothing (a save from before held a stray, or the king)
