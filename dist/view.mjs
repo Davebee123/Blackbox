@@ -477,7 +477,8 @@ function bendChip(i, c, k = '') {
 // what the lash costs. Its tooltip: the rule, and the answer.
 function lashChip(i, c, k = '') {
   const tip = `Backlash, ${bendWhen(c)}. A beat: hit this part with a command then and it lashes back for ${i.amount}${i.also ? `, with its ${i.also}` : ''}${i.plus ? `, and ${i.plus}` : ''}. A hit that breaks it doesn't.${answerLine('Hit a part with no attack, break one, or fire a shield or buff then.')}`;
-  return `<div class="intent bend lash${c === 0 ? ' now' : c === 1 ? ' next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}"><span class="ico" ${icon(ICON.mirror)}></span><b class="bend-to">Lash −${i.amount}</b></div>`;
+  // The *Return chip*: hatched, pointing back at you, so it never reads as one of the part's attacks.
+  return `<div class="intent lash${c === 0 ? ' now' : c === 1 ? ' next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}"><span class="lash-ar" aria-hidden="true">↩</span><b>−${i.amount}</b><small>if hit</small></div>`;
 }
 // NIGHT DESK's attacks (floorbosses.mjs holdTrade): none lands, each opens a pending trade. Marked here (trade), and the
 // one that fills the table, or the Desk's Margin Call (act 3), carries what settles (full).

@@ -4666,6 +4666,11 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .intent.bend.harm b.bend-to { color: var(--hot); }
 .intent.bend.veiled b.bend-to { color: var(--muted); }
 .intent.bend.now { background: var(--hot-soft); }
+/* A boss's Backlash (view.mjs lashChip): the Return chip, hatched and pointing back at you. */
+.intent.lash { padding-left: 14px; border: 1px solid var(--hot); color: var(--hot); background: repeating-linear-gradient(135deg, var(--hot-soft) 0 4px, transparent 4px 8px); clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%); }
+.intent.lash .lash-ar { flex: none; font-weight: 700; }
+.intent.lash b { color: var(--hot); font-weight: 700; }
+.intent.lash.now { background-color: var(--hot-soft); }
 /* A boss's act break (actbreak.mjs): its card over the board's strip, the emote under its bar, the bits off its ♛'s tick. */
 .phase-strip.act-on { position: relative; }
 .phase-strip.act-on > :not(.act-card) { visibility: hidden; }

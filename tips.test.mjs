@@ -213,7 +213,7 @@ test('every tip points at something the game draws', async () => {
 // His lines are lowercase, as he writes, and the rest of the tips keep the plain voice.
 test('wick narrates the guided path, in his own voice, and nothing else', async () => {
   const guided = ['map-start', 'tour-walk', 'tour-engage', 'tour-cache', 'tour-hunter', 'tour-rest', 'tour-jackout',
-    'fight-timeline', 'fight-keys', 'fight-ticks', 'fight-armor', 'sync', 'run-signal', 'run-rival', 'room-vault', 'room-core', 'fight-crown'];
+    'fight-timeline', 'fight-keys', 'fight-ticks', 'fight-armor', 'sync', 'run-signal', 'run-rival', 'room-vault', 'room-core', 'fight-crown', 'fight-backlash'];
   assert.deepEqual(TIPS.filter((t) => t.wick).map((t) => t.id).sort(), [...guided].sort());
   for (const t of TIPS.filter((x) => x.wick)) assert.equal(t.text, t.text.toLowerCase(), `${t.id} is in wick's lowercase`);
   // A rival's tip opens with wick's line on that rival.
