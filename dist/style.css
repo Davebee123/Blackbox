@@ -3024,7 +3024,8 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ct-row.ready:hover .ct-turn, .ct-row.ready:focus-visible .ct-turn { background: var(--ready); color: var(--bg); }
 .ct-row.ready > .glyph { color: var(--ready); }
 /* The rail and the tracker share the map's left column; the rail keeps its own rows. */
-.map-lcol { position: absolute; top: 56px; left: 10px; z-index: 3; width: 230px; display: grid; align-content: start; gap: var(--s5); max-height: calc(100% - 60px); overflow-y: auto; pointer-events: none; }
+.map-lcol { position: absolute; top: 56px; left: 10px; z-index: 3; width: 230px; display: grid; align-content: start; gap: var(--s5); max-height: calc(100% - 60px); overflow-x: hidden; overflow-y: auto; scrollbar-width: none; pointer-events: none; }
+.map-lcol::-webkit-scrollbar { display: none; } /* it still scrolls (wheel, touch) when it runs long, without a bar */
 .map-lcol > * { pointer-events: auto; }
 @media (max-width: 900px) { .map-lcol { position: static; width: auto; max-height: none; overflow: visible; margin: 44px 8px 0; gap: var(--s4); } }
 /* The Rail (runners-view.mjs): the runners you know, under Contracts. Paper white (--bright): a runner is nobody's
