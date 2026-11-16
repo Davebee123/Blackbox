@@ -803,10 +803,9 @@ export function play(s, input) {
     if (word === 'pack') { const first = s.serial; out(s, s.run.pack.length ? s.run.pack.map((f) => `${f.name.padEnd(14)} ${packLine(f)}`).concat('unbanked until you jack out.') : 'pack is empty.', 'rooms-out'); return since(s, first); }
     if (word === 'help') { const first = s.serial; out(s, ['ls            this room and its exits', 'go <room>     walk: a name or an address (cd C2; cd .. toward the entry)', 'map           the rooms you have seen', 'wait          stay a move', 'engage, back  fight what holds the room, or step back', 'cat, pull     read and take a cache (pull in an open vault)', 'open, force   the vault', 'rest          the rest room', 'install       a contract\'s item, in its room (plant)', 'play          a puzzle room\'s board (play wall c4, play up, play tap b2, play ping d4)', 'talk          who waits in a thread\'s room (talk 1, talk 2 to choose; read a log)', 'threads       your threads (thread <id>, thread abandon <id>)', 'slip          past the hunter (Infiltrator)', 'pack          what you carry', 'jack out      home, banking the pack'], 'rooms-out'); return since(s, first); }
     if (['split', 'link', 'goto', 'regroup', 'unlink'].includes(word)) { const first = s.serial; crewMove(s, word, rest); return since(s, first); }
-    if (word === 'scan') { const first = s.serial; scanRoom(s, rest); return since(s, first); }
     const ev = roomsCommand(s, text.replace(/^look$/, 'ls').replace(/^attack\b.*/, 'engage').replace(/^tree$/, 'map'));
     if (ev) return ev;
-    if (RUN_COMMANDS.includes(word) && !['scan', 'boost', 'crew'].includes(word) && !(word === 'jack' && rest !== 'out')) { const first = s.serial; warn(s, `${word}: not on rooms. Type help.`); return since(s, first); }
+    if (RUN_COMMANDS.includes(word) && !['boost', 'crew'].includes(word) && !(word === 'jack' && rest !== 'out')) { const first = s.serial; warn(s, `${word}: not on rooms. Type help.`); return since(s, first); }
     return command(s, input);
   }
   const isRun = RUN_COMMANDS.includes(word) && !(word === 'jack' && rest !== 'out') && !(word === 'scan' && active(s)); // scan mid-fight reads the fight (genome.mjs)
@@ -972,36 +971,6 @@ function scan(s, arg) {
   showCard(s, v, { deep, type: 'net-scan' });
 }
 
-// scan [room] on rooms: the genome card of what holds this room, or a room next to you that you've discovered (been in:
-// floorplan.mjs fog) and holds a fight. An unknown room can't be read from outside.
-// It costs SCAN.signal Signal (an Infiltrator scans quietly and for free, and reads deeper).
-// What scan reads on rooms: a room you've been in whose fight is up (a sealed Core never is).
-const scanReads = (s, room) => !!room && seenOf(s, room.id) === 'kind' && FIGHTS.includes(room.kind) && isUp(s, room) && !(room.kind === 'core' && !coreOpen(s));
-// The Scan button on a room's pop-up card (floorplan-view.mjs, through netrooms.mjs): a room next to you that scan
-// reads, out of a fight. It runs scan <room>, as the prompt does. Null where scan can't read it, your own room too.
-export function scanButton(s, room) {
-  const R = s.rooms;
-  if (!s.run?.rooms || !R?.at || active(s) || !room || room.id === R.at || !neighbours(R.graph, R.at).includes(room.id) || !scanReads(s, room)) return null;
-  const free = classOf(s) === 'infiltrator';
-  return { cmd: `scan ${room.dir}`, free, cost: free ? 0 : SCAN.signal, short: !free && s.run.integrity <= SCAN.signal };
-}
-function scanRoom(s, arg) {
-  const R = s.rooms, g = R.graph, a = (arg || '').toLowerCase();
-  const near = [R.at, ...neighbours(g, R.at)].map((id) => g.rooms[id]);
-  const room = a ? near.find((x) => x.dir === a.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || x.path0 === a || x.path0 === '/' + a || x.path.toLowerCase() === a) : g.rooms[R.at];
-  if (room && seenOf(s, room.id) !== 'kind') return err(s, `scan: you haven't been in that room. You can't read what's in it from outside.`);
-  if (!scanReads(s, room)) return err(s, a ? `Nothing to scan at ${arg}. Scan a room next to you that holds a fight.` : 'Nothing to scan here. scan <room> reads a fight next door.');
-  const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts);
-  const deep = classOf(s) === 'infiltrator';
-  if (!deep) {
-    if (s.run.integrity <= cost(s, SCAN.signal)) return err(s, 'Not enough Signal to scan.');
-    s.run.integrity -= cost(s, SCAN.signal);
-  } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
-  (s.run.unpack ||= []).includes(v.id) || s.run.unpack.push(v.id); // a Packer's rules show once you've scanned it (combat.mjs packerOn)
-  (s.run.named ||= []).includes(v.id) || s.run.named.push(v.id); // its rules show by name, on the card and in the fight (genome.mjs scannedRead)
-  s.run.scans = (s.run.scans || 0) + 1; // the rooms tour's scan step (tips.mjs)
-  showCard(s, v, { deep, type: 'net-scan' });
-}
 
 // attack <name>: the start of its name, in any case, with or without .exe.
 const named = (name, arg) => name.toLowerCase().startsWith(arg.toLowerCase().replace(/\.exe$/, ''));
@@ -1093,14 +1062,14 @@ export function runSuggestions(s, input) {
   return ['history', 'ls', 'ls -a', 'cd ', 'cat ', ...(canCloak(s) ? ['spoof'] : []), ...(equipped(s, 'tap') ? ['tap'] : []), ...(slipsLeft(s) > 0 ? ['slip'] : []), 'pull ', 'unlock ', 'jack out', 'tree', 'pack', 'help', 'engage'].filter((c) => c.startsWith(text));
 }
 
-// On rooms: the room verbs, and for cd/go/scan the rooms you've discovered (by the slug you type; never an unknown one).
+// On rooms: the room verbs, and for cd/go the rooms you've discovered (by the slug you type; never an unknown one).
 function roomSuggestions(s, text) {
   const [word, arg = ''] = text.split(/ (.*)/);
   if (text.includes(' ')) {
-    if (['cd', 'go', 'scan'].includes(word)) return [...(word === 'cd' ? ['..'] : []), ...roomList(s).filter((x) => seenOf(s, x.id) === 'kind' && x.dir).map((x) => x.dir)].filter((d) => d.startsWith(arg)).map((d) => `${word} ${d}`);
+    if (['cd', 'go'].includes(word)) return [...(word === 'cd' ? ['..'] : []), ...roomList(s).filter((x) => seenOf(s, x.id) === 'kind' && x.dir).map((x) => x.dir)].filter((d) => d.startsWith(arg)).map((d) => `${word} ${d}`);
     return [];
   }
-  return ['ls', 'map', 'cd ', 'go ', 'wait', 'back', 'engage', 'cat', 'pull', 'open', 'force', 'rest', 'slip', 'scan', 'pack', 'help', 'jack out'].filter((c) => c.startsWith(text));
+  return ['ls', 'map', 'cd ', 'go ', 'wait', 'back', 'engage', 'cat', 'pull', 'open', 'force', 'rest', 'slip', 'pack', 'help', 'jack out'].filter((c) => c.startsWith(text));
 }
 
 export { guarded, locked };

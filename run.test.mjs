@@ -33,11 +33,13 @@ const onRun = () => {
   return s;
 };
 // Leave one part on 1 Integrity with no armor, then break it.
-const finishOff = (s, id) => {
-  for (const p of s.encounter.virus.parts) Object.assign(p, { integrity: 0, armor: 0 });
-  part(s, id).integrity = 1;
-  command(s, 'spike ' + id);
-  resolveCycle(s);
+const finishOff = (s, id) => { // every act of a boss's (act bars, acts.mjs): each ends when its last part breaks
+  for (let n = 0; n < 4 && s.encounter?.phase === 'active'; n++) {
+    for (const p of s.encounter.virus.parts) Object.assign(p, { integrity: 0, armor: 0 });
+    part(s, id).integrity = 1;
+    command(s, 'spike ' + id);
+    resolveCycle(s);
+  }
 };
 const winFight = (s) => {
   command(s, 'engage');

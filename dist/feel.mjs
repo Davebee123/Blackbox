@@ -115,7 +115,7 @@ const QUIET_VOICES = new Set(['cycle', 'channel']);
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
-export function createFeel({ settings, reducedMotion }) {
+export function createFeel({ settings, reducedMotion, queued = () => {} }) {
   let queue = [];
   let muting = false;
   let beatMs = 0;
@@ -137,19 +137,10 @@ export function createFeel({ settings, reducedMotion }) {
     try { navigator.vibrate(pattern); } catch { /* not allowed yet */ }
   }
 
-  function flash(el, cls) {
-    if (!el || !cls) return;
-    el.classList.remove(cls);
-    void el.offsetWidth; // restart the animation
-    el.classList.add(cls);
-    setTimeout(() => el.classList.remove(cls), 900);
-  }
-
   // src (dmgfx.mjs): { kind, icon, label }: the number gets its kind's icon and colour, and says its source.
-  function float(el, text, color, size = 0, { src = null, spot = '', stack = false, x = 0 } = {}) {
-    if (!el || !text) return;
-    const r = el.getBoundingClientRect();
-    if (!r.width) return;
+  // r: el's box, read before play() writes anything (a read after a write lays the screen out again).
+  function float(r, text, color, size = 0, { src = null, spot = '', stack = false, x = 0 } = {}) {
+    if (!r?.width || !text) return;
     const f = document.createElement('div');
     const still = reducedMotion() || stack;
     f.className = `fx-float ${color}${src ? ` src k-${src.kind}` : ''}${still ? ' still' : ''}`;
@@ -172,34 +163,63 @@ export function createFeel({ settings, reducedMotion }) {
     setTimeout(() => f.remove(), 1100);
   }
 
-  function edge(soft) {
-    const el = document.getElementById('fx-edge');
-    if (!el) return;
-    el.classList.toggle('soft', !!soft);
-    flash(el, 'on');
+  // What the effects put on the page (flashes, numbers, the edge) goes up in one batch a frame, after the frame's layout
+  // and before its paint (a ResizeObserver's turn): every box a number rises from is read there for free, the classes a
+  // flash restarts come off (one style pass), then everything goes on. Each effect alone used to force a layout of the
+  // screen (2–3 ms on a phone). What a timer or the tick writes shows no sooner than that frame's paint, and a delayed
+  // effect's sound and buzz still go off on its timer.
+  let later = [], asked = false;
+  const afterLayout = typeof ResizeObserver === 'function' ? new ResizeObserver(() => { afterLayout.disconnect(); showLater(); }) : null;
+  function showLater() { asked = false; const items = later; later = []; show(items); }
+  function showSoon(items) {
+    if (!items.length) return;
+    if (document.hidden) { show(items); return; } // no frames come while hidden
+    later.push(...items);
+    if (asked) return;
+    asked = true;
+    if (afterLayout) { afterLayout.observe(document.body); requestAnimationFrame(() => {}); } // a fresh observation reports at the next frame's layout
+    else requestAnimationFrame(showLater);
   }
-
-  function play({ kind, target, label, detail, mute }) {
+  function show(items) {
+    const shake = !reducedMotion(), flashes = [];
+    for (const it of items) {
+      const { sign, target, label, detail } = it;
+      const els = typeof target === 'string' ? [...document.querySelectorAll(target)] : target ? [target] : [];
+      // detail.noFlash: the number only; detail.quiet: a smaller, dimmer number (a crewmate's).
+      if (!detail?.noFlash && sign.flash) for (const el of els) flashes.push([el, shake || !sign.flash.match(/nope|hurt|strike/) ? sign.flash : 'fx-still']);
+      // detail.silent: the look without the sound or buzz (a crewmate's hit when yours already sounds).
+      // detail.softEdge: a fainter edge in place of the lash (a hit on you with Effects minimal, or Motion off).
+      if ((sign.edge || detail?.softEdge) && !detail?.silent && !detail?.noEdge) { const el = document.getElementById('fx-edge'); if (el) flashes.push([el, 'on', !!detail?.softEdge]); }
+      // detail.floatAt: where the number rises, if not off the flashing element (detail.x: how far across it, 0–1).
+      it.fl = label ? (detail?.floatAt ? document.querySelector(detail.floatAt) || els[0] : els[0]) : null;
+    }
+    for (const it of items) if (it.fl) it.box = it.fl.getBoundingClientRect(); // reads first, before any write
+    let off = null;
+    for (const [el, cls] of flashes) if (el.classList.contains(cls)) { el.classList.remove(cls); off = el; }
+    if (off) void getComputedStyle(off).animationName; // the style pass that lets a removed animation start over
+    for (const [el, cls, soft] of flashes) {
+      if (soft != null) el.classList.toggle('soft', soft);
+      el.classList.add(cls);
+      setTimeout(() => el.classList.remove(cls), 900);
+    }
+    for (const { sign, target, label, detail, box } of items) if (label) float(box, label, (sign.float || 'amber') + (detail?.quiet ? ' quiet' : ''), detail?.size, { src: detail?.src, spot: detail?.floatAt || (typeof target === 'string' ? target : ''), stack: detail?.stack, x: detail?.x });
+  }
+  // shown: where its look goes (the flush's own batch); none: the next frame's.
+  function play({ kind, target, label, detail, mute }, shown) {
     if (typeof kind === 'function') { try { kind(); } catch { /* an effect never breaks the game */ } return; }
     const sign = SIGNS[kind];
     if (!sign) return;
-    const els = typeof target === 'string' ? [...document.querySelectorAll(target)] : target ? [target] : [];
-    const shake = !reducedMotion();
-    // detail.noFlash: the number only; detail.quiet: a smaller, dimmer number (a crewmate's).
-    if (!detail?.noFlash) for (const el of els) flash(el, shake || !sign.flash?.match(/nope|hurt|strike/) ? sign.flash : 'fx-still');
-    // detail.floatAt: where the number rises, if not off the flashing element (detail.x: how far across it, 0–1).
-    const fl = detail?.floatAt ? document.querySelector(detail.floatAt) || els[0] : els[0];
-    if (label) float(fl, label, (sign.float || 'amber') + (detail?.quiet ? ' quiet' : ''), detail?.size, { src: detail?.src, spot: detail?.floatAt || (typeof target === 'string' ? target : ''), stack: detail?.stack, x: detail?.x });
-    // detail.silent: the look without the sound or buzz (a crewmate's hit when yours already sounds).
-    // detail.softEdge: a fainter edge in place of the lash (a hit on you with Effects minimal, or Motion off).
-    if ((sign.edge || detail?.softEdge) && !detail?.silent && !detail?.noEdge) edge(detail?.softEdge);
+    const it = { sign, target, label, detail };
+    if (shown) shown.push(it);
+    else showSoon([it]);
     // mute: its ability's own sound plays in its voice's place (the flash and the buzz stay).
     if (!detail?.silent) { if (!mute) voice(sign.voice, detail); buzz(sign.buzz); }
   }
 
   return {
     // kind: a key of SIGNS; target: a CSS selector or element; label: floating text
-    add(kind, target, label, detail) { queue.push({ kind, target, label, detail, at: beatMs, mute: muting }); },
+    add(kind, target, label, detail) { queue.push({ kind, target, label, detail, at: beatMs, mute: muting }); queued(); }, // queued: the page's tick wakes to flush it
+    pending: () => queue.length,
     // What is added next keeps its look and its buzz and loses its voice (its ability's own sound plays instead), until
     // this turn of the event loop is over.
     mute(on) { muting = !!on; if (on) queueMicrotask(() => { muting = false; }); },
@@ -244,12 +264,13 @@ export function createFeel({ settings, reducedMotion }) {
     // Volume sliders: { music, ambience, places, sfx }, each 0–1.
     volumes(v) { sound.volumes({ sfx: v.sfx, ambience: v.ambience }); track.volumes({ music: v.music, ambience: v.ambience }); places.volumes({ places: v.places }); },
     flush() {
-      const batch = queue;
+      const batch = queue, now = [];
       queue = [];
       for (const item of batch) {
         if (item.at > 0) setTimeout(() => play(item), item.at);
-        else play(item);
+        else play(item, now);
       }
+      showSoon(now);
     },
     canBuzz: () => typeof navigator !== 'undefined' && 'vibrate' in navigator,
   };

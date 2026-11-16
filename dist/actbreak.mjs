@@ -1,10 +1,12 @@
-// Presentation only: the act break (docs/solo-bosses.md "The shape"), played when a boss's ♛ crosses into its next act
-// (combat.mjs bossPhases' phase event, its act). The ♛'s tick bursts into red bits as the hit crosses it; after a
+// Presentation only: the act break (docs/solo-bosses.md "The shape"), played when a boss starts its next act (combat.mjs
+// bossPhases' phase event, its act): its last part broken (act bars, acts.mjs), or its ♛ across an act tick, when that
+// tick bursts into red bits as the hit crosses it. Then, after a
 // breath the board's strip flares red and names the act, its letters pulling in from a blur, and fades out the same
-// way, over a drone (sound.mjs actdrone); the boss's emote types out under its bar. The fight's clock holds for all of it (app.js). Each frame re-applies
+// way, over a drone (sound.mjs actdrone); the boss's emote types out under its bar; with act bars the parts come back in
+// (refill). The fight's clock holds for all of it (app.js). Each frame re-applies
 // it, so the board's own redraws never wipe it.
-export const ACT_BREAK = { gap: 1700, hold: 4200, fade: 700, emote: 1800, type: 30, bits: 34 };
-export const actBreakMs = () => ACT_BREAK.gap + ACT_BREAK.hold + ACT_BREAK.fade;
+export const ACT_BREAK = { gap: 1700, hold: 4200, fade: 700, emote: 1800, type: 30, bits: 34, row: 140, fill: 650 }; // row, fill: act bars' refill (each part's start after the last, its fill)
+export const actBreakMs = (act) => ACT_BREAK.gap + ACT_BREAK.hold + (act?.refill ? ACT_BREAK.row * 4 + ACT_BREAK.fill : ACT_BREAK.fade); // the clock holds for it (a refill: about four rows)
 
 const ease = (x) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
 const bump = (t, len) => (t < 0 || t > len ? 0 : Math.sin((t / len) * Math.PI));
@@ -79,7 +81,24 @@ export function createActBreak({ motion, say = () => {} }) {
     // The desktop's haptic: the boss's bar thumps once as the strip comes in.
     const bar = hud?.querySelector('.bigbar');
     if (bar && moving) { const b = bump(t, 260); bar.style.transform = b ? `scaleY(${1 + 0.35 * b})` : ''; bar.style.filter = b ? `brightness(${1 + 0.7 * b})` : ''; }
-    return t < hold + Math.max(fade, ACT_BREAK.emote);
+    return refill(act, t, moving) || t < hold + Math.max(fade, ACT_BREAK.emote);
+  }
+  // Act bars (acts.mjs): the board's parts come back. Until the strip fades their rows wait dark and empty; then, top to
+  // bottom, each fades in from a blur and its bar fills, the boss's bar with them. True while it runs.
+  function refill(act, t, moving) {
+    if (!act.refill) return false;
+    const rows = [...document.querySelectorAll('#board .brow.bpart')], hud = document.querySelector('.hud-bar.enemy .act-segs');
+    const from = ACT_BREAK.hold - 150, end = from + ACT_BREAK.row * rows.length + ACT_BREAK.fill;
+    const k = (i) => (!moving || t === Infinity ? 1 : ease((t - from - ACT_BREAK.row * i) / ACT_BREAK.fill));
+    rows.forEach((row, i) => {
+      const x = k(i), fill = row.querySelector('.part-bar > span');
+      row.style.opacity = x >= 1 ? '' : String(0.25 + 0.75 * x);
+      row.style.filter = x >= 1 ? '' : `blur(${((1 - x) * 3).toFixed(1)}px)`;
+      if (fill) { fill.style.transformOrigin = 'left'; fill.style.transform = x >= 1 ? '' : `scaleX(${x.toFixed(3)})`; }
+    });
+    const seg = hud && [...hud.children].find((el) => !el.classList.contains('act-done') && !el.classList.contains('act-wait'))?.querySelector('span');
+    if (seg) { const x = !moving || t === Infinity ? 1 : ease((t - from) / (end - from)); seg.style.transformOrigin = 'left'; seg.style.transform = x >= 1 || !moving ? '' : `scaleX(${x.toFixed(3)})`; }
+    return moving && t < end;
   }
   // act: the phase event's act ({ n, of, name, emote, part, at }), boss: its name.
   function play(act, boss) {
@@ -93,7 +112,8 @@ export function createActBreak({ motion, say = () => {} }) {
       if (id !== run) return;
       const t = performance.now() - t0;
       if (t >= 0 && !droning) { droning = true; say('actdrone', { len: ACT_BREAK.hold / 1000, fade: (ACT_BREAK.fade + 200) / 1000 }); } // the drone (sound.mjs) under the strip
-      if (t < 0 || frame(a, t, moving)) requestAnimationFrame(step);
+      if (t < 0) { refill(a, t, moving); requestAnimationFrame(step); } // the refilled board waits dark through the breath
+      else if (frame(a, t, moving)) requestAnimationFrame(step);
       else frame(a, Infinity, moving);
     };
     requestAnimationFrame(step);

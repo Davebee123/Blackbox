@@ -10,6 +10,7 @@ five sets and 20 uniques each: docs/floor-items.md (designed).
 Taken from Diablo 2: modest items, general effects with a natural lean, something to find in every stretch.
 
 - **Modest on their own.** A unique or set piece is a sidegrade, about a good blue. A full set is the payoff.
+  Legends are the one exception: very rare, very strong, endgame (docs/legends.md).
 - **General, with a lean.** Effects work in every fight and never name a virus, gene, guard or boss.
 - **Every band has something**, weighted by how long players spend in it.
 - **Sources are activities**: bosses and lairs, vaults, rare spawns, strains, threads, puzzle boards, crew bosses.
