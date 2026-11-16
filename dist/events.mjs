@@ -13,6 +13,7 @@
 //   hunt      A named elite that hops server to server every 5 minutes, a level tougher and better paid each hop.
 //   shock     One hub's price for one ware jumps ×2.5 (or crashes ×0.4) for 15 minutes (market.mjs outsideMult).
 //   spotter   A spotter watches your wall. Kill it at home and the next invasion comes weaker, its kind known (invasion.mjs).
+//   call      A faction server you've found is under attack from its owner's rival. Ignore it, or answer (Defend) and hold it.
 //
 // Chains (docs/director.md section 2): what you did with one card deals the next, a follow-up with a link to its cause.
 //   counter   after a feud you won a fight in: the side you fought sends a runner at a server you hold.
@@ -36,16 +37,16 @@ import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNI
 import { FAMILIES, CONFIG, floorFor } from './data.mjs';
 import { floorOfSlot } from './floors.mjs';
 import { LOOT, rollItem, seeded, codeOf, vaultCode, MATERIALS } from './gear.mjs';
-import { changeStanding } from './mail.mjs';
 import { openFarm } from './rogue.mjs';
 import { eventMult, noteEvent, leanPick, darknetPick, darknetBuy, nameNative, homeName, NETWORK } from './network.mjs';
 import { isPiece } from './sets.mjs';
-import { FACTIONS, hubsOf, hostile, changeRep, hubFound, RIPPLE } from './factions.mjs';
-import { FACTION_FAMILY } from './hubs.mjs';
+import { factionAuthor } from './authors.mjs';
+import { FACTIONS, hubsOf, changeRep, hubFound, FACTION_FAMILY, RIPPLE, commissionOf } from './factions.mjs';
 import { addFilter, rollFilter } from './filters.mjs';
 import { invasionsLive, scoutNext, SCOUTED } from './invasion.mjs';
 import { gainPart, pieceOf } from './faction-gear.mjs';
 import { addrsOf } from './address.mjs';
+import { castOf, hired, personFor, HANDLES } from './runners.mjs';
 
 export const DIRECTOR = {
   from: 3, // class level the director starts dealing at
@@ -69,6 +70,13 @@ export const FEUD = { from: 8, ms: 20 * 60000, start: 0.05, driftMs: 60000, drif
 export const HUNT = { from: 6, hopMs: 5 * 60000, hops: 3, cap: 3, mult: [1, 1.3, 1.6, 2], rep: 2 };
 export const SHOCK = { from: 5, ms: 15 * 60000, up: 2.5, down: 0.4, crash: 1 / 3, wares: ['cipher', 'worm', 'kernel', 'salvage'] }; // not Exploits: the wall's and the programs' currency stays steady
 export const SCOUT_EVENT = { from: 6, ms: 10 * 60000 };
+// CALL (docs/factions-plan.md 8), from level 6: a faction server you've found (still its owner's, at your level + 2 or under)
+// is hit by one of its owner's rivals, an elite sized like a feud's runner, for ms of logged-on time. Ignoring it costs
+// nothing. Your first fight answers it: beat the invader before the clock runs out and the owner pays +hold (the usual
+// ripples); the clock runs out while you hold the call and the server reboots, −reboot with the owner (no ripple). Your
+// commission's calls count ×commission both ways.
+export const CALL = { from: 6, ms: 10 * 60000, hold: 6, reboot: 4, commission: 1.5 };
+export const callRep = (s, ev, n) => Math.round(n * (commissionOf(s) === ev.owner ? CALL.commission : 1));
 // Chains: at most max follow-ups pending, one per kind, each dropped quietly if it isn't dealt within expireMs of logged-on
 // time. COUNTER: delay after the feud, a runner sized like a feud's, pay × a bounty's credits, +rep with your side. RETURNING:
 // delay after the escape; it comes back once, at the level and pay it had when it got away (letting one go never pays). LANTERN: after `at` couriers, +rep. ZERO:
@@ -80,13 +88,18 @@ export const CHAIN = {
   lantern: { at: 3, ms: 15 * 60000, rep: 5 },
   zero: { at: 15, ms: 15 * 60000 },
 };
-// A faction's runner in a feud: a name of its own.
-const RUNNER = { halcyon: 'ADJUSTER', glassjaw: 'FACET', kestrel: 'TALON', lantern: 'BEACON', nullchoir: 'DISSONANCE' };
+// A faction's runner in a feud, a counter-raid or a hit (R3, docs/runners.md): one of the cast who works for it, else
+// one from the pool who does, by handle. One roll, as before. Nothing a runner does moves a faction.
+function runnerName(s, f) {
+  const x = roll(s), on = castOf(s).filter((r) => r.faction === f && !hired(s, r.handle));
+  if (on.length) return on[Math.floor(x * on.length)].handle;
+  const pool = HANDLES.filter((h) => personFor(s, h).faction === f);
+  return pool.length ? pool[Math.floor(x * pool.length)] : HANDLES[Math.floor(x * HANDLES.length)];
+}
 // How much of a feud's bar is this side's (0–1), and its pay a win.
 export const feudShare = (ev, f) => (f === ev.sides[0] ? ev.bar ?? 0.5 : 1 - (ev.bar ?? 0.5));
 export const feudPay = (level) => Math.round(bountyPay(level) * FEUD.pay);
 const rival = (ev, f) => ev.sides.find((x) => x !== f);
-const runnerName = (s, f) => `${RUNNER[f]}-${1000 + Math.floor(roll(s) * 9000)}`;
 // The feud won for your side: a part of its piece (faction-gear.mjs), its good (fixed by the event; a sealed item carries its
 // implicit), +bonusRep, its allies a quarter of a win and the bonus. No ripple.
 function feudBonus(s, ev) {
@@ -105,9 +118,9 @@ function runnerDrop(s, ev, f) {
 }
 // Two located hubs that are rivals (factions.mjs), each pair once.
 export const feuds = (s) => { const fs = hubsOf(s).map((h) => h.faction); return fs.flatMap((a, i) => fs.slice(i + 1).filter((b) => FACTIONS[a].rivals.includes(b)).map((b) => [a, b])); };
-const markets = (s) => hubsOf(s).filter((h) => !hostile(s, h.faction) && (h.offlineUntil || 0) <= (hooks.now?.() ?? Date.now())).map((h) => h.faction); // hubs you can trade at
-// What your side gives from its goods: a sealed item (Tuned, at your level), or LANTERN's bootleg filter (it sells no crate).
-export const feudGood = (f) => (f === 'halcyon' || FACTIONS[f].shop.includes('crate') ? 'crate' : 'bootleg');
+const markets = (s) => hubsOf(s).map((h) => h.faction); // hubs you can trade at
+// What your side gives for the win: a sealed item (Tuned, at your level), or from LANTERN a bootleg filter.
+export const feudGood = (f) => (f === 'lantern' ? 'bootleg' : 'crate');
 const NAMES = ['lapsejack', 'deductible', 'subrogate', 'rider', 'lossrun', 'waiver', 'binder', 'tallow', 'cinder', 'quarry'];
 
 export const CARDS = {
@@ -136,7 +149,7 @@ export const CARDS = {
     reward: (ev) => `${bountyPay(ev.level)} credits and Halcyon standing`,
     won: (s, ev) => {
       s.server.credits += bountyPay(ev.level);
-      changeStanding(s, 'halcyon', 2, 'Bounty collected');
+      changeRep(s, 'halcyon', 2, 'Bounty collected');
       return `Bounty collected on ${ev.name}: ${bountyPay(ev.level)} credits.`;
     },
   },
@@ -177,7 +190,7 @@ export const CARDS = {
     reward: (ev) => UNIQUES[ev.unique].name,
   },
   // Two rival factions clash over one of your servers: one card, two sides, a tug-of-war bar (ev.bar, sides[0]'s share). event
-  // fight <id> <faction> sides with that faction against the other's runner (an elite of its family, hubs.mjs FACTION_FAMILY, at
+  // fight <id> <faction> sides with that faction against the other's runner (an elite of its family, factions.mjs FACTION_FAMILY, at
   // your level, sized for one); your side locks with your first fight. Each win pushes it, pays, and brings a fresh runner.
   feud: {
     name: 'Feud', weight: 1, ms: FEUD.ms, fight: true, again: true, from: FEUD.from,
@@ -213,6 +226,17 @@ export const CARDS = {
       return `You beat ${beat}: ${feudPay(ev.level)} credits and a protocol. ${FACTIONS[f].short} holds ${Math.round(feudShare(ev, f) * 100)}%.`;
     },
   },
+  // A faction server under attack (CALL above). The fight is the invader at that server's wall; fighting answers the call.
+  call: {
+    name: 'Defence call', weight: 1, ms: CALL.ms, fight: true, from: CALL.from,
+    where: (s) => (hackerLevel(s) >= CALL.from ? callSpots(s) : []),
+    make: (s, loc) => { const owner = loc.faction, by = pick(s, FACTIONS[owner].rivals); return { owner, by, family: FACTION_FAMILY[by], level: placeLevel(s, loc), name: runnerName(s, by), elite: true, eliteHp: FEUD.hp }; },
+    text: (ev, where) => `${FACTIONS[ev.owner].short}: ${where} under attack from ${FACTIONS[ev.by].short}. Defend it before it reboots.`,
+    reward: (ev, s) => `Hold it: ${FACTIONS[ev.owner].short} +${callRep(s, ev, CALL.hold)}. Answered and lost: ${FACTIONS[ev.owner].short} −${callRep(s, ev, CALL.reboot)}`,
+    timeout: (s, ev, where) => { if (ev.fought) changeRep(s, ev.owner, -callRep(s, ev, CALL.reboot), `${where} rebooted on your watch`, { ripple: false }); return null; },
+    gone: (ev, where) => `${where} rebooted: ${FACTIONS[ev.by].short} got through.`,
+    won: (s, ev) => { const where = placeName(s, ev.loc); changeRep(s, ev.owner, callRep(s, ev, CALL.hold), `You held ${where} for ${FACTIONS[ev.owner].short}`); return `You beat ${ev.name}: ${where} holds.`; },
+  },
   // A named elite that moves: every HUNT.hopMs it hops to another of your servers (its path is set when it's dealt, so
   // the map shows where it goes next), a level up each time and better paid. Kestrel are the hunters.
   hunt: {
@@ -239,8 +263,7 @@ export const CARDS = {
     },
     won: (s, ev) => {
       s.server.credits += huntPay(ev);
-      if (ev.hunter === 'halcyon') changeStanding(s, 'halcyon', HUNT.rep, 'Bounty collected');
-      else changeRep(s, ev.hunter, HUNT.rep, 'Bounty collected');
+      changeRep(s, ev.hunter, HUNT.rep, 'Bounty collected');
       return `Bounty collected on ${ev.name}: ${huntPay(ev)} credits.`;
     },
   },
@@ -274,7 +297,7 @@ export const CARDS = {
     spots: (s) => { const held = places(s).filter((l) => (l.runs || 0) > 0 || l.takenOver); return held.length ? held : [null]; },
     make: (s, loc, f) => ({ side: f.data.side, foe: f.data.foe, family: FACTION_FAMILY[f.data.foe], level: placeLevel(s, loc), name: runnerName(s, f.data.foe), elite: true, eliteHp: FEUD.hp }),
     from: (ev) => FACTIONS[ev.foe].short,
-    text: (ev, where) => `${FACTIONS[ev.foe].short} sends ${ev.name} at ${ev.loc ? where : 'your server'} for the feud you fought for ${FACTIONS[ev.side].short}. Beat it before it leaves.`,
+    text: (ev, where) => `${FACTIONS[ev.foe].short} sends ${ev.name} at ${ev.loc ? where : 'your server'} for the feud you fought for ${FACTIONS[ev.side].short}. Beat them before they leave.`,
     reward: (ev) => `${counterPay(ev.level)} credits and ${FACTIONS[ev.side].short} +${CHAIN.counter.rep}`,
     gone: (ev) => `${ev.name} pulled back.`,
     won: (s, ev) => {
@@ -304,7 +327,7 @@ export const CARDS = {
   lantern: {
     name: "LANTERN's offer", chain: true, weight: 0, ms: CHAIN.lantern.ms, fight: true, where: () => [],
     spots: (s) => places(s),
-    make: (s, loc) => ({ family: FACTION_FAMILY.lantern, level: placeLevel(s, loc), name: `${RUNNER.lantern}-${1000 + Math.floor(roll(s) * 9000)}`, ally: hubFound(s, 'lantern') ? 'lantern' : 'halcyon' }),
+    make: (s, loc) => ({ family: FACTION_FAMILY.lantern, level: placeLevel(s, loc), name: runnerName(s, 'lantern'), ally: hubFound(s, 'lantern') ? 'lantern' : 'halcyon' }),
     from: () => 'LANTERN',
     text: (ev, where) => `LANTERN noticed the couriers you took. Its own courier ${ev.name} crosses ${where}: intercept it for a Custom protocol.`,
     reward: (ev) => `a Custom protocol and ${FACTIONS[ev.ally].short} +${CHAIN.lantern.rep}`,
@@ -372,6 +395,8 @@ const places = (s) => {
   const near = mine.filter((l) => (l.level || 1) <= L + 2);
   return near.length ? near : [mine.reduce((a, b) => ((b.level || 1) < (a.level || 1) ? b : a))];
 };
+// Defence calls land on faction servers you've found, wherever they are, at your level + 2 or under.
+const callSpots = (s) => traced(s).filter((l) => FACTIONS[l.faction] && (l.level || 1) <= hackerLevel(s) + 2);
 // The level an event takes: its server's; one with no server (a spotter at your wall) your floor's servers' lowest
 // such level, else yours.
 const placeLevel = (s, loc) => { const ls = places(s).map((l) => l.level || 1); return Math.min(CONFIG.maxMobLevel, Math.max(1, loc?.level || (ls.length ? Math.min(...ls) : hackerLevel(s)))); };
@@ -566,14 +591,16 @@ export function eventCommand(s, text) {
   if (s.run) return warn(s, 'Jack out first.');
   if (active(s)) return warn(s, 'Finish the fight first.');
   const foe = c.foe ? c.foe(ev, f) : { family: ev.family, name: ev.name, elite: !!ev.elite, boss: ev.boss, eliteHp: ev.eliteHp };
+  // A faction's runner or invader signs with its faction (authors.mjs), over its strain's own author. Halcyon writes none yet.
+  const sender = ev.card === 'feud' ? rival(ev, f) : ev.card === 'call' ? ev.by : ev.card === 'counter' ? ev.foe : ev.card === 'lantern' ? 'lantern' : null, signed = sender ? factionAuthor(sender) : null;
   const gate = s.encounter?.phase === 'alert' && s.encounter.mode !== 'run' ? s.encounter : s.gate;
-  selectEncounter(s, 'random', (ev.seed + (c.foe ? ev.sides.indexOf(f) * 7919 + (ev.wins || 0) * 104729 : 0)) >>> 0, { level: ev.level, family: foe.family, name: foe.name, elite: !!foe.elite, ...(foe.eliteHp ? { eliteHp: foe.eliteHp } : {}), ...(foe.boss ? { boss: foe.boss } : {}), mutation: ev.mutation ?? null, quiet: true });
+  selectEncounter(s, 'random', (ev.seed + (c.foe ? ev.sides.indexOf(f) * 7919 + (ev.wins || 0) * 104729 : 0)) >>> 0, { level: ev.level, family: foe.family, name: foe.name, elite: !!foe.elite, ...(foe.eliteHp ? { eliteHp: foe.eliteHp } : {}), ...(foe.boss ? { boss: foe.boss } : {}), mutation: ev.mutation ?? null, ...(signed ? { signed } : {}), quiet: true });
   if (!s.encounter || s.encounter.phase === 'active') return;
   if (c.foe) ev.side = f; // the side you fight for: locked from here
   ev.fought = true; // a hunt you fought and let go got away (chains)
   s.gate = gate && gate !== s.encounter ? gate : null;
   s.encounter.event = ev.id;
-  emit(s, 'jack-in', `Intercepting ${foe.name}.`, { location: ev.loc });
+  emit(s, 'jack-in', ev.card === 'call' ? `Defending ${placeName(s, ev.loc)}: ${foe.name} at its wall.` : `Intercepting ${foe.name}.`, { location: ev.loc });
   command(s, 'engage');
 }
 
@@ -723,6 +750,32 @@ export function blipStood(s, loc, room) {
 }
 // The marks on a server's room map (netrooms.mjs 'blips'): { roomId: { kind, text } }.
 export const blipRooms = (s, loc) => Object.fromEntries(blipsOf(s).filter((b) => loc && b.loc === loc.id && b.room).map((b) => [b.room, { kind: b.kind, name: BLIPS[b.kind].name, text: blipText(s, b) }]));
+
+// ---------- run cards (docs/director.md section 4, runcards.mjs) ----------
+// One run in four on a traced server (netrooms.mjs WORLD.runcard picks which servers), from DIRECTOR.from, on dice of its
+// own (never shifting the deck's or the blips'). A forced kind (developer runcard) skips the roll.
+export const RUNCARD_DEAL = { chance: 0.25, kinds: ['surge', 'escort', 'pack'] };
+function croll(s) {
+  const d = s.director;
+  let t = (d.cr = ((d.cr ?? ((s.seed || 1) ^ 0x5c4d1e7)) + 0x6d2b79f5) >>> 0);
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+export function runCardRoll(s, kind = null) {
+  const d = (s.director ||= { next: null, n: 0, last: null });
+  if (!kind && (hackerLevel(s) < DIRECTOR.from || croll(s) >= RUNCARD_DEAL.chance)) return null;
+  const ks = RUNCARD_DEAL.kinds.filter((x) => x !== d.lastCard), k = kind || ks[Math.floor(croll(s) * ks.length)]; // never the same kind twice running
+  return { kind: k, seed: Math.floor(croll(s) * 4294967296) >>> 0 };
+}
+// Dealt, and how it ended: the history's line (name and icon from runcards.mjs).
+export function runCardUp(s, loc, c, name, icon) {
+  const d = (s.director ||= { next: null, n: 0, last: null });
+  d.lastCard = c.kind;
+  c.hid = `r${(d.rn = (d.rn || 0) + 1)}`;
+  noteHistory(s, c.hid, null, { k: c.kind, name, icon, loc: loc?.id || null, how: 'up' });
+}
+export const runCardEnd = (s, c, how) => noteHistory(s, c.hid, how);
 
 // ---------- the history (docs/director.md section 5) ----------
 // { id, k, name, loc, how, cause } newest first, HISTORY.keep at most. how: up, won, gone, taken, missed, true, done.

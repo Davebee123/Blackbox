@@ -3,10 +3,10 @@
 // talents, the edge, how the planner plays them) lives in ./operator.mjs.
 //
 // A subclass is picked at level 10 (`subclass <id>`; switching is free, at home). Its skill line unlocks
-// at SUBCLASS.unlocks in data.mjs (levels 10 to 38), in the order written here (eleven skills). Its talent tree has the same shape as
-// before: three filler rows of two ranked nodes, and three tiers of two picks.
+// at SUBCLASS.unlocks in data.mjs (levels 10 to 38), in the order written here (eleven skills). Its talent tree is six tiers
+// of three picks.
 // edge.legacy: the class's old edge (EDGE in data.mjs), now this subclass's.
-import { f, t, c } from './kit.mjs';
+import { t, c } from './kit.mjs';
 
 // New skills (ABILITIES entries, same fields as data.mjs). Give each a cls and a sub.
 // Numbers the engine reads from here (operator.mjs): helper/ticks (Fan-out), cycles (Mesh, Cache
@@ -45,15 +45,15 @@ export const subs = {
     },
     layers: { core: ['deploy', 'botnet', 'fan-out', 'nohup', 'spawn', 'hook'], utility: ['kill-switch', 'load-shed', 'oom-kill'], cooldown: ['mesh', 'malloc', 'cron-storm'], specialist: ['fork', 'garbage-collect', 'crontab'] },
     tags: { fork: 'Armor', 'garbage-collect': 'Fragments', crontab: 'Bosses' },
-    fillers: [
-      [f('thread-pool', 'Thread Pool', 'Increases the damage of Deploy helpers by 1 per rank.', 1), f('node-pool', 'Node Pool', 'Increases the damage of Botnet helpers by 1 per rank.', 1)],
-      [f('wide-area', 'Wide Area', 'Increases the damage of Fan-out helpers by 1 per rank.', 1), f('dead-mans-switch', 'Dead Man’s Switch', 'Increases the damage of Kill Switch by 5% per rank.', 0.05)],
-      [f('load-balancer', 'Load Balancer', 'Reduces the damage you take from attacks by 3% per rank.', 0.03), f('gc-tuning', 'GC Tuning', 'Increases the damage of Garbage Collect by 30% per rank.', 0.3)],
-    ],
-    talents: [
-      [t('big-process', 'Big Process', 'Deploy helpers deal 14 damage.'), t('long-running', 'Long-running', 'Deploy helpers last 6 cycles.')],
-      [t('hive', 'Hive', 'Raises your helper cap to 9.'), t('hydra', 'Hydra', 'When a part breaks, each of your helpers on it splits in two on the next part, up to your helper cap.')],
-      [t('zombie-process', 'Zombie Process', 'Last Gasp strikes twice.'), t('supervisor', 'Supervisor', 'Kill Switch resets the cooldown of Deploy.')],
+    // The talent tiers (docs/builds.md): one of three a tier, each opening at its level (LOADOUT.tiers). The first is
+    // the plain pick, the middle changes how a skill plays, the third fires on a shared event (combat.mjs fireEvent).
+    tiers: [
+      [t('node-pool', 'Node Pool', 'Increases the damage of Botnet helpers by 3 every cycle.'), t('long-running', 'Long-running', 'Makes Deploy helpers last 6 cycles instead of 4.'), t('auto-restart', 'Auto-restart', 'Starts a Spawn helper on a part when you cut its move.')],
+      [t('dead-mans-switch', 'Dead Man\'s Switch', 'Increases what Kill Switch cashes in by 15%.'), t('supervisor', 'Supervisor', 'Makes Deploy usable again when you use Kill Switch.'), t('sighup', 'SIGHUP', 'Makes every helper on a part hit it once more when its attack hits you. Works once per cycle.')],
+      [t('hive', 'Hive', 'Lets you run 9 helpers at once instead of 6.'), t('full-mesh', 'Full Mesh', 'Makes Mesh\'s spill deal full damage, but its cooldown is 12 cycles.'), t('hydra', 'Hydra', 'Splits each of your helpers on a part in two when the part breaks, up to your cap.')],
+      [t('gc-tuning', 'GC Tuning', 'Increases the damage of Garbage Collect by 50%.'), t('zombie-process', 'Zombie Process', 'Makes Last Gasp hit twice, so each helper hits two more times as it expires.'), t('watchdog-reset', 'Watchdog Reset', 'Makes your helpers run 1 cycle longer when you answer a tell.')],
+      [t('load-balancer', 'Load Balancer', 'Reduces the damage attacks deal to you by 3% for each helper you have running, up to 12%.'), t('page-out', 'Page Out', 'Makes OOM Kill shield you for 60% of the damage your helpers had left, instead of healing you for 40%.'), t('host-vector', 'Host Vector', 'Makes every helper on a Tagged part hit it once more when you hit it. Works once per cycle.')],
+      [t('renice', 'Renice', 'Increases the damage of your helpers by 10%.'), t('final-run', 'Final Run', 'Makes Cron Storm\'s helpers hit three times, and each one ends with its Last Gasp.'), t('hot-swap', 'Hot Swap', 'Starts a Spawn helper on every part without one when you gain a shield. Works once per cycle.')],
     ],
     // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
     capstones: [
@@ -73,15 +73,15 @@ export const subs = {
     },
     layers: { core: ['sniff', 'replay', 'botnet', 'jam', 'deploy', 'spawn', 'hook'], utility: ['spoofed-ack', 'hijack', 'barrier', 'reroute'], cooldown: ['takeover', 'blackhole'], specialist: ['cache-poison', 'echo-cancel'] },
     tags: { 'cache-poison': 'Seals', 'echo-cancel': 'Mimic' },
-    fillers: [
-      [f('thread-pool', 'Thread Pool', 'Increases the damage of Deploy helpers by 1 per rank.', 1), f('kernel-hook', 'Kernel Hook', 'Increases the damage Hooked adds to each hit by 1 per rank.', 1)],
-      [f('ack-flood', 'ACK Flood', 'Increases the share of the attack Spoofed ACK sends back by 10% per rank.', 0.1), f('cold-storage', 'Cold Storage', 'Increases the shield from Barrier by 10% per rank.', 0.1)],
-      [f('load-balancer', 'Load Balancer', 'Reduces the damage you take from attacks by 3% per rank.', 0.03), f('packet-capture', 'Packet Capture', 'Increases the damage of Replay by 5 per rank.', 5)],
-    ],
-    talents: [
-      [t('long-jam', 'Long Jam', 'Jam delays the attack 2 cycles, instead of 1.'), t('loopback', 'Loopback', 'Jam and Blackhole leave the helper running.')],
-      [t('double-agent', 'Double Agent', 'Hijack takes the target’s next 2 attacks.'), t('crosstalk', 'Crosstalk', 'A hijacked hit lands on every other part.')],
-      [t('full-duplex', 'Full Duplex', 'Jammed parts take 40% more damage from everyone, instead of 20%.'), t('kill-chain', 'Kill Chain', 'Breaking a Jammed part resets the cooldowns of Jam, Spoofed ACK and Hijack.')],
+    // The talent tiers (docs/builds.md): one of three a tier, each opening at its level (LOADOUT.tiers). The first is
+    // the plain pick, the middle changes how a skill plays, the third fires on a shared event (combat.mjs fireEvent).
+    tiers: [
+      [t('kernel-hook', 'Kernel Hook', 'Increases the damage Hooked parts take from every hit by 3.'), t('port-mirror', 'Port Mirror', 'Makes Sniff leave two footholds instead of one.'), t('line-tap', 'Line Tap', 'Makes Sniff usable again when you cut a part\'s move.')],
+      [t('ack-flood', 'ACK Flood', 'Makes Spoofed ACK send back three quarters of the attack instead of half.'), t('double-agent', 'Double Agent', 'Makes Hijack take the part\'s next two attacks.'), t('rebroadcast', 'Rebroadcast', 'Makes Replay usable again when you answer a tell.')],
+      [t('cold-storage', 'Cold Storage', 'Increases Barrier\'s shield by 25%.'), t('loopback', 'Loopback', 'Makes Jam leave the helper running.'), t('shim', 'Shim', 'Leaves a foothold on the part whose hit your shield absorbs.')],
+      [t('packet-capture', 'Packet Capture', 'Increases the damage of Replay by 15.'), t('crosstalk', 'Crosstalk', 'Makes a hijacked hit land on every other part, not just one.'), t('traceback', 'Traceback', 'Jams the part that hits you until its next attack. Works once per cycle.')],
+      [t('full-duplex', 'Full Duplex', 'Makes Jammed parts take 30% more damage from everyone instead of 20%.'), t('sidetone', 'Sidetone', 'Makes Echo Cancel also Jam the target until its next attack.'), t('handoff', 'Handoff', 'Makes Jam, Spoofed ACK and Hijack usable again when you break a Jammed part.')],
+      [t('refcount', 'Refcount', 'Heals you for 5 when you spend a helper.'), t('event-horizon', 'Event Horizon', 'Makes Blackhole drop the part\'s next two attacks, but its cooldown is 9 cycles.'), t('elevate', 'Elevate', 'Makes Hijack usable again when you land a critical strike on a Jammed part. Works once per cycle.')],
     ],
     // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
     capstones: [

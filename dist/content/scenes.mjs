@@ -6,9 +6,9 @@ export default {
   welcome: {
     who: 'wick', from: 'LOWLIGHT',
     nodes: {
-      start: { lines: ['you made it in. good.', "i'm wick. LOWLIGHT. halcyon pays, i point, you do the work."], ask: ['lowlight', 'halcyon', 'begin'] },
-      lowlight: { q: "Who's LOWLIGHT?", lines: ['a crew. small.', "we fix what halcyon pays to have fixed, and we keep what they don't count."], ask: ['halcyon', 'begin'] },
-      halcyon: { q: 'What does Halcyon want with me?', lines: ['every breach on their books is a claim they pay.', "you're cheaper than the payouts. keep your own box standing and the retainer keeps coming."], ask: ['lowlight', 'begin'] },
+      start: { lines: ["there you are. took you long enough. coffee's gone cold twice.", "i'm wick, and welcome to LOWLIGHT. it's me and a desk, most days.", "halcyon pays, so halcyon picks the jobs. you're one of them now. sorry."], ask: ['lowlight', 'halcyon', 'begin'] },
+      lowlight: { q: "Who's LOWLIGHT?", lines: ["a crew. small. you've met most of it.", "we clear what halcyon is tired of paying for, and keep what they don't count."], ask: ['halcyon', 'begin'] },
+      halcyon: { q: 'What does Halcyon want with me?', lines: ['fewer claims. every breach on their books costs them, and you cost less.', 'keep your own box standing and the money keeps coming.'], ask: ['lowlight', 'begin'] },
       begin: { q: 'Where do I start?', lines: ["SPRAWL-00. it's crawling with strays.", "kill three. the job's in your mail. every kill traces a server off it, too."], ask: ['mail', 'go'] },
       mail: { q: 'Open my mail.', end: 'mail' },
       go: { q: 'On my way.', end: true },

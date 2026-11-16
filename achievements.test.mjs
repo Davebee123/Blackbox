@@ -12,7 +12,7 @@ import { PIECES } from './dist/faction-gear.mjs';
 import { titles, myProfile, stickersOf, tickProfile, fingerOf, stickerById, REWARD_BANNERS, setBanner } from './dist/profile.mjs';
 import { achievements, CATEGORIES, POINTS, achOf, earned, tickAchievements, fightOver, achievementsRestore, pointsOf, totalPoints, shownAchievements, achById, bannersOf } from './dist/achievements.mjs';
 import { achievementsMarkup, achRow } from './dist/achievements-view.mjs';
-import { systemMarkup } from './dist/view.mjs';
+import { systemMarkup, rigMarkup } from './dist/view.mjs';
 import { profileMarkup } from './dist/profile-view.mjs';
 import { logComms } from './dist/comms.mjs';
 import { tickChannel, channelOf } from './dist/channel.mjs';
@@ -23,9 +23,9 @@ const since = (s, first) => s.logs.filter((e) => e.id > first);
 // A won fight's end, as the engine hands it over (combat.mjs finish → fightOver).
 const won = (s, e = {}) => fightOver(s, { cycle: 6, virus: { name: 'X', family: 'ransomware', parts: [], ...(e.virus || {}) }, ...e, metrics: { attackDamage: 5, ...(e.metrics || {}) } }, 'victory');
 
-test('the table: 60 to 90 of them in eight categories, WoW points, names that read as titles, rules in one sentence', () => {
+test('the table: 60 to 120 of them in eight categories, WoW points, names that read as titles, rules in one sentence', () => {
   const all = achievements();
-  assert.ok(all.length >= 60 && all.length <= 100, `${all.length} achievements`);
+  assert.ok(all.length >= 60 && all.length <= 120, `${all.length} achievements`);
   assert.equal(new Set(all.map((a) => a.id)).size, all.length, 'ids are unique');
   assert.deepEqual(CATEGORIES.map((c) => c.name), ['Combat', 'Exploration', 'Collection', 'Factions', 'Classes', 'Daemons', 'Co-op', 'Feats']);
   for (const c of CATEGORIES) assert.ok(all.filter((a) => a.cat === c.id).length >= 4, `${c.name} has a few`);
@@ -273,7 +273,7 @@ test('the page: categories with totals, earned with a date, progress in amber, h
   tickAchievements(s);
   const html = achievementsMarkup(s, { cat: 'combat' });
   for (const c of CATEGORIES) assert.ok(html.includes(`data-ach-cat="${c.id}"`), c.id);
-  assert.match(html, /data-ach="c-relayking"[^>]*title="Uncrowned: Beat RELAY-KING\. 10 points\. Rewards the title Uncrowner\. Earned /);
+  assert.match(html, /data-ach="c-relayking"[^>]*title="Uncrowned: Beat RELAY-KING\. 10 points\. Rewards the title Uncrowner and the Relay throne for your house\. Earned /);
   assert.match(html, /class="ach-row got"/);
   assert.match(html, /class="ach-row part"[^>]*data-ach="c-win-100"/);
   assert.match(html, /<small>12\/100<\/small>/);
@@ -283,11 +283,11 @@ test('the page: categories with totals, earned with a date, progress in amber, h
   assert.match(achievementsMarkup(s, {}), /<h2>Achievements<\/h2>/, 'the summary');
   assert.match(achRow(s, achById('c-relayking'), 'c-relayking'), /ach-row got focus/, 'the one a pager line opened is lit');
   // On the System page, a tab beside Settings.
-  assert.match(systemMarkup(s), /data-stab="achievements"/);
-  assert.match(systemMarkup(s, { tab: 'achievements', ach: { cat: 'feat' } }), /<h2>Feats<\/h2>/);
+  assert.match(rigMarkup(s), /data-rtab="achievements"/);
+  assert.match(rigMarkup(s, { tab: 'achievements', ach: { cat: 'feat' } }), /<h2>Feats<\/h2>/);
   // A view never writes the save.
   const t = me(), snap = JSON.stringify(t);
-  achievementsMarkup(t, { cat: 'class' }); systemMarkup(t, { tab: 'achievements' });
+  achievementsMarkup(t, { cat: 'class' }); rigMarkup(t, { tab: 'achievements' });
   assert.equal(JSON.stringify(t), snap);
 });
 

@@ -10,7 +10,7 @@
 import { esc } from './view.mjs';
 import { glyph } from './glyphs.mjs';
 import { FACTIONS } from './factions.mjs';
-import { statLine, itemLabel, SLOTS, RULES } from './gear.mjs';
+import { statLine, itemLabel, SLOTS, RULES, shownRarity } from './gear.mjs';
 import { hackerLevel } from './combat.mjs';
 import { chainOf, chainDef, stepsOf, objectiveOf, fill, offerItems, CHAINS, TEMPLATES } from './threads.mjs';
 import { TH_ICONS } from './threads-view.mjs';
@@ -59,7 +59,7 @@ const choicesOf = (d) => (d.choices ? `<div class="th-choices">${d.choices.map((
 const later = '<button type="button" class="sp-go th-later" data-th-later>Later <small>it waits in Mail</small></button>';
 const tookLine = (m) => (m.took ? `<p class="svc-line"><span class="tag dim">took</span> ${esc(m.took)}</p>` : '');
 const where = (ctx) => `${esc(ctx.addr || '')}${ctx.server ? `${ctx.addr ? ' · ' : ''}${esc(ctx.server)}` : ''}`;
-const bits = (it, i) => ({ n: i + 1, name: itemLabel(it), slot: SLOTS[it.group]?.name || it.group, level: it.level, mine: i === 0, rarity: it.rarity,
+const bits = (it, i) => ({ n: i + 1, name: itemLabel(it), slot: SLOTS[it.group]?.name || it.group, level: it.level, mine: i === 0, rarity: shownRarity(it),
   stats: Object.keys(it.stats || {}).map((k) => statLine({ [k]: it.stats[k] })).filter(Boolean), rule: it.rule && RULES[it.rule] ? RULES[it.rule].name : null });
 // Static noise the length of a line (its spaces kept, so it wraps as the line does): what the opening line was before
 // it resolved.

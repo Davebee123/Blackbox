@@ -12,6 +12,7 @@ import { tellsOf } from './dist/tells.mjs';
 import { boardMarkup } from './dist/view.mjs';
 
 CONFIG.baseCrit = 0; CONFIG.enemyCrit = 0; CONFIG.misses = false;
+CONFIG.gearReq = 99; // these tests hand out gear of any level (the requirement has its own test in gear.test.mjs)
 
 const vet = (cls, sub, bar, level = 30) => { const s = fresh(); s.hackers = { [cls]: { level, xp: 0 } }; s.loadout.archetype = cls; s.loadout.sub = { [cls]: sub }; s.loadout.equipped[sub] = bar; return s; };
 const wear = (s, id, level) => { const it = addItem(s, uniqueItem(UNIQUES[id], level ?? UNIQUES[id].level, seeded(1))); command(s, 'load ' + it.id); assert.ok(loaded(s).some((x) => x.id === it.id), `${id} loaded`); };
@@ -67,7 +68,7 @@ test('a skill: a second Suspend on the same attack does nothing, says so, and th
 
 test('a talent: Ghost Route delays the soonest attack once, not again before it lands', () => {
   const s = vet('infiltrator', 'phantom', ['null-route']);
-  s.loadout.picks.phantom = [0, 1, 0]; // Ghost Route
+  (s.loadout.tiers ||= {}).phantom = [0, 0, 1]; // Ghost Route
   const e = fight(s), p = pulse(s), due = p.attack.due;
   go(s, 'null-route');
   assert.equal(p.attack.due, due + 2);

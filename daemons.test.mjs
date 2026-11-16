@@ -9,7 +9,7 @@ import { rollDaemon, daemonText } from './dist/daemons.mjs';
 import { tickNetwork, daemonChance, daemonDrop, bountyOf } from './dist/invasion.mjs';
 import { tierCost, fwOf, TIERS } from './dist/firewall.mjs';
 import { layoutOf, fileInfo } from './dist/run.mjs';
-import { GOODS } from './dist/store.mjs';
+import { TOOLS, CHASE } from './dist/store.mjs';
 import { FACTIONS } from './dist/factions.mjs';
 import { REWARDS } from './dist/content.mjs';
 import { play } from './dist/run.mjs';
@@ -193,8 +193,8 @@ test('only invasions drop daemons: no vault daemon.exe, no kill or guard drops, 
   }
   assert.equal(owned(s).length, 0, 'home kills drop none');
   // Shops, the agencies' stock and contracts.
-  assert.ok(!GOODS.daemon, 'no daemon image in the agency stock');
-  for (const f of Object.values(FACTIONS)) assert.ok(!f.shop.includes('daemon'), `${f.name} sells none`);
+  assert.ok(!TOOLS.daemon, 'no daemon image in a Shop');
+  for (const f of Object.keys(FACTIONS)) assert.ok(!CHASE[f].some(([id]) => id === 'daemon'), `${f} sells none`);
   assert.ok(!('daemon' in REWARDS), 'a contract cannot pay one');
   assert.ok(!JSON.stringify(STORY).includes('"daemon"'), 'nor can the storyline');
 });

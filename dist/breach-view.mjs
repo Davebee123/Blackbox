@@ -3,7 +3,7 @@
 // short tty under it. docs/ui.md tokens and components; the map is the centre, the decision is the focus.
 import { esc } from './view.mjs';
 import { ABILITIES, GUARDS, FAMILIES, STRAINS, BOSSES } from './data.mjs';
-import { itemLabel, statLine } from './gear.mjs';
+import { itemLabel, statLine, shownRarity } from './gear.mjs';
 import { stashItem, equippedSkills, knownSkills, classOf } from './combat.mjs';
 import { AUTHORS } from './authors.mjs';
 import { FRAGMENTS } from './campaign.mjs';
@@ -288,7 +288,7 @@ function resultMarkup(s) {
   if (b.result === 'won') {
     const c = captureOf(s);
     const lines = c.rewrites.map(({ sub, held, kept }) => { const o = outputLine(sub, held); return `<li class="${held ? '' : 'stock'}"><span class="cap-sub">${esc(sub)}</span><b>${esc(o.name)}${kept ? ' <small class="cap-kept" title="Kept: you did not clear it this time, so the rewrite it ran stays.">kept</small>' : ''}</b><span>${esc(o.text)}</span></li>`; }).join('');
-    const loot = c.items.map((it) => `<li data-ptip="${esc(it.id)}"><b class="iname r-${it.rarity}">${esc(itemLabel(it))}</b></li>`).join('');
+    const loot = c.items.map((it) => `<li data-ptip="${esc(it.id)}"><b class="iname r-${shownRarity(it)}">${esc(itemLabel(it))}</b></li>`).join('');
     const dump = c.dump ? `<div class="cap-dump"><div class="cap-dump-k"><b>${esc(c.dump.title)}</b><span>${esc(c.dump.from)}</span><span class="cap-frag">${esc(c.dump.thread)} ${c.dump.n}/${c.dump.of}</span></div><pre>${c.dump.lines.map(esc).join('\n')}</pre></div>` : '';
     return `<section class="card bx-capture"><div class="cap-kick"><span>${b.report?.reimaged ? 'RE-IMAGED' : 'CAPTURED'}</span><span>${camp ? `level ${b.level} · ` : ''}heat ${b.heat || 0}</span></div><h1>${esc(card.name)}</h1><p class="svc-line">${esc(card.kind)} · ${esc(card.author.toUpperCase())} · ${c.kills} fights · Resident ${esc(residentName(card))} down</p>
       <h3 class="bx-sec" title="What the server does for you from now on: each subsystem's rewrite. They run on your later breaches.">Output <small>${c.rewrites.filter((x) => x.held).length}/${c.rewrites.length}</small></h3>
@@ -311,7 +311,7 @@ function resultMarkup(s) {
 // A piece of gear: its name (the item card on hover) and stats, and Equip, or a tag when it's already on.
 function itemRow(s, it) {
   const on = Object.values(s.gear?.rigs || {}).flat().includes(it.id), can = !on && !s.breach.result;
-  return `<li data-ptip="${esc(it.id)}"><b class="iname r-${it.rarity}">${esc(itemLabel(it))}</b><small>${esc(statLine(it.stats))}</small>${on ? '<span class="tag you">on</span>' : can ? btn('equip', 'Equip', { arg: it.id }) : ''}</li>`;
+  return `<li data-ptip="${esc(it.id)}"><b class="iname r-${shownRarity(it)}">${esc(itemLabel(it))}</b><small>${esc(statLine(it.stats))}</small>${on ? '<span class="tag you">on</span>' : can ? btn('equip', 'Equip', { arg: it.id }) : ''}</li>`;
 }
 // Trace on the strip: a meter with its two marks (the alarm, the hunter), and what moves it on hover.
 export function traceStat(s) {

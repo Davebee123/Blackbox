@@ -5,12 +5,13 @@
 // Everything that moves is skipped when Motion is off; `shell plain` turns it all off.
 
 import { powerOn } from './poweron.mjs';
+import { warmGame } from './warm.mjs';
 import { bootScript } from './boots.mjs';
 import { bootOf } from './terminal.mjs';
 
 const BOOTED_KEY = 'blackbox-booted';
 const SPARK = '▁▂▃▄▅▆▇█';
-const PATHS = { map: '~/map', server: '/srv', vault: '~/protocols', loadout: '/etc/loadout', daemons: '/etc/daemons', system: '/sys', net: '~/net', combat: '/proc/intrusion' };
+const PATHS = { map: '~/map', server: '/srv', vault: '~/protocols', loadout: '/etc/loadout', daemons: '/etc/daemons', system: '/sys', rig: '/dev/rig', net: '~/net', combat: '/proc/intrusion' };
 
 export function createShell({ getState, isOn, canMove, tick, sound, tear }) {
   const $ = (id) => document.getElementById(id);
@@ -29,7 +30,7 @@ export function createShell({ getState, isOn, canMove, tick, sound, tear }) {
     // The monitor comes on first (poweron.mjs); the boot lines run once a key starts it.
     $('boot').hidden = false;
     booting = true; // tips and the like hold off from the power-up on
-    powerOn({ sound, reducedMotion: () => !canMove() }).then(() => bootLinesRun(bootOf(getState())));
+    powerOn({ sound, reducedMotion: () => !canMove(), warm: (progress) => warmGame({ audio: !!getState()?.settings?.sound, progress }) }).then(() => bootLinesRun(bootOf(getState())));
   }
   // A look played on its own (System → Terminal's Preview): no power-up first. Motion off shows it still, all at once.
   function preview(id) {
@@ -187,7 +188,11 @@ export function createShell({ getState, isOn, canMove, tick, sound, tear }) {
     const c = $('caret');
     if (!input || !c) return;
     const at = input.selectionStart ?? input.value.length;
-    const key = input.value + '|' + at + '|' + input.scrollLeft;
+    // scrollLeft is a layout read: skipped while the line sits unfocused and unchanged (nothing can scroll it then).
+    const va = input.value + '|' + at, focused = document.activeElement === input;
+    if (!focused && !caret.focused && va === caret.va) return;
+    caret.va = va; caret.focused = focused;
+    const key = va + '|' + input.scrollLeft;
     if (key === caretKey) return;
     const typing = caretKey && caretKey.split('|')[0] !== input.value;
     caretKey = key;

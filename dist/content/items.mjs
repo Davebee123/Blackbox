@@ -27,7 +27,8 @@ export default {
           "id": "claimjack"
         }
       ],
-      "flavour": "Comments in three languages. None of them polite."
+      "flavour": "Comments in three languages. None of them polite.",
+      "keep": true
     },
     {
       "id": "neighbours-wifi",
@@ -1838,6 +1839,10 @@ export default {
         {
           "kind": "author",
           "id": "glassjaw"
+        },
+        {
+          "kind": "boss",
+          "id": "centrifuge"
         }
       ]
     },
@@ -1959,8 +1964,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "lair",
-          "floor": 3
+          "kind": "boss",
+          "id": "shouldersurfer"
         },
         {
           "kind": "lair",
@@ -1993,12 +1998,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "lair",
-          "floor": 3
-        },
-        {
-          "kind": "lair",
-          "floor": 4
+          "kind": "boss",
+          "id": "nightdesk"
         }
       ]
     },
@@ -2029,8 +2030,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "lair",
-          "floor": 4
+          "kind": "boss",
+          "id": "byzantine"
         }
       ]
     },
@@ -4678,7 +4679,8 @@ export default {
       "sources": [
         {
           "kind": "lair",
-          "floor": 7
+          "floor": 7,
+          "planned": "BIT BUCKET"
         }
       ],
       "flavour": "Every wave that breaks on it leaves it a little higher."
@@ -4766,7 +4768,8 @@ export default {
       "sources": [
         {
           "kind": "lair",
-          "floor": 7
+          "floor": 7,
+          "planned": "Sinkhole Residents"
         }
       ],
       "flavour": "What flows out comes back in."
@@ -4908,7 +4911,8 @@ export default {
       "sources": [
         {
           "kind": "lair",
-          "floor": 7
+          "floor": 7,
+          "planned": "GOLDEN PARACHUTE"
         }
       ],
       "flavour": "Open one and the rest follow."
@@ -5021,7 +5025,7 @@ export default {
         {
           "kind": "lair",
           "floor": 7,
-          "planned": "GOLDEN PARACHUTE"
+          "planned": "Sinkhole Residents"
         }
       ],
       "flavour": "It drags anything that stops moving."
@@ -5189,7 +5193,8 @@ export default {
       "sources": [
         {
           "kind": "lair",
-          "floor": 7
+          "floor": 7,
+          "planned": "SUMP"
         }
       ],
       "flavour": "Every pull on it sets it deeper."
@@ -5316,7 +5321,7 @@ export default {
         {
           "kind": "lair",
           "floor": 7,
-          "planned": "GOLDEN PARACHUTE"
+          "planned": "PAY RUN"
         }
       ],
       "flavour": "The first rush out is the strongest."
@@ -5344,7 +5349,7 @@ export default {
         {
           "kind": "lair",
           "floor": 7,
-          "planned": "GOLDEN PARACHUTE"
+          "planned": "BIT BUCKET"
         }
       ],
       "flavour": "It runs on what you have built up."
@@ -5464,7 +5469,8 @@ export default {
       "sources": [
         {
           "kind": "lair",
-          "floor": 7
+          "floor": 7,
+          "planned": "GOLDEN PARACHUTE"
         }
       ],
       "flavour": "When it overflows, it goes somewhere."
@@ -6542,6 +6548,3468 @@ export default {
         }
       ],
       "flavour": "A second voice above the tune, never quite on it."
+    },
+    {
+      "id": "governor",
+      "name": "Governor",
+      "base": "vpn-cascade",
+      "level": 14,
+      "primary": {
+        "signal": 88,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "custom",
+        "do": "governor",
+        "value": 25
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "centrifuge"
+        }
+      ],
+      "flavour": "Spin it down, and everything after spins down with it."
+    },
+    {
+      "id": "cascade-failure",
+      "name": "Cascade Failure",
+      "base": "exploit-chain",
+      "level": 14,
+      "primary": {
+        "damage": [
+          17,
+          21
+        ]
+      },
+      "effect": {
+        "when": "custom",
+        "do": "slow-hit",
+        "value": 20
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "centrifuge"
+        }
+      ],
+      "flavour": "Stop one wheel and the next one tears loose."
+    },
+    {
+      "id": "paper-trail",
+      "name": "Paper Trail",
+      "base": "exploit-chain",
+      "level": 12,
+      "primary": {
+        "damage": [
+          16,
+          20
+        ]
+      },
+      "effect": {
+        "when": "custom",
+        "do": "windup%",
+        "value": 50
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "shakedown"
+        }
+      ],
+      "flavour": "Every demand leaves a receipt somewhere."
+    },
+    {
+      "id": "shakedown-escrow",
+      "name": "Escrow",
+      "base": "root-shell",
+      "level": 12,
+      "primary": {
+        "signal": 38,
+        "regen": 8
+      },
+      "effect": {
+        "when": "custom",
+        "do": "late",
+        "value": 2
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "shakedown"
+        }
+      ],
+      "flavour": "Held by a third party until the deadline. The third party is late."
+    },
+    {
+      "id": "privacy-screen",
+      "name": "Privacy Screen",
+      "base": "restricted-shell-escape",
+      "level": 18,
+      "primary": {
+        "signal": 50,
+        "regen": 10
+      },
+      "effect": {
+        "when": "custom",
+        "do": "screen"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "shouldersurfer"
+        }
+      ],
+      "flavour": "Polarised. From the side it is a black rectangle."
+    },
+    {
+      "id": "muscle-memory",
+      "name": "Muscle Memory",
+      "base": "loader",
+      "level": 18,
+      "primary": {
+        "damage": 9,
+        "signal": 40,
+        "payload": 3.8
+      },
+      "effect": {
+        "when": "custom",
+        "do": "rhythm",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "shouldersurfer"
+        }
+      ],
+      "flavour": "Two beats, then the key. Your hands knew before you did."
+    },
+    {
+      "id": "tail-call",
+      "name": "Tail Call",
+      "base": "zero-click",
+      "level": 19,
+      "primary": {
+        "damage": [
+          23,
+          29
+        ]
+      },
+      "effect": {
+        "when": "custom",
+        "do": "break-burns"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "recursion"
+        }
+      ],
+      "flavour": "The last thing a frame does is hand its work on."
+    },
+    {
+      "id": "stack-guard",
+      "name": "Stack Guard",
+      "base": "onion-circuit",
+      "level": 19,
+      "primary": {
+        "signal": 104,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "custom",
+        "do": "break-guard",
+        "value": 20
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "recursion"
+        }
+      ],
+      "flavour": "A canary on every frame. It sings once, then it is gone."
+    },
+    {
+      "id": "overdraft",
+      "name": "Overdraft",
+      "base": "onion-circuit",
+      "level": 24,
+      "primary": {
+        "signal": 130,
+        "reduction": 4
+      },
+      "effect": {
+        "when": "custom",
+        "do": "overdraft",
+        "value": 25,
+        "limit": "fight"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "nightdesk"
+        }
+      ],
+      "flavour": "The desk covers it tonight. It bills you in the morning."
+    },
+    {
+      "id": "pre-authorization",
+      "name": "Pre-Authorization",
+      "base": "loader",
+      "level": 24,
+      "primary": {
+        "damage": 12,
+        "signal": 51,
+        "payload": 5
+      },
+      "effect": {
+        "when": "custom",
+        "do": "shield-hit",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "nightdesk"
+        }
+      ],
+      "flavour": "The hold goes on the account before the charge does."
+    },
+    {
+      "id": "changed-default",
+      "name": "Changed Default",
+      "base": "onion-circuit",
+      "level": 24,
+      "primary": {
+        "signal": 130,
+        "reduction": 4
+      },
+      "effect": [
+        {
+          "when": "custom",
+          "do": "helpers-safe"
+        },
+        {
+          "when": "custom",
+          "do": "helper-frags%",
+          "value": 50
+        }
+      ],
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "camswarm"
+        }
+      ],
+      "flavour": "admin, admin. Somebody finally changed it."
+    },
+    {
+      "id": "mass-reboot",
+      "name": "Mass Reboot",
+      "base": "loader",
+      "level": 24,
+      "primary": {
+        "damage": 12,
+        "signal": 51,
+        "payload": 5
+      },
+      "effect": {
+        "when": "custom",
+        "do": "break-frags",
+        "value": 30
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "camswarm"
+        }
+      ],
+      "flavour": "Forty thousand cameras blink at once."
+    },
+    {
+      "id": "majority-attack",
+      "name": "Majority Attack",
+      "base": "wormable",
+      "level": 26,
+      "primary": {
+        "damage": [
+          32,
+          40
+        ]
+      },
+      "effect": {
+        "when": "custom",
+        "do": "low-parts%",
+        "value": 8,
+        "cap": 32
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "byzantine"
+        }
+      ],
+      "flavour": "Hold more than half and the ledger says what you say."
+    },
+    {
+      "id": "quorum-sensor",
+      "name": "Quorum Sensor",
+      "base": "mixnet",
+      "level": 26,
+      "primary": {
+        "signal": 140,
+        "reduction": 4
+      },
+      "effect": {
+        "when": "custom",
+        "do": "second-less",
+        "value": 30
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "byzantine"
+        }
+      ],
+      "flavour": "It counts the votes as they come in, and it flinches at the second."
+    },
+    {
+      "id": "street-atlas",
+      "name": "Street Atlas",
+      "base": "cron-job",
+      "level": 8,
+      "primary": {
+        "damage": 4,
+        "signal": 20,
+        "payload": 2
+      },
+      "effect": {
+        "when": "hit",
+        "if": "room-new",
+        "do": "damage%",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 1
+        }
+      ],
+      "flavour": "Every alley on the Sprawl, inked in by hand, with the dead ends crossed out."
+    },
+    {
+      "id": "quiet-hours",
+      "name": "Quiet Hours",
+      "base": "root-shell",
+      "level": 13,
+      "primary": {
+        "signal": 37,
+        "regen": 7.9,
+        "restore": 21
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat+",
+        "stat": "stealth",
+        "value": 6
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 2
+        }
+      ],
+      "flavour": "The routers on Backhaul log less between two and five."
+    },
+    {
+      "id": "sweetener",
+      "name": "Sweetener",
+      "base": "implant",
+      "level": 18,
+      "primary": {
+        "damage": 6,
+        "signal": 32
+      },
+      "effect": {
+        "when": "custom",
+        "do": "cache-heal%",
+        "value": 5
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 3
+        }
+      ],
+      "flavour": "A canary in every block, and a little sugar under each one."
+    },
+    {
+      "id": "ring-main",
+      "name": "Ring Main",
+      "base": "onion-circuit",
+      "level": 24,
+      "primary": {
+        "signal": 114,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 1,
+        "scale": "held",
+        "cap": 4
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 4
+        }
+      ],
+      "flavour": "One cable round Coldline, fed from both ends."
+    },
+    {
+      "id": "mixed-bag",
+      "name": "Mixed Bag",
+      "base": "polymorphic-engine",
+      "level": 30,
+      "primary": {
+        "damage": 14,
+        "signal": 59,
+        "payload": 5.8
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 3,
+        "scale": "specials"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 5
+        }
+      ],
+      "flavour": "Seven kinds of trouble on Deep Core. It kept a sample of each."
+    },
+    {
+      "id": "superuser",
+      "name": "Superuser",
+      "base": "bootkit",
+      "level": 36,
+      "primary": {
+        "damage": 12.9,
+        "signal": 64
+      },
+      "effect": [
+        {
+          "when": "hit",
+          "if": "server-held",
+          "do": "damage%",
+          "value": 6
+        },
+        {
+          "when": "always",
+          "if": "server-held",
+          "do": "max-signal%",
+          "value": 6
+        }
+      ],
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 6
+        }
+      ],
+      "flavour": "Ring zero answers to whoever holds it longest."
+    },
+    {
+      "id": "bottleneck",
+      "name": "Bottleneck",
+      "base": "hypervisor-escape",
+      "level": 42,
+      "primary": {
+        "damage": [
+          83,
+          104
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 4,
+        "scale": "reads",
+        "cap": 12
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 7
+        }
+      ],
+      "flavour": "Everything on the Sink drains toward one narrow pipe."
+    },
+    {
+      "id": "last-mile",
+      "name": "Last Mile",
+      "base": "covert-channel",
+      "level": 48,
+      "primary": {
+        "signal": 395,
+        "reduction": 11
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 5,
+        "scale": "parts"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 8
+        }
+      ],
+      "flavour": "The last stretch of cable before the bedrock, and the slowest."
+    },
+    {
+      "id": "regular",
+      "name": "Regular",
+      "base": "cron-job",
+      "level": 6,
+      "primary": {
+        "damage": 4,
+        "signal": 19,
+        "payload": 2
+      },
+      "effect": [
+        {
+          "when": "always",
+          "do": "stat+",
+          "stat": "echo",
+          "value": 5
+        },
+        {
+          "when": "custom",
+          "do": "echo-first"
+        }
+      ],
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 1
+        }
+      ],
+      "flavour": "Same corner of SPRAWL-00 every night. The street hits back with you."
+    },
+    {
+      "id": "dead-end",
+      "name": "Dead End",
+      "set": "switchback",
+      "base": "socks-tunnel",
+      "level": 8,
+      "primary": {
+        "signal": 50,
+        "reduction": 1
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 2
+        }
+      ]
+    },
+    {
+      "id": "one-way",
+      "name": "One Way",
+      "set": "switchback",
+      "base": "dropper",
+      "level": 11,
+      "primary": {
+        "damage": 6,
+        "signal": 28,
+        "payload": 2.9
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 4,
+        "text": "+4% Clock Speed"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 2
+        }
+      ]
+    },
+    {
+      "id": "turnout",
+      "name": "Turnout",
+      "set": "switchback",
+      "base": "root-shell",
+      "level": 14,
+      "primary": {
+        "signal": 38,
+        "regen": 8.1,
+        "restore": 22
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 4,
+        "text": "+4% damage"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 2
+        }
+      ]
+    },
+    {
+      "id": "honeycomb",
+      "name": "Honeycomb",
+      "base": "root-shell",
+      "level": 16,
+      "primary": {
+        "signal": 40,
+        "regen": 8.6,
+        "restore": 23
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat%",
+        "stat": "reduction",
+        "value": 100,
+        "if": "early",
+        "text": "Your Block counts double for the first 3 cycles of a fight."
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 3
+        }
+      ],
+      "flavour": "Six walls to a cell, and every cell holds."
+    },
+    {
+      "id": "ice-pick",
+      "name": "Ice Pick",
+      "set": "coldstart",
+      "base": "zero-click",
+      "level": 19,
+      "primary": {
+        "damage": [
+          23,
+          29
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 4,
+        "text": "+4% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 4
+        }
+      ]
+    },
+    {
+      "id": "rime",
+      "name": "Rime",
+      "set": "coldstart",
+      "base": "implant",
+      "level": 22,
+      "primary": {
+        "damage": 7,
+        "signal": 35
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 4
+        }
+      ]
+    },
+    {
+      "id": "thaw",
+      "name": "Thaw",
+      "set": "coldstart",
+      "base": "onion-circuit",
+      "level": 25,
+      "primary": {
+        "signal": 117,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 4
+        }
+      ]
+    },
+    {
+      "id": "sapper",
+      "name": "Sapper",
+      "base": "wormable",
+      "level": 28,
+      "primary": {
+        "damage": [
+          33,
+          42
+        ]
+      },
+      "effect": [
+        {
+          "when": "hit",
+          "do": "shatter",
+          "limit": "fight",
+          "text": "Once a fight, a hit on an armored part breaks 2 ◆."
+        },
+        {
+          "when": "hit",
+          "if": "target-bare",
+          "do": "damage%",
+          "value": 10
+        }
+      ],
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 5
+        }
+      ],
+      "flavour": "Two specials to every server on Deep Core, and a charge for each."
+    },
+    {
+      "id": "grub",
+      "name": "Grub",
+      "set": "bootloader",
+      "base": "polymorphic-engine",
+      "level": 31,
+      "primary": {
+        "damage": 14,
+        "signal": 61,
+        "payload": 5.9
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 4,
+        "text": "+4% Clock Speed"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 6
+        }
+      ]
+    },
+    {
+      "id": "chainload",
+      "name": "Chainload",
+      "set": "bootloader",
+      "base": "bootkit",
+      "level": 34,
+      "primary": {
+        "damage": 12.5,
+        "signal": 62
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 6
+        }
+      ]
+    },
+    {
+      "id": "post",
+      "name": "POST",
+      "set": "bootloader",
+      "base": "ring-zero-shell",
+      "level": 37,
+      "primary": {
+        "signal": 120,
+        "regen": 25.8,
+        "restore": 52
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 4,
+        "text": "+4% damage"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 6
+        }
+      ]
+    },
+    {
+      "id": "culvert",
+      "name": "Culvert",
+      "base": "bootkit",
+      "level": 40,
+      "primary": {
+        "damage": 13.8,
+        "signal": 68
+      },
+      "effect": {
+        "when": "custom",
+        "do": "spill",
+        "value": 40
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 7
+        }
+      ],
+      "flavour": "Everything on the Sink runs downhill, and it takes the next thing with it."
+    },
+    {
+      "id": "lagoon",
+      "name": "Lagoon",
+      "set": "atoll",
+      "base": "firmware-shell",
+      "level": 43,
+      "primary": {
+        "signal": 184,
+        "regen": 40,
+        "restore": 79
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 4,
+        "text": "+4% damage"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 8
+        }
+      ]
+    },
+    {
+      "id": "reef",
+      "name": "Reef",
+      "set": "atoll",
+      "base": "covert-channel",
+      "level": 46,
+      "primary": {
+        "signal": 384,
+        "reduction": 11
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 8
+        }
+      ]
+    },
+    {
+      "id": "causeway",
+      "name": "Causeway",
+      "set": "atoll",
+      "base": "hypervisor-escape",
+      "level": 49,
+      "primary": {
+        "damage": [
+          92,
+          115
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 4,
+        "text": "+4% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 8
+        }
+      ]
+    },
+    {
+      "id": "plumb-line",
+      "name": "Plumb Line",
+      "set": "fullcoverage",
+      "base": "wormable",
+      "level": 26,
+      "primary": {
+        "damage": [
+          35,
+          44
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 6,
+        "text": "+6% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 5
+        }
+      ]
+    },
+    {
+      "id": "field-book",
+      "name": "Field Book",
+      "set": "fullcoverage",
+      "base": "polymorphic-engine",
+      "level": 29,
+      "primary": {
+        "damage": 15,
+        "signal": 64,
+        "payload": 6.3
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 8,
+        "text": "+8% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 5
+        }
+      ]
+    },
+    {
+      "id": "hi-vis",
+      "name": "Hi-Vis",
+      "set": "fullcoverage",
+      "base": "ghost-shell",
+      "level": 33,
+      "primary": {
+        "signal": 88,
+        "regen": 19,
+        "restore": 38
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 3,
+        "text": "+3 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 6
+        }
+      ]
+    },
+    {
+      "id": "datum",
+      "name": "Datum",
+      "set": "fullcoverage",
+      "base": "bootkit",
+      "level": 37,
+      "primary": {
+        "damage": 14.5,
+        "signal": 72
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 8,
+        "text": "+8% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 3,
+        "text": "+3 Block"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 6
+        }
+      ]
+    },
+    {
+      "id": "waybill",
+      "name": "Waybill",
+      "set": "longhaul",
+      "base": "cron-job",
+      "level": 10,
+      "primary": {
+        "damage": 5,
+        "signal": 23,
+        "payload": 3
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 8,
+        "text": "+8% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ]
+    },
+    {
+      "id": "dray",
+      "name": "Dray",
+      "set": "longhaul",
+      "base": "vpn-cascade",
+      "level": 17,
+      "primary": {
+        "signal": 90,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 8,
+        "text": "+8% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 6,
+        "text": "+6% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ]
+    },
+    {
+      "id": "tailgate",
+      "name": "Tailgate",
+      "set": "longhaul",
+      "base": "restricted-shell-escape",
+      "level": 24,
+      "primary": {
+        "signal": 63,
+        "regen": 13,
+        "restore": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 3,
+        "text": "+3 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ]
+    },
+    {
+      "id": "freehold",
+      "name": "Freehold",
+      "set": "tenure",
+      "base": "implant",
+      "level": 33,
+      "primary": {
+        "damage": 10,
+        "signal": 48
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 8,
+        "text": "+8% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 3,
+        "text": "+3 Block"
+      },
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ]
+    },
+    {
+      "id": "deed",
+      "name": "Deed",
+      "set": "tenure",
+      "base": "ring-zero-shell",
+      "level": 40,
+      "primary": {
+        "signal": 138,
+        "regen": 29.7,
+        "restore": 59
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 3,
+        "text": "+3 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ]
+    },
+    {
+      "id": "sitting-tenant",
+      "name": "Sitting Tenant",
+      "set": "tenure",
+      "base": "covert-channel",
+      "level": 48,
+      "primary": {
+        "signal": 434,
+        "reduction": 12
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 8,
+        "text": "+8% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 6,
+        "text": "+6% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ]
+    },
+    {
+      "id": "sampler",
+      "name": "Sampler",
+      "base": "loader",
+      "level": 20,
+      "primary": {
+        "damage": 10,
+        "signal": 46,
+        "payload": 4.4
+      },
+      "effect": [
+        {
+          "when": "custom",
+          "do": "warn-early",
+          "value": 1
+        },
+        {
+          "when": "hit",
+          "if": "target-winding",
+          "do": "damage%",
+          "value": 10
+        }
+      ],
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ],
+      "flavour": "One of everything on the board, and the knack of each."
+    },
+    {
+      "id": "field-guide",
+      "name": "Field Guide",
+      "base": "wormable",
+      "level": 28,
+      "primary": {
+        "damage": [
+          37,
+          46
+        ]
+      },
+      "effect": [
+        {
+          "when": "hit",
+          "if": "strain-fight",
+          "do": "damage%",
+          "value": 8
+        },
+        {
+          "when": "hit",
+          "if": "strain-fight",
+          "do": "crit%",
+          "value": 5
+        }
+      ],
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ],
+      "flavour": "Twenty strains drawn from life, each with a note on where it bites."
+    },
+    {
+      "id": "no-rest",
+      "name": "No Rest",
+      "base": "restricted-shell-escape",
+      "level": 22,
+      "primary": {
+        "signal": 60,
+        "regen": 12,
+        "restore": 29
+      },
+      "effect": [
+        {
+          "when": "always",
+          "if": "unrested",
+          "do": "max-signal%",
+          "value": 6
+        },
+        {
+          "when": "always",
+          "if": "unrested",
+          "do": "stat+",
+          "stat": "regen",
+          "value": 1
+        }
+      ],
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ],
+      "flavour": "Five servers in one sitting each, and no chair."
+    },
+    {
+      "id": "long-shot",
+      "name": "Long Shot",
+      "base": "bootkit",
+      "level": 40,
+      "primary": {
+        "damage": 15.2,
+        "signal": 75
+      },
+      "effect": [
+        {
+          "when": "always",
+          "do": "stat+",
+          "stat": "crit",
+          "value": 5
+        },
+        {
+          "when": "hit",
+          "if": "above-75",
+          "do": "damage%",
+          "value": 10
+        }
+      ],
+      "sources": [
+        {
+          "kind": "feat"
+        }
+      ],
+      "flavour": "Found them all from a distance, before anyone stood next to them."
+    },
+    {
+      "id": "breakwater",
+      "name": "Breakwater",
+      "base": "sandbox-escape",
+      "level": 41,
+      "lean": "bastion",
+      "primary": {
+        "damage": [
+          66,
+          83
+        ]
+      },
+      "secondary": {
+        "crit": 6,
+        "reduction": 2
+      },
+      "effect": {
+        "when": "shielded",
+        "do": "buff",
+        "value": 5,
+        "cycles": 2,
+        "stacks": 3,
+        "text": "Increases your damage by 5% for 2 cycles when you gain a shield or your shield absorbs a hit. Stacks up to 3 times."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7
+        }
+      ],
+      "flavour": "The sea hits it all night and builds it a little higher."
+    },
+    {
+      "id": "riprap",
+      "name": "Riprap",
+      "base": "firmware-shell",
+      "level": 42,
+      "lean": "breaker",
+      "primary": {
+        "signal": 150,
+        "regen": 32,
+        "restore": 65
+      },
+      "secondary": {
+        "crit": 5
+      },
+      "effect": {
+        "when": "cut",
+        "do": "buff",
+        "value": 8,
+        "cycles": 2,
+        "stacks": 2,
+        "text": "Increases your damage by 8% for 2 cycles when you cut a part's move. Stacks up to 2 times."
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 7
+        }
+      ],
+      "flavour": "Broken stone, dumped where the current cuts deepest."
+    },
+    {
+      "id": "spawning-run",
+      "name": "Spawning Run",
+      "base": "hypervisor-escape",
+      "level": 42,
+      "lean": "operator",
+      "primary": {
+        "damage": [
+          69,
+          86
+        ]
+      },
+      "secondary": {
+        "clock": 4
+      },
+      "effect": {
+        "when": "hit",
+        "do": "helper%",
+        "value": 15,
+        "text": "Increases the damage of your helpers by 15%."
+      },
+      "sources": [
+        {
+          "kind": "rare",
+          "floor": 7
+        }
+      ],
+      "flavour": "Thousands go upstream. Enough of them arrive."
+    },
+    {
+      "id": "tide-table",
+      "name": "Tide Table",
+      "base": "firmware-rootkit",
+      "level": 42,
+      "primary": {
+        "damage": 17,
+        "signal": 83
+      },
+      "secondary": {
+        "crit": 4
+      },
+      "effect": {
+        "when": "answer",
+        "do": "refund",
+        "value": 1,
+        "text": "Reduces all your cooldowns by 1 cycle when you answer a tell."
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "floor": 7
+        }
+      ],
+      "flavour": "High water at 03:12. It is never wrong."
+    },
+    {
+      "id": "banked-fire",
+      "name": "Banked Fire",
+      "base": "firmware-shell",
+      "level": 43,
+      "lean": "infiltrator",
+      "primary": {
+        "signal": 150,
+        "regen": 32,
+        "restore": 65
+      },
+      "secondary": {
+        "payload": 6
+      },
+      "effect": {
+        "when": "hit",
+        "do": "burn%",
+        "value": 12,
+        "text": "Increases the damage of your burns by 12%."
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": 7
+        }
+      ],
+      "flavour": "Ash on top. Red underneath until morning."
+    },
+    {
+      "id": "rockfall",
+      "name": "Rockfall",
+      "base": "metamorphic-engine",
+      "level": 45,
+      "lean": "breaker",
+      "primary": {
+        "damage": 35,
+        "signal": 145,
+        "payload": 18
+      },
+      "secondary": {
+        "crit": 5
+      },
+      "effect": {
+        "when": "break",
+        "do": "refund",
+        "value": 1,
+        "text": "Reduces all your cooldowns by 1 cycle when you break a part."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8
+        }
+      ],
+      "flavour": "One stone lets go, and the slope follows it."
+    },
+    {
+      "id": "relief-valve",
+      "name": "Relief Valve",
+      "base": "firmware-shell",
+      "level": 45,
+      "lean": "operator",
+      "primary": {
+        "signal": 185,
+        "regen": 40,
+        "restore": 80
+      },
+      "secondary": {
+        "clock": 4
+      },
+      "effect": {
+        "when": "cut",
+        "do": "refund",
+        "value": 1,
+        "text": "Reduces all your cooldowns by 1 cycle when you cut a part's move."
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 8
+        }
+      ],
+      "flavour": "Set to lift at nine bar. It has lifted every night this week."
+    },
+    {
+      "id": "cutoff-wall",
+      "name": "Cutoff Wall",
+      "base": "metamorphic-engine",
+      "level": 47,
+      "lean": "bastion",
+      "primary": {
+        "damage": 37,
+        "signal": 157,
+        "payload": 19
+      },
+      "secondary": {
+        "reduction": 2
+      },
+      "effect": {
+        "when": "cut",
+        "do": "shield",
+        "value": 16,
+        "text": "Shields you for 16 when you cut a part's move."
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 8
+        }
+      ],
+      "flavour": "Grout pumped down to the bedrock, so nothing seeps under the dam."
+    },
+    {
+      "id": "bench-mark",
+      "name": "Bench Mark",
+      "base": "firmware-rootkit",
+      "level": 48,
+      "lean": "infiltrator",
+      "primary": {
+        "damage": 22,
+        "signal": 110
+      },
+      "secondary": {
+        "crit": 5
+      },
+      "effect": {
+        "when": "tagged",
+        "do": "heal",
+        "value": 5,
+        "text": "Heals you for 5 when you hit a Tagged part."
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": 8
+        }
+      ],
+      "flavour": "A brass disc in the rock. Every survey starts from it."
+    },
+    {
+      "id": "flue",
+      "name": "Flue",
+      "base": "covert-channel",
+      "level": 48,
+      "primary": {
+        "signal": 385,
+        "reduction": 11
+      },
+      "secondary": {
+        "payload": 6
+      },
+      "effect": {
+        "when": "burn",
+        "do": "shield",
+        "value": 2,
+        "text": "Shields you for 2 when one of your burns ticks."
+      },
+      "sources": [
+        {
+          "kind": "rare",
+          "floor": 8
+        }
+      ],
+      "flavour": "The heat goes up the stack and keeps the room warm on the way."
+    },
+    {
+      "id": "gully",
+      "name": "Gully",
+      "set": "catchment",
+      "base": "sandbox-escape",
+      "level": 37,
+      "primary": {
+        "damage": [
+          60,
+          76
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7
+        }
+      ]
+    },
+    {
+      "id": "storm-drain",
+      "name": "Storm Drain",
+      "set": "catchment",
+      "base": "domain-front",
+      "level": 39,
+      "primary": {
+        "signal": 271,
+        "reduction": 8
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7
+        }
+      ]
+    },
+    {
+      "id": "basin",
+      "name": "Basin",
+      "set": "catchment",
+      "base": "firmware-shell",
+      "level": 42,
+      "primary": {
+        "signal": 150,
+        "regen": 32,
+        "restore": 65
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7
+        }
+      ]
+    },
+    {
+      "id": "reservoir",
+      "name": "Reservoir",
+      "set": "catchment",
+      "base": "firmware-rootkit",
+      "level": 44,
+      "primary": {
+        "damage": 18,
+        "signal": 90
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 4,
+        "text": "+4% Clock Speed"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7
+        }
+      ]
+    },
+    {
+      "id": "rider",
+      "name": "Rider",
+      "set": "fineprint",
+      "base": "mixnet",
+      "level": 26,
+      "primary": {
+        "signal": 142,
+        "reduction": 4
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5,
+          "planned": "Underwriting desk: its vaults and Core"
+        }
+      ]
+    },
+    {
+      "id": "copay",
+      "name": "Copay",
+      "set": "fineprint",
+      "base": "ghost-shell",
+      "level": 27,
+      "primary": {
+        "signal": 77,
+        "regen": 17,
+        "restore": 33
+      },
+      "effect": {
+        "when": "struck",
+        "do": "taken%",
+        "value": 20,
+        "limit": "fight",
+        "text": "The first hit on you each fight deals 20% less"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5,
+          "planned": "Underwriting desk: its vaults and Core"
+        }
+      ]
+    },
+    {
+      "id": "exclusion",
+      "name": "Exclusion",
+      "set": "fineprint",
+      "base": "polymorphic-engine",
+      "level": 30,
+      "primary": {
+        "damage": 15,
+        "signal": 65,
+        "payload": 6
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5,
+          "planned": "Underwriting desk: its vaults and Core"
+        }
+      ]
+    },
+    {
+      "id": "premium",
+      "name": "Premium",
+      "set": "fineprint",
+      "base": "implant",
+      "level": 32,
+      "primary": {
+        "damage": 7,
+        "signal": 37
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5,
+          "planned": "Underwriting desk: its vaults and Core"
+        }
+      ]
+    },
+    {
+      "id": "sector",
+      "name": "Sector",
+      "set": "contiguous",
+      "base": "wormable",
+      "level": 27,
+      "primary": {
+        "damage": [
+          35,
+          44
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 4,
+        "text": "+4% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5,
+          "planned": "Defrag boards"
+        }
+      ]
+    },
+    {
+      "id": "cluster",
+      "name": "Cluster",
+      "set": "contiguous",
+      "base": "implant",
+      "level": 29,
+      "primary": {
+        "damage": 7,
+        "signal": 37
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 4,
+        "text": "+4% Clock Speed"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5,
+          "planned": "Defrag boards"
+        }
+      ]
+    },
+    {
+      "id": "allocation-table",
+      "name": "Allocation Table",
+      "set": "contiguous",
+      "base": "polymorphic-engine",
+      "level": 31,
+      "primary": {
+        "damage": 15,
+        "signal": 65,
+        "payload": 6
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5,
+          "planned": "Defrag boards"
+        }
+      ]
+    },
+    {
+      "id": "stub",
+      "name": "Stub",
+      "set": "crypter",
+      "base": "wormable",
+      "level": 26,
+      "primary": {
+        "damage": [
+          35,
+          44
+        ]
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5,
+          "planned": "Polymorph kills"
+        }
+      ]
+    },
+    {
+      "id": "junk-code",
+      "name": "Junk Code",
+      "set": "crypter",
+      "base": "polymorphic-engine",
+      "level": 28,
+      "primary": {
+        "damage": 15,
+        "signal": 65,
+        "payload": 6
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 6,
+        "if": "target-wearing",
+        "text": "+6% damage to a part wearing ◆"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5,
+          "planned": "Polymorph kills"
+        }
+      ]
+    },
+    {
+      "id": "decryptor",
+      "name": "Decryptor",
+      "set": "crypter",
+      "base": "ghost-shell",
+      "level": 31,
+      "primary": {
+        "signal": 77,
+        "regen": 17,
+        "restore": 33
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5,
+          "planned": "Polymorph kills"
+        }
+      ]
+    },
+    {
+      "id": "ticket",
+      "name": "Ticket",
+      "set": "domainadmin",
+      "base": "implant",
+      "level": 32,
+      "primary": {
+        "damage": 7,
+        "signal": 37
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "Domain Controller vaults"
+        }
+      ]
+    },
+    {
+      "id": "group-policy",
+      "name": "Group Policy",
+      "set": "domainadmin",
+      "base": "mixnet",
+      "level": 33,
+      "primary": {
+        "signal": 166,
+        "reduction": 5
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "Domain Controller vaults"
+        }
+      ]
+    },
+    {
+      "id": "schema",
+      "name": "Schema",
+      "set": "domainadmin",
+      "base": "ring-zero-shell",
+      "level": 35,
+      "primary": {
+        "signal": 111,
+        "regen": 24,
+        "restore": 48
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "restore",
+        "value": 5,
+        "text": "+5% Restore"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "Domain Controller vaults"
+        }
+      ]
+    },
+    {
+      "id": "admin-rights",
+      "name": "Admin Rights",
+      "set": "domainadmin",
+      "base": "sandbox-escape",
+      "level": 37,
+      "primary": {
+        "damage": [
+          56,
+          71
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "Domain Controller vaults"
+        }
+      ]
+    },
+    {
+      "id": "spinlock",
+      "name": "Spinlock",
+      "set": "semaphore",
+      "base": "polymorphic-engine",
+      "level": 33,
+      "primary": {
+        "damage": 15,
+        "signal": 65,
+        "payload": 6
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 4,
+        "text": "+4% Clock Speed"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "id": "deadlock",
+          "floor": 6
+        }
+      ]
+    },
+    {
+      "id": "semaphore",
+      "name": "Semaphore",
+      "set": "semaphore",
+      "base": "bootkit",
+      "level": 35,
+      "primary": {
+        "damage": 13,
+        "signal": 62
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "id": "deadlock",
+          "floor": 6
+        }
+      ]
+    },
+    {
+      "id": "critical-section",
+      "name": "Critical Section",
+      "set": "semaphore",
+      "base": "ring-zero-shell",
+      "level": 37,
+      "primary": {
+        "signal": 120,
+        "regen": 26,
+        "restore": 52
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "id": "deadlock",
+          "floor": 6
+        }
+      ]
+    },
+    {
+      "id": "unlink",
+      "name": "Unlink",
+      "set": "hiddenprocess",
+      "base": "wormable",
+      "level": 32,
+      "primary": {
+        "damage": [
+          35,
+          44
+        ]
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "Rootkit kills"
+        }
+      ]
+    },
+    {
+      "id": "hollow",
+      "name": "Hollow",
+      "set": "hiddenprocess",
+      "base": "living-off-the-land",
+      "level": 34,
+      "primary": {
+        "damage": 20,
+        "signal": 87,
+        "payload": 10
+      },
+      "effect": {
+        "when": "custom",
+        "do": "burn+%",
+        "value": 5,
+        "text": "Your burns deal 5% more"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "Rootkit kills"
+        }
+      ]
+    },
+    {
+      "id": "driver",
+      "name": "Driver",
+      "set": "hiddenprocess",
+      "base": "bootkit",
+      "level": 36,
+      "primary": {
+        "damage": 13,
+        "signal": 62
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "stealth",
+        "value": 5,
+        "text": "+5% Stealth"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "Rootkit kills"
+        }
+      ]
+    },
+    {
+      "id": "hatch",
+      "name": "Hatch",
+      "set": "watertight",
+      "base": "domain-front",
+      "level": 34,
+      "primary": {
+        "signal": 216,
+        "reduction": 6
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "Kestrel ICE on floor 6"
+        }
+      ]
+    },
+    {
+      "id": "seal-plate",
+      "name": "Seal Plate",
+      "set": "watertight",
+      "base": "ring-zero-shell",
+      "level": 36,
+      "primary": {
+        "signal": 120,
+        "regen": 26,
+        "restore": 52
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "Kestrel ICE on floor 6"
+        }
+      ]
+    },
+    {
+      "id": "pressure-door",
+      "name": "Pressure Door",
+      "set": "watertight",
+      "base": "bootkit",
+      "level": 38,
+      "primary": {
+        "damage": 13,
+        "signal": 62
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "Kestrel ICE on floor 6"
+        }
+      ]
+    },
+    {
+      "id": "installment",
+      "name": "Installment",
+      "base": "implant",
+      "level": 28,
+      "primary": {
+        "damage": 7,
+        "signal": 37
+      },
+      "secondary": {
+        "clock": 4
+      },
+      "effect": {
+        "when": "custom",
+        "do": "part-first%",
+        "value": 10,
+        "every": 3,
+        "text": "Your first hit on each part every 3 cycles deals 10% more."
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "graceperiod"
+        }
+      ],
+      "flavour": "Small amounts, on time, for as long as it takes."
+    },
+    {
+      "id": "late-fee",
+      "name": "Late Fee",
+      "base": "wormable",
+      "level": 28,
+      "primary": {
+        "damage": [
+          35,
+          44
+        ]
+      },
+      "secondary": {
+        "crit": 4
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 15,
+        "if": "target-repatched",
+        "text": "Increases your damage by 15% on a part whose ◆ came back this fight."
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "graceperiod"
+        }
+      ],
+      "flavour": "Charged on the first of the month to anything still standing."
+    },
+    {
+      "id": "antibody",
+      "name": "Antibody",
+      "base": "wormable",
+      "level": 32,
+      "primary": {
+        "damage": [
+          35,
+          44
+        ]
+      },
+      "secondary": {
+        "accuracy": 4
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 40,
+        "if": "target-healed",
+        "text": "Increases your damage by 40% on a part that healed this cycle."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5,
+          "planned": "PARASITE"
+        }
+      ],
+      "flavour": "It learns the shape of whatever is feeding and waits there."
+    },
+    {
+      "id": "tourniquet",
+      "name": "Tourniquet",
+      "base": "mixnet",
+      "level": 32,
+      "primary": {
+        "signal": 166,
+        "reduction": 5
+      },
+      "secondary": {
+        "reduction": 2
+      },
+      "effect": {
+        "when": "custom",
+        "do": "siphon-less",
+        "value": 50,
+        "text": "Siphons that hit you deal 50% less and heal half as much."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5,
+          "planned": "PARASITE"
+        }
+      ],
+      "flavour": "Tight enough to hurt. Tight enough to stop it."
+    },
+    {
+      "id": "hidden-service",
+      "name": "Hidden Service",
+      "base": "implant",
+      "level": 30,
+      "primary": {
+        "damage": 7,
+        "signal": 37
+      },
+      "secondary": {
+        "evasion": 4
+      },
+      "effect": {
+        "when": "custom",
+        "do": "halve-every",
+        "value": 6,
+        "text": "Every 6 cycles, the next attack on you deals half."
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "exitnode"
+        }
+      ],
+      "flavour": "An address that answers, from a machine nobody has ever found."
+    },
+    {
+      "id": "tail-circuit",
+      "name": "Tail Circuit",
+      "base": "wormable",
+      "level": 30,
+      "primary": {
+        "damage": [
+          35,
+          44
+        ]
+      },
+      "secondary": {
+        "crit": 4
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 10,
+        "if": "target-grew",
+        "text": "Increases your damage by 10% on a part with more Integrity than it had 2 cycles ago."
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "exitnode"
+        }
+      ],
+      "flavour": "Three hops out, and the last one remembers everything."
+    },
+    {
+      "id": "moral-hazard",
+      "name": "Moral Hazard",
+      "base": "sandbox-escape",
+      "level": 40,
+      "primary": {
+        "damage": [
+          60,
+          76
+        ]
+      },
+      "secondary": {
+        "crit": 6
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 3,
+        "scale": "tells",
+        "cap": 30,
+        "text": "Increases your damage by 3% for each tell that landed on you this fight, up to 30%."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5,
+          "planned": "ACTUARY"
+        }
+      ],
+      "flavour": "Covered for every loss, so it stopped counting them."
+    },
+    {
+      "id": "reinsurance",
+      "name": "Reinsurance",
+      "base": "domain-front",
+      "level": 40,
+      "primary": {
+        "signal": 271,
+        "reduction": 8
+      },
+      "secondary": {
+        "reduction": 3
+      },
+      "effect": {
+        "when": "struck",
+        "do": "reinsure",
+        "value": 30,
+        "cycles": 2,
+        "limit": "fight",
+        "text": "The first time each fight a hit takes more than 30% of your max Signal, the excess comes back as a shield over 2 cycles."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5,
+          "planned": "ACTUARY"
+        }
+      ],
+      "flavour": "The insurer's insurer pays last, and pays in full."
+    },
+    {
+      "id": "syscall-table",
+      "name": "Syscall Table",
+      "base": "living-off-the-land",
+      "level": 34,
+      "primary": {
+        "damage": 20,
+        "signal": 87,
+        "payload": 10
+      },
+      "secondary": {
+        "clock": 5
+      },
+      "effect": {
+        "when": "custom",
+        "do": "varied%",
+        "value": 5,
+        "cap": 25,
+        "text": "Each different skill you land in a row adds 5% damage, up to 25%. Repeating one resets it."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "RING ZERO"
+        }
+      ],
+      "flavour": "Three hundred numbered entries, and every call goes through one of them."
+    },
+    {
+      "id": "ring-minus-one",
+      "name": "Ring Minus One",
+      "base": "bootkit",
+      "level": 34,
+      "primary": {
+        "damage": 13,
+        "signal": 62
+      },
+      "secondary": {
+        "crit": 4
+      },
+      "effect": {
+        "when": "custom",
+        "do": "ready-wait%",
+        "value": 15,
+        "cycles": 2,
+        "text": "A skill fired after waiting ready for 2 cycles deals 15% more."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "RING ZERO"
+        }
+      ],
+      "flavour": "Below the kernel, the hypervisor watches the clock and waits."
+    },
+    {
+      "id": "load-path",
+      "name": "Load Path",
+      "base": "sandbox-escape",
+      "level": 36,
+      "primary": {
+        "damage": [
+          54,
+          69
+        ]
+      },
+      "secondary": {
+        "crit": 6
+      },
+      "effect": {
+        "when": "custom",
+        "do": "armor-bleed",
+        "value": 15,
+        "text": "A hit that breaks a ◆ still deals 15% of its damage to the part."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "BRICKWALL"
+        }
+      ],
+      "flavour": "Every wall carries its weight down to something."
+    },
+    {
+      "id": "recovery-mode",
+      "name": "Recovery Mode",
+      "base": "living-off-the-land",
+      "level": 36,
+      "primary": {
+        "damage": 20,
+        "signal": 87,
+        "payload": 10
+      },
+      "secondary": {
+        "regen": 6
+      },
+      "effect": {
+        "when": "custom",
+        "do": "cap-every",
+        "value": 15,
+        "every": 6,
+        "text": "Below half Signal, every 6 cycles the next hit on you is capped at 15% of your max Signal."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "BRICKWALL"
+        }
+      ],
+      "flavour": "Hold the button down for ten seconds and it comes back plain."
+    },
+    {
+      "id": "notice-period",
+      "name": "Notice Period",
+      "base": "living-off-the-land",
+      "level": 36,
+      "primary": {
+        "damage": 20,
+        "signal": 87,
+        "payload": 10
+      },
+      "secondary": {
+        "clock": 5
+      },
+      "effect": {
+        "when": "custom",
+        "do": "tell-cd",
+        "value": 1,
+        "text": "When a part starts a tell, your shortest cooldown drops by 1."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "BULKHEAD"
+        }
+      ],
+      "flavour": "They always say when it is coming. Most people just stop listening."
+    },
+    {
+      "id": "pressure-relief",
+      "name": "Pressure Relief",
+      "base": "ring-zero-shell",
+      "level": 36,
+      "primary": {
+        "signal": 120,
+        "regen": 26,
+        "restore": 52
+      },
+      "secondary": {
+        "reduction": 2
+      },
+      "effect": {
+        "when": "custom",
+        "do": "delayed-less",
+        "value": 20,
+        "text": "An attack you delayed deals 20% less when it lands."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "BULKHEAD"
+        }
+      ],
+      "flavour": "A spring, a seat and a little hiss before the bang."
+    },
+    {
+      "id": "generator",
+      "name": "Generator",
+      "base": "bootkit",
+      "level": 34,
+      "primary": {
+        "damage": 13,
+        "signal": 62
+      },
+      "secondary": {
+        "accuracy": 4
+      },
+      "effect": {
+        "when": "custom",
+        "do": "reach",
+        "text": "When the part you aim at is out of reach, your command hits the next part at full."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "BLACKOUT"
+        }
+      ],
+      "flavour": "Diesel in the basement, enough for one floor at a time."
+    },
+    {
+      "id": "ups",
+      "name": "UPS",
+      "base": "ring-zero-shell",
+      "level": 34,
+      "primary": {
+        "signal": 105,
+        "regen": 23,
+        "restore": 46
+      },
+      "secondary": {
+        "regen": 6
+      },
+      "effect": {
+        "when": "always",
+        "do": "taken%",
+        "value": 20,
+        "if": "early",
+        "text": "For the first 3 cycles of a fight, hits on you deal 20% less."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "BLACKOUT"
+        }
+      ],
+      "flavour": "Eleven minutes of battery and a beep nobody can find."
+    },
+    {
+      "id": "dkom",
+      "name": "DKOM",
+      "base": "polymorphic-engine",
+      "level": 33,
+      "primary": {
+        "damage": 15,
+        "signal": 65,
+        "payload": 6
+      },
+      "secondary": {
+        "crit": 4
+      },
+      "effect": {
+        "when": "custom",
+        "do": "surfaced%",
+        "value": 25,
+        "text": "Your first hit on a part that just became hittable deals 25% more."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "Rootkit kills"
+        }
+      ],
+      "flavour": "It unlinks itself from the list and keeps running."
+    },
+    {
+      "id": "golden-ticket",
+      "name": "Golden Ticket",
+      "base": "bootkit",
+      "level": 36,
+      "primary": {
+        "damage": 13,
+        "signal": 62
+      },
+      "effect": [
+        {
+          "when": "always",
+          "do": "max-signal%",
+          "value": 6,
+          "text": "Increases your max Signal by 6%."
+        },
+        {
+          "when": "custom",
+          "do": "first-shield-x2",
+          "text": "Your first shield each fight is doubled."
+        }
+      ],
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "Domain Controller Core vault"
+        }
+      ],
+      "flavour": "Signed with a key nobody changed in ten years."
+    },
+    {
+      "id": "pass-the-hash",
+      "name": "Pass the Hash",
+      "base": "sandbox-escape",
+      "level": 35,
+      "primary": {
+        "damage": [
+          52,
+          66
+        ]
+      },
+      "secondary": {
+        "crit": 6
+      },
+      "effect": {
+        "when": "custom",
+        "do": "crit-pass",
+        "value": 3,
+        "text": "A critical strike makes your next hit on a different part a critical strike too. Works once every 3 cycles."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6,
+          "planned": "Domain Controller vaults"
+        }
+      ],
+      "flavour": "Nobody asked for the password. The hash was enough."
+    },
+    {
+      "id": "grabber",
+      "name": "Grabber",
+      "set": "smashandgrab",
+      "base": "sandbox-escape",
+      "level": 38,
+      "primary": {
+        "damage": [
+          55,
+          68
+        ]
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7,
+          "planned": "Stealer kills"
+        }
+      ]
+    },
+    {
+      "id": "clipper",
+      "name": "Clipper",
+      "set": "smashandgrab",
+      "base": "living-off-the-land",
+      "level": 40,
+      "primary": {
+        "damage": 26,
+        "signal": 112,
+        "payload": 13
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "scavenge",
+        "value": 5,
+        "text": "+5% Scavenge"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7,
+          "planned": "Stealer kills"
+        }
+      ]
+    },
+    {
+      "id": "dropzone",
+      "name": "Dropzone",
+      "set": "smashandgrab",
+      "base": "firmware-rootkit",
+      "level": 42,
+      "primary": {
+        "damage": 17,
+        "signal": 83
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7,
+          "planned": "Stealer kills"
+        }
+      ]
+    },
+    {
+      "id": "pay-slip",
+      "name": "Pay Slip",
+      "set": "payroll",
+      "base": "living-off-the-land",
+      "level": 39,
+      "primary": {
+        "damage": 26,
+        "signal": 112,
+        "payload": 13
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "restore",
+        "value": 5,
+        "text": "+5% Restore"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": [
+            7,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "id": "direct-deposit",
+      "name": "Direct Deposit",
+      "set": "payroll",
+      "base": "domain-front",
+      "level": 41,
+      "primary": {
+        "signal": 256,
+        "reduction": 7
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": [
+            7,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "id": "year-end",
+      "name": "Year End",
+      "set": "payroll",
+      "base": "firmware-shell",
+      "level": 43,
+      "primary": {
+        "signal": 154,
+        "regen": 33,
+        "restore": 66
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": [
+            7,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hop",
+      "name": "Hop",
+      "set": "backbone",
+      "base": "living-off-the-land",
+      "level": 38,
+      "primary": {
+        "damage": 22,
+        "signal": 94,
+        "payload": 10
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 4,
+        "text": "+4% Clock Speed"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "id": "routing",
+          "floor": 7
+        }
+      ]
+    },
+    {
+      "id": "crc",
+      "name": "CRC",
+      "set": "backbone",
+      "base": "bootkit",
+      "level": 41,
+      "primary": {
+        "damage": 16,
+        "signal": 79
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "id": "routing",
+          "floor": 7
+        }
+      ]
+    },
+    {
+      "id": "broadcast-storm",
+      "name": "Broadcast Storm",
+      "set": "backbone",
+      "base": "hypervisor-escape",
+      "level": 44,
+      "primary": {
+        "damage": [
+          75,
+          93
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "id": "routing",
+          "floor": 7
+        }
+      ]
+    },
+    {
+      "id": "headcount",
+      "name": "Headcount",
+      "base": "domain-front",
+      "level": 40,
+      "primary": {
+        "signal": 256,
+        "reduction": 7
+      },
+      "secondary": {
+        "signal": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 1,
+        "scale": "standing",
+        "cap": 4,
+        "text": "+1 Block for each part standing, up to 4."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7,
+          "planned": "PAY RUN"
+        }
+      ],
+      "flavour": "Everyone on the floor at nine, and everyone paid at five."
+    },
+    {
+      "id": "check-valve",
+      "name": "Check Valve",
+      "base": "covert-channel",
+      "level": 44,
+      "primary": {
+        "signal": 324,
+        "reduction": 9
+      },
+      "secondary": {
+        "reduction": 3
+      },
+      "effect": {
+        "when": "custom",
+        "do": "break-less",
+        "value": 40,
+        "text": "Damage from a part breaking deals 40% less to you."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7,
+          "planned": "SUMP"
+        }
+      ],
+      "flavour": "Water goes one way through it, and the flap stays shut on the backwash."
     }
   ]
 };

@@ -119,7 +119,8 @@ test('finger on you: banner, title, plan, classes, pieces, marks and stickers', 
   const card = fingerOf(s, 'dana');
   assert.deepEqual(card.classes.map((c) => [c.cls, c.level]), [['breaker', 14], ['bastion', 6]]);
   assert.deepEqual(card.pieces.map((p) => p.name), [u.name]);
-  assert.ok(card.marks.some((m) => m.f === 'kestrel' && m.tier === 4));
+  assert.ok(card.marks.some((m) => m.f === 'kestrel' && m.tier === 3));
+  assert.deepEqual(card.stance, { f: 'halcyon', line: 'Holds with Halcyon' }, 'the badge’s stance line reads your commission');
   assert.deepEqual(stickersOf(s).map((x) => x.id), ['f-kestrel', 'floor-2', 'floor-3', 'lair-nb-deadbolt']);
   assert.equal(card.title, shownTitle(s).name);
   const html = profileMarkup(s, 'dana');

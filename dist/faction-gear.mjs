@@ -7,9 +7,9 @@
 //               as a count on the save (s.factionParts), not in the stash. At its hub, `hub assemble <faction>` spends
 //               the parts for the piece at your level; once you hold it, the next lot re-tunes it to your level (the
 //               same item, its stats, base and implicit grown). Feuds are their only source.
-// Read from the written items (not combat.mjs UNIQUES), so this module loads before the engine has finished (hubs.mjs).
+// Read from the written items (not combat.mjs UNIQUES), so this module loads before the engine has finished (combat.mjs imports it).
 import ITEMS from './content/items.mjs';
-import { emit, warn, rand, active, hackerLevel, addItem, gearFx, fxHolds, defender, soonestAttacker, alive, attackAmount, blocked, skillBase, hit, heal } from './combat.mjs';
+import { emit, warn, rand, active, hackerLevel, addItem, gearFx, fxHolds, defender, soonestAttacker, alive, attackAmount, blocked, skillBase, hit, heal, zeroDay, livingParts } from './combat.mjs';
 import { uniqueItem, itemLabel, STASH_CAP } from './gear.mjs';
 import { FACTIONS, hubOf } from './factions.mjs';
 
@@ -53,6 +53,7 @@ export const IMPLICIT_HOOKS = {
     }
     st.hurt = true;
     const c = st.clean && own(s, 'clean-signal');
+    if (c && st.keep) { st.keep = false; emit(s, 'status', `${c.name} holds through the hit.`, { mark: 'buff', ...chip(c) }); return; } // Carrier Wave (chase.mjs)
     if (c) emit(s, 'status', `${c.name} lost.`, { mark: 'debuff', ...chip(c) });
     st.clean = 0;
   },
@@ -82,7 +83,11 @@ export const IMPLICIT_HOOKS = {
     st.last = id;
     if (!x) return;
     st.last = null; // the copy answers the pair: a third in a row starts the next one
-    hit(s, target, Math.max(1, Math.round((skillBase(s, id, target) * x.fx.value) / 100)), { mine: true, by: x.name });
+    const n = Math.max(1, Math.round((skillBase(s, id, target) * x.fx.value) / 100));
+    hit(s, target, n, { mine: true, by: x.name });
+    // Round (a NULL CHOIR chase protocol): the second hit lands on another part too.
+    const rd = zeroDay(s, 'round'), other = rd && livingParts(s).find((p) => p !== target);
+    if (other) hit(s, other, n, { mine: true, by: rd.name });
   },
 };
 
@@ -118,7 +123,7 @@ export function assemble(s, f) {
   if (!hubOf(s, f)) return warn(s, `Assemble ${u.name} at ${FACTIONS[f].hub.name}, once you have found it.`);
   if (active(s)) return warn(s, 'Finish the fight first.');
   const st = pieceState(s, f);
-  if (st.parts < PARTS.need) return warn(s, `${u.name} takes ${PARTS.need} parts. You hold ${st.parts}. Win feuds for ${FACTIONS[f].short} for more.`);
+  if (st.parts < PARTS.need) return warn(s, `${u.name} takes ${PARTS.need} parts. You hold ${st.parts}. Win feuds or stamp receipts for ${FACTIONS[f].short} for more.`);
   if (st.current) return warn(s, `Your ${u.name} is already at your level (${st.held.level}). Keep the parts for the next level.`);
   const fresh = uniqueItem(u, st.level, () => rand(s));
   if (st.held) {

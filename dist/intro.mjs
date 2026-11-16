@@ -13,10 +13,10 @@ export const HANDLE = /^[a-z0-9_.-]{2,16}$/;
 
 export const letter = (handle) => [
   `${handle},`,
-  'This terminal was set up for you last night. Don\'t go looking for the purchase order. There isn\'t one.',
-  'Halcyon Mutual insures half the servers on this net. Something keeps getting into them, and every breach is a claim we pay.',
-  'We don\'t hire people like you. We pay the people who do. One of them, who goes by wick, will write to you. Check your mail once you\'re in.',
-  'Keep this box standing. We read every claim.',
+  'This terminal was installed for you last night at our expense.',
+  'Halcyon Mutual insures a large share of the servers on this net. Each breach of an insured server is filed with us as a claim. We would prefer to file fewer of them.',
+  'A contractor of ours, who uses the name wick, will be in touch. His instructions will reach you by mail.',
+  'Please keep this terminal in working order. It is covered under our policy.',
 ];
 
 export function createIntro({ key = () => {}, sound = () => {}, reducedMotion = () => false } = {}) {

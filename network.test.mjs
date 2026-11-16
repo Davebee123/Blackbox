@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, part, active, addItem, loaded, restore, SAVE_VERSION, UNIQUES, selectEncounter, syncServer, damageMultiplier, fxAnswer, hit, finish, patchDelay, addLocation } from './dist/combat.mjs';
 import { play, connect, currentLocation, layoutOf } from './dist/run.mjs';
-import { CONFIG, BOSSES, NATIVE_BOSSES, STRAINS, variantFor, STRAIN_NATIVE, BOSS_LOOT, TELL, lifted } from './dist/data.mjs';
+import { CONFIG, BOSSES, NATIVE_BOSSES, STRAINS, variantFor, STRAIN_NATIVE, BOSS_LOOT, TELL, lifted, filled } from './dist/data.mjs';
 import { uniqueItem, seeded, RULES, MATERIALS } from './dist/gear.mjs';
 import { NETWORK, NATIVE_POOL, signature, sigOf, memberSeed, netOf, fightNet, nativeRoll, nativeChance, awayChance, named, biasCode, leanPick, eventMult, lairOf, openLair, networkRestore, networkLines, homeName, darknetPick } from './dist/network.mjs';
 import { deal, eventsOf, CARDS } from './dist/events.mjs';
@@ -19,7 +19,7 @@ import { graphOf } from './dist/floors.mjs';
 const at = (level, netSeed = 4242) => { const s = fresh(); s.netSeed = netSeed; s.hackers = { breaker: { level, xp: 0 } }; syncServer(s); s.server.integrity = s.server.max; return s; };
 const wear = (s, id, level = 30) => { const it = addItem(s, uniqueItem(UNIQUES[id], level, seeded(1))); command(s, 'load ' + it.id); assert.ok(loaded(s).some((x) => x.id === it.id), `${id} loaded`); return it; };
 const fight = (s, key = 'cryptjack', level = 30, over = {}) => { selectEncounter(s, key, 7, { level, mutation: null, ...over }); command(s, 'engage'); s.encounter.hardened = 0; return s; };
-const finishOff = (s) => { for (const p of s.encounter.virus.parts) Object.assign(p, { integrity: 0, armor: 0 }); const p = s.encounter.virus.parts[0]; p.integrity = 1; command(s, 'spike ' + p.id); resolveCycle(s); };
+const finishOff = (s) => { for (let n = 0; n < 4 && s.encounter?.phase === 'active'; n++) { for (const p of s.encounter.virus.parts) Object.assign(p, { integrity: 0, armor: 0 }); const p = s.encounter.virus.parts[0]; p.integrity = 1; command(s, 'spike ' + p.id); resolveCycle(s); } }; // every act (act bars)
 
 test('the seed fully decides the signature: same seed, same network; 3 to 5 natives, one from each band', () => {
   for (let k = 1; k <= 200; k++) {
@@ -322,17 +322,17 @@ test('native effects: Open, locks and wards, the Tripwire, twins, reads, after-e
     const d = at(30); wear(d, 'split-brain'); fight(d, 'random', 30, { family: 'worm' });
     const mirror = d.encounter.virus.parts.find((x) => x.twin);
     if (mirror) { Object.assign(mirror, { integrity: 1, armor: 0 }); command(d, 'spike ' + mirror.id); resolveCycle(d); assert.ok(!mirror.rebootAt, 'no reboot'); }
-    // Ping of Death: the part you read takes 10, lifted at its item level.
+    // Ping of Death: the part you read takes 10, lifted and filled at its item level.
     const e = at(30), pod = wear(e, 'ping-of-death'); fight(e);
     const q = part(e, 'encryptor'); Object.assign(q, { armor: 0 });
     const hp = q.integrity; fxAnswer(e, q);
-    assert.equal(hp - q.integrity, lifted(10, pod.level));
+    assert.equal(hp - q.integrity, filled(10, pod.level));
     // Rubber Hose: +6 damage a read, up to 30.
     const f = at(38); wear(f, 'rubber-hose', 38); fight(f, 'cryptjack', 38);
     const fp = part(f, 'encryptor'); Object.assign(fp, { armor: 0, integrity: 9999, max: 9999 });
     const dealt = (reads) => { f.encounter.metrics.reads = reads; const was = fp.integrity; hit(f, fp, 20, { mine: true, pierce: true }); return was - fp.integrity; };
     const full = dealt(7) - dealt(0);
-    assert.ok(full >= lifted(25, 38) && full <= lifted(40, 38), `+30 before the multipliers, lifted: ${full}`);
+    assert.ok(full >= filled(25, 38) && full <= filled(40, 38), `+30 before the multipliers, lifted and filled: ${full}`);
     assert.equal(dealt(9), dealt(7), 'capped');
     assert.ok(dealt(2) < dealt(4));
     // Sandman: tells that land leave nothing behind (no key offline, no Corrupted, no Hung).

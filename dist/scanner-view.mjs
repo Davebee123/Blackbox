@@ -261,6 +261,7 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
       if (!open) show();
     },
     isOpen: () => open,
+    due: () => lastSched + 500, // when tick() next looks at the schedule (Date.now() ms)
     // Every frame: the schedule, the reel, the paint, the sound.
     tick(now = Date.now()) {
       const s = state(), dt = Math.min(0.1, Math.max(0, (now - (last || now)) / 1000));

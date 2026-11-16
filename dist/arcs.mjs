@@ -6,8 +6,12 @@
 //            One step is open at a time; delivering it posts the next as a letter. Never on the board, never timed,
 //            never dropped, and never counted toward the contracts you can hold (MAIL.take), like the storyline's jobs.
 //   steps    each wraps an existing activity as a contract (mail.mjs runs it): map, rooms, takeover, item, install,
-//            sweep, heist (past the Tracker) and bounty (a named process in SPRAWL-00, floor 1 only), plus two of its
-//            own, polled here: puzzle (win a puzzle board on the server) and lair (beat the floor's lair boss).
+//            sweep, heist (past the Tracker) and bounty (a named process in SPRAWL-00, floor 1 only), plus three of
+//            its own, polled here: puzzle (win a puzzle board on the server), lair (beat the floor's lair boss) and
+//            boss (a named boss in a Core, with its challenge and fall lines: once built (namedBoss), it holds that
+//            server's Core in the Resident's place for good (jobBossAt); until then the floor's lair boss stands in, or
+//            SPRAWL-00's RELAY-KING on floor 1, at: 'sprawl').
+//   letters  a step's letter: one with no job, from someone else, sent when the step is delivered.
 //   targets  fixed by the floor's diagram (floors.mjs), so every save of a network gets the same ones: the landing
 //            server, a server along the main road (never a rogue server or the lair) by its place from the entry, the
 //            first main-road server with a Tracker from there (a Mirror, an Archive or a Lab), or the lair. A target
@@ -18,12 +22,13 @@
 //            contractXp), as the board's. A step marked pick offers one of three items at your level (WoW's quest
 //            reward): the last step's are yellows, one rarity over a contract's blue; a middle step's are blues. Never
 //            a unique or a set piece.
-// State: s.arcs = { [floor]: { step, at, done, doneAt, titles }, offers: [{ floor, step, items }] }. The jobs themselves
+// State: s.arcs = { [floor]: { step, at, done, doneAt, titles }, offers: [{ floor, step, items }] }. A chain done before
+// it gained a step opens again at that step (regrown). The jobs themselves
 // are mail jobs (s.mail.jobs) marked chain: <floor>, step: <k>, slot: <the target's slot>.
 import { emit, warn, hackerLevel, hooks, addItem, classOf, subOf } from './combat.mjs';
-import { BOSSES, SUBS, defaultSub } from './data.mjs';
+import { BOSSES, SUBS, defaultSub, CONFIG } from './data.mjs';
 import { seeded, rollItem, itemLabel } from './gear.mjs';
-import { graphOf, locAt, hiddenAt, neighbours, floorName, reached, serverSlot } from './floors.mjs';
+import { graphOf, locAt, hiddenAt, neighbours, floorName, reached, serverSlot, floorOfSlot } from './floors.mjs';
 import { lairBoss, NETWORK } from './network.mjs';
 import { addrsOf, sweepRooms } from './address.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
@@ -37,7 +42,7 @@ export const ARC = {
   rarity: { last: 'custom', mid: 'tuned' }, // a pick's three: the last step's a rarity over a contract's item (a blue), a middle step's a blue
   stats: ['damage', 'crit', 'signal', 'restore', 'clock', 'payload'], // what the three lean to: yours first, then two others
   trackers: ['mirror', 'archive', 'lab'], // server kinds with a Tracker (floorplan.mjs KINDS): a heist's target
-  own: ['puzzle', 'lair'], // step kinds this module runs (polled); every other kind is a mail.mjs contract type
+  own: ['puzzle', 'lair', 'boss'], // step kinds this module runs (polled); every other kind is a mail.mjs contract type
 };
 export const CHAINS = Object.fromEntries((CONTRACT_TEXT.floors || []).map((c) => [c.floor, c]));
 export const chainOf = (n) => CHAINS[n] || null;
@@ -48,6 +53,7 @@ const mix = (...xs) => xs.reduce((h, x) => (Math.imul(h ^ (x >>> 0), 2654435761)
 const shuffled = (r, xs) => xs.map((x) => [r(), x]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
 const locById = (s, id) => (s.locations || []).find((l) => l.id === id) || null;
 const from = (c) => (c.faction && c.faction !== 'halcyon' ? FACTIONS[c.faction].name : STORY_TEXT.contacts?.[c.from] || c.from);
+const sender = (k) => (FACTIONS[k] && k !== 'halcyon' ? FACTIONS[k].name : STORY_TEXT.contacts?.[k] || k); // an extra letter's: a faction or a contact
 
 // ---------- targets ----------
 // The floor's main road, from the entry out (floors.mjs marks it: never a rogue server or the lair).
@@ -77,11 +83,24 @@ function frontier(s, slot) {
   return null;
 }
 const where = (s, c) => {
+  if (c.type === 'boss' && !c.slot) return CONFIG.zone.name;
   if (c.loc) return locById(s, c.loc)?.name || 'a server';
   const f = c.slot && frontier(s, c.slot);
   return f ? `the server ${f.hops > 1 ? `${f.hops} links ` : ''}past ${f.loc.name}` : `a server on ${floorName(c.chain)}`;
 };
 const bossOf = (s, n) => BOSSES[(n && graphOf(s, n).lairBoss) || lairBoss(s, 'you')]?.name || 'the lair boss';
+const KING_ROOM = '/net/relay'; // SPRAWL-00's Core (run.mjs KING_ROOM): RELAY-KING, floor 1's stand-in
+const standIn = (s, c) => (c.type === 'boss' && namedBoss(c.named) ? BOSSES[namedBoss(c.named)].name : c.type === 'boss' && !c.slot ? BOSSES.relayking.name : bossOf(s, c.chain)); // who a Boss step's fight is, until its boss is built
+// A Boss step's named boss once it is built (BOSSES by name: a floor job's own, never a lair's or a throne's), or null.
+export const namedBoss = (name) => (name && Object.keys(BOSSES).find((k) => BOSSES[k].name === name && !BOSSES[k].native && !BOSSES[k].lair && !BOSSES[k].throne && !BOSSES[k].raid)) || null;
+const bossStep = (n) => { const ch = chainOf(n), k = ch ? ch.steps.findIndex((x) => x.kind === 'boss') : -1; return k >= 0 ? { k, step: ch.steps[k] } : null; };
+// The floor job's boss in a server's Core (netrooms.mjs): the server its chain's Boss step points at, once the chain has
+// reached that step, for good (come back for its uniques). Its id, or null (the Resident holds the Core).
+export function jobBossAt(s, loc) {
+  const n = floorOfSlot(loc?.slot), b = n && bossStep(n), id = b && namedBoss(b.step.boss), st = id && arcsOf(s)[n];
+  if (!st || (!st.done && (st.step ?? -1) < b.k)) return null;
+  return slotFor(s, n, b.step) === loc.slot ? id : null;
+}
 
 // ---------- posting a step ----------
 function pay(s, n, step) {
@@ -100,6 +119,7 @@ function post(s, n, k, at) {
   if (step.kind === 'rooms') job.count = step.count || 4;
   if (step.kind === 'item' || step.kind === 'heist') Object.assign(job, { file: step.file, label: step.label, text: [step.line, step.kind === 'heist' ? 'past the Tracker: bank it from a visit it never reached you.' : 'pull it and bank it, then deliver it from Mail.'].filter(Boolean) });
   if (step.kind === 'install') Object.assign(job, { file: step.file, label: step.label, carry: 'stash' });
+  if (step.kind === 'boss') Object.assign(job, { named: step.boss, challenge: step.challenge, fall: step.fall });
   const loc = job.slot && locAt(s, job.slot);
   if (loc) job.loc = loc.id;
   else if (job.slot && hiddenAt(s, job.slot)) job.hidden = hiddenAt(s, job.slot).id;
@@ -119,12 +139,15 @@ function post(s, n, k, at) {
 function varsOf(s, j) {
   const loc = j.loc && locById(s, j.loc), label = j.label || '';
   return { handle: s.profile?.handle || 'rookie', server: where(s, j), floor: floorName(j.chain), owner: loc?.owner || 'a crew', crew: CREWS[loc?.family] || 'its crew',
-    file: j.file, label, Label: label ? label[0].toUpperCase() + label.slice(1) : '', name: j.name, count: j.count, boss: bossOf(s, j.chain) };
+    file: j.file, label, Label: label ? label[0].toUpperCase() + label.slice(1) : '', name: j.name, count: j.count, boss: standIn(s, j) };
 }
 // A step's target located: the plain contract from here (its install room, its file planted, a map already done).
 function setup(s, c) {
+  // A Boss step posted before its boss was built pointed at the lair: its built boss is in its own server's Core.
+  // Keyed on the slot, so it runs once.
+  if (c.type === 'boss' && c.slot && namedBoss(c.named)) { const at = slotFor(s, c.chain, chainOf(c.chain)?.steps[c.step]); if (at && at !== c.slot) { c.slot = at; delete c.loc; delete c.hidden; c.ok = false; } }
   if (c.ok) return;
-  if (c.type === 'bounty') { c.ok = true; return; }
+  if (c.type === 'bounty' || (c.type === 'boss' && !c.slot)) { c.ok = true; return; }
   const loc = c.loc ? locById(s, c.loc) : c.slot ? locAt(s, c.slot) : null;
   if (!loc) { const h = c.slot && hiddenAt(s, c.slot); if (h) c.hidden = h.id; return; }
   c.loc = loc.id; delete c.hidden;
@@ -154,6 +177,7 @@ export function arcTick(s, at = nowOf()) {
   if (!s.mail?.jobs || !s.mail.list || !boardOpen(s)) return; // a mail state with no letters (a test's) has nowhere to post
   const A = arcsOf(s);
   for (let n = 1; n <= reached(s); n++) {
+    regrown(s, n, at);
     if (!chainOf(n) || A[n]) continue;
     const l = post(s, n, 0, at);
     emit(s, 'mail', `New mail from ${l.from}: ${l.subject}.`, { letter: l.id, from: l.from, subject: l.subject, chain: n });
@@ -161,8 +185,21 @@ export function arcTick(s, at = nowOf()) {
   for (const c of openContracts(s).filter((x) => x.chain)) {
     setup(s, c);
     if (c.got || !c.ok || !ARC.own.includes(c.type)) continue;
-    if (c.type === 'puzzle' ? puzzleWon(s, c) : lairDown(s, c)) { c.got = 1; emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id }); }
+    if (c.type === 'puzzle' ? puzzleWon(s, c) : c.type === 'boss' && !c.slot ? kingDown(s, c) : c.type === 'boss' && namedBoss(c.named) ? jobDown(s, c) : lairDown(s, c)) {
+      c.got = 1;
+      if (c.fall) emit(s, 'arc-fall', c.fall, { contract: c.id, chain: c.chain });
+      emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
+    }
   }
+}
+// A chain finished before it gained a step (floor 1's Boss step): open again at the first step it never had. Keyed on
+// its titles, one a delivered step, so it runs once.
+function regrown(s, n, at) {
+  const st = arcsOf(s)[n], c = chainOf(n), k = st?.titles?.length || 0;
+  if (!st?.done || !c || !k || k >= c.steps.length || openContracts(s).some((x) => x.chain === n)) return;
+  delete st.done; delete st.doneAt;
+  const l = post(s, n, k, at);
+  emit(s, 'mail', `New mail from ${l.from}: ${l.subject}.`, { letter: l.id, from: l.from, subject: l.subject, chain: n });
 }
 // A puzzle board on its server won since the step was posted (floorplan.mjs finishPuzzle: puzzles[room] { at, won }).
 function puzzleWon(s, c) {
@@ -174,11 +211,23 @@ function lairDown(s, c) {
   const sp = locById(s, c.loc)?.spawns?.['/core'];
   return !!sp && !sp.alive && sp.respawnAt != null && sp.respawnAt - NETWORK.lairMs >= c.at;
 }
+// A floor job's built boss beaten in its Core since (netrooms.mjs won: loc.jobFell).
+const jobDown = (s, c) => (locById(s, c.loc)?.jobFell || 0) >= c.at;
+// SPRAWL-00's RELAY-KING beaten since (back CONFIG.zone.bossRespawnMs after it fell).
+function kingDown(s, c) {
+  const sp = zoneOf(s).spawns?.[KING_ROOM];
+  return !!sp && !sp.alive && sp.respawnAt != null && sp.respawnAt - CONFIG.zone.bossRespawnMs >= c.at;
+}
+// A Boss step's challenge line, for the Core it points at (netrooms.mjs fightNote): loc a server, or SPRAWL-00 (zone).
+export function arcChallenge(s, loc, room) {
+  const c = openContracts(s).find((x) => x.chain && x.type === 'boss' && !x.got && x.challenge && (x.slot ? x.loc === loc?.id && room.path0 === '/core' : loc?.zone && room.path0 === KING_ROOM));
+  return c?.challenge || '';
+}
 
 // ---------- what mail.mjs asks of a chain's job ----------
 // Its title, while its target isn't located or for a kind of its own (null: mail.mjs's own).
 export function arcTitle(s, c) {
-  if (ARC.own.includes(c.type)) return c.type === 'puzzle' ? `Win a puzzle board on ${where(s, c)}` : `Beat ${bossOf(s, c.chain)} on ${where(s, c)}`;
+  if (ARC.own.includes(c.type)) return c.type === 'puzzle' ? `Win a puzzle board on ${where(s, c)}` : `Beat ${standIn(s, c)} on ${where(s, c)}`;
   if (c.ok || c.type === 'bounty') return null;
   const w = where(s, c);
   return { map: `Map ${w}`, rooms: `Clear ${c.count} rooms on ${w}`, takeover: `Take over ${w}`, install: `Install ${c.label} on ${w}`, sweep: `Map ${w} without resting`, item: `Recover ${c.file}`, heist: `Recover ${c.file} past the Tracker` }[c.type] || null;
@@ -191,7 +240,7 @@ export function arcProgress(s, c) {
     return { text: f ? `${f.hops} links past ${f.loc.name}: trace your way there` : `Somewhere on ${floorName(c.chain)}`, part: 0 };
   }
   if (c.type === 'puzzle') return c.got ? { text: 'Board won', part: 1 } : { text: `Any puzzle room on ${where(s, c)}`, part: 0.3 };
-  if (c.type === 'lair') return c.got ? { text: `${bossOf(s, c.chain)} beaten`, part: 1 } : { text: `In the Core of ${where(s, c)}`, part: 0.3 };
+  if (c.type === 'lair' || c.type === 'boss') return c.got ? { text: `${standIn(s, c)} beaten`, part: 1 } : { text: `In the Core of ${where(s, c)}`, part: 0.3 };
   return null;
 }
 export const arcReady = (s, c) => ARC.own.includes(c.type) && !!c.got;
@@ -205,6 +254,10 @@ export function arcDelivered(s, c, at = nowOf()) {
   if (step?.reward?.pick) {
     A.offers.push({ floor: n, step: c.step, last, items: pickOf(s, n, c.step, last) });
     emit(s, 'arc-offer', `${ch.title}: pick your reward.`, { chain: n });
+  }
+  if (step?.letter) {
+    const l = letter(s, { from: sender(step.letter.from), subject: step.letter.subject, body: step.letter.body.map((p) => fill(p, varsOf(s, c))) }, at);
+    emit(s, 'mail', `New mail from ${l.from}: ${l.subject}.`, { letter: l.id, from: l.from, subject: l.subject, chain: n });
   }
   if (last) {
     st.done = true; st.doneAt = at;

@@ -10,7 +10,7 @@ import { glyph } from './glyphs.mjs';
 
 export const RECAP = { cycles: 6, rows: 4 };
 // A tell's icon, as its chip on the board wears it (view.mjs tellChip), and its answer in one short line.
-export const TELL_ICON = { charge: 'event-warning', cast: 'interrupt', seal: 'event-lock', mimic: 'scan', lock: 'event-lock' };
+export const TELL_ICON = { charge: 'event-warning', cast: 'command', seal: 'event-lock', mimic: 'scan', lock: 'event-lock' };
 const ANSWER = {
   charge: (p) => `Cut ${p ? `the ${p}` : 'its part'} on its cycle to call it off.`,
   cast: () => 'SIGINT or a cut in its window interrupts it.',

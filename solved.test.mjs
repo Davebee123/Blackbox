@@ -44,7 +44,7 @@ test("the routine player's fights are played by its program, which is uninstalle
 
 test("the Operator's report: the Mimic's beat catches the blind player's helpers, and the planner keeps its own off it", () => {
   // A Herder at 18 against Ghostroot with a Mimic (the game's rule, tells.mjs mimicLands; helper-rules.test.mjs has the rule).
-  const blind = mimicCost('herder', 'blind', 18, { seeds: 3 }), smart = mimicCost('herder', 'planner', 18, { seeds: 3 });
+  const blind = mimicCost('herder', 'blind', 18, { seeds: 12 }), smart = mimicCost('herder', 'planner', 18, { seeds: 12 }); // 12 seeds: on 3 the two sit a catch apart either way
   assert.ok(blind.caught > 0, 'some beat caught a blind helper');
   assert.ok(smart.caught <= blind.caught, `the planner's helpers are caught no more often (${smart.caught} vs ${blind.caught})`);
   assert.equal(smart.wins, 100);

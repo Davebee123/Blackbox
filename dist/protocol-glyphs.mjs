@@ -4,7 +4,7 @@
 // yellow, gold and orange framed at the corners; a Zero-day swept by a bright scanline; a unique (or an Indemnified
 // protocol) flickers now and then (style.css .pglyph; app.js runs the motion). The same item always looks the same.
 // Every shape is 23 columns wide and mirrors itself about column 11 (protocol-glyphs.test.mjs checks).
-import { groupOf } from './gear.mjs';
+import { groupOf, shownRarity } from './gear.mjs';
 import { glyph } from './glyphs.mjs';
 import { FACTIONS } from './factions.mjs';
 
@@ -234,8 +234,8 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 // moving glyph keeps it in data-mark, for the motion to put back.
 const markOf = (it) => (it?.implicit && FACTIONS[it.implicit] ? `<i class="pg-fm" style="--fc:${FACTIONS[it.implicit].color}">${glyph('f-' + it.implicit)}</i>` : '');
 export function glyphMarkup(it, size = 'md') {
-  const text = glyphText(it), fx = glyphFx(it), r = it?.rarity || 'stock', mark = markOf(it);
-  return `<span class="pglyph pg-${size} r-${r}${FRAMED.has(r) ? ' pg-framed' : ''}${mark ? ' pg-fac' : ''}" aria-hidden="true"${fx ? ` data-pg-fx="${fx}" data-base="${esc(text)}"${mark ? ` data-mark="${esc(mark)}"` : ''}` : ''}>${mark}${esc(text)}</span>`;
+  const text = glyphText(it), fx = glyphFx(it), r = it?.rarity || 'stock', shown = shownRarity(it) || r, mark = markOf(it);
+  return `<span class="pglyph pg-${size} r-${shown}${FRAMED.has(r) ? ' pg-framed' : ''}${mark ? ' pg-fac' : ''}" aria-hidden="true"${fx ? ` data-pg-fx="${fx}" data-base="${esc(text)}"${mark ? ` data-mark="${esc(mark)}"` : ''}` : ''}>${mark}${esc(text)}</span>`;
 }
 
 // ---------- motion (app.js calls glyphMotion every frame while motion is on) ----------
@@ -253,7 +253,8 @@ export function glyphFrame(base, fx, t, rand = Math.random) {
 // Every moving glyph under root, at time t. Each redraws only when its step changes; with motion off (still), each
 // goes back to its still text once.
 export function glyphMotion(root, t, still = false) {
-  for (const el of root.querySelectorAll('[data-pg-fx]')) {
+  const all = root.querySelectorAll('[data-pg-fx]');
+  for (const el of all) {
     const fx = el.dataset.pgFx, key = still ? 'still' : fx === 'scan' ? `s${scanRow(t)}` : flickering(t) ? `f${Math.floor(t / FLICKER_MS)}` : 'still';
     if (el.dataset.pgAt === key) continue;
     el.dataset.pgAt = key;
@@ -261,4 +262,5 @@ export function glyphMotion(root, t, still = false) {
     if (key === 'still') { if (mark) el.innerHTML = mark + esc(el.dataset.base); else el.textContent = el.dataset.base; }
     else el.innerHTML = mark + glyphFrame(el.dataset.base, fx, t);
   }
+  return all.length; // how many glyphs are on the page (none: the caller's loop can rest)
 }

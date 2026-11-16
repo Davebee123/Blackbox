@@ -20,7 +20,7 @@ import { gainComponents } from './salvage.mjs';
 // server's gates count only when this level raises it.
 export function levelGains(arch, L, top = 0) {
   const out = [];
-  if (gainsTalent(L)) out.push('a talent point');
+  if (gainsTalent(L)) out.push('a talent tier (pick one of three)');
   if (L === LOADOUT.capstoneAt[0]) out.push('a capstone point (pick one of two capstones)');
   if (L === LOADOUT.capstoneAt[1]) out.push("your capstone's second rank");
   const slot = PROTOCOL_SLOTS.find((x) => x.level === L);

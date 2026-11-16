@@ -1,10 +1,10 @@
 // The level-up (GAME_RULES.md "Levels"): a firmware update flashed on the screen. A compact panel under the top bar
-// (over the prompt on a phone): an amber kicker strip, the level in big phosphor digits beside the flash's progress
-// line, then [ OK ] per unlock as the flash finishes, the next level that brings something, and Continue (Enter).
+// (over the prompt on a phone): an amber kicker strip, the level in big phosphor digits (the old level under it, dim,
+// until the flash locks) beside the flash's progress line, then [ OK ] per unlock as the flash finishes, the next level that brings something, and Continue (Enter).
 // It lists what the level brings on every track: each gain of the level, the power line, the server's Integrity and the
 // next level. Each row's detail is its tooltip (Name: sentence), never on the row. Pure markup builders: no DOM
 // (levelup-ui.mjs puts it on the page).
-import { ABILITIES, ARCHETYPES, SUBS, FLOORS, CANTRIPS, CONFIG } from './data.mjs';
+import { ABILITIES, ARCHETYPES, SUBS, FLOORS, CANTRIPS, CONFIG, own } from './data.mjs';
 import { kitTalent, specRule } from './combat.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -27,7 +27,7 @@ export function gainItem(g, e, keys = []) {
   let m;
   if (g === 'a subclass to pick') { const subs = Object.values(A.subs).map((x) => x.name); return { kind: 'subclass', label: 'Subclass', value: 'pick one', tip: `Subclass: Choose ${subs.join(' or ')} on the Loadout. Until you do, you play the ${A.name} core.` }; }
   if (sub && g === SUBS[sub].edge.name) return { kind: 'edge', label: g, value: 'edge', tip: `${g}: ${SUBS[sub].edge.rule}` };
-  if (g === 'a talent point') return { kind: 'talent', label: 'Talent point', value: '+1', n: 1, tip: 'Talent point: Spend it on the Loadout, under Skills and talents.' };
+  if (g === 'a talent tier (pick one of three)') return { kind: 'talent', label: 'Talent tier', value: '+1', n: 1, tip: 'Talent tier: Pick one of its three talents on the Loadout, under Skills and talents.' };
   if (/^a capstone point/.test(g)) return { kind: 'capstone', label: 'Capstone point', value: '+1', tip: 'Capstone point: Pick one of your subclass\'s two capstones on the Loadout.' };
   if (g === "your capstone's second rank") return { kind: 'capstone', label: 'Capstone', value: 'rank 2', tip: 'Capstone: Your capstone reaches rank 2.' };
   if (/^a protocol slot \(Implant\)/.test(g)) return { kind: 'slot', label: 'Implant slot', value: '+1', n: 1, tip: 'Implant slot: You load one more protocol, an Implant. Implants start to drop.' };
@@ -52,9 +52,9 @@ export function levelUpSummary(events, keys = []) {
     if (same) { same.n += it.n; same.value = `+${same.n}`; if (it.names) { same.names = [...same.names, ...it.names]; same.tip = basesTip(same.names); } }
     else items.push({ ...it });
   }
-  const pct = Math.round(((1 + CONFIG.powerPerLevel) ** evs.length - 1) * 100), // compounding (data.mjs power)
+  const pct = Math.round((own(last.level) / own(evs[0].level - 1) - 1) * 100), // your own line (data.mjs own): none past level 6, gear carries you
     srv = evs.findLast((e) => e.server)?.server;
-  items.push({ kind: 'power', label: 'Power', value: `+${pct}%`, tip: `Power: Your skills deal ${pct}% more damage, and your server's Integrity grows with them.` });
+  if (pct > 0) items.push({ kind: 'power', label: 'Power', value: `+${pct}%`, tip: `Power: Your skills deal ${pct}% more damage, and your server's Integrity grows with them.` });
   if (srv) items.push({ kind: 'integrity', label: 'Integrity', value: String(srv), tip: `Integrity: Your server's Integrity is now ${srv}.` });
   const nx = last.next, nItems = nx ? nx.gains.map((g) => gainItem(g, { ...last, level: nx.level })) : [];
   const short = (it) => (['skill', 'sigint', 'floor', 'kit', 'edge'].includes(it.kind) ? it.label : `${it.label} ${it.value}`);
@@ -80,12 +80,12 @@ export function firmwareMarkup(sum) {
   if (!sum) return '';
   const rom = `${sum.cls.toLowerCase()}.rom`;
   return `<div class="lu-b-head"><span>Firmware update · ${esc(rom)}</span><button type="button" class="lu-x" data-lu-close aria-label="Close">×</button></div>`
-    + `<div class="lu-b-top"><pre class="lu-b-big" aria-hidden="true">${bigDigits(sum.level)}</pre><div class="lu-b-flash"><span class="lu-b-ver">v${sum.from} → <b>v${sum.level}</b> <small>${esc(sum.cls)}</small></span><span class="lu-b-bar" aria-hidden="true"><i></i></span><span class="lu-b-pct" aria-hidden="true">100%</span></div></div>`
+    + `<div class="lu-b-top"><div class="lu-b-digits" aria-hidden="true"><pre class="lu-b-big lu-old">${bigDigits(sum.from)}</pre><pre class="lu-b-big">${bigDigits(sum.level)}</pre></div><div class="lu-b-flash"><span class="lu-b-ver">v${sum.from} → <b>v${sum.level}</b> <small>${esc(sum.cls)}</small></span><span class="lu-b-bar" aria-hidden="true"><i></i></span><span class="lu-b-pct" aria-hidden="true">100%</span></div></div>`
     + `<ul class="lu-b-list" aria-label="${esc(ariaOf(sum))}">${sum.items.map((it, i) => row(it, i, `<span class="lu-ok">[ OK ]</span><span class="lu-k">${esc(it.label)}</span><b class="lu-v">${esc(it.value)}</b>`)).join('')}</ul>`
     + (sum.next ? `<p class="lu-b-next" title="${esc(sum.next.tip)}" style="--i:${sum.items.length}"><span>next</span> v${sum.next.level} · ${esc(sum.next.text)}</p>` : '')
     + `<div class="lu-b-acts">${sum.skill ? '<button type="button" class="btn small" data-module="loadout">Loadout</button>' : ''}<button type="button" class="btn small primary" data-lu-close>Continue <kbd>Enter</kbd></button></div>`;
 }
 
 // When the level-up may come up: never during a fight, and not over a card that waits for you (the spoils of a won
-// fight, a card that waits for Enter, the boot screen, the subclass breakout). It waits for the next calm moment.
+// fight, a card that waits for Enter, the boot screen). It waits for the next calm moment.
 export const luCalm = ({ fighting = false, ended = false, spoils = false, gainModal = false, booting = false } = {}) => !fighting && !ended && !spoils && !gainModal && !booting;

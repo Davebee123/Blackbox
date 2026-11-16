@@ -124,6 +124,13 @@ Root still rewards cleared respawns on a server you hold, but no longer opens a 
 
 An old save keeps its count; its rank follows the new table, and its stash room goes.
 
+## Shops: guaranteed gear (built, GAME_RULES *Shops*)
+
+Every hub's Shop: tools, the shelf (blue and yellow protocols at your level with the faction's implicit, rerolling every
+30 minutes of play), the chase line by rep tier, codebases. Prices in hours of income at your level: shelf 3 / 6, chase
+8 / 12 / 20. Code lots, Exploits, the sealed item, LANTERN's bootleg filter and Halcyon's agency stock are cut. No
+re-tune for chase protocols (the designer's call: a bought one ages).
+
 ## Trading between players (needs a server)
 
 Built and tested against simulated players until there's a backend.

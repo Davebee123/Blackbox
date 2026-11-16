@@ -252,7 +252,7 @@ test('the save (v50): a trait becomes a special; a server with none rolls one; a
   assert.deepEqual(again.locations.map((l) => l.special), t.locations.map((l) => l.special));
 });
 
-test('the look: one filled amber tag, its glyph and name; the tooltip says what it is and names the programs; the map node wears the glyph', () => {
+test('the look: one filled amber tag, its glyph and name; the tooltip says what it is and names the programs; the map label wears the glyph, with the same tooltip', () => {
   const { s, loc } = traced(['volatile']);
   const tag = specialTags(loc);
   assert.match(tag, /class="tag tag-special" data-special="volatile"/);
@@ -261,4 +261,5 @@ test('the look: one filled amber tag, its glyph and name; the tooltip says what 
   assert.match(tag, /<template class="tt-more">.*class="rw".*class="rw neg"/s);
   play(s, 'jack out');
   assert.match(mapMarkup(s, loc.id), /class="mspecial"[^>]*>⚡\uFE0E</);
+  assert.match(mapMarkup(s, loc.id), /<text [^>]*class="msub"><tspan class="mlv[^"]*">lv \d+<\/tspan><tspan class="mspecial" dx="0.5em" title="Volatile: Server special\./, 'after the level, on the line under the name');
 });

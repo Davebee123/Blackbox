@@ -4,10 +4,10 @@
 //
 // A subclass is picked at level 10 (`subclass <id>`; switching is free, at home). Its skill line unlocks
 // at SUBCLASS.unlocks in data.mjs (levels 10 to 38), in the order written here (eleven skills). Run skills
-// (`run`: Spoof and Tap) take no slot and come at levels of their own. Its talent tree has the same shape as
-// before: three filler rows of two ranked nodes, and three tiers of two picks.
+// (`run`: Spoof and Tap) take no slot and come at levels of their own. Its talent tree is six tiers
+// of three picks.
 // edge.legacy: the class's old edge (EDGE in data.mjs), now this subclass's.
-import { f, t, c } from './kit.mjs';
+import { t, c } from './kit.mjs';
 
 // New skills (ABILITIES entries, same fields as data.mjs). Give each a cls and a sub.
 // Numbers that grow with your level sit in damage/tick fields (the library scales them on screen).
@@ -125,15 +125,15 @@ export const subs = {
     },
     layers: { core: ['inject', 'tag', 'keepalive', 'wormable', 'detonate', 'backdoor'], utility: ['fuzz', 'skim', 'logic-trap', 'irq-storm'], cooldown: ['implant', 'thrash', 'outbreak'], specialist: ['polymorph', 'propagate'] },
     tags: { polymorph: 'Armor', propagate: 'Fragments', implant: 'Healers' },
-    fillers: [
-      [f('heap-spray', 'Heap Spray', 'Increases the damage of each Inject tick by 3 per rank.', 3), f('persistent-tag', 'Persistent Tag', 'Increases the damage of burns on a Tagged part by 10% per rank.', 0.1)],
-      [f('shaped-charge', 'Shaped Charge', 'Increases the damage of Detonate by 10% per rank.', 0.1), f('backchannel', 'Backchannel', 'Increases the damage of Backdoor by 4 per rank.', 4)],
-      [f('low-profile', 'Low Profile', 'Reduces the damage you take from attacks by 3% per rank.', 0.03), f('virulence', 'Virulence', 'Increases the damage of each Wormable, Skim and Polymorph tick by 2 per rank.', 2)],
-    ],
-    talents: [
-      [t('supercookie', 'Supercookie', 'Tag lasts 6 cycles.'), t('polymorphic', 'Long Fuse', 'Inject lasts 6 cycles.')],
-      [t('contagion', 'Contagion', 'Each Inject also starts a copy of itself on the part whose attack lands soonest, or refreshes the one there.'), t('assassinate', 'Assassinate', 'Detonate deals double damage to a Tagged part.')],
-      [t('superspreader', 'Superspreader', 'Bloom copies the burns to every other part, not only the next one.'), t('persistence', 'Persistence', 'Rootkit Implant can be used twice per fight.')],
+    // The talent tiers (docs/builds.md): one of three a tier, each opening at its level (LOADOUT.tiers). The first is
+    // the plain pick, the middle changes how a skill plays, the third fires on a shared event (combat.mjs fireEvent).
+    tiers: [
+      [t('heap-spray', 'Heap Spray', 'Increases the damage of your Inject by 6 every tick.'), t('long-fuse', 'Long Fuse', 'Your Inject lasts 6 cycles instead of 4.'), t('third-party-cookie', 'Third-Party Cookie', 'When you Tag a part, every burn on it ticks once.')],
+      [t('shaped-charge', 'Shaped Charge', 'Increases the damage of Detonate by 25%.'), t('assassinate', 'Assassinate', 'Detonate deals double damage to a Tagged part.'), t('chain-letter', 'Chain Letter', 'When a part you are burning breaks, Detonate becomes usable again.')],
+      [t('low-profile', 'Low Profile', 'Reduces the damage attacks deal to you by 10% from a part you are burning.'), t('spillover', 'Spillover', 'Skim heals past your max Signal shield you instead, up to 20.'), t('fault-handler', 'Fault Handler', 'When an attack hits you, your burns on its part tick once. Works once per cycle.')],
+      [t('virulence', 'Virulence', 'Wormable, Skim and Polymorph deal 5 more damage every tick.'), t('contagion', 'Contagion', 'Each Inject also starts a copy on the part whose attack lands soonest, or refreshes the one there.'), t('fever', 'Fever', 'Every third tick of your Inject is a critical strike.')],
+      [t('persistence', 'Persistence', 'Rootkit Implant can be used twice a fight.'), t('superspreader', 'Superspreader', 'Bloom copies the burns to every other part, not just the next one.'), t('heat-sink', 'Heat Sink', 'When you gain a shield, every burn on the target ticks once. Works once per cycle.')],
+      [t('thermal-load', 'Thermal Load', 'Increases the damage of your burns by 10%.'), t('index-case', 'Index Case', 'Outbreak also Tags every part for 4 cycles.'), t('irq-chain', 'IRQ Chain', 'When you answer a tell, IRQ Storm becomes usable again. IRQ Storm\'s own answers do not count.')],
     ],
     // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
     capstones: [
@@ -154,15 +154,15 @@ export const subs = {
     },
     layers: { core: ['backstab', 'fingerprint', 'opening', 'side-channel', 'inject', 'backdoor', 'tag', 'keepalive'], utility: ['null-route', 'shadow-copy', 'rotate-keys'], cooldown: ['log-wipe', 'vanish', 'implant'], specialist: ['unmask'] },
     tags: { unmask: 'Mimic', 'log-wipe': 'Mimic' },
-    fillers: [
-      [f('cold-open', 'Cold Open', 'Increases the damage of Weak Spot hits by 5% per rank.', 0.05), f('recon', 'Recon', 'Increases the damage of Opening by 5 per rank.', 5)],
-      [f('pivot', 'Pivot', 'Increases the damage of Backstab by 10% per rank.', 0.1), f('onion-routing', 'Onion Routing', 'Increases your max Signal on runs by 3 per rank.', 3)],
-      [f('low-profile', 'Low Profile', 'Reduces the damage you take from attacks by 3% per rank.', 0.03), f('log-rotation', 'Log Rotation', 'Reduces the cooldown of Log Wipe by 1 cycle per rank.', 1)],
-    ],
-    talents: [
-      [t('fast-hands', 'Fast Hands', 'Opening stays usable for 2 cycles.'), t('blind-spot', 'Blind Spot', 'Weak Spot also makes your first burn tick on each part a critical strike.')],
-      [t('kill-chain', 'Kill Chain', 'Breaking a part resets the cooldown of Backstab and makes Opening usable.'), t('ghost-route', 'Ghost Route', 'Null Route also delays the attack that lands soonest by 2 cycles.')],
-      [t('deep-cover', 'Deep Cover', 'Log Wipe also resets the cooldowns of Null Route and Shadow Copy.'), t('tracking-pixel', 'Tracking Pixel', 'When a Tagged part breaks, Tag moves to the part whose attack lands soonest, with the cycles it had left.')],
+    // The talent tiers (docs/builds.md): one of three a tier, each opening at its level (LOADOUT.tiers). The first is
+    // the plain pick, the middle changes how a skill plays, the third fires on a shared event (combat.mjs fireEvent).
+    tiers: [
+      [t('cold-open', 'Cold Open', 'Increases the damage of your Weak Spot critical strikes by 15%.'), t('blind-spot', 'Blind Spot', 'Makes your first burn tick on each part a critical strike, as Weak Spot does for hits.'), t('web-beacon', 'Web Beacon', 'Makes Weak Spot fresh on a part again when you Tag it.')],
+      [t('pivot', 'Pivot', 'Increases the damage of Backstab by 25%.'), t('fast-hands', 'Fast Hands', 'Keeps Opening usable for 2 cycles instead of 1.'), t('timing-attack', 'Timing Attack', 'Makes Opening usable when you answer a tell.')],
+      [t('onion-routing', 'Onion Routing', 'Increases your max Signal on runs by 8.'), t('ghost-route', 'Ghost Route', 'Makes Null Route also delay the attack that lands soonest by 2 cycles.'), t('kill-chain', 'Kill Chain', 'Makes Backstab and Opening usable when you break a part.')],
+      [t('log-rotation', 'Log Rotation', 'Lowers Log Wipe\'s cooldown from 6 cycles to 4.'), t('deep-cover', 'Deep Cover', 'Makes Log Wipe also make Null Route and Shadow Copy usable again.'), t('data-leak', 'Data Leak', 'Ticks your Inject on a part once when you land a critical strike on it. Works once per cycle.')],
+      [t('packet-loss', 'Packet Loss', 'Gives attacks on you a 10% chance to miss.'), t('full-disclosure', 'Full Disclosure', 'Makes Unmask last until the target breaks, but its cooldown is 8 cycles.'), t('cover-traffic', 'Cover Traffic', 'Makes Opening usable when your shield absorbs a hit.')],
+      [t('clean-exploit', 'Clean Exploit', 'Increases the damage of your critical strikes by 20%.'), t('tracking-pixel', 'Tracking Pixel', 'Moves Tag to the part whose attack lands soonest when a Tagged part breaks, with the cycles it had left.'), t('zeroize', 'Zeroize', 'Makes Weak Spot fresh on every part when you cut a part\'s move. Works once per cycle.')],
     ],
     // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
     capstones: [

@@ -1,4 +1,4 @@
-// The Achievements page (System → Achievements): the categories on the left with their totals, the chosen
+// The Achievements page (Rig → Achievements): the categories on the left with their totals, the chosen
 // category's achievements beside them. Pure functions of state. Each row shows; its rule is its tooltip.
 //   ui: { cat: 'summary' | a category id, focus: an achievement id to light (a pager line opened it) }
 import { glyph } from './glyphs.mjs';
@@ -7,7 +7,7 @@ import { BOOT_LOOKS, PROMPTS, CURSORS } from './terminal.mjs';
 import { titleById, stickerById, REWARD_BANNERS } from './profile.mjs';
 import { COLORWAYS, PROPS, propSvg } from './casing.mjs';
 import { districtMini } from './casing-view.mjs';
-import { DISTRICTS } from './window.mjs';
+import { DISTRICTS } from './districts.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const dmy = (t) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });

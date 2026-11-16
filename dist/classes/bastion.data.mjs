@@ -3,10 +3,10 @@
 // talents, the edge, how the planner plays them) lives in ./bastion.mjs.
 //
 // A subclass is picked at level 10 (`subclass <id>`; switching is free, at home). Its skill line unlocks
-// at SUBCLASS.unlocks in data.mjs (levels 10 to 38), in the order written here (eleven skills). Its talent tree has the same shape as
-// before: three filler rows of two ranked nodes, and three tiers of two picks.
+// at SUBCLASS.unlocks in data.mjs (levels 10 to 38), in the order written here (eleven skills). Its talent tree is six tiers
+// of three picks.
 // edge.legacy: the class's old edge (EDGE in data.mjs), now this subclass's.
-import { f, t, c } from './kit.mjs';
+import { t, c } from './kit.mjs';
 
 // New skills (ABILITIES entries, same fields as data.mjs). Give each a cls and a sub.
 // Fields the engine reads generically: taunt (draw fire in a crew), once, ally. The rest (cut, cap,
@@ -74,15 +74,15 @@ export const subs = {
     },
     layers: { core: ['rate-limit', 'purge', 'reject', 'blowback', 'retaliate'], utility: ['firewall', 'suspend', 'bulkhead', 'harden', 'quarantine'], cooldown: ['circuit-breaker', 'failover'], specialist: ['throttle', 'dmz', 'honeypot'] },
     tags: { throttle: 'Loud parts', dmz: 'Fragments', honeypot: 'Mimic', firewall: 'Crew' },
-    fillers: [
-      [f('reverse-shell', 'Reverse Shell', 'Increases the damage of Retaliate by 5 per rank.', 5), f('deep-buffer', 'Deep Buffer', 'Increases the damage of Blowback by 10% per rank.', 0.1)],
-      [f('hardened-kernel', 'Hardened Kernel', 'Reduces the damage you take from attacks by 3% per rank.', 0.03), f('stateful-firewall', 'Stateful Firewall', 'Increases the damage Firewall absorbs by 5 per rank.', 5)],
-      [f('vendetta', 'Vendetta', 'Increases the bonus damage of Grudge by 5% per rank.', 0.05), f('token-bucket', 'Token Bucket', 'Increases the damage of Rate Limit by 4 per rank.', 4)],
-    ],
-    talents: [
-      [t('tarpit', 'Tarpit', 'Suspend also Throttles the target until its attack lands.'), t('deep-packet-inspection', 'Deep Packet Inspection', 'Firewall absorbs 30 damage.')],
-      [t('counterflow', 'Counterflow', 'Retaliate also sends back everything Blowback has stored.'), t('write-protect', 'Write Protect', 'Harden grants 2 ◆, but costs 10% of your max Signal.')],
-      [t('uptime', 'Uptime', 'A hit that would drop you to 0 leaves you at 1 instead. Works once per fight.'), t('kernel-panic', 'Kernel Panic', 'Your hits deal 30% more damage while you are below a third of your max Signal.')],
+    // The talent tiers (docs/builds.md): one of three a tier, each opening at its level (LOADOUT.tiers). The first is
+    // the plain pick, the middle changes how a skill plays, the third fires on a shared event (combat.mjs fireEvent).
+    tiers: [
+      [t('deep-packet-inspection', 'Deep Packet Inspection', 'Makes Firewall absorb 30 instead of 16.'), t('token-bucket', 'Token Bucket', 'Makes Rate Limit Throttle the target\'s next 2 attacks instead of 1.'), t('rebound', 'Rebound', 'Makes your next Reject deal double damage when an attack hits you.')],
+      [t('deep-buffer', 'Deep Buffer', 'Increases the damage of Blowback by 25%.'), t('tarpit', 'Tarpit', 'Makes Suspend also Throttle the target until its attack lands.'), t('flow-control', 'Flow Control', 'Makes Retaliate usable on a part when you answer its tell.')],
+      [t('hardened-kernel', 'Hardened Kernel', 'Increases your max Signal by 10%.'), t('write-protect', 'Write Protect', 'Makes Harden give 2 ◆, but it costs 10% of your max Signal.'), t('bounce-buffer', 'Bounce Buffer', 'Deals the damage your shield absorbs back to the part that hit you.')],
+      [t('denylist', 'Denylist', 'Increases Grudge\'s bonus from 20% to 30%.'), t('counterflow', 'Counterflow', 'Makes Retaliate also send back everything Blowback has stored, as a second hit, and empties it.'), t('dead-letter', 'Dead Letter', 'Stores a part\'s move for your next Blowback when you cut it, as if it had hit you.')],
+      [t('uptime', 'Uptime', 'Leaves you at 1 Signal when a hit would drop you to 0. Works once per fight.'), t('honey-farm', 'Honey Farm', 'Makes Honeypot soften the next 2 hits on you instead of 1.'), t('heat-shield', 'Heat Shield', 'Shields you for 3 when one of your burns ticks.')],
+      [t('kernel-panic', 'Kernel Panic', 'Increases your damage by 30% while you are below a third of your Signal.'), t('fail-fast', 'Fail-Fast', 'Makes Failover hit only the target, for double damage.'), t('retransmit', 'Retransmit', 'Makes Retaliate usable when you land a critical strike.')],
     ],
     // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
     capstones: [
@@ -103,15 +103,15 @@ export const subs = {
     },
     layers: { core: ['rate-limit', 'checksum', 'reclaim', 'purge', 'retaliate'], utility: ['firewall', 'patch', 'heartbeat', 'scrub'], cooldown: ['rollback', 'maintenance-window', 'hot-standby'], specialist: ['multicast', 'revoke', 'rebalance'] },
     tags: { multicast: 'Fragments', revoke: 'Healers', rebalance: 'Crew', firewall: 'Crew' },
-    fillers: [
-      [f('patch-notes', 'Patch Notes', 'Increases the healing of Patch by 3 per rank.', 3), f('fan-out', 'Fan-out', 'Increases the healing of Multicast by 3 per rank.', 3)],
-      [f('reserve-pool', 'Reserve Pool', 'Increases the shield Overprovision holds by 5 per rank.', 5), f('redundancy', 'Redundancy', 'Increases your max Signal on runs by 4 per rank.', 4)],
-      [f('tick-rate', 'Tick Rate', 'Increases the healing of each Heartbeat tick by 1 per rank.', 1), f('hardened-kernel', 'Hardened Kernel', 'Reduces the damage you take from attacks by 3% per rank.', 0.03)],
-    ],
-    talents: [
-      [t('service-pack', 'Service Pack', 'Patch heals for 10 up front, instead of 4.'), t('ping-flood', 'Ping Flood', 'Multicast also deals damage to every part equal to what it heals.')],
-      [t('critical-path', 'Critical Path', 'Your heals on anyone below a third of their max Signal heal 50% more.'), t('redistribute', 'Redistribute', 'Reclaim heals the lowest crewmate as much as it heals you. Alone, it heals you twice as much.')],
-      [t('overcommit', 'Overcommit', 'Overprovision holds twice as much shield.'), t('loopback', 'Loopback', 'Every heal you cast also heals you for a third of it.')],
+    // The talent tiers (docs/builds.md): one of three a tier, each opening at its level (LOADOUT.tiers). The first is
+    // the plain pick, the middle changes how a skill plays, the third fires on a shared event (combat.mjs fireEvent).
+    tiers: [
+      [t('parity-bit', 'Parity Bit', 'Makes Checksum heal for half the damage it deals instead of a quarter.'), t('hot-fix', 'Hot Fix', 'Makes Firewall also heal you for 10.'), t('health-probe', 'Health Probe', 'Makes Checksum usable again when you gain a shield. Works once per cycle.')],
+      [t('tick-rate', 'Tick Rate', 'Increases Heartbeat\'s heal by 3 every cycle.'), t('service-pack', 'Service Pack', 'Makes Patch heal its whole amount up front.'), t('health-check', 'Health Check', 'Ticks your Heartbeat on you once more when an attack hits you. Works once per cycle.')],
+      [t('anycast', 'Anycast', 'Increases Multicast\'s heal by 8.'), t('ping-flood', 'Ping Flood', 'Makes Multicast also hit every part for what it heals each player.'), t('clean-slate', 'Clean Slate', 'Increases your next heal by 50% when you answer a tell.')],
+      [t('critical-path', 'Critical Path', 'Increases your heals by 50% on anyone below a third of their Signal.'), t('redistribute', 'Redistribute', 'Makes Reclaim also heal the lowest crewmate as much as it heals you. Alone, it heals you twice as much.'), t('change-freeze', 'Change Freeze', 'Shields you and every crewmate for 8 when you cut a part\'s move.')],
+      [t('overcommit', 'Overcommit', 'Lets Overprovision hold 40 shield instead of 20.'), t('revocation-list', 'Revocation List', 'Makes Revoke hit every part for half, and revoke them all for 2 cycles.'), t('trickle-charge', 'Trickle Charge', 'Heals the lowest player for 3 when one of your burns ticks.')],
+      [t('high-availability', 'High Availability', 'Increases all your heals by 15%.'), t('graceful-restart', 'Graceful Restart', 'Makes Hot Standby also heal the player it saves to half their Signal.'), t('teardown', 'Teardown', 'Heals you and every crewmate for 10 when a part breaks.')],
     ],
     // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
     capstones: [

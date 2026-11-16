@@ -3,7 +3,7 @@
 // outputs run on every later breach. It lives on s.camp, in its own save (app.js CAMPAIGN_KEY, ?campaign=breach):
 // the old game's save is never read, written or migrated.
 //
-// What it adds over a playtest breach (breach.mjs):
+// What it adds over a bare breach (breach.mjs):
 //   the map      SERVERS: name, kind, level, author and family, a Resident from BOSSES, the subsystems an act, links
 //   outputs      every captured server's rewrites, once each at their best tier; Spam Cannon only on its neighbours
 //   checkpoints  a gate you beat stays beaten: a retry can start past it, with the rewrites from the acts behind it

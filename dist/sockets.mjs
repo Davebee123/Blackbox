@@ -58,13 +58,13 @@ export const SOCKET = {
   start: ['harvester'],
   price: { light: (L) => 200 + 10 * L, medium: (L) => 400 + 15 * L }, // credits at a hub
 };
-// The hubs' shelves (6.2), each codebase at a rep tier (index in REP_TIERS; Halcyon's in its store's standing tiers).
+// The hubs' shelves (6.2), each codebase at a rep tier (index in REP_TIERS: 0 is the first tier).
 export const CODEBASE_SHOPS = {
-  halcyon: [['harvester', 1], ['defrag', 1], ['mill', 2]],
-  kestrel: [['snare', 2], ['bulkhead', 2], ['lockdown', 3]],
-  lantern: [['post', 2], ['tunnel', 3]],
-  glassjaw: [['siphon', 1], ['patch', 2], ['honeytoken', 3]],
-  nullchoir: [['cron', 1], ['lure', 2], ['amplifier', 3]],
+  halcyon: [['harvester', 0], ['defrag', 0], ['mill', 1]],
+  kestrel: [['snare', 1], ['bulkhead', 1], ['lockdown', 2]],
+  lantern: [['post', 1], ['tunnel', 2]],
+  glassjaw: [['siphon', 0], ['patch', 1], ['honeytoken', 2]],
+  nullchoir: [['cron', 0], ['lure', 1], ['amplifier', 2]],
 };
 
 // ---------- codebases ----------
@@ -210,8 +210,8 @@ export function retireOutposts(s, was) {
   if (s.recipes) s.recipes = s.recipes.filter((id) => !OLD_SERVICES[id]); // their blueprints
   const arch = s.architecture;
   s.architecture = null;
-  // Swarms at outposts, and the natives' clock, go; a hub's old owner still sends its own (fleet.mjs).
-  if (s.fleet && !s.fleet.hub) s.fleet = null;
+  // Swarms at outposts, and the natives' clock, go.
+  delete s.fleet;
   if (s.net) { delete s.net.fleetAt; delete s.net.fleetNext; delete s.net.schedAt; }
   // The consortium's dividend: what's waiting pays out; members' outposts are just their servers now.
   for (const l of s.consortium?.servers || []) {

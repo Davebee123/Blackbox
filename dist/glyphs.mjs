@@ -93,6 +93,8 @@ const P = {
   stall: '<rect x="4" y="3" width="2.5" height="10" rx=".5"/><rect x="9.5" y="3" width="2.5" height="10" rx=".5"/>',
   xp: '<path d="M3 11l5-5 5 5M3 7l5-5 5 5"/>',
   // An objective's mark (objectives.mjs): a Priority's target.
+  // Pin: a pushpin (an earned piece pinned to the map, earned.mjs).
+  pin: '<path d="M6 1.5h4M6.6 1.5l-.5 4.6-2.3 2.6h8.4l-2.3-2.6-.5-4.6M8 8.7v5.8"/>',
   target: '<circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r=".6"/>',
   // Uptime: an hourglass.
   uptime: '<path d="M4 1.5h8M4 14.5h8M5 1.5c0 4 6 4 6 6.5s-6 2.5-6 6.5M11 1.5c0 4-6 4-6 6.5s6 2.5 6 6.5"/>',
@@ -140,6 +142,9 @@ const P = {
   lure: '<path d="M5 3.5h6M5.5 3.5v1.5c-1.5.8-2.5 2.3-2.5 4 0 2.5 2.2 4.5 5 4.5s5-2 5-4.5c0-1.7-1-3.2-2.5-4V3.5"/><path d="M8 7v2.5"/>',
   // A letter (the pager's pages, pager-view.mjs): an envelope.
   letter: '<rect x="2" y="4" width="12" height="8.5" rx="1"/><path d="M2.5 4.8 8 9.2l5.5-4.4"/>',
+  // A Lab server on the map: a flask. Cold storage: a snowflake.
+  flask: '<path d="M5.8 1.5h4.4M6.8 1.5v4.3L2.9 12.4c-.5.9.1 2.1 1.2 2.1h7.8c1.1 0 1.7-1.2 1.2-2.1L9.2 5.8V1.5M4.5 10h7"/>',
+  cold: '<path d="M8 1.5v13M2.4 4.75l11.2 6.5M2.4 11.25l11.2-6.5M6.5 2.4 8 3.9l1.5-1.5M6.5 13.6 8 12.1l1.5 1.5M12.2 3.85l-.55 2.05 2.05.55M13.7 9.55l-2.05.55.55 2.05M3.8 3.85l.55 2.05-2.05.55M2.3 9.55l2.05.55-.55 2.05"/>',
 };
 
 export const GLYPHS = P;

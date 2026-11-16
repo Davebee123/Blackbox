@@ -1,4 +1,5 @@
-# Publishes the game (dist/) to GitHub Pages on every push to main, so it can be played from a link.
+# Publishes the game to GitHub Pages on every push to main, so it can be played from a link: dist/ built into one
+# minified script and stylesheet (scripts/build.mjs → build/).
 name: Deploy to GitHub Pages
 on:
   push:
@@ -19,6 +20,11 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: node scripts/build.mjs build
       - uses: actions/configure-pages@v5
         with:
           enablement: true
@@ -26,7 +32,7 @@ jobs:
       # "github-pages" artifact too and fail with "Multiple artifacts named github-pages".
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: build
           name: github-pages-${{ github.run_attempt }}
       - id: deployment
         uses: actions/deploy-pages@v4

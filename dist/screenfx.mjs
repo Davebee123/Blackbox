@@ -1,3 +1,4 @@
+import { restartClass } from './restart.mjs';
 // Screen effects (System: Screen effects; docs/ui.md, Screen effects). Light on the glass around the game, never on
 // the game: every effect lives in the backdrop behind the panels (#fx-back), on the tube's edge (#crt-bezel), in the
 // monitor casing's lamps, or across the virus picture (#virus-canvas). Text, numbers, bars, chips and the board are
@@ -97,7 +98,7 @@ export function floorOf(s, { module, mapFloor = null, loc = null } = {}) {
   if (module === 'map') return mapFloor || null;
   const e = s.encounter;
   if (e && (e.phase === 'active' || e.phase === 'alert') && e.mode !== 'run') return null; // a fight at home
-  if (s.run) return Math.max(1, Math.min(PALETTES.length, loc?.depth || 1));
+  if (s.run) return Math.max(1, Math.min(PALETTES.length, loc?.depth || s.rooms?.floor || 1)); // the rooms playtest has no location: its own floor
   return null;
 }
 // Low Signal: your health under a quarter, while it matters. health: your bar's share (0..1) in a fight, on a run, in
@@ -141,7 +142,7 @@ export function createScreenFx(doc, { canMove = () => true } = {}) {
   const until = { net: 0, dmn: 0 };
   const replay = (el, cls, ms) => {
     if (!el) return;
-    el.classList.remove(...cls.split(' ')); void el.offsetWidth; el.classList.add(...cls.split(' '));
+    restartClass(el, ...cls.split(' '));
     clearTimeout(el._sfxT); el._sfxT = setTimeout(() => el.classList.remove(...cls.split(' ')), ms);
   };
   return {

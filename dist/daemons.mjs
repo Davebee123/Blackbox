@@ -70,7 +70,7 @@ const ACT = {
   stall: (s, id) => { const t = soonestAttacker(s); if (!t?.attack) return false; say(s, id, delayAttack(s, t, 1) ? `stalls ${t.name}` : `hits ${t.name}`); strikeAt(s, id, t); },
   cron: (s, id) => { const t = livingParts(s).find((q) => q.kind === 'system' && telling(s, q)) || soonestAttacker(s); if (!t) return false; say(s, id, `runs on ${t.name}`); strikeAt(s, id, t); },
   nudge: (s, id) => { const t = nearTick(s); if (!t) return false; say(s, id, `nudges ${t.name}`); strikeAt(s, id, t); },
-  drain: (s, id) => { const t = soonestAttacker(s); if (!t) return false; say(s, id, `drains ${t.name}`); const r = strikeAt(s, id, t); if (r?.dealt) heal(s, Math.max(1, Math.round(r.dealt / 2)), DAEMONS[id].name); },
+  drain: (s, id) => { const t = soonestAttacker(s); if (!t) return false; say(s, id, `drains ${t.name}`); const r = strikeAt(s, id, t); if (r?.dealt) heal(s, Math.max(1, Math.round(r.dealt / 2)), DAEMONS[id].name, { drawn: true }); },
   kindle: (s, id) => { const hot = livingParts(s).filter((p) => s.encounter.burns.some((b) => b.target === p.id)); if (!hot.length) return false; say(s, id, `fans the burns on ${hot.map((p) => p.name).join(' and ')}`); for (const p of hot) strikeAt(s, id, p); },
   flare: (s, id) => { const t = soonestAttacker(s); if (!t) return false; say(s, id, `exposes ${t.name}`); t.exposedUntil = Math.max(t.exposedUntil || 0, s.encounter.cycle + CONFIG.exposedCycles); strikeAt(s, id, t); },
   capacitor: (s, id) => shield(s, id),
@@ -124,6 +124,19 @@ export function runDaemons(s) {
     e.daemonReady[id] = e.cycle + d.cd;
     e.metrics.daemon = (e.metrics.daemon || 0) + 1;
   }
+}
+// Wakeup Call (a legend, combat.mjs): each slotted daemon with a cooldown acts once more now, its cooldown untouched.
+// True if any acted.
+export function daemonsAgain(s) {
+  const e = s.encounter;
+  let any = false;
+  for (const id of slottedDaemons(s)) {
+    const d = DAEMONS[id];
+    if (!d.cd || !ACT[id] || !active(s) || virusIntegrity(s).current === 0 || (d.exfil && e.objective?.kind !== 'exfil')) continue;
+    if (asDaemon(s, () => ACT[id](s, id))) { any = true; e.metrics.daemon = (e.metrics.daemon || 0) + 1; }
+  }
+  flushDaemons(s);
+  return any;
 }
 // Something happened (see data.mjs DAEMONS `on`). x: what it happened to ({ part, source }).
 export function daemonsOn(s, what, x = {}) {

@@ -1,22 +1,24 @@
 // Markup builders. Pure functions of state; they never change it.
+import { chipTheme } from './chipfx.mjs'; // a part's themed chips (docs/ui.md The fight board)
 import { masteryLine } from './mastery.mjs';
 import { componentsOf } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
-import { leaveOf } from './acts.mjs';
+import { actInfo, actBar } from './acts.mjs';
+import { robinOpen, robinIn, dozer } from './nativeacts.mjs';
+import { FB, BUYER, nextBuyer, dumpOf, topFrame, canCall, frames, leakOf, depthOf, pendingOf, tradeOf, voteOf, forkOf, nodesOf, camerasOf, hatchers, parentOf, leverLeft, rollTo } from './floorbosses.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './memory.mjs';
 // The server whose Connect is waiting on a yes (app.js): its card shows the memory it takes.
 let memAsk = null;
 export const setMemAsk = (id) => { memAsk = id; };
-import { hubWall, HUBS, retakeOf, retakeLeft, lockedDown, incomeOf, bankOf, demandOf } from './hubs.mjs';
-import { PAYLOADS, PAYLOAD, builtOf, flyingOf, lastStrike, defenceOf, alertOf, offline, forecastStrike } from './payload.mjs';
 import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, eventOf, quote, priceOf, travelMs, transfersOf, orderQuote, orderMax } from './market.mjs';
 // The market's open order ticket (app.js): { f, w, side, n }.
 let order = null;
 export const setOrder = (o) => { order = o; };
 import { PIECES, PARTS, pieceState, isFactionPiece, pendingClaims, appraisedOf, cleanStacks } from './faction-gear.mjs';
-import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, shopOf, hubPremium, hostile, OWNED, captured, donationOf, hubFound, hubTraceOf } from './factions.mjs';
+import { keptReceipts, receiptLine, STAMPS, STAMP_ORDER, RECEIPT, tallyOf, sumText } from './receipts.mjs';
+import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, hubFound, hubTraceOf, commissionOf, stanceLine, STANCE } from './factions.mjs';
 import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { ruleHtml } from './ruletext.mjs';
@@ -28,6 +30,7 @@ import { GENES, CATS, AXES, CLASHES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import * as UI from './uiscale.mjs';
+import * as GX from './graphics.mjs';
 import { chipOf, virusGenes, scannedDeep, scannedRead, packedChip, packsGene } from './genome.mjs';
 import { mastered, RESEARCH, TIER } from './research.mjs';
 import { SFX, levelOf as sfxLevel } from './screenfx.mjs';
@@ -37,11 +40,13 @@ import { eventsAt, eventsOf, eventText, eventMinutes, CARDS as EVENT_CARDS, HUNT
 import { eventCard, leakCard, toldCard, darknetCard, EVENT_ICON, FAM_GLYPH, blipSvg } from './event-cards.mjs';
 import { matesOf, mateUp, mateSignal } from './crew.mjs';
 import { momentumCap } from './classes/breaker.mjs';
-import { online, inSprawl, whereText, simOn, friends, profileOf } from './presence.mjs';
+import { online, listed, inSprawl, whereText, simOn, peopleOn, friends, profileOf } from './presence.mjs';
+import { pingsMarkup } from './pings.mjs';
+import { runnerRail, runnerMark, runnerCard, runnersMap, runnersList } from './runners-view.mjs';
 import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, rebooting, consortiumWall, alertsOf, tiersOf as conTiers } from './consortium.mjs';
-import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn, xpOf } from './mail.mjs';
+import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, tierIndex, standing, tierOf, nextTier, retainer, retainerWith, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn, xpOf } from './mail.mjs';
 import { commsOf } from './comms.mjs';
-import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow, premiumOf, premiumPrice, premiumBlock } from './store.mjs';
+import { shopOf, chaseItem, blockOf } from './store.mjs';
 import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, connectedTo, viaName } from './hidden.mjs';
 import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend, waypointOf, holderOf } from './floors.mjs';
 import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
@@ -49,29 +54,31 @@ import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defrag
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, FILTER_CAP, baseName as filterBase } from './filters.mjs';
 import { situationOf } from './situations.mjs';
 import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine } from './sets.mjs';
+import { earnedOf, cellsOf, pinsOf, PIN_MAX } from './earned.mjs';
+import { logGo, homeOfUnique } from './collection.mjs';
 import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED, answerLine, helperPlan, beatCopy } from './fightread.mjs';
-import { cutsNow, crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
+import { crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { programMarkup, progNow, progTarget, progText, progMove, progOnPart, progExc, progFight, progTag } from './routines-view.mjs';
 import { unlocked as routinesOpen, LOCKED as ROUTINES_LOCKED } from './routines.mjs';
 import { bodyTags, AUTHOR_FAMILIES, familyName } from './families.mjs';
 import { heatOf } from './parts.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, quirkLine, labelOf, verdictOf, strength, sendersOf, senderGrade, sendsAt, streakOf, streakMult, STREAK, SCOUT, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine, sendTop, countsAt, wallSafety } from './invasion.mjs';
-import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS } from './gear.mjs';
+import { reqLevel, meetsReq, shownRarity, RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS, rarityName, CHASE_LINE } from './gear.mjs';
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, skillOrder, barSlots, isRunSkill } from './data.mjs';
-import { XP_KINDS, rebootSick, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, capOf, asleep, frozenNow } from './combat.mjs';
+import { XP_KINDS, rebootSick, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, turboOn, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, loaded, loadedOn, slotCount, maxSignal, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, freeSlot, rigOf, stashItem, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, capOf, asleep, frozenNow } from './combat.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
-import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState, blastOf, livingParts } from './combat.mjs';
+import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState, freeTiers, blastOf, livingParts, keptItem } from './combat.mjs';
 import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { youMarks, junkKey } from './mechanics.mjs';
-import { cantripsOf, TELL, lifted } from './data.mjs';
-import { usable, hooks } from './combat.mjs';
+import { cantripsOf, TELL, lifted, own, lift, line } from './data.mjs';
+import { usable, hooks, watchdogIn } from './combat.mjs';
 import { EXE } from './exe.mjs';
 import { sigintWindows, sigintCharges, plannedTells } from './tells.mjs';
 import { daemonText } from './daemons.mjs';
-import { ROOMS as ROOMS_FP, kindRule, KIND_OF } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
-import { RIVALS } from './rivals.mjs';
+import { ROOMS as ROOMS_FP, KIND_OF, KINDS as KINDS_FP } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
+import { rivalP } from './rivals.mjs';
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
 import { arcRows, arcReader } from './arcs-view.mjs';
 import { threadById, serverMarks } from './threads.mjs';
@@ -79,11 +86,13 @@ import { tipOf, postFound } from './scanner.mjs';
 import { POST, postNodeSvg, postNodeSub, postCard } from './scanner-view.mjs';
 import { skillsTabMarkup } from './skills-view.mjs';
 import { achievementsMarkup } from './achievements-view.mjs';
-import { casingPageMarkup, districtCardMarkup } from './casing-view.mjs';
+import { casingPageMarkup } from './casing-view.mjs';
 import { terminalPageMarkup } from './terminal-view.mjs';
+import { housePageMarkup } from './house-view.mjs';
 import { objectiveText, objectiveTip, backupAims } from './objectives.mjs';
 import { pointsOf } from './achievements.mjs';
-export { skillDetailMarkup, breakoutMarkup, breakoutDetailMarkup, breakoutDue, breakoutLevels } from './skills-view.mjs';
+import { flowSvg } from './flowfx.mjs';
+export { toolkitMarkup, subPromptDue } from './skills-view.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
@@ -92,19 +101,18 @@ export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange'
 const longChip = (i) => i.name.length > 6 || i.name.length + String(effectLabel(i)).length > 14;
 export const attackCode = (name = '') => (name[0] + name.slice(1).replace(/[aeiou\s'-]/gi, '')).slice(0, 3).toUpperCase();
 export const levelTag = (s, level, label = `Level ${level}`) => `<b class="${conClass(level - hackerLevel(s))}" title="${level > hackerLevel(s) ? `${level - hackerLevel(s)} levels above you` : level < hackerLevel(s) ? `${hackerLevel(s) - level} levels below you` : 'your level'}">${label}</b>`;
-// Skill text with this level's numbers: every level adds 4% to damage and shields. Heals you cast and
-// damage over time (burn ticks, helpers) take CONFIG.healLevel / dotLevel of that; heals times Restore, and
-// Payload adds its flat number to every burn tick and helper hit.
+// Skill text with this level's numbers: your own line (data.mjs own) on damage, shields and burns; heals keep half the
+// level line and the lift (CONFIG.healLevel), times Restore; gear Damage and Payload add their share to every burn tick and helper hit.
 export function scaledText(s, id, text, arch = null) {
   const a = ABILITIES[id];
-  const k = arch ? power(hackerLevel(s, arch)) : powerOf(s);
-  const kHeal = (1 + (k - 1) * CONFIG.healLevel) * (1 + gearStat(s, 'restore') / 100);
-  const kDot = 1 + (k - 1) * CONFIG.dotLevel, pay = gearStat(s, 'payload');
+  const L = hackerLevel(s, arch || undefined), k = arch ? own(L) : powerOf(s);
+  const kHeal = lift(L) * (1 + (line(L) - 1) * CONFIG.healLevel) * (1 + gearStat(s, 'restore') / 100);
+  const kDot = k, pay = gearStat(s, 'payload') / CONFIG.dotRef + gearStat(s, 'damage') / CONFIG.tickRef; // per point of tick (combat.mjs gearTick)
   if (!a || !text || (k === 1 && kHeal === 1 && kDot === 1 && !pay)) return text;
   const healing = a.verb === 'heal' || id === 'patch';
-  const factor = { heal: kHeal, drain: kHeal, tick: healing ? kHeal : kDot, helper: kDot }, plus = { tick: healing ? 0 : pay, helper: pay }; // Payload: flat, on each tick and helper hit
+  const factor = { heal: kHeal, drain: kHeal, tick: healing ? kHeal : kDot, helper: kDot }, plus = { tick: healing ? 0 : pay, helper: pay }; // gear's share on each tick and helper hit (combat.mjs gearTick)
   // a.scales: the extra numbers a subclass skill writes in its text (dist/classes), as fields to scale.
-  const nums = ['damage', 'heal', 'shield', 'tick', 'helper', 'all', 'cap', 'floor', ...(a.scales || [])].map((f) => [a[f], factor[f] ?? k, plus[f] || 0]).filter(([n]) => typeof n === 'number' && n > 1);
+  const nums = ['damage', 'heal', 'shield', 'tick', 'helper', 'all', 'cap', 'floor', ...(a.scales || [])].map((f) => [a[f], factor[f] ?? k, (plus[f] || 0) * a[f]]).filter(([n]) => typeof n === 'number' && n > 1);
   if (id === 'counter') nums.push([SKILLS.fixedCounter, k, 0]);
   if (id === 'hook') nums.push([SKILLS.hooked, k, 0]);
   let out = text;
@@ -229,7 +237,7 @@ export function timelineMarkup(s) {
       .join('');
     const quiet = !hidden && !items.length ? `<span class="quiet">${runMode ? 'quiet' : 'quiet · trace lands'}</span>` : '';
     const head = c === 0
-      ? `<div class="tcol-head"><span>Now</span><span class="countdown" id="countdown">${e.paused ? 'II' : remaining.toFixed(1)}</span></div><div class="cyclebar"><span id="cyclebar" style="width:${(e.elapsedMs / CONFIG.cycleMs) * 100}%"></span></div>${youChip(s)}`
+      ? `<div class="tcol-head"><span>Now</span><span class="countdown" id="countdown">${e.paused ? 'II' : remaining.toFixed(1)}</span></div><div class="cyclebar"><span id="cyclebar" style="transform:scaleX(${e.elapsedMs / CONFIG.cycleMs})"></span></div>${youChip(s)}`
       : `<div class="tcol-head"><span>+${c}</span></div>`;
     return `<div class="tcol">${head}${chips}${quiet}</div>`;
   });
@@ -281,7 +289,7 @@ export function forecast(s, preview = null) {
   for (const m of crew) shoot(m, m.encounter.queue);
   out.total = Object.values(out.parts).reduce((a, b) => a + b, 0);
   // Incoming: this cycle's visible damage attacks, plus encryption on you.
-  const hits = intents(s, 1).filter((i) => i.col === 0 && !i.hidden && (i.effect === 'damage' || i.hit)).map((i) => (i.effect === 'damage' ? i.amount : i.hit));
+  const hits = asTrades(s, intents(s, 1).filter((i) => i.col === 0 && !i.hidden && (i.effect === 'damage' || i.hit))).filter((i) => !i.trade || i.full).map((i) => i.full || (i.effect === 'damage' ? i.amount : i.hit)); // NIGHT DESK: a trade lands nothing until the table fills
   const take = (st, raw) => {
     let chits = st.encounter.chits || 0, shield = st.encounter.shield || 0, lost = 0;
     for (const a of raw) {
@@ -318,7 +326,7 @@ const capMark = (s, d) => { const cap = healCap(s); return cap < d.max ? `<i cla
 export function hudMarkup(s, { party = true, preview = null } = {}) {
   const e = s.encounter, v = e.virus;
   runMode = e.mode === 'run';
-  const hp = virusIntegrity(s);
+  const hp = s.encounter?.actBars ? actBar(s) : virusIntegrity(s); // act bars (acts.mjs): this act's bar
   const vp = hp.max ? (hp.current / hp.max) * 100 : 0;
   const d = defender(s);
   const dp = (d.integrity / d.max) * 100;
@@ -332,10 +340,17 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   // No title of its own: the virus's name labels its health bar, its tags sit under the bar with
   // its armor. Your bar and the crew's window come first; the virus's bar is at the right.
   const tags = `${v.champion ? '<span class="tag tag-crew" title="Champion: an elite-grade invader, sized for one. It is tougher, gives three times the XP, and leaves a capture when it falls: a sure daemon.">★ CHAMPION</span>' : v.elite ? '<span class="tag tag-crew" title="Elite\nA tougher virus, with a clash: two rules whose answers pull against each other.\nIt gives three times the XP and drops better loot.">◆ CREW</span>' : ''}${clashTag(v)}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invasion · ${esc(s.invasion.fromName)}</span>` : ''}${m && !geneChips(s, v) ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
-  // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
-  // over its picture.
+  // Yours (what you watch): your Signal with the crew under it, over the board; the virus's total over its picture.
+  // On a desktop the virus's side is drawn on the left (style.css, the Swap).
   return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${crackMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}${copyGhost(d, fc.you, cp)}${claimMarks(s, d)}</div>${clockMeter(s)}</div></div>${statusPanel(s, cp)}</div>
-    <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${roomBossTag(s)}${rivalTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
+    <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div>${actSegments(s, `<div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div>`)}<p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${roomBossTag(s)}${rivalTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
+}
+// The *Segments* (act bars, acts.mjs): the boss's bar in one segment an act, the acts done dark, the act now draining
+// (bar: its own bigbar), the acts to come full and dim.
+export function actSegments(s, bar) {
+  const e = s.encounter, a = e?.actBars ? actInfo(e.virus) : null;
+  if (!a) return bar;
+  return `<div class="act-segs" style="--acts:${a.of}">${Array.from({ length: a.of }, (_, i) => (i + 1 === a.n ? bar : `<div class="bigbar ${i + 1 < a.n ? 'act-done' : 'act-wait'}"><span></span></div>`)).join('')}</div>`;
 }
 // An elite's clash (docs/puzzle-levers.md 4, genes.mjs CLASHES): its two levers by name, the pull and the answer in its tooltip.
 export function clashTag(v) {
@@ -349,14 +364,16 @@ export function clashTag(v) {
 function rivalTag(s) {
   const e = s.encounter, v = e?.rooms?.as === 'rival' ? s.rooms?.visit?.rival : null;
   if (!v) return '';
-  const P = RIVALS[v.id];
-  return `<span class="tag hot" title="${esc(`${P.name}\nRival · fight ${v.fight + 1} of ${v.fights}\nYour Signal carries to its next fight. Your cooldowns start fresh.\n▸ Win all ${v.fights} to take its pack.`)}">${esc(P.name)} ${v.fight + 1}/${v.fights}</span>`;
+  const P = rivalP(v);
+  return `<span class="tag hot" title="${esc(`${P.name}\nRival · fight ${v.fight + 1} of ${v.fights}\nYour Signal carries to their next fight. Your cooldowns start fresh.\n▸ Win all ${v.fights} to take their pack.`)}">${esc(P.name)} ${v.fight + 1}/${v.fights}</span>`;
 }
 function roomBossTag(s) {
   const e = s.encounter;
   if (!e?.rooms || !e.bossRule) return '';
-  const R = BOSS_RULES[e.bossRule], pips = e.cutBudget != null ? ` <span class="cut-pips">${'●'.repeat(Math.max(0, e.cutBudget))}<i>${'○'.repeat(Math.max(0, TICKS.budget - e.cutBudget))}</i></span>` : '';
-  return `<span class="tag hot boss-rule" title="${esc(`Boss rule (${e.bossRule}): ${R.name}. ${R.text}`)}">rule ${e.bossRule}${pips}</span>`;
+  // No "rule a" label: only the cut budget's pips, when the rule has one (its rule in the hover).
+  if (e.cutBudget == null) return '';
+  const R = BOSS_RULES[e.bossRule];
+  return `<span class="tag hot boss-rule" title="${esc(`Boss rule (${e.bossRule}): ${R.name}. ${R.text}`)}"><span class="cut-pips">${'●'.repeat(Math.max(0, e.cutBudget))}<i>${'○'.repeat(Math.max(0, TICKS.budget - e.cutBudget))}</i></span></span>`;
 }
 
 // Clock Speed (gear.mjs STATS.clock, capped at 25%): a thin meter under your bar that fills each cycle by your Clock Speed
@@ -402,30 +419,24 @@ function gearRow(s) {
 
 
 // A tell (tells.mjs): on its part's row, in the column it lands, never hidden. The chip is the glance: its kind and
-// when it lands (NOW while its window is open), its name and number, and the answer's verb. The tooltip says the rest
-// once each (fightread.mjs tellTip): what happens if it lands, and how to stop it and when. A longer window marks the
+// when it lands (NOW while its window is open), its name and number, and a SIGINT mark when SIGINT can stop it. The tooltip says the rest
+// once each (fightread.mjs tellTip): what happens if it lands. A longer window marks the
 // cells before it (tellSpan).
 const TELL_KICK = { charge: 'Charged', cast: 'Casting', seal: 'Sealing', mimic: 'Recording', lock: 'Locking' };
 function tellChip(s, i, c, k = '', to = null) {
-  const p = part(s, i.source);
   const open = i.open ?? c === 0;
   // What it does, as short as an attack chip's number: a charge's hit, a cast's price (the Signal its attacks would add,
   // a Self-Update's Integrity), the ◆ a seal would hand out in all (tells.mjs tellPrice).
   const what = i.tell === 'charge' ? (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? `−${i.price ?? i.amount}` : i.effect === 'replicate' ? `+${i.spawn || 2} frags` : i.effect === 'scramble' ? `−${i.hit || 0} · scramble` : `+${i.amount} hp`)
     : i.tell === 'cast' ? (i.does === 'grow' ? `+${i.grow ?? 0} hp` : i.does === 'overclock' ? '×2 both ways' : `−${i.price ?? 0}`)
     : i.tell === 'seal' ? `+${i.armorOut ?? 0} ◆` : i.tell === 'lock' ? 'locks a key' : i.copy ? i.copy.short : 'copies you'; // the Mimic: what your selected command would copy
-  // The answer as an order, without its timing: the kick line has that (NOW, or when it lands).
-  const sig = sigintCharges(s) && usable(s).includes('sigint');
-  const answer = i.tell === 'charge' ? `Cut${i.armored ? ` past ◆${p?.armor || 0}` : ''}${sig ? ' or SIGINT' : ''}`
-    : i.tell === 'cast' ? 'SIGINT or cut'
-    : i.tell === 'seal' ? (p?.armor > 0 ? `Strip ◆${p.armor}` : 'Keep it bare') : i.tell === 'lock' ? 'Feed it a cooldown' : 'Pick a cheap copy';
-  const progress = '';
+  // SIGINT stops it (a cast, or from level 17 a charge too): a small mark, no words. The answer itself is the tooltip's.
+  const sig = usable(s).includes('sigint') && (i.tell === 'cast' || (i.tell === 'charge' && sigintCharges(s)));
   // A price in your Signal reads in threat red, a seal's ◆ in steel.
   const kindOf = i.tell === 'seal' ? ' tl-armor' : (i.tell === 'charge' && ['damage', 'encrypt'].includes(i.effect)) || (i.tell === 'cast' && ['loud', 'haste'].includes(i.does)) ? ' tl-price' : '';
-  return `<div class="intent tell t-${esc(i.tell)} ${c === 0 ? 'now' : ''} ${open ? 'win' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tellTip(s, i, c, to))}">`
-    + `<div class="tl-kick"><span class="ico" ${icon(TELL_ICON[i.tell])}></span><span class="tl-kind">${TELL_KICK[i.tell] || ''}</span>${open ? '<b class="tl-win">NOW</b>' : `<span class="tl-when">${c ? `in ${c}` : 'now'}</span>`}</div>`
+  return `<div class="intent tell t-${esc(i.tell)}${i.effect === 'replicate' ? ' replicate' : ''} ${c === 0 ? 'now' : ''} ${open ? 'win' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tellTip(s, i, c, to))}">`
+    + `<div class="tl-kick"><span class="ico" ${icon(TELL_ICON[i.tell])}></span><span class="tl-kind">${TELL_KICK[i.tell] || ''}</span>${sig ? `<span class="ico tl-sig" ${icon('interrupt')} aria-label="SIGINT stops it"></span>` : ''}${open ? '<b class="tl-win">NOW</b>' : `<span class="tl-when">${c ? `in ${c}` : 'now'}</span>`}</div>`
     + `<div class="tl-main"><b>${esc(i.name)}</b><small class="tl-what${kindOf}${i.copy ? ` copy${i.copy.dear ? ' dear' : ''}` : ''}">${esc(what)}</small></div>`
-    + `<div class="tl-ans">▸ ${esc(answer)}${progress ? `<span class="tl-prog">${esc(progress)}</span>` : ''}</div>`
     + `${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
 // A tell's window over more than one cycle (levels 1 to 5, an elite's or a boss's charge, a cast): a strip in each
@@ -441,7 +452,7 @@ const heldMark = (i) => (i.held ? `<i class="held">${glyph('stall')}</i>` : '');
 // Zip Bomb's fuse, a Buffer's next shield.
 // The P2 parts' (genes.mjs): a Scraper's takes-buffs mark, a Bad Block's cracked mark, a Cold Store's thaw, a Spare's boot.
 const chipCls = (i) => (i.packed ? '' : chipCls0(i)); // a packed part's chip (combat.mjs intents): no mark says what it is
-const chipCls0 = (i) => `${i.taps ? ` tap t${i.tap}${i.tap === 1 ? ' first' : ''}${i.tap === i.taps ? ' last' : ''}` : ''}${i.syn ? ' syn' : ''}${i.effect === 'fuse' ? ' fuse' : ''}${i.effect === 'buffer' ? ' bufup' : ''}${i.scrape ? ' scrape' : ''}${i.bad ? ' bad' : ''}${i.effect === 'thaw' ? ' thaw' : ''}${i.effect === 'boot' ? ' boot' : ''}${i.loud ? ' loud' : ''}`;
+const chipCls0 = (i) => `${i.taps ? ` tap t${i.tap}${i.tap === 1 ? ' first' : ''}${i.tap === i.taps ? ' last' : ''}` : ''}${i.syn ? ' syn' : ''}${i.effect === 'fuse' ? ' fuse' : ''}${i.effect === 'buffer' ? ' bufup' : ''}${i.scrape ? ' scrape' : ''}${i.bad ? ' bad' : ''}${i.effect === 'thaw' ? ' thaw' : ''}${i.effect === 'boot' ? ' boot' : ''}${i.effect === 'replicate' ? ' replicate' : ''}${i.loud ? ' loud' : ''}`;
 const chipTip = (i) => (i.loud ? `\nLoud: if the ${i.loud.by} breaks this cycle, it deals ${i.loud.amount} instead of ${i.loud.was}${i.loud.from > i.col ? ` and lands ${i.col === 0 ? 'this cycle' : i.col === 1 ? 'next cycle' : `in ${i.col} cycles`}` : ''}.` : '') + chipTip0(i);
 const chipTip0 = (i) => (i.taps ? `\nHit ${i.tap} of ${i.taps} of one volley. A cut stops the rest, and a delay moves all of it.` : i.syn ? '\nThe skill you fire this cycle cools down 2 cycles longer.' : i.effect === 'fuse' ? `\nThe fuse goes off on both sides: a ◆ or a shield of yours absorbs your share, and every part of the virus loses a ◆ and ${Math.round(CONFIG.zipbomb.parts * 100)}% of its max. Ending the fight first puts it out.` : i.effect === 'buffer' ? '\nIts shield absorbs your commands\' hits first. Burns and helpers bypass it.'
   : i.scrape ? '\nRemoves your shield, your ◆ and your timed buffs as it lands. Gains up to 2 ◆ from them. Null Route makes it miss.\n▸ Buff after it lands, not before.' : i.bad ? '\nYour next heals lose up to 10% of your max health. Purge, Scrub, Rollback and Rotate Keys clear it.'
@@ -465,10 +476,36 @@ function bendChip(i, c, k = '') {
 // A P4 boss's Backlash (acts.mjs): a dashed red chip on each part with an attack, in the columns the beat falls in, with
 // what the lash costs. Its tooltip: the rule, and the answer.
 function lashChip(i, c, k = '') {
-  const tip = `Backlash, ${bendWhen(c)}. A beat: hit this part with a command then and it lashes back for ${i.amount}${i.also ? `, with its ${i.also}` : ''}. A hit that breaks it doesn't.${answerLine('Hit a part with no attack, break one, or fire a shield or buff then.')}`;
+  const tip = `Backlash, ${bendWhen(c)}. A beat: hit this part with a command then and it lashes back for ${i.amount}${i.also ? `, with its ${i.also}` : ''}${i.plus ? `, and ${i.plus}` : ''}. A hit that breaks it doesn't.${answerLine('Hit a part with no attack, break one, or fire a shield or buff then.')}`;
   return `<div class="intent bend lash${c === 0 ? ' now' : c === 1 ? ' next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}"><span class="ico" ${icon(ICON.mirror)}></span><b class="bend-to">Lash −${i.amount}</b></div>`;
 }
+// NIGHT DESK's attacks (floorbosses.mjs holdTrade): none lands, each opens a pending trade. Marked here (trade), and the
+// one that fills the table, or the Desk's Margin Call (act 3), carries what settles (full).
+function asTrades(s, list) {
+  const v = s.encounter.virus;
+  if (!v.desk) return list;
+  const all = pendingOf(s);
+  let n = all.length, sum = all.reduce((t, x) => t + tradeOf(s, x), 0);
+  return list.map((i) => {
+    if (i.tell || i.hidden || !(i.effect === 'damage' || i.hit)) return i;
+    const size = i.effect === 'damage' ? i.amount : i.hit, call = v.desk.call && part(s, i.source)?.core;
+    n++; sum += size;
+    const out = { ...i, trade: size, ...(n >= FB.desk.full || call ? { full: sum, call } : {}) };
+    if (n >= FB.desk.full || call) { n = 0; sum = 0; }
+    return out;
+  });
+}
+// A trade's chip: dashed, a clock and the trade's size. The one that fills the table is solid red, with all that settles.
+function tradeChip(i, c, k = '') {
+  const tip = i.call ? `${i.name}\nMargin Call\nSettles every pending trade on you with it, in full, for ${i.full}.${answerLine('Settle the traders first, or break the Desk.')}`
+    : i.full ? `${i.name}\nTrade\nThe table fills at ${FB.desk.full} pending. Every trade settles on you in full, for ${i.full}.${answerLine('Settle a part\'s trades at half before then.')}`
+    : `${i.name}\nTrade\nOpens a pending trade of ${i.trade} on this part. It deals nothing until it settles.${answerLine('Hit the part to settle its trades at half.')}`;
+  return `<div class="intent trade${i.full ? ' full' : ''}${c === 0 ? ' now' : c === 1 ? ' next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}">${glyph('clock', 'tr-ico')}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${i.full ? `−${i.full}` : i.trade}</small></div>`;
+}
+// A boss rule's own chip (floorbosses.mjs fbIntents: a vote, a sweep, a leak): drawn beside its part's attack, never in its place.
+const ruleChip = (i) => !!(i.vote || i.sweep || i.leak || i.rollback);
 function attackChip(i, c, k = '', to = null) {
+  if (i.trade) return tradeChip(i, c, k);
   if (i.effect === 'mirror') return bendChip(i, c, k);
   if (i.effect === 'backlash') return lashChip(i, c, k);
   if (i.packed) i = { ...i, syn: false, scrape: false, bad: false, taps: 0 };
@@ -580,6 +617,24 @@ export function partAbout(p, v = null, s = null) {
   const r = partRead(s, v || { parts: [p] }, p);
   return `${r.does}${answerLine(r.answer)}`;
 }
+// Floor 2's lair bosses' act rules on their parts (nativeacts.mjs): Tumblers, Round robin, Out of band, Hotfix, the dozer,
+// Shatter. Each tag's tooltip: the rule, and the answer.
+function nativeTags(s, p) {
+  const e = s.encounter, v = e.virus, out = [], tag = (label, tip) => out.push(`<span class="tag hot" title="${esc(tip)}">${label}</span>`);
+  const cyc = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
+  if (v.tumblers && p.lockMax && livingParts(s).some((m) => m.lock === p.id)) tag('tumblers', `Tumblers\nBoss rule\nA Deadbolt that lands locks the ${p.name} again at full.${answerLine('Cut the Deadbolt.')}`);
+  const open = v.robin && p.kind === 'system' ? robinOpen(s) : null;
+  if (open === p) { const n = robinIn(s); tag(`open ${n}`, `Round robin\nBoss rule\nThe ${p.name} is open and takes full damage. The other parts take half. The turn moves on in ${cyc(n)}.${answerLine('Hit the open part.')}`); }
+  else if (open) tag('½', `Round robin\nBoss rule\nThe ${p.name} is shut and takes half damage. The ${open.name} is open.${answerLine('Hit the open part.')}`);
+  if (v.oob && p.attack?.effect === 'heal') tag('oob', `Out of band\nBoss rule\nWhen your hit takes a part across a tick, the ${p.name} patches it at once for ${p.attack.amount}.${answerLine('Cross both ticks in one hit, or break the Patcher first.')}`);
+  if (v.hotfix === true && p.core) tag('hotfix', `Hotfix\nBoss rule\nThe last part you break this act comes back once at 25%.${answerLine('Save a big hit for the last part.')}`);
+  if (dozer(s) === p) {
+    const a = livingParts(s).find((x) => x.attack?.alarm), alarm = a ? ` and sounds the Alarm for ${a.attack.amount}` : '';
+    tag('z ×2', v.rem.terror ? `Night Terror\nBoss rule\nThe ${p.name} dozes and charges, and takes double damage. A hit on it wakes it, calls the charge off${alarm}.${answerLine('Wake it, or take the charge.')}` : `REM\nBoss rule\nThe ${p.name} dozes: its attack waits, and it takes double damage. A hit on it wakes it${alarm}.${answerLine('Hit it when you can take the Alarm, or leave it be.')}`);
+  }
+  if (v.shatter && p.mimic) tag('shatter', `Shatter\nBoss rule\nOn its beat the ${p.name} plays your hit back as three shards, a third each. A ◆ on you stops one shard.${answerLine('Hold ◆ for the beat, or fire small on it.')}`);
+  return out;
+}
 function partTags(s, p) {
   const e = s.encounter, tags = [], pk = packed(s, e.virus, p); // a Packer standing: a rolled part's rule reads as ???
   if (pk && p.integrity > 0) tags.push(`<span class="tag packed" title="${esc('Packed: its name and rule are hidden until the Packer breaks.')}">${glyph('crate')}???</span>`);
@@ -591,6 +646,7 @@ function partTags(s, p) {
   if (p.taggedUntil >= e.cycle) tags.push(`<span class="tag you" title="Tagged: burns on it deal 50% more damage, and its timer shows through a veil">tagged ${p.taggedUntil - e.cycle + 1}</span>`);
   if (p.hookedUntil >= e.cycle) tags.push(`<span class="tag you" title="Hooked: every hit on it deals 6 additional damage">hooked ${p.hookedUntil - e.cycle + 1}</span>`);
   if (p.throttledUntil >= e.cycle) tags.push(`<span class="tag you" title="Throttled: its attacks deal half damage">throttled ${p.throttledUntil - e.cycle + 1}</span>`);
+  if (p.resisted && e.cycle - p.resisted.cycle <= 1 && p.integrity > 0) tags.push(`<span class="tag hot" title="${esc(`Resisted: ${levelGap(s)} ${levelGap(s) === 1 ? 'level' : 'levels'} above you, it shrugged off your ${p.resisted.name}. A part resists your delays and statuses 10% more often for each level it is above you.${answerLine('Fight nearer your level, or lean on plain damage.')}`)}" data-tt-kind="Level gap">resisted</span>`);
   if (p.quarantinedUntil >= e.cycle) tags.push(`<span class="tag you" title="Quarantined: it takes 25% more damage while its attack waits">quarantined ${p.quarantinedUntil - e.cycle + 1}</span>`);
   if (p.phase && p.integrity > 0) tags.push(e.cycle % 2 ? '<span class="tag hot" title="Out of phase: your hits pass through it this cycle, and 15% of each command hits you">phased out</span>' : '<span class="tag you" title="In phase: takes damage this cycle">in phase</span>');
   if (p.attack?.windup && p.attack.due - e.cycle <= 2 && p.integrity > 0) tags.push(`<span class="tag hot" title="Winding up: dealing ${p.attack.windup} damage to it before it lands calls it off">wind-up ${p.attack.wound || 0}/${p.attack.windup}</span>`);
@@ -613,7 +669,7 @@ function partTags(s, p) {
   // A Lockbox's held damage (docs/puzzle-levers.md 3.4): yours, in your teal.
   for (const h of p.integrity > 0 && !pk ? heldOf(s, p) : []) tags.push(`<span class="tag you held" title="${esc(`Held: the ${p.name} holds ${h.held} of your damage on the ${h.partner.name}. When it breaks, half of it, ${h.land}, lands on the ${h.partner.name} at once.`)}">${glyph('unlock')}held ${h.held}</span>`);
   // Fallback (combat.mjs): the part that takes over its partner's attack when the partner breaks first.
-  if (p.rival) { const v = s.rooms?.visit?.rival, P = v && RIVALS[v.id]; if (P) tags.push(`<span class="tag hot" title="${esc(`${p.name}\nPart · added by ${P.name}, read from how you won its last fight.`)}">+ ${esc(P.name)}</span>`); }
+  if (p.rival) { const v = s.rooms?.visit?.rival, P = v && rivalP(v); if (P) tags.push(`<span class="tag hot" title="${esc(`${p.name}\nPart · added by ${P.name}, read from how you won their last fight.`)}">+ ${esc(P.name)}</span>`); }
   if (p.fallback && p.integrity > 0) { const t = e.virus.parts.find((x) => x.id === p.fallback); if (p.tookOver) tags.push(`<span class="tag hot" title="${esc(`Took over: took over the ${t?.name || 'broken part'}'s ${t?.attack?.name || 'attack'} when the ${t?.name || 'other part'} broke.`)}">took over</span>`); else if (t && t.integrity > 0 && t.attack) tags.push(`<span class="tag hot" title="${esc(`Fallback: if the ${t.name} breaks first, the ${p.name} takes over its ${t.attack.name}.`)}">fallback</span>`); }
   // The parts plan (data.mjs BASICS, genes.mjs): an Accumulator's charge, a Hotspot's glow, the Idle Timer's countdown on
   // the signature's row, an Obfuscator's smoke.
@@ -630,9 +686,15 @@ function partTags(s, p) {
   if (frozenNow(s, p) && !pk) { const k = p.thawAt ?? p.frozen, f = Math.max(0, Math.min(1, (e.cycle - 1) / k)), n = k - e.cycle + 1; tags.push(`<span class="tag frost" title="${esc(`Frozen: off the timeline and immune to damage. Thaws ${n <= 1 ? 'at the end of this cycle' : `in ${n} cycles`}. Its first hit lands 2 cycles after the thaw.`)}">${glyph('clock')}<i class="thaw-bar"><b style="width:${Math.round(f * 100)}%"></b></i></span>`); }
   // The solo bosses (docs/solo-bosses.md): the ♛ part, RELAY-KING's Broadcast, REPO MAN's Liens, HOLLOW CHOIR's Round.
   const v = e.virus;
-  if (p.core && p.integrity > 0) tags.push(`<span class="tag hot crown" title="${esc(`${p.name}\nBoss part\nIts ticks start the boss's next phase instead of cutting a move.${v.boss === 'relayking' && !v.phases?.[0]?.done ? ' At its 50% tick, the ♛ hops to the healthiest other part.' : ''}${answerLine('Cross a tick when you are ready for the next phase.')}`)}">♛</span>`);
+  if (p.core && p.integrity > 0) tags.push(`<span class="tag hot crown" title="${esc(`${p.name}\nBoss part\nIt carries the boss's signature. Break every part to end the act.`)}">♛</span>`);
+  // The act rules on the board (combat.mjs bossPhases): RELAY-KING's Crown Hop and Flood, the Resident's Outbreak or Lockdown.
+  if (p.core && p.integrity > 0 && v.hop === true) tags.push(`<span class="tag hot" title="${esc(`Crown Hop\nBoss rule\nWhen the ${p.name} crosses half, the ♛ hops to the healthiest other part, and the two swap how full they are. Once this act.${answerLine('Bring the other parts down first, so the swap gives little back.')}`)}">${glyph('relay')}hop</span>`);
+  if (p.broadcast && p.integrity > 0 && v.flood) tags.push(`<span class="tag hot" title="${esc(`Flood\nBoss rule\nEach ${p.attack?.name || 'Broadcast'} that lands hatches a fragment on every part, up to ${CONFIG.fragmentCap} on the board.${answerLine('Cut the Broadcast, or break parts before it lands.')}`)}">flood</span>`);
+  if (p.core && p.integrity > 0 && (v.outbreak || v.lockdown)) tags.push(`<span class="tag hot" title="${esc(v.outbreak ? `Outbreak\nBoss rule\nEach Backlash also hatches a fragment.${answerLine('Stay off the beat.')}` : `Lockdown\nBoss rule\nEach Backlash also encrypts you while the Encryptor stands.${answerLine('Stay off the beat, or break the Encryptor first.')}`)}">${v.outbreak ? 'outbreak' : 'lockdown'}</span>`);
   if (p.broadcast && p.attack && p.integrity > 0) { const n = livingParts(s).filter((x) => x.kind === 'fragment').length, each = Math.round(p.attack.amount * (p.fanin || 0)); tags.push(`<span class="tag hot" title="${esc(`Broadcast\nBoss rule\nThe ${p.name}'s ${p.attack.name} deals ${each} more damage for each fragment on the board.${answerLine('Clear the fragments before it lands, or cut it.')}`)}">${glyph('relay')}×${n}</span>`); }
-  if (p.lien && p.integrity > 0) { const n = v.liens || 0, each = Math.round(p.attack ? p.attack.amount * p.lien * (v.interest || 1) : 0); tags.push(`<span class="tag hot liens" title="${esc(`Lien\nBoss rule\nEach of your commands that a ◆ absorbs puts a Lien on the ${p.name}. Each Lien adds ${each} damage to its ${p.attack?.name || 'Collection'}. A Collection that lands or is cut clears them.${answerLine('Take ◆ off with strips, burns or helpers, and cut the Collection.')}`)}">§${n}</span>`); }
+  if (p.lien && p.integrity > 0) { const n = v.liens || 0, each = Math.round(p.attack ? p.attack.amount * p.lien * (v.interest || 1) : 0); tags.push(`<span class="tag hot liens" title="${esc(`Lien\nBoss rule\nEach of your commands that a ◆ absorbs puts a Lien on the ${p.name}. Each Lien adds ${each} damage to its ${p.attack?.name || 'Collection'}${v.interest > 1 ? ' (Interest: it counts twice)' : ''}. A Collection that lands or is cut clears them.${v.repo ? ' One that lands puts a ◆ back for each Lien.' : ''}${answerLine('Take ◆ off with strips, burns or helpers, and cut the Collection.')}`)}">§${n}</span>`); }
+  for (const x of p.integrity > 0 ? floorTags(s, p) : []) tags.push(x); // the floor 2 and 3 bosses (floorbosses.mjs)
+  for (const x of p.integrity > 0 ? nativeTags(s, p) : []) tags.push(x); // floor 2's lair bosses' act rules (nativeacts.mjs)
   if (p.mimic && v.round && p.integrity > 0) tags.push(`<span class="tag hot" title="${esc(`Round\nBoss rule\nOn its beat the ${p.name} plays back your last three commands: the one you fire on the beat and the two before it. A cycle you hold adds nothing.${answerLine('Hold or fire small in the two cycles before a beat.')}`)}">round</span>`);
   if (p.command && p.integrity > 0) tags.push(`<span class="tag hot" title="${esc(`${p.name}: fragments deal ${Math.round((p.gnaw ?? CONFIG.c2.gnaw) * 100)}% more damage while it stands. When it breaks, every fragment drops.`)}">commands fragments</span>`);
   const burn = (e.burns || []).filter((b) => b.target === p.id);
@@ -674,6 +736,8 @@ export function statusSpans(s) {
   const add = (name, until, kind, title, value = '') => { if (until >= e.cycle) out.push({ name, value, cycles: until - e.cycle + 1, kind, title }); };
   const st = momentumStacks(s);
   if (st) add('Momentum', e.momentum.until, 'you', `Momentum: +${Math.round(momentumBonus(s) * 100)}% damage (${st} of ${momentumCap(s)} stacks). Each break adds a stack and resets the timer.`, `+${Math.round(momentumBonus(s) * 100)}%${st > 1 ? ` ×${st}` : ''}`);
+  const tb = turboOn(e); // an Overclocker crewmate's Turbo Boost
+  if (tb) add('Turbo', tb.until, 'you', `Turbo\nBuff from ${tb.who === 'you' ? 'your' : `${tb.who}'s`} Turbo Boost\nYou deal ${Math.round((tb.dealt - 1) * 100)}% more damage and take ${Math.round((tb.taken - 1) * 100)}% more.`, `+${Math.round((tb.dealt - 1) * 100)}% · +${Math.round((tb.taken - 1) * 100)}% taken`);
   for (const [k, until] of Object.entries(e.buffs || {})) if (k !== 'null-route') add(k === 'sinkhole' ? 'Drawing fire' : k === 'stolen' ? 'Stolen cast' : ABILITIES[k]?.name || k, until, 'you', k === 'sinkhole' ? 'Every attack comes at you (Firewall or Bulkhead, with a crew).' : k === 'stolen' ? 'A cast you hijacked: your hits deal 35% more.' : ABILITIES[k]?.help || '');
   add('Null-routed', e.buffs?.['null-route'] ?? -1, 'you', "This cycle's attacks miss you, and your next skill is a critical strike.");
   // What a tell that landed left on you (tells.mjs): Corrupted, a hung command, a skill knocked offline.
@@ -690,23 +754,80 @@ export function statusSpans(s) {
 
 // The interrupt (interrupt.mjs, every fight but a crew boss's): two ticks on a part's bar at 50% and 25%. A spent one
 // goes hollow; a boss's core part under rule (a) has phase ticks instead.
-// A P4 boss's ♛ (acts.mjs leaveOf): its next phase tick is held (amber) until this act's beat has played.
+// The floor 2, 3 and 4 bosses' marks (floorbosses.mjs), each with its rule in WoW's grammar: CENTRIFUGE's bid on the Gavel
+// and the buyer a part came from, SHAKEDOWN's Ransom Clock on its ♛, SHOULDER SURFER's window and log on the Logger,
+// RECURSION's top frame and its Call, NIGHT DESK's pending trades and table, BYZANTINE's vote, CAMSWARM's sweep.
+function floorTags(s, p) {
+  const e = s.encounter, v = e.virus, out = [], when = (n) => (n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`);
+  const tag = (cls, tip, body) => out.push(`<span class="tag ${cls}" title="${esc(tip)}">${body}</span>`);
+  if (p.gavel && p.attack && v.bid) {
+    const k = p.attack.interval, who = BUYER[nextBuyer(v)], spec = BOSSES[v.boss].buyers[nextBuyer(v)];
+    tag(k <= FB.bid.fast ? 'hot bid' : 'bid', `Bidding\nBoss rule\nThe ${p.name}'s Surge comes every ${k} cycles, and each one that lands spins it faster. A Surge at every 2 sells to ${who}: its ${spec.name} joins the fight${v.bid.lots > 1 ? ', with a second buyer' : ''}. ${v.bid.reserve ? 'A delay or Throttle steps it back one.' : 'A delay or Throttle takes it back to every 4.'} Each sale heals the Rotor ${Math.round(FB.bid.heal * 100)}% of its max and makes the Surge ${Math.round(FB.bid.sold * 100)}% harder for the act${v.bid.sold ? ` (${v.bid.sold} so far)` : ''}. Each command you aim at the Gavel while the Rotor stands is a bid: it spins one faster.${answerLine('Leave the Gavel for last. Delay, Throttle or SIGINT it at every 2.')}`, `${glyph('clock')}${k} · ${esc(who)}`);
+  }
+  // The Resident's Watchdog, on its ♛ (combat.mjs watchdog).
+  const wd = p.core ? watchdogIn(s) : null;
+  if (wd != null) tag(wd <= 1 ? 'hot' : '', `Watchdog\nBoss rule\nWhile the ${p.name} stands above its next tick, every other part patches a ◆ every ${BOSSES[v.boss].watchdog.every} cycles: ${when(wd)}. Crossing a tick restarts the count.${answerLine(`Take the ${p.name} across its tick.`)}`, `${glyph('clock')}watchdog ${wd}`);
+  if (p.buyer) tag('', `${p.name}\nBought by ${BUYER[p.buyer]}\nIt joined when the Gavel sold.`, esc(BUYER[p.buyer]));
+  if (p.core && v.ransom) {
+    const L = v.ransom.left, k = leakOf(v), n = Math.round(defender(s).max * k);
+    tag(L <= 3 ? 'hot ransom' : 'ransom', `Ransom Clock\nBoss rule\nIt leaks ${n} (${Math.round(k * 100)}% of your max) ${when(L - 1)}, then restarts at ${FB.ransom.restart}. Each leak in an act takes ${Math.round(FB.ransom.grow * 100)}% more than the last, up to ${Math.round(FB.ransom.most * 100)}%, and each act starts a new clock. Breaking a Demand while the Collector stands halves the time left. A Deadline that lands adds ${FB.ransom.pay} cycles. One you call off buys nothing.${v.ransom.notice ? ' Each leak re-arms the Demand and brings the Lockbox back.' : ''}${answerLine('Let a Deadline land when the clock would run out first.')}`, `${glyph('clock')}${L}`);
+  }
+  const lev = leverLeft(s, p);
+  if (lev != null) tag(lev <= 0 ? 'hot' : '', `Leverage\nBoss rule\nWhile a Demand stands, the ${p.name} loses at most ${Math.round(FB.ransom.lever * 100)}% of its max a cycle: ${lev} more this cycle. The rest of a hit is lost.${answerLine('Fit your hit to the cap, or spend the big one on a Demand.')}`, `cap ${lev}`);
+  if (p.syncOnly && v.surf) {
+    const shut = e.cycle % 2 === 1, d = dumpOf(s);
+    tag(shut ? 'hot window' : 'window', `Replay\nBoss rule\nThe Sync Window ${shut ? 'is shut this cycle and opens next cycle' : 'is open this cycle'}. The ${p.name} takes damage only from commands fired in it, and logs each one fired outside it: ${e.keylog || 0} of ${FB.surf.log}. At ${FB.surf.log} its Dump plays back ${d ? `your ${ABILITIES[d.id]?.name || d.id} for ${d.amount}` : 'your last logged command'}${v.surf.dumps ? `, ${Math.round(FB.surf.grow * v.surf.dumps * 100)}% harder for the Dumps before it` : ''}. Each Dump that plays your command back makes the next ${Math.round(FB.surf.grow * 100)}% bigger.${v.surf.top ? ' The log never clears now.' : ''}${answerLine('Fire at it in the window. On a shut cycle, hold or fire small.')}`, `${shut ? 'shut' : 'open'} · ${e.keylog || 0}/${FB.surf.log}`);
+    if (v.surf.again) { const n = v.surf.again - e.cycle; tag('hot', `Again\nBoss rule\nOn its beat, ${when(n)}, the ${p.name} plays your last three commands back at you, each at ${Math.round(FB.surf.echo * 100)}%.${answerLine('Hold or fire small in the two cycles before the beat.')}`, `again ${Math.max(0, n)}`); }
+  }
+  if (p.frame != null && v.stack) {
+    const top = topFrame(s), n = v.stack.callAt - e.cycle;
+    if (p === top) tag(canCall(p) ? 'hot call' : 'call', `Top frame\nBoss rule\nYour one-part commands land on it, whichever frame you aim at. ${canCall(p) ? `It Calls ${when(n)}: a new frame on top at 60% of its max.` : 'Under a quarter of its max, it cannot Call.'}${v.stack.ret ? ' A frame that breaks makes the one beneath attack a cycle sooner and 50% harder.' : ''} Each Call brings the next one a cycle sooner (down to every ${FB.stack.soonest}) and makes every frame hit ${Math.round(FB.stack.deeper * 100)}% harder${v.stack.calls ? `: +${Math.round((depthOf(v) - 1) * 100)}% now` : ''}.${answerLine('SIGINT the Call, break the frame before it, or leave it under a quarter.')}`, canCall(p) ? `${glyph('clock')}call ${Math.max(0, n)}` : 'top');
+    else tag('dim', `Frame\nBoss rule\nUnder the top frame. Only burns, helpers and area hits reach it.`, 'stacked');
+    if (p.core && v.stack.overflow) tag(frames(s).length >= FB.stack.overflow - 1 ? 'hot' : '', `Overflow\nBoss rule\nAt ${FB.stack.overflow} frames every frame attacks at once.${answerLine('Keep the stack at four or fewer.')}`, `${frames(s).length}/${FB.stack.overflow}`);
+  }
+  const pct = (x) => Math.round(x * 100);
+  // NIGHT DESK: the trades waiting on a part, the table on its ♛, its traders.
+  if (v.desk) {
+    const all = pendingOf(s), sum = (xs) => xs.reduce((n, t) => n + tradeOf(s, t), 0);
+    if (p.pending?.length) { const n = sum(p.pending); tag('hot trade', `Pending ${p.pending.length === 1 ? 'trade' : 'trades'}\nBoss rule\n${p.pending.length === 1 ? 'One trade waits' : `${p.pending.length} trades wait`} on the ${p.name}: ${n} in full. Your one-part command on the ${p.name} settles ${p.pending.length === 1 ? 'it' : 'them'} on you at half, for ${Math.round(n * FB.desk.half)}.${v.desk.night != null ? ` Each grows ${pct(FB.desk.grow)}% a cycle.` : ''}${v.desk.call ? ' The Desk\'s Margin Call settles every trade in full.' : ''}${answerLine('Settle before the table fills.')}`, `${glyph('clock')}${p.pending.length} · ${n}`); }
+    if (p.core) tag(all.length >= FB.desk.full - 1 ? 'hot table' : 'table', `No Timeout\nBoss rule\nIts attacks never land. They wait as pending trades: ${all.length} of ${FB.desk.full}. At ${FB.desk.full}, every trade settles on you in full${all.length ? ` (${sum(all)} now)` : ''}, and each trade after that opens ${pct(FB.desk.margin)}% bigger${v.desk.margin ? ` (+${pct(FB.desk.margin * v.desk.margin)}% so far)` : ''}. No single hit takes more than ${pct(FB.desk.limit)}% of the ${p.name}'s max.${answerLine('Hit a part to settle its trades at half.')}`, `${all.length}/${FB.desk.full}`);
+    if (p.role === 'trader') tag('dim', `${p.name}\nOn the books\nIt takes no damage while the Desk stands, and goes when the Desk breaks. Your one-part command on it settles its trades.`, 'books');
+  }
+  // BYZANTINE: the vote on the Node it would restore, the traitor, the Hard fork.
+  if (v.vote && p.role === 'node') {
+    const x = voteOf(s), n = v.vote.at - e.cycle;
+    if (x && p === x.low) tag(x.passes ? 'hot vote' : 'vote', `Vote\nBoss rule\nThe Nodes vote ${when(n)}. ${x.passes ? `It passes: the ${p.name} is ${pct(FB.vote.pass)}% or more under ${x.turned ? 'the healthiest Node' : 'the average'}, and is restored by ${x.gain}.` : `It fails: no Node is ${pct(FB.vote.pass)}% under ${x.turned ? 'the healthiest Node' : 'the average'}.`} Each vote that passes makes every Node hit ${pct(FB.vote.harder)}% harder for the act${v.vote.passed ? ` (+${pct(FB.vote.harder * v.vote.passed)}% now)` : ''}. No single hit takes more than ${pct(FB.vote.limit)}% of a Node's max.${answerLine(`Keep the Nodes within ${pct(FB.vote.pass)}%, then break one between two votes.`)}`, `${glyph('clock')}vote ${Math.max(0, n)}${x.passes ? ` · +${x.gain}` : ''}`);
+    if (p.id === v.vote.traitor) tag(x?.turned ? 'hot' : '', `Traitor\nBoss rule\nWhile the ${p.name} is not the most damaged Node, a vote restores the most damaged Node to the healthiest Node's level.${answerLine('Keep it the most damaged Node.')}`, 'traitor');
+    if (v.vote.fork && p === nodesOf(s)[0]) tag(forkOf(s) ? 'hot' : '', `Hard fork\nBoss rule\nEvery broken Node returned as the phase started. A Node that breaks now returns at the next vote, at the others' average, unless every other Node is under half.${answerLine('Bring every Node under half before you break one.')}`, 'fork');
+  }
+  // CAMSWARM: the sweep and the Lockout on the Hive, a fragment's fuse, a Camera.
+  if (v.swarm) {
+    const n = v.swarm.at - e.cycle, h = hatchers(s), host = parentOf(s, p);
+    if (p.core) tag(h.length ? 'hot sweep' : 'sweep', `Telnet Sweep\nBoss rule\nIt sweeps ${when(n)}. Each part under half its Integrity hatches a fragment and shields it: ${h.length ? h.map((x) => x.name).join(', ') : 'none'} now. The ${p.name} never hatches. Each fragment hatched brings the next sweep a cycle sooner, down to every ${FB.swarm.soonest} (every ${v.swarm.every} now). No single hit takes more than ${pct(FB.swarm.limit)}% of a part's max.${answerLine('Break a part between two sweeps, or leave it above half.')}`, `${glyph('clock')}sweep ${Math.max(0, n)}${h.length ? ` · ${h.length}` : ''}`);
+    if (p.core && v.swarm.lockout) tag(camerasOf(s).length ? 'hot' : '', `Lockout\nBoss rule\nThe ${p.name} takes no damage while a Camera stands.${answerLine('Break every Camera first.')}`, 'locked');
+    if (p.kind === 'fragment' && p.hatched != null) { const k = p.hatched + FB.swarm.grows - e.cycle; tag('hot', `Fragment\nBoss rule\nIt becomes a Camera ${when(k)}.${host ? ` The ${host.name} shields it: it takes no damage, and drops when the ${host.name} breaks.` : ''}${answerLine(host ? `Break the ${host.name}.` : 'Break it first.')}`, `${glyph('clock')}cam ${Math.max(0, k)}${host ? ' · shielded' : ''}`); }
+    if (p.role === 'camera') tag('', `${p.name}\nRecruited\nA part with a Surge of its own. Under half, it hatches on the sweep.${v.swarm.botnet ? ' It fires when the C2 Node\'s Beacon lands.' : ''}`, 'camera');
+  }
+  // GRACE PERIOD: each part's grace, the balance on its ♛, the Rider.
+  if (v.grace && p.grace != null) {
+    const paid = p.paidAt === e.cycle, n = paid ? v.grace.days : p.grace;
+    tag(n <= 1 ? 'hot grace' : 'grace', `Grace\nBoss rule\n${paid ? `Paid up: ${v.grace.days} cycles of grace from the end of this cycle.` : `The ${p.name} lapses at the end of ${n <= 1 ? 'this cycle' : `${n} cycles`}.`} Your command on it pays it up. When it lapses, its next attack is a charge${v.grace.reinstate ? ' and its ◆ refill' : ''}. Your command on it on the cycle the charge lands calls it off.${answerLine('Keep three paid, and hit a lapsed part on the cycle its charge lands.')}`, `${glyph('clock')}grace ${n}${paid ? ' · paid' : ''}`);
+    if (p.core && v.grace.fees) tag('hot', `Balance\nBoss rule\nEach lapse charge that lands makes every later one ${pct(FB.grace.fee)}% bigger. ${v.grace.fees === 1 ? 'One has' : `${v.grace.fees} have`} landed: +${pct(FB.grace.fee * v.grace.fees)}% now.${answerLine('Hit each lapsed part as its charge lands.')}`, `fee +${pct(FB.grace.fee * v.grace.fees)}%`);
+    if (p.role === 'rider') tag('hot', `Rider\nBoss rule\nWhile the ${p.name} stands, every other part hits ${pct(FB.grace.rider)}% harder.`, `rider +${pct(FB.grace.rider)}%`);
+  }
+  // EXIT NODE: the restore on the Core, what each part goes back to, the Front.
+  if (v.roll) {
+    const n = v.roll.at - e.cycle, to = rollTo(s, p), cold = v.roll.coldOn && v.roll.cold;
+    if (p.core) tag(n <= 1 ? 'hot rollback' : 'rollback', `Rollback\nBoss rule\nIt restores its own bars ${n <= 0 ? 'at the end of this cycle' : n === 1 ? 'at the end of next cycle' : `in ${n} cycles`}, to ${cold ? 'the image taken as Backup v6 broke' : `the image taken ${FB.roll.back} cycles before`}. A quarter of what it gives back lands on you${(() => { const k = Math.round(livingParts(s).reduce((t, x) => t + Math.max(0, (rollTo(s, x)?.hp ?? x.integrity) - x.integrity), 0) * FB.roll.charge); return k ? ` (${k} now)` : ''; })()}. A broken part stays broken. The ${p.name} is never restored past its last act tick.${v.roll.kept ? ' A charge you cut in the 2 cycles before a restore comes back at it.' : ''}${answerLine(n <= 1 ? 'Break a part outright now, or answer the Glass Cut and wait.' : 'Do your damage now.')}`, `${glyph('clock')}rollback ${Math.max(0, n)}`);
+    if (to && to.hp > p.integrity) tag('dim', `Rollback image\nBoss rule\nAt the restore the ${p.name} goes back to ${to.hp}/${p.max}${to.armor > (p.armor || 0) ? `, with ${to.armor} ◆` : ''}.`, `↺ ${to.hp}`);
+    if (p.role === 'front') tag('hot', `Front\nBoss rule\nWhile the ${p.name} stands, your one-part commands at the Core land on it. Burns, helpers and area hits reach the Core.${answerLine('Break it to reach the Core.')}`, 'front');
+  }
+  return out;
+}
+// A part's interrupt ticks on its bar (interrupt.mjs).
 function ticksMarkup(s, p) {
   if (!s.encounter?.ticked || !p.ticks) return '';
-  const lv = p.core ? leaveOf(s) : null, next = p.ticks.find((t) => !t.spent);
-  const held = (t) => lv && !lv.done && t === next;
-  const leaveTip = (t) => (held(t) ? `\nLeave it above this tick until the beat plays${lv.beat != null ? ` (${bendWhen(lv.beat)})` : ''}. Taken under it sooner, every part re-arms.` : '');
-  return p.ticks.map((t) => `<i class="ptick${t.spent ? ' spent' : ''}${t.phase != null ? ' phase' : ''}${held(t) ? ' held' : ''}" style="left:${t.at * 100}%" title="${esc(t.phase != null ? `Phase tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it and the boss starts its next phase.${t.spent ? ' Spent.' : ''}${leaveTip(t)}` : `Tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it on a cycle its move is due and that move is cancelled. Each tick works once a fight.${t.spent ? ' Spent.' : ''}`)}"></i>`).join('');
-}
-// What crossing takes this cycle, in the Now column: cut ▸ 9 (deal 9), cut ▸ ◆1 + 9 when it still wears armor,
-// cut ▸ — when no tick is left.
-function cutChip(s, p) {
-  const c = cutsNow(s).find((x) => x.part === p.id);
-  if (!c) return '';
-  const spent = c.budget != null && c.budget <= 0;
-  const what = c.need == null || spent ? '—' : `${c.armor ? `◆${c.armor} + ` : ''}${c.need}`;
-  const tip = c.need == null ? `The ${p.name} has no tick left to cross.` : spent ? 'The interrupt budget for this fight is spent.' : `Deal ${c.need} to the ${p.name} this cycle${c.armor ? `, after breaking its ${c.armor} ◆,` : ''} to take it across its next tick and cancel its move.`;
-  return `<div class="intent cut${c.need == null || spent ? ' none' : ''}" title="${esc(tip)}"><b>cut ▸ ${esc(what)}</b></div>`;
+  return p.ticks.map((t) => `<i class="ptick${t.spent ? ' spent' : ''}" style="left:${t.at * 100}%" title="${esc(`Tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it on a cycle its move is due and that move is cancelled. Each tick works once a fight.${t.spent ? ' Spent.' : ''}`)}"></i>`).join('');
 }
 
 // ---------- what protects what (fightread.mjs partLinks) ----------
@@ -742,7 +863,7 @@ function guardMarks(s, v, p, fc) {
 }
 // The tethers: a bracket in the board's left gutter from the part a rule sits on to each part it reaches, drawn a piece
 // a row (so it follows the rows at any height: dense, a phone), with a node at the middle of its span carrying the
-// rule's icon (? until the codex knows the part) and its countdown (↻ N). It glows while the rule holds, goes grey
+// rule's icon (? until the codex knows the part), or a clock and its countdown. It glows while the rule holds, goes grey
 // while it's down (a broken lock, an overheated Keyring), its countdown taking the node's place, and snaps as the part it hangs from dissolves. Two lanes at most.
 function tethers(rows, links, dying) {
   const idx = new Map(rows.map((p, i) => [p.id, i])), per = rows.map(() => '');
@@ -750,23 +871,31 @@ function tethers(rows, links, dying) {
     const at = [l.from, ...l.to].map((id) => idx.get(id)).filter((i) => i != null);
     return idx.has(l.from) ? { l, a: Math.min(...at), b: Math.max(...at), src: idx.get(l.from), ends: new Set(at) } : null;
   }).filter(Boolean).sort((x, y) => x.a - y.a || y.b - y.a - (x.b - x.a));
+  // A lane takes a span that starts below where the last one ended, or on that row when one arrives from above and the
+  // other leaves downward: their arms split there (--arm), so the two arrows share one line.
   const lanes = [];
   for (const sp of spans) {
-    let k = lanes.findIndex((end) => end < sp.a);
+    let k = lanes.findIndex((ln) => ln.end < sp.a || (ln.end === sp.a && ln.from < ln.end && sp.a < sp.b));
     if (k < 0) k = Math.min(lanes.length, 1);
-    lanes[k] = Math.max(lanes[k] ?? -1, sp.b); sp.lane = k;
+    lanes[k] = { end: Math.max(lanes[k]?.end ?? -1, sp.b), from: sp.a }; sp.lane = k;
   }
+  // Two arms on one row: the span arriving from above takes the upper one, the span leaving downward the lower.
+  const arms = new Map();
+  for (const sp of spans) for (const r of sp.ends) arms.set(r, (arms.get(r) || 0) + 1);
+  const armOf = (sp, r) => (arms.get(r) > 1 && sp.a !== sp.b ? (r === sp.b ? -5 : r === sp.a ? 5 : 0) : 0);
   for (const sp of spans) {
     const { l } = sp, mid = (sp.a + sp.b) / 2, nodeRow = Math.floor(mid), edge = mid !== nodeRow; // an even span: on the line between two rows
-    const p = rows[sp.src], snap = l.snap ? ` style="--snap:-${dying(p)}ms"` : '';
+    const p = rows[sp.src], snap = l.snap ? `--snap:-${dying(p)}ms;` : '';
     const cls = `tether k-${l.kind} lane${sp.lane} ${l.up ? 'up' : 'down'}${l.known ? '' : ' unk'}${l.snap ? ' snap' : ''}${sp.a === sp.b ? ' stub' : ''}`;
     for (let r = sp.a; r <= sp.b; r++) {
       const top = r === sp.a ? '50%' : '-1px', bottom = r === sp.b ? '50%' : '0';
       const arm = sp.ends.has(r) ? `<i class="tt-arm ${r === sp.src ? 'src' : 'dst'}"></i>` : '';
-      // Down with a countdown, the countdown is the node: the one lit thing on the grey line is how long you have.
-      const clock = !l.up && l.count != null, count = l.count != null ? `<span class="tt-count">↻${l.count}</span>` : '';
-      const node = r === nodeRow ? `<b class="tt-node${edge ? ' edge' : ''}${clock ? ' clock' : ''}">${clock ? '' : l.known ? glyph(l.icon, 'tt-ico') : '?'}${count}</b>` : '';
-      per[r] += `<span class="${cls}" data-links="${esc([l.from, ...l.to].join(' '))}" data-kind="${l.kind}"${snap} title="${esc(l.tip)}"><i class="tt-line" style="top:${top};bottom:${bottom}"></i>${arm}${node}</span>`;
+      // A countdown is the node: a clock and the cycles left, centered on the line (the part's name carries its ?).
+      const clock = l.count != null;
+      const node = r === nodeRow ? `<b class="tt-node${edge ? ' edge' : ''}${clock ? ' clock' : ''}">${clock ? `${glyph('clock', 'tt-ico')}<span class="tt-count">${l.count}</span>` : l.known ? glyph(l.icon, 'tt-ico') : '?'}</b>` : '';
+      const off = armOf(sp, r);
+      const style = snap + (off ? `--arm:${off}px;` : '');
+      per[r] += `<span class="${cls}" data-links="${esc([l.from, ...l.to].join(' '))}" data-kind="${l.kind}"${style ? ` style="${style}"` : ''} title="${esc(l.tip)}"><i class="tt-line" style="top:${top};bottom:${bottom}"></i>${arm}${node}</span>`;
     }
   }
   return per;
@@ -799,7 +928,7 @@ export function boardMarkup(s, selected, preview = null) {
     return rows.length ? `<span class="hpips">${rows.map((k) => { const x = hplan.pips.find((y) => y.part === p.id && y.col === c && y.helper === k); return x ? `<i class="hpip${x.trips ? ' trip' : ''}" title="${esc(x.tip)}"></i>` : '<i class="hpip none"></i>'; }).join('')}</span>` : '';
   };
   // Damage on the timeline is what you'll actually take after your Reduction.
-  const list0 = fighting ? intents(s, 4).map((i) => (i.effect === 'damage' ? { ...i, amount: blocked(s, i.amount) } : i.hit ? { ...i, hit: blocked(s, i.hit) } : i)) : [];
+  const list0 = fighting ? asTrades(s, intents(s, 4).map((i) => (i.effect === 'damage' ? { ...i, amount: blocked(s, i.amount) } : i.hit ? { ...i, hit: blocked(s, i.hit) } : i))) : [];
   // The order levers on the board (order.mjs, docs/puzzle-levers.md 3.2 to 3.4). A Tripwire your move breaks this cycle
   // (the forecast): the other parts' attacks show their loud numbers, a cycle sooner, and their ◆ blink as falling.
   const trip = fighting ? tripwireOf(s) : null;
@@ -823,7 +952,7 @@ export function boardMarkup(s, selected, preview = null) {
   const gearCyc = (c) => { const names = fighting ? cycleGear(s, e.cycle + c) : []; return names.length ? `<i class="gcyc" title="${esc(`${list2(names)}: live on cycle ${e.cycle + c}.`)}">${glyph('clock')}</i>` : ''; };
   const live = fighting ? gearLive(s) : [], onParts = gearOnParts(live);
   const head = `<div class="brow bhead"><div class="bcell bname">Part</div>
-    <div class="bcell bnow${gearCyc(0) ? ' gear-cyc' : ''}"><span>Now <small class="cyc">cycle ${e.cycle}</small>${gearCyc(0)}</span><span class="countdown" id="countdown">${!fighting ? '—' : e.paused ? 'II' : remaining.toFixed(1)}</span><div class="cyclebar">${e.sync && fighting ? `<i class="sync-win${e.sync.surprise ? ' surprise' : ''}" id="sync-win" style="left:${(e.sync.at * 100).toFixed(1)}%;width:${(e.sync.width * 100).toFixed(1)}%" title="${esc(e.sync.surprise ? `Surprise: fire while the bar is here. Inject ticks at once, Tag lasts ${CONFIG.surprise.tagCycles} cycles with burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, Keepalive stretches burns ${CONFIG.surprise.keepalive} cycles.` : `Sync Window: fire your command while the bar is here for +${Math.round(CONFIG.sync.bonus * 100)}% damage. ${SYNC[classOf(s)]?.rule || ''}`)}"></i>` : ''}<span id="cyclebar" style="width:${(e.elapsedMs / cycleLength(s)) * 100}%"></span></div></div>
+    <div class="bcell bnow${gearCyc(0) ? ' gear-cyc' : ''}"><span>Now <small class="cyc">cycle ${e.cycle}</small>${gearCyc(0)}</span><span class="countdown" id="countdown">${!fighting ? '—' : e.paused ? 'II' : remaining.toFixed(1)}</span><div class="cyclebar">${e.sync && fighting ? `<i class="sync-win${e.sync.surprise ? ' surprise' : ''}" id="sync-win" style="left:${(e.sync.at * 100).toFixed(1)}%;width:${(e.sync.width * 100).toFixed(1)}%" title="${esc(e.sync.surprise ? `Surprise: fire while the bar is here. Inject ticks at once, Tag lasts ${CONFIG.surprise.tagCycles} cycles with burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, Keepalive stretches burns ${CONFIG.surprise.keepalive} cycles.` : `Sync Window: fire your command while the bar is here for +${Math.round(CONFIG.sync.bonus * 100)}% damage. ${SYNC[classOf(s)]?.rule || ''}`)}"></i>` : ''}<span id="cyclebar" style="transform:scaleX(${e.elapsedMs / cycleLength(s)})"></span></div></div>
     ${[1, 2, 3].map((c) => `<div class="bcell${gearCyc(c) ? ' gear-cyc' : ''}">+${c}${gearCyc(c)}${quietCol(c) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div>`).join('')}</div>`;
   // Your row mirrors the parts: what you'll do in each upcoming cycle.
   const cutNote = (q) => { const x = q?.target && e.ticked ? crossBy(s, q.ability, part(s, q.target)) : null; return x === 'cut' ? ' <small class="cuts">cuts</small>' : x === 'both' ? ' <small class="cuts">cuts · −tick</small>' : x === 'waste' ? ' <small class="cuts waste">−tick</small>' : ''; };
@@ -891,13 +1020,14 @@ export function boardMarkup(s, selected, preview = null) {
       const told = mine.filter((i) => i.tell && i.col === c).map((i) => tellChip(s, i.tell === 'mimic' ? { ...i, copy: cp } : i, c, `tell:${p.id}:${i.id}@${e.cycle + c}`, crew.length && i.effect === 'damage' ? sink || 'all' : null)).join('')
         + mine.filter((i) => i.tell && i.winFrom != null && c >= i.winFrom && c < i.col).map((i) => tellSpan(s, i, c)).join(''); // a window longer than a cycle (tells.mjs)
       const lash = mine.filter((i) => i.col === c && i.effect === 'backlash').map((i) => lashChip(i, c, `lash:${p.id}@${e.cycle + c}`)).join(''); // a P4 boss's beat (acts.mjs), beside what lands
-      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${escChip}${told || '<div class="intent hidden">?</div>'}${lash}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
-      const hit = mine.find((i) => i.col === c && !i.tell && i.effect !== 'backlash');
+      const rule = mine.filter((i) => i.col === c && ruleChip(i)).map((i) => attackChip(i, c, `rule:${p.id}@${e.cycle + c}`)).join(''); // a vote, a sweep or a leak: beside the part's own attack
+      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${escChip}${told || '<div class="intent hidden">?</div>'}${rule}${lash}${c === 0 ? progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
+      const hit = mine.find((i) => i.col === c && !i.tell && i.effect !== 'backlash' && !ruleChip(i));
       // With a crew, a damage attack lands on everyone, or on whoever is drawing fire; a crew boss's part with a
       // target rule (raid.mjs) on the one player it's aiming at.
       const aimed = crew.length && hit?.effect === 'damage' && !sink && p.attack.target ? attackTarget(s, p) : null;
       const to = crew.length && hit?.effect === 'damage' ? sink || (aimed ? aimed.who || 'you' : 'all') : null;
-      return `<div class="bcell">${cryptChip}${escChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit.effect === 'damage' && backupAims(e, e.cycle + c) ? { ...hit, bk: true } : hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${lash}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
+      return `<div class="bcell">${cryptChip}${escChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit.effect === 'damage' && backupAims(e, e.cycle + c) ? { ...hit, bk: true } : hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${rule}${lash}${c === 0 ? progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
     }).join('');
     // A part with no attack of its own (a Mutex, a Mimic) still shows its row's cells when a tell or a beat sits there.
     const showCells = p.attack || p.ratchet || hrows[p.id] || mine.some((i) => i.tell || !i.hidden || i.effect === 'fuse');
@@ -911,7 +1041,7 @@ export function boardMarkup(s, selected, preview = null) {
     const cueTag = cue ? `<span class="pcue"${cue.link ? ` data-link="${esc(cue.link)}"` : ''}>${glyph(cue.icon, 'pcue-ico')}${esc(cue.text)}</span>` : '';
     const guard = alive(p) ? guardMarks(s, e.virus, p, fc) : '';
     const gearMark = onParts[p.id] ? `<span class="gpart" title="${esc(`${list2(onParts[p.id])}: live on the ${p.name} now.`)}">${glyph('protocol')}</span>` : '';
-    return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''}${frozenNow(s, p) && !packed(s, e.virus, p) ? ' frozen' : ''}${asleep(p) && alive(p) && !packed(s, e.virus, p) ? ' standby' : ''} ${marks.map((k) => 'm-' + k).join(' ')}${fighting && progExc(s, p) ? ' m-exc' : ''}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
+    return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''}${frozenNow(s, p) && !packed(s, e.virus, p) ? ' frozen' : ''}${asleep(p) && alive(p) && !packed(s, e.virus, p) ? ' standby' : ''}${alive(p) && Object.values(GENES).some((g) => g.lever && g.carried(p)) ? ' lever' : ''} ${marks.map((k) => 'm-' + k).join(' ')}${fighting && progExc(s, p) ? ' m-exc' : ''}" data-target="${esc(p.id)}"${chipTheme(p.name) && !packed(s, e.virus, p) ? ` data-th="${chipTheme(p.name)}"` : ''} ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
       <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${exeName(p)}${known ? '' : '<sup class="unk">?</sup>'}${mastered(s, e.virus, p) && !packed(s, e.virus, p) ? masteredMark(p) : ''}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}${leanTag(s, p)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${ghosts(p)}${guard}${capLine(s, p)}${ticksMarkup(s, p)}</span><span class="part-tags">${fighting ? progTag(s, p) : ''}${cueTag}${partTags(s, p)}</span></div>
       ${showCells ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
@@ -1092,7 +1222,16 @@ export function trayMarkup(s, selected = null) {
   // The next thing your level will unlock, as a faint slot.
   const nx = nextUnlock(s);
   if (nx) cards.push(`<div class="ability ghost" title="${esc(`${nx.name}: Unlocks at level ${nx.level}.`)}">${keyFace(ABILITIES[nx.id]?.icon || 'command', nx.name)}</div>`);
+  // The Toolkit (skills-view.mjs), quiet at the tray's end and out of its grid (style.css .tk-open): the way in on a phone.
+  cards.push(`<button type="button" class="tk-open" data-toolkit="${classOf(s)}" title="Toolkit: Your abilities and your bar. Keys change between fights." data-tt-kind="Key T" aria-label="Toolkit"><span class="ico" ${icon('command')}></span></button>`);
   return cards.join('');
+}
+// The emergency jack out (combat.mjs flee, run.mjs hooks.flee): a red key at the tray's end, wherever the typed
+// command works. Not on a breach, the rooms playtest, or while a hunter has your trace.
+export function fleeKey(s) {
+  const e = s.encounter;
+  if (!active(s) || e.mode !== 'run' || !s.run || s.roomsPlay || e.breach || (e.hunter && !s.run.rooms)) return '';
+  return `<button type="button" class="ability flee" data-command="jack out" data-confirm="Sure?" title="${esc('Jack out: leave the fight on your turn. You keep your pack, and the virus stays.')}">${keyFace('cancel', 'Jack out')}</button>`;
 }
 
 // ---------- pages ----------
@@ -1108,12 +1247,15 @@ function locationList(s) {
 }
 
 // ---------- protocols (you) ----------
-const rarityClass = (it) => `r-${it.rarity}`;
+const rarityClass = (it) => `r-${shownRarity(it)}`;
 const leadStat = (it) => Object.keys(it?.stats || {})[0] || 'protocol';
-const itemTitle = (it) => [`${RARITIES[it.rarity]?.name || ''} ${SLOTS[groupOf(it)]?.name || ''}${it.base && BASES[it.base] && !it.unique && it.rarity !== 'custom' ? '' : it.base && BASES[it.base] ? ` (${BASES[it.base].name})` : ''}`.trim(), it.unique && isNative(it.unique) && it.home?.name ? `Native to ${it.home.name}` : '', it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour].filter(Boolean).join('. ');
+const itemTitle = (it) => [`${rarityName(it)} ${SLOTS[groupOf(it)]?.name || ''}${it.base && BASES[it.base] && !it.unique && it.rarity !== 'custom' ? '' : it.base && BASES[it.base] ? ` (${BASES[it.base].name})` : ''}`.trim(), it.unique && isNative(it.unique) && it.home?.name ? `Native to ${it.home.name}` : '', it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour].filter(Boolean).join('. ');
 const itemName = (it) => `<b class="iname ${rarityClass(it)}" title="${esc(itemTitle(it))}">${glyph(leadStat(it), 'badge')}${esc(itemLabel(it))}</b>`;
 // A unique's effect (or a found Zero-day's), under its stats.
-const itemEffect = (it) => (it.zeroDay ? `<small class="zd">${esc(ZERO_DAYS[it.zeroDay].effect)}</small>` : (it.unique || it.rule) && effectLine(it) ? `<small class="zd${it.rule ? ' rule' : ''}">${esc(effectLine(it))}</small>` : '');
+const itemEffect = (it) => {
+  const [head, ...rest] = fxText(it).split(' — ');
+  return head ? `<small class="zd${it.rule ? ' rule' : ''}">${rest.length ? `<b>${esc(head)}</b> — ${esc(rest.join(' — '))}` : esc(head)}</small>` : '';
+};
 // A faction implicit (gear.mjs IMPLICITS): the faction's mark and its line, in its colour; the faction's name on hover.
 const implicitRow = (it, tag = 'small') => (it?.implicit && FX[it.implicit] ? `<${tag} class="impl" style="--fc:${FX[it.implicit].color}" title="${esc(FX[it.implicit].name)}">${glyph('f-' + it.implicit)}<span><b>${esc(IMPLICITS[it.implicit].name)}</b> — ${esc(implicitText(it))}</span></${tag}>` : '');
 const statsHtml = (it) => `<small>${Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span class="${v < 0 ? 'neg' : ''}">${esc(statLine({ [k]: v }))}</span>`).join('')}</small>`;
@@ -1127,7 +1269,7 @@ export function nativeHome(s, it) {
 // wireframe, which app.js spins), in its rarity colour, over its name, rarity, kind, level, stats one a line and effect.
 export function itemTipMarkup(s, ref) {
   const f = ref?.startsWith('f:') ? filtersOf(s)[Number(ref.slice(2))] : null;
-  const shelf = ref?.startsWith('p:') ? shelfOf(s, ref) : null; // a premium protocol on a shelf: p:<seller>:<i>
+  const shelf = ref?.startsWith('p:') ? shelfOf(s, ref) : null; // a Shop's protocol: p:<hub>:<n> or p:<hub>:c-<id>
   const it = f || shelf?.it || stashItem(s, ref);
   if (!it) return '';
   const kind = f ? 'filter' : groupOf(it), r = it.rarity;
@@ -1136,19 +1278,18 @@ export function itemTipMarkup(s, ref) {
   const flavour = !f && (it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour);
   const vs = f || loadedOn(s, it.id) === classOf(s) ? '' : swapCompare(s, it);
   const home = !f && it.unique && isNative(it.unique) ? nativeHome(s, it) : null;
-  return `<div class="ptip-card r-${r}">${f ? `<pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre>` : `<span class="ptip-glyph">${glyphMarkup(it, 'tip')}</span>`}<div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}${home ? `<span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}<div class="ptip-stats">${stats}</div>${!f ? implicitRow(it) : ''}${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${!f && it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${vs}${shelf ? `<small class="ptip-ans">${esc(premiumBlock(s, shelf.price) || `${shelf.price} credits. You have ${s.server.credits}.`)}</small>` : ''}</div></div>`;
+  return `<div class="ptip-card r-${f ? r : shownRarity(it)}">${f ? `<pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre>` : `<span class="ptip-glyph">${glyphMarkup(it, 'tip')}</span>`}<div class="ptip-body"><b class="iname r-${f ? r : shownRarity(it)}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(f ? RARITIES[r]?.name || '' : rarityName(it))} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}${home ? `<span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}<div class="ptip-stats">${stats}</div>${!f ? implicitRow(it) : ''}${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${!f && it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${keptItem(it) ? '<small class="ptip-ans">Can’t be deconstructed.</small>' : ''}${vs}${shelf ? `<small class="ptip-ans">${esc(shelf.why)}</small>` : ''}</div></div>`;
 }
-// A premium protocol by its tooltip ref (p:<seller>:<i>): { it, price }, at that seller's price.
-const shelfOf = (s, ref) => { const [, f, i] = ref.split(':'); return f === 'halcyon' ? ((it) => it && { it, price: premiumPrice(it, hackerLevel(s)) })(premiumOf(s)[+i]) : hubPremium(s, f)[+i] || null; };
-// A premium shelf's tile: the glyph, the name in its rarity colour, its kind and level, its three biggest stats (▲ ▼
-// against what its slot runs now), the price and Buy. Its card (itemTipMarkup) has the rest.
-function premiumTile(s, f, { it, i, price }, cmd, kicker = '') {
-  const out = loadOut(s, it), vs = loadSlot(s, it) >= 0, why = premiumBlock(s, price);
-  const top = Object.entries(it.stats).filter(([k]) => STATS[k]).sort(([a, x], [b, y]) => Math.abs(y) / STATS[b].base - Math.abs(x) / STATS[a].base).slice(0, 3);
-  const stats = top.map(([k, v]) => { const d = v - (out?.stats?.[k] || 0); return `<span class="silk-st${v < 0 ? ' neg' : ''}">${glyph(k)}<b>${v < 0 ? '−' : '+'}${fmtStat(k, Math.abs(v))}</b><span class="sr-only"> ${esc(STATS[k].name)}</span>${vs && Math.abs(d) > 1e-9 ? `<i class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}</i>` : ''}</span>`; }).join('');
-  return `<li class="ptile prem ${rarityClass(it)}" data-ptip="p:${f}:${i}">${kicker ? `<span class="agency">${esc(kicker)}</span>` : ''}<span class="prem-glyph">${glyphMarkup(it, 'sm')}</span><b class="iname ${rarityClass(it)}">${esc(itemLabel(it))}</b><small>${esc(RARITIES[it.rarity]?.name || '')} ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}</small><span class="silk-sts">${stats}</span>
-      <div class="ptile-acts"><span class="price">${price} credits</span><button type="button" class="btn small ${why ? '' : 'primary'}" data-command="${cmd}" ${why ? `disabled title="${esc(why)}"` : ''}>Buy</button></div></li>`;
-}
+// A Shop's protocol by its tooltip ref: p:<hub>:<n> on its shelf, p:<hub>:c-<id> a chase protocol as it comes out at
+// your level (its preview: the dice are fixed, so its stats stay put while you look). { it }.
+const shelfOf = (s, ref) => {
+  const [, f, i] = ref.split(':');
+  if (!FX[f]) return null;
+  const shop = shopOf(s, f), x = i?.startsWith('c-') ? shop.chase.find((c) => c.id === i.slice(2)) : shop.shelf[+i];
+  if (!x) return null;
+  const why = x.sold ? 'Sold. New stock soon.' : x.locked ? `For ${FX[f].tiers[x.need]} and up.` : blockOf(s, x.price) || `${x.price} credits. You have ${s.server.credits}.`;
+  return { it: x.it || chaseItem(s, f, x.id, seeded(7)), price: x.price, why };
+};
 // The name of an item's effect (its Zero-day's, the unique's own, its rule's), or ''.
 const fxName = (x) => x && (x.zeroDay ? ZERO_DAYS[x.zeroDay].name : x.unique ? x.name : x.rule ? RULES[x.rule]?.name || '' : '');
 // Loading a stash protocol: what changes against what's in that slot now (▲ gains, ▼ losses).
@@ -1187,7 +1328,9 @@ export function setLines(s, uniqueId, compact = false) {
   const have = setHave(s), c = setCard(set.id, have), g = greenOf(uniqueId, have.worn);
   // The piece's green line (Diablo 2's): a second small stat, grey until this piece and another of its set are loaded.
   const green = g ? `<span class="sg${g.on ? ' on' : ''}" title="${esc(g.on ? 'On' : `Load it with another ${c.name} piece`)}">With ${g.at} pieces: ${esc(g.text)}</span>` : '';
-  const pieces = c.pieces.map((p) => `<span class="sp ${p.state}" title="${esc(SET_PIECE_TIP[p.state])}">${esc(p.name || '???')}</span>`).join('');
+  // An earned piece you lack (earned.mjs) keeps its name and line, its goal and count right-aligned (Cascade 4/6).
+  const earned = (p) => p.state === 'unknown' && earnedOf(s, p.id);
+  const pieces = c.pieces.map((p) => { const e = earned(p); return e ? `<span class="sp unknown earned" title="${esc(earnTip(s, p.id))}"><span>${esc(UNIQUES[p.id].name)}</span>${compact ? '' : `<small class="sp-goal">${esc(e.short)} ${e.n}/${e.of}</small>`}</span>` : `<span class="sp ${p.state}" title="${esc(SET_PIECE_TIP[p.state])}">${esc(p.name || '???')}</span>`; }).join('');
   const bonuses = c.bonuses.map((b) => `<span class="sb${b.on ? ' on' : ''}${b.blocked ? ' blocked' : ''}" title="${esc(b.blocked ? `Only one 4-piece bonus at a time: ${b.blocked} reached four first and keeps it.` : b.on ? 'On' : `Wear ${b.at} pieces`)}">(${b.at}) Set: ${esc(b.text)}${b.blocked ? ` <em>${esc(b.blocked)} holds it</em>` : ''}</span>${compact ? '' : subLines(b)}`).join('');
   const tier = tierLine(set.id);
   return `<span class="set-lines${compact ? ' compact' : ''}">${green}<b class="set-name">${esc(c.name)} (${c.n}/${c.total})</b>${tier && !compact ? `<small class="set-tier">${esc(tier)}</small>` : ''}<span class="set-pieces">${pieces}</span><span class="set-bonuses">${bonuses}</span></span>`;
@@ -1245,7 +1388,7 @@ function protocolsParts(s) {
 // shell and script left; proxy and the two implants right), each traced to the rig. Protocols are software: a footprint
 // is a place on the board with the protocol's glyph and name on it, never a part plugged in. Beside it the stash (a
 // slot you pick lists every item of its kind, best first); under the board, the set bonuses and the stat sheet. An
-// item's datasheet is a popover on a stash row or a filled slot (hover or focus; a tap on a phone, as a bottom sheet
+// item's datasheet is a popover on a stash row or a filled slot (hover or focus; a tap on a phone, in the one sheet
 // with its buttons), app.js.
 const SLOT_REFS = ['U1', 'J1', 'SH1', 'U2', 'IC5', 'IC6']; // each slot's designator on the board
 const BOARD_AT = [[0, 0], [1, 0], [0, 1], [0, 2], [1, 1], [1, 2]]; // each slot's side (0 left, 1 right) and row
@@ -1256,7 +1399,7 @@ const loadSlot = (s, it) => { const free = freeSlot(s, groupOf(it)); return free
 // What loading it would replace (null for a free slot).
 const loadOut = (s, it) => { const at = loadSlot(s, it); return at >= 0 && freeSlot(s, groupOf(it)) < 0 ? slotItem(s, at) : null; };
 // Why it can't load now, or ''.
-const loadBlock = (s, it, busy) => (busy ? 'At home only' : loadSlot(s, it) < 0 ? `No ${SLOTS[groupOf(it)]?.name || ''} slot yet`
+const loadBlock = (s, it, busy) => (busy ? 'At home only' : !meetsReq(s, it, hackerLevel(s)) ? `Requires Level ${reqLevel(it)}` : loadSlot(s, it) < 0 ? `No ${SLOTS[groupOf(it)]?.name || ''} slot yet`
   : (it.zeroDay && zeroDay(s, it.zeroDay)) || (it.unique && loaded(s).some((x) => x.unique === it.unique)) ? 'You already run this one' : '');
 // How much loading it gains against what its slot runs now: each stat's change in its budget points (STATS base), so
 // Damage and Crit weigh alike. One with no slot open yet sorts last.
@@ -1271,7 +1414,7 @@ function loadButton(s, it, busy, long = false) {
   const label = `${swap ? 'Swap' : 'Load'}${long && at >= 0 ? ` into ${SLOT_REFS[at]}` : ''}`;
   return `<button type="button" class="${long ? 'btn primary' : 'inv-btn'} load" data-command="load ${it.id}" ${why ? 'disabled' : ''} title="${esc(why || (swap ? `Swap it in for what ${SLOT_REFS[at]} runs now` : `Load it into ${SLOT_REFS[at]}`))}">${label}</button>`;
 }
-const scrapButton = (s, it, busy, long = false) => (loadedOn(s, it.id) ? '' : `<button type="button" class="${long ? 'btn' : 'inv-btn'}" data-command="deconstruct ${it.id}"${['custom', 'zeroday', 'indemnified'].includes(it.rarity) ? ' data-confirm="Sure? Deconstruct"' : ''} ${busy ? 'disabled' : ''} title="Deconstruct it for salvage, code and Exploits" aria-label="Deconstruct ${esc(it.name)}">${glyph('scrap')}${long ? ' Deconstruct' : ''}</button>`);
+const scrapButton = (s, it, busy, long = false) => (loadedOn(s, it.id) || keptItem(it) ? '' : `<button type="button" class="${long ? 'btn' : 'inv-btn'}" data-command="deconstruct ${it.id}"${['custom', 'zeroday', 'indemnified'].includes(it.rarity) ? ' data-confirm="Sure? Deconstruct"' : ''} ${busy ? 'disabled' : ''} title="Deconstruct it for salvage, code and Exploits" aria-label="Deconstruct ${esc(it.name)}">${glyph('scrap')}${long ? ' Deconstruct' : ''}</button>`);
 
 // The picked slot: { slot, chosen } (chosen: a slot you clicked, not the first one by default).
 function silkPick(s) {
@@ -1325,11 +1468,11 @@ function itemSheet(s, it, vs = null, acts = '') {
   const [fxHead, ...fxRest] = fxText(it).split(' — ');
   const effect = fxHead ? `<h4 class="silk-kicker">Effect</h4><p class="silk-fx">${fxRest.length ? `<b>${esc(fxHead)}</b> — ${esc(fxRest.join(' — '))}` : esc(fxHead)}</p>` : '';
   return `<div class="silk-head"><div class="silk-headtext"><h3 class="silk-title iname ${rarityClass(it)}">${esc(itemLabel(it))}</h3>
-    <p class="silk-sub">${esc(RARITIES[it.rarity]?.name || '')} · ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}${where && where !== classOf(s) ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}${home ? ` <span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}</p>${acts}</div><div class="silk-plate">${glyphMarkup(it, 'lg')}</div></div>
+    <p class="silk-sub">${esc(rarityName(it))} · ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}${!meetsReq(s, it, hackerLevel(s)) ? ` · <b class="silk-req">Requires Level ${reqLevel(it)}</b>` : ''}${where && where !== classOf(s) ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}${home ? ` <span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}</p>${acts}</div><div class="silk-plate">${glyphMarkup(it, 'lg')}</div></div>
     <h4 class="silk-kicker">${vs ? (out ? `Stats · vs ${esc(itemLabel(out))}` : 'Stats') : 'Stats'}</h4><dl class="silk-stats${vs ? ' vs' : ''}">${rows}</dl>${implicitRow(it, 'p')}${lost}${effect}${it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em class="silk-flavour">${esc(flavour)}</em>` : ''}`;
 }
 
-// An item's datasheet, for its popover (app.js: beside a stash row or a filled slot on hover or focus; a bottom sheet
+// An item's datasheet, for its popover (app.js: beside a stash row or a filled slot on hover or focus; the one sheet
 // on a phone): itemSheet against what its slot runs now (▲ ▼), then its buttons: Load or Swap and Deconstruct from the
 // stash, Unload from the board. '' when it's gone.
 export function protocolDetailMarkup(s, id) {
@@ -1522,11 +1665,12 @@ export function rewardChips(s, c) {
 }
 // How to trace an unknown server, shown rather than explained (docs/style-guide.md section 0): the way that is
 // tracing it now on top, with pips for the kills or clears still needed; then every other way as an icon, a label and
-// what it adds, dim and locked until you have it. The sentences live in the rows' tooltips.
+// what it adds, shaded with a lock in its icon's place until you have it. The sentences live in the rows' tooltips.
 function traceWays(s, h, via, kit) {
   const relay = !!h.pinged, route = `ping-${h.id}.trc`, banked = !!via?.state?.taken?.['/' + route], left = 100 - h.lead;
   const fam = FAMILIES[h.family]?.name || '?', at = viaName(s, h);
-  const row = (ic, label, gain, tip, state = 'on') => `<li class="tw ${state}" title="${esc(tip)}">${glyph(ic)}<span>${esc(label)}</span><b>${esc(gain)}</b></li>`;
+  // A way you don't have yet wears a lock in its icon's place, on a shaded row.
+  const row = (ic, label, gain, tip, state = 'on') => `<li class="tw ${state}" title="${esc(tip)}">${glyph(state === 'off' ? 'lock' : ic)}<span>${esc(label)}</span><b>${esc(gain)}</b></li>`;
   const pips = (n) => (n > 0 ? `<span class="tw-pips" aria-label="${n} more">${'<i></i>'.repeat(Math.min(n, 10))}${n > 10 ? '<small>+</small>' : ''}</span>` : '');
   // The main way: SPRAWL-00's kills (the ? closest to being found goes first), or first clears of the server it hangs off.
   const zone = h.via === CONFIG.zone.id, per = zone ? leadOf(s, Math.min(hackerLevel(s), CONFIG.zone.maxLevel)) : HIDDEN.firstClear;
@@ -1742,7 +1886,7 @@ const floorTag = (c) => `<span title="A floor job: floor ${c.chain}'s own chain"
 // Where a contract's work is: its server, an unknown one it points at, or SPRAWL-00 (the WoW quest tracker).
 const trackGo = (c) => (c.loc ? `map:${c.loc}` : c.hidden ? `map:${c.hidden}` : c.type === 'bounty' || c.where === 'sprawl' ? 'map:sprawl' : null);
 // A contract's icon, by its kind (the mail's contract card and the map's tracker).
-const jobIcon = (c) => ({ kill: 'kill', strain: 'kill', bounty: 'bounty', takeover: 'takeover', materials: 'materials', item: 'item', side: 'f-' + c.faction, install: 'canary', defuse: 'lock', sweep: 'trace', exfil: 'upload', heist: 'stealth', puzzle: 'cipher', lair: 'bounty', rooms: 'trace', map: 'trace' }[c.type] || 'item');
+const jobIcon = (c) => ({ kill: 'kill', strain: 'kill', bounty: 'bounty', takeover: 'takeover', materials: 'materials', item: 'item', side: 'f-' + c.faction, install: 'canary', defuse: 'lock', sweep: 'trace', exfil: 'upload', heist: 'stealth', puzzle: 'cipher', lair: 'bounty', boss: 'bounty', rooms: 'trace', map: 'trace' }[c.type] || 'item');
 // Whose contract it is: its faction, Halcyon's board, or none for LOWLIGHT (the mail's rows and the map's tracker).
 const jobFaction = (c) => c.faction || (c.story !== undefined || /LOWLIGHT/.test(c.from) ? null : 'halcyon');
 function jobBox(s, c, now) {
@@ -1784,14 +1928,13 @@ export function mailMarkup(s, sel = null, now = Date.now()) {
   const letterRows = letters.filter((m) => m.job == null || !taken.has(m.job)).map((m) => row('l' + m.id, m.from, m.subject, '', '', '', !m.read)).join('');
   const done = doneContracts(s);
   const doneRows = done.map((c) => row('j' + c.id, c.from, contractTitle(s, c), c.chain ? floorTag(c) : c.story !== undefined ? '<span title="A job from LOWLIGHT, your crew: the storyline">LOWLIGHT</span>' : '', 'dim', '', false, jobFaction(c))).join('');
-  const st = standing(s), tier = tierOf(s), next = nextTier(s);
-  // A faction's chip shows once you've met it: found its hub, or found one of its servers.
-  const met = hubsOf(s).length ? FACTION_IDS.filter((f) => f !== 'halcyon' && (hubFound(s, f) || (s.locations || []).some((l) => l.faction === f))) : [];
-  const head = `<div class="standing" title="Standing ${st}/100${next ? `. ${next.name} at ${next.min}` : ''}. Contracts raise it; a crash on your server lowers it, and so does work for GLASSJAW.">
-      <span class="st-name">${esc(FACTIONS.halcyon.name)}</span><span class="tag ${st ? 'you' : 'hot'}">${esc(tier.name)}</span>
-      <span class="lvl-bar"><span style="width:${st}%"></span></span><b>${st}</b></div>
+  // Your commission: its rep as four pips and the retainer it pays. A faction's chip shows once you've met it: found
+  // its hub, or found one of its servers.
+  const cf = commissionOf(s), met = hubsOf(s).length ? FACTION_IDS.filter((f) => f !== cf && (f === 'halcyon' || hubFound(s, f) || (s.locations || []).some((l) => l.faction === f))) : [];
+  const head = `<div class="standing" style="--fc:${FX[cf].color}" title="${esc(`${FX[cf].name}\nYour commission\nIt pays your retainer, set by your rep with it. Switch at any hub you've found.`)}">
+      ${fIcon(cf)}<span class="st-name">${esc(FX[cf].name)}</span>${repPips(s, cf)}</div>
     <p class="svc-line">Retainer ${retainer(s)} credits · next in <span id="pay-left">${fmtTime(nextPayIn(s, now))}</span></p>
-    ${met.length ? `<div class="reps">${met.map((f) => `<button type="button" class="rep-chip" style="--fc:${FX[f].color}" data-go="hub:${f}" title="${esc(FX[f].name)}: ${rep(s, f)} · ${esc(repTier(s, f).name)}">${glyph('f-' + f)}<span>${esc(repTier(s, f).name)}</span></button>`).join('')}</div>` : ''}`;
+    ${met.length ? `<div class="reps">${met.map((f) => `<button type="button" class="rep-chip" style="--fc:${FX[f].color}" data-go="hub:${f}" title="${esc(repTip(s, f))}">${glyph('f-' + f)}${repPips(s, f, false)}</button>`).join('')}</div>` : ''}`;
   let reader = '<section class="card mread"><p class="quiet">No mail.</p></section>';
   const item = open.letter || open.job;
   if (open.thread) reader = threadReader(s, open.thread);
@@ -1815,10 +1958,10 @@ const chainMk = (c) => (c.chain ? `<i class="cchain" title="${esc(c.chain)}" rol
 
 // ---------- people (presence.mjs): friends and who's online ----------
 export function peopleMarkup(s, tab = 'friends', now = Date.now()) {
-  const all = online(s, now), crew = (s.crewSim || []).map((x) => x.name);
+  const all = listed(s, now), crew = (s.crewSim || []).map((x) => x.name);
   const c = consortiumOf(s), inv = s.consortiumInvite;
   const row = (x) => `<li class="person${x.friend ? ' friend' : ''}${x.member ? ' member' : ''}"><span class="p-dot${x.place.fighting ? ' fighting' : ''}"></span><b class="p-handle" data-finger="${esc(x.handle)}" title="finger ${esc(x.handle)}">${esc(x.handle)}</b><small>${esc(ARCHETYPES[x.cls].name)} ${x.level}</small><span class="p-where">${esc(whereText(x.place))}</span>
-    <span class="p-acts">${c && !x.member && c.founder !== x.handle ? `<button type="button" class="act" data-run="consortium invite ${esc(x.handle)}" title="Merge their server with the consortium">Invite to consortium</button>` : ''}${crew.includes(x.handle) ? `<span class="tag you">crew</span><button type="button" class="act dim" data-run="crew kick ${esc(x.handle)}">Remove from crew</button>` : ''}${x.friend || x.member ? `${crew.includes(x.handle) ? '' : `<button type="button" class="act" data-run="crew invite ${esc(x.handle)}" ${crew.length >= 3 ? 'disabled title="Your crew is full"' : ''}>Invite to crew</button>`}${x.friend ? `<button type="button" class="act dim" data-run="friend remove ${esc(x.handle)}">Remove</button>` : ''}` : ''}${x.friend ? '' : `<button type="button" class="act" data-run="friend add ${esc(x.handle)}">Add friend</button>`}</span></li>`;
+    <span class="p-acts">${c && !x.member && c.founder !== x.handle ? `<button type="button" class="act" data-run="consortium invite ${esc(x.handle)}" title="Merge their server with the consortium">Invite to consortium</button>` : ''}${crew.includes(x.handle) ? `<span class="tag you">crew</span><button type="button" class="act dim" data-run="crew kick ${esc(x.handle)}">Remove from crew</button>` : ''}${x.friend || x.member ? `${x.friend ? `<button type="button" class="act dim" data-run="friend remove ${esc(x.handle)}">Remove</button>` : ''}` : ''}${x.friend ? '' : `<button type="button" class="act" data-run="friend add ${esc(x.handle)}">Add friend</button>`}</span></li>`;
   const offline = friends(s).filter((h) => !all.some((x) => x.handle === h));
   const memberOffline = (c?.members || []).filter((h) => !all.some((x) => x.handle === h));
   const invCard = inv && !c ? `<li class="con-head invite"><b>${esc(inv.from)} invites you to ${esc(inv.name)}</b><small>Merge your server with ${inv.members.length} others: reach their outposts and servers, keep everything of yours.</small><span class="p-acts"><button type="button" class="act" data-run="consortium accept">Merge</button><button type="button" class="act dim" data-run="consortium decline">Decline</button></span></li>` : '';
@@ -1842,9 +1985,9 @@ export function peopleMarkup(s, tab = 'friends', now = Date.now()) {
     : tab === 'consortium'
     ? (c ? `<li class="con-head"><b>${esc(c.name)}</b><small>${sizeOf(s)} servers merged${alertsOf(s).length ? ` · <b class="hot">${alertsOf(s).length} need${alertsOf(s).length === 1 ? 's' : ''} you</b>` : ''}</small><button type="button" class="btn primary small" data-go="consortium">Open the Consortium page</button></li>` + all.filter((x) => x.member).map(row).join('') + memberOffline.map((h) => `<li class="person off member"><span class="p-dot off"></span><b>${esc(h)}</b><small>away</small></li>`).join('') : invCard || '<li class="quiet">No consortium</li>')
     : invCard + all.map(row).join('');
-  return `<div class="comms-head"><span>People${simOn(s) ? ' · simulated' : ''}</span><button type="button" class="act" data-people-close>Close</button></div>
+  return `<div class="comms-head"><span>People${simOn(s) && !peopleOn(s, true) ? ' · simulated' : ''}</span><button type="button" class="act" data-people-close>Close</button></div>
     <div class="comms-filters" role="group" aria-label="Show">${[['friends', `Friends ${all.filter((x) => x.friend).length}/${friends(s).length}`], ['crew', `Crew ${(s.crewSim || []).length}/3`], ['consortium', c ? `Consortium ${all.filter((x) => x.member).length}/${c.members.length}` : inv ? 'Consortium •' : 'Consortium'], ['online', `Online ${all.length}`]].map(([k, l]) => `<button type="button" data-ptab="${k}" aria-pressed="${tab === k}">${esc(l)}</button>`).join('')}</div>
-    <ul class="comms-list people-list">${list || `<li class="quiet">${!simOn(s) ? 'Nobody online. (online sim)' : tab === 'friends' ? 'No friends' : 'Nobody else is online.'}</li>`}</ul>`;
+    <ul class="comms-list people-list">${list || `<li class="quiet">${!peopleOn(s) ? 'Nobody online. (online sim)' : tab === 'friends' ? 'No friends' : 'Nobody else is online.'}</li>`}</ul>`;
 }
 
 // ---------- the Consortium page (consortium.mjs) ----------
@@ -1887,7 +2030,7 @@ export function consortiumMarkup(s, now = Date.now()) {
       <span class="cm-n" title="Servers">${glyph('node')}${mine.length}</span>
       <button type="button" class="cm-where act dim" data-go="${esc(there)}" title="Show on the map">${glyph('trace')}${p.place ? esc(whereText(p.place)) : 'home'}</button>
       <span class="cm-state">${state}</span>
-      <span class="p-acts">${crew.includes(h) ? `<button type="button" class="act dim" data-run="crew kick ${esc(h)}">Remove from crew</button>` : onSet.has(h) ? `<button type="button" class="act" data-run="crew invite ${esc(h)}" ${crew.length >= 3 ? 'disabled' : ''}>Invite to crew</button>` : ''}${c.founder === 'you' ? `<button type="button" class="act dim" data-run="consortium kick ${esc(h)}">Kick</button>` : ''}</span></li>`;
+      <span class="p-acts">${crew.includes(h) ? `<button type="button" class="act dim" data-run="crew kick ${esc(h)}">Remove from crew</button>` : ''}${c.founder === 'you' ? `<button type="button" class="act dim" data-run="consortium kick ${esc(h)}">Kick</button>` : ''}</span></li>`;
   };
   const size = sizeOf(s), have = conTiers(s).length;
   const ladder = CONSORTIUM.tiers.map((t) => `<li class="${size >= t.at ? 'on' : ''}"><span class="tier-at">${t.at}</span><b>${esc(t.name)}</b><small>${esc(t.rule)}</small></li>`).join('');
@@ -1907,30 +2050,8 @@ export function consortiumMarkup(s, now = Date.now()) {
 }
 
 // ---------- the Halcyon store ----------
-export function storeMarkup(s, now = Date.now()) {
-  const L = hackerLevel(s), tierAt = tierIndex(s), have = kitOf(s);
-  const credits = s.server.credits;
-  const line = LINE.map((x) => {
-    const locked = tierAt < x.tier;
-    const price = `${x.credits(L)} credits`;
-    const can = !locked && credits >= x.credits(L);
-    return `<li class="ptile${x.chase ? ' chase' : ''}${locked ? ' locked' : ''}"><b class="iname${x.chase ? ' r-indemnified' : ''}">${glyph({ relay: 'relay', deductible: 'reduction', subrogation: 'countermeasures', actuarial: 'watchman', 'total-loss': 'hit' }[x.id], 'badge')}${esc(lineName(x))}</b><small>${esc(lineAbout(x))}</small>
-      <div class="ptile-acts"><span class="price">${price}</span>${locked ? `<span class="tag dim">${esc(TIERS[x.tier].name)}</span>` : `<button type="button" class="btn ${can ? 'primary' : ''} small" data-command="buy ${x.id}" ${can ? '' : 'disabled'}>Buy</button>`}</div></li>`;
-  }).join('');
-  const shelf = storeOf(s).slots.map((slot) => {
-    const g = GOODS[slot.id], x = { ...slot, price: priceNow(s, slot.id, slot.price, L) };
-    const trend = x.drift > 1.08 ? '<i class="up" title="Above its usual price">▲</i>' : x.drift < 0.92 ? '<i class="down" title="Below its usual price">▼</i>' : '';
-    return `<li class="ptile stash"><span class="agency">${esc(x.agency)}</span><b class="iname">${glyph({ signal: 'booster', crate: 'protocol' }[x.id] || x.id, 'badge')}${esc(g.name)}</b><small>${esc(goodsAbout(g, L))}</small>
-      <div class="ptile-acts"><span class="price">${x.price} credits ${trend}</span><small class="qty">×${x.qty}</small><button type="button" class="btn ${credits >= x.price ? 'primary' : ''} small" data-command="buy ${x.key}" ${credits >= x.price && x.qty ? '' : 'disabled'}>Buy</button></div></li>`;
-  }).join('');
-  const kit = [['relay', 'Relays'], ['cracker', 'Key crackers'], ['injector', 'Trace injectors']].map(([k, n]) => stat(n, have[k] || 0)).join('');
-  return `<div class="page-grid store-page"><div class="stack"><section class="card"><h2>Halcyon Mutual</h2>
-      <div class="stats">${stat('Credits', credits)}${stat('Standing', `${standing(s)} · ${tierOf(s).name}`)}</div>
-      <ul class="ptiles">${line}</ul></section>
-    <section class="card"><h2>Codebases</h2><ul class="plan-shelf">${shopCodebases(s, 'halcyon', L).map((x) => `<li class="${x.known ? 'known' : ''}"><span class="iname" title="${esc(PROGRAMS[x.id].rule)}">${glyph('module')}${esc(PROGRAMS[x.id].name)}</span><span class="tag dim">${PROGRAMS[x.id].weight}</span>${x.known ? '<span class="tag dim">known</span>' : tierAt < x.tier ? `<span class="tag dim">${esc(TIERS[x.tier].name)}</span>` : `<span class="price">${x.price}</span><button type="button" class="btn small ${credits >= x.price ? 'primary' : ''}" data-command="buy codebase-${x.id}" ${credits >= x.price ? '' : 'disabled'}>Buy</button>`}</li>`).join('')}</ul></section>
-    <section class="card"><h2>Your kit</h2><div class="stats">${kit}</div></section></div>
-    <section class="card"><h2>Agency stock</h2><ul class="ptiles stash">${premiumOf(s).map((it, i) => premiumTile(s, 'halcyon', { it, i, price: premiumPrice(it, L) }, `buy premium-${i}`, 'Premium')).join('')}${shelf}</ul></section></div>`;
-}
+// Halcyon's Shop as a page of its own (the store page): the same window every hub has.
+export const storeMarkup = (s) => `<div class="page-grid store-page"><section class="card hub-win">${shopMarkup(s, 'halcyon')}</section></div>`;
 
 // ---------- loadout: the classes, then its tabs ----------
 // `view` is the archetype being browsed (class/subclass on Skills and talents); the equipped one is s.loadout.archetype.
@@ -1944,7 +2065,7 @@ export function loadoutMarkup(s, view, tab = 'protocols', ui = {}) {
   const id = ARCHETYPES[vc] ? vc : equippedArch;
   const a = ARCHETYPES[id];
   const busy = active(s) || !!s.run; // classes change at home, between fights
-  const free = subOf(s, id) ? Math.max(0, talentPoints(s, id) - pointsSpent(s, id)) + (capState(s, id) === 'open' ? 1 : 0) : 0; // with no subclass, its points wait for the tree
+  const free = subOf(s, id) ? freeTiers(s, id) + (capState(s, id) === 'open' ? 1 : 0) : 0; // with no subclass, its tiers wait for the tree
 
   // The classes, one slim button each (its level, a teal lamp on the one in use): click to look at it. Looking at
   // one you aren't playing, Use switches to it, at home (and while trying classes out, your level comes with you).
@@ -1954,7 +2075,7 @@ export function loadoutMarkup(s, view, tab = 'protocols', ui = {}) {
   return `<div class="loadout">
     <nav class="arch-tabs" aria-label="Classes">${tabs}</nav>
     <nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', 'Protocols'], ['daemons', `Daemons${newOn(s, 'daemons') ? ` · ${newOn(s, 'daemons')} new` : ''}`], ['program', 'Program'], ['skills', `Skills and talents${free ? ` · ${free} free` : ''}`]].map(([k, l]) => (k === 'program' && !routinesOpen(s) ? `<button type="button" role="tab" class="ltab-locked" data-ltab="${k}" aria-selected="${tab === k}" aria-disabled="true" title="${esc(ROUTINES_LOCKED)}">${esc(l)}</button>` : `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`)).join('')}</nav>
-    ${tab === 'daemons' ? daemonsMarkup(s) : tab === 'program' ? programMarkup(s) : tab === 'skills' ? skillsTabMarkup(s, view || id, ui) : id === equippedArch ? `
+    ${tab === 'daemons' ? daemonsMarkup(s) : tab === 'program' ? programMarkup(s) : tab === 'skills' ? skillsTabMarkup(s, view || id) : id === equippedArch ? `
     <div class="loadout-protocols silk">${protocolGearMarkup(s)}</div>` : `
     <div class="loadout-protocols one"><section class="card"><h2>Protocols</h2><p class="svc-line"><span class="tag dim" title="Protocols belong to the class in use">${esc(a.name)} only</span></p></section></div>`}
     </div>`;
@@ -2048,7 +2169,7 @@ export function mapLayout(s, floor = null, portrait = mapPortrait) {
     nodes.push({ id: 'invader', kind: 'invader', inv, x: Math.round(start.x + (wall.x - start.x) * p), y: Math.round(start.y + (wall.y - start.y) * p) });
     links.push({ from: src.id, to: 'invader', hot: inv.state === 'breach', ghost: inv.state === 'travel' });
   }
-  return { nodes, links, floor: n };
+  return { nodes, links, floor: n, slots: idOf }; // slots: the floor's slot → the node drawn on it (runners.mjs revealed agrees with it)
 }
 
 // The consortium's network: your home server in the middle, a trunk line out to each member's
@@ -2118,25 +2239,55 @@ function mapTags(s, l, st, job) {
 
 // The map is a quiet network scope: hairline links, small nodes, range rings for the wall and
 // each layer, labels set outward from home. Selection is a reticle, not a glow.
+const CHART = 60; // the chart's cell, in map units
 const reticle = (r) => { const k = 5, q = r + 4; return `<path class="mreticle" d="M${-q} ${-q + k}V${-q}H${-q + k}M${q - k} ${-q}H${q}V${-q + k}M${q} ${q - k}V${q}H${q - k}M${-q + k} ${q}H${-q}V${q - k}"/>`; };
-// Where a node's name goes: outward from home, so labels never sit on the links.
-function labelAt(n, r) {
+// Where a node's name goes: outward from the floor's middle first, so labels keep off the links; the crowding pass in
+// mapMarkup moves it to another side (spots) when that one would sit on a name or a node. It starts at the node's edge
+// (r, in map units) and its gap and line spacing are in ems: text keeps its size on screen, so a label hugs its node at
+// any zoom. Beside a node, the name and the line under it are centred on it.
+let spots = {};
+function sideOf(n) {
   const ang = n.angle ?? Math.atan2(n.y, n.x) * 180 / Math.PI;
   const c = Math.cos(ang * Math.PI / 180), si = Math.sin(ang * Math.PI / 180);
-  if (c > 0.4) return { x: r + 12, y: 3, a: 'start' };
-  if (c < -0.4) return { x: -r - 12, y: 3, a: 'end' };
-  return si > 0 ? { x: 0, y: r + 17, a: 'middle' } : { x: 0, y: -r - 22, a: 'middle' };
+  return c > 0.4 ? 'r' : c < -0.4 ? 'l' : si > 0 ? 'b' : 't';
 }
-const label = (n, r, name, sub, cls = '') => { const p = labelAt(n, r); return `<text x="${p.x}" y="${p.y}" class="mlabel ${cls}" text-anchor="${p.a}">${esc(name)}</text>${sub ? `<text x="${p.x}" y="${p.y}" dy="1.4em" class="msub" text-anchor="${p.a}">${esc(sub)}</text>` : ''}`; }; // the line under it sits in ems: text keeps its size on screen (--z), so a phone's small map doesn't stack them
-// A server's label with its level up front: the level big and coloured by how hard it is for you
-// (WoW colours), the layer as a tag, then whatever else (outpost, siege…). The name can hide.
-const lvLabel = (s, n, r, name, level, depth, rest = '', cls = '') => {
-  const p = labelAt(n, r), gap = level - hackerLevel(s);
-  // The layer is the ring it sits on; a server you own needs no level (its colour says it's yours).
-  const lv = level != null ? `<tspan class="mlv ${conClass(gap)}" dx="0">lv ${level}</tspan>` : '';
-  const sub = lv + (rest ? `<tspan dx="${lv ? 6 : 0}">${esc(rest)}</tspan>` : '');
-  return `<text x="${p.x}" y="${p.y}" class="mlabel ${cls}" text-anchor="${p.a}">${esc(name)}</text>${sub ? `<text x="${p.x}" y="${p.y}" dy="1.45em" class="msub" text-anchor="${p.a}">${sub}</text>` : ''}`;
+const LINES = { r: ['0.55em', '-0.3em', '0.65em', '1.1em', '0.35em'], l: ['-0.55em', '-0.3em', '-0.65em', '1.1em', '0.35em'], b: ['0', '1em', '0', '2.6em', '1em'], t: ['0', '-1.55em', '0', '-0.3em', '-0.3em'] };
+// The name's and the line under it's attributes (one = a name with no line under it).
+function labelAt(n, r, one = false) {
+  const side = spots[n.id] || sideOf(n), [dx, dy, sdx, sdy, solo] = LINES[side];
+  const at = `x="${side === 'r' ? r + 2 : side === 'l' ? -r - 2 : 0}" y="${side === 'b' ? r + 2 : side === 't' ? -r - 2 : 0}" text-anchor="${side === 'r' ? 'start' : side === 'l' ? 'end' : 'middle'}"`;
+  return { name: `${at} dx="${dx}" dy="${one ? solo : dy}"`, sub: `${at} dx="${sdx}" dy="${sdy}"` };
+}
+// Its box in map units, as the crowding pass weighs it: w wide, two lines (z: screen pixels per map unit).
+function labelBox(n, side, r, w, z) {
+  const g = 6 / z;
+  if (side === 'r') return [n.x + r + 2 + g, n.y - 14 / z, n.x + r + 2 + g + w, n.y + 14 / z];
+  if (side === 'l') return [n.x - r - 2 - g - w, n.y - 14 / z, n.x - r - 2 - g, n.y + 14 / z];
+  if (side === 'b') return [n.x - w / 2, n.y + r + 2, n.x + w / 2, n.y + r + 2 + 30 / z];
+  return [n.x - w / 2, n.y - r - 2 - 29 / z, n.x + w / 2, n.y - r - 2 + 2 / z];
+}
+const label = (n, r, name, sub, cls = '') => { const p = labelAt(n, r, !sub); return `<text ${p.name} class="mlabel ${cls}">${esc(name)}</text>${sub ? `<text ${p.sub} class="msub">${esc(sub)}</text>` : ''}`; };
+// A server's label: its name, and under it the level coloured by how hard it is for you (WoW colours), its specials'
+// glyphs (each with its tooltip), then whatever else (outpost, siege…). The name can hide.
+const lvLabel = (s, n, r, name, level, depth, rest = '', cls = '', specials = []) => {
+  const gap = level - hackerLevel(s);
+  // A server you own needs no level (its colour says it's yours).
+  const lv = level != null ? `<tspan class="mlv ${conClass(gap)}">lv ${level}</tspan>` : '';
+  const sp = specials.map((id, i) => { const x = SPECIALS[id]; return `<tspan class="mspecial" dx="${i ? '0.25em' : lv ? '0.5em' : 0}" title="${esc(`${x.name}: Server special.\n${x.rule}\n▸ ${x.answer}`)}">${x.glyph}\uFE0E</tspan>`; }).join('');
+  const sub = lv + sp + (rest ? `<tspan dx="${lv || sp ? '0.6em' : 0}">${esc(rest)}</tspan>` : '');
+  const p = labelAt(n, r, !sub);
+  return `<text ${p.name} class="mlabel ${cls}">${esc(name)}</text>${sub ? `<text ${p.sub} class="msub">${sub}</text>` : ''}`;
 };
+// A server on the map: its kind's glyph (floorplan.mjs KINDS), so a Mailhub reads as one before its name, with the
+// kind's rule as its tooltip; a bar under it filling as you clear it; a ring round one you haven't been into, with a
+// pulse going out from it.
+// SV_R: the ring's radius, and where the server's label starts.
+const SV_R = 16;
+const KIND_GLYPH = { Mailhub: 'letter', Relay: 'relay', Mirror: 'mirror', Archive: 'storage', Lab: 'flask', Router: 'router', Honeypot: 'honeypot', Cold: 'cold' };
+function serverIcon(l, st) {
+  const kind = KIND_OF[l.template] || 'Relay', taken = takenOf(l), total = takeable(l).length, share = total ? Math.min(1, taken / total) : 0;
+  return `<circle r="11" class="sv-plate"/>${st === 'new' ? `<circle r="${SV_R}" class="sv-ring"/><circle r="${SV_R}" class="ring"/>` : ''}<g class="sv-kind" title="${esc(layoutRule(l))}" transform="translate(-9 -10) scale(1.125)"><rect width="16" height="16" class="sv-hit"/>${GLYPHS[KIND_GLYPH[kind]]}</g><rect class="sv-track" x="-8" y="11" width="16" height="2"/>${share ? `<rect class="sv-lit" x="-8" y="11" width="${(16 * share).toFixed(1)}" height="2"/>` : ''}`;
+}
 // A thin progress arc around a node (share 0–1).
 const arc = (r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="${r}" class="marc-bg ${cls}"/><circle r="${r}" class="marc ${cls}" stroke-dasharray="${(c * Math.min(1, share)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90)"/>`; };
 
@@ -2151,9 +2302,6 @@ export function threatsOf(s, now = Date.now()) {
     : inv.state === 'watch' ? { cls: 'hot', icon: 'kill', name: inv.name, where: 'scout mapping your wall', tag: `lv ${inv.level}`, left: inv.mapLeft, total: SCOUT.mapMs, sel: 'invader', verb: 'leaves' }
     : { cls: 'hot', icon: 'kill', name: inv.name, where: inv.state === 'siege' ? 'contested at your wall' : 'BREACH at your wall', tag: `lv ${inv.level}`, pct: inv.hp, sel: 'invader' });
   else if (threatTop(s) && s.net?.next > 0) add({ cls: 'dim', icon: 'clock', name: 'Next invasion', where: 'your wall', left: s.net.next, total: CONFIG.invasion.everyMs[1], sel: 'server' });
-  const r = retakeOf(s);
-  if (r) add({ cls: r.state === 'siege' ? 'hot' : 'warn', icon: 'kill', name: `Swarm ×${r.ships}`, where: `${r.state === 'siege' ? 'at' : '→'} your ${FX[r.f].short} hub`, tag: `lv ${r.level}`, left: retakeLeft(s, now), total: r.state === 'travel' ? HUBS.travelMs : HUBS.siegeMs, sel: 'hub-' + r.f, verb: r.state === 'travel' ? 'arrives' : 'falls' });
-  for (const h of Object.values(s.hubs || {})) if (h.captured?.lockdown) add({ cls: 'hot', icon: 'takeover', name: 'Lockdown', where: `your ${FX[h.faction].short} hub`, sel: h.id });
   for (const ev of eventsOf(s)) { const c = EVENT_CARDS[ev.card], l = s.locations.find((x) => x.id === ev.loc); add({ cls: 'drop', icon: EVENT_ICON[ev.card] || 'signal', left: ev.left, total: c.ms, sel: l ? l.id : 'server', verb: c.fight ? 'leaves' : 'ends', ...railOf(s, ev, l) }); }
   const sc = s.net?.scouted, scFrom = sc && s.locations.find((l) => l.id === sc.from);
   if (sc) { const row = out.find((x) => x.name === 'Next invasion'); if (row) Object.assign(row, { name: scFrom ? `Next: ${INV_KINDS[sc.kind].name}` : 'Next invasion', tag: `−${sc.levels} lv`, where: scFrom ? `from ${scFrom.name}` : row.where }); }
@@ -2169,13 +2317,54 @@ function railOf(s, ev, l) {
   if (ev.card === 'outbreak') return { name: `${FAMILIES[ev.family]?.name || ''} ×2`, where: 'code drops' };
   if (ev.card === 'darknet') return { name: UNIQUES[ev.unique]?.name || '?', where: `${ev.credits}c · ${ev.net}`, verb: 'closes' };
   if (ev.card === 'spotter') return { name: ev.name, tag: lv, where: 'your wall' };
+  if (ev.card === 'call') return { name: `${FX[ev.owner].short} · Defend`, tag: lv, where };
   return { name: ev.name, tag: lv, where };
 }
-// The map's left column: the threat rail, then the contract tracker under it (the selected server's contract lit).
+// An earned piece's count as cells (earned.mjs): one a count, past eight one for two; set green for a set piece, amber
+// for a unique. The Ledger's hint and a pinned row draw it.
+export const earnCells = (p) => { const [lit, all] = cellsOf(p.n, p.of); return `<span class="ecells ${p.set ? 'set' : 'uniq'}" aria-hidden="true">${'<i class="on"></i>'.repeat(lit)}${'<i></i>'.repeat(Math.max(0, all - lit))}</span>`; };
+// An earned piece's tooltip, WoW's grammar: its name, its kind, then the answer (the count left), muted.
+export function earnTip(s, id) {
+  const u = UNIQUES[id], p = earnedOf(s, id), set = setOf(id), slot = SLOTS[BASES[u.base]?.slot]?.name || '';
+  const kind = set ? `${slot} from the ${set.name} set` : `Unique ${slot.toLowerCase()}`;
+  return `${u.name}: ${kind}, level ${u.level}.${p.got ? '' : `\n▸ ${p.open ? '' : `From level ${p.from}: `}${p.todo}.`}`;
+}
+// The map's Pinned section (earned.mjs pins, up to three): a tracker row a piece, set green's edge for a set piece and
+// amber's for a unique, its set's name (or Floor feat) over its name, then its cells and its goal in words with n/N
+// (the Ledger's wording), on its own line when it doesn't fit beside them. A click opens its Ledger entry.
+function pinnedTracker(s) {
+  const ids = pinsOf(s);
+  if (!ids.length) return '';
+  const rows = ids.map((id) => {
+    const u = UNIQUES[id], p = earnedOf(s, id), over = setOf(id)?.name || (u.sources?.[0]?.floor ? 'Floor feat' : 'Feat');
+    return `<button type="button" class="ct-row pin-row${p.set ? ' set' : ''}" data-go="${esc(logGo(homeOfUnique(id)))}" title="${esc(earnTip(s, id))}">${glyph(SLOT_GLYPH[BASES[u.base]?.slot] || 'item')}<span class="ct-txt"><small class="ct-for">${esc(over)}</small><b>${esc(u.name)}</b></span><span class="ct-prog">${earnCells(p)}<small class="pin-goal">${esc(p.text)} ${p.n}/${p.of}</small></span></button>`;
+  }).join('');
+  return `<section class="ctrack pins" aria-label="Pinned"><h3 class="ct-head">${glyph('pin')}Pinned<small>${ids.length}/${PIN_MAX}</small></h3>${rows}</section>`;
+}
+const SLOT_GLYPH = { exploit: 'exploit', proxy: 'relay', shell: 'module', script: 'cipher', implant: 'injector' };
+// The map's left column: the threat rail, then the contract tracker under it (the selected server's contract lit), then
+// the pinned earned pieces, then the ping log (pings.mjs). The Runners are on the map itself (a phone still lists them
+// in the sheet: mapRail).
 function mapLeft(s, sel) {
-  const col = threatRail(s) + contractTracker(s, sel);
+  const col = threatRail(s) + contractTracker(s, sel) + pinnedTracker(s) + pingsMarkup(s);
   return col ? `<div class="map-lcol">${col}</div>` : '';
 }
+// A phone's map (docs/phone-plan.md P3): the rail and the tracker fold into a row of chips under the floors, a red
+// count with the soonest timer, an amber count of contracts under way, a green ✓ for the ones to turn in. A tap opens
+// its list in the sheet (app.js data-phone; mapRail). A chip at zero is left out.
+export function mapChips(s, pick = null) {
+  const th = threatsOf(s), jobs = trackedJobs(s), ready = jobs.filter((j) => j.ready).length, open = jobs.length - ready, rr = runnerRail(s, pick);
+  const soon = th.filter((x) => x.left != null).sort((a, b) => a.left - b.left)[0];
+  const chips = [
+    th.length ? `<button type="button" class="ph-chip hot" data-phone="threats" aria-label="${th.length} threat${th.length > 1 ? 's' : ''} and timers">${glyph('kill')}<b>${th.length}</b>${soon ? `<small data-chip-t>${fmtTime(soon.left)}</small>` : ''}</button>` : '',
+    open || (rr && !ready) ? `<button type="button" class="ph-chip job" data-phone="jobs" aria-label="${open} contract${open === 1 ? '' : 's'} under way">${glyph('contract')}${open ? `<b>${open}</b><small>contract${open === 1 ? '' : 's'}</small>` : '<small>Runners</small>'}</button>` : '',
+    ready ? `<button type="button" class="ph-chip ok" data-phone="jobs" aria-label="${ready} contract${ready === 1 ? '' : 's'} ready to turn in"><b>✓ ${ready}</b><small>ready</small></button>` : '',
+    pinsOf(s).length ? `<button type="button" class="ph-chip pin" data-phone="pins" aria-label="${pinsOf(s).length} pinned">${glyph('pin')}<b>${pinsOf(s).length}</b><small>pinned</small></button>` : '',
+  ].join('');
+  return chips ? `<div class="ph-chips" role="group" aria-label="Threats and contracts">${chips}</div>` : '';
+}
+// A chip's list, for the sheet: the threat rail, or the contract tracker with the Runners under it.
+export const mapRail = (s, which, sel = null, runner = null) => (which === 'threats' ? threatRail(s) : which === 'pins' ? pinnedTracker(s) : contractTracker(s, sel) + runnerRail(s, runner));
 function threatRail(s) {
   const list = threatsOf(s);
   if (!list.length) return '';
@@ -2196,27 +2385,32 @@ export function trackedJobs(s) {
     return { id: c.id, icon: jobIcon(c), name: contractTitle(s, c), from: c.from, faction: jobFaction(c), ready: ok, text: pr.text, part: Math.max(0, Math.min(1, pr.part || 0)), n: pr.n, of: pr.of, locate: place && !ok ? place.slice(4) : null, go: place || ok ? null : `mail:j${c.id}`, command: ok ? `mail deliver ${c.id}` : null, tip, pay: rewardChips(s, c) };
   });
 }
-// A tracker row's inside: whose it is over its name, then how far along (the map's tracker, and a server's strip tip).
+// A tracker row's inside (the map's tracker, and a server's strip tip), lean: its name, a count on the same line (n/N,
+// past 10 a bar too), or else its few words under it on one line. Whose it is goes in the tooltip.
+const ctCount = (j) => (j.of ? null : /^(\d+\/\d+)\b/.exec(j.text || '')?.[1]);
 const ctProg = (j) => j.ready ? `<span class="ct-turn">Turn in</span>`
   : j.of && j.of > 10 ? `<span class="ct-bar"><i style="width:${(j.part * 100).toFixed(0)}%"></i></span><small class="ct-n">${j.n}/${j.of}</small>`
+  : j.of || ctCount(j) ? `<small class="ct-n">${j.of ? `${j.n}/${j.of}` : ctCount(j)}</small>`
   : `<small class="ct-n ct-say">${esc(j.text)}</small>`;
-const ctMark = (f) => (f && FX[f] ? `<span class="fmark-i ct-f" style="--fc:${FX[f].color}">${glyph('f-' + f)}</span>` : '');
-const ctInner = (j) => `${glyph(j.icon)}<span class="ct-txt"><small class="ct-for">${ctMark(j.faction)}${esc(j.from)}</small><b>${esc(j.name)}</b></span><span class="ct-prog">${ctProg(j)}</span>`;
+const ctInner = (j) => { const p = ctProg(j), say = p.includes('ct-say'); return `${glyph(j.icon)}<span class="ct-txt"><b>${esc(j.name)}</b></span><span class="ct-prog${say ? '' : ' ct-side'}">${p}</span>`; };
 // The rows for a tooltip (floorplan-view.mjs: the strip's Contracts), one per contract, as the tracker draws them.
 export const contractTipRows = (list) => list.map((j) => `<span class="ct-row tt-ct${j.ready ? ' ready' : ''}">${ctInner(j)}</span>`).join('');
 function contractTracker(s, sel = null) {
   const list = trackedJobs(s);
   if (!list.length) return '';
   const rows = list.map((j) => `<button type="button" class="ct-row${j.ready ? ' ready' : ''}${j.locate && j.locate === sel ? ' on' : ''}" ${j.command ? `data-command="${esc(j.command)}"` : j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`} title="${esc(j.tip)}">${j.pay ? `<template class="tt-more">${j.pay}</template>` : ''}${ctInner(j)}</button>`).join('');
-  return `<section class="ctrack" aria-label="Contracts"><h3 class="ct-head">${glyph('contract')}Contracts<small>${heldCount(s)}/${MAIL.take}</small></h3>${rows}</section>`;
+  // The kicker counts the rows you see; how many of the board's slots they fill (story and floor jobs take none) is its tip.
+  const h = heldCount(s), slots = `${h} of ${MAIL.take} contract slots in use${list.length > h ? `; story and floor jobs don’t take a slot` : ''}.`;
+  return `<section class="ctrack" aria-label="Contracts"><h3 class="ct-head" title="${esc(slots)}">${glyph('contract')}Contracts<small>${list.length}</small></h3>${rows}</section>`;
 }
 
 // Traffic on the net: files moving between servers, as dots along the links. Your market orders
 // and payloads run home ↔ hub; the hubs trade among themselves along the backbone that joins them.
-// The markup only says where each dot runs and when (a route and its clock); app.js moves them, so
-// the map doesn't redraw to animate. Hostile or offline hubs carry no backbone traffic.
+// The markup only says where each dot runs and when (a route and its clock); mapmotion.mjs moves them, so
+// the map doesn't redraw to animate. A hub-to-hub dot carries both hubs' colours, one shown a lap.
+// Hostile or offline hubs carry no backbone traffic.
 // A file is a page with a folded corner; a payload is a spiked virus. The arrow ahead of it turns
-// with the route (app.js), so you can read which way it's going.
+// with the route (mapmotion.mjs), so you can read which way it's going.
 const PKT_ICON = {
   you: '<path class="pk-icon" d="M-4 -5.5 H2 L4.5 -3 V5.5 H-4.5 V-5.5 Z M2 -5.5 V-3 H4.5"/>',
   pay: '<path class="pk-icon" d="M0 -6.5 L1.6 -2.6 L5.6 -3.2 L3 0 L5.6 3.2 L1.6 2.6 L0 6.5 L-1.6 2.6 L-5.6 3.2 L-3 0 L-5.6 -3.2 L-1.6 -2.6 Z"/>',
@@ -2227,7 +2421,7 @@ export function trafficMarkup(s, nodes) {
   const byF = Object.fromEntries(hubs.map((n) => [n.hub.faction, n]));
   const routes = [], dots = [];
   // The backbone: a curve between each found hub on this floor and the next along.
-  const live = hubs.filter((n) => !offline(s, n.hub.faction)).sort((a, b) => a.x - b.x); // the hubs on this floor, left to right
+  const live = hubs.slice().sort((a, b) => a.x - b.x); // the hubs on this floor, left to right
   if (live.length >= 2) {
     live.forEach((a, i) => {
       const b = live[(i + 1) % live.length];
@@ -2239,10 +2433,10 @@ export function trafficMarkup(s, nodes) {
       // What actually moves: each ware goes from the hub where it's cheap to the one that pays more
       // for it, the biggest gaps first. Each lap carries the next of them (app.js picks by lap).
       const ships = WARE_IDS.map((w) => { const pa = priceOf(s, a.hub.faction, w), pb = priceOf(s, b.hub.faction, w); return { w, back: pa > pb ? 1 : 0, gap: Math.max(pa, pb) / Math.max(0.01, Math.min(pa, pb)), lo: Math.round(Math.min(pa, pb)), hi: Math.round(Math.max(pa, pb)) }; }).sort((x, y) => y.gap - x.gap).slice(0, 3);
-      dots.push(`<g class="mpkt amb" data-route="${id}" data-period="${period}" data-phase="${(h % 997) / 997}" data-ca="${fa}" data-cb="${fb}" data-fa="${a.hub.faction}" data-fb="${b.hub.faction}" data-ships="${esc(JSON.stringify(ships))}"><circle r="12" class="pk-hit"/><g class="pk-file">${PKT_ICON.you}</g><path class="pk-dir" d="M13 0 L8 -4 L9.5 0 L8 4 Z"/></g>`);
+      dots.push(`<g class="mpkt amb" data-route="${id}" data-period="${period}" data-phase="${(h % 997) / 997}" data-ca="${fa}" data-cb="${fb}" data-fa="${a.hub.faction}" data-fb="${b.hub.faction}" data-ships="${esc(JSON.stringify(ships))}"><circle r="12" class="pk-hit"/>${['a', 'b'].map((k) => `<g class="pk-${k}" style="color:${k === 'a' ? fa : fb}"><g class="pk-file">${PKT_ICON.you}</g><path class="pk-dir" d="M13 0 L8 -4 L9.5 0 L8 4 Z"/></g>`).join('')}</g>`);
     });
   }
-  // Yours: market orders and payloads in flight, home ↔ the hub. Outgoing runs out, incoming runs home.
+  // Yours: market orders in flight, home ↔ the hub. Outgoing runs out, incoming runs home.
   const mine = (f, id, t0, t1, out, cls, tip) => {
     const n = byF[f]; if (!n || !home) return;
     if (!routes.some((r) => r.includes(`data-rid="hr-${f}"`))) routes.push(`<path class="mroute" data-rid="hr-${f}" d="M${home.x} ${home.y} L${n.x} ${n.y}"/>`);
@@ -2252,7 +2446,6 @@ export function trafficMarkup(s, nodes) {
     const sell = x.side === 'sell';
     mine(x.f, x.id, x.sentAt, x.landsAt, sell, 'you', { mine: 1, icon: x.side === 'good' ? 'crate' : x.w, what: x.side === 'good' ? x.name : WARES[x.w].name, n: x.side === 'good' ? 1 : x.n, from: sell ? 'You' : FX[x.f].short, to: sell ? FX[x.f].short : 'You', credits: sell ? x.credits : -x.credits, lands: x.landsAt });
   }
-  if (PAYLOAD.on) for (const p of flyingOf(s)) mine(p.f, p.id, p.sentAt, p.landsAt, true, 'pay', { mine: 1, pay: 1, icon: 'spike', what: PAYLOADS[p.kind].name, n: 1, from: 'You', to: FX[p.f].short, lands: p.landsAt });
   return routes.length ? `<g class="mtraffic">${routes.join('')}${dots.join('')}</g>` : '';
 }
 
@@ -2273,7 +2466,7 @@ export const setMapScale = (z) => { const was = mapScale; mapScale = z; return M
 // Map filters: any mix of mine · targets · threats (none = everything). Old callers pass one string.
 const MAP_FILTERS = [['mine', 'Mine', 'f-mine'], ['targets', 'Targets', 'f-target'], ['threats', 'Threats', 'f-threat']];
 const filterList = (f) => (Array.isArray(f) ? f : !f || f === 'all' ? [] : [f]).filter((k) => MAP_FILTERS.some(([x]) => x === k));
-export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false, filter = 'all', list = false, sort = 'status', pickOpen = false, build = null, floor = null } = {}) {
+export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false, filter = 'all', list = false, sort = 'status', pickOpen = false, build = null, floor = null, runner = null, runnerMode = 'runner', runnerPreset = 'rotation', runnersAt = null, railShut = false, phone = false } = {}) {
   const none = !sel; // nothing selected (you clicked away): no reticle, and the side card shows your server
   sel ||= 'server';
   filter = filterList(filter);
@@ -2305,7 +2498,8 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     <line x1="${minX}" y1="0" x2="${maxX}" y2="0" class="maxis"/><line x1="0" y1="${minY}" x2="0" y2="${maxY}" class="maxis"/></g>` : '';
   const lines = links.map((k) => {
     const a2 = find(k.from), b2 = find(k.to);
-    return `<line x1="${a2.x}" y1="${a2.y}" x2="${b2.x}" y2="${b2.y}" class="mlink ${k.hot ? 'hot' : ''} ${k.ghost ? 'ghost' : ''} ${k.trunk ? 'trunk' : ''} ${k.temp ? 'tlink' : ''}"/>`;
+    const flow = k.hot || k.trunk ? flowSvg([a2, b2], `mlink ${k.hot ? 'hot' : 'trunk'}`, k.hot ? 8 : 10, { id: 'm' }) : ''; // its dashes, flowing (flowfx.mjs)
+    return `<line x1="${a2.x}" y1="${a2.y}" x2="${b2.x}" y2="${b2.y}" class="mlink ${k.hot ? 'hot' : ''} ${k.ghost ? 'ghost' : ''} ${k.trunk ? 'trunk' : ''} ${k.temp ? 'tlink' : ''}${flow ? ' flowed' : ''}"/>${flow}`;
   }).join('');
   // Labels that would overlap: the more important one keeps its label, the other's comes back on
   // hover, selection or zoom. Importance: selected, under threat, a contract or fresh find, an
@@ -2320,12 +2514,16 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const nameOf = (n) => n.loc?.name || n.inv?.name || n.roamer?.name || n.virus?.name || (n.hub ? FX[n.hub.faction]?.short : '') || (n.fleet ? `Swarm ×${n.fleet.ships}` : '') || n.handle || (n.kind === 'exit' || n.kind === 'entry' ? 'Floor 8' : n.kind === 'zone' ? CONFIG.zone.name : n.kind === 'post' ? POST.name : '');
     const cands = nodes.filter((n) => (n.kind === 'location' && n.loc) || OTHER[n.kind]).map((n) => ({ n, r: n.kind === 'location' ? rank(n) : n.id === sel ? 0 : OTHER[n.kind] })).filter((c) => c.r < 9).sort((a, b) => a.r - b.r);
     { const h = find('server'); boxes.push([h.x - 5 * CH, h.y + 26 / z, h.x + 5 * CH, h.y + 26 / z + H]); } // HOME's label, under the server
+    // Every node's mark is in the way too: a name never sits on another server, an exit or a ?.
+    const marks = nodes.filter((n) => n.kind !== 'transit').map((n) => { const r = n.kind === 'location' ? SV_R : 13; return { id: n.id, b: [n.x - r, n.y - r, n.x + r, n.y + r] }; });
+    const meets = (a, b) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1]; const pad = 4 / z; // two names keep a little apart
+    spots = {};
     for (const { n } of cands) {
-      const p = labelAt(n, 12), w = Math.max(nameOf(n).length, 10, (SUB[n.kind] || 0) * 0.86) * CH;
-      const x0 = n.x + p.x - (p.a === 'end' ? w : p.a === 'middle' ? w / 2 : 0), y0 = n.y + p.y - 11 / z;
-      const box = [x0, y0, x0 + w, y0 + H];
-      const off = n.id !== sel && (box[0] < minX || box[2] > maxX); // a name the scope's edge would cut in half (a narrow screen) waits too
-      if (off || boxes.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) crowded.add(n.id); else boxes.push(box);
+      const w = Math.max(nameOf(n).length, 10, (SUB[n.kind] || 0) * 0.86) * CH, first = sideOf(n);
+      // Its outward side first, then the others: right, left, under, over.
+      const fit = [first, ...['r', 'l', 'b', 't'].filter((x) => x !== first)].map((side) => ({ side, box: labelBox(n, side, n.kind === 'location' && !n.loc.rogue ? SV_R : 12, w, z) })).find(({ box }) => !(n.id !== sel && (box[0] < minX || box[2] > maxX)) // a name the scope's edge would cut in half (a narrow screen) waits too
+        && !boxes.some((b) => meets(box, [b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad])) && !marks.some((m) => m.id !== n.id && meets(box, m.b)));
+      if (fit) { spots[n.id] = fit.side; boxes.push(fit.box); } else { delete spots[n.id]; crowded.add(n.id); }
     }
   }
   // A bounty hunt's quarry (events.mjs): a dashed line and an arrow from where it sits to where it hops next.
@@ -2333,12 +2531,12 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const a = find(ev.loc), b = find(ev.next);
     if (!a || !b) return '';
     const d = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / d, uy = (b.y - a.y) / d, tx = b.x - ux * 16, ty = b.y - uy * 16, r = (v) => v.toFixed(1);
-    return `<g class="mhunt"><title>${esc(`${ev.name} hops to ${b.loc?.name || 'its next server'} in ${fmtLeft(hopLeft(ev))}`)}</title><line x1="${r(a.x + ux * 14)}" y1="${r(a.y + uy * 14)}" x2="${r(tx)}" y2="${r(ty)}"/><path d="M${r(tx)} ${r(ty)} L${r(tx - ux * 7 - uy * 4)} ${r(ty - uy * 7 + ux * 4)} L${r(tx - ux * 7 + uy * 4)} ${r(ty - uy * 7 - ux * 4)} Z"/></g>`;
+    return `<g class="mhunt"><title>${esc(`${ev.name} hops to ${b.loc?.name || 'its next server'} in ${fmtLeft(hopLeft(ev))}`)}</title>${flowSvg([{ x: a.x + ux * 14, y: a.y + uy * 14 }, { x: tx, y: ty }], 'mhunt-line', 8, { id: 'm' })}<path d="M${r(tx)} ${r(ty)} L${r(tx - ux * 7 - uy * 4)} ${r(ty - uy * 7 + ux * 4)} L${r(tx - ux * 7 + uy * 4)} ${r(ty - uy * 7 - ux * 4)} Z"/></g>`;
   }).join('');
   const thMarks = serverMarks(s); // the servers a thread marks (threads.mjs)
   const draw = nodes.map((n) => {
     const on = !none && n.id === sel ? ' selected' : '';
-    const pick = on ? reticle(n.kind === 'server' ? 13 : 9) : '';
+    const pick = on ? reticle(n.kind === 'server' ? 13 : n.kind === 'location' && !n.loc.rogue ? SV_R : 9) : '';
     if (n.kind === 'server') {
       const srv = s.server;
       const homeEv = eventsOf(s).some((ev) => EVENT_CARDS[ev.card].home); // a spotter at your wall (events.mjs): the antenna
@@ -2346,7 +2544,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     }
     if (n.kind === 'zone') {
       const live = liveSpawns(s), here = s.run?.loc === CONFIG.zone.id;
-      return `<g class="mnode zone${here ? ' here' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${CONFIG.zone.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${CONFIG.zone.name}, rogue server"><circle r="18" class="mhit"/><path d="M0 -9 L8 -4.5 L8 4.5 L0 9 L-8 4.5 L-8 -4.5 Z"/>${live ? `<circle r="2.5" class="zdot"/>` : ''}${pick}${label(n, 10, CONFIG.zone.name, (here ? 'you are here' : live ? `rogue server · ${live} ${live === 1 ? 'virus' : 'viruses'}` : 'rogue server · quiet') + (simOn(s) && inSprawl(s).length ? ` · ${inSprawl(s).length} online` : ''))}</g>`;
+      return `<g class="mnode zone${here ? ' here' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${CONFIG.zone.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${CONFIG.zone.name}, rogue server"><circle r="18" class="mhit"/><path class="mhex" d="M0 -9 L8 -4.5 L8 4.5 L0 9 L-8 4.5 L-8 -4.5 Z"/>${live ? `<circle r="2.5" class="zdot"/>` : ''}${pick}${label(n, 10, CONFIG.zone.name, (here ? 'you are here' : live ? `rogue server · ${live} ${live === 1 ? 'virus' : 'viruses'}` : 'rogue server · quiet') + (peopleOn(s) && inSprawl(s).length ? ` · ${inSprawl(s).length} online` : ''))}</g>`;
     }
     if (n.kind === 'roamer') {
       const r = n.roamer, ang = Math.atan2(n.ty - n.y, n.tx - n.x) * 180 / Math.PI;
@@ -2369,14 +2567,14 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     if (n.kind === 'post') return postNodeSvg(s, n, on + (crowded.has(n.id) ? ' crowded' : ''), pick + label(n, 14, POST.name, postNodeSub(s)));
     if (n.kind === 'hub') {
       const f = n.hub.faction, F = FX[f], t = repTier(s, f);
-      return `<g class="mnode hub${hostile(s, f) ? ' hostile' : ''}${offline(s, f) ? ' offline' : ''}${captured(s, f) ? ' yours f-mine' : ''}${lockedDown(s, f) || retakeOf(s)?.f === f ? ' threat f-threat' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" style="--fc:${captured(s, f) ? 'var(--you)' : F.color}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(F.name)} hub"><circle r="18" class="mhit"/><path d="M0 -13 L13 0 L0 13 L-13 0 Z" class="hub-frame"/><g class="hub-mark" transform="translate(-8 -8)">${GLYPHS['f-' + f]}</g>${shockSvg(s, f)}${pick}${label(n, 14, F.short, lockedDown(s, f) ? 'lockdown' : retakeOf(s)?.f === f ? `swarm · ${fmtLeft(retakeLeft(s))}` : offline(s, f) ? 'hub · offline' : captured(s, f) ? 'your hub' : `hub · ${t.name}`, lockedDown(s, f) || retakeOf(s)?.f === f ? 'hot' : '')}</g>`;
+      return `<g class="mnode hub${on}${crowded.has(n.id) ? ' crowded' : ''}" style="--fc:${F.color}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(F.name)} hub"><circle r="18" class="mhit"/><path d="M0 -13 L13 0 L0 13 L-13 0 Z" class="hub-frame"/><g class="hub-mark" transform="translate(-8 -8)">${GLYPHS['f-' + f]}</g>${shockSvg(s, f)}${pick}${label(n, 14, F.short, `hub · ${t.name}`, '')}</g>`;
     }
     if (n.kind === 'exit' || n.kind === 'entry') {
       // ▼ the way down (lit through the fog), ▲ the way back up. Its band in WoW colours: what waits there for you.
       const to = n.kind === 'exit' ? n.to : n.floor - 1, [lo, hi] = bandOf(to), L = hackerLevel(s), been = to <= floorsOf(s).reached;
       const band = `<tspan class="mlv ${conClass(lo - L)}">lv ${lo}</tspan><tspan class="mlv ${conClass(hi - L)}">–${hi}</tspan>`;
       const p = labelAt(n, 12), shape = n.kind === 'exit' ? 'M-9 -6 L9 -6 L0 9 Z' : 'M0 -9 L9 6 L-9 6 Z';
-      return `<g class="mnode ${n.kind}${n.open || been ? ' open' : ''}${been ? ' been' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${n.kind === 'exit' ? 'Exit to' : 'Up to'} floor ${to}"><circle r="18" class="mhit"/><circle r="14" class="exit-glow"/><path d="${shape}" class="exit-mark"/>${pick}<text x="${p.x}" y="${p.y}" class="mlabel" text-anchor="${p.a}">Floor ${to}</text><text x="${p.x}" y="${p.y}" dy="1.45em" class="msub" text-anchor="${p.a}">${band}</text></g>`;
+      return `<g class="mnode ${n.kind}${n.open || been ? ' open' : ''}${been ? ' been' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${n.kind === 'exit' ? 'Exit to' : 'Up to'} floor ${to}"><circle r="18" class="mhit"/><circle r="14" class="exit-glow"/><path d="${shape}" class="exit-mark"/>${pick}<text ${p.name} class="mlabel">Floor ${to}</text><text ${p.sub} class="msub">${band}</text></g>`;
     }
     if (n.kind === 'temp') return tempNodeSvg(s, n, on + (crowded.has(n.id) ? ' crowded' : '') + (s.run?.loc === n.id ? ' here' : ''), (nn, r, name, sub, cls) => (pick || '') + label(nn, r, name, sub, cls));
     if (n.kind === 'transit') return transitSvg(n, s.settings?.motion !== false);
@@ -2385,7 +2583,6 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       return `<g class="mnode hidden f-target${flag ? ' job' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${h.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Unknown server"><circle r="18" class="mhit"/>${arc(8, h.lead / 100, 'lead')}<text class="qmark" text-anchor="middle" y="4">?</text>${pick}${label(n, 9, flag ? 'Flagged' : h.lead ? `${h.lead}%` : '', flag && h.lead ? `${h.lead}%` : '', 'dim')}</g>`;
     }
     const l = n.loc, st = nodeState(s, l);
-    const taken = takenOf(l), total = takeable(l).length;
     const job = openContracts(s).some((c) => c.loc === l.id);
     const progs = programsOn(l).length;
     const rest = st === 'here' ? 'here' : job ? 'contract' : progs ? `${progs} ${progs === 1 ? 'program' : 'programs'}` : l.takenOver ? '' : st === 'done' ? 'clean' : '';
@@ -2394,18 +2591,25 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
       return `<g class="mnode rogue${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${st === 'here' ? ' here' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${l.lair && BOSSES[l.lair] ? BOSSES[l.lair].name : ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
     }
-    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${eventsAt(s, l.id).length ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${specialsOf(l).length ? `<text class="mspecial" x="-11" y="-8" text-anchor="end">${specialsOf(l).map((id) => `${SPECIALS[id].glyph}\uFE0E`).join('')}</text>` : ''}${dropMark(s, l)}${blipSvg(s, l)}${serverMarkSvg(s, l.id, thMarks)}${pick}${lvLabel(s, n, 12, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest)}</g>`;
+    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${eventsAt(s, l.id).length ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(`${l.name}, ${layoutName(l)}`)}"><circle r="18" class="mhit"/>${serverIcon(l, st)}${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(s, l)}${blipSvg(s, l)}${serverMarkSvg(s, l.id, thMarks)}${pick}${lvLabel(s, n, SV_R, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest, '', specialsOf(l))}</g>`;
   }).join('');
   const hoverNames = s.settings?.mapNames === 'hover';
-  const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter.length ? ' mf' + filter.map((k) => ' mf-' + k).join('') : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${con ? 'Map of your consortium' : `Floor ${fl}, ${esc(floorName(fl))}`}">${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${con ? '' : trails}${draw}</svg>`;
+  // The ground is a chart (the *Chart*): a faint crosshair every CHART units, hairlines between, drawn in the map so it
+  // pans and zooms with it; it runs well past the scope, for a wide screen's sides. A small map (a phone's) takes cells
+  // twice the size, so they stay about 40px on screen.
+  const W = maxX - minX, Hh = maxY - minY, C = CHART * ((mapScale || 1) < 0.5 ? 2 : 1), c2 = C / 2;
+  const chart = `<defs><pattern id="mchart" width="${C}" height="${C}" patternUnits="userSpaceOnUse"><path class="mchart-line" d="M0 ${c2}H${C}M${c2} 0V${C}"/><path class="mchart-tick" d="M${c2 - 4} ${c2}H${c2 + 4}M${c2} ${c2 - 4}V${c2 + 4}"/></pattern></defs><rect class="mchart" x="${minX - 2 * W}" y="${minY - 2 * Hh}" width="${5 * W}" height="${5 * Hh}" fill="url(#mchart)"/>`;
+  const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter.length ? ' mf' + filter.map((k) => ' mf-' + k).join('') : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${con ? 'Map of your consortium' : `Floor ${fl}, ${esc(floorName(fl))}`}">${chart}${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${con ? '' : trails}${draw}${con ? '' : runnersMap(s, fl, runner, mapPortrait, runnersAt) + runnerMark(s, runner, fl, mapPortrait)}</svg>`;
   // Top corner: which map, and the map's own controls (names on hover, zoom back out).
   const tabs = `<div class="map-tools"><div class="map-left">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters map-mode" role="group" aria-label="View"><button type="button" data-maplist="0" aria-pressed="${!list}">Map</button><button type="button" data-maplist="1" aria-pressed="${list}">List</button></div><details class="map-pick${filter.length ? ' on' : ''}"${pickOpen ? ' open' : ''}><summary data-mapfilter-toggle aria-label="Show">${filter.length ? filter.map((k) => MAP_FILTERS.find(([x]) => x === k)[1]).join(' + ') : 'All'}</summary><div class="map-pick-menu">${MAP_FILTERS.map(([k, l]) => `<label><input type="checkbox" data-mapfilter-check="${k}"${filter.includes(k) ? ' checked' : ''}><span>${l}</span></label>`).join('')}${filter.length ? '<button type="button" data-mapfilter-clear>Show all</button>' : ''}</div></details></div><div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover. Click to always show them.' : 'Show names only on hover'}">Aa</button><button type="button" data-locate="__sel" title="Zoom to the selected one">${glyph('trace')}</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
   // pop: the selected node's card, popped up beside the node (app.js places it once the map is drawn).
   const card = pop ? `<div class="map-pop" id="map-pop" data-keep="${esc(sel || '')}" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-map-pop-close title="Close">×</button>${mapSide(s, sel, find(sel))}</div>` : '';
   // List mode (MOO2's planets list): every server as a row, sortable, the filters apply; the
   // selected one's card sits beside the list.
-  if (list && !con) return `<div class="map-page map-list-page"><section class="panel map-canvas map-list">${tabs}${serverList(s, sel, filter, sort)}</section><aside class="map-side">${mapSide(s, sel, find(sel))}</aside></div>`;
-  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : mapLeft(s, none ? null : sel)}${con ? '' : floorLift(s, fl)}${svg}${card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
+  // A phone (docs/phone-plan.md P3): the floors as a segmented row, the rail and the tracker as chips under it; the
+  // selected one's card is the sheet's (app.js lifts #map-pop into it), in List mode too.
+  if (list && !con) return `<div class="map-page map-list-page"><section class="panel map-canvas map-list">${tabs}${serverList(s, sel, filter, sort)}${phone ? card : ''}</section>${phone ? '' : `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>`}</div>`;
+  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : phone ? floorLift(s, fl) + mapChips(s, runner) : mapLeft(s, none ? null : sel, runner, railShut)}${con || phone ? '' : floorLift(s, fl)}${svg}${card}${runner && !con ? runnerCard(s, runner, { mode: runnerMode, preset: runnerPreset }) : ''}${runnersAt && !runner && !con ? runnersList(s, fl, runnersAt) : ''}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
 }
 // The floor panel, a lift's buttons down the side of the map: the floors you've reached lit (the one on the map marked),
 // the next one dim with its band, the rest dark. A teal pip on the floor you're connected to.
@@ -2462,9 +2666,9 @@ function wallMark(s, l) {
 const locBtn = (id) => `<span class="sl-loc" role="button" tabindex="0" data-locate="${esc(id)}" title="Show it on the map">${glyph('trace')}</span>`;
 // The hubs you've found, as rows: the faction, its level, how it stands with you.
 function listHubs(s, sel, filter) {
-  const hubs = hubsOf(s).filter((h) => !filter.length || (filter.includes('mine') && captured(s, h.faction)) || (filter.includes('threats') && (lockedDown(s, h.faction) || retakeOf(s)?.f === h.faction)));
+  const hubs = filter.length ? [] : hubsOf(s);
   if (!hubs.length) return '';
-  return `<h4 class="sl-sec">Hubs</h4>${hubs.map((h) => { const f = h.faction, chips = [captured(s, f) ? '<span class="tag you">yours</span>' : '', hostile(s, f) ? '<span class="tag hot">hostile</span>' : '', offline(s, f) ? '<span class="tag dim">offline</span>' : '', lockedDown(s, f) ? '<span class="tag hot">lockdown</span>' : '', retakeOf(s)?.f === f ? '<span class="tag hot">swarm</span>' : ''].join('');
+  return `<h4 class="sl-sec">Hubs</h4>${hubs.map((h) => { const f = h.faction, chips = '';
     return `<button type="button" class="sl-row${h.id === sel ? ' on' : ''}" data-select="${esc(h.id)}"><span class="sl-name">${fIcon(f)}<b>${esc(h.name)}</b></span><span class="sl-fam">${esc(FX[f].short)}</span><span class="sl-lv">${h.level}</span><span class="sl-num">—</span><span class="sl-exp"><small>${esc(repTier(s, f).name)}</small></span><span class="sl-status">${chips}${locBtn(h.id)}</span></button>`; }).join('')}`;
 }
 // Traces in progress: the unknown servers along your floors' links.
@@ -2594,13 +2798,11 @@ function floorCard(s, node) {
     : `<button type="button" class="btn primary" data-command="descend" ${node.open && !active(s) ? '' : `disabled title="${active(s) ? 'Finish the fight first' : 'Locate a server it hangs off'}"`}>Go down</button>`;
   return `<section class="card floor-card"><h2>Exit · floor ${to - 1}</h2><h1>Floor ${to}${been ? ` · ${esc(floorName(to))}` : ''}</h1><p class="tagline">${bandLine(s, to)}</p><div class="row">${go}</div></section>`;
 }
-// Who owns a traced server, and what taking it costs and earns: its mark, then the standing it moves, a chip a
-// faction in its own colour (the sentence is the tooltip).
+// Who owns a traced server: its mark (the sentence is the tooltip). Taking it is no hit with anyone: its receipt's stamp
+// is the choice (receipts.mjs).
 function ownerLine(f) {
-  const F = FX[f], hit = OWNED.takeoverHit, gain = Math.round(hit * 0.5), rivals = F.rivals.map((r) => FX[r]);
-  const chip = (x, n) => `<span class="rep-chip fl-rep" style="--fc:${x.color}">${glyph('f-' + x.id)}${n > 0 ? '+' : '−'}${Math.abs(n)}</span>`;
-  const tip = `${F.short}: Owner\nBeating its Resident takes the server from ${F.short}, for −${hit} standing with ${F.short}${rivals.length ? ` and +${gain} with ${rivals.map((r) => r.short).join(' and ')}, its ${rivals.length > 1 ? 'rivals' : 'rival'}` : ''}.`;
-  return `<p class="svc-line fline" style="--fc:${F.color}" title="${esc(tip)}">${fIcon(f)}<b>${esc(F.short)}</b><span class="fl-reps">${chip({ ...F, id: f }, -hit)}${F.rivals.map((r) => chip({ ...FX[r], id: r }, gain)).join('')}</span></p>`;
+  const F = FX[f], tip = `${F.short}\nOwner\nBeat its Resident and the server is yours, with its vault's receipt to stamp.`;
+  return `<p class="svc-line fline" style="--fc:${F.color}" title="${esc(tip)}">${fIcon(f)}<b>${esc(F.short)}</b></p>`;
 }
 function mapSide(s, sel, node) {
   const e = gateOf(s), srv = s.server;
@@ -2724,7 +2926,7 @@ function mapSide(s, sel, node) {
   const vaultStat = l.takenOver ? stat('Root', rootPips(l)) : stat('Vault', R && vaultId && R.opened[vaultId] ? 'open' : R ? 'shut' : '???');
   const parent = l.parent && s.locations.find((x) => x.id === l.parent);
   return `<section class="card ${st === 'new' ? 'alert' : ''}"><h2>${l.member ? `${esc(l.member)}'s server` : `Floor ${l.depth || 1}`} · ${esc(FAMILIES[l.family].name)}</h2><h1>${esc(l.name)}</h1>
-    ${serverTags(s, l, `<span class="tag tag-kind" data-kind="${esc(l.template || '')}"${layoutRule(l) ? ` title="${esc(layoutRule(l))}"` : ''}>${esc(layout)}</span>${specialTags(l)}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}`)}
+    ${serverTags(s, l, `<span class="tag tag-kind" data-kind="${esc(l.template || '')}" title="${esc(layoutRule(l))}">${kindIcon(l)}${esc(layout)}</span>${specialTags(l)}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}`)}
     <div class="stats">${roomsStat}${vaultStat}${stat('Runs', l.runs || 0)}</div>
     ${R?.mapped || (R && l.takenOver) ? `<p class="svc-line">${R.mapped ? '<span class="tag you" title="Every room cleared at least once">Mapped</span> ' : ''}<span class="tag" title="Mapped or held, a server's rooms come back fast">Fast respawns</span> <small>fight rooms ${ROOMS_FP.respawn.process} min, guard posts ${ROOMS_FP.respawn.guard}, elites ${ROOMS_FP.respawn.elite}</small></p>` : ''}
     ${openContracts(s).filter((c) => c.loc === l.id).map((c) => `<p class="svc-line"><span class="tag${c.offBooks ? ' hot' : ''}">Contract</span> ${esc(contractTitle(s, c))} <small class="svc-prog">· ${esc(contractProgress(s, c).text)}</small></p>`).join('')}
@@ -2760,7 +2962,9 @@ function programsLine(s, l) {
 // (A relay is the item you install on a server you hold: the relay template reads as a name server.)
 export const LAYOUT_NAMES = { relay: 'Name server', mailhub: 'Mail hub', mirror: 'Public mirror', archive: 'Backup archive', lab: 'Research lab', router: 'Router', honeypot: 'Honeypot', cold: 'Cold storage' };
 export const layoutName = (l) => LAYOUT_NAMES[l.template] || 'Node';
-export const layoutRule = (l) => kindRule(KIND_OF[l.template]);
+// The kind's tooltip, on the map's glyph and the card's tag alike: its name, Server kind, its one rule on rooms.
+export const layoutRule = (l) => { const k = KINDS_FP[KIND_OF[l.template] || 'Relay']; return `${layoutName(l)}: Server kind.\n${k?.text || ''}`; };
+export const kindIcon = (l) => glyph(KIND_GLYPH[KIND_OF[l.template] || 'Relay']);
 
 // Free memory: the pips you have, and the one(s) a server would take (blinking): "4 → 3/4 free".
 function memPips(j) {
@@ -2783,44 +2987,92 @@ function paceCard(s) {
   return `<section class="card"><h2>Pace</h2><p class="svc-line" title="Counts time while the game is open and you've used it in the last 2 minutes. Loot targets assume ${LOOT.killsPerHour} kills an hour.">${line}</p></section>`;
 }
 
-// The System page's tabs: Settings (everything as it was), Achievements (achievements-view.mjs), Casing
-// (casing-view.mjs: the monitor's colourway, plate and stickers) and Terminal (terminal-view.mjs: the boot, the
-// prompt and the cursor).
-export const SYSTEM_TABS = [['settings', 'Settings'], ['achievements', 'Achievements'], ['casing', 'Casing'], ['terminal', 'Terminal']];
-const systemTabs = (s, tab) => `<nav class="ltabs sys-tabs" role="tablist" aria-label="System">${SYSTEM_TABS.map(([k, l]) => `<button type="button" role="tab" data-stab="${k}" aria-selected="${tab === k}">${esc(l)}${k === 'achievements' ? `<small class="sys-pts">${glyph('medal')}${pointsOf(s)}</small>` : ''}</button>`).join('')}</nav>`;
-export function systemMarkup(s, { coop = false, tab = 'settings', ach = {}, cs = {} } = {}) {
-  if (tab === 'achievements') return systemTabs(s, tab) + achievementsMarkup(s, ach);
-  if (tab === 'casing') return systemTabs(s, tab) + casingPageMarkup(s, cs);
-  if (tab === 'terminal') return systemTabs(s, tab) + terminalPageMarkup(s);
-  // Co-op (coop-ui.mjs, docs/coop.md): a developer prototype, so only with ?dev.
+// The Settings page (nav id 'system'): the player's options, and with ?dev a Dev tab (co-op, pace, the sound test, the
+// wire, fight reports, the log).
+const systemTabs = (tab, dev) => dev ? `<nav class="ltabs sys-tabs" role="tablist" aria-label="Settings">${[['settings', 'Settings'], ['dev', 'Dev']].map(([k, l]) => `<button type="button" role="tab" data-stab="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</nav>` : '';
+// The Rig page: Achievements (achievements-view.mjs), and what they unlock for your machine: Casing (casing-view.mjs:
+// the monitor's color, plate and stickers), Terminal (terminal-view.mjs: the boot, the prompt and the cursor) and
+// House (house-view.mjs: your house and its furniture).
+export const RIG_TABS = [['achievements', 'Achievements'], ['casing', 'Casing'], ['terminal', 'Terminal'], ['house', 'House']];
+const rigTabs = (s, tab) => `<nav class="ltabs sys-tabs" role="tablist" aria-label="Rig">${RIG_TABS.map(([k, l]) => `<button type="button" role="tab" data-rtab="${k}" aria-selected="${tab === k}">${esc(l)}${k === 'achievements' ? `<small class="sys-pts">${glyph('medal')}${pointsOf(s)}</small>` : ''}</button>`).join('')}</nav>`;
+export function rigMarkup(s, { tab = 'achievements', ach = {}, house = {}, casing = 'color' } = {}) {
+  if (tab === 'house') return rigTabs(s, tab) + housePageMarkup(s, house);
+  if (tab === 'casing') return rigTabs(s, tab) + casingPageMarkup(s, { sec: casing });
+  if (tab === 'terminal') return rigTabs(s, tab) + terminalPageMarkup(s);
+  return rigTabs(s, 'achievements') + achievementsMarkup(s, ach);
+}
+// Developer tools: not part of the game, so only with ?dev.
+function devMarkup(s, coop) {
   const co = coop ? '<section class="card coop-card"><h2>Co-op</h2><p>Play a run with another player. Your game runs the world, theirs sends their character. Prototype.</p><div class="row"><button type="button" class="btn" data-run="coop">Open Co-op</button></div></section>' : '';
-  return `${systemTabs(s, tab)}<div class="page-grid"><div style="display:grid;gap:12px">${co}${volumeCard(s)}${paceCard(s)}
-    <section class="card settings-card"><h2>Settings</h2><div class="row settings-grid">
-      <button type="button" class="btn" data-toggle="speed">Speed: ${esc(s.settings.speed || 'normal')} (${cycleLength(s) / 1000}s per cycle)</button>
-      <button type="button" class="btn" data-toggle="sound" aria-pressed="${!!s.settings.sound}">Sound ${s.settings.sound ? 'on' : 'off'}</button>
-      <button type="button" class="btn" data-toggle="motion" aria-pressed="${!!s.settings.motion}">Motion ${s.settings.motion ? 'on' : 'off'}</button>
-      <button type="button" class="btn" data-run="music ${s.settings.music === false ? 'on' : 'off'}" aria-pressed="${s.settings.music !== false}" ${s.settings.sound ? '' : 'disabled'} title="Music from the music folder, one track for home, runs and fights">Music ${s.settings.music === false ? 'off' : 'on'}</button>
-      <button type="button" class="btn" data-run="radio ${s.settings.radio === false ? 'on' : 'off'}" aria-pressed="${s.settings.radio !== false}" ${s.settings.sound ? '' : 'disabled'} title="Stray transmissions in the static">Radio ${s.settings.radio === false ? 'off' : 'on'}</button>
-      <button type="button" class="btn" data-run="radio test" ${s.settings.sound ? '' : 'disabled'}>Test radio</button>
-      <button type="button" class="btn" data-toggle="haptics" aria-pressed="${!!s.settings.haptics}" title="Vibration works on Android phones">Vibrate ${s.settings.haptics ? 'on' : 'off'}</button>
-      <button type="button" class="btn" data-run="shell toggle" aria-pressed="${s.settings.shell !== 'plain'}" title="CRT screen, boot sequence, status line, glitches when you're hit">Shell: ${s.settings.shell === 'plain' ? 'plain' : 'immersive'}</button>
-      <button type="button" class="btn" data-run="shell boot" ${s.settings.shell === 'plain' ? 'disabled' : ''}>Reboot screen</button>
-      <button type="button" class="btn" data-run="casing ${s.settings.casing === false ? 'on' : 'off'}" aria-pressed="${s.settings.casing !== false}" ${s.settings.shell === 'plain' ? 'disabled' : ''} title="The monitor around the screen, on wide screens">Casing ${s.settings.casing === false ? 'off' : 'on'}</button>
-      <button type="button" class="btn" data-run="window ${s.settings.window === false ? 'on' : 'off'}" aria-pressed="${s.settings.window !== false}" ${s.settings.shell === 'plain' || s.settings.casing === false ? 'disabled' : ''} title="The city outside, beside the monitor">Window ${s.settings.window === false ? 'off' : 'on'}</button>
-      <button type="button" class="btn" data-run="ui scale" title="The screen drawn larger or smaller, for big displays. Auto sizes it to your screen. It scales up only as far as the layout has room: none at 1920 pixels wide, about 140% at 2560. Type ui scale 125 for a size of your own.">${esc(UI.scaleLabel(s.settings.uiScale ?? 1, UI.ROOM.avail))}</button>
-      <button type="button" class="btn" data-run="screen fx next" title="Light around the game (the backdrop, the screen's edges, the casing's lamps) and how much moves in a fight. Off: numbers and bars only. Subtle and medium: the number, the bar and who did it. Bold: impact bursts, sparks and flashes too">Screen effects: ${esc(sfxLevel(s))}</button>
-      ${Object.entries(SFX.effects).map(([id, name]) => `<button type="button" class="btn" data-run="screen fx ${id} ${!s.settings.screenFxOff?.[id] ? 'off' : 'on'}" aria-pressed="${!s.settings.screenFxOff?.[id]}" ${s.settings.shell === 'plain' || sfxLevel(s) === 'off' ? 'disabled' : ''}>${name} ${!s.settings.screenFxOff?.[id] ? 'on' : 'off'}</button>`).join('')}
-      <button type="button" class="btn" data-run="tips ${s.settings.tips === false ? 'on' : 'off'}" aria-pressed="${s.settings.tips !== false}">Tips ${s.settings.tips === false ? 'off' : 'on'}</button>
-      <button type="button" class="btn" data-run="tips replay">Replay tips</button>
-      <button type="button" class="btn" data-run="channel ${s.settings.channel === false ? 'on' : 'off'}" aria-pressed="${s.settings.channel !== false}" title="#net's latest line over the prompt">#net ${s.settings.channel === false ? 'muted' : 'on'}</button>
-    </div>
-    <div class="row sound-test"><span class="next-label">Sound test</span>${[['hit', 'Hit'], ['break', 'Break'], ['hurt', 'Hurt'], ['unlock', 'Unlock'], ['pickup', 'Pickup'], ['good', 'Good news'], ['win', 'Win / level'], ['chit', 'Armor ◆'], ['patch', 'Patch'], ['interrupt', 'Interrupt'], ['nope', 'Refused'], ['prewarn', 'Warning'], ['daemon', 'Daemon'], ['channel', 'Channel change'], ['jackin', 'Connect'], ['hangup', 'Hang up'], ['lose', 'Crash'], ['mark', 'Mark'], ['burn', 'Burn'], ['helper', 'Helper'], ['shield', 'Shield'], ['buff', 'Buff']].map(([id, name]) => `<button type="button" class="btn" data-sound="${id}">${name}</button>`).join('')}</div></section>
-    ${districtCardMarkup(s)}
-    ${collectionMarkup(s)}
-    <section class="card"><h2>New game</h2><div class="row"><button type="button" class="btn" data-run="reset game">Reset game</button></div></section>
+  return `<div class="page-grid"><div style="display:grid;gap:12px">${co}${paceCard(s)}
+    <section class="card"><h2>Sound test</h2><div class="row sound-test"><button type="button" class="btn" data-run="radio test" ${s.settings.sound ? '' : 'disabled'}>Radio</button>${[['hit', 'Hit'], ['break', 'Break'], ['hurt', 'Hurt'], ['unlock', 'Unlock'], ['pickup', 'Pickup'], ['good', 'Good news'], ['win', 'Win'], ['bosswin', 'Boss down'], ['levelup', 'Level'], ['chit', 'Armor ◆'], ['patch', 'Patch'], ['interrupt', 'Interrupt'], ['nope', 'Refused'], ['prewarn', 'Warning'], ['daemon', 'Daemon'], ['channel', 'Channel change'], ['jackin', 'Connect'], ['hangup', 'Hang up'], ['lose', 'Crash'], ['mark', 'Mark'], ['burn', 'Burn'], ['helper', 'Helper'], ['shield', 'Shield'], ['buff', 'Buff']].map(([id, name]) => `<button type="button" class="btn" data-sound="${id}">${name}</button>`).join('')}</div></section>
     <section class="card"><h2>Wire</h2><div class="ticker"><span>${(TICKER.map(esc).join('  //  ') + '  //  ').repeat(2)}</span></div></section>
     <section class="card"><h2>Fight reports</h2>${s.reports.length ? `<details><summary>${s.reports.length} report(s)</summary><pre>${esc(JSON.stringify(s.reports.slice(-5), null, 1))}</pre></details>` : '<p>None yet.</p>'}</section></div>
     <section class="card"><h2>Log</h2><ol class="fulllog">${s.logs.slice(-300).map((e) => `<li>c${e.cycle} · ${esc(e.message)}</li>`).join('')}</ol></section></div>`;
+}
+// The Settings page's controls: a slider for a setting with steps, a checkbox for one that is on or off. Each says
+// what it does in its tooltip (WoW's grammar: name, kind, what it does, the answer muted).
+const tipAttrs = (tip, kind) => (tip ? ` title="${esc(tip)}"` : '') + (kind ? ` data-tt-kind="${esc(kind)}"` : '');
+// opts: [[value, label], ...] from least to most; run: the command, the value after it (app.js runs it on change).
+function slideRow(run, name, opts, cur, { tip = '', kind = '' } = {}) {
+  const i = Math.max(0, opts.findIndex(([v]) => String(v) === String(cur)));
+  return `<label class="set-slide"${tipAttrs(tip, kind)}><span class="set-name">${name}</span><span class="set-rail">${'<i></i>'.repeat(opts.length)}<input type="range" min="0" max="${opts.length - 1}" step="1" value="${i}" data-slide="${esc(run)}" data-opts="${esc(opts.map(([v]) => v).join(' '))}" data-labels="${esc(opts.map(([, l]) => l).join('|'))}" aria-label="${esc(name)}"></span><b class="set-val">${esc(opts[i][1])}</b></label>`;
+}
+// attr: the input's own action (data-run="…" or data-toggle="…").
+const checkRow = (attr, name, on, { tip = '', kind = '', disabled = false } = {}) => `<label class="set-check${disabled ? ' off' : ''}"${tipAttrs(tip, kind)}><input type="checkbox" ${attr} ${on ? 'checked' : ''} ${disabled ? 'disabled' : ''}><span>${name}</span></label>`;
+const LOOKS = 'Graphics · costs looks';
+function graphicsCard(s, phone) {
+  const g = GX.graphicsOf(s), on = GX.presetOf(s, phone), plain = s.settings.shell === 'plain', lvl = sfxLevel(s);
+  const presetTip = { auto: `Auto: your device's preset, ${GX.PRESET_NAMES[GX.autoPreset(phone)]} on this one.\n▸ A phone plays Balanced, a desktop Quality.`, quality: 'Quality: every row at its full look.', balanced: 'Balanced: the virus drawn slower, a part breaking into fewer bits, a steady tether.\n▸ A phone runs smoother with it.', performance: 'Performance: the virus still, nothing ambient moving, a part fading out, chip effects in Now only, subtle screen effects.\n▸ For a slow phone.' };
+  const presets = ['auto', 'quality', 'balanced', 'performance'].map((k) => `<button type="button" class="${on === k ? 'on' : ''}" data-run="graphics ${k}" aria-pressed="${on === k}"${tipAttrs(presetTip[k], 'Graphics preset')}>${GX.PRESET_NAMES[k]}${k === 'auto' ? ` <small>${GX.PRESET_NAMES[GX.autoPreset(phone)]}</small>` : ''}</button>`).join('');
+  const fxOff = (id) => !!s.settings.screenFxOff?.[id];
+  const fxTip = { signal: 'Low Signal: the screen\'s edges warm as your Signal falls under a half, and pulse under a quarter.', hits: 'Hits: a big hit on you tears the backdrop.', crits: 'Crits: a crit tears the virus picture.', floor: 'Floor colour: each floor paints the screen in its own palette.', lamps: 'Status lights: the casing\'s lamps show the gate, the wall, the net and your daemons.' };
+  return `<section class="card gx-card"><h2>Graphics${on === 'custom' ? ' <small>Custom</small>' : ''}</h2>
+    <div class="gx-seg" role="group" aria-label="Graphics preset">${presets}</div>
+    <h3 class="gx-sub">Costs looks</h3>
+    ${slideRow('graphics virus', 'Virus picture', [['still', 'Still'], ['slow', 'Slow'], ['full', 'Full']], g.virus, { tip: 'Virus picture: the virus in a fight, drawn at 25 frames a second (Full), 8 (Slow) or Still.\n▸ On a phone it is a small icon, and Slow looks the same there.', kind: LOOKS })}
+    ${slideRow('graphics dissolve', 'Part dissolve', [['fade', 'Fade'], ['fewer', 'Fewer'], ['all', 'All bits']], g.dissolve, { tip: 'Part dissolve: a broken part flies apart in all its 1s and 0s, in a third of them (Fewer), or fades out.', kind: LOOKS })}
+    ${slideRow('screen fx', 'Screen effects', SFX.levels.map((l) => [l, l[0].toUpperCase() + l.slice(1)]), lvl, { tip: 'Screen effects: light around the game (the backdrop, the screen\'s edges, the casing\'s lamps) and how much moves in a fight. Off is numbers and bars only; Subtle and Medium add the number, the bar and who did it; Bold adds impact bursts, sparks and flashes.', kind: LOOKS })}
+    <div class="set-checks">
+      ${checkRow(`data-run="graphics ambient ${g.ambient ? 'off' : 'on'}"`, 'Ambient motion', g.ambient, { tip: 'Ambient motion: the map\'s pulses and files, the rooms\' bits and links, the backdrop\'s drift and the screen\'s roll.\n▸ Off, they hold still.', kind: LOOKS })}
+      ${checkRow(`data-run="graphics chips ${g.chips ? 'off' : 'on'}"`, 'Chip effects at +1', g.chips, { tip: 'Chip effects at +1: a themed part\'s chips play its effect faintly a cycle ahead, as well as in Now.', kind: LOOKS })}
+      ${checkRow(`data-run="graphics tether ${g.tether ? 'off' : 'on'}"`, 'Breathing tether', g.tether, { tip: 'Breathing tether: a tether\'s glow swells and fades.\n▸ Off, it glows steady.', kind: LOOKS })}
+    </div>
+    <h3 class="gx-sub">Screen</h3>
+    <div class="set-checks">
+      ${checkRow('data-toggle="motion"', 'Motion', !!s.settings.motion, { tip: 'Motion: everything that moves. Off, the game holds still, whatever the rows above say.', kind: 'Setting' })}
+      ${checkRow('data-run="shell toggle"', 'Immersive shell', !plain, { tip: 'Immersive shell: the CRT screen, the boot sequence, the status line and the glitches when you\'re hit.', kind: 'Setting' })}
+      ${checkRow(`data-run="casing ${s.settings.casing === false ? 'on' : 'off'}"`, 'Casing', s.settings.casing !== false, { tip: 'Casing: the monitor around the screen, on wide screens.', kind: 'Setting', disabled: plain })}
+      ${checkRow(`data-run="window ${s.settings.window === false ? 'on' : 'off'}"`, 'Window', s.settings.window !== false, { tip: 'Window: the city outside, beside the monitor.', kind: 'Setting', disabled: plain || s.settings.casing === false })}
+      ${((g2) => checkRow(`data-run="grain ${g2 ? 'off' : 'on'}"`, 'Grain', g2, { tip: 'Grain: film grain moving over the screen.\n▸ It starts off on a phone.', kind: 'Setting', disabled: plain }))(s.settings.grain ?? !phone)}
+      ${Object.entries(SFX.effects).map(([id, name]) => checkRow(`data-run="screen fx ${id} ${fxOff(id) ? 'on' : 'off'}"`, name, !fxOff(id), { tip: fxTip[id], kind: 'Screen effect', disabled: plain || lvl === 'off' })).join('')}
+    </div>
+    <div class="row"><button type="button" class="btn" data-run="shell boot" ${plain ? 'disabled' : ''}>Reboot screen</button></div></section>`;
+}
+function optionsCard(s) {
+  const avail = UI.ROOM.avail, fits = UI.STEPS.filter((z) => z <= UI.maxScale(avail)), set = s.settings.uiScale ?? 1;
+  const scales = [['auto', `Auto ${Math.round(UI.scaleFor('auto', avail) * 100)}%`], ...fits.map((z) => [Math.round(z * 100), `${Math.round(z * 100)}%`])];
+  const cur = set === 'auto' ? 'auto' : Math.round(UI.scaleFor(set, avail) * 100);
+  return `<section class="card settings-card"><h2>Options</h2>
+    ${slideRow('speed', 'Speed', [['relaxed', 'Relaxed 12s'], ['normal', 'Normal 8s'], ['fast', 'Fast 5s']], s.settings.speed || 'normal', { tip: 'Speed: how long a fight\'s cycle lasts.\n▸ Rules count cycles, so the balance never changes.', kind: 'Setting' })}
+    ${slideRow('ui scale', 'UI scale', scales, cur, { tip: 'UI scale: the screen drawn larger or smaller, for big displays. Auto sizes it to your screen, as far as the layout has room.\n▸ Type ui scale 125 for a size of your own.', kind: 'Setting' })}
+    <div class="set-checks">
+      ${checkRow('data-toggle="sound"', 'Sound', !!s.settings.sound)}
+      ${checkRow(`data-run="music ${s.settings.music === false ? 'on' : 'off'}"`, 'Music', s.settings.music !== false, { tip: 'Music: a track for home, runs and fights.', kind: 'Setting', disabled: !s.settings.sound })}
+      ${checkRow(`data-run="radio ${s.settings.radio === false ? 'on' : 'off'}"`, 'Radio', s.settings.radio !== false, { tip: 'Radio: stray transmissions in the static.', kind: 'Setting', disabled: !s.settings.sound })}
+      ${checkRow('data-toggle="haptics"', 'Vibrate', !!s.settings.haptics, { tip: 'Vibrate: the phone buzzes on hits.\n▸ Android phones only.', kind: 'Setting' })}
+      ${checkRow(`data-run="tips ${s.settings.tips === false ? 'on' : 'off'}"`, 'Tips', s.settings.tips !== false)}
+      ${checkRow(`data-run="channel ${s.settings.channel === false ? 'on' : 'off'}"`, '#net', s.settings.channel !== false, { tip: '#net: the channel\'s latest line over the prompt.', kind: 'Setting' })}
+    </div>
+    <div class="row"><button type="button" class="btn" data-run="tips replay">Replay tips</button></div></section>`;
+}
+export function systemMarkup(s, { coop = false, dev = false, tab = 'settings', phone = false } = {}) {
+  if (tab !== 'dev' || !dev) tab = 'settings';
+  const head = systemTabs(tab, dev);
+  if (tab === 'dev') return head + devMarkup(s, coop);
+  return `${head}<div class="page-grid settings-page"><div style="display:grid;gap:12px;align-content:start">${volumeCard(s)}${optionsCard(s)}</div>
+    <div style="display:grid;gap:12px;align-content:start">${graphicsCard(s, phone)}${collectionMarkup(s)}
+    <section class="card"><h2>New game</h2><div class="row"><button type="button" class="btn" data-run="reset game">Reset game</button></div></section></div></div>`;
 }
 
 // What a won fight gave you, as rows for the card over the virus picture.
@@ -2913,6 +3165,20 @@ export function spoilsMarkup(head, rows, xp, goLabel = 'Continue') {
 // What a pull or a jack-out gave you, in the same card. kicker: 'Pulled' | 'Banked'.
 // A pull is one row and goes away on its own; Banked waits for Enter.
 // lead: a block over the rows (the Disconnected card's death recap, recap.mjs), as markup.
+// The takeover card's receipt (receipts.mjs; the picked Stamps look): the trade in an inset mono block, five square stamps
+// in a row (each its faction's mark, verb and pips toward its next part, in its colour), Later under them.
+export function receiptLead(s, id) {
+  const x = keptReceipts(s).find((k) => k.id === id);
+  if (!x) return '';
+  const stamp = (f) => {
+    const n = tallyOf(s, f), piece = PIECES[f]?.name || 'its piece', S = STAMPS[f];
+    const tip = `${S.verb}\n${FX[f].short} · Receipt\n${S.what}\n+${RECEIPT.rep} ${FX[f].short} rep · ${n}/${RECEIPT.perPart} toward ${piece}\n▸ Three receipts make one part.`;
+    return `<button type="button" class="rc-stamp" style="--fc:${FX[f].color}" data-gain-cmd="receipt ${esc(x.id)} ${f}" title="${esc(tip)}">${glyph('f-' + f)}<b>${esc(S.verb)}</b><span class="rc-pips">${Array.from({ length: RECEIPT.perPart }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span></button>`;
+  };
+  return `<div class="rc-block"><span class="rc-id">${esc(x.id)}</span><span>${esc(x.payer)} → ${esc(x.payee)}</span><b class="rc-sum">${esc(sumText(x.sum))}</b><span>${esc(x.date)} · ${esc(x.c)}</span><span class="rc-wait">awaiting counterparty</span></div>
+    <div class="rc-stamps">${STAMP_ORDER.map(stamp).join('')}</div>
+    <button type="button" class="sp-go rc-later" data-gain-cmd="receipt later" title="Keep it in your files. Hand it in at your commission’s hub.">Later</button>`;
+}
 export function gainMarkup(kicker, name, rows, go = true, lead = '') {
   return `<div class="sp-card gain-card" role="status" aria-label="${esc(kicker)}: ${esc(rows.map((r) => r.text).join(', ') || 'nothing')}">
     <i class="sp-corner tl"></i><i class="sp-corner tr"></i><i class="sp-corner bl"></i><i class="sp-corner br"></i>
@@ -2959,6 +3225,17 @@ function runMate(s, name) {
     youFollow ? `<button type="button" class="act" data-run="unlink" title="Stop following ${esc(name)}">Unlink</button>` : '',
   ].join('');
   return `<div class="pm-run"><span class="pm-where">${state}<code title="Where ${esc(name)} is">${esc(c.cwd)}</code></span><span class="pm-acts">${acts}</span></div><button type="button" class="pm-kick" data-run="crew kick ${esc(name)}" title="Take ${esc(name)} out of your crew" aria-label="Remove ${esc(name)}">×</button>`;
+}
+// The phone's fight HUD (docs/phone-plan.md P2): each crewmate's bar as a thin violet line under yours, the name and
+// Signal in its card.
+export function crewLineMarkup(s) {
+  const e = s.encounter, live = active(s) && e?.mode === 'run';
+  const mates = matesOf(s);
+  if (!mates.length) return '';
+  return `<div class="ph-crew">${mates.map((m) => {
+    const up = !live || !m.encounter || mateUp(m), sig = live && m.encounter ? m.run.integrity : mateSignal(s, m), pct = up ? Math.max(0, Math.min(100, (sig / m.run.max) * 100)) : 0;
+    return `<span class="ph-mate${up ? '' : ' down'}" title="${esc(`${m.who}: ${ARCHETYPES[m.loadout.archetype].name}, Lv ${hackerLevel(m)}.\n${up ? `Signal ${sig}/${m.run.max}.` : 'Down.'}`)}"><i style="width:${pct}%"></i></span>`;
+  }).join('')}</div>`;
 }
 const CREW_PARTY = (s, mates, inFight, fc, actedWho) => `<div class="party">${mates.map((m) => {
         const live = inFight && m.encounter, up = !live || mateUp(m), sig = live ? m.run.integrity : mateSignal(s, m), pct = (sig / m.run.max) * 100, q = live ? m.encounter.queue : null;
@@ -3010,13 +3287,10 @@ export function sidebarMarkup(s, { module = 'map', mapSel = 'server', mapView = 
 
 // ---------- factions (factions.mjs) ----------
 const fIcon = (f, cls = '') => `<span class="fmark-i ${cls}" style="--fc:${FX[f].color}" title="${esc(FX[f].name)}">${glyph('f-' + f)}</span>`;
-// Rep as a bar of the faction's five tiers, filled to where you stand.
-export function repBar(s, f) {
-  const r = rep(s, f), t = repTier(s, f);
-  const segs = REP_TIERS.map((min, i) => { const max = REP_TIERS[i + 1] ?? 101, fill = Math.max(0, Math.min(1, (r - min) / (max - min))); return `<span class="rb-seg${i === t.i ? ' on' : ''}" title="${esc(FX[f].tiers[i])} (${min}+)"><i style="width:${fill * 100}%"></i></span>`; }).join('');
-  const neg = f === 'halcyon' ? '' : `<span class="rb-seg rb-neg${r < 0 ? ' on' : ''}" title="How deep: ${r < 0 ? r : 0} of −100"><i style="width:${Math.min(100, Math.max(0, -r))}%"></i></span>`;
-  return `<div class="repbar" style="--fc:${FX[f].color}" title="${esc(FX[f].short)}: ${r} · ${esc(t.name)}${t.next != null ? ` · next at ${t.next}` : ''}">${neg}${segs}<b>${esc(t.name)}${r < 0 ? ` ${r}` : ''}</b></div>`;
-}
+// Rep as four pips, one a tier, lit to where you stand; the tier's name and the numbers in the tooltip.
+export const repTip = (s, f) => { const t = repTier(s, f); return `${FX[f].name}\n${t.name}\nRep ${rep(s, f)} of 100${t.next != null ? `. ${FX[f].tiers[t.i + 1]} at ${t.next}.` : '.'} Contracts it posts and receipts you stamp for it raise it.`; };
+export const repPips = (s, f, tip = true) => { const t = repTier(s, f); return `<span class="rpips" style="--fc:${FX[f].color}"${tip ? ` title="${esc(repTip(s, f))}"` : ''}>${REP_TIERS.map((_, i) => `<i class="${i <= t.i ? 'on' : ''}"></i>`).join('')}</span>`; };
+export function repBar(s, f) { return `<div class="repbar" style="--fc:${FX[f].color}" title="${esc(repTip(s, f))}">${repPips(s, f, false)}</div>`; }
 const relations = (f) => `<div class="frel">${FX[f].allies.length ? `<span class="frel-k">allies</span>${FX[f].allies.map((x) => fIcon(x)).join('')}` : ''}${FX[f].rivals.length ? `<span class="frel-k">rivals</span>${FX[f].rivals.map((x) => fIcon(x)).join('')}` : ''}</div>`;
 function hubCard(s, f) {
   const F = FX[f], h = hubOf(s, f);
@@ -3029,11 +3303,11 @@ function hubCard(s, f) {
 // Connecting to a hub opens a session: who answers, one line from them, and a short menu. Each
 // choice opens its own window; you never see the whole hub at once.
 const VOICE = {
-  halcyon: { who: 'concierge@halcyon', hostile: 'Your policy is suspended. This channel is monitored.', low: 'Welcome back, contractor. Keep your claim number ready.', mid: 'Good to see you, contractor. Your file is in order.', high: 'Preferred client. The clearing house is at your disposal.' },
-  glassjaw: { who: '—@glassjaw', hostile: 'You burned us. Talk is expensive now.', low: "Don't know you. Don't need to.", mid: 'You again. Good. Quiet work pays.', high: 'Inner circle. Whatever you need, it never happened.' },
-  kestrel: { who: 'helpdesk@kestrel', hostile: 'Ticket #0000 closed: account blacklisted.', low: 'Ticket opened. Estimated wait: forever.', mid: 'Ticket opened. Priority: client.', high: 'Key account. Routing you to a human. Kidding.' },
-  lantern: { who: 'ops@lantern', hostile: "…static. We're not broadcasting for you.", low: "You're on the frequency. Listen first.", mid: 'Regular on the dial. What do you need?', high: "Signal's strong. You're one of us." },
-  nullchoir: { who: 'vesper@nullchoir', hostile: 'Marked. Say your piece and get off our wire.', low: 'Outsider. Corporate smell on you. Make it quick.', mid: "Fellow. The choir's listening.", high: 'Cantor. Sing and we follow.' },
+  halcyon: { who: 'concierge@halcyon', low: 'Welcome back, contractor. Keep your claim number ready.', mid: 'Good to see you, contractor. Your file is in order.', high: 'Preferred client. The clearing house is at your disposal.' },
+  glassjaw: { who: '—@glassjaw', low: "Don't know you. Don't need to.", mid: 'You again. Good. Quiet work pays.', high: 'Inner circle. Whatever you need, it never happened.' },
+  kestrel: { who: 'helpdesk@kestrel', low: 'Ticket opened. Estimated wait: forever.', mid: 'Ticket opened. Priority: client.', high: 'Key account. Routing you to a human. Kidding.' },
+  lantern: { who: 'ops@lantern', low: "You're on the frequency. Listen first.", mid: 'Regular on the dial. What do you need?', high: "Signal's strong. You're one of us." },
+  nullchoir: { who: 'vesper@nullchoir', low: 'Outsider. Corporate smell on you. Make it quick.', mid: "Fellow. The choir's listening.", high: 'Cantor. Sing and we follow.' },
 };
 const MARK = {
   halcyon: ['  .-""""-.  ', ' /  |  |  \\ ', ' \\  |--|  / ', "  '-.__.-'  "],
@@ -3044,27 +3318,22 @@ const MARK = {
 };
 function greeting(s, f, now) {
   const V = VOICE[f], h = hubOf(s, f);
-  if (captured(s, f)) return { who: `${s.profile?.handle || 'root'}@${h.name.toLowerCase()}`, line: lockedDown(s, f) ? 'Locked out of my own box. Get me back in.' : retakeOf(s)?.f === f ? 'They want it back. Incoming.' : 'Root shell. Yours.' };
-  if (offline(s, f, now)) return { who: V.who, line: '— no carrier —' };
   const t = repTier(s, f).i;
-  return { who: V.who, line: hostile(s, f) ? V.hostile : t >= 3 ? V.high : t >= 2 ? V.mid : V.low };
+  return { who: V.who, line: t >= 2 ? V.high : t >= 1 ? V.mid : V.low };
 }
 // What the session offers right now: [{ key, label, meta }]. Typed numbers pick from this.
 export function hubOptions(s, f, now = Date.now()) {
   if (!FX[f] || !hubOf(s, f)) return [];
   const theirs = s.locations.filter((l) => l.faction === f).length, offers = mailOffers(s).filter((o) => (o.faction || 'halcyon') === f).length;
   const servers = { key: 'servers', label: 'Their servers', meta: `${theirs}` };
-  const pay = { key: 'payloads', label: 'Payloads', meta: `${glyph('firewall')}${defenceOf(s, f, now)}` };
   const pst = pieceState(s, f), piece = pst && (pst.parts || pst.held || pst.found) ? [{ key: 'piece', label: 'Assemble', meta: partPips(pst, pst.ready ? 'ready' : '') }] : []; // its faction piece (faction-gear.mjs), once you hold a part or the piece: the parts are yours, whatever your rep
-  if (captured(s, f)) return [{ key: 'hold', label: 'Your hub', meta: `${glyph('credits')}${bankOf(s, f)}` }, { key: 'market', label: 'Market', meta: `⇄ ${Math.round(travelMs(s, f) / 60000)}m` }, { key: 'shop', label: 'Shop', meta: 'at cost' }, ...piece];
-  if (hostile(s, f)) return [...(PAYLOAD.on ? [pay] : []), ...(f !== 'halcyon' ? [{ key: 'donate', label: 'Donate', meta: donationOf(s, f).x > 1 ? `×${donationOf(s, f).x.toFixed(1)}` : '' }] : []), ...piece, servers];
-  if (offline(s, f, now)) return [...(PAYLOAD.on ? [pay] : []), servers];
+  const mine = commissionOf(s) === f, kept = keptReceipts(s).length;
+  const comm = [{ key: 'commission', label: 'Commission', meta: mine ? '<span class="tag you">yours</span>' : `${glyph('credits')}${retainerWith(s, f)}` }, ...(mine && kept ? [{ key: 'receipts', label: 'Receipts', meta: `${kept}` }] : [])];
   return [
     { key: 'market', label: 'Market', meta: `⇄ ${Math.round(travelMs(s, f) / 60000)}m` },
-    { key: 'shop', label: 'Shop', meta: f === 'halcyon' ? 'instant' : `${shopOf(s, f, now).filter((g) => !g.locked && g.left).length}` },
+    { key: 'shop', label: 'Shop', meta: f === 'halcyon' ? 'instant' : `${shopOf(s, f).shelf.filter((x) => !x.locked && !x.sold).length}` },
     { key: 'work', label: 'Work', meta: `${offers}` },
-    ...(PAYLOAD.on ? [pay] : []),
-    ...(f !== 'halcyon' && donationOf(s, f).open ? [{ key: 'donate', label: 'Donate', meta: donationOf(s, f).x > 1 ? `×${donationOf(s, f).x.toFixed(1)}` : '' }] : []),
+    ...comm,
     ...piece,
     servers,
   ];
@@ -3074,23 +3343,42 @@ export function hubOptions(s, f, now = Date.now()) {
 function pieceMarkup(s, f) {
   const st = pieceState(s, f), u = UNIQUES[st.id], it = st.held || uniqueItem(u, st.level, seeded(7));
   const verb = st.held ? (st.current ? 'Re-tune' : `Re-tune to v${st.level}`) : 'Assemble';
-  const why = st.current ? `Already at your level (${st.held.level})` : st.parts < st.need ? `${st.need - st.parts} more ${st.need - st.parts === 1 ? 'part' : 'parts'}: win feuds for ${FX[f].short}` : busyOf(s);
+  const why = st.current ? `Already at your level (${st.held.level})` : st.parts < st.need ? `${st.need - st.parts} more ${st.need - st.parts === 1 ? 'part' : 'parts'}: win feuds or stamp receipts for ${FX[f].short}` : busyOf(s);
   const stats = Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span><b>+${fmtStat(k, v)}</b> ${esc(STATS[k].name)}</span>`).join('');
   return `<div class="piece-tile${st.found ? ' on' : ''}${st.ready ? ' ready' : ''}" style="--fc:${FX[f].color}">${glyphMarkup(it, 'lg')}<div class="piece-body"><b class="iname${st.found ? ' r-zeroday' : ''}" title="${esc(`${effectLine(it)} ${u.flavour || ''}`.trim())}">${esc(st.held ? itemLabel(st.held) : u.name)}</b><small>${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}</small>${partPips(st, 'lg')}<span class="piece-stats">${stats}${implicitRow(it)}</span></div>
     <button type="button" class="btn small${st.ready && !why ? ' primary' : ''}" data-command="hub assemble ${f}" ${st.ready && !why ? '' : `disabled title="${esc(why)}"`}>${esc(verb)}</button></div>`;
 }
 const busyOf = (s) => (active(s) ? 'Finish the fight first' : '');
-// A faction's Shop: its own shelf as tiles, like Halcyon's store (Halcyon's Shop is its store).
-function shopMarkup(s, f, now) {
-  const F = FX[f];
-  if (hostile(s, f) || offline(s, f, now)) return '<p class="quiet">Shut to you.</p>';
-  const tiles = shopOf(s, f, now).map((g) => {
-    const can = !g.locked && g.left > 0 && s.server.credits >= g.price;
-    return `<li class="ptile stash${g.locked ? ' locked' : ''}"><b class="iname">${glyph(g.id === 'bootleg' ? 'firewall' : GLYPH_OF_GOOD[g.id] || 'crate', 'badge')}${esc(g.name)}</b><small>${esc(g.about)}</small>
-      <div class="ptile-acts"><span class="price">${g.price} credits</span><small class="qty">×${g.left}</small>${g.locked ? `<span class="tag dim">${esc(F.tiers[g.need])}</span>` : `<button type="button" class="btn small ${can ? 'primary' : ''}" data-command="buy ${f} ${g.id}" ${can ? '' : 'disabled'}>Buy</button>`}</div></li>`;
-  }).join('');
-  const prem = hubPremium(s, f).map((p) => premiumTile(s, f, p, `buy ${f} premium-${p.i}`)).join('');
-  return `<ul class="ptiles stash">${prem}${tiles}</ul>`;
+// A hub's Shop (store.mjs), one shape for every hub, top to bottom: the shelf (its clock), the chase line on its tier
+// rail, the tools, the codebases. Prices are credit icons; a locked thing shows the tier pips it needs, its tier on hover.
+const tierPips = (f, need) => `<span class="rpips" style="--fc:${FX[f].color}" title="${esc(`For ${FX[f].tiers[need]} and up (${REP_TIERS[need]} rep).`)}">${REP_TIERS.map((_, i) => `<i class="${i <= need ? 'on' : ''}"></i>`).join('')}</span>`;
+const credits = (n) => `<span class="price">${glyph('credits')}${Number(n).toLocaleString('en-US')}</span>`;
+const buyBtn = (s, cmd, why) => `<button type="button" class="btn small${why ? '' : ' primary'}" data-command="${esc(cmd)}" ${why ? `disabled title="${esc(why)}"` : ''}>Buy</button>`;
+const shortOf = (s, price) => (s.server.credits < price ? `It costs ${price} credits. You have ${s.server.credits}.` : '');
+// A protocol's tile: its glyph, name in its rarity colour, kind and level, its three biggest stats (▲ ▼ against what its
+// slot runs now) and implicit, then the price and Buy (Sold, or the pips it needs). The card on hover has the rest.
+function shopTile(s, f, { it, ref, price, need, locked, sold, cmd, name }) {
+  const out = loadOut(s, it), vs = loadSlot(s, it) >= 0, why = blockOf(s, price);
+  const top = Object.entries(it.stats).filter(([k]) => STATS[k]).sort(([a, x], [b, y]) => Math.abs(y) / STATS[b].base - Math.abs(x) / STATS[a].base).slice(0, 3);
+  const stats = top.map(([k, v]) => { const d = v - (out?.stats?.[k] || 0); return `<span class="silk-st${v < 0 ? ' neg' : ''}">${glyph(k)}<b>${v < 0 ? '−' : '+'}${fmtStat(k, Math.abs(v))}</b><span class="sr-only"> ${esc(STATS[k].name)}</span>${vs && Math.abs(d) > 1e-9 ? `<i class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}</i>` : ''}</span>`; }).join('');
+  const imp = it.implicit && IMPLICITS[it.implicit] ? `<span class="shop-imp" style="--fc:${FX[it.implicit].color}">${glyph('f-' + it.implicit)}${esc(IMPLICITS[it.implicit].name)}</span>` : '';
+  const acts = sold ? '<span class="tag dim">Sold</span>' : `${credits(price)}${locked ? tierPips(f, need) : buyBtn(s, cmd, why)}`;
+  return `<li class="ptile prem ${rarityClass(it)}${locked ? ' locked' : ''}${sold ? ' sold' : ''}" data-ptip="${esc(ref)}"><span class="prem-glyph">${glyphMarkup(it, 'sm')}</span><b class="iname ${rarityClass(it)}">${esc(name || itemLabel(it))}</b><small>${name ? '' : `${esc(rarityName(it))} `}${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}</small><span class="silk-sts">${stats}${imp}</span>
+      <div class="ptile-acts">${acts}</div></li>`;
+}
+export function shopMarkup(s, f) {
+  const shop = shopOf(s, f), mins = Math.ceil(shop.leftMs / 60000);
+  const head = (title, right = '', tip = '') => `<h3 class="shop-h"><span${tip ? ` title="${esc(tip)}"` : ''}>${esc(title)}</span>${right}</h3>`;
+  const clock = `<span class="shop-clock" title="${esc(`New stock in ${mins} ${mins === 1 ? 'minute' : 'minutes'} of play, and at each level.`)}">${glyph('clock')}${mins}m</span>`;
+  const shelf = shop.shelf.map((x) => shopTile(s, f, { it: x.it, ref: `p:${f}:${x.i}`, price: x.price, need: x.need, locked: x.locked, sold: x.sold, cmd: `buy ${f} shelf-${x.i}` })).join('');
+  const rail = [1, 2, 3].map((t) => { const xs = shop.chase.filter((c) => c.need === t); return xs.length ? `<div class="shop-col${repTier(s, f).i < t ? ' shut' : ''}" style="--n:${xs.length}"><span class="shop-tier">${tierPips(f, t)}<small>${esc(FX[f].tiers[t])}</small></span><ul class="ptiles">${xs.map((c) => shopTile(s, f, { it: chaseItem(s, f, c.id, seeded(7)), ref: `p:${f}:c-${c.id}`, price: c.price, need: c.need, locked: c.locked, cmd: `buy ${f} ${c.id}`, name: c.name })).join('')}</ul></div>` : ''; }).join('');
+  const tools = shop.tools.map((t) => `<li class="shop-tool" title="${esc(`${t.name}. ${t.about} You have ${t.have}.`)}">${glyph(t.id, 'badge')}<b>${esc(t.name)}</b>${credits(t.price)}${buyBtn(s, `buy ${f} ${t.id}`, shortOf(s, t.price))}</li>`).join('');
+  const cbs = shop.codebases.filter((x) => !x.known);
+  const codebases = cbs.map((x) => `<li class="shop-tool" title="${esc(`${PROGRAMS[x.id].name} codebase, ${PROGRAMS[x.id].weight}. ${PROGRAMS[x.id].rule}`)}">${glyph('module', 'badge')}<b>${esc(PROGRAMS[x.id].name)}</b>${credits(x.price)}${x.locked ? tierPips(f, x.need) : buyBtn(s, `buy ${f} codebase-${x.id}`, shortOf(s, x.price))}</li>`).join('');
+  return `<div class="shop">${head('Shelf', clock)}<ul class="ptiles shop-shelf">${shelf}</ul>
+    ${head(CHASE_LINE[f], '', `${FX[f].short}’s own protocols: a signature rule and its implicit, rolled at your level when you buy one.`)}<div class="shop-rail" style="grid-template-columns:${[1, 2, 3].map((t) => `${shop.chase.filter((c) => c.need === t).length}fr`).join(' ')}">${rail}</div>
+    ${head('Tools')}<ul class="shop-tools">${tools}</ul>
+    ${codebases ? `${head('Codebases')}<ul class="shop-tools shop-cbs">${codebases}</ul>` : ''}</div>`;
 }
 function workMarkup(s, f) {
   const offers = mailOffers(s).filter((o) => (o.faction || 'halcyon') === f);
@@ -3104,13 +3392,12 @@ function serversMarkup(s, f) {
 }
 const WINDOWS = {
   market: { title: 'Market', body: (s, f, now) => marketMarkup(s, f, now) },
-  shop: { title: 'Shop', body: (s, f, now) => (f === 'halcyon' ? storeMarkup(s, now) : shopMarkup(s, f, now)) },
+  shop: { title: 'Shop', body: (s, f) => shopMarkup(s, f) },
   work: { title: 'Work', body: (s, f) => workMarkup(s, f) },
-  payloads: { title: 'Payloads', body: (s, f, now) => payloadMarkup(s, f, now) },
-  donate: { title: 'Donate', body: (s, f) => donateMarkup(s, f) },
-  hold: { title: 'Your hub', body: (s, f, now) => holdMarkup(s, f, now) },
-  piece: { title: 'Assemble', body: (s, f) => pieceMarkup(s, f), tip: (f) => `${PARTS.need} parts from feuds won for ${FX[f].short}: the piece at your level, then a re-tune to your level` },
-  servers: { title: 'Their servers', body: (s, f) => serversMarkup(s, f), tip: (f) => `Open a vault: ${FX[f].short} −${OWNED.takeoverHit}, its rivals +${Math.round(OWNED.takeoverHit * 0.5)}` },
+  commission: { title: 'Commission', body: (s, f) => commissionMarkup(s, f), tip: () => 'Your commission pays your retainer, set by your rep with it, and is your stance. Switch at any hub you have found.' },
+  receipts: { title: 'Receipts', body: (s, f) => receiptsMarkup(s, f), tip: (f) => `Kept receipts, handed in for ${FX[f].short}: +${RECEIPT.rep} rep each, and ${RECEIPT.perPart} make a part of its piece` },
+  piece: { title: 'Assemble', body: (s, f) => pieceMarkup(s, f), tip: (f) => `${PARTS.need} parts from feuds won and receipts stamped for ${FX[f].short}: the piece at your level, then a re-tune to your level` },
+  servers: { title: 'Their servers', body: (s, f) => serversMarkup(s, f), tip: (f) => `Take one over and stamp its receipt` },
 };
 // The session is a terminal, like jacking into any server: an ssh handshake, the hub's banner,
 // whoever answers, and its menu as tokens you can type or click. A choice opens its window beside.
@@ -3127,8 +3414,8 @@ export function hubBanner(s, f, now = Date.now()) {
   return [
     { cls: 'you', html: `ssh ${handle}@${esc(hubHost(s, f))}` },
     { cls: 'note', html: `Connecting to ${esc(h.name)} … ⇄ ${Math.round(travelMs(s, f) / 60000)} min` },
-    { cls: offline(s, f, now) ? 'bad' : hostile(s, f) && !captured(s, f) ? 'warn' : 'good', html: offline(s, f, now) ? 'NO CARRIER' : hostile(s, f) && !captured(s, f) ? 'Connected. Filtered.' : 'Connected.' },
-    { cls: 'hub-banner', html: `<pre class="hub-ascii" aria-hidden="true">${MARK[f].map(esc).join('\n')}</pre><span class="hub-motd"><b>${esc(F.name)}</b><span class="tag dim">lv ${h.level}</span>${captured(s, f) ? '<span class="tag you">yours</span>' : `<span class="tag" title="Rep ${rep(s, f)}">${esc(t.name)}</span>`}</span>` },
+    { cls: 'good', html: 'Connected.' },
+    { cls: 'hub-banner', html: `<pre class="hub-ascii" aria-hidden="true">${MARK[f].map(esc).join('\n')}</pre><span class="hub-motd"><b>${esc(F.name)}</b><span class="tag dim">lv ${h.level}</span><span class="tag" title="Rep ${rep(s, f)}">${esc(t.name)}</span></span>` },
     { cls: 'hub-say', html: `<b>${esc(g.who)}:</b> ${esc(g.line)}` },
     hubMenuLine(s, f, now),
   ];
@@ -3143,46 +3430,20 @@ export function hubTerminalMarkup(s, f, lines, win, now = Date.now()) {
     <ol class="term" id="hubterm">${lines.map((l) => `<li class="${l.cls}">${l.menu ? hubMenuLine(s, f, now, win).html : l.html}</li>`).join('')}</ol>
   </section>`;
   const w = W ? `<section class="card hub-win" data-keep="${esc(f + ' ' + W.title)}"><h2${W.tip ? ` title="${esc(W.tip(f))}"` : ''}>${esc(W.title)}<button type="button" class="btn small x" data-hub-opt="" title="Close">×</button></h2>${W.body(s, f, now)}</section>` : '';
-  return `<div class="hub-session${W ? ' with-win' : ''}" style="--fc:${captured(s, f) ? 'var(--you)' : F.color}">${term}${w}</div>`;
+  return `<div class="hub-session${W ? ' with-win' : ''}" style="--fc:${F.color}">${term}${w}</div>`;
 }
 export const hubMarkup = (s, f, now = Date.now()) => hubTerminalMarkup(s, f, hubBanner(s, f, now), null, now);
-// A hub you hold: what it has earned, what it earns, and anyone coming to take it back.
-function holdMarkup(s, f, now) {
-  const r = retakeOf(s), mine = r && r.f === f, lock = s.hubs[f].captured.lockdown, bank = bankOf(s, f), inc = incomeOf(s, f), d = demandOf(s, f), cap = HUBS.bankHours * inc;
-  const earn = `<ul class="craft-list"><li class="mk-row"><span class="mk-ware"><b class="iname">${glyph('credits', 'badge')}${bank}</b><span class="div-fill" title="${bank} of ${cap}"><span style="width:${cap ? Math.min(100, (bank / cap) * 100) : 0}%"></span></span></span><span class="mk-val">${lock || mine ? '<span class="tag hot">+0/h</span>' : `<span class="tag you" title="×${d.toFixed(2)} demand">+${inc}/h</span>`}</span><span class="mk-btns"><button type="button" class="btn small ${bank ? 'primary' : ''}" data-command="hub collect ${f}" ${bank ? '' : 'disabled'}>Collect</button></span></li></ul>`;
-  const pips = (n, of) => `<span class="pips" title="${n} of ${of} left">${'◆'.repeat(n)}${'◇'.repeat(of - n)}</span>`;
-  const threat = lock
-    ? `<ul class="craft-list"><li class="mk-row"><span class="mk-ware"><span class="tag hot">Lockdown</span>${fIcon(f)}<span class="mk-have">lv ${lock.level}</span></span><span></span><span class="mk-btns"><button type="button" class="btn small primary" data-command="hub retake ${f}">Retake</button></span></li></ul>`
-    : mine ? (() => { const left = retakeLeft(s, now), total = r.state === 'travel' ? HUBS.travelMs : HUBS.siegeMs; return `<ul class="craft-list"><li class="mk-row"><span class="mk-ware"><b class="hot">Swarm from ${esc(FX[f].short)}</b>${pips(r.ships, r.total)}<span class="mk-have">lv ${r.level}</span></span><span class="xfer-bar hot" title="${r.state === 'travel' ? 'Arrives' : 'Falls'} in ${fmtLeft(left)}"><i style="width:${Math.round((1 - left / total) * 100)}%"></i></span><span class="mk-btns"><button type="button" class="btn small primary" data-command="hub defend ${f}">${r.state === 'travel' ? 'Intercept' : 'Defend'}</button></span></li></ul>`; })() : '';
-  return earn + fwRow(s, hubWall(s, f), f, FX[f].hub.level + HUBS.levelUp, now) + threat;
-}
 // Buying your way back toward Neutral: dearer the deeper you are.
-function donateMarkup(s, f) {
-  const d = donationOf(s, f), mats = materialsOf(s), ok = s.server.credits >= d.credits && (mats[d.ware] || 0) >= d.code;
-  return `<ul class="craft-list"><li><span><b class="iname">${fIcon(f)}Donation</b>${needChips(s, { credits: d.credits, code: { [d.ware]: d.code } })}${d.x > 1 ? `<span class="mk-d down" title="Inflated by how deep you are">×${d.x.toFixed(1)}</span>` : ''}</span><button type="button" class="btn small ${ok ? 'primary' : ''}" data-command="hub donate ${f}" ${ok ? '' : 'disabled'}>+5 rep</button></li></ul>`;
+// The Commission window: the stance it gives, the retainer it would pay at your rep, and the switch.
+function commissionMarkup(s, f) {
+  const mine = commissionOf(s) === f, why = active(s) ? 'Finish the fight first' : '';
+  return `<div class="comm-line" style="--fc:${FX[f].color}">${fIcon(f)}<b>${esc(STANCE[f])} ${esc(FX[f].short)}</b>${repPips(s, f)}<span class="comm-pay" title="Retainer every 30 minutes at your rep with ${esc(FX[f].short)}">${glyph('credits')}${retainerWith(s, f)}</span>
+    ${mine ? '<span class="tag you">yours</span>' : `<button type="button" class="btn small primary" data-command="commission ${f}" ${why ? `disabled title="${why}"` : ''}>Take it</button>`}</div>`;
 }
-// Payloads against this hub: its defence, what you hold (with how each would land), compile, in flight.
-const BAND = { breach: ['Breach', 'you'], siege: ['Partial', ''], blocked: ['Blocked', 'dim'] };
-// A payload's power against a hub's defence: the fill, with notches where Partial and Breach begin.
-const PW_SPAN = 1.5;
-function powerBar(power, def, band) {
-  const at = (r) => `${Math.round((r / PW_SPAN) * 100)}%`;
-  return `<span class="pw-bar ${band}" title="Power ${power} · defence ${def} (±${PAYLOAD.swing * 100}% a run)"><i style="width:${at(Math.min(PW_SPAN, power / def))}"></i><u style="left:${at(PAYLOAD.bands.siege)}"></u><u style="left:${at(PAYLOAD.bands.breach)}"></u></span>`;
-}
-function payloadMarkup(s, f, now) {
-  const def = defenceOf(s, f, now), alert = alertOf(s, f, now), off = offline(s, f, now), mats = materialsOf(s), L = hackerLevel(s);
-  const head = `<div class="row mk-tags"><span class="tag" title="Defence${alert ? ` · +${alert * PAYLOAD.alertStep * 100}% from recent strikes` : ''}">${glyph('firewall')} ${def}${alert ? ' ' + '▲'.repeat(alert) : ''}</span>${off ? `<span class="tag hot" title="Offline">offline ${Math.max(1, Math.ceil((s.hubs[f].offlineUntil - now) / 60000))} min</span>` : ''}</div>`;
-  const held = builtOf(s).map((p) => { const band = forecastStrike(s, p, f, now), b = BAND[band], gone = p.kind === 'backdoor' ? f === 'halcyon' : off; return `<li class="mk-row"><span class="mk-ware"><b class="iname" title="${esc(PAYLOADS[p.kind].about)}">${glyph(PAYLOADS[p.kind].code, 'badge')}${esc(PAYLOADS[p.kind].name)} #${p.id}</b>${p.armed ? `<span class="mk-have" title="Armed">${glyph('exploit')}</span>` : ''}</span><span class="mk-val">${powerBar(p.power, def, band)}<span class="tag ${b[1]}">${b[0]}</span></span><span class="mk-btns"><button type="button" class="btn small primary" data-command="payload deploy ${p.id} ${f}" ${gone ? 'disabled' : ''}>Deploy</button></span></li>`; }).join('');
-  const credits = PAYLOAD.credits(L), full = builtOf(s).length >= PAYLOAD.maxBuilt, pw = PAYLOAD.power(L);
-  const make = Object.entries(PAYLOADS).map(([k, P]) => {
-    const ok = !full && s.server.credits >= credits && (mats[P.code] || 0) >= PAYLOAD.code && canAfford(s, PAYLOAD.salvage);
-    const band = k === 'backdoor' && !off ? 'blocked' : forecastStrike(s, { kind: k, power: pw }, f, now);
-    return `<li><span><b class="iname" title="${esc(P.about)}">${glyph(P.code, 'badge')}${esc(P.name)}</b>${needChips(s, { credits, code: { [P.code]: PAYLOAD.code }, salvage: PAYLOAD.salvage })}${powerBar(pw, def, band)}</span><span class="mk-btns"><button type="button" class="btn small ${ok ? 'primary' : ''}" data-command="payload compile ${k}" ${ok ? '' : 'disabled'}>Compile</button>${(mats.exploit || 0) >= 1 ? `<button type="button" class="btn small" data-command="payload compile ${k} exploit" ${ok ? '' : 'disabled'} title="Power ${Math.round(pw * PAYLOAD.armed)}">${glyph('exploit')}Arm</button>` : ''}</span></li>`;
-  }).join('');
-  const going = flyingOf(s).filter((x) => x.f === f);
-  const fly = going.length ? `<h3 class="craft-sub">Uploading</h3><ul class="craft-list">${going.map((x) => { const left = Math.max(0, x.landsAt - now), pct = Math.round((1 - left / Math.max(1, x.landsAt - x.sentAt)) * 100); return `<li class="mk-xfer"><span class="mk-ware"><b class="iname">→ ${glyph(PAYLOADS[x.kind].code, 'badge')}${esc(PAYLOADS[x.kind].name)} #${x.id}</b></span><span></span><span class="xfer-bar" title="${Math.max(1, Math.ceil(left / 60000))} min"><i style="width:${pct}%"></i></span></li>`; }).join('')}</ul>` : '';
-  const last = lastStrike(s), lastLine = last && last.f === f ? `<div class="row mk-tags"><span class="tag dim">Last · ${esc(PAYLOADS[last.kind].name)} #${last.id}</span><span class="tag ${BAND[last.band][1]}">${BAND[last.band][0]}</span>${last.got.map((g) => `<span class="tag you">${esc(g)}</span>`).join('')}</div>` : '';
-  return `${head}${held ? `<ul class="craft-list">${held}</ul>` : ''}${fly}${lastLine}<h3 class="craft-sub">Compile${full ? ` · ${PAYLOAD.maxBuilt}/${PAYLOAD.maxBuilt}` : ''}</h3><ul class="craft-list pay-compile">${make}</ul>`;
+// Kept receipts at your commission's hub: each one's line, and its stamp.
+function receiptsMarkup(s, f) {
+  const list = keptReceipts(s);
+  return list.length ? `<ul class="craft-list rc-kept">${list.map((x) => `<li><span class="rc-mono" title="${esc(x.server)}">${esc(receiptLine(x))}</span><button type="button" class="btn small primary" data-command="receipt ${esc(x.id)} ${f}" title="${esc(`${STAMPS[f].verb}\n${FX[f].short} · Receipt\n${STAMPS[f].what}`)}">${esc(STAMPS[f].verb)}</button></li>`).join('')}</ul>` : '<p class="quiet">None kept.</p>';
 }
 // The hub's market: what it pays and asks for each ware, why (hover the arrow), and your transfers.
 // The order ticket: Sell or Buy, a slider for how many, and what it comes to (app.js updates the
@@ -3209,8 +3470,6 @@ function orderTicket(s, f, w) {
   return `<div class="mk-ticket"><div class="mk-sides">${tab('sell', 'Sell')}${WARES[w].sellOnly ? '' : tab('buy', 'Buy')}</div>${body}</div>`;
 }
 function marketMarkup(s, f, now) {
-  if (hostile(s, f)) return '<p class="quiet">Shut to you.</p>';
-  if (offline(s, f, now)) return '<p class="quiet">Offline.</p>';
   const cond = CONDITIONS[HUB_CONDITION[f]], ev = eventOf(s), mats = materialsOf(s), shock = shockOf(s, f);
   const haveOf = (w) => (w === 'salvage' ? componentsOf(s) : mats[w] || 0);
   const min = Math.round(travelMs(s, f) / 60000);
@@ -3240,29 +3499,38 @@ function marketMarkup(s, f, now) {
   return `<div class="mk-tags"><span class="tag" title="${esc(cond.about)}">${esc(cond.name)}</span><span class="tag dim" title="${esc(ev.about)}">${esc(ev.name)}</span><span class="tag dim" title="File transfer">⇄ ${min} min</span>${shockTag(s, f)}</div>
     <div class="mk-table mk-wares">${head}${rows}</div>${flying}`;
 }
-const GLYPH_OF_GOOD = { relay: 'relay', cracker: 'cracker', injector: 'injector', signal: 'signal', repair: 'repair', cipher: 'cipher', worm: 'worm', kernel: 'kernel', exploit: 'exploit', salvage: 'salvage', crate: 'crate', blueprint: 'blueprint' };
+const GLYPH_OF_GOOD = { shelf: 'protocol', chase: 'protocol', relay: 'relay', cracker: 'cracker', injector: 'injector', signal: 'signal', repair: 'repair', cipher: 'cipher', worm: 'worm', kernel: 'kernel', exploit: 'exploit', salvage: 'salvage', crate: 'crate', blueprint: 'blueprint' };
 
-// Your first class, picked right after you log in: a choice of four on the screen, each with its emblem, its archetype,
-// its passive and Sync, the two skills it starts with and the subclasses it opens. Pick one, then start
-// (app.js pickClass). Switching is free until a class reaches LOADOUT.trialUntil (your level comes along).
+// Your first class, picked right after you log in (docs/ui.md The class picker): four squares, each its emblem, name and
+// roles. A pick opens a drawer from its square (traits, the two skills it starts with, its subclasses; rules in
+// tooltips) and narrows the rest to strips; the picked square's border plays its class's effect (.pk-fx). Never a
+// slogan. Start is a command line (pkGoMarkup). app.js pickClass drives it. Switching is free until LOADOUT.trialUntil.
+const PK_KIND = { hit: 'Hit', burn: 'Burn', stun: 'Stun', debuff: 'Debuff', shield: 'Shield', heal: 'Heal', buff: 'Buff' };
+const pkTip = (name, body, kind) => ` tabindex="0" title="${esc(`${name}: ${body}`)}" data-tt-kind="${esc(kind)}"`;
+const pkRow = (mark, name, sub, tip, cls = '') => `<span class="pk-row"${tip}><span class="pk-fr${cls}">${mark}</span><span class="pk-txt">${name}${sub}</span></span>`;
+const pkIco = (name) => `<span class="sk-ico" style="--icon:url('ui/icons/${name}.svg')" aria-hidden="true"></span>`;
+export const pkGoMarkup = (name = '') => `<span class="pk-cmd"><span class="pk-dim">&gt;</span> start <span class="pk-dim">--as</span> <b>${esc(name)}</b><i class="pk-cur"></i></span>`;
 export function classPickMarkup() {
   const cards = Object.entries(ARCHETYPES).map(([k, a], i) => {
-    const first = a.skills.slice(0, 2).map((x) => `<li title="${esc(x.rule || '')}"><b>${esc(x.name)}</b><small>${ruleHtml(ABILITIES[x.id]?.short || '')}</small></li>`).join('');
-    const subs = Object.values(a.subs || {}).map((x) => esc(x.name)).join(' <i>or</i> ');
-    return `<button type="button" class="pk-card" data-pick-class="${k}" role="radio" aria-checked="false" style="--i:${i}">
-      <span class="pk-num">0${i + 1}</span>
-      <span class="pk-plate"><pre class="pk-art" aria-hidden="true">${esc(EMBLEMS[k].join('\n'))}</pre></span>
-      <span class="pk-name">${esc(a.name)}</span>
-      <span class="pk-role">${a.role.map((r) => `<span>${esc(r)}</span>`).join('')}</span>
-      <span class="pk-sec"><span class="pk-k">Passive</span><b>${esc(a.passive.name)}</b><small>${ruleHtml(a.passive.rule)}</small></span>
-      <span class="pk-sec"><span class="pk-k">Sync</span><small>${ruleHtml(SYNC[k].rule)}</small></span>
-      <span class="pk-sec"><span class="pk-k">Starts with</span><ul class="pk-skills">${first}</ul></span>
-      <span class="pk-sec pk-later"><span class="pk-k" title="${esc(`From level ${SUBCLASS.from}`)}">Subclass</span><small>${subs}</small></span>
-    </button>`;
+    const traits = pkRow(glyph('damage'), `<small class="pk-lb">Passive</small><b>${esc(a.passive.name)}</b>`, '', pkTip(a.passive.name, a.passive.rule, 'Passive'), ' gl')
+      + pkRow(glyph('sync'), `<small class="pk-lb">Sync</small><b>${ruleHtml(SYNC[k].tag)}</b>`, '', pkTip('Sync bonus', `Fired in a Sync Window, your command deals ${Math.round(CONFIG.sync.bonus * 100)}% more damage and ${SYNC[k].rule.replace(/^./, (c) => c.toLowerCase())}`, 'Sync bonus'), ' gl');
+    const skills = a.skills.slice(0, 2).map((x) => { const ab = ABILITIES[x.id] || {}; return pkRow(pkIco(ab.icon || 'command'), `<b>${esc(x.name)}</b>`, `<small>${ruleHtml(ab.short || '')}</small>`, pkTip(x.name, x.rule || '', `${PK_KIND[ab.verb] || 'Utility'} · ${ab.cooldown || 0} cycle cooldown`)); }).join('');
+    const subs = Object.entries(a.subs || {}).map(([id, x]) => pkRow(pkIco(`sub-${id}`), `<b>${esc(x.name)}</b>`, `<small>${esc(x.role.join(' · '))}</small>`, pkTip(x.name, x.solo, `Subclass · Level ${SUBCLASS.from}`), ' gl')).join('');
+    return `<div class="pk-card" data-pick-class="${k}" role="radio" aria-checked="false" tabindex="0">
+      <span class="pk-fx" aria-hidden="true">${'<i></i>'.repeat(14)}</span>
+      <span class="pk-sq"><kbd class="pk-key">${i + 1}</kbd><span class="pk-plate"><pre class="pk-art" aria-hidden="true">${esc(EMBLEMS[k].join('\n'))}</pre></span>
+        <span class="pk-id"><span class="pk-name">${esc(a.name)}</span><span class="pk-roles">${a.role.map((r) => `<span>${esc(r)}</span>`).join('')}</span></span>
+        <span class="pk-v" aria-hidden="true">${esc(a.name)}</span></span>
+      <span class="pk-drawer"><span class="pk-dt">
+        <span class="pk-col"><span class="pk-k">Traits</span>${traits}</span>
+        <span class="pk-col"><span class="pk-k">Starts with</span>${skills}</span>
+        <span class="pk-col"><span class="pk-k">Subclass · Lv ${SUBCLASS.from}</span>${subs}</span>
+      </span></span>
+    </div>`;
   }).join('');
   return `<div class="pk-scene" role="dialog" aria-label="Choose your class">
-    <header class="pk-head"><span class="bb-logo pk-logo" aria-hidden="true"></span><h2>Choose your class</h2><p>Switch freely on the Loadout page until level ${LOADOUT.trialUntil}. Your level comes with you.</p></header>
-    <div class="pk-grid" role="radiogroup" aria-label="Classes">${cards}</div>
-    <footer class="pk-foot"><span class="pk-hint">Press 1–4 or click a class to choose it. Press Enter to start.</span><button type="button" class="btn primary pk-go" disabled>Choose a class</button></footer>
+    <header class="pk-head"><span class="bb-logo pk-logo" aria-hidden="true"></span><h2>Choose your class</h2><p title="${esc(`Free to switch: Change class on the Loadout page until level ${LOADOUT.trialUntil}. Your level comes with you.`)}">Switch freely until level ${LOADOUT.trialUntil}</p></header>
+    <div class="pk-deck" role="radiogroup" aria-label="Classes">${cards}</div>
+    <footer class="pk-foot"><button type="button" class="btn primary pk-go" disabled>${pkGoMarkup()}</button></footer>
   </div>`;
 }

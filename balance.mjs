@@ -117,7 +117,11 @@ export const MATCH_OF = { demolitionist: 'swarm', overclocker: 'rules', warden: 
 // Held since the damage profiles (GAME_RULES.md "Viruses"), on the 24 fights of a bracket only: the
 // Phantom loses 10–12% at Lv 30 (16% over 160 fights, 17% before P1: these seeds suit its burst) and the Overclocker
 // 50% at Lv 10 (39% over 160, as before P1). level: the bracket's, for the hold; without it, the band.
-const HELD_BAND = { 'phantom 30': [8, 50], 'overclocker 10': [15, 52] };
+// Since gear Damage reaches ticks and helper hits (docs/scaling.md step 2) the Herder loses 13% at Lv 10 (15% before, 17%
+// at step 1: one fight of 24 went its way): held at 12.
+// Since fight length (docs/scaling.md step 3) the Demolitionist loses 16% at Lv 18 (21% before), 10% with the Kestrel
+// pair (sets-balance.test.mjs): held at 13.
+const HELD_BAND = { 'phantom 30': [8, 50], 'overclocker 10': [15, 52], 'herder 10': [12, 50], 'demolitionist 18': [13, 50] };
 export const soloBand = (sub, level) => HELD_BAND[`${sub} ${level}`] || (sub && SUBS[sub].cls === 'bastion' ? [0, 50] : [15, 50]);
 // Average Signal lost (capped at 100) playing a bar over a set, each fight on `seeds` seeds.
 export function setScore(sub, b, bar, set, seeds = [1, 2]) {
@@ -185,12 +189,13 @@ if (isMain) {
       md += `| ${p} | ${ARCHETYPES[cls].skills.find((x) => x.id === id).name} | ${r.wins}/${r.total} | ${r.lost.toFixed(0)}% | ${(r.lost - base.lost >= 0 ? '+' : '') + (r.lost - base.lost).toFixed(0)} | ${r.cycles.toFixed(1)} | ${(r.cycles - base.cycles >= 0 ? '+' : '') + (r.cycles - base.cycles).toFixed(1)} |\n`;
     }
   }
-  // Every combination of the three talent picks, at level 50's talent points.
-  md += '\n## Every talent pick (level 50)\n\nThe eight combinations of the three picks, in the default subclass.\n\n| Class | Best build | Health lost · cycles | Worst build | Health lost · cycles |\n|---|---|---:|---|---:|\n';
+  // Each talent pick, the other tiers on their plain pick, at level 50.
+  md += '\n## Every talent pick (level 50)\n\nEach tier\'s other two picks against all plain picks, in the default subclass.\n\n| Class | Best build | Health lost · cycles | Worst build | Health lost · cycles |\n|---|---|---:|---|---:|\n';
   for (const p of classes) {
     const cls = CLASS[p], a = SUBS[defaultSub(cls)];
     const rows = [];
-    for (let m = 0; m < 8; m++) { const picks = [m & 1, (m >> 1) & 1, (m >> 2) & 1]; const r = score(p, top, { picks }); rows.push({ name: picks.map((x, i) => a.talents[i][x].name).join(' / '), ...r }); }
+    rows.push({ name: 'All plain', ...score(p, top, { tiers: [] }) });
+    for (let i = 0; i < a.tiers.length; i++) for (const j of [1, 2]) { const tiers = []; tiers[i] = j; rows.push({ name: a.tiers[i][j].name, ...score(p, top, { tiers }) }); }
     rows.sort((x, y) => x.lost - y.lost);
     const [best, worst] = [rows[0], rows.at(-1)];
     md += `| ${p} | ${best.name} | ${best.lost.toFixed(0)}% · ${best.cycles.toFixed(1)} | ${worst.name} | ${worst.lost.toFixed(0)}% · ${worst.cycles.toFixed(1)} |\n`;

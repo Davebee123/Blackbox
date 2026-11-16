@@ -37,7 +37,7 @@ test('selling is a file transfer: stock leaves now, credits land later; pressure
   assert.ok(Math.abs(priceOf(s, 'kestrel', 'kernel') - p0) / p0 < 0.05, 'recovers over time');
 });
 
-test('buying pays now and the goods land later; can’t overspend, oversell or trade with the hostile', () => {
+test('buying pays now and the goods land later; can’t overspend or oversell', () => {
   const s = open();
   tickMarket(s, T0);
   const c0 = s.server.credits;
@@ -55,9 +55,9 @@ test('buying pays now and the goods land later; can’t overspend, oversell or t
   s.server.credits = 1;
   trade(s, 'buy', 'glassjaw', 'exploit', 1, T0);
   assert.equal(s.server.credits, 1);
-  s.standing.lantern = 0; materialsOf(s).worm = 5;
+  s.standing.lantern = 1; materialsOf(s).worm = 5;
   trade(s, 'sell', 'lantern', 'worm', 5, T0);
-  assert.equal(materialsOf(s).worm, 5);
+  assert.equal(materialsOf(s).worm, 0, 'the bottom tier still trades');
 });
 
 test('the world event turns over on the clock, and the market runs from the service tick', () => {
@@ -106,6 +106,7 @@ test('traffic on the map: the hubs trade along their backbone, and your orders r
   const arcs = html.match(/class="mbone"/g) || [];
   assert.equal(arcs.length, (html.match(/class="mnode hub/g) || []).length - 1, 'a curve between each hub on this floor and the next (Halcyon and Kestrel stand on floor 1)');
   assert.match(html, /class="mpkt amb"/);
+  assert.match(html, /<g class="pk-a" style="color:#[0-9a-f]+">[\s\S]*?<\/g><g class="pk-b" style="color:#[0-9a-f]+">/, 'a hub-to-hub dot in each hub\'s colour, one shown a lap (mapmotion.mjs)');
   assert.doesNotMatch(html, /mpkt you/, 'nothing of yours in flight yet');
   s.market ||= {}; s.market.transfers = [{ id: 1, side: 'sell', f: 'kestrel', w: 'kernel', n: 4, credits: 60, sentAt: at, landsAt: at + 60000 }];
   html = mapMarkup(s, 'server');

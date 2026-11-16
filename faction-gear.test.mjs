@@ -13,6 +13,8 @@ import { sendGood, tickMarket } from './dist/market.mjs';
 import { vaultItem } from './dist/run.mjs';
 import { isPiece } from './dist/sets.mjs';
 import { CONFIG } from './dist/data.mjs';
+// These test each heal's and shield's own numbers: sustain potency (CONFIG.length.heal, docs/scaling.md step 3) off.
+CONFIG.length = { ...CONFIG.length, heal: null };
 import { checkItems, fxList, fxText } from './dist/content.mjs';
 import ITEMS from './dist/content/items.mjs';
 import { itemTipMarkup, hudMarkup, collectionMarkup, hubOptions, hubTerminalMarkup, hubBanner, mapMarkup } from './dist/view.mjs';

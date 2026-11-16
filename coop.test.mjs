@@ -38,10 +38,10 @@ test('invite codes: an SDP packs into a short pasteable code and back', async ()
 });
 
 test('the character: a fight\'s worth of the save, nothing personal, and a player state rebuilt from it', () => {
-  const g = bench('sysop', 12, 'moth');
+  const g = bench('sysop', 12, 'wisp');
   g.profile.email = 'someone@example.com'; // never on the wire, whatever the save holds
   const c = characterOf(g);
-  assert.equal(c.name, 'moth'); assert.equal(c.cls, 'bastion'); assert.equal(c.level, 12);
+  assert.equal(c.name, 'wisp'); assert.equal(c.cls, 'bastion'); assert.equal(c.level, 12);
   assert.ok(!JSON.stringify(c).includes('example.com'), 'no email');
   assert.deepEqual(Object.keys(c).sort(), ['cls', 'daemonLv', 'daemons', 'geneCodex', 'hackers', 'level', 'loadout', 'met', 'metAll', 'name', 'programs', 'research', 'rig', 'stash', 'v'].sort());
   assert.ok(!('locations' in c) && !('mail' in c) && !('server' in c), 'no world, no mail, no bank');

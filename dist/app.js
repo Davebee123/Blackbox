@@ -1,20 +1,24 @@
 // BLACKBOX browser shell: modules, command line, clock, save, sound.
-import { CONFIG, ABILITIES, FAMILIES, BOSSES, xpToNext, spikeOf, SUBS, SUBCLASS, defaultSub, partGenesFor } from './data.mjs';
+import { CONFIG, ABILITIES, LOADOUT, FAMILIES, BOSSES, xpToNext, spikeOf, SUBS, SUBCLASS, defaultSub, partGenesFor } from './data.mjs';
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
-import { selectEncounter, partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
+import { selectEncounter, partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync, packed } from './combat.mjs';
 import * as V from './view.mjs';
-import { subLater, subWaiting, levelUpPreview, barKeys, hackerLevel as heroLevel, virusIntegrity } from './combat.mjs';
+import { subPrompted, levelUpPreview, barKeys, hackerLevel as heroLevel, virusIntegrity } from './combat.mjs';
 import { luCalm } from './levelup-view.mjs';
 import { createLevelUpUi } from './levelup-ui.mjs';
 import { SHAPES, render as ascii3d } from './ascii3d.mjs';
 import { glyphMotion } from './protocol-glyphs.mjs';
 import { createArt } from './virus-art.mjs';
+import { createStage } from './stage.mjs';
+import * as BFX from './boardfx.mjs';
 import { codexPageMarkup, codexEntry } from './codex-view.mjs';
 import { collectionPageMarkup, finds as findsLog } from './collection-view.mjs';
 import { createFeel } from './feel.mjs';
+import { restartClass } from './restart.mjs';
+import { createActBreak, actBreakMs } from './actbreak.mjs';
 import { placeOf, familyCues } from './places.mjs';
 import { createShell } from './shell.mjs';
-import { createScreenFx, screenState, screenFxCommand, SFX, boardFxOf, migrateEffects } from './screenfx.mjs';
+import { createScreenFx, screenState, screenFxCommand, SFX, boardFxOf, migrateEffects, levelOf } from './screenfx.mjs';
 import { play, runSuggestions, nextActions, currentLocation, signalNow, crewWander } from './run.mjs';
 import { tickNetwork, degradedLeft, fmtLeft } from './invasion.mjs';
 import { consortiumOf, alertsOf } from './consortium.mjs';
@@ -22,21 +26,30 @@ import { nextPayIn, boardOpen, storyAt, openContracts, ready } from './mail.mjs'
 import { hubsOf, hubFound, hubTraceOf, FACTIONS } from './factions.mjs';
 import { WARES } from './market.mjs';
 import { logComms, commsOf, unseenAlert, seeAll, markDone, pruneComms } from './comms.mjs';
-import { nextTip, markSeen, TOUR, tourDone, skipTour } from './tips.mjs';
-import { createWindow } from './window.mjs';
+import { nextTip, markSeen, settleTips, TOUR, tourDone, skipTour, paceOf, CALM_MS } from './tips.mjs';
 import { createIntro } from './intro.mjs';
+import { coldOpen } from './coldopen.mjs';
 import * as SC from './scenes.mjs';
 import { sceneMarkup } from './scenes-view.mjs';
+import { portraitMarkup } from './portraits.mjs';
+import { journalCardMarkup } from './journals-view.mjs';
+import { JOURNAL_BY } from './journals.mjs';
 import { powerOn } from './poweron.mjs';
+import { warmGame } from './warm.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
-import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, idOfName, finisherBreak, levelOf as afxLevel } from './abilityfx.mjs';
+import { flourishKey, FIN_LAND } from './abilitysound-all.mjs';
+import { PICKED as SOUND_STYLE, hasSound } from './abilitysound.mjs';
+import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, idOfName, winningBreak, slowAt, SLOW, levelOf as afxLevel } from './abilityfx.mjs';
 import { tierOf as masteryTier } from './mastery.mjs';
-import { mountFxPlaytest, abilityOfKey } from './abilityfx-playtest.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
 import { recapMarkup } from './recap.mjs';
-import { createLash } from './lash.mjs';
-import { online, simOn } from './presence.mjs';
+import { createLash, shakeOf, SHAKE } from './lash.mjs';
+import { createChipFx, chipStrike, chipTheme, STRIKES, STRIKE_PLAN } from './chipfx.mjs';
+import { ATTACKS, OWN_PLAN } from './virussound.mjs';
+import { voices as voicesOf, todayOf } from './virusvoice.mjs';
+import { online, listed, peopleOn } from './presence.mjs';
+import { runnerFloor, runnerBadge } from './runners-view.mjs';
 import { matesOf } from './crew.mjs';
 import { tickPlay } from './progression.mjs';
 import * as BR from './breach.mjs';
@@ -48,7 +61,8 @@ import { patchRules } from './skillrules.mjs';
 import { runScript, scriptsOf, SCRIPTS } from './scripts.mjs';
 import * as FP from './floorplan.mjs';
 import { spawnRival } from './rivals.mjs';
-import { roomsMarkup, fillClocks, popOf, pickRoom, closePop, stepPath, traceHop } from './floorplan-view.mjs';
+import { RUN_CARDS, dealCard } from './runcards.mjs';
+import { roomsMarkup, roomsView, POP_MARK, fillClocks, popOf, pickRoom, closePop, stepPath, traceHop } from './floorplan-view.mjs';
 import { createPuzzleFx, panelRoom, closePanel, openPanel, pzUi } from './puzzle-view.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { threadPanel, thUi, offerMarkup as thOfferMarkup } from './threads-view.mjs';
@@ -58,9 +72,13 @@ import * as PV from './profile-view.mjs';
 import { channelOf, muted as chanMuted, say as chanSay } from './channel.mjs';
 import { setBanner, setPlan, handleOf } from './profile.mjs';
 import { achById } from './achievements.mjs';
-import { casingLook, decalStrips, districtOf, propsLook, propMarkup, propLayout } from './casing.mjs';
+import { casingLook, decalMarkup, districtOf, propsLook, propMarkup, stickerSpot, stickerAt, propSpot, propAt, placeSticker, placeProp } from './casing.mjs';
 import { promptLabel, cursorOf, bootOf, bootIds, BOOT_LOOKS, lookOpen } from './terminal.mjs';
-import * as BN from './bench.mjs';
+import * as HOUSE from './house.mjs';
+import * as BK from './bench-key.mjs';
+import * as F from './form.mjs';
+import * as PH from './phone-shell.mjs';
+import { openSheet, closeSheet, sheetKey, sheetBody } from './sheet.mjs';
 import { PARTS } from './parts.mjs';
 import { installPrograms, noteExceptions, cuesOf } from './routines.mjs';
 import { wireRoutines } from './routines-ui.mjs';
@@ -68,14 +86,18 @@ import { createCoop } from './coop-ui.mjs';
 import { humansReady } from './coop.mjs';
 import * as PG from './pager.mjs';
 import * as PGV from './pager-view.mjs';
+import * as PI from './pings.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
-import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, connectLines, whenConnected, playHangup, stopHangup, hangupLines, whenHome } from './bootfx.mjs';
+import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, whenConnected, playHangup, stopHangup, whenHome } from './bootfx.mjs';
 let bootFor = null; // the fight the screen last booted into (go)
 import { startTraffic } from './traffic.mjs';
+import { watchPackets, shipOf } from './mapmotion.mjs';
 import { postFound } from './scanner.mjs';
 import { createScanner, postBanner, postOptions, postTerminalMarkup, POST } from './scanner-view.mjs';
+import * as GX from './graphics.mjs';
+import { runBorder } from './pickfx.mjs';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -84,27 +106,29 @@ const playtest = params.get('playtest');
 // read, written or migrated from here, and the old game's systems (map, mail, server, hubs, invasions, timers) sit out.
 // A test bench (bench.mjs, ?bench=<name>): its own save under blackbox-bench-<name>, developer mode on. The real save
 // is never read, written or reset from a bench.
-const { key: KEY, bench: BENCH, camp: CAMP } = BN.pageSave(location.search, CP.CAMPAIGN_KEY);
+const { key: KEY, bench: BENCH, camp: CAMP } = BK.pageSave(location.search, CP.CAMPAIGN_KEY);
 const DEV = params.has('dev') || !!BENCH; // developer commands (and window.__bb, for tests)
-if (BENCH) { const c = BN.benchCurve(location.search); if (c != null) CONFIG.powerPerLevel = c; } // ?curve=8: the level curve at 8% on this bench (bench.mjs)
-// The pager's tray (pager-view.mjs): four slots (three icons and +n when more wait) on a desktop, three on a phone.
-const phoneBar = matchMedia('(max-width: 900px)');
+// The bench itself (bench.mjs) loads only on a bench or with ?dev.
+const BN = BENCH || DEV ? await import('./bench.mjs') : null;
+if (BENCH) { const c = BK.benchCurve(location.search); if (c != null) CONFIG.powerPerLevel = c; } // ?curve=8: the level curve at 8% on this bench (bench.mjs)
 
 // ---------- state ----------
 let campaign = load();
 migrateEffects(campaign); // the old Effects setting becomes its Screen effects level (screenfx.mjs)
+GX.migrateGraphics(campaign); GX.applyAuto(campaign, F.isPhone()); // the Graphics settings; Auto reads the device (graphics.mjs)
 if (DEV) Object.defineProperty(window, '__bb', { get: () => campaign }); // dev only: the live state, for tests
 // The scanner (scanner.mjs): its own clock, saved as it changes; the radio sits in the Listening Post's Tune window
 // (render mounts it). Not in the breach campaign.
-const scanner = CAMP ? null : createScanner({ state: () => campaign, changed: () => { save(); dirty = true; }, busy: () => active(campaign), sound: () => !!campaign.settings.sound, volume: () => V.volumesOf(campaign).sfx, played: () => { if (hubSel === POST.id && hubShown()) { hubWin = 'tune'; dirty = true; } }, found: (loc) => { feel.numbers(); notice(`A numbers broadcast cuts through the radio chatter. It's coming from a LANTERN repeater on ${loc.name}.`); } });
+const scanner = CAMP ? null : createScanner({ state: () => campaign, changed: () => { save(); markDirty(); }, busy: () => active(campaign), sound: () => !!campaign.settings.sound, volume: () => V.volumesOf(campaign).sfx, played: () => { if (hubSel === POST.id && hubShown()) { hubWin = 'tune'; markDirty(); } }, found: (loc) => { feel.numbers(); notice(`A numbers broadcast cuts through the radio chatter. It's coming from a LANTERN repeater on ${loc.name}.`); } });
 if (DEV && scanner) window.__scan = scanner; // dev only: the needle and the strip, for tests
-let module = playtest === 'story' ? 'mail' : playtest === 'breach' ? 'breach' : playtest === 'rooms' ? 'rooms' : CAMP ? 'campaign' : 'map';
+let module = playtest === 'story' ? 'mail' : playtest === 'rooms' ? 'rooms' : CAMP ? 'campaign' : 'map';
 let selected = null;
 let mapSel = 'server';
 let nag = {}; // when the pager last shook for an alert, and the breach last pinged
 let wasCooling = new Set(); // abilities on cooldown at the last render (the tray flashes the ones that come back)
 let mapView = 'mine'; // the Map: 'mine' (your network) or 'consortium' (the merged servers)
 let mailSel = null; // the open item on the Mail page: 'l<id>' a letter, 'j<id>' a contract
+let logJr = { writer: null, read: null }; // the Ledger's Journals entry: the writer open, the entry being read (journals-view.mjs)
 let codexSel = null, codexIdx = false, codexTab = 'codex', logSel = null, logFind = '', codexShut = false; // and its tab ('codex' or 'log', the Collection: collection-view.mjs) and the log's entry open; // the Codex tab: the entry open ('family:worm'), and the phone's index unfolded
 let srvUi = { sel: null, open: false, preview: null, armed: null }; // the Server page (server-view.mjs): what's picked, the phone's sheet, the before and after showing and the one a tap armed
 let history = [];
@@ -114,14 +138,29 @@ let suggestionIndex = -1;
 let noticeTimer = 0;
 let revealNote = null; // a hidden room that opened mid-fight: its line goes up when you're back on the room map
 let dirty = true;
+// The tick (frame) rests when nothing needs it every frame (tickBusy): a slow timer runs it instead, and markDirty(),
+// input, a queued effect or the tab coming back wake it at once. loop: 0 running, 1 a frame asked for, 2 resting on
+// the timer, 3 resting with the tab hidden (nothing runs, as a hidden tab's frames never did).
+let loop = 0, restTimer = 0, awakeUntil = 0;
+const AWAKE_MS = 1000; // after an input, the tick keeps every frame this long (the caret, the pop-ups, the page's answer)
+function wakeTick(input = false) {
+  if (input) awakeUntil = performance.now() + AWAKE_MS;
+  if (loop < 2) return;
+  clearTimeout(restTimer);
+  loop = 1; last = chipLast = performance.now(); // the clocks count from the wake, as a running tick's would
+  requestAnimationFrame(frame);
+}
+function markDirty() { dirty = true; wakeTick(); return true; }
 let archView = null; // archetype shown on the Loadout page (defaults to the equipped one)
+let tk = null; // the Toolkit while it's open: { arch, pick: { id, from } } (skills-view.mjs toolkitMarkup)
+let tkDrag = null; // what's being dragged in it: { id, from: a key's index or null, dropped }
 let loadoutTab = 'protocols'; // Loadout page: 'protocols' or 'skills' (skills and talents)
-let systemTab = 'settings'; // System page: 'settings' or 'achievements' (view.mjs SYSTEM_TABS)
+let systemTab = 'settings'; // Settings page (nav id 'system'): 'settings', or 'dev' with ?dev
+let rigTab = 'achievements'; // Rig page: a view.mjs RIG_TABS key
+let houseUi = { held: null, hover: null }; // Rig → House (house-view.mjs): the piece in hand, and where it would go
+let casingSec = 'color'; // Rig → Casing's open section (casing-view.mjs CASING_SECS)
 let achUi = { cat: 'summary', focus: null }; // the Achievements page (achievements-view.mjs): the category shown, an achievement to light
-let caseUi = { slot: 0, pslot: 0 }; // System → Casing (casing-view.mjs): the sticker slot and the desk's spot picked
-let skillUi = { sel: null, sheet: false }; // Skills and talents (skills-view.mjs): the item its panel explains, and the phone's sheet
-let bo = null; // the subclass breakout while it's open: { arch, step, sel, lvl, sheet } (skills-view.mjs breakoutMarkup)
-const pd = { id: null, anchor: null, el: null, scrim: null, sheet: false, html: '', mine: false, timer: 0 }; // the Loadout's item datasheet popover (pdShow)
+const pd = { id: null, anchor: null, el: null, scrim: null, tap: false, html: '', mine: false, timer: 0 }; // the Loadout's item datasheet popover (pdShow)
 let pdTouch = 0; // when a touch last came down: the click after it is a tap
 
 function load() {
@@ -155,19 +194,6 @@ function load() {
     storyAt(s, params.get('beat'));
     return s;
   }
-  // The roguelite prototype (breach.mjs): ?playtest=breach&class=operator&level=10&sub=hijacker&seed=7. One breach of
-  // MERIDIAN-MX-14 on a fresh campaign that is never saved: a real save is not read, touched or migrated.
-  if (playtest === 'breach') {
-    const s = fresh();
-    s.rng = newRng();
-    s.tutorialCompleted = true;
-    s.profile = { handle: params.get('handle') || 'tester', pwLen: 6, since: Date.now() };
-    const cls = ['breaker', 'bastion', 'infiltrator', 'operator'].includes(params.get('class') || params.get('cls')) ? params.get('class') || params.get('cls') : 'breaker';
-    const lv = Math.max(1, Math.min(50, Number(params.get('level')) || 10));
-    BR.outfit(s, { cls, level: lv, sub: params.get('sub') || params.get('subclass'), gearSeed: Number(params.get('seed')) || 0 });
-    BR.startBreach(s, { seed: Number(params.get('seed')) || (newRng() % 100000) + 1, level: lv, heat: Math.max(0, Math.min(8, Number(params.get('heat')) || 0)) });
-    return s;
-  }
   // The rooms playtest (floorplan.mjs, GAME_RULES.md "Developer tools"): one server as a room graph, on a fresh character that is
   // never saved. ?playtest=rooms&class=…&level=…&kind=Mailhub|Relay|Mirror|Archive|Lab&seed=…&size=small|medium|large
   // &boss=a|b|c&hunter=patrol|track&author=…&sub=…&rival=…. The clocks run ten times as fast.
@@ -187,7 +213,8 @@ function load() {
     FP.connect(s);
     if (pz) { s.rooms.at = FP.neighbours(s.rooms.graph, pz.id)[0]; s.rooms.visit.walked[s.rooms.at] = true; FP.go(s, pz.id); }
     if (params.has('seen')) for (const id of Object.keys(s.rooms.graph.rooms)) s.rooms.seen[id] = 'kind'; // &seen: every room discovered
-    if (params.has('rival')) spawnRival(s, seed, params.get('rival')); // &rival=kudzu|escrow|hush (or any): a rival this visit (rivals.mjs)
+    if (params.has('rival')) spawnRival(s, seed, params.get('rival')); // &rival=<handle> (or any): a rival this visit (rivals.mjs)
+    if (RUN_CARDS[params.get('card')]) dealCard(s, params.get('card'), seed); // &card=surge|escort|pack: a run card this visit (runcards.mjs)
     return s;
   }
   if (playtest) {
@@ -268,7 +295,8 @@ const canMove = () => campaign.settings.motion && !reducedMotion.matches;
 const fxLevel = () => boardFxOf(campaign); // one setting: Screen effects off is minimal, subtle and medium calm, bold full
 // Hit effects (hitfx.mjs): when a command lands, it lands on the part's own cell in the shooter's
 // colour (flash, slash, a bright jolt that never moves it); a crit slashes twice; a miss dims it; a broken chit flashes it white.
-const hitfx = createHitFx(document.getElementById('board'), { canMove: () => canMove() });
+const gfx = () => GX.graphicsOf(campaign); // the Graphics settings (graphics.mjs)
+const hitfx = createHitFx(document.getElementById('board'), { canMove: () => canMove(), dissolveMode: () => gfx().dissolve });
 const partRow = (id) => document.querySelector(`#board .bpart[data-target="${CSS.escape(id)}"]`);
 const initials = (h) => (h || '').replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'YO'; // as on the board (view.mjs)
 // Only commands: burns, helpers and other ticks ("Inject: …") don't strike. Crack's chits do.
@@ -286,10 +314,20 @@ const shooterClass = (who) => { if (!who) return classOf(campaign); const m = ma
 // Its mastery tier (mastery.mjs): yours plays at the tier you chose for it (default the highest you've reached); a
 // crewmate's at tier 1.
 const afxTier = (e, id) => (e.who || !id ? 1 : masteryTier(campaign, classOf(campaign), id));
-const plainStrike = (e, result) => () => hitfx.strike(partRow(e.target), { who: e.who || 'you', initials: initials(e.who || campaign.profile?.handle || 'you'), kind: e.who ? 'crew' : 'you', result });
+const plainStrike = (e, result) => () => hitfx.strike(partRow(e.target), { who: e.who || 'you', initials: initials(e.who || campaign.profile?.handle || 'you'), kind: e.who ? 'crew' : 'you', result, word: e.resisted ? 'RESISTED' : 'MISS' });
 // Every command fired in a batch (combat.mjs resolved) with an effect to play: what it set off follows it, up to the
-// next one (its hits, its marks, its interrupt). A miss keeps the strike's MISS; a crewmate's heal or shield is on their
-// bar, not yours.
+// next one (its hits, its marks, its interrupt). How it went is its result: a miss plays its effect going on through (and
+// the strike's MISS still says it); a crit, a hit spent on ◆, or a hit. marks: the statuses it cashed in (combat.mjs
+// damage marks; Hooked: its +6 landing). A crewmate's heal or shield is on their bar, not yours.
+const afxResults = (after) => {
+  const out = {}, rank = { miss: 0, hit: 1, chit: 2, crit: 3 };
+  for (const x of after) {
+    const r = x.type === 'miss' ? 'miss' : x.type === 'damage' ? (x.crit ? 'crit' : 'hit') : x.type === 'armor' ? (x.absorbed ? 'chit' : 'hit') : null;
+    if (r && x.target && !(rank[out[x.target]] >= rank[r])) out[x.target] = r;
+  }
+  return out;
+};
+const allResult = (rs) => { const v = Object.values(rs); return v.every((r) => r === 'miss') ? 'miss' : v.includes('crit') ? 'crit' : v.every((r) => r === 'chit' || r === 'miss') ? 'chit' : 'hit'; };
 function afxCommands(events) {
   const out = [];
   for (let i = 0; i < events.length; i++) {
@@ -297,16 +335,24 @@ function afxCommands(events) {
     if (e.type !== 'resolved' || !e.ability) continue;
     const after = [];
     for (let j = i + 1; j < events.length && events[j].type !== 'resolved'; j++) if ((events[j].who || '') === (e.who || '')) after.push(events[j]);
-    if (after.some((x) => x.type === 'miss')) continue; // a miss: the strike's MISS says it
+    const missed = after.some((x) => x.type === 'miss');
     const key = keyFor(e.ability, shooterClass(e.who)), R = recipeOf(key);
     if (!R || (R.on === 'you' && e.who)) continue;
-    const tgt = e.target || after.find((x) => x.target && ['damage', 'armor', 'interrupt', 'cut', 'status', 'blocked'].includes(x.type))?.target || null;
+    const tgt = e.target || after.find((x) => x.target && ['damage', 'armor', 'interrupt', 'cut', 'status', 'blocked', 'miss'].includes(x.type))?.target || null;
     if (R.on !== 'you' && !tgt && R.motion !== 'all') continue;
     const mine = after.filter((x) => x.target === tgt && (x.type === 'damage' || x.type === 'armor'));
-    const result = mine.some((x) => x.crit) ? 'crit' : mine.some((x) => x.type === 'armor' && x.absorbed) ? 'chit' : 'hit';
+    const result = missed ? 'miss' : mine.some((x) => x.crit) ? 'crit' : mine.some((x) => x.type === 'armor' && x.absorbed) ? 'chit' : 'hit';
+    const marks = [...new Set(mine.flatMap((x) => x.marks || []))];
+    // On every part (Fork Bomb, Failover…): how it went on each; it missed only if it missed them all.
+    const results = R.motion === 'all' ? afxResults(after) : null;
+    const brokeOn = R.motion === 'all' && after.some((x) => x.broke != null) ? after.reduce((m, x) => (x.broke ? { ...m, [x.target]: (m[x.target] || 0) + x.broke } : m), {}) : null; // ◆ each part lost (Fork Bomb)
+    const broke = mine.some((x) => x.broke != null) ? mine.reduce((n, x) => n + (x.broke || 0), 0) : null; // ◆ it broke (Crack)
+    if (tgt && after.some((x) => x.type === 'damage' && x.via === 'Hook' && x.target === tgt)) marks.push('hooked');
     const pm = (tgt && part(campaign, tgt)?.max) || 50, dealt = mine.reduce((n, x) => n + (x.type === 'damage' ? x.amount || 0 : 0), 0);
     const origin = originOf(e); // its key in the tray, however it was fired (your bar when the key isn't on screen); a crewmate's: their bar
-    out.push({ e, key, R, tgt, mine, result, origin, landEvt: mine[0] || after.find((x) => x.target === tgt) || e, power: dealt ? Math.min(1, dealt / pm) : 0.3 });
+    // What its own sound speaks for (abilitysound.mjs): its hits, its miss, what it puts on, cuts or heals. Never a tick's.
+    const covers = after.filter((x) => !ticked(x) && (mine.includes(x) || x.type === 'miss' || (x.type === 'status' && x.mark) || ((x.type === 'interrupt' || x.type === 'cut') && x.target === tgt) || (x.type === 'heal' && !x.target && R.on === 'you') || (R.motion === 'all' && (x.type === 'damage' || x.type === 'armor'))));
+    out.push({ e, key, R, tgt, mine, covers, result: results && Object.keys(results).length ? allResult(results) : result, results, brokeOn, marks, broke, origin, landEvt: mine[0] || after.find((x) => x.target === tgt) || e, power: dealt ? Math.min(1, dealt / pm) : 0.3 });
   }
   return out;
 }
@@ -317,11 +363,36 @@ function afxLead(events) {
   if (module !== 'combat' || fxLevel() === 'minimal' || !afxLevel({ level: fxLevel(), motion: canMove() })) return 0;
   const c = afxCommands(events)[0];
   if (!c) return 0;
-  const plan = abilityfx.plan(c.key, afxRow(c), { origin: c.origin, ability: c.e.ability, who: c.e.who || null, kind: c.e.who ? 'crew' : 'you', tier: afxTier(c.e, c.e.ability) });
+  const plan = abilityfx.plan(c.key, afxRow(c), { origin: c.origin, ability: c.e.ability, who: c.e.who || null, kind: c.e.who ? 'crew' : 'you', tier: afxTier(c.e, c.e.ability), power: c.power, crit: c.result === 'crit', result: c.result, results: c.results, brokeOn: c.brokeOn, marks: c.marks, broke: c.broke }); // a crit's swing draws back first: its numbers wait for that too
   return plan ? Math.min(600, Math.round(plan.impact)) : 0;
 }
+// An ability's own sound (abilitysound.mjs), timed to its effect (p: its plan as played, else none: contact on the
+// number's beat, in `land` ms). A crewmate's is quieter and at tier 1. With none to play, its result's voice.
+function abilitySound(c, p, land) {
+  const shift = p ? land - p.impact : land, cut = Math.min(0, shift); // when its effect starts; cut: already under way
+  const plan = p ? { travel: Math.max(0, p.travel + cut), hold: p.hold, impact: Math.max(0, p.impact + cut), stop: p.stop } : null;
+  if (feel.ability(c.key, plan, { result: c.result, power: c.power, tier: afxTier(c.e, c.e.ability), gain: c.e.who ? CREW_GAIN : 1 }, Math.max(0, shift))) return;
+  feel.say(c.result === 'miss' ? 'miss' : c.result === 'chit' ? 'chit' : c.result === 'crit' ? 'crit' : c.mine.length ? 'hit' : c.R.on === 'you' ? 'buff' : 'mark', { amount: c.mine.reduce((n, x) => n + (x.amount || 0), 0) || 12 }, land);
+}
+const CREW_GAIN = 0.5, CREW_VOICES = 2, SAME_BEAT = 120; // a crewmate's: half as loud, two a batch, none on your beat (ms)
+// The commands in a batch that play their own sound, and the events those speak for (their voices stay quiet). Yours
+// always; a crewmate's unless it lands on your beat or two of theirs already sound.
+function abilityVoices(cmds, delayOf) {
+  const voiced = new Set();
+  if (module !== 'combat' || !feel.abilityOn()) return voiced;
+  const yours = cmds.filter((c) => !c.e.who).map((c) => delayOf(c.landEvt));
+  let crew = 0;
+  for (const c of cmds) {
+    const land = delayOf(c.landEvt);
+    c.sounds = hasSound(SOUND_STYLE, c.key) && (!c.e.who || (crew < CREW_VOICES && !yours.some((t) => Math.abs(t - land) < SAME_BEAT) && !!++crew));
+    if (c.sounds) for (const x of c.covers) voiced.add(x);
+  }
+  return voiced;
+}
 function strikes(events, delayOf = () => 0) {
-  if (module !== 'combat' || fxLevel() === 'minimal') return;
+  const cmds = module === 'combat' ? afxCommands(events) : [], voiced = abilityVoices(cmds, delayOf);
+  if (module !== 'combat') return voiced;
+  if (fxLevel() === 'minimal') { for (const c of cmds) if (c.sounds) pendingStrikes.push(() => abilitySound(c, null, delayOf(c.landEvt))); return voiced; } // no effect to time it: on the number's beat
   const hits = new Map(); // who>part → the strongest result this batch
   const rank = { miss: 0, hit: 1, crit: 2, chit: 3 };
   const afxOn = !!afxLevel({ level: fxLevel(), motion: canMove() });
@@ -333,16 +404,18 @@ function strikes(events, delayOf = () => 0) {
     if (!tk || !e.target || ticks.has(tk + '>' + e.target)) continue;
     ticks.add(tk + '>' + e.target);
     const land = delayOf(e);
-    pendingStrikes.push(() => abilityfx.play(tk, partRow(e.target), { origin: 'here', kind: e.who ? 'crew' : 'you', landIn: land, tier: afxTier(e, idOfName(e.via)) }));
+    pendingStrikes.push(() => abilityfx.play(tk, partRow(e.target), { origin: 'here', kind: e.who ? 'crew' : 'you', landIn: land, tier: afxTier(e, idOfName(e.via)), marks: e.marks || [], left: e.left ?? null }));
   }
-  for (const c of afxOn ? afxCommands(events) : []) {
-    const { e, key, tgt, mine, result } = c, land = delayOf(c.landEvt);
+  for (const c of cmds) {
+    const { e, key, tgt, mine, result, marks } = c, land = delayOf(c.landEvt);
+    if (!afxOn) { if (c.sounds) pendingStrikes.push(() => abilitySound(c, null, land)); continue; }
     const strike = mine.length && tgt ? plainStrike(mine[0], result) : null;
     if (tgt) taken.set((e.who || 'you') + '>' + tgt, strike);
     pendingStrikes.push(() => {
       const row = afxRow(c);
-      const played = abilityfx.play(key, row, { power: c.power, crit: result === 'crit', result, kind: e.who ? 'crew' : 'you', origin: c.origin, ability: e.ability, who: e.who || null, landIn: land, tier: afxTier(e, e.ability), onImpact: row ? () => hitfx.jolt(row, result) : null });
+      const played = abilityfx.play(key, row, { power: c.power, crit: result === 'crit', result, results: c.results, brokeOn: c.brokeOn, marks, broke: c.broke, kind: e.who ? 'crew' : 'you', origin: c.origin, ability: e.ability, who: e.who || null, landIn: land, tier: afxTier(e, e.ability), onImpact: row ? () => hitfx.jolt(row, result) : null });
       if (!played && strike) later(land, strike); // no room for it: the strike, on the number's beat
+      if (c.sounds) abilitySound(c, played || null, land);
     });
   }
   for (const e of events) {
@@ -357,17 +430,24 @@ function strikes(events, delayOf = () => 0) {
     if (result !== 'miss' && taken.has(key)) continue; // its ability effect plays there instead
     pendingStrikes.push(() => later(delayOf(e), plainStrike(e, result)));
   }
+  return voiced;
 }
 const later = (ms, f) => (ms > 0 ? setTimeout(f, ms) : f());
-// A break finisher (abilityfx.mjs): your class's flourish (its subclass's, once you've picked one) on the part whose
-// break wins the fight, on its row only. Screen effects and Motion as every ability effect.
-const finisher = (e) => { const cls = classOf(campaign), sub = campaign.loadout?.sub?.[cls]; return !!abilityfx.finish(cls, heroLevel(campaign, cls) >= SUBCLASS.from ? sub : null, partRow(e.target)); };
+// The break that wins the fight sounds your class's flourish (its subclass's, once you've picked one) over the break's own
+// voice, as it slows (abilitysound-all.mjs flourishes).
+const winSound = () => { const cls = classOf(campaign), sub = heroLevel(campaign, cls) >= SUBCLASS.from ? campaign.loadout?.sub?.[cls] : null; feel.ability(flourishKey(cls, sub), { travel: 0, impact: FIN_LAND[cls] || 0 }, {}); };
 let pendingStrikes = [];
 const DISSOLVE_MS = 1000; // a broken part's last moment on the board
 
+// The floor's stage in the render (stage.mjs): the fight's floor, as its palette is up (screenFx sets stageFloor).
+let stageFloor = null;
+const stage = createStage({ getFloor: () => (active(shown()) || document.body.classList.contains('fight-over') ? stageFloor : null), canMove: () => canMove() });
 const art = createArt({
+  stage,
   getState: shown,
   canMove: () => canMove(),
+  rate: () => gfx().virus, // full, slow or still (graphics.mjs)
+  breakout: () => fxLevel() !== 'minimal', // an attack strikes out of the render's window (Screen effects on)
   getSelected: () => selected,
   getNowSources: () => {
     const s = shown();
@@ -395,14 +475,22 @@ function codexDrawn(focusKey) {
 }
 document.addEventListener('click', (e) => {
   const row = e.target.closest?.('[data-codex]');
-  if (row) { codexSel = row.dataset.codex; codexTab = 'codex'; codexIdx = false; if (module !== 'codex') go('codex'); else { dirty = true; $('page-view').scrollTop = 0; } return; }
+  if (row) { codexSel = row.dataset.codex; codexTab = 'codex'; codexIdx = false; if (module !== 'codex') go('codex'); else { markDirty(); $('page-view').scrollTop = 0; } return; }
   const lrow = e.target.closest?.('[data-log]'), tab = e.target.closest?.('[data-codex-tab]');
-  if (lrow) { logSel = lrow.dataset.log; codexIdx = false; dirty = true; $('page-view').scrollTop = 0; return; }
-  if (tab) { codexTab = tab.dataset.codexTab === 'log' ? 'log' : 'codex'; dirty = true; return; }
-  if (e.target.closest?.('[data-codex-side]')) { codexShut = !codexShut; try { localStorage.setItem('bb-codex-side', codexShut ? 'shut' : 'open'); } catch { /* storage unavailable */ } dirty = true; return; }
-  if (e.target.closest?.('[data-codex-fold]')) { codexIdx = !codexIdx; dirty = true; }
+  if (lrow) { logSel = lrow.dataset.log; codexIdx = false; markDirty(); $('page-view').scrollTop = 0; return; }
+  const jw = e.target.closest?.('[data-jr-writer]'), jread = e.target.closest?.('.lg-entry [data-jr-read]');
+  if (jw) { logJr = { writer: logJr.writer === jw.dataset.jrWriter ? null : jw.dataset.jrWriter, read: null }; markDirty(); return; }
+  if (jread) { logJr = { writer: null, read: jread.dataset.jrRead }; markDirty(); return; }
+  if (e.target.closest?.('.lg-entry [data-jr-back]')) { logJr = { writer: JOURNAL_BY[logJr.read]?.writer || null, read: null }; markDirty(); return; }
+  if (tab) { codexTab = tab.dataset.codexTab === 'log' ? 'log' : 'codex'; markDirty(); return; }
+  if (e.target.closest?.('[data-codex-side]')) { codexShut = !codexShut; try { localStorage.setItem('bb-codex-side', codexShut ? 'shut' : 'open'); } catch { /* storage unavailable */ } markDirty(); return; }
+  if (e.target.closest?.('[data-codex-fold]')) { codexIdx = !codexIdx; markDirty(); }
 });
 try { codexShut = localStorage.getItem('bb-codex-side') === 'shut'; } catch { /* storage unavailable */ } // the Codex's index as you left it
+// The fight log shows its newest line until opened (style.css body.log-open), as you left it.
+const setLogOpen = (open) => { document.body.classList.toggle('log-open', open); $('log-more').setAttribute('aria-expanded', String(open)); $('log-more').title = open ? 'Fight log: shows the newest line only.' : 'Fight log: shows every line.'; };
+try { setLogOpen(localStorage.getItem('bb-fight-log') === 'open'); } catch { setLogOpen(false); }
+$('log-more').addEventListener('click', () => { const open = !document.body.classList.contains('log-open'); setLogOpen(open); try { localStorage.setItem('bb-fight-log', open ? 'open' : 'line'); } catch { /* storage unavailable */ } $('log').scrollTop = $('log').scrollHeight; });
 // The collection log's search: it hides the index rows it doesn't match as you type, with no redraw (the next one draws
 // the same from logFind).
 document.addEventListener('input', (e) => {
@@ -426,7 +514,7 @@ document.addEventListener('keydown', (e) => {
 // ---------- events → feedback ----------
 // A breach: a ring fires out of the pager's lamp (twice, a beat apart), so you notice it.
 function ledRing() {
-  const led = document.querySelector('#pager .led');
+  const led = F.isPhone() ? document.querySelector('#pager .led') : [...document.querySelectorAll('.ping.threat .pi-ico')].find((x) => x.offsetParent);
   if (!led || campaign.settings.motion === false) return;
   const r = led.getBoundingClientRect();
   for (const delay of [0, 280]) setTimeout(() => { const d = document.createElement('div'); d.className = 'led-ring'; d.style.left = r.left + r.width / 2 + 'px'; d.style.top = r.top + r.height / 2 + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 950); }, delay);
@@ -437,41 +525,75 @@ function flash(text) {
   clearTimeout(flash.t);
   flash.t = setTimeout(() => (el.textContent = ''), 1600);
 }
-const feel = createFeel({ settings: () => campaign.settings, reducedMotion: () => !campaign.settings.motion || reducedMotion.matches });
+const feel = createFeel({ settings: () => campaign.settings, reducedMotion: () => !campaign.settings.motion || reducedMotion.matches, queued: () => wakeTick() });
+// A boss's act break (actbreak.mjs): the fight's clock holds while it plays (frame: actHold).
+let actHold = 0;
+const actBreak = createActBreak({ motion: () => canMove(), say: (name, detail) => feel.say(name, detail) });
 // A puzzle room's board: what a move did, played over it once it renders (puzzle-view.mjs), its sounds on their beats.
 // The level-up (levelup-ui.mjs): a firmware update under the top bar. It waits for a calm moment: no fight, no card
-// that waits for you, no breakout over the screen; after a won fight, once you have left it.
+// that waits for you, no Toolkit over the screen; after a won fight, once you have left it.
 const lu = createLevelUpUi({
-  feel, keys: () => barKeys(campaign), motion: () => canMove(),
+  feel, keys: () => barKeys(campaign), motion: () => canMove(), queued: () => wakeTick(),
   fighting: () => active(campaign),
-  calm: () => luCalm({ fighting: active(campaign), ended: !!ended || ending, spoils: !$('spoils').hidden, gainModal: gainOpen(), booting: !!shell.booting || introOn || !!bo || connecting() || !$('tip').hidden }),
+  calm: () => luCalm({ fighting: active(campaign), ended: !!ended || ending, spoils: !$('spoils').hidden, gainModal: gainOpen(), booting: !!shell.booting || introOn || !!tk || connecting() || !$('tip').hidden }),
 });
-const pzFx = createPuzzleFx({ canMove: () => canMove(), sound: (sign, ms) => { feel.beat(ms); feel.add(sign, null); feel.beat(0); }, play: (arg) => { if (module === 'rooms' && campaign.rooms) roomsClick('play', arg); }, redraw: () => { feel.key('click'); dirty = true; } });
+const pzFx = createPuzzleFx({ canMove: () => canMove(), sound: (sign, ms) => { feel.beat(ms); feel.add(sign, null); feel.beat(0); }, play: (arg) => { if (module === 'rooms' && campaign.rooms) roomsClick('play', arg); }, redraw: () => { feel.key('click'); markDirty(); } });
 // The immersive shell (CRT, boot, status line). `?shell=plain` or `shell plain` turns it off.
 const shellParam = params.get('shell');
 const shellOn = () => (shellParam || campaign.settings.shell || 'immersive') !== 'plain';
 // The window behind the monitor (casing on, Window setting on): the slum outside, and its weather. The sky follows the
 // clock's hour; `?tod=night|dawn|day|dusk` shows another.
-const outside = createWindow({ canMove: () => canMove(), onThunder: (d) => feel.thunder(d), onWeather: (_, w) => { outsideRain = w.rain; feel.rain(outsideRain); } });
+// window.mjs loads only on a desktop (a phone never asks for it): until it has, the last call of each kind waits.
+const outside = (() => {
+  let w = null, loading = false;
+  const wait = new Map();
+  const load = () => {
+    if (loading || F.isPhone()) return;
+    loading = true;
+    import('./window.mjs').then(({ createWindow }) => {
+      w = createWindow({ canMove: () => canMove(), onThunder: (d) => feel.thunder(d), onWeather: (_, x) => { outsideRain = x.rain; feel.rain(outsideRain); } });
+      for (const m of ['district', 'hour', 'force', 'set', 'remeasure']) if (wait.has(m)) w[m](...wait.get(m));
+      wait.clear();
+    });
+  };
+  const call = (m) => (...a) => { if (w) return w[m](...a); wait.set(m, a); load(); };
+  load();
+  return { district: call('district'), hour: call('hour'), force: call('force'), set: call('set'), remeasure: call('remeasure') };
+})();
 if (params.get('tod')) outside.hour(params.get('tod'));
 let outsideRain = 0, outsideShown = false, lastVols = '';
-// First launch (or after Reset game): log in, then Halcyon's transmission.
+// First launch (or after Reset game): the cold open (coldopen.mjs), log in, then Halcyon's transmission.
 const intro = createIntro({ key: (k) => feel.key(k), sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() });
-let introOn = false;
+let introOn = false, coldOn = false;
+// The game's own room tone, music and places hold off while the cold open plays its mix.
+function playColdOpen() {
+  coldOn = true;
+  feel.ambience(false); feel.soundtrack({ on: false }); feel.places({ on: false });
+  return coldOpen({ audio: () => feel.scene(), reducedMotion: () => !canMove() }).then(() => { coldOn = false; markDirty(); });
+}
+// A black cover under the first launch's screens, so the map never shows through their fades between them.
+function coverUp() {
+  const el = document.createElement('div');
+  el.className = 'first-cover';
+  document.body.append(el);
+  return () => el.remove();
+}
 function firstLogin() {
   if (CAMP) return firstCampaign();
   introOn = true;
-  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() }).then(() => intro.run()).then(({ handle, pwLen }) => {
-    campaign.profile = { handle, pwLen, since: Date.now() };
+  const uncover = coverUp();
+  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove(), warm: (progress) => warmGame({ audio: !!campaign.settings.sound, progress }) }).then(playColdOpen).then(() => intro.run()).then(({ handle, pwLen }) => {
+    campaign.profile = { ...campaign.profile, handle, pwLen, since: Date.now() };
     return pickClass();
   }).then(() => {
     introOn = false;
     save();
-    dirty = true;
+    markDirty();
     cache.clear();
+    SC.queueScene(campaign, 'welcome'); // wick's transmission, up as the map first opens (scenes.mjs)
     go('map', true);
-    feel.add('pager', '#pager');
-    SC.queueScene(campaign, 'welcome'); // wick's transmission over the map (scenes.mjs)
+    uncover();
+    feel.add('pager', pingTarget());
     save();
   });
 }
@@ -485,21 +607,24 @@ const CAMPAIGN_LETTER = (handle) => [
 ];
 function firstCampaign() {
   introOn = true;
-  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() }).then(() => intro.run({ letter: CAMPAIGN_LETTER })).then(({ handle, pwLen }) => {
-    campaign.profile = { handle, pwLen, since: Date.now() };
+  const uncover = coverUp();
+  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove(), warm: (progress) => warmGame({ audio: !!campaign.settings.sound, progress }) }).then(playColdOpen).then(() => intro.run({ letter: CAMPAIGN_LETTER })).then(({ handle, pwLen }) => {
+    campaign.profile = { ...campaign.profile, handle, pwLen, since: Date.now() };
     return pickClass();
   }).then(() => {
     introOn = false;
     CP.newCampaign(campaign, { seed: newRng() || 1 });
     save();
-    dirty = true;
+    markDirty();
     cache.clear();
     go('campaign', true);
+    uncover();
     feel.add('pager', null);
     notice('SPRAWL-00 is open. Breach it.');
   });
 }
-// Your first class: four cards. Click (or 1–4, or the arrows) chooses one; Start, Enter or a double-click takes it.
+// Your first class: four squares (view.mjs classPickMarkup). A click (or 1–4, the arrows) opens one as a drawer and
+// narrows the rest; a click on the open one, or Esc, closes it. The Start command (or Enter, or a double-click) takes it.
 // Switching stays free for a while (see LOADOUT.trialUntil).
 function pickClass() {
   return new Promise((done) => {
@@ -507,18 +632,27 @@ function pickClass() {
     el.className = 'class-pick';
     el.innerHTML = V.classPickMarkup(campaign);
     document.body.append(el);
-    const cards = [...el.querySelectorAll('[data-pick-class]')], go = el.querySelector('.pk-go');
-    let pick = null;
-    const choose = (b) => {
-      pick = b.dataset.pickClass;
-      for (const c of cards) c.setAttribute('aria-checked', String(c === b));
-      go.disabled = false;
-      go.textContent = `Start as ${b.querySelector('.pk-name').textContent}`;
-      b.focus();
+    const deck = el.querySelector('.pk-deck'), cards = [...el.querySelectorAll('[data-pick-class]')], go = el.querySelector('.pk-go');
+    let pick = null, typing = 0, unrun = () => {};
+    const choose = (k) => {
+      pick = k === pick ? null : k;
+      for (const c of cards) c.setAttribute('aria-checked', String(c.dataset.pickClass === pick));
+      unrun();
+      unrun = runBorder(cards.find((c) => c.dataset.pickClass === pick)?.querySelector('.pk-fx'), pick); // its border's lights, on the compositor (pickfx.mjs)
+      deck.classList.toggle('picked', !!pick);
+      go.disabled = !pick;
+      go.innerHTML = V.pkGoMarkup();
+      clearInterval(typing);
+      const card = cards.find((c) => c.dataset.pickClass === pick), word = card ? card.querySelector('.pk-name').textContent.toLowerCase() : '', name = go.querySelector('b');
+      let n = 0;
+      if (word) typing = setInterval(() => { name.textContent = word.slice(0, ++n); if (n >= word.length) clearInterval(typing); }, 32); // the class types itself into the command
+      card?.focus();
       feel.key('char');
     };
     const start = () => {
       if (!pick) return;
+      clearInterval(typing);
+      unrun();
       removeEventListener('keydown', keys, true);
       command(campaign, `archetype ${pick}`);
       feel.add('unlock', null);
@@ -526,18 +660,19 @@ function pickClass() {
       done();
     };
     const keys = (e) => {
-      const i = cards.findIndex((c) => c.dataset.pickClass === pick);
-      if (/^[1-4]$/.test(e.key)) choose(cards[+e.key - 1]);
-      else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') choose(cards[(i + 1) % cards.length]);
-      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') choose(cards[(i - 1 + cards.length) % cards.length]);
+      const i = cards.findIndex((c) => c.dataset.pickClass === pick), at = (j) => cards[(j + cards.length) % cards.length].dataset.pickClass;
+      if (/^[1-4]$/.test(e.key)) choose(cards[+e.key - 1].dataset.pickClass);
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') choose(at(i + 1));
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') choose(at(i < 0 ? -1 : i - 1));
+      else if (e.key === 'Escape' && pick) choose(pick);
       else if (e.key === 'Enter' && pick) start();
       else return;
       e.preventDefault();
       e.stopPropagation();
     };
     addEventListener('keydown', keys, true);
-    el.addEventListener('click', (e) => { const b = e.target.closest('[data-pick-class]'); if (b) choose(b); else if (e.target.closest('.pk-go')) start(); });
-    el.addEventListener('dblclick', (e) => { if (e.target.closest('[data-pick-class]')) start(); });
+    el.addEventListener('click', (e) => { if (e.target.closest('.pk-go')) return start(); if (e.target.closest('.pk-drawer')) return; const c = e.target.closest('[data-pick-class]'); if (c) choose(c.dataset.pickClass); });
+    el.addEventListener('dblclick', (e) => { const c = e.target.closest('.pk-sq')?.parentElement; if (!c) return; if (pick !== c.dataset.pickClass) choose(c.dataset.pickClass); start(); }); // its two clicks opened and closed it
   });
 }
 // Screen effects (screenfx.mjs): light on the glass around the game (the backdrop, the tube's edge, the lamps, the
@@ -571,7 +706,7 @@ const juice = {
     const st = document.querySelector('.virus-stage');
     if (!st) return;
     st.style.setProperty('--punch', power.toFixed(2));
-    st.classList.remove('fx-punch'); void st.offsetWidth; st.classList.add('fx-punch');
+    restartClass(st, 'fx-punch');
   },
   // Sparks off the hit part's row, flying away from the impact.
   sparks(id, n, cls = '') {
@@ -614,7 +749,7 @@ const juice = {
     const ring = document.createElement('i');
     ring.className = 'fx-crackring'; ring.style.left = x + 'px'; ring.style.top = y + 'px';
     document.body.appendChild(ring); setTimeout(() => ring.remove(), 500);
-    rowEl.classList.remove('fx-crack'); void rowEl.offsetWidth; rowEl.classList.add('fx-crack');
+    restartClass(rowEl, 'fx-crack');
     setTimeout(() => rowEl.classList.remove('fx-crack'), 500);
   },
   // A Mutex's lock took a hit (view.mjs guardMarks): the slice it lost lingers on the part's bar and drains (a..b: where
@@ -652,6 +787,7 @@ const juice = {
 // A virus attack on you lashes at the screen (lash.mjs): from the part on the render (or its row on the
 // board) into your Signal bar. Effects minimal or Motion off: none, a soft edge instead.
 const lash = createLash();
+const chipfx = createChipFx(); // themed telegraph chips (chipTick)
 function lashFrom(id) {
   const a = id ? art.anchor(id) : null;
   if (a) return a;
@@ -659,10 +795,77 @@ function lashFrom(id) {
   return r?.width ? { x: r.left + r.width * 0.5, y: r.top + r.height / 2, chars: (part(campaign, id)?.name || '').replace(/\W/g, '') + '#%*+=' } : null;
 }
 function lashAt(e, mode, frac = 0, heavy = false) {
-  const full = fxLevel() === 'full'; // the lash never shakes the screen: a big hit tears the backdrop instead (screenfx.mjs)
+  if (mode !== 'tick' && STRIKES.has(chipTheme(part(campaign, e.source)?.name)) && !packed(campaign, campaign.encounter?.virus, part(campaign, e.source))) return; // its chip strikes instead (chipfx.mjs)
+  const full = fxLevel() === 'full';
   lash.lash({ from: mode === 'tick' ? null : lashFrom(e.source), bar: document.querySelector(MINE + ' .bigbar'), power: Math.min(1, frac * 5), heavy, mode, full });
 }
-const LASH_TRAVEL = 140; // ms: a hit's number shows as the lash lands, not as it leaves the part
+// An attack that hurts you shakes the screen as its number lands (lash.mjs shakeOf): harder for a bigger hit, a crit or
+// a charge; half on Screen effects subtle and medium, none off or with Motion off.
+function shake(power, heavy) {
+  const lvl = fxLevel(), app = document.getElementById('app');
+  if (!app?.animate || lvl === 'minimal' || !canMove()) return;
+  const { px, ms } = shakeOf({ power, heavy, full: lvl === 'full' });
+  try { app.animate([{ transform: 'none' }, ...SHAKE.map((f, i) => ({ transform: `translate(${(f * px).toFixed(1)}px, ${((i % 2 ? 0.5 : -0.6) * f * px).toFixed(1)}px)` })), { transform: 'none' }], { duration: ms, easing: 'ease-out' }); } catch { /* no shake */ }
+}
+// The hit that wins the fight plays in slow motion (abilityfx.mjs slowAt): everything animating, and the effects' light,
+// drops to a quarter speed and eases back to full in about half a second.
+function slowmo() {
+  if (!canMove() || fxLevel() === 'minimal') return;
+  const t0 = performance.now();
+  const tick = () => { const t = performance.now() - t0, r = slowAt(t); for (const an of document.getAnimations()) an.playbackRate = r; abilityfx.timeScale(r); if (t < SLOW.dur) requestAnimationFrame(tick); };
+  tick();
+}
+const LASH_TRAVEL = OWN_PLAN.lash.impact; // ms: a hit's number shows as the lash lands, not as it leaves the part
+// ---------- virus attack sounds in a fight (virusvoice.mjs; docs/ability-sounds-plan.md "Virus attacks", round 4) ----------
+// A batch's voices wait here for the frame's numbers to be let go (attackGo, after feel.flush): a number's beat counts
+// from there, so theirs do too. A chip going off takes its own: its strike is held so it lands with its number, and its
+// sound flies with it. The virus's attacks land a step apart (stepCycle) and the board turns only after the last, so a
+// part's chip strikes at its own step, from where it stands (spentChips: it has gone off, and doesn't again as the
+// board turns); the last one's goes as the board turns (fire). What no chip takes plays on its beat.
+const attackQueue = [], attackHeld = [], spentChips = new Set();
+const ATTACK_CHIP = '.intent.now[data-k]:not(.patch):not(.t-cast):not(.t-seal):not(.t-lock):not(.spent)';
+const chipOf = (el) => { const c = el.cloneNode(true); c.querySelector('.fxin')?.remove(); return { k: el.dataset.k, at: el.dataset.at || '', rect: el.getBoundingClientRect(), html: c.outerHTML, cls: el.className, th: el.closest('.brow')?.dataset.th || '', src: el.closest('.bpart')?.dataset.target || '' }; }; // a chip as it stands (a resolved chip's ghost leaves its theme behind)
+const spend = (k) => { spentChips.add(k); $('board')?.querySelector(`[data-k="${CSS.escape(k)}"]`)?.classList.add('spent'); };
+function attackVoices(events, delayOf, lashing) {
+  const board = $('board'), live = (id) => board?.querySelector(`.bpart[data-target="${CSS.escape(id)}"] ${ATTACK_CHIP}`);
+  const V = voicesOf(events, {
+    delay: delayOf, lashing, lashTravel: LASH_TRAVEL, sound: feel.abilityOn(), max: defender(campaign).max || 100,
+    partOf: (id) => part(campaign, id), packed: (p) => packed(campaign, campaign.encounter?.virus, p),
+    chipNow: (id) => !!live(id),
+  });
+  for (const x of V.list) { const el = x.mode === 'chip' ? live(x.src) : null; attackQueue.push({ ...x, chip: el ? chipOf(el) : null, sounds: V.voiced.has(x.e) && x.gain > 0 }); }
+  if (V.list.length) setTimeout(attackGo, 250); // (no frame let them go: now)
+  return V;
+}
+// The strike a chip of that part's throws this batch, once.
+function takeStrike(src) {
+  const x = src ? attackQueue.find((q) => q.mode === 'chip' && q.src === src && !q.taken) : null;
+  if (x) x.taken = true;
+  return x || null;
+}
+// Its sound, starting in startIn ms (drawn: its strike or the lash flies; else contact and tail). With none to play
+// (the samples aren't in, the voices are capped): today's voice, on its number.
+function attackSound(x, drawn, startIn) {
+  x.played = true;
+  if (!x.sounds || feel.attack(x.key, x.plan, { result: x.result, power: x.power, gain: x.gain }, drawn, Math.max(0, startIn))) return;
+  feel.say(todayOf(x.e, x), { frac: (x.e.amount || 0) / (defender(campaign).max || 100) }, x.land);
+}
+// The frame's numbers are let go: the strikes held for theirs start counting, and what no chip took plays on its beat.
+function attackGo() {
+  for (const go of attackHeld.splice(0)) go();
+  for (const x of attackQueue.splice(0)) {
+    if (x.played) continue;
+    if (x.mode === 'chip' && x.chip && !x.taken) { // the board hasn't turned: its chip strikes from where it stands
+      const b = x.chip, wait = Math.max(0, x.land - x.plan.impact), replicate = /\breplicate\b/.test(b.cls), stays = !!$('board')?.querySelector(`[data-k="${CSS.escape(b.k)}"]`);
+      const hold = stays ? null : ghostOf(b); // (the board dropped it already: it holds as a ghost)
+      attackSound(x, true, wait);
+      later(wait, () => { hold?.remove(); spend(b.k); fireNow(b, true, replicate, replicate ? x.e.target : null); });
+      continue;
+    }
+    const flies = x.mode === 'lash' || (x.mode === 'beat' && x.kind === 'other' && !!OWN_PLAN[x.key] && x.land >= x.plan.impact); // the lash; a patch, a seal or a cast with room for its wind-up
+    attackSound(x, flies, flies ? x.land - x.plan.impact : x.land);
+  }
+}
 let cueAt = 0; // when the last damage number queued lands (performance.now() ms)
 // A part's bar steps down hit by hit (the designer: "each instance of damage tick separately on the enemy component bar"):
 // while a batch's numbers play out, each damaged part's bar and HP read what it had before that hit, and drop as its
@@ -726,6 +929,7 @@ function showSpoils(events) {
   el.hidden = false;
   // Each line lands with a small tick; names decode from noise first.
   const motion = campaign.settings.motion !== false;
+  if (canMove()) BFX.spoilsIn(el, stageFloor); // on some floors the card arrives the floor's way (boardfx.mjs)
   el.querySelectorAll('[style*="--i"]').forEach((node) => {
     const i = Number(node.style.getPropertyValue('--i')) || 0;
     setTimeout(() => {
@@ -779,7 +983,7 @@ function roomsDone(events) {
   // (a disconnect: NO CARRIER, in react, takes you to the map under its static: nocarrier.mjs)
   else if (module !== 'rooms' && !active(campaign) && !events.some((e) => e.type === 'disconnected')) go('rooms', true);
   save(); // the network's rooms are on your save (the playtest's never are: save skips it)
-  dirty = true;
+  markDirty();
 }
 // What happens on the server goes up as a notice (there's no tty on the page): the last few lines of a batch (a move, a
 // respawn, a fight's end), ls and map in full. A step or a fight starting says nothing: the map and the pop-up show it.
@@ -797,15 +1001,15 @@ document.addEventListener('click', (e) => {
   if (module !== 'rooms' || !campaign.rooms) return;
   // A puzzle room's board (puzzle-view.mjs): × or Close puts it away, Play on the room's card brings it back, the
   // sweep's Ping and Dig switch what a click on a cell does.
-  if (e.target.closest?.('[data-pz-close]')) { closePanel(campaign); feel.key('click'); dirty = true; return; }
-  if (e.target.closest?.('[data-th-close]')) { thUi.closed = campaign.threads?.said?.n ?? null; feel.key('click'); dirty = true; return; } // a thread's dialogue (threads-view.mjs)
-  if (e.target.closest?.('[data-pz-open]')) { openPanel(); closePop(campaign); feel.key('click'); dirty = true; return; }
+  if (e.target.closest?.('[data-pz-close]')) { closePanel(campaign); feel.key('click'); markDirty(); return; }
+  if (e.target.closest?.('[data-th-close]')) { thUi.closed = campaign.threads?.said?.n ?? null; feel.key('click'); markDirty(); return; } // a thread's dialogue (threads-view.mjs)
+  if (e.target.closest?.('[data-pz-open]')) { openPanel(); closePop(campaign); feel.key('click'); markDirty(); return; }
   const mode = e.target.closest?.('[data-pz-mode]');
-  if (mode && !mode.disabled) { pzUi.mode = mode.dataset.pzMode; feel.key('click'); dirty = true; return; }
+  if (mode && !mode.disabled) { pzUi.mode = mode.dataset.pzMode; feel.key('click'); markDirty(); return; }
   const t = e.target.closest?.('[data-fp-sel]');
-  if (t) { pickRoom(campaign, t.dataset.fpSel); feel.key('click'); dirty = true; return; }
+  if (t) { pickRoom(campaign, t.dataset.fpSel); feel.key('click'); markDirty(); return; }
   const bg = e.target.closest?.('.fp-map') && !e.target.closest('.fp-pop, .pz-panel, [data-rooms], [data-fp-sel], [data-fp-zoom]');
-  if ((e.target.closest?.('[data-fp-pop-close]') || bg) && popOf(campaign)) { closePop(campaign); dirty = true; }
+  if ((e.target.closest?.('[data-fp-pop-close]') || bg) && popOf(campaign)) { closePop(campaign); markDirty(); }
 });
 // The chase's keys: the arrows move, space waits (not while you type).
 const CHASE_KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', ' ': 'wait' };
@@ -816,11 +1020,11 @@ document.addEventListener('keydown', (e) => {
   const g = e.target.closest?.('[data-rooms]');
   if (g && (e.key === 'Enter' || e.key === ' ') && g.tagName !== 'BUTTON') { e.preventDefault(); roomsClick(g.dataset.rooms, g.dataset.arg); return; }
   const t = e.target.closest?.('[data-fp-sel]');
-  if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pickRoom(campaign, t.dataset.fpSel); dirty = true; }
+  if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pickRoom(campaign, t.dataset.fpSel); markDirty(); }
   if (module === 'rooms' && campaign.rooms && CHASE_KEYS[e.key] && !e.target.closest?.('input, textarea, button') && panelRoom(campaign)?.kind === 'chase' && !document.querySelector('#pz-panel.pz-busy')) { e.preventDefault(); roomsClick('play', CHASE_KEYS[e.key]); return; }
-  if (e.key === 'Escape' && module === 'rooms' && campaign.rooms && panelRoom(campaign) && !gainOpen()) { closePanel(campaign); dirty = true; return; }
-  if (e.key === 'Escape' && module === 'rooms' && campaign.rooms && document.getElementById('th-panel') && !gainOpen()) { thUi.closed = campaign.threads?.said?.n ?? null; dirty = true; return; } // a thread's dialogue (threads-view.mjs)
-  if (e.key === 'Escape' && module === 'rooms' && campaign.rooms && popOf(campaign)) { closePop(campaign); dirty = true; }
+  if (e.key === 'Escape' && module === 'rooms' && campaign.rooms && panelRoom(campaign) && !gainOpen()) { closePanel(campaign); markDirty(); return; }
+  if (e.key === 'Escape' && module === 'rooms' && campaign.rooms && document.getElementById('th-panel') && !gainOpen()) { thUi.closed = campaign.threads?.said?.n ?? null; markDirty(); return; } // a thread's dialogue (threads-view.mjs)
+  if (e.key === 'Escape' && module === 'rooms' && campaign.rooms && popOf(campaign)) { closePop(campaign); markDirty(); }
 });
 // Put the pop-up beside its room: right, left, below or above, the first side where it fits whole on screen without
 // covering the room (on a phone it spans the map, so below or above). Measured again only when the room, the map's
@@ -829,6 +1033,7 @@ let fpPopAt = null;
 let fpWas = {}; // where you and the hunter stood at the last redraw, on which visit: a step plays its travel (travelfx.mjs)
 let fpFresh = []; // rooms seen or discovered since the last redraw of the rooms page: they resolve on it
 function placeRoomsPop() {
+  if (F.isPhone()) return; // a phone: the room's card is in the sheet (phPops)
   const pop = $('fp-pop');
   if (!pop) { fpPopAt = null; return; }
   const box = pop.parentElement, id = pop.dataset.pop;
@@ -912,7 +1117,7 @@ document.addEventListener('pointermove', (e) => {
   applyFpZoom(); placeRoomsPop();
 });
 document.addEventListener('pointerup', () => { if (fpDrag?.moved) { const stop = (ev) => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', stop, { capture: true, once: true }); setTimeout(() => document.removeEventListener('click', stop, { capture: true }), 0); } fpDrag = null; });
-document.addEventListener('dblclick', (e) => { if (e.target.closest?.('.fp-svg') && !e.target.closest('[data-rooms], [data-fp-sel]')) fpZoomReset(); });
+document.addEventListener('dblclick', (e) => { if (!F.isPhone() && e.target.closest?.('.fp-svg') && !e.target.closest('[data-rooms], [data-fp-sel]')) fpZoomReset(); });
 document.addEventListener('click', (e) => { if (e.target.closest?.('[data-fp-zoom]')) fpZoomReset(); });
 // ---------- a breach (breach.mjs) ----------
 // A button on the breach page: a move on the map, or the screen's verb. A fight starts paused on the Fight page.
@@ -931,7 +1136,7 @@ function breachDone(events) {
   else { const last = events.findLast((e) => /^breach/.test(e.type) || e.type === 'intrusion'); if (last && module !== 'breach') notice(last.message); }
   if (events.some((e) => e.type === 'engage') && active(campaign)) { go('combat'); notice('Fight paused. Any order starts it.'); }
   else if (module !== 'breach' && !active(campaign)) go('breach', true);
-  dirty = true;
+  markDirty();
 }
 // The campaign page (campaign-view.mjs): pick a server, take a bounty, breach; and the end card's way back.
 document.addEventListener('click', (e) => {
@@ -939,9 +1144,9 @@ document.addEventListener('click', (e) => {
   if (!b || b.disabled || !CAMP) return;
   const verb = b.dataset.camp, arg = b.dataset.arg || '';
   feel.key('click');
-  if (verb === 'sel') { campUi.sel = arg; dirty = true; if (matchMedia('(max-width: 900px)').matches) requestAnimationFrame(() => document.querySelector('.cp-side')?.scrollIntoView({ block: 'start', behavior: 'smooth' })); return; }
-  if (verb === 'bounty') { const [id, k] = arg.split(':'); campUi.bounty[id] = campUi.bounty[id] === k ? null : k; dirty = true; return; }
-  if (verb === 'heat') { const [id, d] = arg.split(':'); campUi.heat[id] = Math.max(CP.heatFloor(campaign, id), Math.min(CP.heatOpen(campaign), heatPick(id) + Number(d))); dirty = true; return; }
+  if (verb === 'sel') { campUi.sel = arg; markDirty(); if (F.narrow()) requestAnimationFrame(() => document.querySelector('.cp-side')?.scrollIntoView({ block: 'start', behavior: 'smooth' })); return; }
+  if (verb === 'bounty') { const [id, k] = arg.split(':'); campUi.bounty[id] = campUi.bounty[id] === k ? null : k; markDirty(); return; }
+  if (verb === 'heat') { const [id, d] = arg.split(':'); campUi.heat[id] = Math.max(CP.heatFloor(campaign, id), Math.min(CP.heatOpen(campaign), heatPick(id) + Number(d))); markDirty(); return; }
   if (verb === 'breach') {
     const [id, from] = arg.split(':');
     if (campaign.breach && !campaign.breach.result) return go('breach');
@@ -963,10 +1168,10 @@ function heatPick(id) { return Math.max(CP.heatFloor(campaign, id), Math.min(CP.
 // The breach strip's Pack pop-over and the tty: a click toggles them; a click elsewhere or Esc closes the pack.
 document.addEventListener('click', (e) => {
   const t = e.target.closest?.('[data-bx-ui]');
-  if (t) { bxToggle(t.dataset.bxUi, campaign); feel.key('click'); dirty = true; return; }
-  if (bxUi.pack && !e.target.closest?.('.bx-pop')) { bxUi.pack = false; dirty = true; }
+  if (t) { bxToggle(t.dataset.bxUi, campaign); feel.key('click'); markDirty(); return; }
+  if (bxUi.pack && !e.target.closest?.('.bx-pop')) { bxUi.pack = false; markDirty(); }
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && bxUi.pack) { bxUi.pack = false; dirty = true; } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && bxUi.pack) { bxUi.pack = false; markDirty(); } });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && lu.showing()) lu.dismiss(); }); // the level-up (levelup-ui.mjs)
 // Keep the map where it was across redraws; when you move, bring your row into view.
 let bxAt;
@@ -981,7 +1186,7 @@ function breachScroll(keep) {
   if (key !== bxScreen) {
     bxScreen = key;
     const side = document.querySelector('.bx-side'), hud = document.querySelector('.bx-hud');
-    if (key && side && matchMedia('(max-width: 900px)').matches) { side.style.scrollMarginTop = `${(hud?.offsetHeight || 0) + 8}px`; side.scrollIntoView({ block: 'start' }); }
+    if (key && side && F.narrow()) { side.style.scrollMarginTop = `${(hud?.offsetHeight || 0) + 8}px`; side.scrollIntoView({ block: 'start' }); }
   }
 }
 let bxScreen = null;
@@ -990,14 +1195,14 @@ let bxScreen = null;
 let gainTimer = 0;
 // Rewards land in one place: a centred card (a toast for small things). A card already up queues the next.
 let gainQueue = [];
-function showGain(kicker, name, rows, toast, lead = '') {
+function showGain(kicker, name, rows, toast, lead = '', go = !toast) {
   const el = $('gain');
   if (!el) return;
-  if (gainOpen()) { gainQueue.push([kicker, name, rows, toast, lead]); return; } // never over a card that waits for Enter
-  if (connecting()) return whenConnected(() => showGain(kicker, name, rows, toast, lead)); // never over the connect
+  if (gainOpen()) { gainQueue.push([kicker, name, rows, toast, lead, go]); return; } // never over a card that waits for Enter
+  if (connecting()) return whenConnected(() => showGain(kicker, name, rows, toast, lead, go)); // never over the connect
   clearTimeout(gainTimer);
   el.className = `gain${toast ? ' toast' : ''}`;
-  el.innerHTML = V.gainMarkup(kicker, name, rows, !toast, lead);
+  el.innerHTML = V.gainMarkup(kicker, name, rows, go, lead);
   el.hidden = false;
   const motion = campaign.settings.motion !== false;
   el.querySelectorAll('.sp-row').forEach((node, i) => setTimeout(() => {
@@ -1012,6 +1217,11 @@ function rewardCard(kicker, e, events, toast = false) {
   const name = e.location ? campaign.locations?.find((l) => l.id === e.location)?.name || '' : '';
   const rows = [{ label: String(e.message || '').replace(/^[A-Z ]+: /, '').replace(/\.$/, ''), qty: '', kind: 'found', text: e.message || '' }, ...V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code'].includes(x.type) && x.id > e.id - 6))];
   showGain(kicker, name, rows, toast);
+}
+// The takeover with its vault's receipt (receipts.mjs): the receipt and five stamps; a stamp or Later closes it.
+function receiptCard(e, events) {
+  const name = campaign.locations?.find((l) => l.id === e.location)?.name || '';
+  showGain(`${name} · Taken over`, '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code'].includes(x.type) && x.id > e.id - 6)), false, V.receiptLead(campaign, e.receipt), false);
 }
 // Losing a run: how it went (the death recap over the last cycles: recap.mjs), what took you out, what it cost, and
 // when you can go back.
@@ -1046,7 +1256,7 @@ function markFx(e, mate) {
 
 function react(events) {
   const won = events.find((e) => e.type === 'victory');
-  const fin = module === 'combat' ? finisherBreak(events) : null; // the break that wins the fight: your class's finisher (abilityfx.mjs)
+  const last = module === 'combat' ? winningBreak(events) : null; // the break that wins the fight: slow motion
   // The wall stopping a weak invasion is quiet: a log line and a pager entry, no sound or float (invasion.mjs).
   const hush = !active(campaign) && events.some((e) => e.type === 'invasion-cleared' && e.quiet);
   const fx = canMove();
@@ -1060,12 +1270,15 @@ function react(events) {
     attackName: (id) => part(campaign, id)?.attack?.name,
     skillName: (id) => (id === 'spike' ? spikeOf(classOf(campaign)).name : ABILITIES[id]?.name),
   }, { stagger: !stack, start: Math.max(queueAfter(cueAt - performance.now()), stack ? 0 : afxLead(events)) }); // an ability's effect travels from its key first (afxLead)
-  if (split.count && !stack) cueAt = performance.now() + split.total;
-  if (!stack) stepBars(events, split.delay); // the bars drop with the numbers, one hit at a time
+  // The virus's attacks in this batch (virusvoice.mjs): which play their own sound, and how long the numbers wait so
+  // each lands on its strike's impact. Every beat below reads delay().
+  const incoming = module === 'combat' && active(campaign) ? attackVoices(events, split.delay, lashing) : { voiced: new Set(), shift: 0, delay: split.delay }, delay = incoming.delay;
+  if (split.count && !stack) cueAt = performance.now() + split.total + incoming.shift;
+  if (!stack) stepBars(events, delay); // the bars drop with the numbers, one hit at a time
   const artHit = (id, kind) => feel.add(() => art.hit(id, kind)); // the render reacts on the event's beat
   // Crewmates' events (crew.mjs). Their turns play a beat apart, so their hits sound like yours.
   // When the virus hits everyone at once, the hits show on each row, and only one of them sounds.
-  strikes(events, split.delay);
+  const voiced = strikes(events, delay); // the events an ability's own sound speaks for
   let hurtVoiced = events.some((e) => e.type === 'server-hit' && !e.who);
   // A part's attack: its row lunges and the attack's name comes off it, once per part per batch.
   const lunged = new Set();
@@ -1073,13 +1286,14 @@ function react(events) {
     if (!e.source || lunged.has(e.source) || !['server-hit', 'evaded', 'blocked', 'encrypt', 'blind'].includes(e.type) || !active(campaign)) continue;
     lunged.add(e.source);
     const p = part(campaign, e.source);
-    feel.beat(split.delay(e));
+    feel.beat(delay(e));
     if (p && fxLevel() !== 'minimal') feel.add('strike', row(e.source), p.attack?.name ? p.attack.name.toUpperCase() : null, { floatAt: `${row(e.source)} > .bcell:nth-child(2)` });
   }
   for (const c of cuesOf(campaign, events)) feel.add('cue' + c, null); // routines.mjs: while your program plays, when to look back
   const famCue = familyCues(campaign, events); // a virus family's attack and break one-shots, layered on the hurt and the break
   for (const e of events) {
-    feel.beat(split.delay(e));
+    feel.beat(delay(e));
+    feel.mute(voiced.has(e) || incoming.voiced.has(e));
     const fc = famCue.get(e);
     if (fc) feel.add(() => feel.familyShot(fc.family, fc.kind));
     const f = split.of(e), src = f ? { kind: f.kind + (f.at === 'you' ? ' at-you' : '') + (f.hostile ? ' hostile' : ''), icon: f.icon, label: f.label } : null;
@@ -1124,18 +1338,20 @@ function react(events) {
         // It stays on the board a moment and dissolves into bits before it joins the broken list.
         const bp = part(campaign, e.target);
         // (It waits for the number of the hit that broke it.)
-        const wait = split.delay(e);
-        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => { if (!(e === fin && finisher(e))) hitfx.dissolve(partRow(e.target)); })); } // the winning break plays your finisher in place of the dissolve's bits
+        const wait = delay(e);
+        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { markDirty(); }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => { hitfx.dissolve(partRow(e.target)); if (e === last) slowmo(); })); }
+        if (e === last) pendingStrikes.push(() => later(wait, winSound)); // your class's flourish over the break's voice
       }
         artHit(e.target, 'break'); feel.add(() => flash(e.message)); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
       case 'server-hit': {
         artHit(e.source, 'attack');
         const dm = defender(campaign).max || 100, frac = e.amount / dm, size = 1 + Math.min(1, frac * 5) * 0.8;
-        const heavy = !!(e.crit || e.tell); // a crit or a charge whips harder (lashAt: a big one shakes the screen)
+        const heavy = !!(e.crit || e.tell); // a crit or a charge whips harder and shakes the screen harder
         // Effects full or calm: the part lashes at your screen, and the number shows as it lands. Else a soft edge.
-        if (lashing) { feel.add(() => lashAt(e, 'hit', frac, heavy)); feel.beat(split.delay(e) + LASH_TRAVEL); }
+        if (lashing) { feel.add(() => lashAt(e, 'hit', frac, heavy)); feel.beat(delay(e) + LASH_TRAVEL); }
         if (e.crit) feel.add(() => flash('CRITICAL HIT'));
         feel.add(() => sfx.hit(frac, !!e.crit)); // a big one tears the backdrop (screenfx.mjs)
+        feel.add(() => shake(Math.min(1, frac * 5), heavy)); // and shakes the screen, with its number
         feel.add(e.crit ? 'hurtcrit' : 'hurt', MINE, f?.text || `−${e.amount}`, { amount: e.amount, frac, size: size + (e.crit ? 0.3 : 0), src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 });
         holdThem(); sideFx(row(e.source), MINE, 'them');
         break;
@@ -1171,11 +1387,11 @@ function react(events) {
       case 'degraded': flash('REBOOTED · DEGRADED'); notice(e.message, true); if (module === 'combat') setTimeout(() => { if (!active(campaign)) go('map'); }, 1800); break;
       case 'rebooted': feel.add('unlock', MINE); notice(e.message); break;
       // The Encryptor's attack: a tendril of hex, and locks over your bar; each tick of it after: the locks only.
-      case 'encrypt': artHit(e.source, 'attack'); flash('ENCRYPTED'); if (lashing) { feel.add(() => lashAt(e, 'encrypt')); feel.beat(split.delay(e) + LASH_TRAVEL); } feel.add('encrypt', MINE, f?.text || `+${e.amount}/cycle`, { src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break;
+      case 'encrypt': artHit(e.source, 'attack'); flash('ENCRYPTED'); if (lashing) { feel.add(() => lashAt(e, 'encrypt')); feel.beat(delay(e) + LASH_TRAVEL); } feel.add('encrypt', MINE, f?.text || `+${e.amount}/cycle`, { src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break;
       case 'encrypted': if (lashing) feel.add(() => lashAt(e, 'tick')); feel.add('drain', MINE, f?.text || `−${e.amount}`, { src, stack, noFlash: lashing, floatAt: BAR, x: 0.5 }); break;
       case 'decrypted': flash('DECRYPTED'); feel.add('unlock', MINE, 'KEY'); break;
       case 'blind': flash('SCRAMBLED'); feel.add('blind', '.board', null); break;
-      case 'scrambled': { const frac = e.amount / (defender(campaign).max || 100); flash('SCRAMBLED'); if (lashing) { feel.add(() => lashAt(e, 'hit', frac)); feel.beat(split.delay(e) + LASH_TRAVEL); } feel.add('hurt', MINE, f?.text || `−${e.amount}`, { amount: e.amount, frac, size: 1.3, src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break; }
+      case 'scrambled': { const frac = e.amount / (defender(campaign).max || 100); flash('SCRAMBLED'); if (lashing) { feel.add(() => lashAt(e, 'hit', frac)); feel.beat(delay(e) + LASH_TRAVEL); } feel.add('hurt', MINE, f?.text || `−${e.amount}`, { amount: e.amount, frac, size: 1.3, src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break; }
       case 'armor': { const lvl = fxLevel(), af = armorFloat(e); if (!af) break; artHit(e.target, 'chit'); if (e.lock === 'broke') { feel.add(af.sign, `${row(e.target)} .part-top`, af.text, { size: 1.1, floatAt: `${row(e.target)} > .bcell:first-child` }); break; } /* a Mutex's lock: its segment shatters (lockDrain, with the hit) */ feel.add(af.sign, `${row(e.target)} .part-top`, af.text, { size: 1.1, noFlash: lvl === 'minimal', floatAt: `${row(e.target)} > .bcell:first-child` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); break; } // ◆ ABSORBED: your command's whole hit went into the ◆ (dmgfx.mjs armorFloat), never a MISS
       case 'patch': feel.add('patch', row(e.target), e.adapt ? 'ADAPTS +◆' : '+◆'); break;
       case 'reroute': feel.add('patch', row(e.target), `+${e.amount} REROUTED`, { src }); if (e.from) artHit(e.target, 'attack'); break;
@@ -1196,7 +1412,9 @@ function react(events) {
       case 'interrupt': feel.add('interrupt', row(e.target), f?.text || (e.tell ? 'STOPPED' : 'DELAYED'), { src }); break;
       case 'telegraph': if (e.source) feel.add('prewarn', row(e.source), e.name || (e.message.match(/ ([A-Z][A-Z' -]{2,})[. ]/) || [])[1] || null); break; // a tell (tells.mjs) or a crew boss's mechanic, announced
       case 'warning': feel.add('nope', '#command-form'); break;
-      case 'phase': flash(e.enrage ? 'ENRAGED' : e.message.split('.')[0]); feel.add('hurt', null); break; // a boss changes phase (combat.mjs bossPhases)
+      // A boss changes phase (combat.mjs bossPhases): across its ♛'s act tick, the act break (actbreak.mjs), once the hit
+      // has played; the clock holds for it. Its enrage, or a phase of a boss with no act ticks: the flash.
+      case 'phase': if (e.act && !e.enrage) { feel.add(() => { actHold = Date.now() + actBreakMs(e.act); actBreak.play(e.act, campaign.encounter?.virus?.name); }); feel.add('act', null); } else { flash(e.enrage ? 'ENRAGED' : e.message.split('.')[0]); feel.add('hurt', null); } break;
       case 'scan': art.hit(e.target); flash(e.message.split('.')[0].toUpperCase()); feel.add('good', row(e.target), 'WEAK'); break;
       case 'proc': feel.add('good', null); break;
       // Tells (tells.mjs): a read pays (the part Open, or a skill ready again); one that lands bites back.
@@ -1235,23 +1453,20 @@ function react(events) {
 
       case 'synced': feel.add(e.surprise ? 'surprise' : 'sync', row(e.target) || '.bnow', `${e.surprise ? 'SURPRISE' : 'SYNCED'}${e.bonus ? ' · ' + e.bonus.toUpperCase() : ''}`); if (fx) feel.add(() => juice.punch(0.5)); break;
       case 'boost': feel.add('unlock', '.net-signal', `+${e.amount}`); break;
-      case 'fleet': case 'fleet-siege': feel.add('prewarn', null); break;
       case 'infest': feel.add('prewarn', null); break;
-      case 'fleet-hit': feel.add('good', null); notice(e.message); break;
-      case 'fleet-broken': flash('SWARM BROKEN'); feel.add('win', null); notice(e.message); break;
       case 'config': feel.add('unlock', null); notice(e.message); break;
       case 'program': feel.add(e.off ? 'click' : 'unlock', null); if (!e.off) flash('INJECTED'); break;
       case 'harvester': feel.add('pickup', null); rewardCard('Compiled', e, events, true); break;
       case 'harvest': feel.add('pickup', null); break;
       case 'consortium-siege': case 'consortium-raid': case 'consortium-roam': feel.add('prewarn', null); break;
       case 'outpost-held': feel.add('good', null); notice(e.message); break;
-      case 'takeover': flash('TAKEN OVER'); feel.add('win', null); rewardCard('Taken over', e, events); break;
+      case 'takeover': flash('TAKEN OVER'); feel.add('bosswin', null); if (e.receipt) receiptCard(e, events); else rewardCard('Taken over', e, events); break;
       case 'root': feel.add('unlock', null); rewardCard(`Root ${e.root}`, e, events); break;
       case 'streak': feel.add('win', null); rewardCard('Streak', e, events); break;
       case 'rotation': feel.add(e.rare ? 'prewarn' : 'good', null); break;
       case 'victory':
         flash(campaign.encounter?.rooms?.as === 'exfil' ? 'ARCHIVE RECOVERED' : 'NEUTRALIZED');
-        feel.add('win', '.hud');
+        feel.add(campaign.encounter?.virus?.boss ? 'bosswin' : 'win', '.hud');
         // Let the last break land, then show what the fight gave you.
         ending = true; hideTip(false); ended = e.mode || 'home'; endedAt = performance.now();
         setTimeout(() => { ending = false; }, 900);
@@ -1287,7 +1502,7 @@ function react(events) {
     const why = String(xpOut[0].message.split('·')[1] || '').trim().replace(/\.$/, ''), show = () => showGain(why ? why[0].toUpperCase() + why.slice(1) : 'XP', '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code', 'level-up'].includes(x.type))), true); // a toast: the level-up carries a level itself
     if (events.some((e) => e.type === 'run-start') && dialFx()) setTimeout(() => whenConnected(show), 0); else show(); // a first run's XP waits for the connect to play
   }
-  if (events.length) dirty = true;
+  if (events.length) markDirty();
 }
 
 // ---------- after a fight ----------
@@ -1330,8 +1545,8 @@ function noticeCard(html) {
 }
 
 // ---------- commands ----------
-const NAV = ['map', 'combat', 'net', 'server', 'loadout', 'daemons', 'codex', 'system', 'campaign', 'room', 'archive'];
-const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 'loadout', inventory: 'loadout', services: 'server', ports: 'server', wall: 'server', talents: 'loadout', skills: 'loadout', archetypes: 'loadout', home: 'map', trace: 'map', leads: 'map', logs: 'system', settings: 'system', bestiary: 'codex', fight: 'combat', run: 'net' };
+const NAV = ['map', 'combat', 'net', 'server', 'loadout', 'daemons', 'codex', 'rig', 'system', 'campaign', 'room', 'archive'];
+const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 'loadout', inventory: 'loadout', services: 'server', ports: 'server', wall: 'server', talents: 'loadout', skills: 'loadout', archetypes: 'loadout', home: 'map', trace: 'map', leads: 'map', logs: 'system', settings: 'system', achievements: 'rig', casing: 'rig', terminal: 'rig', bestiary: 'codex', fight: 'combat', run: 'net' };
 
 function run(raw) {
   let text = raw.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -1347,7 +1562,7 @@ function run(raw) {
   // A server you found but never connected: typing connect asks first, on its map card.
   const join = text.match(/^connect (\S+)$/);
   const found = join && campaign.locations?.find((l) => (l.id === join[1] || l.name.toLowerCase() === join[1]) && l.fresh && l.detached);
-  if (found && memYes !== found.id) { mapSel = found.id; mapPop = true; V.setMemAsk(found.id); go('map'); dirty = true; return; }
+  if (found && memYes !== found.id) { mapSel = found.id; mapPop = true; V.setMemAsk(found.id); go('map'); markDirty(); return; }
   // Hub sessions: connect <hub> opens one; inside it, a number or a word picks from its menu.
   const dial = text.match(/^(?:connect|dial) (halcyon|glassjaw|kestrel|lantern|nullchoir|post|post-07)$/);
   if (dial && /^post/.test(dial[1])) return scanner && postFound(campaign) ? openHub(POST.id) : notice('POST-07: not on your map yet.', true);
@@ -1355,11 +1570,11 @@ function run(raw) {
   if (dial && hubsOf(campaign).length && !hubFound(campaign, dial[1])) { notice(`${dial[1].toUpperCase()}: hub not located yet (${hubTraceOf(campaign, dial[1])}%).`, true); return; }
   if (hubShown() && !active(campaign)) {
     const opts = hubOpts(hubSel);
-    if (/^\d$/.test(text)) { const n = Number(text); if (n === 0) return closeHub(); if (opts[n - 1]) return pickHub(opts[n - 1].key, text); hubEcho(text); hubLines.push({ cls: 'warn', html: `${text}: no such option` }, menuLine); dirty = true; return; }
+    if (/^\d$/.test(text)) { const n = Number(text); if (n === 0) return closeHub(); if (opts[n - 1]) return pickHub(opts[n - 1].key, text); hubEcho(text); hubLines.push({ cls: 'warn', html: `${text}: no such option` }, menuLine); markDirty(); return; }
     if (['disconnect', 'exit', 'bye', 'logout', 'quit'].includes(text)) return closeHub();
     const o = opts.find((x) => x.key === text || x.label.toLowerCase() === text);
     if (o) return pickHub(o.key, text);
-    if (['help', 'menu', 'ls', '?'].includes(text)) { hubEcho(text); hubLines.push(menuLine); dirty = true; return; }
+    if (['help', 'menu', 'ls', '?'].includes(text)) { hubEcho(text); hubLines.push(menuLine); markDirty(); return; }
   }
   // A server's rooms (floorplan.mjs): ls, cd, map and the room's verbs, out of a fight. On the playtest jacking out
   // mid-fight isn't one; on the network it's the emergency escape (run.mjs play), and the verbs go through play too.
@@ -1374,7 +1589,7 @@ function run(raw) {
       react(ev);
       const w = ev.findLast((e) => e.type === 'warning');
       if (w) notice(w.message, true); else if (ok) notice(ev.filter((e) => e.type !== 'rooms-cmd').map((e) => e.message).join(' '));
-      dirty = true; return;
+      markDirty(); return;
     }
     if (text === 'help' && !campaign.roomsPlay) return notice('Click a room, or type go <room> (go elite 2). Also: ls, map, wait, back, engage, cat, pull, open, force, rest, slip, pack, jack out. In a fight: 1 is your plain hit, 2 to 0 your skills, - is SIGINT, script <n> runs a script, jack out is the emergency escape.', false, null, true);
     if (text === 'help') return notice('Click a room, or type go <room> (go elite 2). Also: ls, map, wait, back, engage, cat, pull, open, force, rest, slip, jack out, connect, developer bossrule a|b|c. In a fight: 1 is your plain hit, 2 to 0 your skills, - is SIGINT, script <n> runs a script.', false, null, true);
@@ -1393,7 +1608,7 @@ function run(raw) {
       react(ev);
       const w = ev.findLast((e) => e.type === 'warning');
       if (w) notice(w.message, true); else if (ok) notice(ev.filter((e) => e.type !== 'breach-cmd').map((e) => e.message).join(' '));
-      save(); dirty = true; return;
+      save(); markDirty(); return;
     }
     if (!active(campaign)) { const ev = BR.breachCommand(campaign, text); if (ev) return breachDone(ev); }
     if (/^(equip|unequip) /.test(text) && !active(campaign) && !(campaign.breach.screen?.kind === 'defrag' && campaign.breach.screen.reslot)) return notice('Your bar changes only at a defrag (Re-slot).', true);
@@ -1407,34 +1622,37 @@ function run(raw) {
   const page = ALIAS[text] || text;
   // Daemons live on the Loadout page now (a tab beside Protocols).
   if (page === 'daemons' && !(fighting && ABILITIES[text])) { loadoutTab = 'daemons'; return go('loadout'); }
-  if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; if (page === 'system') systemTab = 'settings'; return go(page); }
+  if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; if (page === 'system') systemTab = text === 'logs' && DEV ? 'dev' : 'settings'; if (page === 'rig') rigTab = ['casing', 'terminal', 'house'].includes(text) ? text : 'achievements'; return go(page); }
   if (text === 'achievements') return goTo('achieve'); // the page; achieve pin <name> and the rest go to the engine
+  if (text === 'house') return goTo('house'); // the page; house place and store go to the engine (house.mjs)
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
   if (text === 'terminal preview' || text.startsWith('terminal preview ')) return bootPreview(text.slice(17).trim()); // the rest of terminal … is the engine's (terminal.mjs)
-  { const said = screenFxCommand(campaign, text); if (said) { save(); dirty = true; return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
+  { const said = screenFxCommand(campaign, text); if (said) { GX.settle(campaign, F.isPhone()); save(); markDirty(); return notice(said); } }
+  { const said = GX.graphicsCommand(campaign, text, { phone: F.isPhone() }); if (said) { save(); markDirty(); return notice(said); } } // graphics <preset> / graphics <row> <value> (graphics.mjs) // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
   if (/^developer levelup( |$)/.test(text)) return levelUpCommand(text.slice(17).trim());
   if (/^developer thread preview\b/.test(text)) return threadPreview(text.replace(/^developer thread preview\s*/, ''));
-  if (/^developer scene\b/.test(text)) { const id = text.replace(/^developer scene\s*/, ''); if (!SC.replay(campaign, id)) return notice(`developer scene: ${Object.keys(SC.SCENES).join(', ')}.`, true); if (module === 'combat') go('map'); dirty = true; return; }
-  if (text === 'casing on' || text === 'casing off') { campaign.settings.casing = text === 'casing on'; save(); dirty = true; return; }
+  if (/^developer scene\b/.test(text)) { const id = text.replace(/^developer scene\s*/, ''); if (!SC.replay(campaign, id)) return notice(`developer scene: ${Object.keys(SC.SCENES).join(', ')}.`, true); if (module === 'combat') go('map'); markDirty(); return; }
+  if (text === 'casing on' || text === 'casing off') { campaign.settings.casing = text === 'casing on'; save(); markDirty(); return; }
   if (text === 'tips on' || text === 'tips off' || text === 'tips replay') {
     if (text === 'tips replay') { campaign.settings.seen = {}; delete campaign.tour; campaign.settings.tips = true; }
     else campaign.settings.tips = text === 'tips on';
-    hideTip(false); save(); dirty = true;
+    hideTip(false); save(); markDirty();
     return notice(text === 'tips replay' ? 'Tips will show again as you meet things.' : `Tips ${campaign.settings.tips ? 'on' : 'off'}.`);
   }
-  if (text === 'music on' || text === 'music off') { campaign.settings.music = text === 'music on'; save(); dirty = true; return notice(`Music ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
-  if (text === 'radio on' || text === 'radio off') { campaign.settings.radio = text === 'radio on'; save(); dirty = true; return notice(`Radio chatter ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
+  if (text === 'music on' || text === 'music off') { campaign.settings.music = text === 'music on'; save(); markDirty(); return notice(`Music ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
+  if (text === 'radio on' || text === 'radio off') { campaign.settings.radio = text === 'radio on'; save(); markDirty(); return notice(`Radio chatter ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio test') return feel.radioTest();
-  if (text === 'sidebar on' || text === 'sidebar off') { campaign.settings.sidebar = text === 'sidebar on'; save(); dirty = true; return notice(`Crew window ${text.slice(8)}.`); }
-  if (text === 'map names hover' || text === 'map names on') { campaign.settings.mapNames = text.endsWith('hover') ? 'hover' : 'on'; save(); dirty = true; return notice(text.endsWith('hover') ? 'Map names show on hover.' : 'Map names always show.'); }
+  if (text === 'grain on' || text === 'grain off') { campaign.settings.grain = text === 'grain on'; save(); markDirty(); return notice(`Grain ${text.slice(6)}.`); } // unset: off in the phone layout (style.css)
+  if (text === 'sidebar on' || text === 'sidebar off') { campaign.settings.sidebar = text === 'sidebar on'; save(); markDirty(); return notice(`Crew window ${text.slice(8)}.`); }
+  if (text === 'map names hover' || text === 'map names on') { campaign.settings.mapNames = text.endsWith('hover') ? 'hover' : 'on'; save(); markDirty(); return notice(text.endsWith('hover') ? 'Map names show on hover.' : 'Map names always show.'); }
   // ui scale <auto|80–200%> (uiscale.mjs): the screen drawn larger or smaller; no argument steps to the next that fits.
   if (/^ui scale( |$)/.test(text)) {
     const arg = text.slice(9).trim(), set = arg ? UI.parseScale(arg) : UI.nextScale(campaign.settings.uiScale ?? 1, UI.ROOM.avail);
     if (set == null) return notice('ui scale auto, or a percent from 80 to 200.', true);
-    campaign.settings.uiScale = set; uiScale(); save(); dirty = true;
+    campaign.settings.uiScale = set; uiScale(); save(); markDirty();
     return notice(`${UI.scaleLabel(set, UI.ROOM.avail)}.`);
   }
-  if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); dirty = true; return notice(`Window ${text.slice(7)}.`); }
+  if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); markDirty(); return notice(`Window ${text.slice(7)}.`); }
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();
   if (text === 'help' && !CAMP) return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload and deconstruct. For your server, use install, uninstall, firewall upgrade|defrag and filter equip. On the net, use connect, relay, detach and mail. The pages are map, mail, server, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
@@ -1445,7 +1663,7 @@ function run(raw) {
   }
 
   // A co-op guest: a fight command goes to the host, a loadout change to their own save (and on to the host).
-  if (coop?.intercept(text, realSave ? campaign : null)) { dirty = true; return; }
+  if (coop?.intercept(text, realSave ? campaign : null)) { markDirty(); return; }
   const wasAlert = campaign.encounter?.phase === 'alert';
   const queuedBefore = campaign.encounter?.queue;
   let events = play(campaign, /^(consortium|guild|say|plan)\b/.test(text) || text.startsWith("'") ? raw.trim() : text); // a consortium's name, a line on #net and a plan keep their capitals
@@ -1477,7 +1695,7 @@ function run(raw) {
   else if (campaign.run && module !== 'net' && !events.some((e) => e.type === 'victory') && events.some((e) => e.type.startsWith('net'))) go('net'); // a win stays on its kill screen (the folder listing waits in the terminal)
   else if (text.startsWith('encounter ') && campaign.encounter?.phase === 'alert') { mapSel = 'intrusion'; go('map'); }
   save();
-  dirty = true;
+  markDirty();
 }
 
 // bench …: a ready character on this bench, the bench saves listed, one deleted (bench.mjs). A build starts the page
@@ -1486,6 +1704,7 @@ function benchRun(text) {
   if (active(campaign) && !/^bench (list|delete)\b/.test(text)) return notice('Finish the fight first.', true);
   let store = null;
   try { store = localStorage; } catch { /* storage unavailable */ }
+  if (!BN) return notice('Bench commands work on a test bench. Open the game with ?bench=<name>.', true);
   const events = BN.benchCommand(campaign, text, { bench: BENCH, dev: DEV, store });
   const built = events.find((e) => e.type === 'bench'), w = events.findLast((e) => e.type === 'warning');
   if (built) {
@@ -1497,7 +1716,7 @@ function benchRun(text) {
     go('map', true);
   }
   notice((w || built || events.at(-1))?.message || '', !!w, null, !w && !built);
-  dirty = true;
+  markDirty();
 }
 
 // Start over: a fresh level-1 server and level-1 classes. Settings stay. Asks twice.
@@ -1541,7 +1760,7 @@ function shellCommand(arg) {
   if (!to) return notice('usage: shell [immersive|plain|boot]', true);
   campaign.settings.shell = to;
   save();
-  dirty = true;
+  markDirty();
   notice(to === 'plain' ? 'Shell: plain.' : 'Shell: immersive. Type shell plain to turn it off.');
 }
 
@@ -1580,37 +1799,35 @@ function go(name, quiet = false) {
   if (name === 'rooms' && revealNote) { const m = revealNote; revealNote = null; setTimeout(() => notice(m), 0); } // a hidden room that opened while you fought
   selected = null;
   document.querySelectorAll('.modules button').forEach((b) => b.setAttribute('aria-current', b.dataset.module === name ? 'page' : 'false'));
-  dirty = true;
+  markDirty();
   render(true);
   if (moved) $('page-view').scrollTop = 0; // a new page opens at its top
   shell.onModule(name);
   focusPrompt();
   if (boot) { bootFor = campaign.encounter; playBoot($('app'), held, bootLines(bootInfo())); }
 }
-// Connecting to a server: the screen dials it (bootfx.mjs, Handshake); from the map, its node locks on first. Screen
-// effects off or Motion off: straight in.
+// Connecting to a server (bootfx.mjs, Carrier): from the map, your signal runs from HOME to its node and the rooms
+// open in a circle from there. Screen effects off or Motion off: straight in.
 const dialFx = () => canMove() && fxLevel() !== 'minimal' && !shell.booting;
 function connectTo(e) {
   const sel = e.location && `[data-select="${CSS.escape(e.location)}"]`, shown = (q) => [...$('page-view').querySelectorAll(q)].find((g) => g.getBoundingClientRect().width);
-  const node = dialFx() && module === 'map' && sel ? shown(`${sel} .ring`) || shown(sel) : null; // its node on the map (or its row on the list)
+  const node = dialFx() && module === 'map' && sel ? shown(`${sel} .mhit`) || shown(sel) : null; // its node on the map (or its row on the list)
   const held = node ? bootHold($('page-view'), node) : null;
   go('net', true);
   if (!dialFx() || module !== 'rooms') return;
-  const q = (sel) => $('page-view').querySelector(sel)?.textContent.trim() || '';
-  const name = q('.fp-hud .fp-id b') || campaign.locations?.find((l) => l.id === e.location)?.name || '';
-  playConnect($('app'), held, name, connectLines({ name, level: q('.fp-hud .fp-id small').match(/lv ([\d–-]+)/)?.[1] || '', rooms: Number(q('.fp-hud .fp-prog b').split('/')[1]) || 0 }));
+  playConnect($('app'), held);
 }
-// Jacking out: the dial-up backwards (bootfx.mjs, Hang-up): from the rooms page your room locks teal and the rooms go
-// dark toward it, the hang-up's readout holds the dark, then the map comes up with the server's node ringed. Screen
-// effects off or Motion off: straight to the map.
+// Jacking out (bootfx.mjs, the Carrier backwards): from the rooms page your room locks teal and the rooms close in a
+// circle onto the server's node on the map; your signal runs home along a teal line. Screen effects off or Motion off:
+// straight to the map.
 function hangUp(events) {
   const e = events.findLast((x) => x.type === 'jacked-out'), shown = (q) => [...$('page-view').querySelectorAll(q)].find((g) => g.getBoundingClientRect().width);
   const fx = dialFx() && !CAMP, here = fx && module === 'rooms' ? shown('.fp-room.here') : null;
   const held = here ? bootHold($('page-view'), here) : null;
   go('map', true);
   if (!fx || module !== 'map') return;
-  const name = e?.message.match(/JACKED OUT of (.+?)\./)?.[1] || '', sel = e?.out && `[data-select="${CSS.escape(e.out)}"]`;
-  playHangup($('app'), held, name, hangupLines({ name, banked: e?.gains?.length || 0 }), () => (sel ? shown(`${sel} .core`) || shown(sel) : null));
+  const sel = e?.out && `[data-select="${CSS.escape(e.out)}"]`;
+  playHangup($('app'), held, () => (sel ? shown(`${sel} .core`) || shown(sel) : null));
 }
 // What the boot console checks: read off the fight's page as it now stands.
 function bootInfo() {
@@ -1630,9 +1847,8 @@ document.addEventListener('pointerdown', (e) => { lastPointer = e.pointerType ||
 // (a tap on the prompt itself still opens it). A key, a click or a suggestion only fills the prompt there.
 const focusPrompt = () => { if (touch() || lastPointer === 'touch' || lastPointer === 'pen') return; $('command-input').focus(); };
 // The phone layout draws a floor on its side (view.mjs mapLayout): the way down at the bottom.
-const portraitQ = matchMedia('(max-width: 900px)');
-V.setMapPortrait(portraitQ.matches);
-portraitQ.addEventListener?.('change', (e) => { if (V.setMapPortrait(e.matches)) dirty = true; });
+V.setMapPortrait(F.narrow());
+F.onForm(() => { V.setMapPortrait(F.narrow()); if (!F.isPhone()) { closeSheet(); phPrompt(false); } markDirty(); }); // phone ↔ desk: draw again
 function prepare(abilityId) {
   const a = ABILITIES[abilityId];
   const s = shown();
@@ -1678,16 +1894,16 @@ function openHub(f) {
   hubLines = [...(f === POST.id ? postBanner(campaign) : V.hubBanner(campaign, f)).slice(0, -1), menuLine];
   go('hub');
 }
-function closeHub() { hubOpen = false; hubWin = null; V.setOrder(null); if (module === 'hub') go('map'); else dirty = true; }
+function closeHub() { hubOpen = false; hubWin = null; V.setOrder(null); if (module === 'hub') go('map'); else markDirty(); }
 function hubEcho(text) { hubLines.push({ cls: 'you', html: V.esc(text) }); }
 // A menu pick opens its window; it isn't echoed into the session (the menu already says what it is).
 function pickHub(key) {
-  hubWin = key || null; V.setOrder(null); feel.key('click'); dirty = true;
+  hubWin = key || null; V.setOrder(null); feel.key('click'); markDirty();
 }
 // The market's order ticket: which ware, Sell or Buy, how many (the slider). Dragging updates the
 // ticket's numbers in place, and the page doesn't redraw under your pointer until you let go.
 let mkOrder = null, mkDrag = false;
-function setMkOrder(o) { mkOrder = o; V.setOrder(o); dirty = true; }
+function setMkOrder(o) { mkOrder = o; V.setOrder(o); markDirty(); }
 function ticketLive() {
   if (!mkOrder) return;
   const k = V.ticketNumbers(campaign, mkOrder.f, mkOrder.w, mkOrder.side, mkOrder.n);
@@ -1699,21 +1915,21 @@ function ticketLive() {
 }
 document.addEventListener('input', (e) => { if (e.target.matches?.('[data-mk-n]') && mkOrder) { mkOrder.n = Number(e.target.value) || 1; ticketLive(); } });
 document.addEventListener('pointerdown', (e) => { if (e.target.matches?.('[data-mk-n]')) mkDrag = true; });
-addEventListener('pointerup', () => { if (mkDrag) { mkDrag = false; dirty = true; } });
-document.addEventListener('change', (e) => { if (e.target.matches?.('[data-mk-n]')) { mkDrag = false; dirty = true; } });
+addEventListener('pointerup', () => { if (mkDrag) { mkDrag = false; markDirty(); } });
+document.addEventListener('change', (e) => { if (e.target.matches?.('[data-mk-n]')) { mkDrag = false; markDirty(); } });
 // The map's Show picker (All · Mine · Targets · Threats).
 // The map's Show picker: its own listener, ahead of the map's, so opening and closing always work.
 // The summary toggles it; Show all clears; a click anywhere else (or Esc) closes it.
 document.addEventListener('click', (e) => {
   const pick = e.target.closest?.('details.map-pick');
-  if (e.target.closest?.('[data-mapfilter-toggle]')) { e.preventDefault(); mapPickOpen = !pick?.open; if (pick) pick.open = mapPickOpen; dirty = true; return; }
-  if (e.target.closest?.('[data-mapfilter-clear]')) { mapFilter = []; mapPickOpen = false; dirty = true; return; }
-  if (!pick && (mapPickOpen || document.querySelector('details.map-pick[open]'))) { mapPickOpen = false; document.querySelectorAll('details.map-pick[open]').forEach((d) => (d.open = false)); dirty = true; }
+  if (e.target.closest?.('[data-mapfilter-toggle]')) { e.preventDefault(); mapPickOpen = !pick?.open; if (pick) pick.open = mapPickOpen; markDirty(); return; }
+  if (e.target.closest?.('[data-mapfilter-clear]')) { mapFilter = []; mapPickOpen = false; markDirty(); return; }
+  if (!pick && (mapPickOpen || document.querySelector('details.map-pick[open]'))) { mapPickOpen = false; document.querySelectorAll('details.map-pick[open]').forEach((d) => (d.open = false)); markDirty(); }
 }, true);
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.querySelector('details.map-pick[open]')) { mapPickOpen = false; document.querySelectorAll('details.map-pick[open]').forEach((d) => (d.open = false)); dirty = true; } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.querySelector('details.map-pick[open]')) { mapPickOpen = false; document.querySelectorAll('details.map-pick[open]').forEach((d) => (d.open = false)); markDirty(); } });
 document.addEventListener('change', (e) => {
   const k = e.target.dataset?.mapfilterCheck;
-  if (k) { mapFilter = e.target.checked ? [...new Set([...mapFilter, k])] : mapFilter.filter((x) => x !== k); mapPickOpen = true; dirty = true; }
+  if (k) { mapFilter = e.target.checked ? [...new Set([...mapFilter, k])] : mapFilter.filter((x) => x !== k); mapPickOpen = true; markDirty(); }
 });
 const hubShown = () => hubOpen && module === 'hub';
 function previewAim(s, text) {
@@ -1724,7 +1940,7 @@ function previewAim(s, text) {
     const intent = parse(s, text.trim().replace(/\s(last|late)$/, '')); // "… last" only changes when it goes
     if (intent?.target) { const why = validate(s, intent); aimPreview = { target: intent.target, ability: intent.ability, ok: !why, why: why || '', text: text.trim() }; }
   }
-  if (key() !== was) dirty = true; // a different ability changes what the board expects it to do
+  if (key() !== was) markDirty(); // a different ability changes what the board expects it to do
 }
 
 // ---------- map zoom ----------
@@ -1738,6 +1954,7 @@ let popAt = null; // the last spot: a redraw puts the card straight back there, 
 // Anchored to the node's hit circle (its rings and labels change size), and measured again only
 // when the selection, the zoom or the canvas changes.
 function placeMapPop() {
+  if (F.isPhone()) return; // a phone: the card is in the sheet (phPops)
   const pop = $('map-pop'), canvas = pop?.closest('.map-canvas'), node = canvas?.querySelector('.mnode.selected .mhit');
   if (!pop) return;
   if (!node) { pop.style.visibility = 'hidden'; return; }
@@ -1754,11 +1971,44 @@ function placeMapPop() {
   pop.style.left = Math.round(left) + 'px'; pop.style.top = Math.round(top) + 'px'; pop.style.visibility = 'visible';
   popAt = { key, left: pop.style.left, top: pop.style.top };
 }
+// The runner card (runners-view.mjs) beside the picked runner's diamond: to its right, or its left when there's no room;
+// beside their Rail row when the map doesn't draw them (another floor, or somewhere you haven't revealed); with no row
+// either (a runner you don't know who walked out of sight), where it last was.
+let runnerPopAt = null; // { h, left, top }: the card's last spot
+function placeRunnerPop() {
+  if (F.isPhone()) return;
+  const pop = $('runner-pop'), canvas = pop?.closest('.map-canvas');
+  if (!pop || !canvas) return;
+  const c = zr(canvas.getBoundingClientRect()), d = canvas.querySelector('.mrunner .mr-dia'), w = pop.offsetWidth, h = pop.offsetHeight, gap = 16;
+  const row = canvas.querySelector('.rr-row.on'), who = pop.dataset.runnerCard; // not drawn: beside their row on the Rail
+  let left = 8, top = 8;
+  if (!d && row) { const n = zr(row.getBoundingClientRect()); left = n.right - c.left + 8; top = n.top - c.top - 8; }
+  else if (!d && runnerPopAt?.h === who) ({ left, top } = runnerPopAt);
+  if (d) {
+    const n = zr(d.getBoundingClientRect()), cx = n.left + n.width / 2 - c.left, cy = n.top + n.height / 2 - c.top;
+    left = cx + gap; if (left + w > c.width - 8) left = cx - gap - w;
+    top = cy - 40;
+  }
+  left = Math.round(Math.max(8, Math.min(c.width - w - 8, left))); top = Math.round(Math.max(8, Math.min(c.height - h - 8, top)));
+  runnerPopAt = { h: who, left, top };
+  pop.style.left = left + 'px'; pop.style.top = top + 'px'; pop.style.visibility = 'visible';
+}
+// The list of who's at a place (runners-view.mjs runnersList) beside its counted diamond: to its right, or its left when
+// there's no room. It shuts when fewer than two are left there.
+function placeRunnersList() {
+  const pop = $('crowd-pop'), canvas = pop?.closest('.map-canvas'), d = canvas?.querySelector('.mrun.crowd.on');
+  if (!pop) { if (module === 'map') mapRunnersAt = null; return; }
+  if (F.isPhone() || !d) return;
+  const c = zr(canvas.getBoundingClientRect()), n = zr(d.getBoundingClientRect()), w = pop.offsetWidth, h = pop.offsetHeight, gap = 12;
+  let left = n.right - c.left + gap; if (left + w > c.width - 8) left = n.left - c.left - gap - w;
+  const top = n.top + n.height / 2 - c.top - 22;
+  pop.style.left = Math.round(Math.max(8, Math.min(c.width - w - 8, left))) + 'px'; pop.style.top = Math.round(Math.max(8, Math.min(c.height - h - 8, top))) + 'px'; pop.style.visibility = 'visible';
+}
 function applyMapZoom() {
   const svg = mapSvg();
   if (!svg) return;
   const [x, y, w, h] = baseVb(svg);
-  const fix = () => { const a = svg.getScreenCTM()?.a; if (a) { svg.style.setProperty('--z', a); if (V.setMapScale(a)) dirty = true; } placeMapPop(); }; // a new scale: labels re-sort who fits // text keeps its size on screen, at any width or zoom
+  const fix = () => { const a = svg.getScreenCTM()?.a; if (a) { svg.style.setProperty('--z', a); if (V.setMapScale(a)) markDirty(); } placeMapPop(); placeRunnerPop(); placeRunnersList(); }; // a new scale: labels re-sort who fits // text keeps its size on screen, at any width or zoom
   if (mapZoom.k <= 1) { mapZoom.k = 1; svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`); svg.classList.remove('zoomed'); return fix(); }
   const zw = w / mapZoom.k, zh = h / mapZoom.k;
   mapZoom.cx = Math.max(x + zw / 2, Math.min(x + w - zw / 2, mapZoom.cx));
@@ -1795,11 +2045,42 @@ document.addEventListener('pointermove', (e) => {
   applyMapZoom();
 });
 document.addEventListener('pointerup', () => { if (mapDrag?.moved) { const stop = (ev) => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', stop, { capture: true, once: true }); setTimeout(() => document.removeEventListener('click', stop, { capture: true }), 0); } mapDrag = null; });
-document.addEventListener('dblclick', (e) => { if (e.target.closest?.('.map-svg')) { mapZoom.k = 1; applyMapZoom(); } });
+document.addEventListener('dblclick', (e) => { if (!F.isPhone() && e.target.closest?.('.map-svg')) { mapZoom.k = 1; applyMapZoom(); } });
 document.addEventListener('click', (e) => { if (e.target.closest?.('[data-map-zoom]')) { mapZoom.k = 1; applyMapZoom(); } });
 
 // ---------- rendering ----------
 const cache = new Map();
+// The rooms page (floorplan-view.mjs roomsView): when the map is as drawn, a click that opens, closes or changes a
+// pop-up swaps the card alone, so the map keeps its nodes (and its traffic) and the browser lays out one card.
+let roomsDrawn = null; // { shell, root }: the map's markup and the node it was drawn into
+const popTpl = document.createElement('template');
+function putRooms() {
+  let v = null;
+  const html = pageOrError(() => { v = roomsView(campaign); return v.shell.replace(POP_MARK, POP_MARK + v.pop); }); // the mark stays: the card goes after it
+  const el = $('page-view');
+  if (cache.get('page-view') === html) return holdPopTip(v?.id);
+  const mark = v && roomsDrawn?.shell === v.shell && roomsDrawn.root === el.firstElementChild && cache.has('page-view') ? markOf(el) : null;
+  if (!mark) { put('page-view', html); roomsDrawn = v ? { shell: v.shell, root: el.firstElementChild } : null; return holdPopTip(v?.id); }
+  cache.set('page-view', html);
+  const old = $('fp-pop'), open = old && old.dataset.pop === v.id ? [...old.querySelectorAll('details')].map((d) => d.open) : [];
+  popTpl.innerHTML = v.pop;
+  const card = popTpl.content.firstElementChild;
+  if (old) old.remove();
+  if (card) { mark.after(card); card.querySelectorAll('details').forEach((d, i) => { if (open[i]) d.open = true; }); }
+  holdPopTip(v.id);
+}
+const markOf = (el) => { const w = document.createTreeWalker(el.querySelector('.fp-map') || el, NodeFilter.SHOW_COMMENT); for (let n = w.nextNode(); n; n = w.nextNode()) if (`<!--${n.data}-->` === POP_MARK) return n; return null; };
+// The popped room is marked (.sel), and its tooltip held off while its card is up (it would cover the card) and given back after.
+function holdPopTip(id) {
+  for (const g of $('page-view').querySelectorAll('.fp-room.sel')) if (g.dataset.room !== id) { g.classList.remove('sel'); if (g.dataset.ttHeld != null) { g.setAttribute('title', g.dataset.ttHeld); delete g.dataset.ttHeld; } }
+  if (!id) return;
+  for (const g of $('page-view').querySelectorAll(`.fp-room[data-room="${CSS.escape(id)}"]`)) {
+    g.classList.add('sel');
+    if (g.dataset.ttHeld != null) continue;
+    g.dataset.ttHeld = g.getAttribute('title') ?? g.dataset.tt ?? ''; g.removeAttribute('title'); delete g.dataset.tt;
+    if (tt.at && g.contains(tt.at)) ttHide();
+  }
+}
 function put(id, html) {
   if (cache.get(id) === html) return;
   cache.set(id, html);
@@ -1809,6 +2090,26 @@ function put(id, html) {
   el.innerHTML = html;
   el.querySelectorAll('details').forEach((d, i) => { if (open[i]) d.open = true; });
   for (const k of el.querySelectorAll('[data-keep]')) if (kept.get(k.dataset.keep)) k.scrollTop = kept.get(k.dataset.keep);
+}
+// The fight's panels rebuild only the rows whose markup changed (docs/performance-plan.md batch 2): a kept row keeps its
+// node, so what effects added to it stays, and the steps after a render re-apply theirs as before. Anything else put
+// into the panel since (or a forced render) rebuilds it whole.
+const rowsOf = new Map(); // panel id → its top-level nodes as drawn, each with its markup
+const rowTpl = document.createElement('template');
+function putRows(id, html) {
+  if (cache.get(id) === html) return;
+  const el = $(id), was = cache.has(id) ? rowsOf.get(id) : null; // (a cleared cache: whole)
+  cache.set(id, html);
+  rowTpl.innerHTML = html;
+  const fresh = [...rowTpl.content.childNodes].map((node) => ({ node, html: node.nodeType === 1 ? node.outerHTML : '#' + node.nodeValue }));
+  if (!was || was.length !== el.childNodes.length || was.some((r, i) => el.childNodes[i] !== r.node)) { el.replaceChildren(rowTpl.content); rowsOf.set(id, fresh); return; }
+  const pool = new Map();
+  for (const r of was) (pool.get(r.html) || pool.set(r.html, []).get(r.html)).push(r);
+  const next = fresh.map((r) => pool.get(r.html)?.shift() || r), keep = new Set(next.map((r) => r.node));
+  for (const r of was) if (!keep.has(r.node)) r.node.remove();
+  next.forEach((r, i) => { if (el.childNodes[i] !== r.node) el.insertBefore(r.node, el.childNodes[i] || null); });
+  rowTpl.content.replaceChildren();
+  rowsOf.set(id, next);
 }
 
 function renderMeters() {
@@ -1883,11 +2184,12 @@ function renderMeters() {
   document.body.classList.toggle('rooms-page', !!campaign.rooms && module === 'rooms'); // its notices pop up mid-screen
   $('tab-rooms').hidden = !campaign.rooms;
   $('tab-rooms').textContent = campaign.roomsPlay ? 'Server' : 'Run'; // on the network a server's rooms are your run (the Server tab is your home server)
+  $('tab-rooms').dataset.tt = campaign.roomsPlay ? "Server: The rooms of the server you're connected to." : 'Run: The rooms of your run.';
   document.body.classList.toggle('rooms-mode', !!campaign.roomsPlay); // the rooms playtest: the old game's tabs and meters step aside
   $('tab-campaign').hidden = !CAMP;
   $('tab-archive').hidden = !CAMP;
   $('tab-room').hidden = !CAMP;
-  document.body.classList.toggle('breach-mode', !!campaign.breach); // a breach playtest: the campaign's tabs and meters step aside
+  document.body.classList.toggle('breach-mode', !!campaign.breach); // a campaign breach: the campaign's tabs and meters step aside
   document.body.classList.toggle('campaign-mode', CAMP); // the breach campaign: the old game's tabs, meters and pager step aside
   document.body.classList.toggle('ctx-tabs', active(campaign) || !!campaign.run);
   $('combat-dot').hidden = !active(campaign) || module === 'combat';
@@ -1914,26 +2216,31 @@ function renderMeters() {
   }
   $('sound').textContent = 'Sound';
   $('sound').setAttribute('aria-pressed', String(campaign.settings.sound));
-  feel.ambience(!!campaign.settings.sound);
+  feel.ambience(!!campaign.settings.sound && !coldOn);
   const vols = V.volumesOf(campaign);
   if (JSON.stringify(vols) !== lastVols) { lastVols = JSON.stringify(vols); feel.volumes(vols); }
   // A fight plays its family's theme (fightmusic.mjs), building as the virus breaks: heat is how much of it is gone.
   const fighting = active(campaign), vi = fighting ? virusIntegrity(campaign) : null;
-  feel.soundtrack({ on: !!campaign.settings.sound, music: campaign.settings.music !== false, radio: campaign.settings.radio !== false, mood: fighting ? 'fight' : campaign.run ? 'run' : 'home', family: fighting ? campaign.encounter.virus.family : null, heat: vi?.max ? Math.round((0.15 + 0.85 * (1 - vi.current / vi.max)) * 10) / 10 : 0 });
+  feel.soundtrack({ on: !!campaign.settings.sound && !coldOn, music: campaign.settings.music !== false, radio: campaign.settings.radio !== false, mood: fighting ? 'fight' : campaign.run ? 'run' : 'home', family: fighting ? campaign.encounter.virus.family : null, floor: fighting ? stageFloor : null, heat: vi?.max ? Math.round((0.15 + 0.85 * (1 - vi.current / vi.max)) * 10) / 10 : 0 });
   // The place under the music (places.mjs): the hub whose session shows, the run's or fight's floor, the floor on the map.
-  feel.places({ on: !!campaign.settings.sound, ...placeOf(campaign, { hub: hubShown() ? hubSel : null, map: module === 'map' && mapView === 'mine' ? V.mapFloorOf(campaign, mapSel, mapFloor) : null }) });
+  feel.places({ on: !!campaign.settings.sound && !coldOn, ...placeOf(campaign, { hub: hubShown() ? hubSel : null, map: module === 'map' && mapView === 'mine' ? V.mapFloorOf(campaign, mapSel, mapFloor) : null }) });
   $('speed').textContent = `${cycleLength(campaign) / 1000}s cycle`;
   $('speed').title = `Speed: ${campaign.settings.speed || 'normal'}. Click for relaxed (12s) / normal (8s) / fast (5s). Rules count cycles, so balance never changes.`;
   $('motion').textContent = 'Motion';
   $('haptics').hidden = !feel.canBuzz();
   casing();
   pagerUi();
+  phoneUi();
   peopleUi();
   channelUi();
   profileUi();
   $('haptics').setAttribute('aria-pressed', String(!!campaign.settings.haptics));
   $('motion').setAttribute('aria-pressed', String(campaign.settings.motion));
   document.body.classList.toggle('no-motion', !campaign.settings.motion);
+  document.body.classList.toggle('grain-on', campaign.settings.grain === true); // either way by choice; unset, by the layout (style.css)
+  document.body.classList.toggle('grain-off', campaign.settings.grain === false);
+  document.body.classList.toggle('no-ambient', !gfx().ambient); // the Graphics settings (graphics.mjs): the maps, the backdrop and the CRT hold still
+  document.body.classList.toggle('tether-steady', !gfx().tether);
   document.body.dataset.fx = fxLevel(); // Effects: style.css quiets what moves on the board (a tether's snap) at minimal
 }
 
@@ -1959,17 +2266,22 @@ function renderCrewWin(s, docked) {
   put('crewwin', V.crewWindowMarkup(s, { preview: aimPreview, collapsed: crewWin.collapsed }));
   placeCrewWin();
 }
-document.addEventListener('click', (e) => { if (e.target.closest('[data-cw-toggle]')) { crewWin.collapsed = !crewWin.collapsed; saveCrewWin(); dirty = true; } });
+document.addEventListener('click', (e) => { if (e.target.closest('[data-cw-toggle]')) { crewWin.collapsed = !crewWin.collapsed; saveCrewWin(); markDirty(); } });
 addEventListener('resize', () => placeCrewWin());
 // The map's selection card pops up beside the node you clicked.
 let mapPop = false;
 let mapList = false, mapSort = 'status', pendingLocate = null; // the map's List mode (MOO2's planets list), its sort column, and a Locate waiting for the map to draw
 let mapFilter = []; // the map's Show picker: any of mine · targets · threats (none = all; the rest dims)
+let mapRunner = null; // the runner picked on the Rail (runners-view.mjs): the map draws them, their card beside them
+let mapRunnersAt = null; // the place whose counted diamond is open: the list of who's there, beside it
+let runnerMode = 'runner', runnerPreset = 'rotation';
+let railShut = false; // the Rail's Runners section folded (kept per viewer)
+try { railShut = localStorage.getItem('bb-rail-runners') === 'shut'; } catch { /* storage unavailable */ } // their card: the runner card, or the crew card Hire turns it into
 let mapFloor = null; // the floor the map shows (floors.mjs): the floor panel's pick; a selection on another floor shows that one
 let mapPickOpen = false; // whether the picker's menu is open (it survives redraws)
 let leadsOpen = false; // a run's Leads panel (the run header's toggle)
 let memYes = null; // the found server you just said yes to (its connect goes through)
-addEventListener('resize', () => { dirty = true; applyMapZoom(); });
+addEventListener('resize', () => { markDirty(); applyMapZoom(); });
 // A page's markup, or, if drawing it throws, a card with the error to copy into a bug report.
 function pageOrError(draw) {
   try { return draw(); } catch (err) {
@@ -1979,7 +2291,28 @@ function pageOrError(draw) {
     return `<section class="card page-error"><h2>This page hit an error</h2><p class="svc-line">The rest of the game still works. Send this text with your bug report.</p><pre>${esc(text)}</pre><div class="row"><button type="button" class="btn primary" data-module="map">Back to the map</button></div></section>`;
   }
 }
+// The fight log scrolls to its newest line once the frame has laid out (a ResizeObserver: observing fires once), not by
+// forcing a layout from render (docs/performance-plan.md batch 10).
+let logDue = false;
+const logRO = new ResizeObserver(() => { if (!logDue) return; logDue = false; const l = $('log'); l.scrollTop = l.scrollHeight; });
+function logEnd() { const l = $('log'); logDue = true; logRO.unobserve(l); logRO.observe(l); }
 const fitBoard = { key: null }; // the fight whose board went dense (render)
+// Every part on screen: if the rows overflow the board, tighten them (style.css .dense) for the rest of the fight.
+// Checked once the frame has laid out (a ResizeObserver on the board and each row: a row added, or one growing), never
+// by forcing a layout from render (docs/performance-plan.md batch 10). What measures the board itself calls it first.
+const denseRows = new Set();
+const denseRO = new ResizeObserver(() => fitDense());
+function fitDense() {
+  const bd = $('board');
+  if (!bd.classList.contains('dense') && bd.scrollHeight > bd.clientHeight + 2) bd.classList.add('dense');
+  if (bd.classList.contains('dense') && denseRows.size) { denseRO.disconnect(); denseRows.clear(); }
+}
+function watchDense(bd) {
+  if (bd.classList.contains('dense')) return;
+  if (!denseRows.has(bd)) { denseRO.observe(bd); denseRows.add(bd); }
+  for (const r of denseRows) if (r !== bd && r.parentNode !== bd) { denseRO.unobserve(r); denseRows.delete(r); }
+  for (const r of bd.children) if (!denseRows.has(r)) { denseRO.observe(r); denseRows.add(r); }
+}
 // A thread's reward (threads.mjs): pick one of three, over the page until you pick one or put it off (Later; it waits
 // in Mail, where Pick your reward brings it back).
 const thOffer = { later: null };
@@ -1987,7 +2320,7 @@ const thOffer = { later: null };
 const offerKey = () => (campaign.threads?.offer ? campaign.threads.offer.tid : campaign.arcs?.offers?.[0] ? `arc:${campaign.arcs.offers[0].floor}:${campaign.arcs.offers[0].step}` : null);
 function renderOffer() {
   const el = $('th-offer'), o = offerKey() && { tid: offerKey() };
-  const want = !!o && !SC.sceneNow(campaign) && thOffer.later !== o.tid && module !== 'combat' && !active(campaign) && !gainOpen() && !CAMP && !campaign.roomsPlay && !document.getElementById('th-panel'); // the last lines first: it comes up once you close them
+  const want = !!o && !SC.sceneNow(campaign) && !campaign.journalCard && thOffer.later !== o.tid && module !== 'combat' && !active(campaign) && !gainOpen() && !CAMP && !campaign.roomsPlay && !document.getElementById('th-panel'); // the last lines first: it comes up once you close them
   if (!el) return;
   el.hidden = !want;
   if (want) put('th-offer', campaign.threads?.offer ? thOfferMarkup(campaign) : arcOfferMarkup(campaign)); else if (cache.get('th-offer')) { cache.delete('th-offer'); el.innerHTML = ''; }
@@ -2002,7 +2335,7 @@ function threadPreview(arg) {
     else if (PREVIEW.stages.some(([k]) => k === w)) thPrev.stage = w;
     else return notice(`developer thread preview: ${PREVIEW.chains.join(', ')}; ${PREVIEW.stages.map(([k]) => k).join(', ')}.`, true);
   }
-  thPrev.open = true; thPrev.qn = null; dirty = true;
+  thPrev.open = true; thPrev.qn = null; markDirty();
 }
 // A transmission (scenes.mjs): over any page but a fight, once nothing else is up.
 function renderScene() {
@@ -2010,21 +2343,40 @@ function renderScene() {
   el.hidden = !want;
   if (want) { const was = cache.get('scene'); put('scene', sceneMarkup(campaign)); if (cache.get('scene') !== was) { const log = el.querySelector('.sc-log'); if (log) log.scrollTop = log.scrollHeight; } } else if (cache.get('scene')) { cache.delete('scene'); el.innerHTML = ''; }
 }
+// A journal's first find (journals.mjs findJournal): its document card, once nothing else is up.
+function renderJournal() {
+  const el = $('jr-find'), want = !!campaign.journalCard && !SC.sceneNow(campaign) && !CAMP && !introOn && module !== 'combat' && !active(campaign) && !gainOpen();
+  el.hidden = !want;
+  if (want) put('jr-find', journalCardMarkup(campaign)); else if (cache.get('jr-find')) { cache.delete('jr-find'); el.innerHTML = ''; }
+}
+function journalDone(ledger = false) {
+  const id = campaign.journalCard;
+  campaign.journalCard = null; feel.key('enter'); save(); markDirty();
+  if (ledger && id) { logJr = { writer: null, read: id }; goTo('log:journal:journals'); }
+}
+$('jr-find').addEventListener('click', (e) => {
+  if (e.target.closest('[data-jr-done]')) { e.stopPropagation(); journalDone(); }
+  else if (e.target.closest('[data-jr-ledger]')) { e.stopPropagation(); journalDone(true); }
+});
+document.addEventListener('keydown', (e) => {
+  if ($('jr-find').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); journalDone(); }
+}, true);
 function sceneAnswer(n) {
   const r = SC.choose(campaign, n);
   if (!r) return;
-  feel.key('enter'); save(); dirty = true;
+  feel.key('enter'); save(); markDirty();
   if (r.go) goTo(r.go);
 }
 $('scene').addEventListener('click', (e) => {
   const p = e.target.closest('[data-scene-pick]');
   if (p) { e.stopPropagation(); return sceneAnswer(Number(p.dataset.scenePick)); }
-  if (e.target.closest('[data-scene-skip]')) { e.stopPropagation(); SC.skip(campaign); feel.key('click'); save(); dirty = true; }
+  if (e.target.closest('[data-scene-skip]')) { e.stopPropagation(); SC.skip(campaign); feel.key('click'); save(); markDirty(); }
 });
 document.addEventListener('keydown', (e) => {
   if ($('scene').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
   if (/^[1-9]$/.test(e.key)) { e.preventDefault(); e.stopImmediatePropagation(); sceneAnswer(Number(e.key)); }
-  else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); SC.skip(campaign); save(); dirty = true; }
+  else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); SC.skip(campaign); save(); markDirty(); }
 }, true);
 function renderPreview() {
   const el = $('th-preview');
@@ -2040,9 +2392,9 @@ document.addEventListener('click', (e) => {
   else if (st) thPrev.stage = st.dataset.thpStage;
   else if (e.target.closest('[data-thp-chain]')) thPrev.chain = PREVIEW.chains[(PREVIEW.chains.indexOf(thPrev.chain) + 1) % PREVIEW.chains.length];
   else { e.stopImmediatePropagation(); return; } // the preview's own window: nothing in it acts on the game
-  thPrev.qn = null; feel.key('click'); dirty = true; e.stopImmediatePropagation();
+  thPrev.qn = null; feel.key('click'); markDirty(); e.stopImmediatePropagation();
 }, true);
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && thPrev.open) { thPrev.open = false; dirty = true; e.stopImmediatePropagation(); } }, true);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && thPrev.open) { thPrev.open = false; markDirty(); e.stopImmediatePropagation(); } }, true);
 // Losing a fight: the screen holds its last frame (the board, on the hit) until NO CARRIER's static covers it
 // (nocarrier.mjs), though the fight itself is already gone from the state.
 let lossHold = false;
@@ -2067,6 +2419,7 @@ function render(force = false) {
   if (force) cache.clear();
   renderMeters();
   renderScene();
+  renderJournal();
   renderOffer();
   renderPreview();
   shell.apply(module);
@@ -2084,26 +2437,35 @@ function render(force = false) {
   if (side) put('sidebar', `<section class="crewwin docked">${V.crewWindowMarkup(s, { preview: aimPreview })}</section>`);
   renderCrewWin(s, side);
   if (combatLike && hasFight) {
-    put('hud', V.hudMarkup(s, { party: !side, preview: aimPreview }));
+    put('hud', V.hudMarkup(s, { party: !side, preview: aimPreview }) + (F.isPhone() ? V.crewLineMarkup(s) : '')); // a phone: the crew as thin violet lines under your bar
+    art.wake(); // the virus picture's loop rests between fights (virus-art.mjs)
+    phHudCards();
     flyStatuses(s);
     // A new cycle: remember where every chip was, so the board can move them instead of jumping.
     const cycleKey = s.encounter.virus.id + ':' + s.encounter.cycle;
     const turned = shownCycle && shownCycle !== cycleKey && shownCycle.startsWith(s.encounter.virus.id + ':') && canMove();
     const before = turned ? chipSnapshot() : null;
-    put('board', (active(s) && s.encounter.paused ? '<div class="pause-strip" role="status">PAUSED · ANY ORDER RESUMES</div>' : '') + V.boardMarkup(s, selected, aimPreview));
+    putRows('board', (active(s) && s.encounter.paused ? '<div class="pause-strip" role="status">PAUSED · ANY ORDER RESUMES</div>' : '') + V.boardMarkup(s, selected, aimPreview));
+    chipfx.place($('board')); // themed chips get their effect back after the rebuild
+    for (const k of spentChips) $('board').querySelector(`[data-k="${CSS.escape(k)}"]`)?.classList.add('spent'); // and one that has gone off stays gone
+    for (const c of $('board').querySelectorAll('.intent.spent[data-k]')) if (!spentChips.has(c.dataset.k)) c.classList.remove('spent'); // (a kept row: one gone off before this cycle comes back)
     if (held.size) applyHeld(); // a batch still playing: its bars hold until each hit lands
     $('board').classList.toggle('is-paused', !!(active(s) && s.encounter.paused));
-    // Every part on screen: if the rows overflow the board, tighten them (style.css .dense) for the rest of the fight.
-    { const bd = $('board'), key = s.encounter.virus.id; if (fitBoard.key !== key) { fitBoard.key = key; bd.classList.remove('dense'); } if (!bd.classList.contains('dense') && bd.scrollHeight > bd.clientHeight + 2) bd.classList.add('dense'); }
+    // Classes for what style.css once asked of :has() (it restyled the board every frame): a tether's gutter, a hotspot's row.
+    { const bd = $('board'); bd.classList.toggle('tt-gut', !!bd.querySelector('.tether')); bd.classList.toggle('tt-lane1', !!bd.querySelector('.tether.lane1')); for (const r of bd.querySelectorAll('.brow.bpart')) r.classList.toggle('has-hotspot', !!r.querySelector('.tag.hotspot')); }
+    { const bd = $('board'), key = s.encounter.virus.id; if (fitBoard.key !== key) { fitBoard.key = key; bd.classList.remove('dense'); } watchDense(bd); } // tightened once it overflows (fitDense)
+    if (pendingStrikes.length || before) fitDense(); // what follows measures the board: tightened first, as it will be drawn
     for (const f of pendingStrikes.splice(0)) f();
     if (before) turnTimeline(before);
     cycleChanged(s);
     setBand(s);
     const logBefore = cache.get('log');
     put('log', V.logMarkup(s));
+    phTicker();
     if (cache.get('log') !== logBefore) {
       if (logBefore !== undefined) shell.typeIn($('log'), s.logs.length - (render.logLen ?? s.logs.length));
-      $('log').scrollTop = $('log').scrollHeight;
+      logEnd();
+      $('log-hidden').textContent = Math.max(0, $('log').children.length - 1);
     }
     render.logLen = s.logs.length;
   } else if (combatLike && campaign.rooms) {
@@ -2111,7 +2473,7 @@ function render(force = false) {
   } else if (combatLike && (campaign.breach || CAMP)) {
     return go(campaign.breach ? 'breach' : 'campaign', true); // a breach fight that's over: back to its page, never the old map
   } else if (combatLike) {
-    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }));
+    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, runnersAt: mapRunnersAt, railShut, phone: F.isPhone() }));
     applyMapZoom();
   } else if (module === 'net') {
     const before = cache.get('page-view');
@@ -2122,7 +2484,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi, cs: caseUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, runnersAt: mapRunnersAt, railShut, phone: F.isPhone() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab, phone: F.isPhone() }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi, house: houseUi, casing: casingSec }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2133,7 +2495,8 @@ function render(force = false) {
     const focusSk = module === 'loadout' ? skFocusKey() : null; // and the Skills page its item
     const focusRow = module === 'loadout' ? document.activeElement?.closest?.('.silk-tile') : null; // and the stash its row, or the next once it's loaded
     const focusRowAt = focusRow ? [...focusRow.parentElement.children].indexOf(focusRow) : -1;
-    if (!(module === 'hub' && mkDrag)) put('page-view', pageOrError(() => (pages[module] || pages.map)(campaign))); // not while you drag a ticket's slider
+    if (module === 'rooms') putRooms();
+    else if (!(module === 'hub' && mkDrag)) put('page-view', pageOrError(() => (pages[module] || pages.map)(campaign))); // not while you drag a ticket's slider
     if (focusRoom && !document.activeElement?.closest?.('.fp-room')) [...$('page-view').querySelectorAll(`.fp-room[data-room="${CSS.escape(focusRoom)}"][tabindex]`)].find((t) => t.getBoundingClientRect().width)?.focus({ preventScroll: true });
     if (module === 'breach') breachScroll(keep);
     if (module === 'codex') codexDrawn(focusCxKey);
@@ -2145,11 +2508,10 @@ function render(force = false) {
       row?.querySelector('.silk-pick')?.focus({ preventScroll: true });
     }
     pdDrawn();
-    if (module === 'server') { const d = document.querySelector('.command-dock'); $('page-view').style.setProperty('--dock-h', `${Math.max(0, innerHeight - (d?.getBoundingClientRect().top ?? innerHeight))}px`); } // the phone's sheet sits just above the prompt
     if (module === 'rooms') { for (const id of fpFresh.splice(0)) for (const g of $('page-view').querySelectorAll(`.fp-room[data-room="${CSS.escape(id)}"]`)) g.classList.add('resolve'); } // a room just seen resolves
     if (module === 'rooms') { applyFpZoom(); fillClocks($('page-view')); placeRoomsPop(); pzFx.mounted(); renderOffer(); } // the countdowns tick in place: the markup only changes with the server
     // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
-    if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); dirty = true; } } }
+    if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); markDirty(); } } }
     if (module === 'hub' && $('hubterm')) {
       const grew = hubLines.length - (render.hubLen ?? 0);
       if (grew > 0) shell.typeIn($('hubterm'), grew);
@@ -2168,17 +2530,21 @@ function render(force = false) {
   const netTray = module === 'net' && !!campaign.run;
   $('tray').hidden = !(combatLike || netTray);
   $('tray').classList.toggle('net-tray', netTray);
-  put('tray', netTray ? V.netTrayMarkup(nextActions(campaign)) : V.trayMarkup(s, selected) + scriptTray(s));
+  { const keys = netTray ? V.netTrayMarkup(nextActions(campaign)) : V.trayMarkup(s, selected) + scriptTray(s) + V.fleeKey(s); (combatLike ? putRows : put)('tray', keys + (combatLike && F.isPhone() ? phMenuKey(keys) : '')); $('tray').querySelectorAll(':scope > .ability').forEach((k, i) => k.classList.toggle('ph-over', i >= PH_KEYS)); } // a phone: past eight keys, under +n
+  phStage();
+  phPicked();
   // An ability that just came off cooldown flashes once.
   const cooling = new Set([...document.querySelectorAll('#tray .ability.cooling[data-ability]')].map((b) => b.dataset.ability));
   for (const b of document.querySelectorAll('#tray .ability.ready[data-ability]')) if (wasCooling.has(b.dataset.ability)) b.classList.add('just-ready');
   wasCooling = cooling;
   applySideMarks();
-  renderBreakout();
+  subPrompt();
+  renderToolkit();
   showArmed();
   renderPrompt();
   tourCheck();
   placeTip();
+  pingFades();
   dirty = false;
 }
 
@@ -2225,7 +2591,9 @@ function setBand(s) {
   const board = $('board');
   if (!board || !s.encounter) return;
   const e = s.encounter;
-  board.style.setProperty('--elapsed', (active(s) ? (e.elapsedMs / cycleLength(s)) * 100 : 0).toFixed(1) + '%');
+  // Set on the Now cells, its only readers: on the board, the inherited property restyled every row each frame.
+  const el = (active(s) ? (e.elapsedMs / cycleLength(s)) * 100 : 0).toFixed(1) + '%';
+  for (const c of board.querySelectorAll('.brow > .bcell:nth-child(2)')) if (c.style.getPropertyValue('--elapsed') !== el) c.style.setProperty('--elapsed', el);
   const closing = active(s) && !e.paused && cycleLength(s) - e.elapsedMs <= 1500 && intents(s, 1).some((i) => i.col === 0 && !i.hidden);
   board.classList.toggle('closing', closing);
 }
@@ -2252,40 +2620,61 @@ function cycleChanged(s) {
 // ---------- the timeline turning over ----------
 // When a cycle resolves, the board shows the move instead of jumping: every chip slides one column
 // left (FLIP: it starts where it was and eases to where it is now), what resolved this cycle fires
-// (an attack flies at your bar, your command at its target, a patch clamps shut) and fades, and
-// anything new drifts in from the right. Motion off skips all of it.
+// (an attack flies at your bar, a replicate at the fragment it spawns, your command at its target, a patch clamps
+// shut) and fades, and anything new drifts in from the right. Motion off skips all of it.
+const rowIds = () => [...$('board').querySelectorAll('.bpart[data-target]')].map((el) => el.dataset.target);
 function chipSnapshot() {
-  return [...$('board').querySelectorAll('[data-k]')].map((el) => ({ k: el.dataset.k, at: el.dataset.at || '', rect: el.getBoundingClientRect(), html: el.outerHTML, cls: el.className }));
+  const snap = [...$('board').querySelectorAll('[data-k]')].map(chipOf);
+  snap.rows = new Set(rowIds());
+  return snap;
 }
 function turnTimeline(before) {
   const board = $('board');
   const now = new Map([...board.querySelectorAll('[data-k]')].map((el) => [el.dataset.k, el]));
   const ease = 'cubic-bezier(.2,.75,.25,1)';
+  const spawned = rowIds().filter((id) => !before.rows?.has(id)); // the rows this cycle added: where a replicate aims
+  const floorMotion = canMove() ? BFX.motionOf(stageFloor) : null; // the floor's way a chip comes in (boardfx.mjs)
   for (const b of before) {
     const el = now.get(b.k);
     if (el) {
       const r = el.getBoundingClientRect();
       const dx = b.rect.left - r.left, dy = b.rect.top - r.top;
-      if (Math.abs(dx) + Math.abs(dy) > 1) el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 440, easing: ease });
+      if (Math.abs(dx) + Math.abs(dy) > 1) { el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 440, easing: ease }); BFX.move(el, floorMotion); }
       if (el.classList.contains('now') && !/\bnow\b/.test(b.cls)) el.animate([{ boxShadow: '0 0 0 0 rgba(255, 91, 61, 0.7)' }, { boxShadow: '0 0 0 6px rgba(255, 91, 61, 0)' }], { duration: 700, delay: 380, easing: 'ease-out' });
-    } else fire(b);
+    } else if (!spentChips.delete(b.k)) fire(b, spawned); // (one that struck at its own step has gone off)
   }
+  spentChips.clear();
   const was = new Set(before.map((b) => b.k));
-  for (const [k, el] of now) if (!was.has(k)) el.animate([{ opacity: 0, transform: 'translateX(28px)' }, { opacity: 1, transform: 'none' }], { duration: 420, delay: 160, easing: 'ease-out', fill: 'backwards' });
+  for (const [k, el] of now) if (!was.has(k)) { BFX.arrive(el, floorMotion, 160); el.animate([{ opacity: 0, transform: 'translateX(28px)' }, { opacity: 1, transform: 'none' }], { duration: 420, delay: 160, easing: 'ease-out', fill: 'backwards' }); }
   const cyc = board.querySelector('.bnow .cyc');
   if (cyc) cyc.animate([{ opacity: 0, transform: 'translateY(-6px)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'ease-out' });
 }
 // What resolved this cycle: a ghost of the chip plays out where it was.
-function fire(b) {
-  const g = document.createElement('div');
-  g.className = 'fx-ghost';
-  g.innerHTML = b.html;
-  Object.assign(g.style, { left: b.rect.left + 'px', top: b.rect.top + 'px', width: b.rect.width + 'px', height: b.rect.height + 'px' });
-  document.body.appendChild(g);
+const ghostOf = (b) => { const g = document.createElement('div'); g.className = 'fx-ghost'; g.innerHTML = b.html; Object.assign(g.style, { left: b.rect.left + 'px', top: b.rect.top + 'px', width: b.rect.width + 'px', height: b.rect.height + 'px' }); document.body.appendChild(g); return g; };
+function fire(b, spawned = []) {
+  const theirs = /\bnow\b/.test(b.cls) && !/mine|daemon|patch/.test(b.cls);
+  // A replicate aims at the fragment it spawned (one each), not your bar; one that fizzled plays out in place.
+  const replicate = theirs && /\breplicate\b/.test(b.cls);
+  const spawn = replicate ? spawned.shift() : null;
+  // Its attack's strike this batch (virusvoice.mjs): held so it lands with its number, its sound flying with it. The
+  // chip stays where it was until it goes. (A cast's, a seal's or a lock's tell chip is no attack.)
+  const hit = theirs && b.th && !/\bt-(cast|seal|lock)\b/.test(b.cls) ? takeStrike(b.src) : null;
+  if (!hit) return fireNow(b, theirs, replicate, spawn);
+  const hold = ghostOf(b), wait = Math.max(0, hit.land - hit.plan.impact);
+  attackHeld.push(() => { attackSound(hit, true, wait); later(wait, () => { hold.remove(); fireNow(b, theirs, replicate, spawn); }); });
+}
+function fireNow(b, theirs, replicate, spawn) {
+  const aim = theirs && (replicate ? (spawn ? document.querySelector(`.board [data-target="${CSS.escape(spawn)}"] .part-bar`) : null) : document.querySelector('.hud-bar.mine .bigbar'));
+  // A themed part's attack going off (chipfx.mjs): its own strike into its target, in place of the ghost or beside it.
+  if (b.th && aim) {
+    const bar = aim.getBoundingClientRect(), fill = aim.firstElementChild?.getBoundingClientRect(); // where its fill ends: a bite lands there
+    if (bar?.width && chipStrike(b.th, b.rect, { x: bar.left + bar.width / 2, y: bar.top + bar.height / 2 }, bar, fill ? fill.right : null)) return;
+  }
+  const g = ghostOf(b);
   const center = (el) => { const r = el?.getBoundingClientRect(); return r && r.width ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null; };
   const from = { x: b.rect.left + b.rect.width / 2, y: b.rect.top + b.rect.height / 2 };
   let to = null, frames;
-  if (/\bnow\b/.test(b.cls) && !/mine|daemon|patch/.test(b.cls)) to = center(document.querySelector('.hud-bar.mine .bigbar')); // an attack lands on you
+  if (theirs) to = center(aim); // an attack lands on you; a replicate, on its new fragment
   else if (/mine|daemon/.test(b.cls) && b.at) to = center(document.querySelector(`.board [data-target="${CSS.escape(b.at)}"] .part-bar`)); // your command hits its target
   if (to) {
     const dx = to.x - from.x, dy = to.y - from.y;
@@ -2304,8 +2693,12 @@ let uiShown = 0;
 // places divided by it.
 const Z = () => uiShown || 1;
 const zr = (r) => { const z = Z(); return { left: r.left / z, top: r.top / z, right: r.right / z, bottom: r.bottom / z, width: r.width / z, height: r.height / z }; };
-function uiScale() {
-  const cs = getComputedStyle(document.body), avail = document.body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+// The room is measured when the casing changes, the window resizes, or the body's width does (a ResizeObserver, once
+// the frame has laid out), not on every render (docs/performance-plan.md batch 10).
+let uiAvail = null;
+function uiScale(measure = false) {
+  if (measure || uiAvail == null) { const cs = getComputedStyle(document.body); uiAvail = document.body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight); }
+  const avail = uiAvail;
   UI.ROOM.avail = avail;
   const z = UI.scaleFor(campaign.settings.uiScale ?? 1, avail);
   if (z === uiShown) return;
@@ -2314,9 +2707,9 @@ function uiScale() {
   fitKey = ''; requestAnimationFrame(() => { fitKey = ''; fitTopbar(); });
 }
 function casing() {
-  // The monitor and its window only fit a desktop-sized screen (style.css, the casing media query).
+  // The monitor and its window only fit a desktop-sized screen (style.css, the casing media query). Never on a phone.
   const roomy = matchMedia('(min-width: 1100px) and (min-height: 720px)').matches;
-  const cased = shellOn() && campaign.settings.casing !== false, win = cased && roomy && campaign.settings.window !== false;
+  const cased = !F.isPhone() && shellOn() && campaign.settings.casing !== false, win = cased && roomy && campaign.settings.window !== false;
   const moved = document.body.classList.contains('cased') !== cased || document.body.classList.contains('window-on') !== win;
   document.body.classList.toggle('cased', cased);
   document.body.classList.toggle('window-on', win);
@@ -2325,7 +2718,7 @@ function casing() {
   if (moved && win) outside.remeasure();
   if (win !== outsideShown || moved) { outsideShown = win; feel.rain(win ? outsideRain : 0); }
   if (moved) { fitKey = ''; requestAnimationFrame(() => { fitKey = ''; fitTopbar(); }); } // the screen's width changed (casing or window on or off): fit the top bar to it again
-  uiScale(); // the room changed with the casing: the scale that fits may too
+  uiScale(moved); // the room changed with the casing: the scale that fits may too
   feel.street(win);
   screenFx();
   const s = campaign;
@@ -2335,33 +2728,63 @@ function casing() {
   $('knob-speed').title = `Speed: ${s.settings.speed || 'normal'}`;
   casingLookUi(cased);
 }
-// The casing's cosmetics (casing.mjs): its colourway on <body> (casing.css: the plastic only), the plate's words,
-// the stickers in the chin's two strips and the desk's props. The strips' ends and the props' spots are measured from
-// the knobs, the plate and the lamps (casing.mjs propLayout), so neither sits on any of them, nor on each other, nor
-// on the screen (re-measured when the plate, the props or the window changes).
-let caseKey = '';
+// The casing's cosmetics (casing.mjs): its monitor color on <body> (casing.css: the plastic only), the plate's words, the
+// stickers anywhere on the plastic and the props on the desk or the monitor's top. Each is placed from the screen's
+// margins and the knobs, the plate and the lamps as measured (casing.mjs stickerSpot, propSpot), so none sits on the
+// screen or on any of them (placed again when the plate, the page's size, the window or a place changes). While Rig →
+// Casing is open they drag (#casing.edit); a drop saves the place.
+let caseKey = '', caseM = null, caseKeep = [], caseDrag = null;
+const caseView = { w: innerWidth, h: innerHeight }; // the window's size, kept from its resizes: reading it on a render forces a style pass
+addEventListener('resize', () => { caseView.w = innerWidth; caseView.h = innerHeight; });
+const casePut = (el, p) => { el.style.transform = `translate(${Math.round(p.x - caseM.box.left)}px, ${Math.round(p.y - caseM.box.top)}px)${p.rot ? ` rotate(${p.rot}deg)` : ''}`; };
+const caseSize = (el) => ({ w: el.offsetWidth, h: el.offsetHeight });
 function casingLookUi(cased) {
-  const look = casingLook(campaign), body = document.body;
+  const look = casingLook(campaign), body = document.body, host = $('casing');
   if (look.color) { if (body.dataset.case !== look.color) body.dataset.case = look.color; } else if (body.dataset.case) delete body.dataset.case;
-  const badge = document.querySelector('#casing .badge');
+  const badge = host.querySelector('.badge');
   if (badge.textContent !== look.plate) badge.textContent = look.plate;
-  const strips = decalStrips(campaign), L = document.querySelector('#casing .decals.l'), R = document.querySelector('#casing .decals.r');
-  if (L.innerHTML !== strips.left) L.innerHTML = strips.left;
-  if (R.innerHTML !== strips.right) R.innerHTML = strips.right;
-  const props = propsLook(campaign), PR = document.querySelector('#casing .props'), pk = props.map((p) => p?.id || '').join(',');
-  if (PR.dataset.k !== pk) { PR.innerHTML = props.map((p, i) => (p ? propMarkup(p, i) : '')).join(''); PR.dataset.k = pk; } // only on a change, so the mug's steam runs on
-  const desk = document.body.classList.contains('window-on') ? parseFloat(getComputedStyle(document.body).getPropertyValue('--desk')) || 0 : 0;
-  const key = `${cased}:${look.plate}:${innerWidth}:${innerHeight}:${desk}:${pk}`;
-  if (!cased || key === caseKey || !(strips.left || strips.right || pk !== ',')) return;
-  const box = $('casing').getBoundingClientRect();
+  host.classList.toggle('edit', cased && module === 'rig' && rigTab === 'casing');
+  if (caseDrag) return; // a sticker in the hand: nothing moves under it
+  const DC = host.querySelector('.decals'), sk = look.decals.map((x) => x.id).join(',');
+  if (DC.dataset.k !== sk) { DC.innerHTML = look.decals.map((x) => decalMarkup(x)).join(''); DC.dataset.k = sk; caseKey = ''; }
+  const props = propsLook(campaign), PR = host.querySelector('.props'), pk = props.map((p) => p.id).join(',');
+  if (PR.dataset.k !== pk) { PR.innerHTML = props.map((p) => propMarkup(p)).join(''); PR.dataset.k = pk; caseKey = ''; } // only on a change, so the mug's steam runs on
+  const win = body.classList.contains('window-on');
+  if (!cased) return;
+  const key = `${cased}:${look.plate}:${caseView.w}:${caseView.h}:${win}:${look.decals.map((x) => `${x.id} ${x.side} ${x.u} ${x.v}`)}:${props.map((p) => `${p.id} ${p.on} ${p.u}`)}`;
+  if (key === caseKey) return;
+  const box = host.getBoundingClientRect();
   if (!box.width) return;
   caseKey = key;
-  const knobs = document.querySelector('#casing .knobs').getBoundingClientRect(), plate = badge.getBoundingClientRect(), lamps = document.querySelector('#casing .lamps').getBoundingClientRect();
-  const { spots, dz } = propLayout({ W: innerWidth, H: innerHeight, desk, box, knobs, plate, lamps }, props.map(Boolean));
-  const set = (k, v) => $('casing').style.setProperty(k, `${Math.max(0, Math.round(v))}px`);
-  set('--dz-l0', dz.l0); set('--dz-l1', dz.l1); set('--dz-r0', dz.r0); set('--dz-r1', dz.r1);
-  PR.querySelectorAll('.prop').forEach((el) => { const p = spots[Number(el.dataset.propSlot)]; el.hidden = !p; if (p) { el.style.left = `${Math.round(p.x - box.left)}px`; el.style.top = `${Math.round(p.y - box.top)}px`; } });
+  const cs = getComputedStyle(body), desk = win ? parseFloat(cs.getPropertyValue('--desk')) || 0 : 0;
+  caseM = { W: innerWidth, H: innerHeight, top: parseFloat(cs.paddingTop) || 0, side: parseFloat(cs.paddingLeft) || 0, chin: (parseFloat(cs.paddingBottom) || 0) - desk, desk, win, box };
+  caseKeep = [host.querySelector('.knobs'), badge, host.querySelector('.lamps')].map((el) => el.getBoundingClientRect());
+  DC.querySelectorAll('.decal').forEach((el, i) => casePut(el, stickerSpot(caseM, caseKeep, look.decals[i], caseSize(el))));
+  PR.querySelectorAll('.prop').forEach((el, i) => casePut(el, propSpot(caseM, caseKeep, props[i])));
 }
+$('casing').addEventListener('pointerdown', (e) => {
+  const el = e.target.closest('[data-sticker], [data-prop]');
+  if (!el || !caseM || !$('casing').classList.contains('edit')) return;
+  e.preventDefault();
+  hideTip(false);
+  try { el.setPointerCapture(e.pointerId); } catch { /* the pointer is gone */ }
+  const prop = el.dataset.prop, id = prop || el.dataset.sticker, size = caseSize(el);
+  caseDrag = { pos: null };
+  el.classList.add('drag');
+  const move = (ev) => {
+    const pos = prop ? propAt(caseM, ev.clientX, ev.clientY) : stickerAt(caseM, ev.clientX, ev.clientY, size);
+    caseDrag.pos = pos;
+    casePut(el, prop ? propSpot(caseM, caseKeep, pos) : stickerSpot(caseM, caseKeep, { id, ...pos }, size));
+  };
+  const up = () => {
+    el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+    el.classList.remove('drag');
+    const pos = caseDrag?.pos;
+    caseDrag = null;
+    if (pos && (prop ? placeProp : placeSticker)(campaign, id, pos)) { save(); caseKey = ''; markDirty(); }
+  };
+  el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+});
 // The screen's effects and the casing's lamps, from real state (screenfx.mjs). The floor whose palette is up: the map's
 // floor on the map, the server's on a run and in a fight there; home keeps the default amber.
 function screenFx() {
@@ -2369,10 +2792,13 @@ function screenFx() {
   const health = active(s) ? frac(defender(s).integrity, defender(s).max) : s.rooms ? frac(FP.signalNow(s), s.rooms.max) : s.breach ? frac(BR.signalOf(s), BR.maxOf(s)) : s.run ? frac(s.run.integrity, s.run.max) : null;
   const st = screenState(s, { module, mapFloor: module === 'map' ? V.mapFloorOf(s, mapSel, mapFloor) : null, loc: s.run ? currentLocation(s) : null, health, gate: V.gateOf(s), until: sfx.until, fmtLeft: s.degraded ? fmtLeft(degradedLeft(s)) : null });
   if (!shellOn()) Object.assign(st, { level: 'off', floor: null, low: false, on: {} });
+  stageFloor = module === 'map' ? null : st.floor;
+  $('virus-canvas').parentElement.classList.toggle('staged', !!stageFloor); // the place replaces the picture's grid
+  { const pane = $('virus-canvas').closest('.stage'), tag = stage.tagOf(stageFloor); if (pane && pane.dataset.pane !== tag) pane.dataset.pane = tag; } // [ coldline/render ]
   sfx.apply(st);
 }
 // A lamp's one-off blink (#net news, a daemon firing), and the redraw that ends it.
-function lampBlink(id) { sfx.blink(id); dirty = true; setTimeout(() => { dirty = true; }, SFX.blinkMs + 60); }
+function lampBlink(id) { sfx.blink(id); markDirty(); setTimeout(() => { markDirty(); }, SFX.blinkMs + 60); }
 $('knob-sound').addEventListener('click', () => $('sound').click());
 // Buttons press like hardware (with Sound on).
 document.addEventListener('pointerdown', (e) => { if (e.button === 0 && e.target.closest('button, [data-command], [data-run], [data-target], .mnode, .knob')) feel.key('click'); });
@@ -2384,7 +2810,7 @@ function tickUi() {
   if (!active(s)) return;
   setBand(s);
   const bar = $('cyclebar'), cd = $('countdown');
-  if (bar) bar.style.width = (s.encounter.elapsedMs / cycleLength(s)) * 100 + '%';
+  if (bar) bar.style.transform = `scaleX(${(s.encounter.elapsedMs / cycleLength(s)).toFixed(4)})`;
   // The Sync Window lights while the bar is inside it.
   const sw = $('sync-win');
   if (sw) {
@@ -2394,8 +2820,8 @@ function tickUi() {
     for (const g of document.querySelectorAll('#hud .gfx[data-if="synced"]:not(.spent)')) g.classList.toggle('lit', live || !!s.encounter.synced);
   }
   ttTapTick();
-  { const first = s.serial, k = `${s.encounter.cycle}:${first}`; if (s === campaign && tickUi.exc !== k) { tickUi.exc = k; if (noteExceptions(s)) { react(s.logs.filter((x) => x.id > first)); dirty = true; } } } // an exception the moment it is on the board (checked when the fight changes)
-  if (cd) cd.textContent = s.encounter.paused ? 'II' : Math.max(0, (cycleLength(s) - s.encounter.elapsedMs) / 1000).toFixed(1);
+  { const first = s.serial, k = `${s.encounter.cycle}:${first}`; if (s === campaign && tickUi.exc !== k) { tickUi.exc = k; if (noteExceptions(s)) { react(s.logs.filter((x) => x.id > first)); markDirty(); } } } // an exception the moment it is on the board (checked when the fight changes)
+  if (cd) { const t = s.encounter.paused ? 'II' : Math.max(0, (cycleLength(s) - s.encounter.elapsedMs) / 1000).toFixed(1); if (cd.textContent !== t) cd.textContent = t; } // written only when it changes: each write is a layout
   // One warning per cycle when something is about to land on you.
   const left = cycleLength(s) - s.encounter.elapsedMs;
   const key = s.encounter.cycle + ':' + s.encounter.virus.id;
@@ -2406,6 +2832,17 @@ function tickUi() {
   }
 }
 let prewarned = '';
+// Themed chips (chipfx.mjs): every frame, a themed part's chips at +1 and in Now play its effect, faint, inside the chip.
+// Screen effects off, Motion off or reduced motion: none; subtle: fainter.
+let chipLast = 0;
+function chipTick() {
+  const t = performance.now(), dt = chipLast ? Math.min(100, t - chipLast) : 0;
+  chipLast = t;
+  const s = shown();
+  if (module !== 'combat' || !active(s)) return;
+  const lvl = levelOf(campaign), k = !canMove() || lvl === 'off' ? 0 : lvl === 'subtle' ? 0.7 : 1, L = cycleLength(s);
+  chipfx.tick({ dt: s.encounter.paused ? 0 : dt, p: Math.min(1, s.encounter.elapsedMs / L), left: L - s.encounter.elapsedMs, k, plusOne: gfx().chips });
+}
 
 // Once a second: finish an install whose time is up, and move the Server page's progress bar.
 // The bar and clock are patched in place so buttons (and their confirm clicks) survive.
@@ -2423,8 +2860,8 @@ function services() {
   const S = own();
   if (!document.hidden && now - lastInput < 120000 && !playtest && !CAMP) tickPlay(S, dt);
   const hp = S.server.integrity;
-  const events = S.breach || S.roomsPlay ? [] : [...tickNetwork(S, now), ...tickServices(S, now)]; // a breach or rooms playtest has no network
-  if (campaign.rooms && !realSave) { const ev = FP.tick(campaign, now); if (ev.length) react(ev); if (module === 'rooms' || ev.length) dirty = true; } // respawn timers count down on the map
+  const events = S.breach || S.roomsPlay ? [] : [...tickNetwork(S, now), ...tickServices(S, now)]; // a campaign breach or the rooms playtest has no network
+  if (campaign.rooms && !realSave) { const ev = FP.tick(campaign, now); if (ev.length) react(ev); if (module === 'rooms' || ev.length) markDirty(); } // respawn timers count down on the map
   if (events.length) { react(events); save(); }
   // A siege or breach took a bite: the meter says so.
   const bite = hp - S.server.integrity;
@@ -2432,14 +2869,14 @@ function services() {
   // An invader on the move, a siege or a breach, or Degraded mode: the map, the Server page and
   // the Integrity meter change a little every second.
   if (campaign.invasion || campaign.degraded) {
-    dirty = true;
+    markDirty();
     if (now - netSaved > 10000) { netSaved = now; save(); }
   }
   if (module === 'mail' && $('pay-left')) $('pay-left').textContent = V.fmtTime(nextPayIn(campaign, now));
   // An event up (events.mjs): its card's ring drains and a feud's bar drifts, so the map redraws now and then.
-  if (module === 'map' && campaign.events?.length && now - (services.ev || 0) > 5000) { services.ev = now; dirty = true; }
+  if (module === 'map' && campaign.events?.length && now - (services.ev || 0) > 5000) { services.ev = now; markDirty(); }
   // Offers and shelves count down: refresh those pages now and then.
-  if ((module === 'mail' || module === 'store') && now - (services.page || 0) > 15000) { services.page = now; dirty = true; }
+  if ((module === 'mail' || module === 'store') && now - (services.page || 0) > 15000) { services.page = now; markDirty(); }
   const job = campaign.install;
   if (module !== 'server' || !job) return;
   const bar = document.querySelector('.install-bar span'), left = document.querySelector('.install-top span');
@@ -2458,15 +2895,23 @@ const shownRect = (el) => { const r = el.getBoundingClientRect(); return r.width
 // The first match that's on screen: the room map draws twice (wide, and tall for a phone) and shows one.
 const shownEl = (sel) => [...document.querySelectorAll(sel)].find(shownRect) || null;
 function onScreen(sel) { return !!shownEl(sel); }
+// Pacing (tips.mjs paceOf): a calm tip once a screen visit and CALM_MS after the last closed; an opening tip once a fight.
+const calm = { module: null, shown: false, until: 0 };
+let toldFight = null;
 function checkTips(now) {
-  if (tip || ending || introOn || lu.showing() || shell.booting || connecting() || playtest || now < tipWait) return;
+  if (tip || ending || introOn || lu.showing() || shell.booting || connecting() || playtest || now < tipWait || !$('scene').hidden) return; // a transmission first
   tipWait = now + 400;
-  const t = nextTip(campaign, module, onScreen);
+  if (calm.module !== module) { calm.module = module; calm.shown = false; }
+  const fight = campaign.encounter?.virus || null;
+  const t = nextTip(campaign, module, onScreen, { quiet: calm.shown || now < calm.until, told: !!fight && toldFight === fight });
   if (!t) return;
-  tip = { t, cur: t, step: 0, paused: false, base: t.mark?.(campaign) };
+  const kind = paceOf(t, module);
+  if (kind === 'calm') calm.shown = true;
+  if (kind === 'opening') toldFight = fight;
+  tip = { t, cur: t, step: 0, paused: false, base: t.mark?.(campaign), kind };
   showStep();
   $('tip').hidden = false;
-  if (t.pause && active(campaign) && !campaign.encounter.paused) { campaign.encounter.paused = true; tip.paused = true; dirty = true; }
+  if (t.pause && active(campaign) && !campaign.encounter.paused) { campaign.encounter.paused = true; tip.paused = true; markDirty(); }
   placeTip();
   const box = $('tip');
   box.classList.remove('show'); void box.offsetWidth; box.classList.add('show');
@@ -2476,6 +2921,11 @@ function checkTips(now) {
 function showStep() {
   const steps = tip.t.steps;
   tip.cur = steps ? steps[tip.step] : tip.t;
+  // wick narrates the guided path (tips.mjs wick): the Transmission, his face beside his line.
+  const wick = !!tip.cur.wick;
+  $('tip').classList.toggle('wick', wick);
+  $('tip-from').hidden = !wick;
+  $('tip-face').innerHTML = wick ? portraitMarkup('wick', 'npc') : '';
   $('tip-text').textContent = tip.cur.text;
   $('tip-step').textContent = steps ? `${tip.step + 1}/${steps.length}` : tip.t.tour ? `${tourDone(campaign) + 1}/${TOUR.length}` : '';
   $('tip-ok').textContent = steps && tip.step < steps.length - 1 ? 'Next' : 'Got it';
@@ -2516,20 +2966,21 @@ function placeTip() {
 }
 function hideTip(seen) {
   if (!tip) return;
+  const kind = tip.kind;
   if (seen) { for (const id of [tip.t.id, ...(tip.t.covers || [])]) markSeen(campaign, id); save(); }
   else if (tip.t.steps && tip.step > 0) { for (const x of tip.t.steps.slice(0, tip.step)) markSeen(campaign, x.id); save(); } // steps you read stay read
-  if (tip.paused && active(campaign) && campaign.encounter.paused) { campaign.encounter.paused = false; dirty = true; }
+  if (tip.paused && active(campaign) && campaign.encounter.paused) { campaign.encounter.paused = false; markDirty(); }
   document.querySelectorAll('.tip-target').forEach((x) => x.classList.remove('tip-target'));
   $('tip').hidden = true;
   tip = null;
-  tipWait = Math.max(tipWait, performance.now() + (seen ? 6000 : 400)); // one at a time, with room to play between
+  if (seen && kind === 'calm') calm.until = performance.now() + CALM_MS;
   tipWait = performance.now() + 700; // a breath before the next one
 }
 $('tip-ok').addEventListener('click', () => { advanceTip(); focusPrompt(); });
-$('tip-off').addEventListener('click', () => { campaign.settings.tips = false; hideTip(true); notice('Tips off. Turn them back on on the System page.'); dirty = true; });
+$('tip-off').addEventListener('click', () => { campaign.settings.tips = false; hideTip(true); notice('Tips off. Turn them back on on the System page.'); markDirty(); });
 $('tip-skip').addEventListener('click', () => { skipTour(campaign); hideTip(false); save(); focusPrompt(); });
 // A tour step you did (by a click or the prompt): it closes, and the next waits for its own thing.
-function tourCheck() { if (tip?.t.tour && tip.t.done?.(campaign, tip.base)) hideTip(true); }
+function tourCheck() { if (tip?.t.done?.(campaign, tip.base)) hideTip(true); settleTips(campaign); } // a tour step, or a tip that waits for you (map-start)
 addEventListener('resize', () => placeTip());
 
 // A status lands: its chip shows big over the board, then flies into its place in the Status
@@ -2575,7 +3026,7 @@ function showArmed() {
 
 // Who did it, to what: the actor's row lights in its side's colour and the target takes the mark.
 // Your half of the cycle resolves the instant you press Enter: keep it lit long enough to see.
-const hold = (key, ms) => { const e = campaign.encounter; if (e) Object.defineProperty(e, key, { value: Date.now() + ms, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, ms + 50); };
+const hold = (key, ms) => { const e = campaign.encounter; if (e) Object.defineProperty(e, key, { value: Date.now() + ms, writable: true, configurable: true, enumerable: false }); setTimeout(() => { markDirty(); }, ms + 50); };
 const holdYou = () => hold('_youUntil', 550), holdThem = () => hold('_themUntil', 300); // just long enough to see the hit land: then it's your move, and the board says so
 // Marks outlive a board redraw: they're re-applied after each render until they expire.
 let sideMarks = [];
@@ -2609,48 +3060,84 @@ function stepLoop() {
     stepTimer = null;
     const events = stepCycle(campaign);
     if (events.length) { react(events); save(); }
-    dirty = true;
+    markDirty();
   }, (STEP_MS[campaign.settings?.speed] || STEP_MS.normal) * (e.steps.after && !e.steps.due ? VIRUS_BEAT : 1));
 }
 
 // ---------- clock ----------
 let last = performance.now();
 let lastSecond = 0, wanderTick = 0;
-// Traffic on the map (view.mjs trafficMarkup): each dot runs its route on its own clock. A transfer
-// sits at its share of the way; backbone traffic loops, the far end's colour on the way back.
-function movePackets(at) {
-  for (const d of document.querySelectorAll('.map-svg .mpkt')) {
-    const path = d.ownerSVGElement?.querySelector(`[data-rid="${d.dataset.route}"]`);
-    if (!path) continue;
-    let p, back = !!d.dataset.rev;
-    if (d.dataset.period) {
-      // Hub-to-hub: each lap carries one of the route's shipments, from where it's cheap to where it pays.
-      const k = at / +d.dataset.period + +d.dataset.phase, lap = Math.floor(k);
-      const ships = d._ships ||= JSON.parse(d.dataset.ships || '[]'), sh = ships.length ? ships[lap % ships.length] : null;
-      p = k - lap; back = sh ? !!sh.back : lap % 2 === 1;
-      d._ship = sh && { ...sh, n: 4 + ((lap * 7 + ships.indexOf(sh) * 13) % 17) };
-      d.style.color = back ? d.dataset.cb : d.dataset.ca;
-    } else p = Math.max(0, Math.min(1, (at - +d.dataset.t0) / Math.max(1, +d.dataset.t1 - +d.dataset.t0)));
-    const len = path.getTotalLength(), at0 = (back ? 1 - p : p) * len, pt = path.getPointAtLength(at0);
-    // Which way it's heading: a step further along the route, in its direction of travel.
-    const q = path.getPointAtLength(Math.max(0, Math.min(len, at0 + (back ? -1 : 1))));
-    const ang = Math.atan2(q.y - pt.y, q.x - pt.x) * 180 / Math.PI;
-    d.setAttribute('transform', `translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`);
-    d.querySelector('.pk-dir')?.setAttribute('transform', `rotate(${ang.toFixed(0)})`);
-  }
-  if (pktHover) placePktTip();
+// Traffic on the map (view.mjs trafficMarkup): mapmotion.mjs runs each dot on the graphics card, started as it's drawn.
+watchPackets($('page-view'));
+// Rig → House (house-view.mjs): drag a tile or a placed piece onto a spot (on the picker, a placed one is put away), or
+// click it and then a spot. The piece lands centred on the pointer. Esc puts a piece in hand back where it was.
+let hsDrag = null; // a press on a tile or a placed piece: { id, x, y, moved }
+let hsDropAt = 0; // the click after a drop is the drop's own
+const hsUnder = (x, y) => document.elementFromPoint(x, y)?.closest?.('.hs-in, .hs-pick') || null;
+function houseAim(inEl, x) {
+  const floor = inEl.dataset.hsFloor, r = inEl.getBoundingClientRect(), col = Math.floor(((x - r.left) / r.width) * HOUSE.widthOf(floor));
+  return { floor, x: HOUSE.leftFor(houseUi.held, col, floor) };
 }
+function housePlace(inEl, x) {
+  const at = houseAim(inEl, x);
+  if (!HOUSE.fits(campaign, houseUi.held, at.floor, at.x)) { feel.add('nope', null); return false; }
+  run(`house place ${houseUi.held} ${at.floor} ${at.x}`);
+  return true;
+}
+function houseClick(e) {
+  if (Date.now() - hsDropAt < 400) return true;
+  const tile = e.target.closest('[data-hs-pick]');
+  if (tile) {
+    const id = tile.dataset.hsPick;
+    if (houseUi.held === id && HOUSE.placedOf(campaign)[id]) run(`house store ${id}`);
+    houseUi = { held: houseUi.held === id ? null : id, hover: null };
+    markDirty(); return true;
+  }
+  const inEl = e.target.closest('.hs-in');
+  if (houseUi.held && inEl) {
+    if (housePlace(inEl, e.clientX)) houseUi = { held: null, hover: null };
+    markDirty(); return true;
+  }
+  const piece = e.target.closest('[data-hs-piece]');
+  if (piece && !houseUi.held) { houseUi = { held: piece.dataset.hsPiece, hover: null }; markDirty(); return true; }
+  return false;
+}
+document.addEventListener('pointerdown', (e) => {
+  if (module !== 'rig' || rigTab !== 'house' || e.button !== 0 || houseUi.held) return; // a piece in hand: a press is a click
+  const el = e.target.closest?.('[data-hs-piece], button[data-hs-pick]');
+  if (el) hsDrag = { id: el.dataset.hsPiece || el.dataset.hsPick, x: e.clientX, y: e.clientY, moved: false };
+});
+document.addEventListener('pointermove', (e) => {
+  if (hsDrag && !hsDrag.moved && Math.hypot(e.clientX - hsDrag.x, e.clientY - hsDrag.y) > 5) { hsDrag.moved = true; houseUi = { held: hsDrag.id, hover: null }; ttHide(); markDirty(); }
+  if (module !== 'rig' || rigTab !== 'house' || !houseUi.held) return;
+  const u = hsUnder(e.clientX, e.clientY), inEl = u?.matches('.hs-in') ? u : null, at = inEl ? houseAim(inEl, e.clientX) : null, was = houseUi.hover;
+  if (at?.floor === was?.floor && at?.x === was?.x) return;
+  houseUi.hover = at; markDirty();
+});
+document.addEventListener('pointerup', (e) => {
+  const d = hsDrag; hsDrag = null;
+  if (!d?.moved) return;
+  hsDropAt = Date.now();
+  const u = hsUnder(e.clientX, e.clientY);
+  if (u?.matches('.hs-in')) housePlace(u, e.clientX);
+  else if (u?.matches('.hs-pick') && HOUSE.placedOf(campaign)[d.id]) run(`house store ${d.id}`);
+  houseUi = { held: null, hover: null }; markDirty();
+});
+document.addEventListener('pointercancel', () => { if (hsDrag?.moved) { houseUi = { held: null, hover: null }; markDirty(); } hsDrag = null; });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && module === 'rig' && houseUi.held) { houseUi = { held: null, hover: null }; markDirty(); } });
 // Hovering a moving file: a card with what it is, following it along its route.
 let pktHover = null;
 function pktTipData(d) {
   if (d.dataset.tip) return JSON.parse(d.dataset.tip);
-  const sh = d._ship; if (!sh) return null;
+  const sh = shipOf(d); if (!sh) return null;
   const fa = FACTIONS[d.dataset.fa]?.short, fb = FACTIONS[d.dataset.fb]?.short;
   return { icon: sh.w, what: WARES[sh.w].name, n: sh.n, from: sh.back ? fb : fa, to: sh.back ? fa : fb, lo: sh.lo, hi: sh.hi };
 }
 function placePktTip() {
+  if (!pktHover) return;
   const { d, el } = pktHover;
   if (!d.isConnected) return hidePktTip();
+  requestAnimationFrame(placePktTip); // it follows the dot while you hover
   const data = pktTipData(d), key = JSON.stringify(data);
   if (key !== el.dataset.key) { el.innerHTML = V.packetTipMarkup(data); el.dataset.key = key; }
   const r = d.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
@@ -2667,8 +3154,16 @@ document.addEventListener('mouseover', (e) => {
   pktHover = { d, el }; placePktTip();
 });
 document.addEventListener('mouseout', (e) => { if (pktHover && e.target.closest?.('.mpkt') === pktHover.d && !pktHover.d.contains(e.relatedTarget)) hidePktTip(); });
+// What needs the tick every frame: a running fight, a render or a queued effect, the Tune window, co-op, a moment after
+// any input. Otherwise it rests (wakeTick). A paused fight rests too: its bar, countdown, chips and closing check stand
+// still, and whatever resumes it (an order, a tip closing, the Fight page coming back, the tab shown, the host's
+// snapshot) comes with an input or markDirty().
+function tickBusy(now) {
+  return dirty || now < awakeUntil || (active(campaign) && !campaign.encounter.paused) || feel.pending() > 0 || attackQueue.length > 0 || attackHeld.length > 0
+    || lu.pending() > 0 || !!scanner?.isOpen() || !!coop?.busy();
+}
 function frame(now) {
-  if (module === 'map') movePackets(Date.now());
+  loop = 0;
   const delta = Math.min(1000, now - last);
   last = now;
   const wall = Date.now();
@@ -2678,43 +3173,56 @@ function frame(now) {
     if (active(campaign) && !e.paused && !e.steps) e.elapsedMs = Math.min(cycleLength(campaign) - 1, (e.elapsedMs || 0) + delta);
   } else if (active(campaign)) {
     campaign.restAt = wall;
-    const events = advance(campaign, delta);
+    const events = advance(campaign, wall < actHold ? 0 : delta); // a boss's act break holds the clock
     if (events.length) { react(events); save(); }
   } else {
     // Resting between fights, plus any Self-healing filter, by the wall clock: a hidden tab or a closed
     // game (up to 8 hours) catches up.
     const away = Math.min(8 * 3600000, Math.max(0, wall - (campaign.restAt ?? wall)));
     campaign.restAt = wall;
-    if (!CAMP && idleRegen(campaign, away)) { dirty = true; save(); }
+    if (!CAMP && idleRegen(campaign, away)) { markDirty(); save(); }
   }
   if (!realSave) stepLoop();
   coop?.tick();
   if (dirty) render();
   else tickUi();
+  chipTick();
   scanner?.tick(Date.now());
   lu.tick();
+  phPops();
   feel.flush();
+  attackGo(); // the virus's strikes and sounds count from the same moment as its numbers
   checkTips(now);
   shell.caret();
   if (now - lastSecond >= 1000) {
     lastSecond = now; shell.second(module); services();
-    if (simOn(campaign)) peopleUi(); // people move about (presence.mjs)
+    if (peopleOn(campaign)) peopleUi(); // people move about (presence.mjs)
     channelUi(); // #net's latest line (channel.mjs)
-    if (pruneComms(campaign)) { save(); dirty = true; } // handled comms clear out after 5 minutes
+    if (pruneComms(campaign)) { save(); markDirty(); } // handled comms clear out after 5 minutes
     // Unanswered alerts shake the pager every 10 s; a breach pings every 15 s.
     const tickNow = Date.now();
-    if (unseenAlert(campaign) && !commsOpen && tickNow - (nag.pager || 0) >= 10000) { nag.pager = tickNow; const p = $('pager'); p.classList.remove('fx-pager'); void p.offsetWidth; p.classList.add('fx-pager'); }
+    if (unseenAlert(campaign) && !commsOpen && tickNow - (nag.pager || 0) >= 10000) { nag.pager = tickNow; for (const p of [$('pager'), ...document.querySelectorAll('.ping.threat.unseen')]) { p.classList.remove('fx-pager'); void p.offsetWidth; p.classList.add('fx-pager'); } }
     const inv = campaign.invasion, breached = inv?.state === 'breach' && !campaign.degraded && !(active(campaign) && campaign.encounter.invader === inv.id);
     if (breached && tickNow - (nag.breach || 0) >= 15000) { nag.breach = tickNow; feel.add('prewarn', '#meter-integrity'); feel.flush(); }
     if (!breached) nag.breach = 0;
-    if (module === 'consortium') dirty = true; // its timers count down
+    if (module === 'consortium') markDirty(); // its timers count down
     // Crewmates off on their own move every few seconds (run.mjs crewWander).
-    if (campaign.run && ++wanderTick % 4 === 0 && Object.values(campaign.run.crew || {}).some((c) => c.link !== 'you')) { const ev = crewWander(campaign); if (ev.length) react(ev); save(); dirty = true; }
+    if (campaign.run && ++wanderTick % 4 === 0 && Object.values(campaign.run.crew || {}).some((c) => c.link !== 'you')) { const ev = crewWander(campaign); if (ev.length) react(ev); save(); markDirty(); }
     // A wild server's reconnect countdown (rogue.mjs relockMs) ticks on its card.
-    if ([campaign.zone, ...(campaign.locations || [])].some((l) => l && relockLeft(l, wall - 1000))) dirty = true; // one more render as it ends
+    if ([campaign.zone, ...(campaign.locations || [])].some((l) => l && relockLeft(l, wall - 1000))) markDirty(); // one more render as it ends
   }
-  requestAnimationFrame(frame);
+  if (loop) return; // something in this frame already woke it (a frame is asked for)
+  if (tickBusy(performance.now())) { loop = 1; requestAnimationFrame(frame); return; }
+  if (document.hidden) { loop = 3; return; }
+  // Resting: the next look comes when something is due (the once-a-second work, the radio's schedule, the next tip
+  // check), a quarter second at most.
+  const t = performance.now(), wallNow = Date.now();
+  const due = Math.min(250, ...[lastSecond + 1000 - t, (scanner?.due() ?? Infinity) - wallNow, tipWait - t].filter((d) => d > 0));
+  loop = 2;
+  restTimer = setTimeout(() => { if (loop !== 2) return; if (document.hidden) loop = 3; else frame(performance.now()); }, due);
 }
+for (const k of ['pointerdown', 'pointermove', 'pointerup', 'keydown', 'keyup', 'input', 'wheel', 'touchstart', 'focusin', 'scroll', 'resize']) addEventListener(k, () => wakeTick(true), { capture: true, passive: true });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) wakeTick(true); });
 
 // ---------- co-op (coop-ui.mjs, docs/coop.md) ----------
 // Developer mode only for now. A guest's page swaps its live state for its view of the host's world while the host is
@@ -2731,22 +3239,22 @@ function coopShow(view, events) {
   else if (events.some((e) => e.type === 'engage') && active(campaign)) go('combat');
   else if (module === 'combat' && !campaign.encounter && !ended) go('rooms', true);
   save();
-  dirty = true;
+  markDirty();
 }
 function coopHome() {
   if (!realSave) return;
   campaign = realSave; realSave = null; ended = null;
   if (['combat', 'rooms', 'net'].includes(module)) go('map', true);
-  dirty = true;
+  markDirty();
 }
 coop = DEV ? createCoop({
   own,
   show: coopShow,
   home: coopHome,
-  react: (events) => { react(events); save(); dirty = true; },
+  react: (events) => { react(events); save(); markDirty(); },
   notice: (text, bad = false) => notice(text, bad),
-  dirty: () => { dirty = true; },
-  ownCommand: (text) => { const ev = play(own(), text); react(ev); const w = ev.findLast((e) => e.type === 'warning'); notice(w ? w.message : ev.findLast((e) => e.type === 'info' || e.type === 'loadout')?.message || '', !!w); save(); dirty = true; },
+  dirty: () => { markDirty(); },
+  ownCommand: (text) => { const ev = play(own(), text); react(ev); const w = ev.findLast((e) => e.type === 'warning'); notice(w ? w.message : ev.findLast((e) => e.type === 'info' || e.type === 'loadout')?.message || '', !!w); save(); markDirty(); },
 }) : null;
 if (DEV) Object.defineProperty(window, '__coop', { get: () => coop }); // dev only: the session, for tests
 
@@ -2766,28 +3274,30 @@ document.addEventListener('click', (e) => {
   if (pv && !pv.disabled && touchFirst() && srvUi.armed !== pv.dataset.preview) {
     e.preventDefault(); e.stopImmediatePropagation();
     srvUi = { ...srvUi, sel: pv.closest('#hsv-panel') ? srvUi.sel : 'core', open: true, preview: pv.dataset.preview, armed: pv.dataset.preview };
-    dirty = true; return;
+    markDirty(); return;
   }
   if (pv) { srvUi = { ...srvUi, armed: null }; return; } // a click, or the second tap: the command runs
   const k = e.target.closest('button[data-svkey]');
-  if (k) { srvUi = { sel: k.dataset.svkey, open: true, preview: null, armed: null }; dirty = true; return; }
-  if (e.target.closest('button[data-hsv-close]')) { srvUi = { ...srvUi, open: false, preview: null, armed: null }; dirty = true; }
+  if (k) { srvUi = { sel: k.dataset.svkey, open: true, preview: null, armed: null }; markDirty(); return; }
+  if (e.target.closest('button[data-hsv-close]')) { srvUi = { ...srvUi, open: false, preview: null, armed: null }; markDirty(); }
 }, true);
 document.addEventListener('pointerover', (e) => {
   if (module !== 'server' || e.pointerType === 'touch') return;
   const pv = e.target.closest?.('button[data-preview]:not(:disabled)'), want = pv ? pv.dataset.preview : srvUi.armed;
-  if ((want || null) !== srvUi.preview) { srvUi = { ...srvUi, preview: want || null }; dirty = true; }
+  if ((want || null) !== srvUi.preview) { srvUi = { ...srvUi, preview: want || null }; markDirty(); }
 });
 document.addEventListener('focusin', (e) => {
   const pv = module === 'server' && e.target.closest?.('button[data-preview]:not(:disabled)');
-  if (pv && srvUi.preview !== pv.dataset.preview) { srvUi = { ...srvUi, preview: pv.dataset.preview }; dirty = true; }
+  if (pv && srvUi.preview !== pv.dataset.preview) { srvUi = { ...srvUi, preview: pv.dataset.preview }; markDirty(); }
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && module === 'server' && (srvUi.open || srvUi.preview)) { srvUi = { ...srvUi, open: false, preview: null, armed: null }; dirty = true; } });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && V.daemonUi.sel && document.querySelector('.dm-panel.open')) { V.daemonUi.sel = null; dirty = true; } }); // the Daemons tab's sheet
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && module === 'server' && (srvUi.open || srvUi.preview)) { srvUi = { ...srvUi, open: false, preview: null, armed: null }; markDirty(); } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && V.daemonUi.sel && document.querySelector('.dm-panel.open')) { V.daemonUi.sel = null; markDirty(); } }); // the Daemons tab's panel, where it closes
 document.addEventListener('click', (e) => {
   if (tip && !e.target.closest('#tip') && (e.target.closest(tip.cur.at) || (tip.cur.also && e.target.closest(tip.cur.also)))) advanceTip();
   if (e.target.closest('[data-spoils-go]')) { if (ended) leaveFight(); else hideSpoils(); return; }
   if (e.target.closest('[data-gain-go]')) { hideGain(); return; }
+  const gc = e.target.closest('[data-gain-cmd]');
+  if (gc) { run(gc.dataset.gainCmd); hideGain(); return; } // a takeover card's stamp, or Later
   const pick = e.target.closest('[data-mk-pick]');
   if (pick) { const w = pick.dataset.mkPick; setMkOrder(mkOrder?.w === w && mkOrder.f === hubSel ? null : { f: hubSel, w, side: w === 'salvage' || (campaign.materials?.[w] || 0) > 0 ? 'sell' : 'buy', n: 1 }); return; }
   const side = e.target.closest('[data-mk-side]');
@@ -2801,36 +3311,48 @@ document.addEventListener('click', (e) => {
     if (cmd.dataset.confirm && !(confirmArm?.cmd === cmd.dataset.command && confirmArm.until > Date.now())) {
       confirmArm = { cmd: cmd.dataset.command, until: Date.now() + 4000, label: cmd.innerHTML, ask: cmd.dataset.confirm };
       showArmed();
-      setTimeout(() => { confirmArm = null; dirty = true; }, 4050);
+      setTimeout(() => { confirmArm = null; markDirty(); }, 4050);
       return;
     }
     confirmArm = null;
-    if (cmd.classList.contains('ability') && !cmd.classList.contains('script')) { $('command-input').value = cmd.dataset.command; focusPrompt(); return; } // a script runs at once: it takes no cycle
+    if (cmd.classList.contains('ability') && !cmd.classList.contains('script') && !cmd.classList.contains('flee')) { $('command-input').value = cmd.dataset.command; focusPrompt(); return; } // a script runs at once: it takes no cycle; Jack out goes at once too
     return run(cmd.dataset.command);
   }
+  if (e.target.closest('[data-rail-fold]')) { railShut = !railShut; try { localStorage.setItem('bb-rail-runners', railShut ? 'shut' : 'open'); } catch { /* storage unavailable */ } markDirty(); return; }
+  if (e.target.closest('[data-runner-close]')) { mapRunner = null; runnerMode = 'runner'; markDirty(); return; }
+  const ra = e.target.closest('[data-runners-at]');
+  if (ra) { const at = ra.dataset.runnersAt; mapRunnersAt = mapRunnersAt === at ? null : at; mapRunner = null; runnerMode = 'runner'; markDirty(); return; } // a counted diamond: who's there, again to shut the list
+  if (e.target.closest('[data-crowd-close]')) { mapRunnersAt = null; markDirty(); return; }
+  const rh = e.target.closest('[data-runner-hire]');
+  if (rh) { runnerMode = rh.dataset.runnerHire === '1' ? 'crew' : 'runner'; runnerPreset = 'rotation'; markDirty(); return; }
+  const rp = e.target.closest('[data-runner-preset]');
+  if (rp) { runnerPreset = rp.dataset.runnerPreset; markDirty(); return; }
+  const rr = e.target.closest('[data-runner]');
+  if (rr) { const h = rr.dataset.runner; mapRunner = mapRunner === h ? null : h; mapRunnersAt = null; runnerMode = 'runner'; const fl = mapRunner && runnerFloor(campaign, h); if (fl && fl <= (campaign.floors?.reached || 1)) mapFloor = fl; markDirty(); return; } // the Rail: pick a runner, again to drop them
   const loc = e.target.closest('[data-locate]');
-  if (loc) { pendingLocate = loc.dataset.locate === '__sel' ? mapSel : loc.dataset.locate; mapList = false; mapSel = pendingLocate; mapPop = true; if (module !== 'map') go('map'); dirty = true; return; }
+  if (loc) { pendingLocate = loc.dataset.locate === '__sel' ? mapSel : loc.dataset.locate; mapList = false; mapSel = pendingLocate; mapPop = true; if (module !== 'map') go('map'); markDirty(); return; }
   const ml = e.target.closest('[data-maplist]');
-  if (ml) { mapList = ml.dataset.maplist === '1'; dirty = true; return; }
+  if (ml) { mapList = ml.dataset.maplist === '1'; markDirty(); return; }
   const ms = e.target.closest('[data-msort]');
-  if (ms) { mapSort = ms.dataset.msort; dirty = true; return; }
+  if (ms) { mapSort = ms.dataset.msort; markDirty(); return; }
   const mf = e.target.closest('[data-mapfilter]');
-  if (mf) { mapFilter = mf.dataset.mapfilter === 'all' ? [] : [mf.dataset.mapfilter]; dirty = true; return; }
+  if (mf) { mapFilter = mf.dataset.mapfilter === 'all' ? [] : [mf.dataset.mapfilter]; markDirty(); return; }
   const mv = e.target.closest('[data-mapview]');
-  if (mv) { mapView = mv.dataset.mapview; mapSel = 'server'; feel.add('channel', null); dirty = true; return; }
+  if (mv) { mapView = mv.dataset.mapview; mapSel = 'server'; feel.add('channel', null); markDirty(); return; }
   const fb = e.target.closest('button[data-floor]'); // a floor button (never <html>, which carries the screen effects' data-sfx-floor)
-  if (fb) { mapFloor = Number(fb.dataset.floor) || 1; mapSel = null; mapPop = false; mapList = false; mapZoom.k = 1; mapView = 'mine'; if (module !== 'map') go('map'); feel.add('channel', null); dirty = true; return; }
-  if (e.target.closest('[data-leads]')) { leadsOpen = !leadsOpen; dirty = true; return; }
+  if (fb) { mapFloor = Number(fb.dataset.floor) || 1; mapSel = null; mapPop = false; mapList = false; mapZoom.k = 1; mapView = 'mine'; if (module !== 'map') go('map'); feel.add('channel', null); markDirty(); return; }
+  if (e.target.closest('[data-leads]')) { leadsOpen = !leadsOpen; markDirty(); return; }
   const lt = e.target.closest('[data-ltab]');
-  if (lt) { loadoutTab = lt.dataset.ltab; feel.add('channel', null); dirty = true; return; }
-  const st = e.target.closest('[data-stab]'); // the System page's tabs (view.mjs SYSTEM_TABS)
-  if (st) { systemTab = st.dataset.stab; achUi.focus = null; feel.add('channel', null); dirty = true; return; }
+  if (lt) { loadoutTab = lt.dataset.ltab; feel.add('channel', null); markDirty(); return; }
+  const st = e.target.closest('[data-stab]'); // the Settings page's tabs (Settings, and Dev with ?dev)
+  if (st) { systemTab = st.dataset.stab; feel.add('channel', null); markDirty(); return; }
+  const rt = e.target.closest('[data-rtab]'); // the Rig page's tabs (view.mjs RIG_TABS)
+  if (rt) { rigTab = rt.dataset.rtab; achUi.focus = null; houseUi = { held: null, hover: null }; feel.add('channel', null); markDirty(); return; }
+  if (module === 'rig' && rigTab === 'house' && houseClick(e)) return;
+  const csec = e.target.closest('[data-cs-sec]'); // a section on Rig → Casing's rail
+  if (csec) { casingSec = csec.dataset.csSec; markDirty(); return; }
   const ac = e.target.closest('[data-ach-cat]'); // a category on the Achievements page
-  if (ac) { achUi = { cat: ac.dataset.achCat, focus: null }; dirty = true; return; }
-  const csl = e.target.closest('[data-cs-slot]'); // a sticker slot on System → Casing
-  if (csl) { caseUi = { ...caseUi, slot: Number(csl.dataset.csSlot) || 0 }; dirty = true; return; }
-  const cps = e.target.closest('[data-cs-pslot]'); // a spot on the desk, System → Casing
-  if (cps) { caseUi = { ...caseUi, pslot: Number(cps.dataset.csPslot) || 0 }; dirty = true; return; }
+  if (ac) { achUi = { cat: ac.dataset.achCat, focus: null }; markDirty(); return; }
   // The Daemons tab (daemons-view.mjs): the party or the roster, a daemon for the panel (× clears it), a cycle's order.
   const dmn = e.target.closest('[data-dmn-view], [data-dmn-sel], [data-dmn-cycle]');
   if (dmn) {
@@ -2838,7 +3360,7 @@ document.addEventListener('click', (e) => {
     if (d.dmnView) ui.view = d.dmnView;
     else if (d.dmnSel !== undefined) ui.sel = d.dmnSel || null;
     else ui.cycle = Number(d.dmnCycle) || 1;
-    feel.key('click'); dirty = true; return;
+    feel.key('click'); markDirty(); return;
   }
   const snd = e.target.closest('[data-sound]');
   if (snd) { feel.preview(snd.dataset.sound); return; }
@@ -2849,24 +3371,24 @@ document.addEventListener('click', (e) => {
   if (flag) {
     const a = flag.dataset.sweepFlag, f = V.sweepUi.flags;
     if (f.has(a)) f.delete(a); else f.set(a, [0, 1, 2].find((c) => ![...f.values()].includes(c)) ?? f.size % 3);
-    feel.key('click'); dirty = true; return;
+    feel.key('click'); markDirty(); return;
   }
   const stf = e.target.closest('[data-stash-filter]');
-  if (stf) { V.stashUi.filter = stf.dataset.stashFilter; feel.key('click'); dirty = true; return; }
+  if (stf) { V.stashUi.filter = stf.dataset.stashFilter; feel.key('click'); markDirty(); return; }
   const sts = e.target.closest('[data-stash-sort]');
-  if (sts) { V.stashUi.sort = sts.dataset.stashSort; feel.key('click'); dirty = true; return; }
+  if (sts) { V.stashUi.sort = sts.dataset.stashSort; feel.key('click'); markDirty(); return; }
   const silk = e.target.closest('[data-silk-sel]'); // the protocol board's pick: a slot, whose kind the stash lists
   if (silk) {
     V.stashUi.sel = silk.dataset.silkSel;
     if (silk.dataset.silkKind) V.stashUi.filter = silk.dataset.silkKind; // a slot shows the stash everything that fits it
-    feel.key('click'); dirty = true; return;
+    feel.key('click'); markDirty(); return;
   }
   const sf = e.target.closest('[data-sweep-filter]');
-  if (sf) { V.sweepUi.filter = sf.dataset.sweepFilter; feel.key('click'); dirty = true; return; }
+  if (sf) { V.sweepUi.filter = sf.dataset.sweepFilter; feel.key('click'); markDirty(); return; }
   const bx = e.target.closest('[data-breach]');
   if (bx && !bx.disabled) { breachClick(bx.dataset.breach, bx.dataset.arg); return; }
-  if (e.target.closest('[data-th-later]')) { thOffer.later = offerKey(); feel.key('click'); dirty = true; return; } // a thread's reward, put off (threads-view.mjs)
-  if (e.target.closest('[data-th-offer]')) { thOffer.later = null; feel.key('click'); dirty = true; return; }
+  if (e.target.closest('[data-th-later]')) { thOffer.later = offerKey(); feel.key('click'); markDirty(); return; } // a thread's reward, put off (threads-view.mjs)
+  if (e.target.closest('[data-th-offer]')) { thOffer.later = null; feel.key('click'); markDirty(); return; }
   const rm = e.target.closest('[data-rooms]');
   if (rm && !rm.disabled) { roomsClick(rm.dataset.rooms, rm.dataset.arg); return; }
   const direct = e.target.closest('[data-run]');
@@ -2881,7 +3403,7 @@ document.addEventListener('click', (e) => {
   if (ability) { // tap a skill to pick it, tap it again to fire it (no keyboard needed)
     const cur = $('command-input').value.trim(), id = ability.dataset.ability;
     if (cur.split(' ')[0] === id && !['command', 'schedule'].includes(ABILITIES[id]?.target)) { $('command-input').value = ''; return run(cur); }
-    return prepare(id);
+    prepare(id); return phPicked();
   }
   const target = e.target.closest('[data-target]');
   if (target && !target.disabled) {
@@ -2890,30 +3412,30 @@ document.addEventListener('click', (e) => {
     const [word] = input.value.trim().split(' ');
     if (selected && ABILITIES[word] && ABILITIES[word].target !== 'none') input.value = `${word} ${partKey(campaign, part(campaign, selected))}`;
     focusPrompt();
-    dirty = true;
+    markDirty();
     return;
   }
   const sug = e.target.closest('[data-suggestion]');
   if (sug) { $('command-input').value = sug.dataset.suggestion + (ABILITIES[sug.dataset.suggestion]?.target === 'part' ? ' ' : ''); updateSuggestions(); focusPrompt(); return; }
   const arch = e.target.closest('[data-arch]');
-  if (arch) { archView = arch.dataset.arch; dirty = true; return; }
+  if (arch) { archView = arch.dataset.arch; markDirty(); return; }
   // A found server's Connect: ask (its card shows the memory it takes), then yes or cancel.
   const ask = e.target.closest('[data-mem-ask]');
-  if (ask) { V.setMemAsk(ask.dataset.memAsk); dirty = true; return; }
+  if (ask) { V.setMemAsk(ask.dataset.memAsk); markDirty(); return; }
   const yes = e.target.closest('[data-mem-yes]');
-  if (yes) { const id = yes.dataset.memYes; V.setMemAsk(null); memYes = id; run('connect ' + id); memYes = null; dirty = true; return; }
-  if (e.target.closest('[data-mem-no]')) { V.setMemAsk(null); dirty = true; return; }
+  if (yes) { const id = yes.dataset.memYes; V.setMemAsk(null); memYes = id; run('connect ' + id); memYes = null; markDirty(); return; }
+  if (e.target.closest('[data-mem-no]')) { V.setMemAsk(null); markDirty(); return; }
   const node = e.target.closest('[data-select]');
-  if (node) { if (node.dataset.select !== mapSel) V.setMemAsk(null); mapSel = node.dataset.select; mapPop = true; dirty = true; return; }
+  if (node) { if (node.dataset.select !== mapSel) V.setMemAsk(null); mapSel = node.dataset.select; mapPop = true; markDirty(); return; }
   // Clicking away (empty map, or the card's ×) closes the card and clears the selection too.
-  if (e.target.closest('[data-map-pop-close]') || (e.target.closest('.map-svg') && !e.target.closest('.mnode'))) { if (mapPop || mapSel) { mapPop = false; mapSel = null; V.setMemAsk(null); dirty = true; } }
+  if (e.target.closest('[data-map-pop-close]') || (e.target.closest('.map-svg') && !e.target.closest('.mnode'))) { if (mapPop || mapSel) { mapPop = false; mapSel = null; V.setMemAsk(null); markDirty(); } }
   const mail = e.target.closest('[data-mail]');
   if (mail) {
     mailSel = mail.dataset.mail;
     // A contract opens its letter too: reading one reads the other.
     const letter = mailSel[0] === 'l' ? mailSel.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(mailSel.slice(1)))?.id;
     if (letter != null) { command(campaign, 'mail read ' + letter); save(); }
-    dirty = true;
+    markDirty();
   }
 });
 
@@ -2929,7 +3451,7 @@ $('command-form').addEventListener('submit', (e) => {
     if (!active(campaign) && lu.dismiss()) return; // the level-up goes with an empty Enter
     // Empty Enter in a fight: stop waiting and resolve this cycle now.
     if (realSave) return; // a co-op guest: the cycle turns when everyone's in, or on the host's timer
-    if (active(campaign) && !campaign.encounter.paused) { react(command(campaign, 'now')); save(); dirty = true; }
+    if (active(campaign) && !campaign.encounter.paused) { react(command(campaign, 'now')); save(); markDirty(); }
     else if (module === 'combat' && ended && !$('spoils').hidden && performance.now() - endedAt > 1200) leaveFight();
     return;
   }
@@ -2947,7 +3469,7 @@ $('command-input').addEventListener('keydown', (e) => {
     if (!ids.length) return;
     const i = ids.indexOf(selected);
     selected = ids[(i + (e.key === ']' ? 1 : -1) + ids.length) % ids.length];
-    dirty = true;
+    markDirty();
     return;
   }
   if (e.key === 'Tab') {
@@ -2981,22 +3503,22 @@ $('command-input').addEventListener('keydown', (e) => {
   }
 });
 
-$('sound').addEventListener('click', () => { campaign.settings.sound = !campaign.settings.sound; save(); dirty = true; });
+$('sound').addEventListener('click', () => { campaign.settings.sound = !campaign.settings.sound; save(); markDirty(); });
 $('speed').addEventListener('click', () => {
   const order = ['relaxed', 'normal', 'fast'];
   const next = order[(order.indexOf(campaign.settings.speed || 'normal') + 1) % order.length];
   react(command(campaign, 'speed ' + next));
-  save(); dirty = true;
+  save(); markDirty();
 });
-$('haptics').addEventListener('click', () => { campaign.settings.haptics = !campaign.settings.haptics; if (campaign.settings.haptics) navigator.vibrate?.(30); save(); dirty = true; });
-$('motion').addEventListener('click', () => { campaign.settings.motion = !campaign.settings.motion; save(); dirty = true; });
+$('haptics').addEventListener('click', () => { campaign.settings.haptics = !campaign.settings.haptics; if (campaign.settings.haptics) navigator.vibrate?.(30); save(); markDirty(); });
+$('motion').addEventListener('click', () => { campaign.settings.motion = !campaign.settings.motion; save(); markDirty(); });
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && active(campaign) && !campaign.encounter.paused && !coop?.live()) { // (a shared fight runs on)
     command(campaign, 'pause');
     campaign.encounter.autoPaused = true; // coming back to the Fight tab (or any order) resumes it
     save();
-    dirty = true;
+    markDirty();
   }
 });
 
@@ -3010,7 +3532,7 @@ function pagerReact(events) {
   if (!added.length) { save(); return; }
   const alert = added.some((c) => c.alert);
   const fighting = active(campaign) && module === 'combat';
-  if (alert || (!fighting && added.some((c) => c.beep))) feel.add('pager', '#pager', null, { alert });
+  if (alert || (!fighting && added.some((c) => c.beep))) feel.add('pager', pingTarget(), null, { alert });
   save();
 }
 // One tap on a page: its command, or where it is (pager.mjs actOf). Going there handles it; a command leaves it up
@@ -3024,9 +3546,9 @@ function pagerAct(id, sure = false) {
   if (!a) return;
   c.seen = true;
   setComms(false);
-  if (!sure && PG.askOf(campaign, c)) { pgAsk = id; dirty = true; return; }
+  if (!sure && PG.askOf(campaign, c)) { pgAsk = id; markDirty(); return; }
   if (a.go) { markDone(campaign, id); save(); goTo(a.go); } else { save(); run(a.cmd); }
-  dirty = true;
+  markDirty();
 }
 function renderAsk() {
   const el = $('pg-ask'), c = pgAsk != null && commsOf(campaign).find((x) => x.id === pgAsk);
@@ -3036,38 +3558,383 @@ function renderAsk() {
 }
 $('pg-ask').addEventListener('click', (e) => {
   if (e.target.closest('[data-ask-yes]')) { e.stopPropagation(); return pagerAct(pgAsk, true); }
-  if (e.target.closest('[data-ask-no]') || e.target === e.currentTarget) { e.stopPropagation(); pgAsk = null; dirty = true; return; }
-  if (e.target.closest('[data-command]')) { pgAsk = null; dirty = true; } // the event card's own tile: it runs, and the quest goes
+  if (e.target.closest('[data-ask-no]') || e.target === e.currentTarget) { e.stopPropagation(); pgAsk = null; markDirty(); return; }
+  if (e.target.closest('[data-command]')) { pgAsk = null; markDirty(); } // the event card's own tile: it runs, and the quest goes
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && pgAsk != null) { pgAsk = null; dirty = true; e.stopImmediatePropagation(); } }, true);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && pgAsk != null) { pgAsk = null; markDirty(); e.stopImmediatePropagation(); } }, true);
+// A desktop has no tray: the ping log (pings.mjs) is in the map's left rail, and above the prompt off the Map page (in
+// a fight, threats only). A phone keeps the lamp in its strip and Comms.
+const pingTarget = () => (F.isPhone() ? '#pager' : '.pings');
 function pagerUi() {
   renderAsk();
-  put('pager', PGV.trayMarkup(campaign, phoneBar.matches ? 3 : 4));
+  const phone = F.isPhone();
+  $('pager').hidden = !phone;
+  put('pager', phone ? PGV.lampMarkup(campaign) : '');
+  put('pings', phone || CAMP || (module === 'map' && mapView === 'mine') ? '' : PI.pingsMarkup(campaign, Date.now(), module === 'combat' ? { only: (c) => PG.classOf(c) === 'threat' } : {}));
   $('pager').setAttribute('aria-expanded', String(commsOpen));
   $('comms').hidden = !commsOpen;
   if (commsOpen) put('comms', PGV.inboxMarkup(campaign, Date.now()));
 }
+// A plain ping's fade runs from when it came in, so a redraw picks it up where it was.
+function pingFades() { for (const el of document.querySelectorAll('.ping[data-t] > .pi-in')) if (!el.style.animationDelay) el.style.animationDelay = `${Number(el.parentElement.dataset.t) - Date.now()}ms`; }
+// A click on a ping: the page's thing (pagerAct), or where a line of news happened.
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-ping]');
+  if (!b) return;
+  e.stopPropagation();
+  const id = Number(b.dataset.ping), c = commsOf(campaign).find((x) => x.id === id);
+  if (!c) return;
+  if (PG.actOf(campaign, c)) return pagerAct(id);
+  if (c.go) { c.seen = true; markDone(campaign, id); save(); goTo(c.go); markDirty(); }
+}, true);
+// Hovering a ping is seeing it: the nag stops.
+document.addEventListener('pointerover', (e) => {
+  const b = e.target.closest?.('[data-ping]'), c = b && commsOf(campaign).find((x) => x.id === Number(b.dataset.ping));
+  if (c && !c.seen) { c.seen = true; save(); }
+});
+// ---------- the phone's shell (docs/phone-plan.md P1: form.mjs, phone-shell.mjs, sheet.mjs, phone.css) ----------
+// The tab bar at the bottom, More in the one sheet, the prompt behind >_, tap for info, a long press for a button's card.
+let phMore = false, phMoreHtml = '';
+const phFight = () => module === 'combat' && !!shown().encounter;
+function phoneUi() {
+  const on = F.isPhone();
+  document.body.classList.toggle('ph-fight', on && phFight()); // a fight: no top strip (its HUD takes the top)
+  document.body.classList.toggle('ph-rooms', on && module === 'rooms' && !!campaign.rooms && !phFight()); // a server's rooms: its one-line header is the strip
+  document.body.classList.toggle('ph-map', on && module === 'map'); // the map: full bleed
+  if (!on) { if (phMore) closeSheet(); return; }
+  const unread = (campaign.mail?.list || []).filter((m) => !m.read).length, due = openContracts(campaign).filter((c) => ready(campaign, c)).length;
+  const counts = { mail: unread, ready: due, loadout: Number($('new-loadout').textContent) || 0, consortium: !$('tab-consortium').hidden ? Number($('con-count').textContent) || 0 : 0 };
+  put('ph-tabs', PH.tabBarMarkup(campaign, { module, camp: CAMP, active: active(campaign), counts, moreOpen: phMore }));
+  if (phMore) { const html = phMoreMarkup(); if (html !== phMoreHtml) { phMoreHtml = html; const b = sheetBody(); if (b) b.innerHTML = html; } }
+  phListDraw();
+}
+function phMoreMarkup() {
+  const h = hackerOf(campaign);
+  return PH.moreMarkup(campaign, { who: { handle: campaign.profile?.handle || 'rookie', cls: V.className(classOf(campaign)), level: h.level, xp: h.level >= 50 ? 1 : h.xp / V.xpNeeded(h.level) }, consortium: !$('tab-consortium').hidden, count: Number($('con-count').textContent) || 0, people: !$('people').hidden, camp: CAMP, pager: document.body.classList.contains('ph-rooms') ? PGV.lampMarkup(campaign).replace(/^<button[^>]*>|<\/button>$/g, '') : '' });
+}
+function phMoreOpen(open) {
+  if (open === phMore) return;
+  phMore = open;
+  if (open) { phMoreHtml = phMoreMarkup(); openSheet(phMoreHtml, { height: 'half', label: 'More', id: 'more', closed: () => { phMore = false; markDirty(); } }); } else closeSheet();
+  markDirty();
+}
+// The prompt behind >_: shown on a phone only when asked for. In a fight it never takes the focus (no keyboard
+// over the board): a tap on the field still opens it.
+function phPrompt(open) {
+  document.body.classList.toggle('ph-prompt', open);
+  if (open && !active(campaign)) $('command-input').focus();
+  if (!open) $('command-input').blur();
+}
+$('ph-prompt-x').addEventListener('click', () => phPrompt(false));
+$('ph-tabs').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-module], [data-phone]');
+  if (!b) return;
+  if (b.dataset.phone === 'more') return phMoreOpen(!phMore);
+  phMoreOpen(false);
+  go(b.dataset.module);
+});
+// The fight on a phone (docs/phone-plan.md P2). The tray's last column is the menu key (···, the pager's lamp on it):
+// it opens the tab bar, the pager and the command line in a sheet. Past eight keys a +n under it opens the rest.
+const PH_KEYS = 8;
+function phMenuKey(keys) {
+  const n = (keys.match(/<(button|div)[^>]*class="ability\b/g) || []).length, more = n - PH_KEYS;
+  const lamp = PGV.lampMarkup(campaign).replace(/^<button[^>]*>|<\/button>$/g, '');
+  return `<div class="ph-menu-col"><button type="button" class="ph-menu" data-phone="menu" aria-label="Menu: pages, pager, command line"><span aria-hidden="true">···</span>${lamp}</button>${more > 0 ? `<button type="button" class="ph-keys" data-phone="keys" aria-label="${more} more keys">+${more}</button>` : ''}</div>`;
+}
+function phMenuMarkup() {
+  const unread = (campaign.mail?.list || []).filter((m) => !m.read).length;
+  const row = (attrs, icon, label) => `<button type="button" class="ph-row" ${attrs}>${icon}<span>${label}</span></button>`;
+  return `<nav class="ph-tabs ph-in-sheet" aria-label="Pages">${PH.tabBarMarkup(campaign, { module, camp: CAMP, active: active(campaign), counts: { mail: unread } })}</nav><nav class="ph-more-list">${row('data-phone="comms"', PGV.lampMarkup(campaign).replace(/^<button[^>]*>|<\/button>$/g, ''), 'Pager')}${row('data-phone="prompt"', '<span class="ph-gt" aria-hidden="true">&gt;_</span>', 'Command line')}</nav>`;
+}
+// The phone's one-line HUD (the designer's pick C) shows two bars and their numbers; the rest sits in each bar's card,
+// a tap away: the virus's name, level, family, writer, rules and tags; your statuses, gear and leaning. Read off the
+// HUD's own markup (hidden on a phone), so the cards say what the desktop's HUD says. Never on a desktop.
+function phHudCards() {
+  const en = document.querySelector('#hud .hud-bar.enemy'), me = document.querySelector('#hud .hud-bar.mine');
+  if (!en || !me) return;
+  if (!F.isPhone()) { for (const b of [en, me]) { delete b.dataset.tt; delete b.dataset.ttKind; } return; }
+  const txt = (el) => el?.textContent.replace(/\s+/g, ' ').trim() || '';
+  const tip = (el) => el.getAttribute('title') || el.dataset.tt || el.dataset.tip || '';
+  const kindOf = (el) => tip(el).split('\n')[0].replace(/^[^:]*: ?/, ''); // "Surge: Attack type" → "Attack type"
+  const name = txt(en.querySelector('.vname strong')), meta = txt(en.querySelector('.vname .meta')), by = txt(en.querySelector('.vname .byline')).replace(/^·\s*/, '');
+  const hp = txt(en.querySelector('.bar-top > span:last-child')), chits = en.querySelector('.chits');
+  const armor = chits ? (chits.textContent.match(/◆/g) || []).length : 0, armorMax = chits ? (chits.textContent.match(/[◆◇]/g) || []).length : 0;
+  const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1);
+  const rules = [...en.querySelectorAll('.gene-line .gchip')].map((g) => `${cap(txt(g))} (${kindOf(g).toLowerCase()})`);
+  const tags = [...en.querySelectorAll('.clock-line .tag')].map(txt).filter(Boolean);
+  en.dataset.ttKind = [meta, by && `by ${by}`].filter(Boolean).join(' · ');
+  en.dataset.tt = `${name}: Integrity ${hp}.${armorMax ? ` Armor ${armor} of ${armorMax} ◆.` : ''}${tags.length ? `\n${tags.join(' · ')}` : ''}${rules.length ? `\nRules: ${rules.join(', ')}.` : ''}`;
+  const st = [...document.querySelectorAll('#hud .hud-status .st')].map((x) => `${txt(x)} (${tip(x).split('\n')[0]})`);
+  const gear = [...document.querySelectorAll('#hud .hud-status .gfx')].map((x) => `${txt(x)}${x.classList.contains('lit') ? ' (live)' : ''}`);
+  const mine = txt(me.querySelector('.bar-top strong')) || 'Your server', mhp = txt(me.querySelector('.bar-top > span:last-child'));
+  delete me.dataset.ttKind;
+  me.dataset.tt = `${mine}: ${mhp}.${st.length ? `\nOn you: ${st.join(', ')}.` : '\nNothing on you.'}${gear.length ? `\nGear: ${gear.join(', ')}.` : ''}`;
+}
+// The key you've picked (the prompt holds it until a second tap fires it): outlined amber on a phone's tray, which
+// has no You row.
+function phPicked() {
+  const id = F.isPhone() ? $('command-input').value.trim().split(' ')[0] : '';
+  for (const k of $('tray').querySelectorAll(':scope > .ability[data-ability]')) k.classList.toggle('ph-picked', !!id && k.dataset.ability === id);
+}
+// The log's latest line over the tray, its side's edge teal or red; a tap opens the whole log in a sheet.
+function phTicker() {
+  const t = $('ph-ticker'), on = F.isPhone() && phFight();
+  t.hidden = !on;
+  if (!on) return;
+  const last = $('log').lastElementChild;
+  const html = last ? last.innerHTML : '';
+  if (t.dataset.html !== html) { t.dataset.html = html; t.innerHTML = html; t.className = `ph-ticker ${last?.className || ''}`; }
+  if (sheetKey() === 'log') { const b = sheetBody(); if (b && b.dataset.n !== String(campaign.logs.length)) { b.dataset.n = campaign.logs.length; b.innerHTML = `<ol class="log-lines ph-log">${V.logMarkup(shown())}</ol>`; b.scrollTop = b.scrollHeight; } }
+}
+$('notice').addEventListener('click', () => { if (F.isPhone() && phFight() && $('notice').textContent) openSheet(`<p class="ph-note">${V.esc($('notice').textContent)}</p>`, { height: 'peek', label: 'Notice', id: 'notice' }); }); // one line over the ticker: a tap shows it whole
+$('ph-ticker').addEventListener('click', () => {
+  const b = openSheet(`<ol class="log-lines ph-log">${V.logMarkup(shown())}</ol>`, { height: 'half', label: 'Combat log', id: 'log' });
+  requestAnimationFrame(() => { b.scrollTop = b.scrollHeight; }); // the latest line in view
+});
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('#tray [data-phone]');
+  if (!b) return;
+  if (b.dataset.phone === 'menu') openSheet(phMenuMarkup(), { height: 'half', label: 'Menu', id: 'menu' });
+  if (b.dataset.phone === 'keys') openSheet(`<div class="tray ph-more-keys">${[...$('tray').querySelectorAll(':scope > .ability')].slice(PH_KEYS).map((k) => k.outerHTML).join('')}</div>`, { height: 'peek', label: 'More keys', id: 'keys' });
+});
+// The virus's window (docs/phone-plan.md P2): home at the HUD's top right. In its half it steps out over the board to
+// the right of the Now column, where no timeline chip sits, plays its strike there and goes home; its slot shows a
+// dashed outline meanwhile. No room clear of chips, or Motion off: it stays home.
+let phOut = null;
+function phStage() {
+  const st = document.querySelector('#combat-view .stage');
+  if (!st) return;
+  const out = F.isPhone() && phFight() && active(campaign) && V.phaseOf(campaign) === 'them' && canMove();
+  if (!out) { if (phOut) { phOut = null; st.style.removeProperty('--ph-dx'); st.style.removeProperty('--ph-dy'); document.body.classList.remove('ph-out'); } return; }
+  if (phOut === campaign.encounter.cycle) return;
+  phOut = campaign.encounter.cycle;
+  const now = document.querySelector('#board .bhead .bnow'), bd = $('board');
+  if (!now || !bd) return;
+  fitDense(); // it measures the board: tightened first, as it will be drawn
+  const home = st.getBoundingClientRect(), left = now.getBoundingClientRect().right + 4, right = bd.getBoundingClientRect().right - 4;
+  const busy = [...bd.querySelectorAll('.intent, .tell, .hpips')].map((c) => c.getBoundingClientRect()).filter((r) => r.right > left && r.width);
+  const top0 = now.getBoundingClientRect().bottom + 4, bottom = bd.getBoundingClientRect().bottom - 4, need = Math.min(home.height, right - left);
+  // The first clear stretch tall enough, top down.
+  let y = top0;
+  for (const r of busy.sort((a, b) => a.top - b.top)) { if (r.top - y >= need) break; y = Math.max(y, r.bottom + 4); }
+  if (y + need > bottom || right - left < need * 0.8) { phOut = campaign.encounter.cycle; return; }
+  st.style.setProperty('--ph-dx', `${Math.round(left + (right - left - home.width) / 2 - home.left)}px`);
+  st.style.setProperty('--ph-dy', `${Math.round(y - home.top)}px`);
+  document.body.classList.add('ph-out');
+}
+// The More sheet's rows: a page, your card (data-finger, opened by its own handler), People, the command line.
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('#sheet [data-module], #sheet [data-phone], #sheet [data-finger]');
+  if (!b) return;
+  if (sheetKey() === 'more') phMoreOpen(false); else closeSheet();
+  if (b.dataset.module) go(b.dataset.module);
+  if (b.dataset.phone === 'prompt') phPrompt(true);
+  if (b.dataset.phone === 'people') $('people').click();
+  if (b.dataset.phone === 'more') phMoreOpen(true);
+  if (b.dataset.phone === 'comms') setComms(true);
+}, true);
+// ---------- the phone's pop-ups (docs/phone-plan.md P3) ----------
+// On a phone every pop-up is the one sheet (sheet.mjs). Each is still drawn where the desktop draws it (a card in the
+// page, or its own host on the body); phPops lifts it into the sheet, whole, so its buttons and handlers are the
+// desktop's. It goes home when the sheet lets go of it (another sheet, a close, a desktop). One at a time, the first
+// wanted of the list. `host`: an element that stays (wanted while it isn't hidden, or `want`); `page`: a selector in
+// the page (wanted while the page draws it). `shut`: what closing the sheet by hand does. `through`: the page under it
+// still takes taps (sheet.mjs).
+const PH_POPS = [
+  { id: 'journal', host: () => $('jr-find'), label: 'Journal', shut: () => journalDone() },
+  { id: 'offer', host: () => $('th-offer'), label: 'Pick your reward', shut: () => { thOffer.later = offerKey(); } },
+  { id: 'quest', page: '#th-panel', label: 'Transmission', shut: () => { thUi.closed = campaign.threads?.said?.n ?? null; } },
+  { id: 'comms', host: () => $('comms'), height: 'half', label: 'Pager', shut: () => setComms(false) },
+  { id: 'item', host: () => pd.el, want: () => !!pd.id && pd.tap, label: 'Datasheet', shut: () => pdHide() },
+  { id: 'map', page: '#map-pop', through: true, label: 'Server', shut: () => { mapPop = false; mapSel = null; V.setMemAsk(null); }, drawn: phPeek },
+  { id: 'room', page: '#fp-pop', through: true, label: 'Room', shut: () => closePop(campaign) },
+  { id: 'server', page: '#hsv-panel.open', through: true, height: 'half', label: 'Details', shut: () => { srvUi = { ...srvUi, open: false, preview: null, armed: null }; } },
+  { id: 'daemon', page: '.dm-panel.open', through: true, label: 'Daemon', shut: () => { V.daemonUi.sel = null; } },
+  { id: 'levelup', host: () => $('levelup'), want: () => lu.showing(), through: true, label: 'Firmware update', shut: () => lu.dismiss() },
+];
+let phPop = null; // what the sheet holds: { p, el, home: { parent, next }, html (the page's markup it came from), quiet }
+const phPopKey = (p) => 'pop:' + p.id;
+function phWanted(p) {
+  if (p.host) { const el = p.host(); return el && (p.want ? p.want() : !el.hidden) ? el : null; }
+  const fresh = $('page-view').querySelector(p.page);
+  if (fresh) return fresh;
+  return phPop?.p === p && phPop.el.isConnected && phPop.html === cache.get('page-view') ? phPop.el : null; // still the page's, in the sheet
+}
+function phGoHome() {
+  const c = phPop; phPop = null;
+  if (!c) return;
+  if (c.p.host || (c.home.parent.isConnected && c.html === cache.get('page-view'))) c.home.parent.insertBefore(c.el, c.home.next?.parentNode === c.home.parent ? c.home.next : null); else c.el.remove();
+  document.documentElement.style.removeProperty('--sh-h');
+}
+function phPops() {
+  const k = sheetKey();
+  if (!F.isPhone()) { if (phPop) closeSheet(); return; }
+  if (k && !k.startsWith('pop:')) return; // More, a rule's card, a list: it has the sheet, and the pop-up comes back after it
+  let p = null, el = null;
+  for (const x of PH_POPS) { el = phWanted(x); if (el) { p = x; break; } }
+  if (!p) { if (phPop) { phPop.quiet = true; closeSheet(); } return; }
+  if (phPop?.p === p && phPop.el === el) return;
+  const home = { parent: el.parentNode, next: el.nextSibling }, html = cache.get('page-view');
+  if (phPop?.p === p && k === phPopKey(p)) { // the page drew it again: the new one takes the old one's place
+    const b = sheetBody(), top = b.scrollTop, open = phPop.el.classList.contains('ph-open');
+    phPop.el.remove();
+    phPop = { p, el, home, html };
+    b.replaceChildren(el); b.scrollTop = top;
+    if (open) el.classList.add('ph-open');
+  } else {
+    const b = openSheet('', { height: p.height || 'peek', label: p.label, id: phPopKey(p), through: !!p.through, closed: (why) => {
+      const c = phPop; phGoHome();
+      if (c && !why?.replaced && !c.quiet) c.p.shut();
+      markDirty();
+    } });
+    phPop = { p, el, home, html };
+    b.append(el);
+  }
+  p.drawn?.(el);
+  if (p.through) document.documentElement.style.setProperty('--sh-h', `${sheetBody().parentElement.offsetHeight}px`); // the page keeps its last rows clear of it
+}
+// A map card's peek: its name, its level and its main button on one line; ▴ opens the whole card under it.
+function phPeek(el) {
+  const card = el.querySelector('.card');
+  if (!card || el.querySelector('.ph-peek')) return;
+  const name = card.querySelector('h1')?.textContent || card.querySelector('h2')?.textContent || '', tag = card.querySelector('.tagline'), go = card.querySelector('.btn.primary:not([disabled])') || card.querySelector('.btn.primary');
+  const peek = document.createElement('div');
+  peek.className = 'ph-peek';
+  peek.innerHTML = `<button type="button" class="ph-peek-id" data-sheet-more aria-label="Details"><b>${V.esc(name)}</b>${tag ? `<small>${tag.innerHTML}</small>` : ''}<i aria-hidden="true">▴</i></button>${go ? go.outerHTML : ''}`;
+  el.prepend(peek);
+}
+document.addEventListener('click', (e) => {
+  const m = e.target.closest?.('#sheet [data-sheet-more]');
+  if (!m) return;
+  const pop = m.closest('.map-pop'); pop?.classList.toggle('ph-open');
+  m.setAttribute('aria-expanded', String(pop?.classList.contains('ph-open')));
+  if (phPop?.p.through) document.documentElement.style.setProperty('--sh-h', `${sheetBody().parentElement.offsetHeight}px`);
+});
+// The map's chips (view.mjs mapChips) open the threat rail, or the contract tracker and the Runners, as a list in
+// the sheet; a row does what it does on the desktop's map, and the list goes. A server's header (its name) opens
+// the rest of its strip: kind, rule, keys, pack, contracts, Scripts.
+let phList = null, phListHtml = '';
+function phListMarkup() {
+  if (phList === 'fpinfo') return module === 'rooms' && $('page-view').querySelector('.fp-hud') ? `<div class="ph-fpinfo">${$('page-view').querySelector('.fp-hud').outerHTML}</div>` : '';
+  return `<div class="ph-list">${V.mapRail(campaign, phList, mapSel, mapRunner)}</div>`;
+}
+function phListOpen(which) {
+  phList = which; phListHtml = phListMarkup();
+  if (!phListHtml) { phList = null; return; }
+  openSheet(phListHtml, { height: 'peek', label: which === 'threats' ? 'Threats and timers' : which === 'jobs' ? 'Contracts' : which === 'pins' ? 'Pinned' : 'The server', id: 'list', closed: () => { phList = null; markDirty(); } });
+}
+function phListDraw() {
+  if (!phList || sheetKey() !== 'list') return;
+  const html = phListMarkup();
+  if (!html || html === '<div class="ph-list"></div>') return closeSheet();
+  if (html !== phListHtml) { phListHtml = html; const b = sheetBody(), top = b.scrollTop; b.innerHTML = html; b.scrollTop = top; }
+}
+document.addEventListener('click', (e) => {
+  if (!F.isPhone()) return;
+  const chip = e.target.closest?.('#page-view [data-phone="threats"], #page-view [data-phone="jobs"], #page-view [data-phone="pins"]');
+  if (chip) return phListOpen(chip.dataset.phone);
+  if (e.target.closest?.('#page-view .fp-hud .fp-id')) return phListOpen('fpinfo');
+  if (sheetKey() === 'list' && e.target.closest?.('#sheet :is([data-select], [data-locate], [data-command], [data-go], [data-runner], [data-rooms])')) closeSheet();
+});
+
+// ---------- a phone's maps: pinch to zoom, double-tap to zoom in and back out ----------
+// Both maps (the network's and a server's rooms) zoom around the fingers' midpoint, up to what the wheel allows; one
+// finger pans a zoomed map (the desktop's drag). A double tap on the ground zooms in there, or back out to the fit.
+const phTouch = new Map();
+let phPinch = null, phTap = null;
+const phZoomOf = (svg) => (svg.matches('.map-svg') ? { z: mapZoom, max: 5, apply: applyMapZoom } : { z: fpZoomOf(svg), max: 4, apply: applyFpZoom });
+function phZoomAt(svg, at, k) {
+  const { z, max, apply } = phZoomOf(svg), [x, y, w, h] = baseVb(svg);
+  if (z.k <= 1) { z.cx = x + w / 2; z.cy = y + h / 2; }
+  const p = svgPoint(svg, at), k0 = z.k;
+  k = Math.max(1, Math.min(max, k));
+  z.cx = p.x + (z.cx - p.x) * (k0 / k); z.cy = p.y + (z.cy - p.y) * (k0 / k); z.k = k;
+  apply();
+}
+const phNoClick = () => { const stop = (ev) => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', stop, { capture: true, once: true }); setTimeout(() => document.removeEventListener('click', stop, { capture: true }), 60); };
+document.addEventListener('pointerdown', (e) => {
+  const svg = F.isPhone() && e.pointerType === 'touch' && e.target.closest?.('.map-svg, .fp-svg');
+  if (!svg) return;
+  phTouch.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t: performance.now(), svg });
+  if (phTouch.size === 2) {
+    const [a, b] = [...phTouch.values()];
+    mapDrag = null; fpDrag = null; phTap = null;
+    phPinch = { svg, d0: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), k0: phZoomOf(svg).z.k };
+  }
+});
+document.addEventListener('pointermove', (e) => {
+  const t = phTouch.get(e.pointerId);
+  if (!t) return;
+  t.x = e.clientX; t.y = e.clientY;
+  if (!phPinch || phTouch.size < 2 || !phPinch.svg.isConnected) return;
+  const [a, b] = [...phTouch.values()];
+  phZoomAt(phPinch.svg, { clientX: (a.x + b.x) / 2, clientY: (a.y + b.y) / 2 }, phPinch.k0 * Math.hypot(a.x - b.x, a.y - b.y) / phPinch.d0);
+});
+const phTouchEnd = (e) => {
+  const t = phTouch.get(e.pointerId);
+  if (!t) return;
+  phTouch.delete(e.pointerId);
+  if (phPinch) { if (phTouch.size < 2) { phPinch = null; mapDrag = null; fpDrag = null; phNoClick(); } return; }
+  if (e.type !== 'pointerup' || Math.hypot(t.x - t.x0, t.y - t.y0) > 10 || performance.now() - t.t > 350 || !t.svg.isConnected) return;
+  if (e.target.closest?.('.mnode, .fp-room, [data-rooms], [data-fp-sel], [data-select]')) { phTap = null; return; } // a server or a room: its own tap
+  const now = performance.now();
+  if (phTap && now - phTap.t < 320 && Math.hypot(t.x - phTap.x, t.y - phTap.y) < 32) { phTap = null; const z = phZoomOf(t.svg).z; phZoomAt(t.svg, e, z.k > 1 ? 1 : 2.5); } else phTap = { t: now, x: t.x, y: t.y };
+};
+document.addEventListener('pointerup', phTouchEnd);
+document.addEventListener('pointercancel', phTouchEnd);
+// Tap for info: on a phone a tap on anything with a rule (a title or data-tt) that isn't a control shows its card in a
+// peek sheet. A long press on a control shows its card without firing it. The fight's board, HUD and level-up keep
+// their own tap cards (below).
+const PH_CONTROL = 'button, a[href], input, select, textarea, label, summary, [data-command], [data-module], [data-run], [data-select], [data-target], [data-finger], [data-pg-open], [data-pact], [role="button"], [tabindex]';
+const PH_OWN = '#board .bname, #board .intent.tell, #hud .gfx, #levelup .lu-row, #sheet .sh-tt, #page-view .fp-hud .fp-id';
+function phCard(a) {
+  const text = a.dataset.tt || a.getAttribute('title');
+  if (!text) return false;
+  openSheet(`<div class="tt sh-tt" role="note">${ttCardHtml(a, text)}</div>`, { height: 'peek', label: 'Info', id: 'info' });
+  return true;
+}
+document.addEventListener('click', (e) => {
+  if (!F.isPhone() || e.target.closest(PH_OWN)) return;
+  const a = e.target.closest?.('[title], [data-tt]');
+  if (!a || e.target.closest(PH_CONTROL)) return; // a control fires; its card is a long press
+  if (phCard(a)) e.preventDefault();
+});
+let phPress = null;
+document.addEventListener('pointerdown', (e) => {
+  if (!F.isPhone() || e.pointerType === 'mouse') return;
+  const c = e.target.closest?.(PH_CONTROL);
+  const a = c && (c.matches('[title], [data-tt]') ? c : c.querySelector('[title], [data-tt]'));
+  if (!a || c.closest('#sheet')) return;
+  clearTimeout(phPress?.timer);
+  phPress = { x: e.clientX, y: e.clientY, fired: false, timer: setTimeout(() => { if (phPress && a.isConnected && phCard(a)) { phPress.fired = true; feel.key?.('click'); } }, 480) };
+}, true);
+addEventListener('pointermove', (e) => { if (phPress && !phPress.fired && Math.hypot(e.clientX - phPress.x, e.clientY - phPress.y) > 10) { clearTimeout(phPress.timer); phPress = null; } }, true);
+addEventListener('pointerup', () => { if (phPress && !phPress.fired) { clearTimeout(phPress.timer); phPress = null; } }, true);
+// The click a long press ends in never fires the control.
+addEventListener('click', (e) => { if (phPress?.fired) { e.preventDefault(); e.stopImmediatePropagation(); phPress = null; } }, true);
+addEventListener('contextmenu', (e) => { if (F.isPhone() && e.target.closest?.(PH_CONTROL)) e.preventDefault(); }, true);
+
 // People (presence.mjs): a button on the top bar with how many are online, and its panel.
 let peopleOpen = false, peopleTab = 'friends';
 function peopleUi() {
-  const on = simOn(campaign);
+  const on = peopleOn(campaign);
   $('people').hidden = !on;
   if (!on) { peopleOpen = false; $('people-panel').hidden = true; return; }
-  const list = online(campaign);
+  const list = listed(campaign);
   $('people-count').textContent = String(list.length);
   $('people').classList.toggle('friends-on', list.some((x) => x.friend));
   $('people').setAttribute('aria-expanded', String(peopleOpen));
   $('people-panel').hidden = !peopleOpen;
   if (peopleOpen) put('people-panel', V.peopleMarkup(campaign, peopleTab));
 }
-$('people').addEventListener('click', (e) => { e.stopPropagation(); peopleOpen = !peopleOpen; if (peopleOpen) setComms(false); dirty = true; });
+$('people').addEventListener('click', (e) => { e.stopPropagation(); peopleOpen = !peopleOpen; if (peopleOpen) setComms(false); markDirty(); });
 $('people-panel').addEventListener('click', (e) => {
   const t = e.target.closest('[data-ptab]');
-  if (t) { e.stopPropagation(); peopleTab = t.dataset.ptab; dirty = true; return; }
-  if (e.target.closest('[data-people-close]')) { e.stopPropagation(); peopleOpen = false; dirty = true; }
+  if (t) { e.stopPropagation(); peopleTab = t.dataset.ptab; markDirty(); return; }
+  if (e.target.closest('[data-people-close]')) { e.stopPropagation(); peopleOpen = false; markDirty(); }
 });
-document.addEventListener('click', (e) => { if (e.target.closest('[data-people-open]')) { e.stopPropagation(); peopleOpen = true; peopleTab = 'online'; setComms(false); dirty = true; } }, true);
-document.addEventListener('click', (e) => { if (peopleOpen && !e.target.closest('#people-panel, #people')) { peopleOpen = false; dirty = true; } });
+document.addEventListener('click', (e) => { if (e.target.closest('[data-people-open]')) { e.stopPropagation(); peopleOpen = true; peopleTab = 'online'; setComms(false); markDirty(); } }, true);
+document.addEventListener('click', (e) => { if (peopleOpen && !e.target.closest('#people-panel, #people')) { peopleOpen = false; markDirty(); } });
 
 // #net (channel.mjs): its latest line sits over the prompt (fights too, as one line); click it for the channel, a
 // drawer with the last lines and a field to say something. Muted, the line goes; the drawer still opens with `channel`.
@@ -3089,7 +3956,7 @@ function channelUi() {
   if (stick || chanShown !== last) { if (stick) box.scrollTop = box.scrollHeight; }
   chanShown = last;
 }
-function setChan(open) { chanOpen = open; if (open) { chanShown = -1; peopleOpen = false; setComms(false); } dirty = true; channelUi(); if (open) $('channel-input').focus({ preventScroll: true }); }
+function setChan(open) { chanOpen = open; if (open) { chanShown = -1; peopleOpen = false; setComms(false); } markDirty(); channelUi(); if (open) $('channel-input').focus({ preventScroll: true }); }
 $('net-line').addEventListener('click', (e) => { if (e.target.closest('[data-finger]')) return; e.stopPropagation(); setChan(!chanOpen); });
 $('channel').addEventListener('click', (e) => { if (e.target.closest('[data-chan-close]')) { e.stopPropagation(); setChan(false); } });
 $('channel-form').addEventListener('submit', (e) => {
@@ -3099,13 +3966,13 @@ $('channel-form').addEventListener('submit', (e) => {
   $('channel-input').value = '';
   save(); channelUi();
 });
-document.addEventListener('click', (e) => { if (chanOpen && !e.target.closest('#channel, #net-line, #profile')) { chanOpen = false; dirty = true; } });
+document.addEventListener('click', (e) => { if (chanOpen && !e.target.closest('#channel, #net-line, #profile')) { chanOpen = false; markDirty(); } });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && chanOpen && !profileOn) { setChan(false); focusPrompt(); } });
 
 // The profile card (profile.mjs): finger <handle>, a handle clicked in #net or People, or your own from the handle
 // on the top bar. Yours has its editor beside it: a banner (a preset or your own drawing), a title, a plan.
 let profileOn = null, pf = { tab: 'banner', draft: null, err: null };
-function openProfile(h) { profileOn = h || handleOf(campaign); pf = { tab: pf.tab, draft: null, err: null }; dirty = true; profileUi(); }
+function openProfile(h) { profileOn = h || handleOf(campaign); pf = { tab: pf.tab, draft: null, err: null }; markDirty(); profileUi(); }
 function profileUi() {
   const el = $('profile');
   el.hidden = !profileOn;
@@ -3155,7 +4022,7 @@ document.addEventListener('submit', (e) => {
 function setComms(open) {
   commsOpen = open;
   if (open) { seeAll(campaign); save(); }
-  dirty = true;
+  markDirty();
 }
 $('pager').addEventListener('click', (e) => {
   e.stopPropagation();
@@ -3166,32 +4033,35 @@ $('pager').addEventListener('click', (e) => {
 $('comms').addEventListener('click', (e) => {
   e.stopPropagation();
   if (e.target.closest('[data-comms-close]')) { setComms(false); return; }
-  if (e.target.closest('[data-comms-clear]')) { PG.clearNews(campaign); save(); dirty = true; return; }
+  if (e.target.closest('[data-comms-clear]')) { PG.clearNews(campaign); save(); markDirty(); return; }
   const pa = e.target.closest('button[data-pact]');
   if (pa) return pagerAct(Number(pa.dataset.pact));
   const h = e.target.closest('li[data-hgo]'); // a line of news: where it happened (an achievement, a takeover, the store)
   if (h) { markDone(campaign, Number(h.dataset.cid)); save(); setComms(false); goTo(h.dataset.hgo); }
 });
 // The top bar stays on one line: when it would wrap (more tabs, a narrow screen, the monitor
-// casing), it tightens a step at a time (style.css .fit-1 … .fit-4). Only re-measured when the
-// tabs shown or the bar's width change.
-let fitKey = '';
-function fitTopbar() {
+// casing), it tightens a step at a time (style.css .fit-1 … .fit-4). Refit when the tabs or what the bar holds change
+// (a breach adds a chip, the pager an alert), read without layout on every render; its width or height changing
+// (growing onto a second row) comes from a ResizeObserver once the frame has laid out (docs/performance-plan.md batch 10).
+let fitKey = '', fitSize = '';
+function fitTopbar(sized = false) {
   const bar = document.querySelector('.topbar');
-  if (!bar.clientWidth) return; // not laid out yet (the casing boots)
   const tabs = document.querySelector('.modules'), n = String([...tabs.children].filter((b) => !b.hidden).length);
   if (tabs.dataset.tabs !== n) tabs.dataset.tabs = n; // how many tabs show: a phone sizes them down from seven (style.css)
-  // Refit when the tabs, the width, or what the bar holds changes (a breach adds a chip, the pager an alert):
-  // the bar's height after the last fit is part of the key, so growing onto a second row refits it.
-  const sig = () => [...document.querySelectorAll('.modules button')].map((b) => (b.hidden ? 0 : 1)).join('') + ':' + bar.clientWidth + ':' + bar.offsetHeight + ':' + ($('integrity-note')?.hidden ? 0 : $('integrity-note')?.textContent) + ':' + $('people')?.hidden + ':' + $('pager').childElementCount; // the pager's icons change its width
-  if (sig() === fitKey) return;
+  const key = [...document.querySelectorAll('.modules button')].map((b) => (b.hidden ? 0 : 1)).join('') + ':' + ($('integrity-note')?.hidden ? 0 : $('integrity-note')?.textContent) + ':' + $('people')?.hidden + ':' + $('pager').childElementCount; // the pager's icons change its width
+  if (key === fitKey && !sized) return;
+  if (!bar.clientWidth) { fitKey = key; fitSize = ''; return; } // not laid out (the casing boots, a phone's fight): fitted when it shows
+  const size = () => bar.clientWidth + ':' + bar.offsetHeight;
+  if (key === fitKey && size() === fitSize) return;
   // Wrapped: something starts below where something else ends.
   const wraps = () => { const kids = [...bar.children].filter((x) => !x.hidden && x.offsetHeight); return kids.some((a) => kids.some((b) => a.offsetTop >= b.offsetTop + b.offsetHeight)); };
   for (let i = 1; i <= 4; i++) bar.classList.remove('fit-' + i);
   for (let i = 1; i <= 4 && wraps(); i++) bar.classList.add('fit-' + i);
-  fitKey = sig();
+  fitKey = key; fitSize = size();
 }
-addEventListener('resize', () => { fitKey = ''; fitTopbar(); uiScale(); });
+new ResizeObserver(() => fitTopbar(true)).observe(document.querySelector('.topbar'));
+addEventListener('resize', () => { fitKey = ''; fitTopbar(); uiScale(true); });
+new ResizeObserver(() => uiScale(true)).observe(document.body);
 document.fonts?.ready.then(() => { fitKey = ''; fitTopbar(); });
 
 // "where:what" from a pager entry or a button elsewhere: a page, and what to show on it.
@@ -3205,18 +4075,19 @@ function goTo(target) {
   else if (where === 'consortium' || where === 'people') { peopleOpen = false; go('consortium'); }
   else if (where === 'jack') run('jack in');
   else if (where === 'profile') { setComms(false); openProfile(what || null); pf.tab = 'title'; profileUi(); } // a title just earned: your card, on its titles
-  else if (where === 'log') { setComms(false); codexTab = 'log'; if (what && sub) logSel = `${what}:${sub}`; codexIdx = false; go('codex'); dirty = true; } // the collection log (a pager line): on its entry
-  else if (where === 'achieve') { // an achievement (a pager line, a chip on your card): System → Achievements, on its category, lit
+  else if (where === 'log') { setComms(false); codexTab = 'log'; if (what && sub) logSel = `${what}:${sub}`; codexIdx = false; go('codex'); markDirty(); } // the collection log (a pager line): on its entry
+  else if (where === 'house') { setComms(false); if (profileOn) { profileOn = null; profileUi(); } rigTab = 'house'; houseUi = { held: null, hover: null }; go('rig'); markDirty(); } // a floor opened (a pager line): Rig → House
+  else if (where === 'achieve') { // an achievement (a pager line, a chip on your card): Rig → Achievements, on its category, lit
     setComms(false);
     if (profileOn) { profileOn = null; profileUi(); }
     const a = what && achById(what);
-    systemTab = 'achievements'; achUi = { cat: a ? a.cat : 'summary', focus: a ? a.id : null };
-    go('system'); dirty = true;
+    rigTab = 'achievements'; achUi = { cat: a ? a.cat : 'summary', focus: a ? a.id : null };
+    go('rig'); markDirty();
     if (a) setTimeout(() => document.querySelector(`[data-ach="${CSS.escape(a.id)}"]`)?.scrollIntoView({ block: 'center' }), 80);
   }
 }
 document.addEventListener('click', (e) => { const g = !e.target.closest('#comms') && e.target.closest('[data-go]'); if (g) { peopleOpen = false; goTo(g.dataset.go); } });
-document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager')) setComms(false); });
+document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager, #sheet')) setComms(false); });
 document.addEventListener('click', (e) => {
   const o = e.target.closest('[data-hub-opt]'), c = e.target.closest('[data-hub-close]');
   if (o) pickHub(o.dataset.hubOpt);
@@ -3226,17 +4097,17 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && commsOpe
 
 document.addEventListener('keydown', (e) => {
   const node = e.target.closest?.('[data-select]');
-  if (node && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); mapSel = node.dataset.select; mapPop = true; dirty = true; }
-  if (e.key === 'Escape' && (mapPop || mapSel) && module === 'map') { mapPop = false; mapSel = null; dirty = true; }
+  if (node && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); mapSel = node.dataset.select; mapPop = true; markDirty(); }
+  if (e.key === 'Escape' && (mapPop || mapSel) && module === 'map') { mapPop = false; mapSel = null; markDirty(); }
 });
 
-// Typing anywhere goes to the prompt.
+// Typing anywhere goes to the prompt; in a fight, from the Toolkit too (it never holds up the fight's keys).
 document.addEventListener('keydown', (e) => {
-  if (e.target === $('command-input') || e.target.closest?.('[data-select], [data-rooms], [data-fp-sel], [data-pdetail], [data-sk], #breakout') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target === $('command-input') || e.target.closest?.('[data-select], [data-rooms], [data-fp-sel], [data-pdetail]') || (!active(campaign) && e.target.closest?.('#toolkit')) || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key.length === 1 && !/input|textarea|select/i.test(e.target.tagName)) $('command-input').focus();
 });
 
-if (playtest) document.title = playtest === 'breach' ? 'BLACKBOX · breach' : playtest === 'rooms' ? 'BLACKBOX · rooms' : 'BLACKBOX · playtest';
+if (playtest) document.title = playtest === 'rooms' ? 'BLACKBOX · rooms' : 'BLACKBOX · playtest';
 if (CAMP) document.title = 'BLACKBOX · campaign';
 // The test bench (bench.mjs): a BENCH tag in the top bar, and the dev panel in a drawer, each button one command.
 if (BENCH) {
@@ -3300,8 +4171,9 @@ go(active(campaign) ? 'combat' : campaign.breach ? 'breach' : campaign.rooms ? '
 // No intrusion waits at the gate any more: you go to the rogue server to find fights.
 if (campaign.encounter?.phase === 'alert' && campaign.encounter.mode === 'home' && !campaign.encounter.invader) campaign.encounter = null;
 if (!campaign.breach && !campaign.roomsPlay && !CAMP) { const done = [...tickNetwork(campaign, Date.now()), ...tickServices(campaign, Date.now())]; if (done.length) { react(done); save(); } } // installs that finished (or Degraded mode that ran out) while you were away
-if (!playtest) { if (!campaign.profile || (CAMP && !campaign.camp)) firstLogin(); else shell.boot(); }
-requestAnimationFrame(frame);
+// A new game has no handle yet (the profile card's empty profile doesn't count: profile.mjs myProfile).
+if (!playtest) { if (!campaign.profile?.handle || (CAMP && !campaign.camp)) firstLogin(); else shell.boot(); }
+loop = 1; requestAnimationFrame(frame);
 window.blackbox = { get state() { return campaign; }, run, places: () => feel.placesNow() }; // places: what the place layer plays (places.mjs)
 
 // Volume sliders: heard live while you drag, saved when you let go.
@@ -3319,7 +4191,17 @@ document.addEventListener('change', (e) => {
   campaign.settings.volume = { ...V.volumesOf(campaign), [r.dataset.volume]: Number(r.value) / 100 };
   if (r.dataset.volume === 'sfx' && campaign.settings.sound) feel.preview('good');
   if (r.dataset.volume === 'ambience' && campaign.settings.sound) feel.radioTest();
-  save(); dirty = true;
+  save(); markDirty();
+});
+
+// Settings sliders (view.mjs slideRow): the label follows while you drag; letting go runs the setting's command.
+document.addEventListener('input', (e) => {
+  const r = e.target.closest?.('[data-slide]'), label = r?.parentNode.querySelector('.set-val');
+  if (label) label.textContent = r.dataset.labels.split('|')[r.value] || '';
+});
+document.addEventListener('change', (e) => {
+  const r = e.target.closest?.('[data-slide]');
+  if (r) run(`${r.dataset.slide} ${r.dataset.opts.split(' ')[r.value]}`);
 });
 
 // The logo goes to the Map (a plain click; it used to reload the page).
@@ -3336,7 +4218,7 @@ document.addEventListener('keydown', (e) => {
 
 // Protocol glyphs (protocol-glyphs.mjs): a Zero-day's scanline and a unique's flicker, wherever one is drawn (the
 // Loadout's board, datasheet and stash, the hover cards). Still with motion off.
-(function glyphLoop(t) { glyphMotion(document, t, !canMove()); requestAnimationFrame(glyphLoop); })(performance.now());
+(function glyphLoop(t) { if (glyphMotion(document, t, !canMove())) requestAnimationFrame(glyphLoop); else setTimeout(() => glyphLoop(performance.now()), 250); })(performance.now()); // no glyph on the page: look again in a quarter second (asking for no frame), not every frame
 
 // Item hover cards (view.mjs itemTipMarkup): a protocol or filter's card beside it, a filter's ASCII model
 // spinning while it's up. Follows the row through redraws; goes when the pointer leaves it.
@@ -3381,10 +4263,10 @@ document.addEventListener('mouseout', (e) => {
 
 // The Loadout's item datasheets (view.mjs protocolDetailMarkup), on a stash row or a filled slot ([data-pdetail]).
 // Hover or keyboard focus: beside it, read only (its buttons are on the row), placed where it fits on screen without
-// covering the stash's list or the row; below or above it when neither side has room. A tap (a phone has no hover): a
-// bottom sheet with the buttons in it, closed by a tap outside. Escape closes either; i opens it again on a focused
+// covering the stash's list or the row; below or above it when neither side has room. A tap (a touch screen has no
+// hover): the same card with its buttons in it, closed by a tap outside; on a phone, in the one sheet (phPops). Escape closes either; i opens it again on a focused
 // row, and ↑ ↓ walk the rows. It follows its row through redraws and goes when the row does.
-function pdShow(anchor, sheet = false) {
+function pdShow(anchor, tap = false) {
   clearTimeout(pd.timer);
   const id = anchor.dataset.pdetail, html = V.protocolDetailMarkup(campaign, id);
   if (!html) return pdHide();
@@ -3394,12 +4276,12 @@ function pdShow(anchor, sheet = false) {
     document.body.append(pd.scrim, pd.el);
   }
   pd.anchor?.classList.remove('pd-on');
-  Object.assign(pd, { id, anchor, sheet, html, mine: /data-command="unload /.test(html) });
+  Object.assign(pd, { id, anchor, tap, html, mine: /data-command="unload /.test(html) });
   anchor.classList.add('pd-on');
   pd.el.innerHTML = html;
-  pd.el.className = `pg-pop${sheet ? ' sheet' : ''}`;
-  pd.el.setAttribute('role', sheet ? 'dialog' : 'tooltip');
-  pd.el.hidden = false; pd.scrim.hidden = !sheet;
+  pd.el.className = `pg-pop${tap ? ' tap' : ''}`;
+  pd.el.setAttribute('role', tap ? 'dialog' : 'tooltip');
+  pd.el.hidden = false; pd.scrim.hidden = !tap;
   pdPlace(); showArmed();
 }
 function pdHide() {
@@ -3407,10 +4289,10 @@ function pdHide() {
   if (!pd.id) return;
   pd.anchor?.classList.remove('pd-on');
   pd.el.hidden = true; pd.scrim.hidden = true;
-  Object.assign(pd, { id: null, anchor: null, sheet: false, html: '' });
+  Object.assign(pd, { id: null, anchor: null, tap: false, html: '' });
 }
 function pdPlace() {
-  if (!pd.id || pd.sheet) return;
+  if (!pd.id || (pd.tap && F.isPhone())) return; // a phone: it is in the sheet (phPops)
   const el = pd.el, a = pd.anchor.getBoundingClientRect(), pad = 8, gap = 12;
   const list = document.querySelector('#page-view .silk-stash .silk-tiles')?.getBoundingClientRect();
   const z = Z(), w = el.offsetWidth * z, h = el.offsetHeight * z, beside = pd.anchor.closest('.silk-tiles') ? list : a; // it zooms with the screen (style.css)
@@ -3430,14 +4312,14 @@ const pdKeyed = (a) => a.contains(document.activeElement) && document.activeElem
 function pdDrawn() {
   if (!pd.id) return;
   const n = document.querySelector(`#page-view [data-pdetail="${CSS.escape(pd.id)}"]`), html = n ? V.protocolDetailMarkup(campaign, pd.id) : '';
-  if (!html || (pd.sheet ? /data-command="unload /.test(html) !== pd.mine : !(n.matches(':hover') || pdKeyed(n)))) return pdHide();
+  if (!html || (pd.tap ? /data-command="unload /.test(html) !== pd.mine : !(n.matches(':hover') || pdKeyed(n)))) return pdHide();
   pd.anchor = n; n.classList.add('pd-on');
   if (html !== pd.html || (!confirmArm && pd.el.querySelector('.armed'))) { pd.html = html; pd.el.innerHTML = html; }
   pdPlace();
 }
 document.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') pdTouch = Date.now(); }, true);
 document.addEventListener('pointerover', (e) => {
-  if (e.pointerType === 'touch' || pd.sheet) return;
+  if (e.pointerType === 'touch' || pd.tap) return;
   const a = e.target.closest?.('#page-view [data-pdetail]');
   if (!a) return;
   if (pd.anchor === a) return clearTimeout(pd.timer);
@@ -3445,7 +4327,7 @@ document.addEventListener('pointerover', (e) => {
   if (pd.id) pdShow(a); else pd.timer = setTimeout(() => a.isConnected && a.matches(':hover') && pdShow(a), 90); // scanning down the list: the next row's at once
 });
 document.addEventListener('pointerout', (e) => {
-  if (e.pointerType === 'touch' || pd.sheet) return;
+  if (e.pointerType === 'touch' || pd.tap) return;
   const a = e.target.closest?.('#page-view [data-pdetail]');
   if (!a || a.contains(e.relatedTarget)) return;
   clearTimeout(pd.timer);
@@ -3453,10 +4335,10 @@ document.addEventListener('pointerout', (e) => {
 });
 document.addEventListener('focusin', (e) => {
   const a = e.target.closest?.('#page-view [data-pdetail]');
-  if (a && !pd.sheet && e.target.matches(':focus-visible')) pdShow(a);
+  if (a && !pd.tap && e.target.matches(':focus-visible')) pdShow(a);
 });
 document.addEventListener('focusout', (e) => {
-  if (pd.sheet || !pd.anchor?.contains(e.target) || pd.anchor.contains(e.relatedTarget) || pd.anchor.matches(':hover')) return;
+  if (pd.tap || !pd.anchor?.contains(e.target) || pd.anchor.contains(e.relatedTarget) || pd.anchor.matches(':hover')) return;
   pdHide();
 });
 document.addEventListener('keydown', (e) => {
@@ -3474,124 +4356,113 @@ document.addEventListener('keydown', (e) => {
 // (the list shows what fits it), and a tap on the picked one opens its sheet. A tap on the scrim closes it, and goes
 // no further.
 document.addEventListener('click', (e) => {
-  if (pd.sheet && e.target === pd.scrim) { e.stopPropagation(); e.preventDefault(); pdHide(); return; }
+  if (pd.tap && e.target === pd.scrim) { e.stopPropagation(); e.preventDefault(); pdHide(); return; }
   if (Date.now() - pdTouch > 800 || pd.el?.contains(e.target)) return;
   const a = e.target.closest?.('#page-view [data-pdetail]');
   if (!a || e.target.closest('.inv-acts, .silk-out')) return;
   if (a.matches('.silk-tile') || V.stashUi.sel === a.querySelector('[data-silk-sel]')?.dataset.silkSel) { e.stopPropagation(); e.preventDefault(); pdShow(a, true); feel.key('click'); }
 }, true);
 addEventListener('scroll', () => pdPlace(), true);
-addEventListener('resize', () => (pd.sheet ? null : pdHide()));
+addEventListener('resize', () => (pd.tap ? null : pdHide()));
 
-// ---------- Loadout → Skills and talents, and the subclass breakout (skills-view.mjs) ----------
-// The page's panel explains the item you picked (a click or Enter: skillUi.sel), and shows the one under the pointer
-// or the keyboard's focus while it's there, without a redraw. On a phone (900px and under) a tap opens it as a
-// bottom sheet; a tap on the scrim or × closes it. The breakout is its own screen inside the glass (#breakout).
-const skNarrow = () => matchMedia('(max-width: 900px)').matches;
-const skPanelOf = (el) => el?.closest?.('#breakout') ? $('breakout')?.querySelector('.sk-panel') : $('page-view')?.querySelector('.sk-panel');
-const skDetail = (inBo, key) => (inBo ? V.breakoutDetailMarkup(campaign, bo || {}, key) : V.skillDetailMarkup(campaign, archView, key));
-function skFocusKey() { const a = document.activeElement?.closest?.('[data-sk]'); return a && !a.closest('.sk-panel') ? a.dataset.sk : null; }
-function skRefocus(root, key) { if (document.activeElement?.closest?.('[data-sk]')) return; [...(root?.querySelectorAll('[data-sk]') || [])].find((n) => n.dataset.sk === key && !n.closest('.sk-panel'))?.focus({ preventScroll: true }); }
-// Show an item in the panel for a moment (hover, focus), or the picked one again. The panel is only rewritten when the
-// item changes, so a click on one of its buttons never loses its target to a redraw under the pointer.
-function skShow(panel, inBo, key) {
-  if (!panel || !key || panel.dataset.showing === key) return;
-  const html = skDetail(inBo, key);
-  if (!html) return;
-  panel.innerHTML = html;
-  panel.dataset.showing = key;
-}
-function skPeek(el) {
-  if (skNarrow()) return;
-  skShow(skPanelOf(el), !!el.closest('#breakout'), el.dataset.sk);
-}
-function skRestore(inBo) {
-  const panel = inBo ? $('breakout')?.querySelector('.sk-panel') : $('page-view')?.querySelector('.sk-panel');
-  if (!panel || skNarrow()) return;
-  const picked = panel.parentElement?.querySelector('[data-sk][aria-pressed="true"]')?.dataset.sk || (inBo ? bo?.sel : skillUi.sel);
-  skShow(panel, inBo, picked);
-}
-document.addEventListener('pointerover', (e) => {
-  if (e.pointerType === 'touch') return;
-  const a = e.target.closest?.('#page-view [data-sk], #breakout [data-sk]');
-  if (a && !a.closest('.sk-panel')) skPeek(a);
+// ---------- Loadout → Skills and talents, and the Toolkit (skills-view.mjs) ----------
+// The page's tree is spent with clicks (data-command); a right-click on a ranks node takes a rank back
+// (data-command-alt). A redraw keeps a focused tree node focused.
+function skFocusKey() { return document.activeElement?.closest?.('#page-view [data-tn]')?.dataset.tn || null; }
+function skRefocus(root, key) { if (!document.activeElement?.closest?.('[data-tn]')) root?.querySelector(`[data-tn="${CSS.escape(key)}"]`)?.focus({ preventScroll: true }); }
+document.addEventListener('contextmenu', (e) => {
+  const n = e.target.closest?.('[data-command-alt]');
+  if (!n) return;
+  e.preventDefault();
+  run(n.dataset.commandAlt);
 });
-document.addEventListener('pointerout', (e) => {
-  if (e.pointerType === 'touch') return;
-  const a = e.target.closest?.('#page-view [data-sk], #breakout [data-sk]');
-  if (!a || a.closest('.sk-panel') || a.contains(e.relatedTarget)) return;
-  const to = e.relatedTarget?.closest?.('[data-sk]');
-  if (!to || to.closest('.sk-panel')) skRestore(!!a.closest('#breakout'));
-});
-document.addEventListener('focusin', (e) => { const a = e.target.closest?.('#page-view [data-sk], #breakout [data-sk]'); if (a && !a.closest('.sk-panel') && a.matches(':focus-visible')) skPeek(a); });
-document.addEventListener('focusout', (e) => { const a = e.target.closest?.('#page-view [data-sk], #breakout [data-sk]'); if (a && !a.closest('.sk-panel') && !e.relatedTarget?.closest?.('[data-sk], .sk-panel')) skRestore(!!a.closest('#breakout')); });
+// The subclass prompt: the first time you're home with no pick, it brings you to Skills and talents once.
+// It waits for the screen to be free: not in the intro, a fight or its result, a card or another full screen.
+function subPrompt() {
+  if (CAMP || !V.subPromptDue(campaign) || introOn || lu.showing() || lu.pending() || ended || $('spoils')?.hidden === false || gainOpen() || document.querySelector('.class-pick') || ['combat', 'net'].includes(module)) return;
+  subPrompted(campaign);
+  save();
+  loadoutTab = 'skills'; archView = classOf(campaign);
+  notice('Choose your subclass.');
+  feel.add('unlock', null);
+  markDirty();
+  if (module !== 'loadout') go('loadout', true);
+}
+
+// The Toolkit (key T, the page's button): your abilities and your bar. Drag an ability onto a key (one on another key
+// swaps), drag a key's ability off the bar to clear it; or click (tap) an ability, then a key. A key's ability tapped
+// twice comes off. Keys change between fights: the commands say so in a fight. The fight tray's button opens it too
+// (view.mjs trayMarkup); the fight runs on under it and its keys still work.
+function tkOpen(arch) { tk = { arch: arch || (module === 'loadout' && archView) || classOf(campaign), pick: null }; ttHide(); feel.add('channel', null); renderToolkit(); }
+function tkClose() { tk = null; renderToolkit(); }
+function renderToolkit() {
+  let el = $('toolkit');
+  if (!tk) { if (el) { el.hidden = true; el.innerHTML = ''; renderToolkit.html = ''; } return; }
+  if (!el) { el = document.createElement('div'); el.id = 'toolkit'; el.className = 'toolkit'; document.body.append(el); }
+  const html = V.toolkitMarkup(campaign, tk.arch, tk);
+  if (renderToolkit.html !== html || el.hidden) { el.innerHTML = html; renderToolkit.html = html; }
+  el.hidden = false;
+}
+const tkKeyIndex = (k) => LOADOUT.keys.indexOf(k);
+function tkPlace(id, key) { tk.pick = null; run(`equip ${tk.arch} ${id} ${key}`); renderToolkit(); }
+function tkClear(id) { tk.pick = null; run(`unequip ${tk.arch} ${id}`); renderToolkit(); }
 document.addEventListener('click', (e) => {
-  const x = e.target.closest?.('[data-sk-close]');
-  if (x) { if (x.closest('#breakout')) bo.sheet = false; else skillUi.sheet = false; dirty = true; renderBreakout(); return; }
-  const a = e.target.closest?.('#page-view [data-sk], #breakout [data-sk]');
-  if (a) {
-    if (a.closest('#breakout')) { bo.sel = a.dataset.sk; bo.sheet = skNarrow(); renderBreakout(); }
-    else { skillUi = { sel: a.dataset.sk, sheet: skNarrow() }; dirty = true; }
-    feel.key('click');
+  const open = e.target.closest?.('[data-toolkit]');
+  if (open && !e.target.closest('#toolkit')) { tkOpen(open.dataset.toolkit); return; }
+  if (!tk || !e.target.closest?.('#toolkit')) return;
+  if (e.target.closest('[data-tk-close]')) { tkClose(); return; }
+  const slot = e.target.closest('[data-tk-key]');
+  if (slot) {
+    const i = tkKeyIndex(slot.dataset.tkKey), there = slot.dataset.tkSkill;
+    if (tk.pick && tk.pick.from === i) tkClear(tk.pick.id); // the same key twice: off the bar
+    else if (tk.pick) tkPlace(tk.pick.id, slot.dataset.tkKey);
+    else if (there) { tk.pick = { id: there, from: i }; feel.key('click'); renderToolkit(); }
     return;
   }
-  const open = e.target.closest?.('[data-bo-open]');
-  if (open) { boOpen(open.dataset.boOpen); return; }
-  if (!bo || !e.target.closest?.('#breakout')) return;
-  const st = e.target.closest('[data-bo-step]');
-  if (st) { bo = { ...bo, step: Number(st.dataset.boStep), sel: null, sheet: false }; feel.add('channel', null); renderBreakout(); $('breakout')?.scrollTo?.(0, 0); return; }
-  const lv = e.target.closest('[data-bo-lvl]');
-  if (lv) { bo.lvl = Number(lv.dataset.boLvl); feel.key('click'); renderBreakout(); return; }
-  if (e.target.closest('[data-bo-later]')) { boLater(); return; }
+  const sk = e.target.closest('.tk-b[data-tk-skill]');
+  if (sk) { tk.pick = tk.pick?.id === sk.dataset.tkSkill && tk.pick.from == null ? null : { id: sk.dataset.tkSkill, from: null }; feel.key('click'); renderToolkit(); }
+});
+document.addEventListener('dragstart', (e) => {
+  const d = e.target.closest?.('#toolkit [data-tk-skill][draggable="true"]');
+  if (!d) return;
+  tkDrag = { id: d.dataset.tkSkill, from: d.dataset.tkKey ? tkKeyIndex(d.dataset.tkKey) : null, dropped: false };
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', tkDrag.id);
+  ttHide();
+});
+document.addEventListener('dragover', (e) => {
+  if (!tkDrag) return;
+  const slot = e.target.closest?.('#toolkit [data-tk-key]');
+  for (const x of document.querySelectorAll('#toolkit .tk-slot.hover')) if (x !== slot) x.classList.remove('hover');
+  if (slot) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; slot.classList.add('hover'); }
+});
+document.addEventListener('drop', (e) => {
+  if (!tkDrag) return;
+  const slot = e.target.closest?.('#toolkit [data-tk-key]');
+  if (!slot) return;
+  e.preventDefault();
+  tkDrag.dropped = true;
+  if (tkKeyIndex(slot.dataset.tkKey) !== tkDrag.from) tkPlace(tkDrag.id, slot.dataset.tkKey);
+});
+document.addEventListener('dragend', () => {
+  if (!tkDrag) return;
+  const { id, from, dropped } = tkDrag;
+  tkDrag = null;
+  if (!dropped && from != null && tk) tkClear(id); // dragged off the bar
+  else renderToolkit();
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape') return;
-  if (bo?.sheet) { bo.sheet = false; renderBreakout(); return; }
-  if (bo) { boLater(); return; }
-  if (skillUi.sheet) { skillUi.sheet = false; dirty = true; }
-});
-// The breakout: open (the page's Choose your subclass, or by itself: breakoutDue), Later, and closed by a pick.
-function boOpen(arch) {
-  bo = { arch: arch || classOf(campaign), step: 1, sel: null, lvl: null, sheet: false, fresh: true };
-  feel.add('unlock', null);
-  renderBreakout();
-}
-function boLater() {
-  if (!bo) return;
-  subLater(campaign, bo.arch);
-  bo = null;
-  save();
-  renderBreakout();
-  dirty = true;
-}
-// The screen is free for it: not in the intro, a fight or its result, a card or another full screen.
-function boFree() { return !introOn && !lu.showing() && !lu.pending() && !ended && !active(campaign) && $('spoils')?.hidden !== false && !gainOpen() && !document.querySelector('.class-pick') && !['combat', 'net'].includes(module); }
-function renderBreakout() {
-  let el = $('breakout');
-  if (bo && !subWaiting(campaign, bo.arch)) { // picked (here or by a command): the page shows the new subclass
-    const arch = bo.arch;
-    bo = null;
-    if (el) { el.hidden = true; el.innerHTML = ''; renderBreakout.html = ''; }
-    if (!CAMP) { archView = arch; loadoutTab = 'skills'; skillUi = { sel: null, sheet: false }; dirty = true; if (module !== 'loadout') go('loadout', true); }
-    return;
-  }
-  if (!bo && !CAMP && V.breakoutDue(campaign) && boFree()) {
-    bo = { arch: classOf(campaign), step: 1, sel: null, lvl: null, sheet: false, fresh: true };
-    loadoutTab = 'skills'; archView = classOf(campaign); skillUi = { sel: null, sheet: false };
-    notice('Choose your subclass.');
-    feel.add('unlock', null);
-    dirty = true;
-    if (module !== 'loadout') return go('loadout', true); // its render draws the breakout
-  }
-  if (!bo) { if (el) { el.hidden = true; el.innerHTML = ''; renderBreakout.html = ''; } return; }
-  if (!el) { el = document.createElement('div'); el.id = 'breakout'; el.className = 'breakout'; document.body.append(el); }
-  const html = V.breakoutMarkup(campaign, bo), focus = el.contains(document.activeElement) ? document.activeElement.closest('[data-sk], [data-bo-step], [data-bo-lvl]') : null;
-  const fk = focus && (focus.dataset.sk ? `[data-sk="${CSS.escape(focus.dataset.sk)}"]` : focus.dataset.boLvl ? `[data-bo-lvl="${focus.dataset.boLvl}"]` : null);
-  if (renderBreakout.html !== html || el.hidden) { el.innerHTML = html; renderBreakout.html = html; }
-  el.hidden = false;
-  if (fk && !el.contains(document.activeElement)) el.querySelector(fk)?.focus({ preventScroll: true });
-  if (bo.fresh) { bo.fresh = false; requestAnimationFrame(() => el.querySelector('.bo-next .primary')?.focus({ preventScroll: true })); } // the keyboard starts on the walk, not the prompt behind it
-}
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'Escape' && tk) { if (tk.pick) { tk.pick = null; renderToolkit(); } else tkClose(); e.stopImmediatePropagation(); return; }
+  if (e.key !== 't' && e.key !== 'T') return;
+  // T opens and closes it: anywhere but a text field, and on an empty prompt only as a capital (t starts commands).
+  const typing = /input|textarea|select/i.test(e.target.tagName) || e.target.isContentEditable;
+  const prompt = e.target === $('command-input') && !e.target.value && e.key === 'T';
+  if (typing && !prompt) return;
+  if (CAMP || introOn || !$('scene').hidden) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  if (tk) tkClose(); else tkOpen();
+}, true);
 
 // Themed hover tips: every title="" in the game shows in the game's own card instead of the browser's.
 // The title moves to data-tt on first hover (so the browser's tip never shows) and the card follows the element.
@@ -3601,10 +4472,11 @@ function ttHide() { clearTimeout(tt.timer); clearTimeout(tt.out); tt.at = null; 
 // A redraw replaces the element under a still pointer with a copy: the pointer leaves the old one and enters the new
 // one. Leaving waits a beat, and the same tip on the copy carries on, so a live page never blinks its tip.
 const ttSame = (a) => tt.el && !tt.el.hidden && a.dataset.tt === tt.text;
-function ttShow(anchor) {
-  const text = anchor.dataset.tt;
-  if (!text || !anchor.isConnected) return ttHide();
-  if (!tt.el) { tt.el = document.createElement('div'); tt.el.className = 'tt'; tt.el.setAttribute('role', 'tooltip'); document.body.append(tt.el); }
+// A rule's card (WoW's grammar: name, kind, what it does, the answer muted), as html: the hover tip and the phone's
+// peek sheet (tap for info) both show it.
+function ttCardHtml(anchor, text) {
+  // A runner on the map (runners-view.mjs): their Badge, as on their card.
+  if (anchor.dataset.ttRunner) { const b = runnerBadge(campaign, anchor.dataset.ttRunner); if (b) return `<div class="tt-runner">${b}</div>`; }
   const m = text.match(/^([^:.\n]{2,40}): ([\s\S]+)$/);
   const esc = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
   // A line that starts with ▸ is the answer (fightread.mjs answerLine): muted, on its own line, like WoW's "Use:" line.
@@ -3614,10 +4486,18 @@ function ttShow(anchor) {
   // what holds right now, a "tone|text" line each (view.mjs trayMarkup), coloured by its job like WoW's red "Not ready yet".
   const state = (anchor.dataset.ttState || '').split('\n').filter(Boolean).map((l) => { const [tone, ...t] = l.split('|'); return `<span class="tt-state ${tone}">${esc(t.join('|'))}</span>`; }).join('');
   const kind = (m && anchor.dataset.ttKind ? `<span class="tt-kind">${esc(anchor.dataset.ttKind)}</span>` : '') + state;
-  tt.el.innerHTML = m ? `<b>${esc(m[1])}</b>${kind}${body(m[2][0].toUpperCase() + m[2].slice(1))}` : body(text);
+  const box = document.createElement('div');
+  box.innerHTML = m ? `<b>${esc(m[1])}</b>${kind}${body(m[2][0].toUpperCase() + m[2].slice(1))}` : body(text);
   // Icons the text can't carry (a contract's pay chips) ride in the element's <template class="tt-more">, before the answer.
   const more = anchor.querySelector(':scope > template.tt-more');
-  if (more) { const box = document.createElement('span'); box.className = 'tt-more'; box.append(more.content.cloneNode(true)); tt.el.insertBefore(box, tt.el.querySelector('.tt-ans')); }
+  if (more) { const m2 = document.createElement('span'); m2.className = 'tt-more'; m2.append(more.content.cloneNode(true)); box.insertBefore(m2, box.querySelector('.tt-ans')); }
+  return box.innerHTML;
+}
+function ttShow(anchor) {
+  const text = anchor.dataset.tt;
+  if (!text || !anchor.isConnected) return ttHide();
+  if (!tt.el) { tt.el = document.createElement('div'); tt.el.className = 'tt'; tt.el.setAttribute('role', 'tooltip'); document.body.append(tt.el); }
+  tt.el.innerHTML = ttCardHtml(anchor, text);
   tt.text = text;
   tt.el.hidden = false;
   const r = anchor.getBoundingClientRect(), w = tt.el.offsetWidth, h = tt.el.offsetHeight, pad = 8;
@@ -3670,34 +4550,68 @@ document.addEventListener('pointerover', (e) => {
 
 // The ability effects playtest (?playtest=fx, abilityfx-playtest.mjs): its panel fires each effect on a part of the
 // paused fight, through the same gate a fight's hits go through (Screen effects, Motion), falling back the same way.
-if (playtest === 'fx') {
+if (playtest === 'fx') import('./abilityfx-playtest.mjs').then(({ mountFxPlaytest, abilityOfKey }) => { // loaded only here
   const fxRow = (id) => partRow(id) || document.querySelector('#board .bpart');
   mountFxPlaytest({
     parts: () => (campaign.encounter?.virus?.parts || []).filter((p) => alive(p)).map((p) => ({ id: p.id, name: p.name })),
     level: () => campaign.settings.screenFx || 'medium',
-    setLevel: (l) => { screenFxCommand(campaign, `screen fx ${l}`); dirty = true; },
+    setLevel: (l) => { screenFxCommand(campaign, `screen fx ${l}`); markDirty(); },
     motion: () => !!campaign.settings.motion,
-    setMotion: (on) => { campaign.settings.motion = on; dirty = true; },
+    setMotion: (on) => { campaign.settings.motion = on; markDirty(); },
     plain: (id, { result }) => { if (fxLevel() !== 'minimal') hitfx.strike(fxRow(id), { kind: 'you', result }); },
     // From its key: the ability's own key on this tray, else the tray's first key standing in for it (said so); with the
     // key hidden, the fallback a fight uses when its key isn't on screen: your bar.
     mates: () => matesOf(campaign).map((m) => m.who),
-    fire: (key, id, { power, crit, result, hidden, who, tier = 1 }) => {
-      if (fxLevel() === 'minimal' || !canMove()) return 'none';
+    // A status on the part (its mark shows on the board) for a hit to cash in: Exposed (on a crit), Quarantined, Hooked,
+    // Tagged (a burn's tick); '' clears them.
+    mark: (id, k) => { const p = part(campaign, id), e = campaign.encounter; if (!p || !e) return; for (const m of ['exposed', 'quarantined', 'hooked', 'tagged']) p[m + 'Until'] = 0; if (k) p[k + 'Until'] = e.cycle + 2; markDirty(); },
+    warm: () => feel.abilityPreview('a', '', null), // wakes the audio and loads the samples
+    fire: (key, id, { power, crit, result, hidden, who, tier = 1, marks = [], left = null, broke = null, sound = 'off' }) => {
+      // Its sound (abilitysound.mjs): today's voice for the result on the number's beat, or the ability's own in a style.
+      const voice = (plan) => {
+        if (sound === 'off' || key.endsWith(':tick')) return;
+        const t = plan ? { travel: plan.travel, hold: plan.hold, impact: plan.impact, stop: plan.stop } : null;
+        if (sound !== 'today' && feel.abilityPreview(sound, key, t, { result, power, tier: who ? 1 : tier })) return;
+        feel.preview(result === 'miss' ? 'miss' : result === 'chit' ? 'chit' : crit ? 'crit' : 'hit', { amount: Math.round(power * 60) }, (t?.impact || 0) / 1000);
+      };
+      if (fxLevel() === 'minimal' || !canMove()) { voice(null); return 'none'; }
       const R = recipeOf(key), row = R?.on === 'you' ? null : fxRow(id), ability = abilityOfKey(key), tick = key.endsWith(':tick');
       const own = ability && document.querySelector(`#tray .ability[data-ability="${CSS.escape(ability)}"]`), stand = !tick && !hidden && !own;
       const keyEl = stand ? document.querySelector('#tray .ability') : null;
-      const plan = abilityfx.play(key, row, { power, crit, result, ability, keyEl, noKey: !!hidden, who: who || null, kind: who ? 'crew' : 'you', origin: tick ? 'here' : who ? 'crew' : 'key', tier: who ? 1 : tier, onImpact: row ? () => hitfx.jolt(row, result) : null });
-      if (plan) { window.__fxPlan = { travel: plan.travel, impact: plan.impact, dur: plan.dur, from: plan.from }; return stand && keyEl ? 'stand-in' : 'fx'; } // the playtest's last plan, for review captures
+      const plan = abilityfx.play(key, row, { power, crit, result, marks, broke, left: tick ? left : null, ability, keyEl, noKey: !!hidden, who: who || null, kind: who ? 'crew' : 'you', origin: tick ? 'here' : who ? 'crew' : 'key', tier: who ? 1 : tier, onImpact: row ? () => hitfx.jolt(row, result) : null });
+      voice(plan || null);
+      if (plan) { window.__fxPlan = { travel: plan.travel, hold: plan.hold, impact: plan.impact, stop: plan.stop, dur: plan.dur, from: plan.from }; return stand && keyEl ? 'stand-in' : 'fx'; } // the playtest's last plan, for review captures
       if (row) hitfx.strike(row, { kind: 'you', result });
       return 'plain';
     },
-    // A break finisher on a part (its class's, or a subclass's), as the winning break plays it.
-    finish: (cls, sub, id) => {
-      if (fxLevel() === 'minimal' || !canMove()) return 'none';
-      const plan = abilityfx.finish(cls, sub || null, fxRow(id));
-      if (plan) { window.__fxPlan = { travel: 0, impact: plan.impact, dur: plan.dur, from: 'here' }; return 'fx'; }
-      return 'plain';
+    // A virus attack (virussound.mjs ATTACKS) as a fight draws it (fire): its chip's strike (chipfx.mjs) from the part's
+    // chip to your bar, or the chip's ghost flying there where its theme has none to fly; with no theme, the ghost and
+    // the lash; a replicate's copies land on the part's own bar, standing in for the fragment; a patch swells and clamps
+    // shut where it is. Its number shows on the impact, and its sound plays: today's voice, or its own in a style.
+    attack: (key, id, { result, power, sound = 'off' }) => {
+      const A = ATTACKS[key], plan = OWN_PLAN[key] || STRIKE_PLAN[A.theme], drawn = fxLevel() !== 'minimal' && canMove(), land = drawn ? plan.impact : 0, frac = power / 5;
+      if (A.does) result = 'hit';
+      const chipEl = fxRow(id)?.querySelector('[data-k]') || document.querySelector('#board [data-k]') || fxRow(id), chip = chipEl?.getBoundingClientRect();
+      if (drawn && chip?.width) {
+        const ghost = chipEl.cloneNode(true); ghost.querySelector('.fxin')?.remove();
+        fire({ rect: chip, html: ghost.outerHTML, cls: `now${A.does && !A.theme ? ' patch' : key === 'replicate' ? ' replicate' : ''}`, th: A.theme || '' }, [fxRow(id)?.dataset.target]);
+        if (key === 'lash') lash.lash({ from: lashFrom(fxRow(id)?.dataset.target), bar: document.querySelector(BAR), power, heavy: result === 'crit' || result === 'charge', mode: 'hit', full: fxLevel() === 'full' });
+      }
+      const today = A.does ? { blind: 'blind', patch: 'patch', cast: 'hurt', seal: 'patch' }[key] : { crit: 'hurtcrit', blocked: 'interrupt', evaded: 'evade' }[result] || 'hurt'; // (a replicate has no voice today; a charge and a boss's beat play the hurt)
+      if (sound !== 'off' && !(sound !== 'today' && feel.attackPreview(sound, key, plan, { result, power }, drawn)) && today) feel.preview(today, { frac }, land / 1000);
+      feel.beat(land);
+      if (key === 'blind') { feel.add(() => flash('SCRAMBLED')); feel.add('blind', '.board', null, { silent: true }); }
+      else if (key === 'patch') feel.add('patch', row(fxRow(id)?.dataset.target), '+◆', { silent: true });
+      else if (key === 'cast') feel.add(() => flash('DOUBLE EXTORTION compiles'));
+      else if (key === 'seal') for (const p of campaign.encounter?.virus?.parts || []) { if (alive(p)) feel.add('patch', row(p.id), '+◆', { silent: true }); }
+      else if (key === 'replicate') { /* the fragment's row is its mark in a fight */ }
+      else if (result === 'evaded' || result === 'blocked') feel.add(result === 'evaded' ? 'evade' : 'interrupt', MINE, result.toUpperCase(), { silent: true });
+      else {
+        feel.add(() => shake(power, result === 'crit' || result === 'charge'));
+        feel.add(result === 'crit' ? 'hurtcrit' : 'hurt', MINE, `−${Math.max(1, Math.round(frac * (defender(campaign).max || 100)))}`, { frac, size: 1 + power * 0.8 + (result === 'crit' ? 0.3 : 0), silent: true, noEdge: drawn, softEdge: !drawn, noFlash: drawn, floatAt: BAR, x: 0.5 });
+      }
+      feel.beat(0); feel.flush();
+      return drawn ? 'fx' : 'none';
     },
   });
-}
+});

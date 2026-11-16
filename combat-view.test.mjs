@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, addLocation } from './dist/combat.mjs';
+import { fresh, command, active, selectEncounter, resolveCycle, part, addLocation } from './dist/combat.mjs';
 import { graphOf } from './dist/floors.mjs';
 import { boardMarkup, hudMarkup, trayMarkup, mapMarkup, mapLayout } from './dist/view.mjs';
 import { CONFIG } from './dist/data.mjs';
@@ -12,7 +12,8 @@ CONFIG.partToughness = 1; // mechanics tests use the parts' base numbers
 CONFIG.enemyRamp = 0;
 CONFIG.salvageChance = 1;
 CONFIG.misses = false; // and no misses
-CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; // flat numbers at every level (level tests turn it back on)
+const OWN0 = CONFIG.ownPerLevel, FILL0 = CONFIG.gearFill; // your own line and gear's fill, to turn back on
+CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]]; // flat numbers at every level (level tests turn it back on)
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 
 const start = (id = 'cryptjack') => { const s = fresh(); s.hackers = { breaker: { level: 50, xp: 0 } }; selectEncounter(s, id, 7, { level: 6 }); command(s, 'engage'); return s; };
@@ -22,7 +23,7 @@ test('each part row shows its attack in the column where it lands', () => {
   const row = (id) => boardMarkup(s).split('data-target="').find((r) => r.startsWith(id + '"'));
   const cells = (id) => row(id).split('class="bcell').slice(2);
   assert.match(cells('pulse')[2], /Surge/, 'lands on cycle 3');
-  assert.match(cells('encryptor')[3], /Encrypt/, 'lands on cycle 4');
+  assert.match(cells('encryptor')[3], /Encrypt|Full Disk/, 'lands on cycle 4 (charged into Full Disk when the tell rides it)');
   assert.doesNotMatch(cells('pulse')[0], /intent/);
   assert.match(row('encryptor'), /◆◆/, 'its two armor chits');
 });
@@ -71,12 +72,12 @@ test('a tray key shows its name, not what it does; its tooltip has that, WoW sty
   assert.doesNotMatch(key, /<kbd>/, 'icon and name only');
 });
 
-test('a mutation is a tag, its rule on hover (and in a first-time tip); the gate card is just the virus and Engage', async () => {
+test('a mutation is a tag, its rule on hover, never a first-time tip; the gate card is just the virus and Engage', async () => {
   const { TIPS } = await import('./dist/tips.mjs');
   const s = start('splinter');
   assert.match(hudMarkup(s), /data-mut="regenerative" title="[^"]*patches its ◆ back 1 cycle sooner/);
   assert.doesNotMatch(hudMarkup(s), /<p class="mutation-rule"/);
-  assert.ok(TIPS.some((t) => t.id === 'mut-regenerative' && /1 cycle sooner/.test(t.text)));
+  assert.ok(!TIPS.some((t) => /^(mut|strain)-/.test(t.id)), 'no virus or mutation tips');
   const h = fresh();
   selectEncounter(h, 'splinter', 1);
   assert.match(mapMarkup(h, 'intrusion'), /At the gate/);
@@ -306,4 +307,39 @@ test('the ◆ badge: on a damaging key armor would absorb, aimed at an armored p
   assert.match(boardMarkup(s, null), /<div class="intent mine"[^>]*>overload encryptor<span class="armd" title="Armor takes this hit/);
   command(s, 'crack encryptor');
   assert.doesNotMatch(boardMarkup(s, null).match(/<div class="intent mine"[^]*?<\/div>/)[0], /armd/, 'Crack queued: no badge');
+});
+
+// An Overclocker crewmate's Turbo Boost (combat.mjs turboOn) shows on your bar, with whose it is.
+test('Turbo shows on a crewmate\'s bar', async () => {
+  const { statusSpans } = await import('./dist/view.mjs');
+  const s = fresh(); s.loadout.archetype = 'breaker'; s.hackers = { breaker: { level: 30, xp: 0 } };
+  selectEncounter(s, 'cryptjack', 7, { level: 6 }); command(s, 'engage');
+  s.encounter.turbo = { until: s.encounter.cycle + 2, dealt: 1.3, taken: 1.2, who: 'Ada' };
+  const x = statusSpans(s).find((y) => y.name === 'Turbo');
+  assert.ok(x && x.value === '+30% · +20% taken' && x.cycles === 3 && /Buff from Ada's Turbo Boost/.test(x.title) && /30% more damage and take 20% more/.test(x.title), JSON.stringify(x));
+});
+
+test('a fight on a server shows a red Jack out key that sends the emergency jack out; none at home', async () => {
+  const { fleeKey } = await import('./dist/view.mjs');
+  const { play } = await import('./dist/run.mjs');
+  const FP = await import('./dist/floorplan.mjs');
+  const s = fresh();
+  s.tutorialCompleted = true;
+  command(s, 'developer location ransomware');
+  const l = s.locations[0];
+  l.lockUntil = 0;
+  play(s, `connect ${l.id}`);
+  for (let i = 0; i < 20 && !active(s); i++) {
+    const room = FP.roomList(s).find((x) => ['process', 'guard'].includes(x.kind) && !s.rooms.cleared?.[x.id]);
+    FP.go(s, room.id); FP.act(s, 'engage');
+  }
+  assert.ok(active(s) && s.encounter.mode === 'run', 'in a fight on the server');
+  assert.match(fleeKey(s), /class="ability flee" data-command="jack out" data-confirm=/);
+  s.roomsPlay = true;
+  assert.equal(fleeKey(s), '', 'the rooms playtest has no jack out mid-fight');
+  delete s.roomsPlay;
+  play(s, 'jack out');
+  for (let i = 0; i < 5 && s.run; i++) resolveCycle(s);
+  assert.ok(!s.run, 'home');
+  assert.equal(fleeKey(s), '', 'nothing to jack out of');
 });

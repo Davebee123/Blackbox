@@ -33,7 +33,6 @@ test('pages are the lines you can act on; news only tells you something', () => 
   const threats = [
     line(s, 'wall-breach', 'cryptjack BREACHED your wall.'),
     line(s, 'invader', 'Invasion: lapsejack left X. At your wall in 4 min.', { invader: 1 }),
-    line(s, 'hub-siege', 'A swarm reaches the Kestrel hub.', { faction: 'kestrel' }),
   ];
   const news = [
     line(s, 'retainer', 'Halcyon retainer: +38 credits.'),
@@ -109,8 +108,6 @@ test('acts follow the game: a full hand reads the offer, a contract not done ope
   assert.deepEqual(PG.actOf(t, inv), { label: 'Intercept', cmd: 'intercept' }, 'a thief can be caught on the way');
   t.invasion.state = 'siege';
   assert.deepEqual(PG.actOf(t, inv), { label: 'Jack in', cmd: 'jack in' }, 'at the wall: jack in');
-  const hub = line(t, 'hub-siege', 'A swarm reaches the Kestrel hub.', { faction: 'kestrel' });
-  assert.deepEqual(PG.actOf(t, hub), { label: 'Defend', cmd: 'hub defend kestrel' });
 });
 
 test('the count is the pages; the order is threat, clock, pay, the rest, letters, offers', () => {
@@ -145,7 +142,7 @@ test('the tray draws the pages: an icon each, most urgent first, +n when more wa
   const tray = PGV.trayMarkup(s, 4);
   assert.equal((tray.match(/class="pg-tile/g) || []).length, 3, 'three icons and +2');
   assert.match(tray, />\+2</);
-  assert.match(tray, new RegExp(`class="pg-tile new" data-pact="${p[0].id}" title="Courier: [^"]+\n▸ Intercept"`), 'the courier first: a tap intercepts it, the tooltip is the line and its ▸ act');
+  assert.match(tray, new RegExp(`class="pg-tile new" data-pact="${p[0].id}" title="COURIER-\\d+: [^"]+\n▸ Intercept"`), 'the courier first: a tap intercepts it, the tooltip is the line and its ▸ act');
   assert.equal((PGV.trayMarkup(s, 3).match(/class="pg-tile/g) || []).length, 2, 'a tight bar: two icons and +3');
   assert.equal((PGV.trayMarkup(s, 6).match(/class="pg-tile/g) || []).length, 5, 'room for all five: no +n');
   assert.doesNotMatch(PGV.trayMarkup(s, 6), /pg-more/);
@@ -177,5 +174,5 @@ test('the pager keeps the rules: no teal, nothing moves, the same chirp, only fo
   assert.doesNotMatch(css.replace(/text-transform/g, ''), /transform|translate|rotate|@keyframes/, 'nothing moves (the lamp reuses the blink)');
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
   assert.match(app, /logComms\(campaign, events\)\.filter\(PG\.isPage\)/, 'news never chirps');
-  assert.match(app, /feel\.add\('pager', '#pager', null, \{ alert \}\)/, 'the pager chirp is the one it always had');
+  assert.match(app, /feel\.add\('pager', pingTarget\(\), null, \{ alert \}\)/, 'the pager chirp is the one it always had');
 });

@@ -9,7 +9,7 @@
 // relays on servers you hold shorten it. A transfer can't be lost: the worst case is waiting.
 import { emit, warn, materialsOf, hooks, rand, firstTime, addItem } from './combat.mjs';
 import { addFilter, rollFilter } from './filters.mjs';
-import { FACTIONS, hubsOf, hostile, repTier, buyFrom, hubFound } from './factions.mjs';
+import { FACTIONS, hubsOf, repTier, hubFound } from './factions.mjs';
 import { seeded } from './gear.mjs';
 import { deliverGoods } from './store.mjs';
 import { deal, shockMult, flickerMult } from './events.mjs';
@@ -54,20 +54,18 @@ export const MARKET = {
   travelMin: { halcyon: 5, kestrel: 8, lantern: 10, glassjaw: 12, nullchoir: 15 }, // file transfer, minutes
   relayCut: 0.1, // each relay you've installed: 10% faster, up to 40%
   maxLots: 99,
-  wiperBoost: 1.25, // while a hub is wiped offline, the others pay 25% more for what it was buying
 };
 
 const marketOf = (s) => (s.market ||= { pressure: {}, transfers: [], serial: 0, event: 'calm', eventUntil: 0, at: null });
 export const eventOf = (s) => EVENTS[marketOf(s).event] || EVENTS.calm;
 
-// What moves a hub's price that you can't: its condition × the world event × a wiped hub elsewhere × a market shock
+// What moves a hub's price that you can't: its condition × the world event × a market shock
 // on this hub's ware (events.mjs, the Market shock card) × a price flicker (a blip) × a pirate's tip you logged (scanner.mjs).
 // A tip is { hub, ware, mult, until } in s.scanner.tips (scanner.mjs catchStation).
 export const tipMult = (s, f, w) => (s.scanner?.tips || []).find((x) => x.hub === f && x.ware === w && x.until > now())?.mult ?? 1;
 export function outsideMult(s, f, w) {
   const cond = CONDITIONS[HUB_CONDITION[f]]?.mult[w] ?? 1, ev = eventOf(s).mult[w] ?? 1;
-  const t = now(), gap = Object.entries(s.hubs || {}).some(([g, h]) => g !== f && (h.offlineUntil || 0) > t && (CONDITIONS[HUB_CONDITION[g]]?.mult[w] || 0) > 1) ? MARKET.wiperBoost : 1;
-  return cond * ev * gap * shockMult(s, f, w) * flickerMult(s, f, w) * tipMult(s, f, w);
+  return cond * ev * shockMult(s, f, w) * flickerMult(s, f, w) * tipMult(s, f, w);
 }
 // The price at a hub for one unit, before the spread: base × outside factors × your own pressure
 // (selling pushes it down to 35% at most, buying up to 160%).
@@ -77,7 +75,7 @@ export function priceOf(s, f, w) {
 }
 // What you'd get selling one, and pay buying one (whole credits). Better rep trades a little better.
 export function quote(s, f, w) {
-  const t = repTier(s, f).i, mine = !!s.hubs?.[f]?.captured, edge = mine ? MARKET.spread : Math.max(0, t - 1) * 0.02; // a hub you hold trades at its true price
+  const t = repTier(s, f).i, edge = t * 0.02;
   const p = priceOf(s, f, w);
   return { sell: Math.max(1, Math.floor(p * (1 - MARKET.spread + edge))), buy: Math.max(1, Math.ceil(p * (1 + MARKET.spread - edge))), mult: p / WARES[w].base };
 }
@@ -91,8 +89,6 @@ export function trade(s, side, f, w, n, at = now()) {
   if (!FACTIONS[f] || !hubsOf(s).length) return warn(s, 'Markets open with the faction hubs.');
   if (!hubFound(s, f)) return warn(s, `You haven't located ${FACTIONS[f].short}'s hub yet.`);
   if (!WARES[w]) return warn(s, `Wares: ${WARE_IDS.join(', ')}.`);
-  if (hostile(s, f)) return warn(s, `${FACTIONS[f].short} won’t trade with you.`);
-  if ((s.hubs?.[f]?.offlineUntil || 0) > at) return warn(s, `${FACTIONS[f].hub.name} is offline.`);
   if (n < 1 || n > MARKET.maxLots) return warn(s, `How many? 1–${MARKET.maxLots}.`);
   if (side === 'buy' && WARES[w].sellOnly) return warn(s, `Hubs buy ${WARES[w].name.toLowerCase()} but don't sell them.`);
   const m = marketOf(s), q = quote(s, f, w);
@@ -136,7 +132,7 @@ function lotTotal(s, side, f, w, n) {
 export function orderQuote(s, side, f, w, n) {
   n = Math.max(1, Math.floor(n));
   const here = lotTotal(s, side, f, w, n);
-  const others = hubsOf(s).map((h) => h.faction).filter((g) => g !== f && !hostile(s, g));
+  const others = hubsOf(s).map((h) => h.faction).filter((g) => g !== f);
   const avg = others.length ? Math.round(others.reduce((a, g) => a + lotTotal(s, side, g, w, n).total, 0) / others.length) : here.total;
   const vs = side === 'sell' ? here.total - avg : avg - here.total; // positive: better than the average elsewhere
   return { n, side, ...here, credits: side === 'sell' ? here.total : -here.total, after: s.server.credits + (side === 'sell' ? here.total : -here.total), vs, minutes: Math.round(travelMs(s, f) / 60000) };
@@ -168,7 +164,7 @@ export function tickMarket(s, at = now()) {
     m.transfers.splice(m.transfers.indexOf(t), 1);
     if (t.side === 'good') {
       emit(s, 'transfer-in', `Transfer complete from ${FACTIONS[t.f].short}: ${t.name}.`, { faction: t.f });
-      if (t.item) addItem(s, t.item, `${FACTIONS[t.f].short}: `); // a premium protocol (factions.mjs hubPremium)
+      if (t.item) addItem(s, t.item, `${FACTIONS[t.f].short}: `); // a shelf or chase protocol (store.mjs buyAt)
       else if (t.good === 'tip') deal(s, 'courier'); // a broadcast schedule bought before LANTERN dropped it
       else if (t.good.startsWith('cb-')) learnCodebase(s, t.good.slice(3), 'Unsealed: ');
       else if (t.good === 'bootleg') addFilter(s, rollFilter(() => rand(s), { level: t.L, rarity: rand(s) < 0.7 ? 'stock' : 'tuned' }), 'Unsealed: ');
@@ -184,7 +180,7 @@ export function tickMarket(s, at = now()) {
   }
 }
 export const transfersOf = (s) => marketOf(s).transfers;
-// A hub's specialty good, bought (factions.mjs buyFrom): paid now, it lands like any transfer.
+// A hub's Shop purchase (store.mjs buyAt): paid now, it lands like any transfer.
 // item: a protocol bought whole (a hub's premium one), delivered as it is.
 export function sendGood(s, f, id, name, credits, L, at = now(), item = null) {
   const m = marketOf(s);
@@ -197,7 +193,6 @@ export function sendGood(s, f, id, name, credits, L, at = now(), item = null) {
 export const bestSell = (s, w) => (hubsOf(s).length && WARES[w] ? Math.max(...hubsOf(s).map((h) => quote(s, h.faction, w).sell)) : 0); // the hubs you can reach
 export function marketCommand(s, text, at = now()) {
   const [, side, f, w, n] = text.split(' ');
-  if (side === 'buy' && FACTIONS[f]?.shop.includes(w)) return buyFrom(s, f, w, at); // a hub's specialty good (factions.mjs)
   if (side === 'sell' || side === 'buy') return trade(s, side, f, w, n, at);
-  return warn(s, 'market sell|buy <faction> <ware> <n> · market buy <faction> <good>');
+  return warn(s, 'market sell|buy <faction> <ware> <n>');
 }

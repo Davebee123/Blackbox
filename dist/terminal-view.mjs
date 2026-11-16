@@ -1,4 +1,4 @@
-// System → Terminal (terminal.mjs): the boot, the prompt and the cursor. Pure functions of state. Each look shows as
+// Rig → Terminal (terminal.mjs): the boot, the prompt and the cursor. Pure functions of state. Each look shows as
 // itself; its name and what brings it are its tooltip. Locked ones are dim, with a lock.
 import { glyph } from './glyphs.mjs';
 import { BOOT_LOOKS, PROMPTS, CURSORS, bootIds, PROMPT_IDS, CURSOR_IDS, lookOpen, lookFrom, bootOf, promptOf, cursorOf, promptText } from './terminal.mjs';

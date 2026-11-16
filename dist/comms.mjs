@@ -39,13 +39,6 @@ const MAP = {
   'outpost-fell': (e) => ({ kind: 'alert', label: 'Lockdown', from: 'Outpost', text: e.message.replace(/^LOCKDOWN: /, ''), go: e.location ? `map:${e.location}` : 'map', beep: true }),
   'outpost-held': (e) => ({ kind: 'net', label: 'Held', from: 'Outpost', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: false }),
   'transfer-in': (e) => ({ kind: 'paid', label: 'Transfer', from: 'Market', text: e.message, go: e.faction ? `hub:${e.faction}` : 'map', beep: false }),
-  'payload-breach': (e) => ({ kind: 'net', label: 'Breach', from: 'Payload', text: e.message, go: `hub:${e.faction}`, beep: true }),
-  'payload-siege': (e) => ({ kind: 'net', label: 'Partial', from: 'Payload', text: e.message, go: `hub:${e.faction}`, beep: true }),
-  'payload-blocked': (e) => ({ kind: 'net', label: 'Blocked', from: 'Payload', text: e.message, go: `hub:${e.faction}`, beep: true }),
-  'hub-retake': (e) => ({ kind: 'alert', label: 'Swarm', from: 'Hub', text: e.message, go: `hub:${e.faction}`, beep: true, alert: true }),
-  'hub-siege': (e) => ({ kind: 'alert', label: 'Swarm', from: 'Hub', text: e.message, go: `hub:${e.faction}`, beep: true, alert: true }),
-  'hub-lockdown': (e) => ({ kind: 'alert', label: 'Lockdown', from: 'Hub', text: e.message.replace(/^LOCKDOWN: /, ''), go: `hub:${e.faction}`, beep: true }),
-  'hub-held': (e) => ({ kind: 'net', label: 'Held', from: 'Hub', text: e.message, go: `hub:${e.faction}`, beep: false }),
   fleet: (e) => ({ kind: 'alert', label: 'Swarm', from: 'Network', text: e.message.replace(/^SWARM: /, ''), go: 'map:fleet', beep: true, alert: true }),
   'fleet-siege': (e) => ({ kind: 'alert', label: 'Swarm', from: 'Outpost', text: e.message, go: 'map:fleet', beep: true, alert: true }),
   'fleet-broken': (e) => ({ kind: 'net', label: 'Broken', from: 'Swarm', text: e.message.replace(/^SWARM BROKEN\. /, ''), go: e.location ? `map:${e.location}` : 'map', beep: false }),
@@ -76,6 +69,8 @@ const MAP = {
   title: (e) => ({ kind: 'standing', label: 'Title', from: 'Profile', text: e.message.replace(/^New titles?: /, ''), go: 'profile', beep: false }),
   // An achievement earned (achievements.mjs): a quiet line, no beep, like a title. It opens the achievement.
   achievement: (e) => ({ kind: 'standing', label: 'Achievement', from: 'Profile', text: e.message.replace(/^Achievements?: /, ''), go: e.achievements?.length ? `achieve:${e.achievements[0]}` : 'achieve', beep: false }),
+  // A floor of your house opened (house.mjs): a quiet line, like an achievement. It opens the house.
+  house: (e) => ({ kind: 'standing', label: 'House', from: 'Rig', text: e.message.replace(/^House: /, ''), go: 'house', beep: false }),
   // The collection log's first time for a slot (collection.mjs, combat.mjs): a quiet line. It opens the log on its entry.
   collected: (e) => ({ kind: 'standing', label: 'Collection', from: 'Codex', text: e.message.replace(/^Collection: /, ''), go: e.go || 'log', beep: false }),
   logged: (e) => ({ kind: 'standing', label: 'Collection', from: 'Codex', text: e.message.replace(/^Collection: /, ''), go: e.go || 'log', beep: false }),
@@ -112,7 +107,7 @@ export function live(s, c) {
   if (c.kind === 'ready') return c.ref == null || (s.mail?.jobs || []).some((j) => j.id === c.ref && !j.done);
   if (c.kind === 'alert') {
     if (c.go === 'jack') return !!s.invasion;
-    if (c.go === 'map:fleet' || c.from === 'Hub' || c.from === 'Outpost') return !!s.fleet || c.label === 'Lockdown';
+    if (c.go === 'map:fleet' || c.from === 'Hub' || c.from === 'Outpost') return false; // swarms and held hubs are gone
   }
   if (c.event) return (s.events || []).some((x) => x.id === c.event);
   if (c.blip) return (s.director?.blips || []).some((x) => x.id === c.blip);

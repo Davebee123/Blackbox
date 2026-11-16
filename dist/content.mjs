@@ -12,10 +12,13 @@ export const JOB_VARS = {
   bounty: { name: 'the named virus (claimjack-0412)', family: 'its family, lower case', room: 'the SPRAWL-00 folder it sits in' },
   materials: { amount: 'how many units', material: 'the code, lower case (worm code)' },
   takeover: { server: 'the server to take (KESSLER-RELAY-22), or "any server you have traced"', owner: 'who runs it (KESSLER)', crew: 'the crew it belongs to' },
+  strain: { strain: 'the strain (Keylogger)', count: 'how many to kill' },
+  rooms: { server: 'the server', count: 'how many new rooms to clear' },
+  map: { server: 'the server to map' },
   'takeover-unknown': {},
   item: { file: 'the file name (policy.db)', label: 'what it is, lower case (a stolen policy database)', Label: 'the same, capitalised', server: 'the server it sits on' },
   'item-unknown': { file: 'the file name', label: 'what it is, lower case', Label: 'the same, capitalised' },
-  install: { server: 'the server it goes on', addr: 'the room\'s grid address (C2)', file: 'the item\'s file name (canary.ko)', label: 'what it is, lower case (a Halcyon canary)', Label: 'the same, capitalised' },
+  install: { server: 'the server it goes on', addr: 'the room\'s grid address (C2)', file: 'the item\'s file name (canary.ko)', label: 'what it is, lower case (a logging tap)', Label: 'the same, capitalised' },
   defuse: { count: 'how many Encryptors to break' },
   sweep: { server: 'the server to walk' },
   exfil: {},
@@ -32,29 +35,33 @@ export const JOB_VARS = {
 export const STORY_VARS = { took: 'the server you took over (once you have one)' };
 export const JOB_TYPES = ['none', 'kill', 'bounty', 'materials', 'takeover', 'item'];
 export const JOB_NAMES = { none: 'Letter only', kill: 'Kill viruses', bounty: 'Bounty: one named virus', materials: 'Hand over code', takeover: 'Take over a server', item: 'Recover a file' };
-// Contract templates: one list of variants per side. GLASSJAW only offers some kinds.
+// Contract templates: one list of variants per giver (each faction writes every kind; mail.mjs falls back to Halcyon's).
+export const SIDES = { halcyon: 'Halcyon (on the books)', glassjaw: 'GLASSJAW (off the books)', kestrel: 'Kestrel', lantern: 'LANTERN', nullchoir: 'NULL CHOIR' };
+const GIVERS = Object.keys(SIDES);
 export const CONTRACT_KINDS = {
-  kill: { name: 'Kill viruses', sides: ['halcyon', 'glassjaw'] },
-  bounty: { name: 'Bounty', sides: ['halcyon'] },
-  materials: { name: 'Hand over code', sides: ['halcyon', 'glassjaw'] },
-  takeover: { name: 'Take over a known server', sides: ['halcyon'] },
-  'takeover-unknown': { name: 'Take over an unknown server', sides: ['halcyon'] },
-  item: { name: 'Recover a file (known server)', sides: ['halcyon', 'glassjaw'] },
-  'item-unknown': { name: 'Recover a file (unknown server)', sides: ['halcyon', 'glassjaw'] },
-  install: { name: 'Install an item at an address', sides: ['halcyon'] },
-  defuse: { name: 'Break Encryptors before they Encrypt', sides: ['halcyon'] },
-  sweep: { name: 'Map a server without resting', sides: ['halcyon'] },
-  exfil: { name: 'Catch an Exfil', sides: ['halcyon'] },
-  heist: { name: 'A vault file past the Tracker', sides: ['halcyon'] },
-  grind: { name: 'Grind: many kills of one virus', sides: ['halcyon'] },
-  solve: { name: 'Solve puzzle boards', sides: ['halcyon'] },
-  decode: { name: 'Decode parts', sides: ['halcyon'] },
-  sweeps: { name: 'Sweep logs', sides: ['halcyon'] },
-  interrupt: { name: 'Answer attacks', sides: ['halcyon'] },
-  root: { name: 'Reach a Root level', sides: ['halcyon'] },
-  hold: { name: 'Stop an invasion', sides: ['halcyon'] },
+  strain: { name: 'Strain: kills of one strain', sides: GIVERS },
+  kill: { name: 'Kill viruses', sides: GIVERS },
+  bounty: { name: 'Bounty', sides: GIVERS },
+  materials: { name: 'Hand over code', sides: GIVERS },
+  rooms: { name: 'Clear new rooms on a server', sides: GIVERS },
+  map: { name: 'Map a server', sides: GIVERS },
+  takeover: { name: 'Take over a known server', sides: GIVERS },
+  'takeover-unknown': { name: 'Take over an unknown server', sides: GIVERS },
+  item: { name: 'Recover a file (known server)', sides: GIVERS },
+  'item-unknown': { name: 'Recover a file (unknown server)', sides: GIVERS },
+  install: { name: 'Install an item at an address', sides: GIVERS },
+  defuse: { name: 'Break Encryptors before they Encrypt', sides: GIVERS },
+  sweep: { name: 'Map a server without resting', sides: GIVERS },
+  exfil: { name: 'Catch an Exfil', sides: GIVERS },
+  heist: { name: 'A vault file past the Tracker', sides: GIVERS },
+  grind: { name: 'Grind: many kills of one virus', sides: GIVERS },
+  solve: { name: 'Solve puzzle boards', sides: GIVERS },
+  decode: { name: 'Decode parts', sides: GIVERS },
+  sweeps: { name: 'Sweep logs', sides: GIVERS },
+  interrupt: { name: 'Answer attacks', sides: GIVERS },
+  root: { name: 'Reach a Root level', sides: GIVERS },
+  hold: { name: 'Stop an invasion', sides: GIVERS },
 };
-export const SIDES = { halcyon: 'Halcyon (on the books)', glassjaw: 'GLASSJAW (off the books)' };
 // (A job's XP comes from its kind, its size and your level, as the board's do: mail.mjs BASE, SIZE.)
 export const REWARDS = { credits: 'Credits', standing: 'Standing', relay: 'Relays', drop: 'A protocol, Tuned or better' };
 
@@ -132,6 +139,10 @@ export const FX_WHEN = {
   cycle: 'At the end of a cycle',
   helper: 'When you call a helper',
   expire: 'When one of your helpers expires',
+  burn: 'When one of your burns ticks',
+  shielded: 'When you gain a shield, or your shield absorbs a hit',
+  tagged: 'When you hit a Tagged part',
+  cut: "When you cut a part's move",
   custom: 'Custom rule',
 };
 // Each condition reads after "when" or "while" in the effect's sentence: "Increases your damage by 50% when the target is below half Integrity."
@@ -175,6 +186,19 @@ export const FX_IF = {
   // Set pieces (sets.mjs): their own bonuses and green lines.
   'above-75': 'you are above 75% health',
   late: "the fight has reached its 6th cycle",
+  // The floor feats' uniques (earned.mjs).
+  'room-new': "you fight in a room you haven't cleared",
+  'server-held': 'you fight on a server you hold',
+  'after-delay': 'one of your delays landed last cycle',
+  early: 'the fight is in its first 3 cycles',
+  'target-unacted': "it hasn't attacked yet this fight",
+  'strain-fight': 'you fight a strain',
+  unrested: "you haven't rested this visit",
+  // Floors 5 and 6 (docs/floor-items.md).
+  'target-wearing': 'the target wears ◆',
+  'target-repatched': 'its ◆ came back this fight',
+  'target-healed': 'the target healed this cycle', // since your last turn: you act first in a cycle, the virus heals after
+  'target-grew': 'the target has more Integrity than it had 2 cycles ago',
 };
 // What each block does, which "when" it fits, and what it needs (value, stat). label: the effect, a verb phrase in the
 // tooltip style ("heals you for X"); fxText adds its trigger and condition after it. own: the label already says when.
@@ -184,10 +208,10 @@ export const FX_DO = {
   'crit%': { when: ['hit'], label: 'increases your critical strike chance by X%', value: true },
   'force-crit': { when: ['start'], label: 'makes your first hit in each fight a critical strike', own: true },
   chit: { when: ['start'], label: 'grants you 1 ◆' },
-  refund: { when: ['break', 'answer'], label: 'reduces all your cooldowns by X cycles', value: true },
+  refund: { when: ['break', 'answer', 'cut'], label: 'reduces all your cooldowns by X cycles', value: true },
   'refund-skill': { when: ['break', 'crit'], label: 'resets the cooldown of the skill you used' },
-  heal: { when: ['break', 'crit', 'answer'], label: 'heals you for X', value: true },
-  shield: { when: ['start', 'answer'], label: 'shields you for X', value: true },
+  heal: { when: ['break', 'crit', 'answer', 'burn', 'shielded', 'tagged', 'cut'], label: 'heals you for X', value: true },
+  shield: { when: ['start', 'answer', 'cut', 'burn'], label: 'shields you for X', value: true },
   'break-hit': { when: ['break'], label: 'deals X damage to the part winding up a tell, or else to the next part to attack,', value: true },
   shatter: { when: ['hit'], label: 'makes each hit on an armored part break 2 ◆' },
   'tell-hits': { when: ['always'], label: 'leaves a part Open when you cut its move' },
@@ -219,6 +243,23 @@ export const FX_DO = {
   'quiet-trip': { when: ['custom'], label: 'keeps a Tripwire you break quiet' },
   'cast-short': { when: ['custom'], label: "shortens a compiled cast's effect by X cycles", value: true },
   'no-after': { when: ['custom'], label: 'stops a tell that lands from taking a skill offline, Corrupting you or leaving you Hung' },
+  // The floor 2 and 3 bosses' uniques (floorbosses.mjs).
+  governor: { when: ['custom'], label: "makes an attack that lands within 2 cycles of its part's last one deal X% less", value: true },
+  'slow-hit': { when: ['custom'], label: 'deals X damage to a part when you delay or Throttle its attack', value: true },
+  'windup%': { when: ['custom'], label: 'makes your hits count X% more toward calling off a wind-up, such as a Deadline', value: true },
+  late: { when: ['custom'], label: "makes a boss's enrage and the Ransom Clock come X cycles later", value: true },
+  screen: { when: ['custom'], label: 'makes the first part each fight that plays back or copies your command miss with it' },
+  rhythm: { when: ['custom'], label: 'makes a command fired exactly 2 cycles after your last deal X% more', value: true },
+  'break-burns': { when: ['custom'], label: 'makes your burns on the other parts tick once right away when you break a part' },
+  'break-guard': { when: ['custom'], label: 'makes the next attack on you within 2 cycles of a part breaking deal X% less', value: true },
+  // The floor 4 bosses' uniques (floorbosses.mjs).
+  overdraft: { when: ['custom'], label: 'leaves you at X% of your max Signal when a hit would take you lower, and the rest lands over the next 3 cycles', value: true },
+  'shield-hit': { when: ['custom'], label: 'increases the damage of your next hit by X% when you raise a shield', value: true },
+  'helpers-safe': { when: ['custom'], label: 'stops a virus from playing your helpers back at you' },
+  'helper-frags%': { when: ['custom'], label: 'makes your helpers deal X% more to fragments', value: true },
+  'break-frags': { when: ['custom'], label: 'deals X damage to every fragment when you break a part', value: true },
+  'low-parts%': { when: ['custom'], label: 'increases your damage by X% for each part below half its Integrity', value: true },
+  'second-less': { when: ['custom'], label: 'makes the second attack to land on you in a cycle deal X% less', value: true },
   'decoy-pass': { when: ['custom'], label: "lets your commands through the Decoy's bend where you aim them, at X% of their damage, and nothing bounces back", value: true },
   // The deep uniques (levels 39-50, docs/loot-plan.md Batch 1). Stats first: what they add, and to what.
   'stat+': { when: ['always'], label: 'adds X to your stat', value: true, stat: true },
@@ -226,7 +267,7 @@ export const FX_DO = {
   'max-signal%': { when: ['always'], label: 'increases your max Signal by X%', value: true },
   'heal%': { when: ['always'], label: 'increases the healing you receive by X%', value: true },
   stack: { when: ['struck'], label: 'adds X to your stat for the rest of the fight', value: true, stat: true },
-  buff: { when: ['break', 'crit'], label: 'increases your damage by X% for N cycles', value: true },
+  buff: { when: ['break', 'crit', 'shielded', 'cut'], label: 'increases your damage by X% for N cycles', value: true },
   // The hits you take.
   'taken%': { when: ['always', 'struck'], label: 'reduces the damage you take by X%', value: true },
   rewind: { when: ['struck'], label: 'resets your Signal to what it was X cycles earlier', value: true },
@@ -267,6 +308,8 @@ export const FX_DO = {
   unveil: { when: ['custom'], label: "shows a Veiled part's next attack once it is X cycles away", value: true },
   'explore-xp%': { when: ['custom'], label: 'increases the XP from Mapped servers by X%', value: true },
   'cache%': { when: ['custom'], label: 'increases the credits caches pay by X%', value: true },
+  'echo-first': { when: ['custom'], label: 'makes your first echo on each part hit for full damage' },
+  'cache-heal%': { when: ['custom'], label: 'heals X% of your max Signal when you take a cache', value: true, own: true },
   // Set pieces (sets.mjs runs them): a piece's own bonus and its green line, the line that counts with two or more of
   // its set worn. Each piece writes its own text, in the plan's words.
   stat: { when: ['always'], label: 'adds X to one of your stats', value: true, stat: true },
@@ -289,9 +332,28 @@ export const FX_DO = {
   'glass-taken%': { when: ['always'], label: 'increases the damage you take by X%', value: true },
   'clean-signal': { when: ['cycle'], label: 'adds X% to your skills for each cycle no attack lands on you, up to 3 times; an attack that lands clears it', value: true, own: true },
   chorus: { when: ['custom'], label: 'makes a damaging skill used twice in a row hit again for X% of its damage', value: true },
+  // Floors 5 and 6 (docs/floor-items.md: levels 25-40). Each writes its own text.
+  'part-first%': { when: ['custom'], label: 'makes your first hit on each part every N cycles deal X% more', value: true }, // N: every
+  'varied%': { when: ['custom'], label: 'adds X% to each different skill you land in a row, up to its cap; repeating one resets it', value: true },
+  'ready-wait%': { when: ['custom'], label: 'makes a skill fired after waiting ready for N cycles deal X% more', value: true },
+  'surfaced%': { when: ['custom'], label: 'makes your first hit on a part that just became hittable deal X% more', value: true },
+  'armor-bleed': { when: ['custom'], label: 'makes a hit that breaks a ◆ still deal X% of its damage to the part', value: true },
+  'crit-pass': { when: ['custom'], label: 'makes your next hit on a different part a critical strike after you land one, once every X cycles', value: true },
+  reach: { when: ['custom'], label: 'sends a command at a part out of reach to the next part, at full' },
+  'halve-every': { when: ['custom'], label: 'halves the next attack on you every X cycles', value: true },
+  'cap-every': { when: ['custom'], label: 'caps the next hit on you at X% of your max health every N cycles, below half', value: true }, // N: every
+  'siphon-less': { when: ['custom'], label: 'makes siphons that hit you deal X% less and heal half as much', value: true },
+  'delayed-less': { when: ['custom'], label: 'makes an attack you delayed deal X% less when it lands', value: true },
+  reinsure: { when: ['struck'], label: 'gives back what a hit takes past X% of your max health as a shield over N cycles', value: true, own: true },
+  'tell-cd': { when: ['custom'], label: 'takes X cycles off your shortest cooldown when a part starts a tell', value: true },
+  'first-shield-x2': { when: ['custom'], label: 'doubles your first shield each fight' },
+  // Floor 7 (docs/floor-items.md).
+  'break-less': { when: ['custom'], label: 'makes damage from a part breaking deal X% less to you', value: true },
 };
 export const FX_SCALE = { '': 'flat', cycles: 'for each cycle the fight has lasted', contracts: 'for each contract you hold', broken: 'for each part broken this fight', reads: 'for each tell you answered this fight',
-  chits: 'for each ◆ you hold', crew: 'for each crewmate in the fight', missing: 'for each 10% of your health you are missing', sets: 'for each set bonus you have active' };
+  chits: 'for each ◆ you hold', crew: 'for each crewmate in the fight', missing: 'for each 10% of your health you are missing', sets: 'for each set bonus you have active',
+  specials: "for each of the server's specials", parts: 'for each part in the fight past two', held: 'for every 5 servers you hold',
+  tells: 'for each tell that landed on you this fight', standing: 'for each part standing' };
 export const FX_LIMIT = { '': 'every time', fight: 'once per fight', run: 'once per run', cooldown: 'then a real-time cooldown' };
 // A unique can lean toward a class: it drops three times as often for that class (combat.mjs uniqueFrom).
 export const CLASSES = { '': 'Any class', breaker: 'Breaker', bastion: 'Bastion', infiltrator: 'Infiltrator', operator: 'Operator',
@@ -302,7 +364,9 @@ export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a str
   // Set pieces only (sets.mjs SET_LOOT: each its own table, its pieces you lack first, with pity).
   courier: "LANTERN's couriers", author: "A crew's bosses and elites", takeover: 'Resident takeovers', crew: 'Crew bosses (KESSLER-FARM-00)',
   // Faction pieces only (faction-gear.mjs): assembled at the faction's hub from three parts, a part a feud won for it.
-  feud: 'Feuds won for its faction (its parts, assembled at its hub)' };
+  feud: 'Feuds won for its faction (its parts, assembled at its hub)',
+  // Earned pieces only (earned.mjs): a floor's goal, its count in the Ledger.
+  feat: "A floor's feat (floor: the floor; its goal is the piece's earn)" };
 // A source can name the floor it drops on (floor: 7 is The Sink): a vault, a lair, a rare spawn, a thread or a puzzle
 // board there and nowhere else. planned: the source it moves to once that is built (docs/loot-plan.md Decisions).
 
@@ -314,7 +378,7 @@ const FX_TRIGGER = { crit: 'when you land a critical strike', break: 'when you b
 // The effect blocks a unique carries: its effect, or each of its effects.
 export const fxList = (u) => (Array.isArray(u?.effect) ? u.effect : u?.effect ? [u.effect] : []);
 const STAT_NAME = (k) => STATS[k]?.name || k;
-const PCT = ['damage%', 'crit%', 'taken%', 'burn-sap', 'stat%', 'heal%'];
+const PCT = ['damage%', 'crit%', 'taken%', 'burn-sap', 'stat%', 'heal%', 'low-parts%'];
 export function fxText(fx, statName = STAT_NAME) {
   if (Array.isArray(fx)) return fx.filter((x) => !x.quiet).map((x) => fxText(x, statName)).filter(Boolean).join(' '); // quiet: the one before it says it too
   if (!fx?.do) return '';

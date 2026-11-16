@@ -10,7 +10,7 @@ import { play } from './dist/run.mjs';
 import { ABILITIES, ARCHETYPES, SUBS, SPIKE, isRunSkill } from './dist/data.mjs';
 import { MASTERY, TIERS_N, thresholdsOf, masteryList, masterable, kitOf, usesOf, earnedTier, tierOf, noteUse, progressOf, masteryLine, masteredN, keyOnesN, kitBest } from './dist/mastery.mjs';
 import { RECIPES, keyFor, tierRecipe } from './dist/abilityfx.mjs';
-import { trayMarkup, loadoutMarkup, skillDetailMarkup } from './dist/view.mjs';
+import { trayMarkup, loadoutMarkup, toolkitMarkup } from './dist/view.mjs';
 import { achievements, achById, tickAchievements, earned, bannersOf } from './dist/achievements.mjs';
 import { myProfile, REWARD_BANNERS, stickerById, titles } from './dist/profile.mjs';
 import { matesOf } from './dist/crew.mjs';
@@ -123,23 +123,18 @@ test('the tray\'s tooltip and the Skills page say where it stands, in WoW toolti
   // app.js lights the line in its tooltip card (teal, its own line).
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
   assert.match(app, /\.replace\(\/\\n\(Mastery \[1-3\] · \[\^\\n\]\*\)\/g, '<span class="tt-mastery">\$1<\/span>'\)/);
-  // The Skills page: pips on every chip and key you have, its tier lit; the panel: the line, its bar and the tiers.
-  const page = loadoutMarkup(s, 'bastion', 'skills', { sel: 'k:spike' });
-  assert.match(page, /data-sk="k:spike"[^>]*>.*?<span class="sk-mt" aria-label="Mastery 2 of 3"><i class="on"><\/i><i class="on"><\/i><i><\/i><\/span><\/button>/);
-  assert.match(page, /class="sk-chip eq" data-sk="s:rate-limit"[^>]*>.*?<span class="sk-mt" aria-label="Mastery 3 of 3">/);
-  assert.doesNotMatch(page, /class="sk-chip locked"[^>]*>(?:(?!<\/button>).)*sk-mt/, 'no pips on a skill you don\'t have yet');
-  const panel = skillDetailMarkup(s, 'bastion', 'k:spike');
-  assert.match(panel, /<p class="sk-mline">Mastery 2 · 340\/1000<\/p><span class="sk-mbar" aria-hidden="true"><i style="width:34\.0%"><\/i><\/span>/);
-  assert.match(panel, /<button type="button" class="sk-tier" data-command="mastery bastion spike 1" aria-pressed="false" title="Play its effect at tier 1">1<\/button><button type="button" class="sk-tier on" disabled aria-pressed="true" title="Its effect plays at tier 2">2<\/button><button type="button" class="sk-tier locked" disabled aria-pressed="false" title="Tier 3 at 1000 uses">3<\/button>/);
+  // The Skills page: the line in each ability's tooltip; the Toolkit: the tier its effect plays at, once there's a choice.
+  assert.match(loadoutMarkup(s, 'bastion', 'skills'), /title="Rate Limit: [^"]*\nMastery 3 · mastered"/);
+  const tk = toolkitMarkup(s, 'bastion');
+  assert.match(tk, /<button type="button" class="tk-tier" data-command="mastery bastion spike 1" aria-pressed="false" title="Tier 1: play its effect at this tier\.">1<\/button><button type="button" class="tk-tier on" disabled aria-pressed="true" title="Tier 2: its effect plays at this tier\.">2<\/button><button type="button" class="tk-tier locked" disabled aria-pressed="false" title="Tier 3: at 1000 uses\.">3<\/button>/);
   play(s, 'mastery bastion spike 1');
-  assert.match(skillDetailMarkup(s, 'bastion', 'k:spike'), /class="sk-tier on" disabled aria-pressed="true" title="Its effect plays at tier 1">1</);
+  assert.match(toolkitMarkup(s, 'bastion'), /class="tk-tier on" disabled aria-pressed="true" title="Tier 1: its effect plays at this tier\.">1</);
   // A skill you don't have yet says nothing of mastery.
   const low = at('bastion', 1);
-  assert.doesNotMatch(skillDetailMarkup(low, 'bastion', 's:retaliate'), /sk-mastery/);
-  assert.match(skillDetailMarkup(low, 'bastion', 's:retaliate'), /<h2>Retaliate<\/h2>/);
+  assert.doesNotMatch(loadoutMarkup(low, 'bastion', 'skills'), /title="Retaliate: [^"]*Mastery/);
   // Another class's page reads that class's count.
   play(s, 'developer mastery ban 0');
-  assert.match(skillDetailMarkup(s, 'breaker', 'k:spike'), /Mastery 1 · 0\/100/);
+  assert.match(toolkitMarkup(s, 'breaker'), /Mastery 1 · 0\/100/);
 });
 
 test('a handful of achievements, cosmetic: first tier 3, 5 of them, every key 1, a whole kit', () => {

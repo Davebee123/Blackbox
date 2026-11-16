@@ -7,14 +7,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, hooks, restore, SAVE_VERSION, finish } from './dist/combat.mjs';
 import { CONFIG, BOSSES } from './dist/data.mjs';
-import { play, currentLocation, LEGACY, KING_ROOM, ZONE_LEVEL } from './dist/run.mjs';
+import { play, currentLocation, LEGACY, KING_ROOM, ZONE_LEVEL, takeable } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { roomsFor, summaryOf, sprawlGraph } from './dist/netrooms.mjs';
 import { ROGUE, rogueRooms, rogueSpawns } from './dist/rogue.mjs';
 import { ROOT, ROOT_PERKS } from './dist/root.mjs';
 import { openContracts, ready } from './dist/mail.mjs';
 import { roomsMarkup } from './dist/floorplan-view.mjs';
-import { mapMarkup } from './dist/view.mjs';
+import { mapMarkup, layoutName } from './dist/view.mjs';
 import { RIVAL } from './dist/rivals.mjs';
 RIVAL.chance = 0; // a rival rolls at connect (rivals.mjs): these walks are scripted (rivals.test.mjs plays them)
 
@@ -42,12 +42,12 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   assert.match(net.path, /^Process \d$/, 'named for what it is, never a folder');
   assert.equal(g.rooms[g.core].path, 'Core');
   assert.doesNotMatch(ls, /\/(net|var|tmp|srv)/, 'no folder names on screen');
-  // A fresh visit: every room but the entry unknown, the ones next to you listed as ? with their cost.
-  assert.ok(Object.values(g.rooms).every((r) => (r.id === g.entry) === FP.known(s, r.id)), 'all unknown but the entry');
-  assert.match(ls, /\n1  [A-Z]+\d+  \?  \[\?\]  −\d+ Signal/); // its address, and nothing about what it is
-  assert.doesNotMatch(ls, /fight|Process/, 'nothing about what they are');
+  // A fresh visit: the entry and the rooms next to it discovered, the rest unknown; a first walk in still costs 5%.
+  const next = new Set(FP.neighbours(g, g.entry));
+  assert.ok(Object.values(g.rooms).every((r) => (r.id === g.entry || next.has(r.id)) === FP.known(s, r.id)), 'the entry and its neighbours');
+  assert.match(ls, /\n1  [A-Z]+\d+  Process \d  \[fight · \w+ lv \d+\]  −\d+ Signal/); // what it is, its level, its cost
   assert.match(play(s, 'cd net/relay').map((e) => e.message).join(' '), new RegExp(`\\w+-\\d+ holds ${net.path}`), 'what holds it stops the walk; cd still takes the folder');
-  assert.equal(s.rooms.screen?.kind, 'virus', 'an unknown room\'s virus still asks: Engage or Step back');
+  assert.equal(s.rooms.screen?.kind, 'virus', 'a virus still asks: Engage or Step back');
   play(s, 'back');
   assert.match(play(s, 'ls').find((e) => e.type === 'rooms-out').message, new RegExp(`${net.path}  \\[fight · \\w+ lv ${ZONE_LEVEL['/net']}\\]`), 'been in: discovered, at its room\'s level');
   Object.assign(s.zone.spawns['/net'], { alive: false, respawnAt: clock + 3600000 });
@@ -77,7 +77,7 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   assert.equal(s.encounter.bossRule, 'a');
 });
 
-test('the terminal on rooms: ls, cd, cd .., map, go, wait, back, engage, pack, help, scan and jack out all work; a typo says so', () => {
+test('the terminal on rooms: ls, cd, cd .., map, go, wait, back, engage, pack, help and jack out all work; a typo says so', () => {
   const { s, loc } = traced();
   play(s, 'connect ' + loc.id);
   const R = s.rooms;
@@ -87,7 +87,6 @@ test('the terminal on rooms: ls, cd, cd .., map, go, wait, back, engage, pack, h
   assert.match(said('help'), /go <room>[\s\S]*jack out/);
   assert.match(said('pack'), /pack is empty/);
   const next = FP.neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]).find((r) => FP.isUp(s, r));
-  assert.match(said('scan ' + next.dir), /./, 'a genome card');
   said('go ' + next.dir);
   assert.equal(R.at, next.id);
   assert.equal(R.screen?.kind, 'virus');
@@ -135,6 +134,22 @@ test('a traced server is the R0 generator\'s graph from its seed: the key, the v
   assert.equal(s.run, null);
   assert.ok(s.server.credits > credits || s.stash.length > stash, 'banked');
   assert.ok(loc.state.taken[s.logs.findLast((e) => e.type === 'jacked-out') && Object.keys(loc.state.taken)[0]], 'its files are taken');
+});
+
+test('the network map draws a server as its kind\'s glyph (the kind\'s rule on hover), a ring round one you haven\'t been into, and a bar of what you\'ve cleared', () => {
+  const { s, loc } = traced();
+  const kind = FP.KIND_OF[loc.template] || 'Relay';
+  const node = () => { const html = mapMarkup(s, loc.id, 'net'), i = html.indexOf(`data-select="${loc.id}"`), j = html.indexOf('class="mnode', i); return html.slice(i, j < 0 ? undefined : j); };
+  assert.match(node(), new RegExp(`aria-label="${loc.name}, ${layoutName(loc)}"`));
+  assert.match(node(), new RegExp(`class="sv-kind" title="${layoutName(loc)}: Server kind\\.\n${FP.KINDS[kind].text}"`), 'its kind\'s rule is the glyph\'s tooltip');
+  assert.match(mapMarkup(s, loc.id, 'net', { pop: true }), new RegExp(`class="tag tag-kind"[^>]*title="${layoutName(loc)}: Server kind\\.\n[^"]*"><svg`), 'the card\'s tag: the same tooltip, and the glyph');
+  assert.match(node(), /class="sv-ring"/, 'new: ringed');
+  assert.doesNotMatch(node(), /class="sv-lit"/, 'nothing cleared yet');
+  loc.state.taken[takeable(loc)[0]] = true; loc.runs = 1;
+  assert.doesNotMatch(node(), /class="sv-ring"/, 'been in: no ring');
+  assert.match(node(), /class="sv-lit" x="-8" y="11" width="[1-9][\d.]*"/, 'the bar fills');
+  // The ground, the Chart: a crosshair pattern in the map's own units, under everything, so it pans and zooms with it.
+  assert.match(mapMarkup(s, loc.id, 'net'), /<svg class="map-svg[^>]*><defs><pattern id="mchart" width="\d+" height="\d+" patternUnits="userSpaceOnUse">.*<\/defs><rect class="mchart"[^>]*fill="url\(#mchart\)"\/>/s);
 });
 
 test('losing a fight on rooms disconnects you and loses the pack; progress stays', () => {

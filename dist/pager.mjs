@@ -43,8 +43,6 @@ export function actOf(s, c) {
       if (inv.state === 'travel') return inv.kind === 'thief' ? { label: 'Intercept', cmd: 'intercept' } : { label: 'Show', go: 'map:invader' };
       return { label: 'Jack in', cmd: 'jack in' };
     }
-    const hub = c.from === 'Hub' && c.label === 'Swarm' && /^hub:(\w+)/.exec(c.go || '')?.[1];
-    if (hub && free) return { label: 'Defend', cmd: `hub defend ${hub}` };
     if (c.from === 'Consortium' && c.go === 'map:roamer' && free) return { label: 'Intercept', cmd: 'consortium intercept' };
     return open(c);
   }
@@ -138,11 +136,13 @@ export function clockOf(s, c, now = Date.now()) {
   const ms = now - c.t;
   return ms < 60000 ? 'now' : ms < 3600000 ? `${Math.floor(ms / 60000)}m ago` : `${Math.floor(ms / 3600000)}h ago`;
 }
-// The tooltip, WoW grammar: the label as the title, the line, the tap on its own ▸ line.
+// The tooltip, WoW grammar: the name as the title (a page's runner, contract or sender; news's label), the whole line,
+// a follow-up's cause, then the click on its own ▸ line (news opens where it happened). Its kind is kindOf.
 export function tipOf(s, c) {
-  const a = actOf(s, c);
-  return `${c.label}: ${c.text}${a ? `\n▸ ${a.label}` : ''}`;
+  const a = actOf(s, c) || open(c);
+  return `${isPage(c) ? shortOf(s, c) : c.label}: ${c.text}${c.chain ? `\n${c.chain}` : ''}${a ? `\n▸ ${a.label}` : ''}`;
 }
+export const kindOf = (c) => (isPage(c) ? `${c.label} · ${c.from}` : c.from);
 
 // ---------- developer pager fill|clear ----------
 // fill: a realistic mix, as real as the game can make it on the spot. A letter, an offer on the board, a contract

@@ -1,27 +1,30 @@
 // #net, the public channel: the net talking to itself, like a MUD's gossip line or WoW's General. Every line comes
 // from real game state: the director's events as they're dealt, move and end (a feud's line names its real winner),
-// your feats (a unique found, a title, a level), the faction contacts speaking for their side, and while `online sim`
-// is on the simulated hackers (presence.mjs), whose chatter follows where they are, their class and level and what
-// is up on the net (an item they found is a real one at their level). Nothing here beeps or goes to the pager.
+// your feats (a unique found, a title, a level), the faction contacts speaking for their side, and the runners on your
+// net (runners.mjs, through presence.mjs): their loop's real turns (a job cleared, a crash, pay, a trade reached), and
+// chatter that follows where they are, their class and level and what is up on the net (an item they found is a real
+// one at their level). Nothing here beeps or goes to the pager.
 //
 // Pacing, on logged-on time (tickNetwork): a line every CHANNEL.everyMs, news at once, a reaction a few seconds
 // after something happens, and nothing at all when there's nothing true to say. Its own dice (mulberry32 on
 // s.channel.r, like the director's): the game's rng never moves. s.channel = { lines (the last CHANNEL.keep), next,
-// seen (the last log serial read), queue (reactions waiting), feuds (the last few results), said, r, n }.
+// seen (the last log serial read), queue (reactions waiting), feuds (the last few results), said, r, n, rq (runners'
+// turns not yet told) }. Speaking on #net is how you come to know a runner (runners.mjs know).
 import { hooks, UNIQUES, hackerLevel } from './combat.mjs';
 import { ARCHETYPES, BOSSES, FAMILIES } from './data.mjs';
 import { FACTIONS, FACTION_IDS, hubFound, rep, REP_TIERS } from './factions.mjs';
-import { online, simOn } from './presence.mjs';
+import { online } from './presence.mjs';
+import { tickRunners, know, nodeName, runnerOf, stateOf } from './runners.mjs';
 import { handleOf, shownTitle, simTitle, voice, worldUniques, hash, titleById } from './profile.mjs';
 import { pieceOf } from './faction-gear.mjs';
 import { achById } from './achievements.mjs';
 
-export const CHANNEL = { keep: 80, everyMs: [20000, 90000], reactMs: [3000, 12000], say: 120, liveMs: 5 * 60000, feuds: 4 };
+export const CHANNEL = { keep: 80, everyMs: [20000, 90000], reactMs: [3000, 12000], say: 120, liveMs: 5 * 60000, feuds: 4, turns: 8 };
 const clock = () => hooks.now?.() ?? Date.now();
 
 export function channelOf(s) {
   const c = (s.channel ||= { lines: [], next: null, queue: [], feuds: [], said: {}, n: 0 });
-  c.lines ||= []; c.queue ||= []; c.feuds ||= []; c.said ||= {};
+  c.lines ||= []; c.queue ||= []; c.feuds ||= []; c.said ||= {}; c.rq ||= [];
   if (c.seen == null) c.seen = s.serial || 0; // a first look at an older save: from now on, not its whole log
   return c;
 }
@@ -37,17 +40,19 @@ const pick = (s, xs) => xs[Math.floor(roll(s) * xs.length)];
 const between = (s, [lo, hi]) => lo + Math.floor(roll(s) * (hi - lo));
 
 // A line: { id, t, kind (wire | contact | sim | you | feat), from, text, title?, faction?, items? }.
+let trimmed = []; // what the last post pushed off the history, put back if that line is taken back (ambient)
 function post(s, line) {
   const c = channelOf(s);
   const l = { id: ++c.n, t: clock(), ...line };
   c.lines.push(l);
-  if (c.lines.length > CHANNEL.keep) c.lines.splice(0, c.lines.length - CHANNEL.keep);
+  trimmed = c.lines.length > CHANNEL.keep ? c.lines.splice(0, c.lines.length - CHANNEL.keep) : [];
   return l;
 }
 const wire = (s, text, extra = {}) => post(s, { kind: 'wire', from: 'wire', text, ...extra });
 // A simulated hacker's line, in their voice, with their title.
 function simSay(s, h, text, extra = {}) {
   const c = channelOf(s);
+  know(s, h);
   return post(s, { kind: 'sim', from: h, title: simTitle(h)?.name || null, text: voice(h, text, c.n), ...extra });
 }
 function later(s, h, text, extra = {}) { channelOf(s).queue.push({ in: between(s, CHANNEL.reactMs), from: h, text, ...extra }); }
@@ -59,7 +64,7 @@ const fam = (f) => FAMILIES[f]?.name.toLowerCase() || 'virus';
 const WARE = { cipher: 'Cipher code', worm: 'Worm code', kernel: 'Kernel code', salvage: 'components' };
 const clsName = (c) => ARCHETYPES[c]?.name || c;
 const room = (folder) => hooks.sprawlRoomName?.(folder) || folder;
-const sims = (s) => (simOn(s) ? online(s) : []);
+const sims = (s) => online(s);
 const you = (s) => handleOf(s);
 
 // ---------- the contacts (view.mjs VOICE: who answers at each hub) ----------
@@ -68,27 +73,27 @@ export const CONTACTS = {
   halcyon: {
     who: 'concierge@halcyon',
     won: (x) => `${x.loser} lost the ${x.loc} feud. Claims are open as usual.`, lost: (x) => `${x.loc} went to ${x.winner}. Halcyon will be back.`, thanks: (x) => `Thank you, ${x.you}.`,
-    tier: [['The clearing house is open as usual.'], ['Contractors: keep your claim numbers ready.'], ['Good to see the contractors busy.', 'Bounties pay within one business cycle.'], ['Trusted contractors get first look at the board.'], ['Preferred clients: the clearing house is at your disposal.']],
+    tier: [['Contractors: keep your claim numbers ready.'], ['Good to see the contractors busy.', 'Bounties pay within one business cycle.'], ['Trusted contractors get first look at the board.'], ['Preferred clients: the clearing house is at your disposal.']],
   },
   glassjaw: {
     who: '—@glassjaw',
     won: (x) => `${x.loc} is ours. ${x.loser} can file a complaint.`, lost: (x) => `${x.loc}. Noted.`, thanks: (x) => `${x.you} was useful.`,
-    tier: [['Quiet on this line.'], ["Don't know you. Don't need to."], ['Quiet work pays.'], ['Partners hear about the good jobs first.'], ['Whatever happens tonight, it never happened.']],
+    tier: [["Don't know you. Don't need to."], ['Quiet work pays.'], ['Partners hear about the good jobs first.'], ['Whatever happens tonight, it never happened.']],
   },
   kestrel: {
     who: 'helpdesk@kestrel',
     won: (x) => `Ticket closed: ${x.loc} stays with Kestrel. ${x.loser} has been notified.`, lost: (x) => `${x.loc} lost to ${x.winner}. Reopening next quarter.`, thanks: (x) => `Thanks to ${x.you}.`,
-    tier: [['Scheduled maintenance tonight. Expect delays.'], ['Ticket queue is long tonight.'], ['All racks green.', 'Clients: tickets are moving.'], ['Accounts: priority routing is on.'], ['Key accounts, a human is standing by. Really.']],
+    tier: [['Ticket queue is long tonight.'], ['All racks green.', 'Clients: tickets are moving.'], ['Accounts: priority routing is on.'], ['Key accounts, a human is standing by. Really.']],
   },
   lantern: {
     who: 'ops@lantern',
     won: (x) => `${x.loc} is on our frequency now. ${x.loser} lost the signal.`, lost: (x) => `${x.winner} has ${x.loc}. For now.`, thanks: (x) => `${x.you}, loud and clear.`,
-    tier: [['…static.'], ['Numbers at the top of the hour. Listen first.'], ['Regulars know the dial.'], ['Confidants, the next drop is a good one.'], ["Signal's strong tonight."]],
+    tier: [['Numbers at the top of the hour. Listen first.'], ['Regulars know the dial.'], ['Confidants, the next drop is a good one.'], ["Signal's strong tonight."]],
   },
   nullchoir: {
     who: 'vesper@nullchoir',
     won: (x) => `${x.loser} lost the ${x.loc} feud.${x.again ? ' Again.' : ''}`, lost: (x) => `${x.winner} got ${x.loc}. We sing louder next time.`, thanks: (x) => `${x.you} sang with us.`,
-    tier: [['The choir is rehearsing.'], ['Corporate smell on this channel tonight.'], ["The choir's listening."], ['Choir, keep the corporate servers honest.'], ['Cantors lead tonight.']],
+    tier: [['Corporate smell on this channel tonight.'], ["The choir's listening."], ['Choir, keep the corporate servers honest.'], ['Cantors lead tonight.']],
   },
 };
 const tierOf = (s, f) => { const r = rep(s, f); let i = 0; REP_TIERS.forEach((m, k) => { if (r >= m) i = k; }); return i; };
@@ -195,6 +200,10 @@ function simLine(s) {
   if (x.place.kind === 'run') opts.push(() => simSay(s, h, ['on a run, back in ten', 'on a run']));
   if (x.place.kind === 'rogue') opts.push(() => simSay(s, h, ["rogue server. signal's bad", 'rogue server. brb']));
   if (x.place.kind === 'home') opts.push(() => simSay(s, h, ['fixing my wall. back soon', 'wall stuff']));
+  if (x.place.kind === 'travel') opts.push(() => simSay(s, h, [`heading for ${x.place.words}`, `on the road to ${x.place.words}`]));
+  if (x.place.kind === 'server' && x.place.fighting) opts.push(() => simSay(s, h, [`on ${x.place.words}. level ${L} and it's enough`, `working ${x.place.words}`]));
+  const r = runnerOf(s, h);
+  if (r) opts.push(() => { const { trade } = stateOf(s, r); return simSay(s, h, [`${Math.round(trade.part * 100)}% of the way to floor ${trade.floor}. ${trade.what} is frozen there`, `still climbing to floor ${trade.floor}`]); });
   if (x.place.kind === 'consortium') opts.push(() => simSay(s, h, [`holding ${x.place.locName} for the consortium`, `on ${x.place.locName}`]));
   const pool = worldUniques(L);
   if (pool.length) opts.push(() => { const u = pick(s, pool), src = SOURCE[(u.sources || []).find((y) => SOURCE[y.kind])?.kind] || 'today'; return simSay(s, h, [`finally got [${u.name}] ${src}`, `[${u.name}] ${src}`], { items: [u.name] }); });
@@ -241,22 +250,54 @@ function contactLine(s) {
   if (last && roll(s) < 0.4) return contact(s, f, last.winner === f ? `${last.loc} still holds.${last.yours === f ? ` ${C.thanks({ you: you(s) })}` : ''}` : `Still thinking about ${last.loc}.`);
   return contact(s, f, pick(s, C.tier[tierOf(s, f)]));
 }
+// A runner's own turn, told by them (tickChannel keeps the last few): the first one whose runner hasn't just spoken.
+function turnLine(s) {
+  const c = channelOf(s), recent = new Set(c.lines.slice(-3).map((l) => l.from)), on = new Set(sims(s).map((x) => x.handle));
+  const i = c.rq.findIndex((q) => on.has(q.h) && !recent.has(q.h));
+  if (i < 0) return null;
+  const [q] = c.rq.splice(i, 1);
+  return simSay(s, q.h, q.text);
+}
 function ambient(s) {
   if (!s.tutorialCompleted) return null;
+  if (channelOf(s).rq.length && roll(s) < 0.5) { const l = turnLine(s); if (l) return l; }
   const r = roll(s), order = sims(s).length && r < 0.65 ? [simLine, liveLine, contactLine] : r < 0.8 ? [liveLine, contactLine] : [contactLine];
   const c = channelOf(s);
   for (const f of order) {
     const l = f(s);
     if (!l) continue;
-    if (c.lines.slice(-13, -1).some((x) => x.text === l.text)) { c.lines.pop(); continue; } // not the same line twice in a while
+    if (c.lines.slice(-13, -1).some((x) => x.text === l.text)) { c.lines.pop(); c.lines.unshift(...trimmed); continue; } // not the same line twice in a while
     return l;
   }
   return null;
 }
 
+// ---------- runners' turns (runners.mjs) ----------
+// What a runner says about a turn of their loop. A crash or a trade reached is told a few seconds later, now and then;
+// the rest wait in c.rq for an ambient line (turnLine). Only the last CHANNEL.turns are kept.
+const TURN = {
+  arrive: (s, q) => [`on ${nodeName(s, q.st.g, q.st.target)} now`, `working ${nodeName(s, q.st.g, q.st.target)}`],
+  clear: (s, q) => [`${nodeName(s, q.st.g, q.st.target)} cleared. level ${q.st.g.nodes[q.st.target]?.level}, no trouble`, `cleared ${nodeName(s, q.st.g, q.st.target)}`],
+  crash: (s, q) => [`crashed out of ${nodeName(s, q.st.g, q.st.target)}. back at ${nodeName(s, q.st.g, q.st.base)} in a bit`, `pulled out of ${nodeName(s, q.st.g, q.st.target)}. need a minute`],
+  paid: (s, q) => [`${nodeName(s, q.st.g, q.st.base)} paid for ${nodeName(s, q.st.g, q.prev.target)}`, 'paid. going again'],
+  trade: (s, q) => [`floor ${q.prev.trade.floor} at last. ${q.prev.trade.what} came through`, `got to floor ${q.prev.trade.floor}. ${q.prev.trade.what} is paid out`],
+};
+function runnerTurns(s, turns) {
+  if (!s.tutorialCompleted || !turns.length) return;
+  const c = channelOf(s);
+  for (const q of turns) {
+    const text = TURN[q.kind](s, q);
+    if ((q.kind === 'trade' && roll(s) < 0.8) || (q.kind === 'crash' && roll(s) < 0.2)) { later(s, q.h, text); continue; }
+    c.rq = c.rq.filter((x) => x.h !== q.h); // only their latest turn waits
+    c.rq.push({ h: q.h, text });
+  }
+  if (c.rq.length > CHANNEL.turns) c.rq.splice(0, c.rq.length - CHANNEL.turns);
+}
+
 // Every second or so (invasion.mjs tickNetwork), on logged-on time.
 export function tickChannel(s, dt) {
   const c = channelOf(s);
+  runnerTurns(s, tickRunners(s, dt));
   for (const e of s.logs || []) if (e.id > c.seen && !e.who) NEWS[e.type]?.(s, e); // a crewmate's own lines aren't news
   c.seen = s.serial || 0;
   for (const q of c.queue) q.in -= dt;

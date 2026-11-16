@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, restore } from './dist/combat.mjs';
-import { TIPS, nextTip, markSeen } from './dist/tips.mjs';
+import { TIPS, nextTip, markSeen, settleTips, paceOf } from './dist/tips.mjs';
 import { mapMarkup, serverMarkup, protocolsMarkup, loadoutMarkup, daemonsMarkup, systemMarkup, boardMarkup, hudMarkup } from './dist/view.mjs';
 
 // A stand-in for "is it on screen": the selector's last class/attribute appears in the markup.
@@ -22,18 +22,36 @@ test('every tip has an id, a page, a selector and one or two short sentences', (
   }
 });
 
+test('the opening pointer is read once you connect, shown or not: it never comes back between runs', async () => {
+  const { play } = await import('./dist/run.mjs');
+  const s = fresh();
+  command(s, 'developer location worm');
+  const l = s.locations[0];
+  l.lockUntil = 0;
+  play(s, `connect ${l.id}`); // the tip was off screen (another page, the card over it, typed from the prompt)
+  settleTips(s);
+  play(s, 'jack out');
+  assert.ok(!s.rooms);
+  assert.notEqual(nextTip(s, 'map', onPage(mapMarkup(s, 'server')))?.id, 'map-start');
+});
+
 test('one tip at a time, in order, only on its page and only once', () => {
   const s = fresh();
-  command(s, 'encounter cryptjack');
-  const map = mapMarkup(s, 'server');
+  let map = mapMarkup(s, 'server');
   const first = nextTip(s, 'map', onPage(map));
-  assert.equal(first.id, 'map-server');
+  assert.equal(first.id, 'map-start', 'the opening map has one tip: where to start');
+  assert.equal(first.done(s), false);
   markSeen(s, first.id);
-  assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-zone');
-  markSeen(s, 'map-zone');
-  assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-intrusion');
-  markSeen(s, 'map-intrusion');
-  assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-hidden', 'the ? servers around SPRAWL-00 (floor 1\'s way down stays hidden until a server beside it is found)');
+  assert.equal(nextTip(s, 'map', onPage(map)), null, 'your server and the ? servers wait until they matter');
+  command(s, 'encounter cryptjack');
+  map = mapMarkup(s, 'server');
+  const gate = nextTip(s, 'map', onPage(map));
+  assert.equal(gate.id, 'map-server', 'an intrusion at your gate brings your server\'s tip');
+  assert.deepEqual(gate.covers, ['map-intrusion'], 'and the intrusion\'s, as one tip');
+  for (const id of [gate.id, ...gate.covers]) markSeen(s, id);
+  assert.equal(nextTip(s, 'map', onPage(map)), null, 'no ? tip before anything traces one');
+  s.hidden[0].lead = 5;
+  assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-hidden', 'a ? with a trace on it brings its tip');
   markSeen(s, 'map-hidden');
   assert.equal(nextTip(s, 'map', onPage(map)), null, 'nothing else on this map yet');
   assert.equal(nextTip(s, 'server', onPage(map)), null, 'map tips stay on the map');
@@ -41,10 +59,31 @@ test('one tip at a time, in order, only on its page and only once', () => {
   assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, 'server'))).id, 'map-origin', 'a new thing brings its tip');
 });
 
+test('tips are paced: a calm tip once a screen visit and a while apart, an opening tip once a fight and only while it is paused', () => {
+  const s = fresh();
+  const map = mapMarkup(s, 'server');
+  assert.equal(nextTip(s, 'map', onPage(map), { quiet: true }), null, 'a calm tip waits while the screen is quiet');
+  assert.equal(paceOf(nextTip(s, 'map', onPage(map)), 'map'), 'calm');
+  command(s, 'encounter cryptjack');
+  command(s, 'engage');
+  const html = hudMarkup(s) + boardMarkup(s) + '<div id="tray"></div>';
+  assert.notEqual(nextTip(s, 'combat', onPage(html))?.id, 'fight-timeline', 'a running fight never stops for what it opened with');
+  s.encounter.paused = true;
+  assert.equal(nextTip(s, 'combat', onPage(html)).id, 'fight-timeline', 'paused, it shows');
+  assert.notEqual(nextTip(s, 'combat', onPage(html), { told: true })?.id, 'fight-timeline', 'one opening tip a fight');
+  s.encounter.paused = false;
+  s.encounter.metrics.wasted = 1;
+  assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .ptick.spent', { told: true, quiet: true })?.id, 'fight-wasted', 'what lands mid-fight still pauses it');
+  assert.equal(paceOf(TIPS.find((t) => t.id === 'fight-wasted'), 'combat'), 'mid');
+  assert.equal(paceOf(TIPS.find((t) => t.id === 'tour-walk'), 'rooms'), 'free', 'the rooms tour is never held back');
+  assert.equal(paceOf(TIPS.find((t) => t.id === 'degraded'), 'map'), 'free', 'nor is a crash');
+});
+
 test('fight tips pause the fight and wait for what they explain', () => {
   const s = fresh();
   command(s, 'encounter cryptjack');
   command(s, 'engage');
+  s.encounter.paused = true; // a room fight opens paused until your first order
   const html = hudMarkup(s) + boardMarkup(s) + '<div id="tray"></div>';
   const t = nextTip(s, 'combat', onPage(html));
   assert.equal(t.id, 'fight-timeline');
@@ -55,9 +94,7 @@ test('fight tips pause the fight and wait for what they explain', () => {
   for (const id of [t.id, ...t.covers]) markSeen(s, id);
   assert.notEqual(nextTip(s, 'combat', onPage(html))?.id, 'fight-keys');
   assert.notEqual(nextTip(s, 'combat', onPage(html))?.id, 'fight-quiet', 'no Trace tip before you have Trace');
-  // The cut readout gets its own tip the first time it's in Now; a tick crossed with nothing due gets one too.
-  assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .intent.cut')?.id, 'fight-cut');
-  markSeen(s, 'fight-cut');
+  // A tick crossed with nothing due gets its own tip.
   assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .ptick.spent'), null, 'a tick spent on a cut is no mistake');
   s.encounter.metrics.wasted = 1;
   assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .ptick.spent')?.id, 'fight-wasted');
@@ -92,7 +129,7 @@ test('the newer systems have their tips: a found server’s memory, plans on Cra
   const s = fresh();
   s.tutorialCompleted = true;
   const loc = addLocation(s, 'worm', 1); // found: not on your network yet
-  for (const id of ['map-server', 'map-zone', 'map-exit']) markSeen(s, id);
+  for (const id of ['map-start', 'map-server', 'map-exit']) markSeen(s, id);
   assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, loc.id))).id, 'map-origin');
   markSeen(s, 'map-origin');
   assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, loc.id, undefined, { side: true }))).id, 'map-memory', 'its card: what joining costs');
@@ -134,43 +171,58 @@ test('the market teaches itself in order: rows, ▲/▼, the news, then the tick
 
 test('every threat on the map has a tip, and none speaks of outposts (gone in R2)', () => {
   const has = (sel) => TIPS.some((t) => t.page === 'map' && t.at === sel);
-  for (const sel of ['.mnode.intrusion', '.mnode.invader[data-select="invader"]', '.mnode.invader.siege[data-select="invader"]', '.mnode.invader.breach', '.mnode.hub.yours.threat']) assert.ok(has(sel), sel);
+  for (const sel of ['.mnode.intrusion', '.mnode.invader[data-select="invader"]', '.mnode.invader.siege[data-select="invader"]', '.mnode.invader.breach']) assert.ok(has(sel), sel);
   for (const t of TIPS) assert.doesNotMatch(t.text, /outpost|bandwidth|salvage|take (it|the outpost) back|cut off/i, t.id);
 });
 
-// The parts plan's P2 (docs/parts-plan.md): one tip for each new board element, and each element is on the board in
-// a fight with its part (selectEncounter's forced genes, as ?playtest=part:<id> builds it).
-test('the P2 parts\' board elements each have a tip, and each shows in a fight with its part', async () => {
+// Cracked cells (a mark on you, not a part) keep their tip; it shows in a fight with a Bad Block.
+test('cracked cells have a tip, and it shows when you carry them', async () => {
   const { selectEncounter } = await import('./dist/combat.mjs');
-  const fight = (family, level, genes) => { const s = fresh(); s.metAll = true; selectEncounter(s, 'random', 77, { level, family, basic: 'pulse', genes, mutation: null, quiet: true }); command(s, 'engage'); return s; };
-  const cases = {
-    'fight-cap': ['ransomware', 13, ['limiter']],
-    'fight-standby': ['worm', 14, ['spare']],
-    'fight-scrape': ['ransomware', 19, ['scraper']],
-    'fight-cracked': ['ghostroot', 21, ['badblock']],
-    'fight-damper': ['cryptominer', 23, ['damper']],
-    'fight-frost': ['ransomware', 24, ['coldstore']],
-  };
-  for (const [id, [family, level, genes]] of Object.entries(cases)) {
-    const t = TIPS.find((x) => x.id === id);
-    assert.ok(t?.pause && t.page === 'combat' && t.text.length <= 200, id);
-    const s = fight(family, level, genes);
-    if (id === 'fight-cracked') { s.server.integrity = Math.round(s.server.max / 2); s.encounter.badBlock = { left: 10, max: 10, source: 'badblock', name: 'Bad Block' }; }
-    const html = hudMarkup(s) + boardMarkup(s);
-    assert.ok(onPage(html)(t.at), `${id}: ${t.at} is on the board`);
-    const off = fight(family, level, []);
-    assert.ok(!onPage(hudMarkup(off) + boardMarkup(off))(t.at), `${id}: not without its part`);
-  }
+  const fight = (genes) => { const s = fresh(); s.metAll = true; selectEncounter(s, 'random', 77, { level: 21, family: 'ghostroot', basic: 'pulse', genes, mutation: null, quiet: true }); command(s, 'engage'); return s; };
+  const t = TIPS.find((x) => x.id === 'fight-cracked');
+  assert.ok(t?.pause && t.page === 'combat' && t.text.length <= 200);
+  const s = fight(['badblock']);
+  s.server.integrity = Math.round(s.server.max / 2); s.encounter.badBlock = { left: 10, max: 10, source: 'badblock', name: 'Bad Block' };
+  assert.ok(onPage(hudMarkup(s) + boardMarkup(s))(t.at), `${t.at} is on the HUD`);
+  const off = fight([]);
+  assert.ok(!onPage(hudMarkup(off) + boardMarkup(off))(t.at), 'not without its part');
 });
-// The parts plan's P3 and priority 3: the Rig's heat, the Degausser's Wipe, the C&C and the Payload each have a tip, on the board in a fight of its family.
-test('the P3 families\' board elements each have a tip, and each shows in a fight of its family', async () => {
-  const { selectEncounter } = await import('./dist/combat.mjs');
-  const fight = (family, level, genes = []) => { const s = fresh(); s.metAll = true; selectEncounter(s, 'random', 77, { level, family, basic: 'pulse', genes, mutation: null, quiet: true }); command(s, 'engage'); return s; };
-  for (const [id, family, level, genes] of [['fight-heat', 'cryptominer', 9], ['fight-wipe', 'wiper', 19], ['fight-twin', 'cryptominer', 9, ['twinrig']], ['fight-cnc', 'botnet', 8], ['fight-payload', 'logicbomb', 12]]) {
-    const t = TIPS.find((x) => x.id === id);
-    assert.ok(t?.pause && t.page === 'combat' && t.text.length <= 200, id);
-    const s = fight(family, level, genes), off = fight('ransomware', level);
-    assert.ok(onPage(hudMarkup(s) + boardMarkup(s))(t.at), `${id}: ${t.at} is on the board`);
-    assert.ok(!onPage(hudMarkup(off) + boardMarkup(off))(t.at), `${id}: not on a Ransomware's`);
+// A part's, a virus's or a mutation's own rule is taught by its tag's hover, never a tip.
+test('no tip teaches how to deal with a part', () => {
+  for (const id of ['veiled', 'heat', 'twin', 'bin', 'wipe', 'cnc', 'payload', 'encrypt', 'tell', 'cast', 'seal', 'mimic', 'lock', 'fuse', 'front', 'idle', 'volley', 'buffer', 'hotspot', 'syn', 'accum', 'cap', 'standby', 'scrape', 'damper', 'frost'])
+    assert.ok(!TIPS.some((t) => t.id === 'fight-' + id), id);
+});
+
+// A tip whose selector names a class or id no markup ever writes can never show (the old file-system runs' tips, the
+// store page's). Every class and id a tip points at must be written by some module's markup: literally, or as a
+// prefix built with a template (`k-${room.kind}`).
+test('every tip points at something the game draws', async () => {
+  const { readdirSync, readFileSync } = await import('node:fs');
+  const dir = new URL('./dist/', import.meta.url);
+  const src = readdirSync(dir).filter((f) => /\.(mjs|js|html)$/.test(f) && f !== 'tips.mjs').map((f) => readFileSync(new URL(f, dir), 'utf8')).join('\n');
+  const drawn = (name) => new RegExp(`(^|[^\\w-])${name}([^\\w-]|$)`).test(src)
+    || [...name.matchAll(/-/g)].some((m) => src.includes(`${name.slice(0, m.index + 1)}\${`));
+  const missing = [];
+  for (const t of TIPS) for (const sel of [t.at, t.also, t.under].filter(Boolean)) {
+    for (const [, name] of sel.matchAll(/[.#]([a-zA-Z][\w-]*)/g)) if (!drawn(name)) missing.push(`${t.id}: ${name}`);
   }
+  assert.deepEqual(missing, []);
+});
+
+// wick narrates the guided path (tips.mjs wick): the opening pointer, the rooms tour, the first fight and a few firsts.
+// His lines are lowercase, as he writes, and the rest of the tips keep the plain voice.
+test('wick narrates the guided path, in his own voice, and nothing else', async () => {
+  const guided = ['map-start', 'tour-walk', 'tour-engage', 'tour-cache', 'tour-hunter', 'tour-rest', 'tour-jackout',
+    'fight-timeline', 'fight-keys', 'fight-ticks', 'fight-armor', 'sync', 'run-signal', 'run-rival', 'room-vault', 'room-core', 'fight-crown'];
+  assert.deepEqual(TIPS.filter((t) => t.wick).map((t) => t.id).sort(), [...guided].sort());
+  for (const t of TIPS.filter((x) => x.wick)) assert.equal(t.text, t.text.toLowerCase(), `${t.id} is in wick's lowercase`);
+  // A rival's tip opens with wick's line on that rival.
+  const FP = await import('./dist/floorplan.mjs');
+  const RV = await import('./dist/rivals.mjs');
+  const s = fresh(); s.tutorialCompleted = true;
+  FP.startRooms(s, { seed: 7, size: 'medium', floor: 3, level: 12 }); FP.connect(s);
+  RV.spawnRival(s, 99, 'sable');
+  const t = nextTip(s, 'rooms', (sel) => sel === '.fp-rvstat');
+  assert.equal(t.id, 'run-rival');
+  assert.ok(t.text.startsWith(RV.wickLine(s, RV.rivalOf(s)) + ' '), t.text);
 });

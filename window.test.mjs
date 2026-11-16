@@ -18,7 +18,7 @@ test('shown with the casing and the Window on; the monitor stands in at 1700px a
   assert.match(read('./dist/screenfx.css'), /\.window-out \{ z-index: -2; \}/, 'behind the backdrop');
   const s = fresh();
   assert.equal(s.settings.window, undefined, 'a new game has the window on by default');
-  assert.match(systemMarkup(s), /data-run="window off"[^>]*>Window on<\/button>/);
+  assert.match(systemMarkup(s), /data-run="window off" checked [^>]*><span>Window</);
 });
 
 test('no monitor size setting: no Full or Roomy, no command, no body class, a saved settings.monitor ignored', () => {
@@ -26,7 +26,7 @@ test('no monitor size setting: no Full or Roomy, no command, no body class, a sa
   assert.ok(!/settings\.monitor|monitor roomy|monitor full|monitor-roomy/.test(app));
   assert.ok(!/monitor-roomy|Roomy/.test(read('./dist/style.css')));
   const s = fresh(); s.settings.monitor = 'roomy';
-  assert.ok(!/Monitor:|monitor roomy|monitor full/.test(systemMarkup(s)), 'no Monitor button on System');
+  assert.ok(!/Monitor:|monitor roomy|monitor full/.test(systemMarkup(s)), 'no Monitor button on Settings');
   assert.ok(!existsSync(new URL('./dist/window.css', import.meta.url)), 'the View stylesheet is gone');
   assert.ok(!/window\.css/.test(read('./dist/index.html')));
 });

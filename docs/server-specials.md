@@ -18,7 +18,7 @@ specials and quirks". The rules as built are there; this doc keeps the design an
 
 One filled amber tag beside the kind on the server card, the special's glyph and name. Everything else is in its
 tooltip, in WoW's grammar: the name, *Server special*, the rule, the upside and cost as icon chips, then the ▸ answer
-naming the programs. On the map each server's node carries the special's glyph.
+naming the programs. On the map the glyph follows the server's level in its label, with the same tooltip.
 
 ## The catalogue
 

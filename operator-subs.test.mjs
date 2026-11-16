@@ -2,26 +2,25 @@
 // every new talent, and the planner playing both lines.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, keyMap, knownSkills, readyIn, patchDelay } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, keyMap, knownSkills, readyIn, patchDelay, fireEvent, helperCap } from './dist/combat.mjs';
 import { CONFIG, ABILITIES, SUBS, SUBCLASS, ARCHETYPES, unlockLevel } from './dist/data.mjs';
 import OPERATOR from './dist/classes/operator.mjs';
 CONFIG.tells = false; // these check skill numbers; tells.test.mjs checks the tells
 
 // The balance run at the end plays with the real numbers: keep them before these tests flatten them.
-const REAL = { baseCrit: CONFIG.baseCrit, enemyCrit: CONFIG.enemyCrit, partToughness: CONFIG.partToughness, enemyRamp: CONFIG.enemyRamp, misses: CONFIG.misses, edges: CONFIG.edges, powerPerLevel: CONFIG.powerPerLevel, levelLine: CONFIG.levelLine, gap: CONFIG.gap };
+const REAL = { baseCrit: CONFIG.baseCrit, enemyCrit: CONFIG.enemyCrit, partToughness: CONFIG.partToughness, enemyRamp: CONFIG.enemyRamp, misses: CONFIG.misses, edges: CONFIG.edges, powerPerLevel: CONFIG.powerPerLevel, levelLine: CONFIG.levelLine, ownPerLevel: CONFIG.ownPerLevel, gearFill: CONFIG.gearFill, gap: CONFIG.gap };
 // Exact numbers: no crits, no misses, base part numbers, flat power, no level gap; edges off unless a test turns one on.
-Object.assign(CONFIG, { baseCrit: 0, enemyCrit: 0, partToughness: 1, enemyRamp: 0, misses: false, edges: false, powerPerLevel: 0, levelLine: 0, gap: { dealt: 0, taken: 0, floor: 1, below: 0 } });
+Object.assign(CONFIG, { baseCrit: 0, enemyCrit: 0, partToughness: 1, enemyRamp: 0, misses: false, edges: false, powerPerLevel: 0, levelLine: 0, ownPerLevel: 0, gearFill: [[1, 1]], gap: { dealt: 0, taken: 0, floor: 1, below: 0 } });
 (await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
 // A level-50 Operator in a quiet cryptjack fight (Pulse and Encryptor), with the dev kit: every skill
-// of the class, these talents, these ranks, and this subclass.
-const start = ({ sub = 'herder', talents = [], ranks = {}, id = 'cryptjack' } = {}) => {
+// of the class, these talents, and this subclass.
+const start = ({ sub = 'herder', talents = [], id = 'cryptjack' } = {}) => {
   const s = fresh();
   s.loadout.archetype = 'operator';
   s.hackers = { operator: { level: 50, xp: 0 } };
   s.loadout.sub = { operator: sub };
   s.loadout.devKit = { talents };
-  s.loadout.ranks.operator = ranks;
   selectEncounter(s, id, 7, { level: 6 });
   command(s, 'engage');
   for (const p of s.encounter.virus.parts) Object.assign(p, { attack: null, armor: 0, maxArmor: 0, patchAt: null, integrity: 500, max: 500 });
@@ -56,25 +55,21 @@ test('both lines have eleven skills, unlocking from 10 to 38; every new skill is
     assert.ok(a.short && a.desc && a.icon && (a.cooldown > 0 || a.once), k);
     assert.ok(ARCHETYPES.operator.skills.some((c) => c.id === k), k);
   }
-  const ids = (x) => new Set([...x.fillers.flat(), ...x.talents.flat()].map((n) => n.id));
+  const ids = (x) => new Set(x.tiers.flat().map((n) => n.id));
   const shared = [...ids(SUBS.herder)].filter((i) => ids(SUBS.hijacker).has(i));
-  assert.ok(shared.length <= 2, `the trees are their own (shared: ${shared})`);
+  assert.deepEqual(shared, [], 'the trees are their own');
   assert.equal(SUBS.hijacker.edge.name, 'Man in the Middle');
   assert.equal(SUBS.herder.edge.name, 'Last Gasp');
 });
 
 // ---------- Herder ----------
-test('Fan-out: a helper on every part; Wide Area makes them bigger', () => {
+test('Fan-out: a helper on every part', () => {
   const s = start();
   act(s, 'fan-out pulse');
   assert.equal(s.encounter.helpers.length, 2);
   assert.ok(s.encounter.helpers.every((h) => h.damage === 6 && h.left === 2));
   assert.equal(lost(s, 'pulse'), 6);
   assert.equal(lost(s, 'encryptor'), 6);
-  const w = start({ ranks: { 'wide-area': 2 } });
-  act(w, 'fan-out encryptor');
-  assert.equal(lost(w, 'pulse'), 8);
-  assert.equal(lost(w, 'encryptor'), 8);
 });
 
 test('Mesh: a helper hit that does damage splashes half onto every other part', () => {
@@ -114,11 +109,11 @@ test('OOM Kill: every helper goes, and you heal 40% of what they had left', () =
   assert.equal(s.server.integrity, 50 + Math.round(12 * 3 * 0.4));
 });
 
-test('GC Tuning: Garbage Collect hits 30% harder per rank', () => {
-  const s = start({ ranks: { 'gc-tuning': 1 } });
+test('GC Tuning: Garbage Collect hits 50% harder', () => {
+  const s = start({ talents: ['gc-tuning'] });
   act(s, 'garbage-collect');
-  assert.equal(lost(s, 'pulse'), Math.floor(14 * 1.3));
-  assert.equal(lost(s, 'encryptor'), Math.floor(14 * 1.3));
+  assert.equal(lost(s, 'pulse'), 21);
+  assert.equal(lost(s, 'encryptor'), 21);
 });
 
 test('Hydra: when a part breaks, each of your helpers on it splits in two on the next one', () => {
@@ -184,7 +179,7 @@ test('Jam marks the part Jammed; Man in the Middle: a Jammed part takes +20% fro
   });
 });
 
-test('Full Duplex: Jammed parts take +40%; Kill Chain: breaking a Jammed part readies Jam, Spoofed ACK and Hijack', () => {
+test('Full Duplex: Jammed parts take +30%; Handoff: breaking a Jammed part readies Jam, Spoofed ACK and Hijack', () => {
   edges(() => {
     const s = start({ sub: 'hijacker', talents: ['full-duplex'] });
     act(s, 'deploy pulse');
@@ -192,9 +187,9 @@ test('Full Duplex: Jammed parts take +40%; Kill Chain: breaking a Jammed part re
     act(s, 'jam pulse');
     const before = lost(s, 'pulse');
     act(s, 'spike pulse');
-    assert.equal(lost(s, 'pulse') - before, 35);
+    assert.equal(lost(s, 'pulse') - before, Math.floor(25 * 1.3));
   });
-  const k = start({ sub: 'hijacker', talents: ['kill-chain'] });
+  const k = start({ sub: 'hijacker', talents: ['handoff'] });
   act(k, 'deploy pulse');
   surge(k, 'pulse', 20, k.encounter.cycle + 1);
   act(k, 'jam pulse');
@@ -202,16 +197,10 @@ test('Full Duplex: Jammed parts take +40%; Kill Chain: breaking a Jammed part re
   part(k, 'pulse').integrity = 1;
   act(k, 'spike pulse');
   assert.equal(readyIn(k, 'jam'), 0);
-  assert.ok(k.logs.some((e) => /^Kill Chain/.test(e.message)));
+  assert.ok(k.logs.some((e) => /^Handoff/.test(e.message)));
 });
 
-test('Long Jam pushes the attack back two cycles; Loopback keeps the helper', () => {
-  const s = start({ sub: 'hijacker', talents: ['long-jam'] });
-  act(s, 'deploy pulse');
-  surge(s, 'pulse', 20, s.encounter.cycle + 1);
-  const due = part(s, 'pulse').attack.due;
-  act(s, 'jam pulse');
-  assert.equal(part(s, 'pulse').attack.due, due + 2);
+test('Loopback: Jam keeps the helper', () => {
   const l = start({ sub: 'hijacker', talents: ['loopback'] });
   act(l, 'deploy pulse');
   surge(l, 'pulse', 20, l.encounter.cycle + 1);
@@ -229,10 +218,10 @@ test('Spoofed ACK: the attack waits a cycle and the part takes half of it; ACK F
   assert.equal(lost(s, 'pulse'), 15);
   assert.equal(s.server.integrity, s.server.max, 'nothing landed');
   assert.ok(part(s, 'pulse').jammedUntil >= s.encounter.cycle);
-  const f = start({ sub: 'hijacker', ranks: { 'ack-flood': 2 } });
+  const f = start({ sub: 'hijacker', talents: ['ack-flood'] });
   surge(f, 'pulse', 30, f.encounter.cycle);
   act(f, 'spoofed-ack pulse');
-  assert.equal(lost(f, 'pulse'), 21);
+  assert.equal(lost(f, 'pulse'), 23, 'three quarters');
   const big = start({ sub: 'hijacker' });
   surge(big, 'pulse', 200, big.encounter.cycle + 2);
   act(big, 'spoofed-ack pulse');
@@ -289,7 +278,7 @@ test('Double Agent: Hijack takes the next two attacks; Crosstalk: the hit lands 
   assert.equal(lost(c, 'extra'), 15);
 });
 
-test('Blackhole: spend a helper, and the next attack does nothing at all; Loopback keeps the helper', () => {
+test('Blackhole: spend a helper, and the next attack does nothing at all; Loopback is Jam only', () => {
   const s = start({ sub: 'hijacker' });
   act(s, 'deploy encryptor');
   part(s, 'encryptor').attack = { name: 'Encrypt', effect: 'encrypt', amount: 6, interval: 5, due: s.encounter.cycle };
@@ -303,7 +292,7 @@ test('Blackhole: spend a helper, and the next attack does nothing at all; Loopba
   surge(l, 'pulse', 30);
   act(l, 'blackhole pulse');
   assert.equal(l.server.integrity, l.server.max);
-  assert.equal(l.encounter.helpers.length, 1);
+  assert.equal(l.encounter.helpers.length, 0);
 });
 
 test('Cache Poison: 18 now and 8 a cycle, its attacks deal 20% less, a patch that is due hits the part instead, and a heal it casts hurts', () => {
@@ -335,7 +324,7 @@ test('Cache Poison: a poisoned part\'s attacks deal 20% less, on anyone', () => 
   assert.equal(took(s, 1), Math.round(took(plain, 0) * (1 - ABILITIES['cache-poison'].weaken)));
 });
 
-test('Replay: the part takes its own attack, 25 to 40, through armor; Packet Capture adds 5 a rank', () => {
+test('Replay: the part takes its own attack, 25 to 40, through armor; Packet Capture adds 15', () => {
   const s = start({ sub: 'hijacker' });
   Object.assign(part(s, 'pulse'), { armor: 3, maxArmor: 3 });
   surge(s, 'pulse', 30, s.encounter.cycle + 3);
@@ -346,17 +335,175 @@ test('Replay: the part takes its own attack, 25 to 40, through armor; Packet Cap
   surge(lo, 'pulse', 5, lo.encounter.cycle + 3);
   act(lo, 'replay pulse');
   assert.equal(lost(lo, 'pulse'), 25);
-  const hi = start({ sub: 'hijacker', ranks: { 'packet-capture': 2 } });
+  const hi = start({ sub: 'hijacker', talents: ['packet-capture'] });
   surge(hi, 'pulse', 90, hi.encounter.cycle + 3);
   act(hi, 'replay pulse');
-  assert.equal(lost(hi, 'pulse'), 50, 'capped at 40, +10');
+  assert.equal(lost(hi, 'pulse'), 55, 'capped at 40, +15');
 });
 
-test('Cold Storage: Barrier shields 10% more per rank', () => {
-  const s = start({ sub: 'hijacker', ranks: { 'cold-storage': 1 } });
+test('Cold Storage: Barrier shields 25% more', () => {
+  const s = start({ sub: 'hijacker', talents: ['cold-storage'] });
   act(s, 'deploy pulse');
   act(s, 'barrier pulse');
-  assert.equal(s.encounter.shield, 36 + 4);
+  assert.equal(s.encounter.shield, 36 + 9);
+});
+
+// ---------- the talent tiers (docs/builds.md): one test a new talent ----------
+test('Node Pool: Botnet helpers +3; Long-running: Deploy helpers last 6 cycles; Renice: helpers +10%', () => {
+  const s = start({ talents: ['node-pool'] });
+  act(s, 'botnet pulse');
+  assert.ok(s.encounter.helpers.length === 3 && s.encounter.helpers.every((h) => h.damage === 7));
+  const l = start({ talents: ['long-running'] });
+  act(l, 'deploy pulse');
+  assert.equal(l.encounter.helpers[0].left, 5);
+  const r = start({ talents: ['renice'] });
+  act(r, 'deploy pulse');
+  assert.equal(lost(r, 'pulse'), Math.floor(12 * 1.1));
+});
+
+test('Supervisor: Kill Switch readies Deploy; Hive: 9 helpers', () => {
+  const s = start({ talents: ['supervisor', 'hive'] });
+  act(s, 'deploy pulse');
+  act(s, 'kill-switch');
+  assert.equal(readyIn(s, 'deploy'), 0);
+  assert.equal(helperCap(s), 9);
+});
+
+test('Auto-restart: a cut starts a Spawn helper there; Line Tap: a cut readies Sniff', () => {
+  const s = start({ sub: 'hijacker', talents: ['auto-restart', 'line-tap'] });
+  act(s, 'sniff pulse');
+  assert.ok(readyIn(s, 'sniff') > 0);
+  fireEvent(s, 'cut', { part: part(s, 'encryptor') });
+  assert.ok(s.encounter.helpers.some((h) => h.target === 'encryptor' && h.damage === 7));
+  assert.equal(readyIn(s, 'sniff'), 0);
+});
+
+test('Dead Man\'s Switch: Kill Switch cashes in 15% more', () => {
+  const s = start({ talents: ['dead-mans-switch'] });
+  act(s, 'deploy pulse');
+  act(s, 'kill-switch');
+  assert.equal(lost(s, 'pulse'), 12 + Math.round(36 * 1.15));
+});
+
+test('SIGHUP: struck, your helpers on that part hit it once more', () => {
+  const s = start({ talents: ['sighup'] });
+  act(s, 'deploy pulse');
+  surge(s, 'pulse', 10);
+  act(s, 'hold');
+  assert.equal(lost(s, 'pulse'), 12 * 3);
+});
+
+test('Full Mesh: Mesh splashes full damage, on a 12-cycle cooldown', () => {
+  const s = start({ talents: ['full-mesh'] });
+  act(s, 'deploy pulse');
+  act(s, 'mesh');
+  assert.equal(lost(s, 'encryptor'), 24, 'the strike and the tick, each in full');
+  assert.equal(readyIn(s, 'mesh'), 11);
+});
+
+test('Watchdog Reset: answering a tell runs your helpers a cycle longer', () => {
+  const s = start({ talents: ['watchdog-reset'] });
+  act(s, 'deploy pulse');
+  fireEvent(s, 'answer', { part: part(s, 'pulse') });
+  assert.equal(s.encounter.helpers[0].left, 4);
+});
+
+test('Load Balancer: 3% less damage a helper; Page Out: OOM Kill shields 60%', () => {
+  const s = start({ talents: ['load-balancer'] });
+  act(s, 'botnet pulse');
+  surge(s, 'encryptor', 100);
+  act(s, 'hold');
+  assert.equal(s.server.max - s.server.integrity, 91);
+  const o = start({ talents: ['page-out'] });
+  act(o, 'deploy pulse');
+  act(o, 'oom-kill');
+  assert.equal(o.encounter.shield, Math.round(36 * 0.6));
+  assert.equal(o.server.integrity, o.server.max);
+});
+
+test('Host Vector: hitting a Tagged part, your helpers on it hit once more, once a cycle', () => {
+  const s = start({ talents: ['host-vector'] });
+  act(s, 'deploy pulse');
+  fireEvent(s, 'tagged', { part: part(s, 'pulse') });
+  fireEvent(s, 'tagged', { part: part(s, 'pulse') });
+  assert.equal(lost(s, 'pulse'), 24);
+});
+
+test('Final Run: Cron Storm hits three times, and the helpers end with their Last Gasp', () => {
+  edges(() => {
+    const s = start({ talents: ['final-run'] });
+    act(s, 'deploy pulse');
+    act(s, 'cron-storm');
+    assert.equal(lost(s, 'pulse'), 12 * 5);
+    assert.equal(s.encounter.helpers.length, 0);
+  });
+});
+
+test('Hot Swap: gaining a shield starts a Spawn helper on every part without one', () => {
+  const s = start({ talents: ['hot-swap'] });
+  act(s, 'deploy pulse');
+  fireEvent(s, 'shielded', { gained: true });
+  assert.deepEqual(s.encounter.helpers.map((h) => h.target).sort(), ['encryptor', 'pulse']);
+});
+
+test('Kernel Hook: Hooked parts take 3 more a hit; Port Mirror: Sniff leaves two footholds', () => {
+  const s = start({ sub: 'hijacker', talents: ['kernel-hook', 'port-mirror'] });
+  act(s, 'hook pulse');
+  const before = lost(s, 'pulse');
+  act(s, 'spike pulse');
+  assert.equal(lost(s, 'pulse') - before, 25 + 6 + 3);
+  act(s, 'sniff encryptor');
+  assert.equal(s.encounter.helpers.filter((h) => h.target === 'encryptor').length, 2);
+});
+
+test('Rebroadcast: answering a tell readies Replay; Elevate: a crit on a Jammed part readies Hijack', () => {
+  const s = start({ sub: 'hijacker', talents: ['rebroadcast', 'elevate'] });
+  surge(s, 'pulse', 30, s.encounter.cycle + 3);
+  act(s, 'replay pulse');
+  fireEvent(s, 'answer', { part: null });
+  assert.equal(readyIn(s, 'replay'), 0);
+  act(s, 'jam pulse');
+  s.encounter.readyAt.hijack = s.encounter.cycle + 5;
+  fireEvent(s, 'crit', { part: part(s, 'pulse') });
+  assert.equal(readyIn(s, 'hijack'), 0);
+});
+
+test('Shim: your shield absorbing a hit leaves a foothold on its part', () => {
+  const s = start({ sub: 'hijacker', talents: ['shim'] });
+  s.encounter.shield = 10;
+  surge(s, 'pulse', 20);
+  act(s, 'hold');
+  assert.ok(s.encounter.helpers.some((h) => h.target === 'pulse' && h.damage === 4));
+});
+
+test('Traceback: the part that hits you is Jammed; Sidetone: Echo Cancel Jams', () => {
+  const s = start({ sub: 'hijacker', talents: ['traceback'] });
+  surge(s, 'pulse', 10);
+  act(s, 'hold');
+  assert.ok(part(s, 'pulse').jammedUntil >= s.encounter.cycle);
+  const e = start({ sub: 'hijacker', talents: ['sidetone'] });
+  act(e, 'echo-cancel pulse');
+  assert.ok(part(e, 'pulse').jammedUntil >= e.encounter.cycle);
+});
+
+test('Refcount: spending a helper heals 5', () => {
+  const s = start({ sub: 'hijacker', talents: ['refcount'] });
+  act(s, 'deploy pulse');
+  surge(s, 'pulse', 20, s.encounter.cycle + 1);
+  s.server.integrity = 50;
+  act(s, 'jam pulse');
+  assert.equal(s.server.integrity, 55);
+});
+
+test('Event Horizon: Blackhole drops the next two attacks, on a 9-cycle cooldown', () => {
+  const s = start({ sub: 'hijacker', talents: ['event-horizon'] });
+  act(s, 'deploy pulse');
+  surge(s, 'pulse', 30, s.encounter.cycle, 1);
+  act(s, 'blackhole pulse');
+  act(s, 'hold');
+  assert.equal(s.server.integrity, s.server.max);
+  assert.ok(!part(s, 'pulse').blackhole);
+  assert.equal(readyIn(s, 'blackhole'), 7);
 });
 
 // ---------- the planner ----------

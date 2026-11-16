@@ -38,14 +38,18 @@ import { SPECIAL, SPECIALS, specialsOf, hasSpecial, armoredAt } from './specials
 import { gainComponents } from './salvage.mjs';
 import { consortiumSockets } from './consortium.mjs';
 import { owned, rootOf, ROOT, ROOT_PERKS } from './root.mjs';
+import { earnEvent } from './earned.mjs';
+import { journalFor, findJournal } from './journals.mjs';
 import { contractTakeover, contractRooms, contractMapped, contractConnect, contractInstall, contractStood, contractExfil, payloadFor, roomMarks, jobsOn } from './mail.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
+import { arcChallenge, jobBossAt } from './arcs.mjs';
 import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
 import { traceNear, hiddenLead, HIDDEN } from './hidden.mjs';
 import { hiddenNear } from './floors.mjs';
-import { zoneSpawns, kingOpen, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn, scanButton } from './run.mjs';
-import { blipStood, blipRooms } from './events.mjs';
+import { zoneSpawns, kingOpen, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn } from './run.mjs';
+import { blipStood, blipRooms, runCardRoll, runCardUp, runCardEnd } from './events.mjs';
+import { RUN_CARDS } from './runcards.mjs';
 import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
 
 export const KIND_OF = FP.KIND_OF;
@@ -235,6 +239,8 @@ WORLD_hook('leave', (s, how, why) => {
   const at = locOf(s, roomsOfRun(s));
   if (how === 'lost') return disconnect(s, 'Signal lost');
   const loc = at;
+  const R = loc?.floorplan; // a Router's vault banked from a visit its Tracker never reached you: Quiet Hours' count (earned.mjs)
+  if (R?.kind === 'Router' && R.visit?.vault && !R.visit.caught) earnEvent(s, { kind: 'router-vault', floor: loc.depth || 1 });
   bank(s, loc, why);
 });
 function roomsOfRun(s) { const loc = s.run && (s.run.loc === CONFIG.zone.id ? zoneOf(s) : findLocation(s, s.run.loc)); return loc?.floorplan || null; }
@@ -299,6 +305,9 @@ WORLD_hook('fight', (s, room, as) => {
     const level = residentLevel(loc, now()), seed = (((loc.seed || 1) * 7 + 31) >>> 0) + (R.spawns[room.id] || 0) * 7919;
     // Guarded (specials.mjs): a crew elite holds the Core in the Resident's place, as a Pit's (rogue.mjs).
     if (hasSpecial(loc, 'guarded') && !loc.temp) { const name = `ELITE · ${loc.name}`; return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: loc.family, elite: true, mutation: armoredAt(loc) ? 'armored' : null, name, author: R.author }, size: 'elite', name, level, family: loc.family, elite: true, author: R.author }; }
+    // A floor job's boss (arcs.mjs jobBossAt): it holds this Core in the Resident's place.
+    const job = !loc.temp && jobBossAt(s, loc);
+    if (job) { const B = BOSSES[job], lv = Math.max(level, B.floor || 1); return { key: 'random', seed, opts: { mode: 'run', room: room.path, level: lv, family: B.family, boss: job, mutation: null, name: B.name }, size: 'boss', name: B.name, level: lv, family: B.family, boss: job, author: B.author || R.author }; }
     const name = `${loc.temp ? 'KILL SWITCH' : 'RESIDENT'} · ${loc.name}`;
     return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: loc.family, boss: 'resident', ...(loc.starter ? { bossHp: RESIDENT.starterHp } : {}), mutation: armoredAt(loc) ? 'armored' : null, name, author: R.author }, size: 'boss', name, level, family: loc.family, author: R.author };
   }
@@ -317,13 +326,17 @@ WORLD_hook('won', (s, room, e, { first = false, mirror = false, rare = false } =
   // A first clear on a server traces the ? servers linked to it on its floor (floors.mjs, GAME_RULES.md "The hidden network").
   if (first && !loc.zone && !loc.member) traceNear(s, loc, HIDDEN.firstClear, `${room.path} cleared: `);
   if (room.wild) return wildWon(s, loc, room, e);
+  // Earned counts (earned.mjs): a Cold storage fight won before its viruses wake; an Armored server's Core beaten.
+  if (R.kind === 'Cold' && e.cycle < 6) earnEvent(s, { kind: 'cold-quick', floor: loc.depth || 1 });
+  if (room.kind === 'core' && armoredAt(loc)) earnEvent(s, { kind: 'armored-core', floor: loc.depth || 1 });
   const guard = room.kind === 'guard' || room.kind === 'elite' || room.kind === 'core' || mirror || !!e.virus.elite;
   roomKill(s, e, { pack: true, guard, family: lineageOf(e.virus.family), loc, rare });
   if (room.kind === 'guard') clearedFor(s, loc); // a faction's server: they notice (factions.mjs)
   if (e.virus.elite && seeded((e.seed * 31 + R.stats.fights) >>> 0)() < 0.25) giveScript(s, rollScript(seeded((e.seed * 17 + 3) >>> 0)), 'The elite carried: ');
-  if (room.kind === 'core') { if (loc.temp) tempKilled(s, loc); else takeover(s, loc, room); } // a temporary server's kill switch: dark for good (threads.mjs)
+  if (room.kind === 'core' && e.virus.boss && e.virus.boss === jobBossAt(s, loc)) loc.jobFell = now(); // a floor job's boss: no takeover (arcs.mjs)
+  else if (room.kind === 'core') { if (loc.temp) tempKilled(s, loc); else takeover(s, loc, room); } // a temporary server's kill switch: dark for good (threads.mjs)
   // Root (2.8): a respawned fight room cleared on a server you hold.
-  if (!first && owned(loc) && FP.FIGHTS.includes(room.kind) && room.kind !== 'core') rootClear(s, loc, hasSpecial(loc, 'hardened') ? SPECIAL.root : 1); // Hardened: twice as fast
+  if (!first && owned(loc) && FP.FIGHTS.includes(room.kind) && room.kind !== 'core') { rootClear(s, loc, hasSpecial(loc, 'hardened') ? SPECIAL.root : 1); earnEvent(s, { kind: 'root-clear', floor: loc.depth || 1 }); } // Hardened: twice as fast; Bootloader's count
 });
 WORLD_hook('lost', (s, room, e) => {
   const loc = locOf(s);
@@ -343,7 +356,7 @@ function takeover(s, loc, room) {
   loc.resident = null; loc.regrow = null;
   strikeServer(s, loc, 'takeover');
   contractTakeover(s, loc); // takenOver, its XP and the event (mail.mjs)
-  setDrop(s, { kind: 'takeover' }, levelOf(loc), loc.name, { pack: true, path: `${room.path}/#set-${s.serial}` }); // Hot Spare's pieces (sets.mjs)
+  setDrop(s, { kind: 'takeover', floor: loc.depth || 1, special: specialsOf(loc).filter((x) => x !== 'guarded') }, levelOf(loc), loc.name, { pack: true, path: `${room.path}/#set-${s.serial}` }); // Hot Spare's pieces (sets.mjs)
   loc.root ||= { level: 1, cleared: 0, n: 0, nextAt: null, proc: null };
   R.held = now();
   // Its Resident's first fall: a protocol, Tuned or better, at the server's level.
@@ -462,6 +475,13 @@ WORLD_hook('exfilWon', (s, room, e) => {
 // A contract's item installed in its room (an Install job, mail.mjs): undefined when you carry none for this server.
 WORLD_hook('plant', (s, room, arg) => { const loc = locOf(s); return loc ? contractInstall(s, loc, room, arg) : undefined; });
 // You stand in a room with nothing live in it: a no-rest map job counts the visit's rooms (mail.mjs).
+// Run cards (runcards.mjs, events.mjs runCardRoll): a traced server's run, never SPRAWL-00, a rogue server, a lair, the
+// farm or a temporary server. s.director.forceCard forces one on the next connect (developer runcard).
+WORLD_hook('runcard', (s) => { const loc = locOf(s), forced = s.director?.forceCard; if (forced) delete s.director.forceCard; return loc && !isWild(loc) && !loc.lair && !loc.farm && !loc.temp ? runCardRoll(s, forced || null) : null; });
+WORLD_hook('cardUp', (s, c) => runCardUp(s, locOf(s), c, RUN_CARDS[c.kind].name, RUN_CARDS[c.kind].icon));
+WORLD_hook('cardEnd', (s, c, how) => runCardEnd(s, c, how));
+// A run card's kill (a surge wave, its guardian, the pack): the kill's own pay, an elite's for an elite; no room cleared.
+WORLD_hook('cardKill', (s, room, e) => { const loc = locOf(s); if (loc) roomKill(s, e, { pack: true, guard: !!e.virus.elite, family: lineageOf(e.virus.family), loc }); });
 WORLD_hook('stood', (s, room) => { const loc = locOf(s); if (loc) { contractStood(s, loc, s.rooms); threadsStood(s, loc, room); blipStood(s, loc, room); } }); // and a thread's goto (threads.mjs), a stray cache (events.mjs blips)
 // Threads (threads.mjs): a file walking after each of your moves; talk, read and sweep in a thread's room.
 WORLD_hook('moved', (s) => threadsMoved(s));
@@ -474,7 +494,7 @@ const packFile = (s, f) => { s.run.pack.push(f); return f; };
 // of the server's own families.
 WORLD_hook('puzzlePay', (s, room, { credits = 0, code = 0, parts = 0, material = 'cipher', won = false } = {}) => {
   const loc = locOf(s), n = s.serial;
-  if (won) setDrop(s, { kind: 'puzzle', id: room.kind }, levelOf(loc), `the ${PUZZLES[room.kind]?.name || room.kind} board`, { pack: true, path: `${room.path}/#set-${n}` }); // Overtime's pieces (sets.mjs), a board won
+  if (won) setDrop(s, { kind: 'puzzle', id: room.kind, floor: loc.depth || 1 }, levelOf(loc), `the ${PUZZLES[room.kind]?.name || room.kind} board`, { pack: true, path: `${room.path}/#set-${n}` }); // Overtime's pieces (sets.mjs), a board won
   if (credits) packFile(s, { path: `${room.path}/#puzzle-${n}`, name: 'cache.dat', kind: 'credits', amount: credits });
   if (code) packFile(s, { path: `${room.path}/#puzzle-code-${n}`, name: `${material}.code`, kind: 'code', material, amount: code });
   if (parts) gainComponents(s, parts);
@@ -483,6 +503,7 @@ WORLD_hook('cache', (s, room, { credits, code, material }) => {
   const n = s.serial;
   packFile(s, { path: `${room.path}/#cache-${n}`, name: 'cache.dat', kind: 'credits', amount: credits });
   packFile(s, { path: `${room.path}/#code-${n}`, name: `${material}.code`, kind: 'code', material, amount: code });
+  if (s.rooms.kind === 'Honeypot' && FP.isBait(s, room)) earnEvent(s, { kind: 'bait', floor: locOf(s)?.depth || 1 }); // Sweetener's count (earned.mjs)
 });
 WORLD_hook('cacheMult', (s) => { const loc = locOf(s); return (loc?.quirk === 'hoard' ? NET.hoard : 1) * setCredits(s, 'cache') * (1 + fxPct(s, 'cache%') / 100); }); // setCredits: Lantern Route, the Logbook (sets.mjs); cache%: Golden Image
 WORLD_hook('packItem', (s, it) => {
@@ -512,6 +533,9 @@ function takeVault(s, loc) {
     const u = guardedUnique(s, loc.depth || 1, levelOf(loc));
     if (u) got.push(packFile(s, { path: 'vault/#guarded', name: 'protocol.bin', kind: 'gear', size: '32k', item: uniqueItem(u, levelOf(loc), () => rand(s)), loc: loc.id }));
   }
+  // A journal entry (journals.mjs): read at once, kept in the Ledger; never in the pack, never in the balance.
+  const taken = ((loc.state ||= {}).taken ||= {});
+  if (!taken['vault/#journal']) { const j = journalFor(s, loc); taken['vault/#journal'] = true; if (j) findJournal(s, j.id, now()); }
   return got;
 }
 // A vault file's pay: Lantern Route's credits (sets.mjs); a Hardened server's credits and code ×2, a Rich server's code ×2.
@@ -522,6 +546,7 @@ WORLD_hook('vault', (s, room) => {
   const loc = locOf(s), R = s.rooms;
   if (!loc || R.type !== 'server' || room.id !== R.graph.vaults[0]) return false;
   const got = takeVault(s, loc), n = got.length;
+  if (R.visit) R.visit.vault = true; // opened this visit: a Router's, banked unseen, counts for Quiet Hours (leave)
   emit(s, 'rooms-good', n ? `The vault: ${n} ${n === 1 ? 'file' : 'files'} into your pack.` : 'The vault is bare.', { gains: gainsOf(got) });
   setDrop(s, { kind: 'vault', floor: loc.depth || 1 }, levelOf(loc), `${loc.name}'s vault`, { pack: true, path: `vault/#set-${s.serial}` }); // Cold Storage's and Deep Archive's pieces (sets.mjs)
   if (loc.member) { R.cleared[R.graph.core] ||= now(); }
@@ -568,7 +593,7 @@ FP.WORLD.view = {
   sealed: (s) => { const loc = locOf(s); return loc?.zone ? 'RELAY-KING holds it from level 3.' : loc?.farm ? 'Behind the ledger.' : loc?.lair ? `${BOSSES[loc.lair]?.name || 'Its boss'} holds it from level ${BOSSES[loc.lair]?.floor || 1}.` : undefined; },
   elite: (s, room) => { const sp = spawnOf(s, room); return !!(sp?.elite || sp?.bounty); },
   packLine: (s, f) => (f.kind === 'credits' ? `${f.amount} credits` : f.kind === 'code' ? `${f.amount} ${MATERIALS[f.material]?.name || f.material}` : f.kind === 'gear' ? itemLabel(f.item) : f.label || f.name),
-  fightNote: (s, room) => { const sp = room.wild ? spawnOf(s, room) : null; return sp?.bounty ? 'A named target: a contract wants it.' : sp?.boss && BOSSES[sp.boss]?.raid ? 'A crew boss, sized for your crew.' : room.kind === 'core' && s.rooms.type === 'server' ? 'Beat it and the server is yours.' : ''; },
+  fightNote: (s, room) => { const sp = room.wild ? spawnOf(s, room) : null, line = arcChallenge(s, locOf(s), room); return line ? line : sp?.bounty ? 'A named target: a contract wants it.' : sp?.boss && BOSSES[sp.boss]?.raid ? 'A crew boss, sized for your crew.' : room.kind === 'core' && s.rooms.type === 'server' ? 'Beat it and the server is yours.' : ''; },
   vaultLeft: (s, room) => { const loc = locOf(s); if (!loc || room.id !== s.rooms.graph.vaults[0]) return 0; return vaultFiles(loc).filter(({ dir, name }) => { const info = fileInfo(loc, dir, name); return info && !['text', 'trap', 'sweep'].includes(info.kind) && !loc.state?.taken?.[`${dir}/${name}`] && !s.run?.pack.some((f) => f.path === `${dir}/${name}`); }).length; },
   entryFiles: (s) => entryFiles(s, locOf(s)).length,
   downNote: (s, room) => { if (!room.wild) return undefined; const at = FP.backAt(s, room); return at ? `Back in ${FP.fmtLeft(at - now())}.` : undefined; },
@@ -579,8 +604,6 @@ FP.WORLD.view = {
   jobs: (s) => { const loc = locOf(s); return loc ? jobsOn(s, loc) : []; },
   // The director's blips on this server (events.mjs): { roomId: { kind, name, text } }, a spark on the chip.
   blips: (s) => { const loc = locOf(s); return loc ? blipRooms(s, loc) : {}; },
-  // A room next to you that scan reads (run.mjs scanRoom): its card's Scan button runs scan <room>.
-  scan: (s, room) => scanButton(s, room),
 };
 
 // The live viruses in the rooms you know on this server, as a contract reads a kill (roomKill's terms): the marks.
@@ -607,6 +630,7 @@ WORLD_hook('mapped', (s) => {
   const loc = locOf(s);
   if (!loc) return;
   contractMapped(s, loc);
+  if (!s.rooms.mappedRest) earnEvent(s, { kind: 'map-norest', floor: loc.depth || 1 }); // No Rest's count (earned.mjs)
   // Mapped: every ? linked to it is traced the rest of the way (floors.mjs), so a floor always opens outward.
   if (!loc.zone && !loc.member && HIDDEN.opens) for (const n of hiddenNear(s, loc)) hiddenLead(s, n, 100 - n.lead, 'Mapped: ');
   if (s.rooms.type === 'server') { const n = NET.mapped(levelOf(loc)); s.server.credits += n; emit(s, 'info', `Mapped: +${n} credits.`, { credits: n }); }

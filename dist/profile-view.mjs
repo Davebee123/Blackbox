@@ -7,7 +7,7 @@ import { ARCHETYPES } from './data.mjs';
 import { FACTIONS } from './factions.mjs';
 import { channelOf, muted } from './channel.mjs';
 import { fingerOf, BANNERS, BANNER_IDS, titles, myProfile, shownTitle, PROFILE, hash } from './profile.mjs';
-import { online, simOn, isFriend } from './presence.mjs';
+import { online, simOn, peopleOn, runnersOn, isFriend } from './presence.mjs';
 import { achievements, totalPoints, bannersOf } from './achievements.mjs';
 import { REWARD_BANNERS, REWARD_BANNER_IDS } from './profile.mjs';
 
@@ -36,7 +36,7 @@ export function tickerMarkup(s) {
   return `<span class="nl-tag">#net</span>${l ? `<span class="nl-line">${lineMarkup(s, l).replace(/^<li[^>]*>|<\/li>$/g, '')}</span>` : '<span class="nl-line quiet">quiet</span>'}`;
 }
 export const channelLinesMarkup = (s) => channelOf(s).lines.map((l) => lineMarkup(s, l)).join('') || '<li class="ch-line quiet">Quiet on the net.</li>';
-export const channelHead = (s) => `<span class="ch-name">#net</span><small>${simOn(s) ? `${online(s).length} online · simulated` : 'the wire and the hubs'}</small><span class="p-acts"><button type="button" class="act dim" data-run="channel ${muted(s) ? 'on' : 'off'}" title="${muted(s) ? 'Show #net\'s line over the prompt' : 'Hide #net\'s line over the prompt'}">${muted(s) ? 'Unmute' : 'Mute'}</button><button type="button" class="act" data-chan-close>Close</button></span>`;
+export const channelHead = (s) => `<span class="ch-name">#net</span><small>${peopleOn(s) ? `${online(s).length} online${simOn(s) && !runnersOn(s) ? ' · simulated' : ''}` : 'the wire and the hubs'}</small><span class="p-acts"><button type="button" class="act dim" data-run="channel ${muted(s) ? 'on' : 'off'}" title="${muted(s) ? 'Show #net\'s line over the prompt' : 'Hide #net\'s line over the prompt'}">${muted(s) ? 'Unmute' : 'Mute'}</button><button type="button" class="act" data-chan-close>Close</button></span>`;
 
 // ---------- the card ----------
 // Achievement points, then the few you pinned or earned last (achievements.mjs). Yours open the achievement.
@@ -52,7 +52,7 @@ function achSection(f) {
   const pts = `<span class="pf-pts" title="${esc(`Achievement points: ${f.points}${f.you ? ` of ${totalPoints()}` : ''}`)}">${glyph('medal')}<b>${f.points}</b></span>`;
   return section('Achievements', (f.achievements || []).length ? `<div class="pf-achs">${f.achievements.map(chip).join('')}</div>` : '', pts);
 }
-const tierPips = (i) => `<span class="pf-pips" aria-hidden="true">${[1, 2, 3, 4].map((k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join('')}</span>`;
+const tierPips = (i) => `<span class="pf-pips" aria-hidden="true">${[0, 1, 2, 3].map((k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join('')}</span>`;
 // The badge's bar code: drawn from the handle, so the same person always has the same one (decoration, no data).
 function barcode(h) {
   let x = 0;
@@ -76,7 +76,7 @@ function cardBody(s, f) {
   const group = (label, body) => `<div class="pf-group"><h3>${label}</h3>${body}</div>`;
   return `<header class="pf-head"><span class="pf-kicker">Net ID</span><button type="button" class="act pf-x" data-profile-close aria-label="Close">×</button></header>
     <div class="pf-face"><div class="pf-photo"><pre class="pf-banner" aria-label="${esc(f.handle)}'s banner">${esc(f.banner.join('\n'))}</pre></div>
-      <b class="pf-handle">${esc(f.handle)}</b>${f.title ? `<span class="pf-title">${esc(f.title)}</span>` : ''}
+      <b class="pf-handle">${esc(f.handle)}</b>${f.title ? `<span class="pf-title">${esc(f.title)}</span>` : ''}${f.stance ? `<span class="pf-stance" style="--fc:${FACTIONS[f.stance.f].color}" title="${esc(`${FACTIONS[f.stance.f].name}\nCommission\nYour stance on the frozen payments. Switch it at any hub you've found.`)}">${glyph('f-' + f.stance.f)}${esc(f.stance.line)}</span>` : ''}
       <p class="pf-plan${f.plan ? '' : ' quiet'}" title="Plan">${f.plan ? `“${esc(f.plan)}”` : 'No plan.'}</p></div>
     ${section('Classes', `<div class="pf-classes">${classes}</div>`)}
     ${pieces || marks ? `<section class="pf-sec pf-groups">${pieces ? group('Gear', `<div class="pf-pieces">${pieces}</div>`) : ''}${marks ? group('Marks', `<div class="pf-marks">${marks}</div>`) : ''}</section>` : ''}

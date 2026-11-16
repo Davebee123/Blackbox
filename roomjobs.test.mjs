@@ -100,7 +100,7 @@ test('addresses show on every chip, an unknown room\'s too (only ? and its addre
   // ls and map.
   const ls = said(play(s, 'ls'));
   assert.match(ls, new RegExp(`^${A[here.id]}  Entry  \\[entry\\]`));
-  for (const x of FP.exits(s)) assert.match(ls, new RegExp(`\\n\\d+  ${A[x.id]}  \\?  \\[\\?\\]`));
+  for (const x of FP.exits(s)) assert.match(ls, new RegExp(`\\n\\d+  ${A[x.id]}  ${x.path}  \\[`));
   const map = said(play(s, 'map'));
   for (const x of unknown) assert.match(map, new RegExp(`\\? ${A[x.id]}  \\?`), 'an unknown room: ? and its address');
   // go and cd take an address, any case; one you can't see yet says only that.
@@ -124,7 +124,7 @@ test('Install: the item waits in your stash, goes in your pack on its server, in
   assert.ok(!['entry', 'core', 'stash'].includes(g.rooms[c.room].kind) && sweepRooms(g).includes(c.room), 'a room you can reach');
   assert.equal(FP.known({ rooms: loc.floorplan }, c.room), false, 'its room is one you have never been in');
   assert.match(progress(s, c).text, /In your stash/);
-  assert.match(rewardLine(s, c), /^\d+ credits · \d+ XP · Halcyon \+7/);
+  assert.match(rewardLine(s, c), /^\d+ credits · \d+ XP · [A-Za-z ]+ \+7/, 'rep with whoever posted it');
   // On another server, it stays home.
   play(s, 'connect sprawl');
   assert.ok(!s.run.pack.some((f) => f.kind === 'payload'));

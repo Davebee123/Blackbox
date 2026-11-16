@@ -23,7 +23,25 @@
 // the hit lands (hitfx.mjs jolt). Teal: you. A crit goes gold-white and a hit on ◆ throws steel; a crewmate's in violet,
 // as hitfx.mjs does.
 //
-// Screen effects bold: the whole thing. Subtle and medium (calm): the piece, half the characters, no flourishes.
+// Look C (the designer's pick): the ASCII piece is what you throw, and what it does where it lands is drawn in light
+// (abilitylight.mjs): a flash, a shock ring along the bar, cracks, spark streaks, flames, ripples, and a comet in place
+// of the old streak. A piece in flight leaves afterimages; it burns white-hot where it makes contact. The particles that
+// are characters by nature (1s and 0s, ◇ shards, garbage, +) stay characters (LIGHT lists what became light).
+//
+// What the hit says (the designer: "not just shinier"): the motion carries the result. A hit that makes contact (CONTACT)
+// holds there for a moment, longer the bigger it is (stopOf: a crit longest), and what flies goes after it; a crit
+// gathers first (a swing or a punch draws back and a glint shows) and cracks further; a hit spent on ◆ lands on the ◆,
+// glances off in steel and leaves the bar alone; a miss goes on through and nothing lands. A status the hit cashed in
+// (marks: Exposed on a crit, Quarantined, Hooked's +6, Tagged's hotter burn) shows doing it: a crosshair flies off its
+// mark and closes on the hit, brackets snap on, a line pulls tight, the fire burns hotter; its mark glows.
+//
+// Each class has its rhythm (CADENCE, by the ability's own class): the Breaker winds up and stops dead; the Bastion's
+// piece lands and stays up a beat; the Infiltrator's goes in quick and its impact spreads after; the Operator's lands in
+// three small even beats. A burn runs down (left: the ticks after this one): its fire stands lower as it runs out, the
+// last tick gutters, and Keepalive stokes it up (stoke).
+//
+// Screen effects bold: the whole thing. Subtle and medium (calm): the piece, half the characters, no flourishes (no
+// afterimages, swing fans or cracks); the result's timing and a status cashing in show on both.
 // Off (minimal) or Motion off: none, and the plain hit effect's own rules apply. Pure but for createAbilityFx (the
 // layer on the page). Look only.
 //
@@ -32,16 +50,11 @@
 // ones and a glint that lingers under 300 ms) and the row's own overrides (TIERS: Ban's heavier hammer and the crack it
 // leaves, Ping's echo off every part, Overload's forks…). Every tier keeps every rule above. Your effect plays at the
 // tier you chose for it (default: the highest you've earned); a crewmate's at tier 1.
-//
-// Break finishers (FINISHERS, finisherLayout): the break that wins the fight plays your class's flourish on that part's
-// row and nowhere else, within FIN_CAP (900 ms), in place of the plain dissolve's bits: the Breaker's shards scatter,
-// the Bastion's seal comes down, the Infiltrator's part falls apart into 1s and 0s, the Operator's helpers converge
-// and pop (a subclass varies its class's: SUB_FINISHERS). The same rules: aria-hidden, no input, no background, ends
-// unseen, Screen effects and Motion.
 
-import { SPIKE, ABILITIES, SUBS } from './data.mjs';
-import { RECIPES, TIER_UP, TIERS, FINISHERS, SUB_FINISHERS } from './abilityfx-table.mjs';
-export { RECIPES, TIER_UP, TIERS, FINISHERS, SUB_FINISHERS } from './abilityfx-table.mjs';
+import { SPIKE, ABILITIES } from './data.mjs';
+import { NS, DEFS as LIGHT_DEFS, drawLight, throwN, crackNet, firePhases, endOf, startOf, startOf as lightStart, later as lightLater, capped } from './abilitylight.mjs';
+import { RECIPES, TIER_UP, TIERS } from './abilityfx-table.mjs';
+export { RECIPES, TIER_UP, TIERS } from './abilityfx-table.mjs';
 
 // Font metrics of the layer (style.css .afx): a monospace character is 0.6 of its size wide, a line 1.05 of it tall.
 export const CW = 0.6, LH = 1.05;
@@ -52,6 +65,36 @@ export const CAP = 1200;
 export const SPEED = 1.5;
 // The travel from where you fired it to where it plays: ms by distance (px), never under or over these.
 export const TRAVEL = { perPx: 0.75, min: 160, max: 340, near: 24 };
+// The motions that make contact with the part (a hit-stop holds them there) and their stop (recipe ms) by result:
+// nothing for a light hit or a miss, up to 75 for a big one, 52 on ◆, 105 for a crit. HOLD: a crit's swing or punch
+// draws back that long first.
+export const CONTACT = new Set(['swing', 'punch', 'dart', 'fly', 'bolt', 'all', 'wave']);
+// The motions that play where they land and make contact there (a mark comes down, a clamp shuts): the same rules.
+export const LANDS = new Set(['mark', 'clamp', 'slash', 'blast']);
+export const HOLD = 120;
+// The motions that draw back (a crit; every Breaker's) before they strike.
+export const WINDS = new Set(['swing', 'punch', 'bolt', 'fly']);
+export function stopOf(result = 'hit', power = 0.3) {
+  if (result === 'miss') return 0;
+  if (result === 'crit') return 105;
+  if (result === 'chit') return 52;
+  return power < 0.2 ? 0 : Math.round(25 + 50 * Math.min(1, (power - 0.2) / 0.5));
+}
+// Each class's rhythm on its own skills' effects (a burn's tick has none):
+//   breaker      wind: a swing or punch draws back first (ms); stop: holds longer on contact (×, 30 ms at least)
+//   bastion      linger: the piece that lands stays up that much longer before it goes (ms)
+//   infiltrator  travel: gets there faster (×); stop: holds less (×); bloom: its impact spreads out after it goes in
+//   operator     pulses: its impact comes in that many small even beats
+export const CADENCE = {
+  breaker: { wind: 50, stop: 1.5 },
+  bastion: { linger: 150 },
+  infiltrator: { travel: 0.8, stop: 0.5, bloom: true },
+  operator: { pulses: 3 },
+};
+export const PULSE = 90; // ms between an Operator's beats (real)
+// The class an effect's key belongs to (key 1 by its class's word), and its rhythm.
+export const classOfKey = (key) => { const id = String(key || '').split(':')[0]; return ABILITIES[id]?.cls || Object.entries(SPIKE).find(([, x]) => x.word === id)?.[0] || null; };
+export const cadenceOf = (key) => (String(key || '').endsWith(':tick') ? null : CADENCE[classOfKey(key)] || null);
 export const travelOf = (a, b) => { const d = Math.hypot(b.x - a.x, b.y - a.y); return d < TRAVEL.near ? 0 : Math.round(Math.max(TRAVEL.min, Math.min(TRAVEL.max, d * TRAVEL.perPx))); };
 
 // What fires from the tray but stays on the plain strike (hitfx.mjs), and why. Run skills (the Phantom's Spoof and Tap)
@@ -202,7 +245,7 @@ function track(el, start, ks) {
 //          numbers and the crew window's names and numbers (nothing stops over them)
 // opts.origin: 'key' (the ability's key; your bar when geo.key is null: not on screen) | 'crew' (the crewmate's bar;
 // yours when geo.mate is null) | 'bar' | 'here' (a burn's tick: it starts where it plays).
-function pointsOf(R, geo, origin) {
+function pointsOf(R, geo, origin, result = 'hit') {
   const ybar = geo.mine?.bar || null, Y = ybar ? mid(ybar) : null;
   let P;
   if (R.on === 'you') {
@@ -217,8 +260,9 @@ function pointsOf(R, geo, origin) {
     let S = { x: (name.l + name.r) / 2, y: (bar.t + bar.b) / 2 }; // the bar's line under the middle of the name cell
     let M = { x: S.x, y: ((name.t + name.b) / 2 + S.y) / 2 }; // the middle of the name cell
     if (R.at === 'chip' && part.chip) { M = mid(part.chip); S = M; } // its attack chip, when it shows one
+    else if ((result === 'chit' || R.at === 'chits') && part.chits) { S = { x: part.chits.x, y: part.chits.b }; M = { x: part.chits.x, y: part.chits.y }; } // spent on ◆: it lands on the ◆
     const lane = { l: cell.r + 3, r: Math.max(cell.r + 60, Math.min(row.r - 4, cell.r + 230)), t: row.t + 1, b: row.b - 1 };
-    P = { S, M, D: M, lane, floor: name.b + 1, bar, row, cell, name, chip: part.chip || null };
+    P = { S, M, D: M, lane, floor: name.b + 1, bar, row, cell, name, chip: part.chip || null, marks: part.marks || {}, chits: part.chits || null };
   }
   P.ybar = ybar; P.Y = Y || P.M;
   // Where it starts: its key (a crewmate's: their bar), else your bar, else (neither on screen) above the part.
@@ -241,6 +285,8 @@ const piece = (cls, lines, size, extra) => ({ cls, text: lines.join('\n'), size,
 const framed = (cls, R, size) => piece(cls, R.frames[0], size, { frames: R.frames.map((f) => f.join('\n')), fms: R.fms, loop: R.loop, ...textSize(R.frames.flat(), size), h: Math.max(...R.frames.map((f) => f.length)) * size * LH });
 const pieceOf = (cls, R, size) => (R.frames ? framed(cls, R, size) : piece(cls, R.art, size, {}));
 const ctrAt = (el, p) => ({ x: p.x - el.w / 2, y: p.y - el.h / 2 });
+// How it went on part q (an effect on every part): its own result, else the command's.
+const resultOn = (c, q) => c.results?.[q.id] ?? c.result;
 const angle = (a, b) => (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
 export const TRAVELS = new Set(['swing', 'punch', 'dart', 'wave', 'bolt', 'walk', 'fly', 'all']);
 
@@ -251,22 +297,41 @@ export const MOTIONS = {
   swing(R, P, c) {
     const el = piece('art', R.art, R.size * c.grow, {});
     el.ox = el.w; el.oy = el.h * 0.5; // the handle's end
-    const x = P.S.x - 2.5 * R.size * c.grow * CW, y = P.S.y + 2 - el.h, T = Math.max(1, P.T), L = R.land, o = { x: P.O.x - el.w * 0.7, y: P.O.y - el.h / 2 }; // scaled 0.6 about its handle's end, centred on where it starts
+    const cw = R.size * c.grow * CW, x = P.S.x - 2.5 * cw, y = P.S.y + 2 - el.h, T = Math.max(1, P.T), L = R.land, H = c.hold, hit = T + H + L, o = { x: P.O.x - el.w * 0.7, y: P.O.y - el.h / 2 }; // scaled 0.6 about its handle's end, centred on where it starts
+    const up = R.heavy ? 64 : 52, top = up + (H ? 4 : 0), miss = c.result === 'miss', glance = c.result === 'chit';
     // Heavy (a mastery tier): a deeper slam, the head driving on into the part a beat before it bounces off.
-    const slam = R.heavy ? [{ t: T + L + 40, r: -3, y: y + 3 }, { t: T + L + 90, r: -9, y: y + 1 }, { t: T + L + 170, r: 1, y }, { t: T + L + 230, r: 0 }] : [{ t: T + L + 60, r: -5 }, { t: T + L + 130, r: 0 }];
-    return [track(el, 0, [{ t: 0, x: o.x, y: o.y, r: 0, s: 0.6, o: 0, e: GO }, { t: T * 0.2, o: 1 }, { t: T, x, y, r: R.heavy ? 64 : 52, s: 1, e: IN }, { t: T + L, r: 0, e: OUT }, ...slam, { t: T + L + (R.heavy ? 260 : 220), o: 1 }, { t: T + R.dur, o: 0, y: y + 3 }])];
+    const slam = R.heavy ? [{ t: hit + 40, r: -3, y: y + 3 }, { t: hit + 90, r: -9, y: y + 1 }, { t: hit + 170, r: 1, y }, { t: hit + 230, r: 0 }] : [{ t: hit + 60, r: -5 }, { t: hit + 130, r: 0 }];
+    // On ◆ it glances back up off the steel; a miss swings on past and is gone.
+    const after = miss ? [{ t: hit + 60, r: -22, e: OUT }, { t: hit + 200, r: -16, o: 0 }]
+      : glance ? [{ t: hit + 90, r: 36, e: OUT }, { t: hit + 200, r: 24, o: 1 }, { t: T + H + R.dur, r: 28, o: 0 }]
+        : [...slam, { t: hit + (R.heavy ? 260 : 220), o: 1 }, { t: T + H + R.dur, o: 0, y: y + 3 }];
+    const ks = [{ t: 0, x: o.x, y: o.y, r: 0, s: 0.6, o: 0, e: GO }, { t: T * 0.2, o: 1 }, { t: T, x, y, r: up, s: 1, ...(H ? {} : { e: IN }) }];
+    if (H) ks.push({ t: T + H * 0.5, r: top + 2 }, { t: T + H, r: top, e: IN }); // a crit draws back a little further first
+    ks.push({ t: hit, r: miss ? -10 : 0, e: OUT }, ...after);
+    // Its fan: light between where the head was and where it is, down the swing (bold only); a crit's glint at the top.
+    const px = x + el.ox, py = y + el.oy, Lh = el.w - 2.5 * cw, head = (r) => ({ x: px + Lh * Math.cos((180 + r) * Math.PI / 180), y: py + Lh * Math.sin((180 + r) * Math.PI / 180) });
+    if (c.lvl === 'full') c.light.push({ kind: 'smear', cx: px, cy: py, r0: Lh - el.h * 0.35, r1: Lh + el.h * 0.35, a1: 180 + top, a2: 180 + (miss ? -10 : 0), t1: c.RT(T + H), t2: c.RT(hit) });
+    if (H && c.result === 'crit') c.light.push({ kind: 'glint', ...head(top), t0: c.RT(T), s: 11, dur: c.RT(H) + 30, tone: 'crit' });
+    c.at = { x: P.S.x, y: P.S.y }; // where it makes contact: the head's face
+    return [track(el, 0, ks)];
   },
   // A ram: it flies in beside the part and punches into its name cell, recoils, fades.
   // Trail (a mastery tier): afterimages a beat behind it, fainter, gone as it lands.
   punch(R, P, c) {
-    const out = [], n = c.lvl === 'full' ? R.trail || 0 : 0;
+    const out = [], n = c.lvl === 'full' ? R.trail || 0 : 0, H = c.hold, miss = c.result === 'miss', glance = c.result === 'chit';
     for (let i = 0; i <= n; i++) {
       const el = piece('art' + (i ? ' echo' : ''), R.art, R.size * c.grow, {});
-      const x = P.S.x - 3 * R.size * CW, y = P.M.y - el.h / 2, T = Math.max(1, P.T), L = R.land, o = ctrAt(el, P.O), f = 1 - i * 0.32;
+      const x = P.S.x - 3 * R.size * CW, y = P.M.y - el.h / 2, T = Math.max(1, P.T), L = R.land, hit = T + H + L, o = ctrAt(el, P.O), f = 1 - i * 0.32;
+      // A crit draws back before it punches; on ◆ it recoils hard; a miss punches on through where the part was.
+      const back = H ? [{ t: T + H, x: x + 124, e: IN }] : [];
+      const after = miss ? [{ t: hit + 120, x: x - 50, o: 0 }]
+        : glance ? [{ t: hit + 70, x: x + 30 }, { t: hit + 160, x: x + 20 }, { t: hit + 200, o: 1 }, { t: T + H + R.dur, x: x + 26, o: 0 }]
+          : [{ t: hit + 50, x: x + 8 }, { t: hit + 140, x: x + 3 }, { t: hit + 200, o: 1 }, { t: T + H + R.dur, x: x + 14, o: 0 }];
       out.push(i
-        ? track(el, i * 36, [{ t: 0, x: o.x, y: o.y, s: 0.6, o: 0, e: GO }, { t: T * 0.25, o: f }, { t: T, x: x + 110, y, s: 1, o: f, e: IN }, { t: T + L - i * 36, x: x + 10 * i, o: 0 }])
-        : track(el, 0, [{ t: 0, x: o.x, y: o.y, s: 0.6, o: 0, e: GO }, { t: T * 0.25, o: 1 }, { t: T, x: x + 110, y, s: 1, e: IN }, { t: T + L, x, e: OUT }, { t: T + L + 50, x: x + 8 }, { t: T + L + 140, x: x + 3 }, { t: T + L + 200, o: 1 }, { t: T + R.dur, x: x + 14, o: 0 }]));
+        ? track(el, i * 36, [{ t: 0, x: o.x, y: o.y, s: 0.6, o: 0, e: GO }, { t: T * 0.25, o: f }, { t: T, x: x + 110, y, s: 1, o: f, ...(H ? {} : { e: IN }) }, ...back, { t: hit - i * 36, x: x + 10 * i, o: 0 }])
+        : track(el, 0, [{ t: 0, x: o.x, y: o.y, s: 0.6, o: 0, e: GO }, { t: T * 0.25, o: 1 }, { t: T, x: x + 110, y, s: 1, ...(H ? {} : { e: IN }) }, ...back, { t: hit, x: miss ? x - 20 : x, e: OUT }, ...after]));
     }
+    c.at = { x: P.S.x - 3 * R.size * CW, y: P.M.y }; // its front
     return out;
   },
   // A needle (or any thin piece) darted straight into the part's name cell: its tip sticks, quivers, pulls out (or
@@ -282,8 +347,14 @@ export const MOTIONS = {
       const tip = (p) => ({ x: p.x - el.ox, y: p.y - el.oy });
       const from = tip({ x: P.O.x - u.x * 10, y: P.O.y - u.y * 10 }), to = tip(at), D = R.dur - lag;
       const last = R.through ? tip({ x: at.x + u.x * 46, y: at.y + u.y * 46 }) : tip({ x: at.x - u.x * 12, y: at.y - u.y * 12 });
-      out.push(track(el, lag, [{ t: 0, ...from, r, o: 0, e: GO }, { t: T * 0.2, o: 1 }, { t: T, ...to, e: OUT }, { t: T + 50, r: r - 4 }, { t: T + 100, r: r + 3 }, { t: T + 150, r }, { t: T + D * 0.7, o: 1 }, { t: T + D, ...last, o: 0 }]));
+      // On ◆ it bounces back off the steel, turned; a miss flies on past where the part was.
+      const rest = c.result === 'miss' ? [{ t: T + 110, ...tip({ x: at.x + u.x * 60, y: at.y + u.y * 60 }), o: 0 }]
+        : c.result === 'chit' ? [{ t: T + 90, ...tip({ x: at.x - u.x * 22, y: at.y - u.y * 22 - 6 }), r: r - 28, e: OUT }, { t: T + 200, r: r - 34, o: 0.8 }, { t: T + D, r: r - 36, o: 0 }]
+          : [{ t: T + 50, r: r - 4 }, { t: T + 100, r: r + 3 }, { t: T + 150, r }, { t: T + D * 0.7, o: 1 }, { t: T + D, ...last, o: 0 }];
+      el.hitAt = lag + T; // each needle makes contact (and holds there) at its own moment
+      out.push(track(el, lag, [{ t: 0, ...from, r, o: 0, e: GO }, { t: T * 0.2, o: 1 }, { t: T, ...(c.result === 'miss' ? tip({ x: at.x + u.x * 20, y: at.y + u.y * 20 }) : to), e: c.result === 'miss' ? undefined : OUT }, ...rest]));
     }
+    c.at = { x: P.M.x, y: P.M.y };
     return out;
   },
   // A wave: a few echoes of it, a beat apart, growing as they go.
@@ -291,24 +362,39 @@ export const MOTIONS = {
     const e = R.echoes || 3, out = [], n = c.lvl === 'full' ? e : Math.ceil(e / 2) + 1 - (e % 2), T = Math.max(1, P.T); // echoes (a mastery tier): how many on bold
     for (let i = 0; i < n; i++) {
       const el = piece('art' + (i ? ' echo' : ''), R.art, R.size, {}), r = angle(P.O, P.M), f = Math.min(0.2, 0.6 / n);
-      out.push(track(el, i * 70, [{ t: 0, ...ctrAt(el, P.O), r, s: 0.6, o: 0 }, { t: T * 0.15, o: 1 - i * f }, { t: T, ...ctrAt(el, P.M), s: 1.25, o: 0.95 - i * f, e: OUT }, { t: T + 220, s: 1.5, o: 0 }]));
+      const d = Math.hypot(P.M.x - P.O.x, P.M.y - P.O.y) || 1, u = { x: (P.M.x - P.O.x) / d, y: (P.M.y - P.O.y) / d }, on = (k) => ctrAt(el, { x: P.M.x + u.x * k, y: P.M.y + u.y * k });
+      // A miss rolls on past the part and thins out; on ◆ it comes back off the steel, flattened.
+      const end = c.result === 'miss' ? [{ t: T, ...on(14), s: 1.1, o: 0.8 - i * f }, { t: T + 160, ...on(70), s: 1.2, o: 0 }]
+        : c.result === 'chit' ? [{ t: T, ...ctrAt(el, P.M), s: 1, o: 0.95 - i * f, e: OUT }, { t: T + 160, ...on(-16), s: 0.8, o: 0 }]
+          : [{ t: T, ...ctrAt(el, P.M), s: 1.25, o: 0.95 - i * f, e: OUT }, { t: T + 220, s: 1.5, o: 0 }];
+      const e2 = track(el, i * 70, [{ t: 0, ...ctrAt(el, P.O), r, s: 0.6, o: 0 }, { t: T * 0.15, o: 1 - i * f }, ...end]);
+      e2.hitAt = i * 70 + T;
+      out.push(e2);
     }
+    c.at = { x: P.M.x, y: P.M.y };
     return out;
   },
   // A bolt: characters along a jagged line, lit tip-first, flickering out (twice: a second bolt a beat behind).
   // Forks (a mastery tier): from the part, branches on to the nearest other parts (none on the board: two short
   // branches off it), lit as the bolt arrives.
   bolt(R, P, c) {
-    const out = [], T = Math.max(1, P.T);
-    const runs = R.twice ? [[P.O, P.M, 0, ''], [P.O, P.M, 150, ' echo']] : c.lvl === 'full' ? [[P.O, P.M, 0, ''], [{ x: P.O.x + 26, y: P.O.y + 4 }, P.M, 40, ' echo']] : [[P.O, P.M, 0, '']];
-    if (R.forks && c.lvl === 'full') {
+    // It charges at the key first (c.hold: the Breaker's wind-up, longer on a crit), then leaps tip-first and arrives at
+    // the impact; it stays solid there (the hit-stop holds it lit), then flickers out. A miss grounds in the row beside
+    // the part; on ◆ it strikes the ◆ and an arc jumps off it in steel.
+    const out = [], T = Math.max(1, P.T), H = c.hold, miss = c.result === 'miss', chit = c.result === 'chit';
+    const end = miss ? { x: P.bar.r + 12, y: P.S.y + 1 } : P.M, hit = T + H;
+    c.at = end;
+    const runs = R.twice ? [[P.O, end, 0, ''], [P.O, end, 150, ' echo']] : c.lvl === 'full' ? [[P.O, end, 0, ''], [{ x: P.O.x + 26, y: P.O.y + 4 }, end, 40, ' echo']] : [[P.O, end, 0, '']];
+    if (R.forks && c.lvl === 'full' && !miss) {
       const others = P.parts.filter((q) => Math.hypot(q.M.x - P.M.x, q.M.y - P.M.y) > 8).sort((a, b) => Math.hypot(a.M.x - P.M.x, a.M.y - P.M.y) - Math.hypot(b.M.x - P.M.x, b.M.y - P.M.y)).slice(0, R.forks);
       const ends = others.length ? others.map((q) => q.M) : [{ x: P.M.x + 70, y: P.M.y - 14 }, { x: P.M.x + 70, y: P.M.y + 14 }].slice(0, R.forks);
-      ends.forEach((to, j) => runs.push([P.M, to, Math.round(T * 0.85) + 20 + j * 40, ' fork']));
+      ends.forEach((to, j) => runs.push([P.M, to, hit + 20 + j * 40, ' fork']));
     }
+    if (chit) runs.push([end, { x: end.x + 30, y: end.y - 24 }, hit + 10, ' fork chit']);
     for (const [from, to, lag, cls] of runs) {
-      const dx = to.x - from.x, dy = to.y - from.y, dist = Math.hypot(dx, dy) || 1, nx = -dy / dist, ny = dx / dist;
-      const steps = Math.max(5, Math.round(dist / (R.size * 0.95))), Tr = cls === ' fork' ? Math.min(180, dist * 0.6) : T;
+      const dx = to.x - from.x, dy = to.y - from.y, dist = Math.hypot(dx, dy) || 1, nx = -dy / dist, ny = dx / dist, fork = / fork/.test(cls);
+      const steps = Math.max(fork ? 3 : 5, Math.round(dist / (R.size * 0.95))), Tr = fork ? Math.min(120, dist * 0.6) : T;
+      const t0 = fork ? lag : H + lag, gone = fork ? lag + 260 : T + H + R.dur;
       let prev = from;
       for (let i = 1; i <= steps; i++) {
         const t = i / steps, side = i === steps ? 0 : (i % 2 ? 1 : -1) * (4 + c.rnd() * 6);
@@ -316,14 +402,28 @@ export const MOTIONS = {
         const sx = p.x - prev.x, sy = p.y - prev.y;
         const ch = Math.abs(sx) < Math.abs(sy) * 0.4 ? '|' : Math.abs(sy) < Math.abs(sx) * 0.4 ? '-' : (sx > 0) === (sy > 0) ? '\\' : '/';
         const el = piece('art bolt' + cls, [ch], R.size, {});
-        const x = (p.x + prev.x) / 2 - el.w / 2, y = (p.y + prev.y) / 2 - el.h / 2, lit = Math.round(t * Tr * 0.85) + lag, life = Math.max(120, (cls === ' fork' ? lag + 300 : T + R.dur) - lit - 60);
+        const x = (p.x + prev.x) / 2 - el.w / 2, y = (p.y + prev.y) / 2 - el.h / 2, lit = Math.round(t0 + t * Tr);
         // A bolt's characters stay where they're drawn: it comes out from the key's (or the bar's) edge, never over a
         // key's label or your bar's numbers.
         if (P.okeep.some((q) => overlaps({ l: x, t: y, r: x + el.w, b: y + el.h }, q))) { prev = p; continue; }
-        out.push(track(el, lit, [{ t: 0, x, y, o: 0 }, { t: life * 0.05, o: 1 }, { t: life * 0.3, o: 0.35 }, { t: life * 0.42, o: 1 }, { t: life * 0.6, o: 0.5 }, { t: life * 0.72, o: 0.9 }, { t: life, o: 0 }]));
+        // Lit as the tip passes, flickering on its way, solid from the moment it strikes; then it flickers out.
+        const at = Math.max(lit + 25, fork ? lit + 25 : hit), life = Math.max(at + 140, gone) - lit, k = (ms) => Math.max(0, ms - lit);
+        const ks = [{ t: 0, x, y, o: 0 }, { t: 18, o: 1 }];
+        if (at - lit > 60) ks.push({ t: (at - lit) * 0.5, o: 0.55 }, { t: at - lit - 12, o: 1 });
+        ks.push({ t: k(at), o: 1 }, { t: k(at) + 40, o: 0.35 }, { t: k(at) + 60, o: 1 }, { t: k(at) + 95, o: 0.5 }, { t: k(at) + 115, o: 0.9 }, { t: life, o: 0 });
+        const e2 = track(el, lit, ks);
+        e2.hitAt = fork ? lit : hit; // what's drawn by the strike holds lit through the hit-stop
+        out.push(e2);
         prev = p;
       }
     }
+    // The wind-up: it crackles at the key before it goes (bold: sparks too).
+    if (H && P.from !== 'here') {
+      c.light.push({ kind: 'glint', x: P.O.x, y: P.O.y, t0: 0, s: c.result === 'crit' ? 12 : 9, dur: c.RT(H) + 40, tone: c.result === 'crit' ? 'crit' : undefined });
+      if (c.lvl === 'full') c.light.push({ kind: 'sparks', list: throwN(c.rnd, c.result === 'crit' ? 6 : 3, P.O, 0, { a0: -Math.PI / 2, spread: Math.PI * 1.4, v: [60, 140], g: 0, drag: 6, life: [90, 150], jit: c.RT(H) * 0.7 }), w: 0.8 });
+    }
+    // A miss grounds: a puff where it strikes the floor of the row.
+    if (miss) c.light.push({ kind: 'puffs', list: throwN(c.rnd, 4, { x: end.x, y: end.y }, c.RT(hit), { a0: -Math.PI / 2, spread: 1.6, v: [30, 70], g: -30, drag: 2, life: [300, 420] }) }, { kind: 'ring', x: end.x, y: end.y + 2, t0: c.RT(hit), rx: 18, ry: 4, dur: 260, w: 1 });
     return out;
   },
   // Helpers scuttling out to the part (count of them): they walk onto its name cell, settle, blink out.
@@ -333,7 +433,10 @@ export const MOTIONS = {
       const el = pieceOf('art', R, R.size), off = (k - (n - 1) / 2) * el.w * 1.15;
       const a = ctrAt(el, P.O), b = ctrAt(el, { x: P.S.x + el.w * 0.6 + off, y: P.M.y }), ks = [{ t: 0, ...a, o: 0 }];
       for (let i = 1; i <= 6; i++) { const f = i / 6; ks.push({ t: T * f, x: lerp(a.x, b.x, f), y: lerp(a.y, b.y, f) - (i % 2 ? 3 : 0), o: 1 }); }
-      ks.push(...(R.hop ? [{ t: T + 70, y: b.y - 7 }, { t: T + 150, y: b.y }, { t: T + 190, y: b.y - 2 }, { t: T + 230, y: b.y }] : [{ t: T + 80, y: b.y - 2 }, { t: T + 160, y: b.y }]), { t: T + R.dur * 0.8, o: 1 }, { t: T + R.dur, o: 0 }); // hop (a mastery tier): a jump as it gets there
+      // A miss: they walk on past the part and blink out; on ◆ they bump off it and back away.
+      if (c.result === 'miss') ks.push({ t: T + 120, x: b.x + 40, y: b.y - 2 }, { t: T + 200, x: b.x + 60, y: b.y, o: 0 });
+      else if (c.result === 'chit') ks.push({ t: T + 60, x: b.x - 10, y: b.y - 4, e: OUT }, { t: T + 140, x: b.x - 14, y: b.y }, { t: T + R.dur * 0.7, o: 1 }, { t: T + R.dur * 0.85, o: 0 });
+      else ks.push(...(R.hop ? [{ t: T + 70, y: b.y - 7 }, { t: T + 150, y: b.y }, { t: T + 190, y: b.y - 2 }, { t: T + 230, y: b.y }] : [{ t: T + 80, y: b.y - 2 }, { t: T + 160, y: b.y }]), { t: T + R.dur * 0.8, o: 1 }, { t: T + R.dur, o: 0 }); // hop (a mastery tier): a jump as it gets there
       out.push(track(el, k * 60, ks));
     }
     return out;
@@ -341,15 +444,34 @@ export const MOTIONS = {
   // Any piece flown to the part (spinning, or turned along its way), landing with a pop on its name cell.
   fly(R, P, c) {
     const el = pieceOf('art', R, R.size * c.grow), T = Math.max(1, P.T), r = R.turn ? angle(P.O, P.M) : 0, spin = R.spin || 0;
-    const a = ctrAt(el, P.O), b = ctrAt(el, P.M), land = T + (R.land || 0);
-    return [track(el, 0, [{ t: 0, ...a, r: r + spin, s: 0.6, o: 0, e: GO }, { t: T * 0.2, o: 1 }, { t: T, ...b, r, s: 1.25, e: OUT }, { t: T + 90, s: 1 }, { t: land + 160, o: 1 }, { t: T + R.dur, s: 1.1, o: 0 }])];
+    const a = ctrAt(el, P.O), b = ctrAt(el, P.M), land = T + (R.land || 0), d = Math.hypot(P.M.x - P.O.x, P.M.y - P.O.y) || 1, u = { x: (P.M.x - P.O.x) / d, y: (P.M.y - P.O.y) / d };
+    c.at = { x: P.M.x, y: P.M.y };
+    // A crit (and every Breaker's) stops short of the part and draws back first (c.hold), gathering, then drives in.
+    const H = c.hold, off = (d) => ({ x: b.x - u.x * d, y: b.y - u.y * d });
+    const go = H ? [{ t: T, ...off(22), r, s: 1, e: OUT }, { t: T + H, ...off(34), s: 1.08, e: IN }] : [];
+    const start = [{ t: 0, ...a, r: r + spin, s: 0.6, o: 0, e: GO }, { t: T * 0.2, o: 1 }, ...go], Th = T + H;
+    if (H && c.result === 'crit') c.light.push({ kind: 'glint', x: P.M.x - u.x * 30, y: P.M.y - u.y * 30, t0: c.RT(T), s: 11, dur: c.RT(H) + 30, tone: 'crit' });
+    // A miss flies on through; on ◆ it bounces up off the steel.
+    if (c.result === 'miss') return [track(el, 0, [...start, { t: Th, x: b.x + u.x * 10, y: b.y + u.y * 10, r, s: 1.1 }, { t: Th + 150, x: b.x + u.x * 70, y: b.y + u.y * 70, o: 0 }])];
+    if (c.result === 'chit') return [track(el, 0, [...start, { t: Th, ...b, r, s: 1.15, e: OUT }, { t: Th + 100, x: b.x - u.x * 14, y: b.y - 20, r: r + 30, s: 1 }, { t: Th + 200, o: 0.9 }, { t: Th + R.dur, y: b.y - 12, r: r + 40, o: 0 }])];
+    return [track(el, 0, [...start, { t: Th, ...b, r, s: 1.25, e: OUT }, { t: Th + 90, s: 1 }, { t: land + H + 160, o: 1 }, { t: Th + R.dur, s: 1.1, o: 0 }])];
   },
   // A copy to every part on the board, a beat apart.
+  // Each copy says how it went on its own part (c.results by part id, else the command's result): it holds there, on ◆
+  // it bounces off in steel, a miss flies on through; each that lands flashes there as it arrives.
   all(R, P, c) {
     const out = [];
     P.parts.slice(0, 6).forEach((q, i) => {
-      const el = pieceOf('art', R, R.size), T = Math.max(1, travelOf(P.O, q.M)), spin = R.spin || 0;
-      out.push(track(el, i * 40, [{ t: 0, ...ctrAt(el, P.O), r: spin, s: 0.6, o: 0, e: GO }, { t: T * 0.2, o: 1 }, { t: T, ...ctrAt(el, q.M), r: 0, s: 1.2, e: OUT }, { t: T + 90, s: 1 }, { t: T + (R.land || 0) + 160, o: 1 }, { t: T + R.dur, o: 0 }]));
+      const el = pieceOf('art', R, R.size), T = Math.max(1, travelOf(P.O, q.M)), spin = R.spin || 0, res = resultOn(c, q), lag = i * 40;
+      const a = ctrAt(el, P.O), b = ctrAt(el, q.M), d = Math.hypot(q.M.x - P.O.x, q.M.y - P.O.y) || 1, u = { x: (q.M.x - P.O.x) / d, y: (q.M.y - P.O.y) / d };
+      const go = [{ t: 0, ...a, r: spin, s: 0.6, o: 0, e: GO }, { t: T * 0.2, o: 1 }];
+      const e2 = res === 'miss' ? track(el, lag, [...go, { t: T, x: b.x + u.x * 10, y: b.y + u.y * 10, r: 0, s: 1.1 }, { t: T + 150, x: b.x + u.x * 60, y: b.y + u.y * 60, o: 0 }])
+        : res === 'chit' ? track(el, lag, [...go, { t: T, ...b, r: 0, s: 1.15, e: OUT }, { t: T + 100, x: b.x - u.x * 12, y: b.y - 16, r: 28, s: 1 }, { t: T + 200, o: 0.9 }, { t: T + R.dur, y: b.y - 10, r: 36, o: 0 }])
+          : track(el, lag, [...go, { t: T, ...b, r: 0, s: 1.2, e: OUT }, { t: T + 90, s: 1 }, { t: T + (R.land || 0) + 160, o: 1 }, { t: T + R.dur, o: 0 }]);
+      e2.hitAt = lag + T; e2.res = res;
+      if (res === 'chit' || res === 'crit') e2.cls += ' ' + res;
+      if (res !== 'miss') c.light.push({ kind: 'flash', x: q.M.x, y: q.M.y, t0: c.RT(lag + T), R: res === 'crit' ? 22 : 13, dur: 180, contact: true, ...(res === 'chit' ? { tone: 'steel' } : res === 'crit' ? { tone: 'crit' } : {}) });
+      out.push(e2);
     });
     return out;
   },
@@ -357,6 +479,7 @@ export const MOTIONS = {
   // A blast where the part's burns went off: it grows through its frames on the name cell and is gone.
   blast(R, P, c) {
     const el = framed('art', R, R.size * c.grow), at = ctrAt(el, P.M);
+    c.at = { x: P.M.x, y: P.M.y };
     return [track(el, 0, [{ t: 0, ...at, s: 0.7, o: 0 }, { t: R.dur * 0.05, o: 1 }, { t: R.dur * 0.35, s: 1.1 }, { t: R.dur * 0.6, s: 1.25, o: 0.9 }, { t: R.dur, s: 1.35, o: 0 }])];
   },
   // A sign on the part (or its attack chip): it pops on (or drops on from above, or spins on), holds, and is gone (or
@@ -364,17 +487,22 @@ export const MOTIONS = {
   mark(R, P, c) {
     const el = pieceOf('art', R, R.size), at = ctrAt(el, P.M), D = R.dur, spin = R.spin || 0;
     const on = R.drop ? { t: 0, x: at.x, y: at.y - 30, o: 0, e: IN } : { t: 0, ...at, s: 1.6, r: spin, o: 0, e: OUT };
+    c.at = { x: P.M.x, y: P.M.y };
+    // Nothing for it to break (no ◆ left): it glances off and slides away.
+    if (c.broke === 0) return [track(el, 0, [on, { t: R.land, ...at, s: 1, r: 0, o: 1, e: OUT }, { t: R.land + 100, x: at.x + 16, y: at.y + 10, r: 28, o: 0.8 }, { t: R.land + 240, x: at.x + 22, y: at.y + 16, r: 34, o: 0 }])];
     return [track(el, 0, [on, { t: R.land, ...at, s: 1, r: 0, o: 1 }, { t: R.land + 60, s: R.drop ? 1.08 : 1 }, { t: R.land + 120, s: 1 }, { t: D - 180, o: 1, s: 1 }, { t: D, o: 0, s: R.collapse ? 0.1 : 1.05, r: R.collapse ? 180 : 0 }])];
   },
   // A cut across the part's attack chip (or its name cell): a line of slashes drawn through it, its sign over it.
   slash(R, P, c) {
-    const out = [], n = 7, w = (P.chip ? P.chip.r - P.chip.l : 60) * 0.5 + 6;
+    const out = [], n = 7, w = (P.chip ? P.chip.r - P.chip.l : 60) * 0.5 + 6, miss = c.result === 'miss';
+    c.at = { x: P.M.x, y: P.M.y };
+    // A miss: the cut goes wide, over the top of it, and is gone at once; its sign never lands.
     for (let i = 0; i < n; i++) {
       const f = i / (n - 1), el = piece('art cut', ['/'], R.size + 2, {});
-      const p = { x: P.M.x - w + 2 * w * f, y: P.M.y + 10 - 20 * f };
-      out.push(track(el, i * 14, [{ t: 0, ...ctrAt(el, p), o: 0, s: 1.4 }, { t: 40, o: 1, s: 1 }, { t: R.dur - 160 - i * 14, o: 1 }, { t: R.dur - i * 14, o: 0 }]));
+      const p = miss ? { x: P.M.x - w + 2.6 * w * f, y: P.M.y - 18 - 20 * f } : { x: P.M.x - w + 2 * w * f, y: P.M.y + 10 - 20 * f };
+      out.push(track(el, i * 14, miss ? [{ t: 0, ...ctrAt(el, p), o: 0, s: 1.4 }, { t: 40, o: 0.7, s: 1 }, { t: 130, o: 0 }] : [{ t: 0, ...ctrAt(el, p), o: 0, s: 1.4 }, { t: 40, o: 1, s: 1 }, { t: R.dur - 160 - i * 14, o: 1 }, { t: R.dur - i * 14, o: 0 }]));
     }
-    if (R.art) {
+    if (R.art && !miss) {
       const el = piece('art', R.art, R.size, {}), at = ctrAt(el, { x: P.M.x, y: P.M.y - 20 });
       out.push(track(el, 0, [{ t: 0, ...at, s: 1.6, o: 0, e: OUT }, { t: R.land, s: 1, o: 1 }, { t: R.dur - 160, o: 1 }, { t: R.dur, o: 0 }]));
     }
@@ -382,30 +510,33 @@ export const MOTIONS = {
   },
   // Two halves closing in on the part from either side (wide: round its whole name cell), a bump as they meet.
   clamp(R, P, c) {
-    const gap = R.wide ? (P.name.r - P.name.l) / 2 + 2 : 2, out = [];
+    const gap = R.wide ? (P.name.r - P.name.l) / 2 + 2 : 2, out = [], bump = c.result === 'crit' ? 7 : 3;
+    c.at = { x: P.M.x, y: P.M.y };
     [[R.art[0], -1], [R.art[1], 1]].forEach(([art, side]) => {
       const el = piece('art', [art], R.size, {}), y = P.M.y - el.h / 2;
       const x = side < 0 ? P.M.x - gap - el.w : P.M.x + gap;
-      out.push(track(el, 0, [{ t: 0, x: x + side * 50, y, o: 0, e: IN }, { t: R.land, x, o: 1, e: OUT }, { t: R.land + 50, x: x + side * 3 }, { t: R.land + 120, x }, { t: R.dur - 160, o: 1 }, { t: R.dur, o: 0 }]));
+      // A miss: the halves shut on nothing, pass each other and are gone.
+      if (c.result === 'miss') { const past = x - side * (2 * gap + el.w + 26); out.push(track(el, 0, [{ t: 0, x: x + side * 50, y, o: 0, e: IN }, { t: R.land, x, o: 1 }, { t: R.land + 150, x: past, o: 0 }])); return; }
+      out.push(track(el, 0, [{ t: 0, x: x + side * 50, y, o: 0, e: IN }, { t: R.land, x, o: 1, e: OUT }, { t: R.land + 50, x: x + side * bump }, { t: R.land + 120, x }, { t: R.dur - 160, o: 1 }, { t: R.dur, o: 0 }]));
     });
     return out;
   },
   // A sign on your bar: it pops on over its middle (or spins on), holds, and is gone.
-  stamp(R, P, c) { return MOTIONS.mark({ ...R, drop: false }, P, c); },
+  stamp(R, P, c) { return MOTIONS.mark({ ...R, drop: !!c.slam }, P, c); }, // the Breaker's slams down
   // Brackets closing round your bar from either end.
   shell(R, P, c) {
-    const out = [];
+    const out = [], bump = c.slam ? 6 : 3; // the Breaker's shuts harder
     [[R.art[0], -1], [R.art[1], 1]].forEach(([art, side]) => {
       const el = piece('art', [art], R.size, {}), y = P.M.y - el.h / 2, x = side < 0 ? P.bar.l - el.w - 1 : P.bar.r + 1;
-      out.push(track(el, 0, [{ t: 0, x: x + side * 36, y, o: 0, e: IN }, { t: R.land, x, o: 1, e: OUT }, { t: R.land + 50, x: x - side * 3 }, { t: R.land + 120, x }, { t: R.dur - 160, o: 1 }, { t: R.dur, o: 0 }]));
+      out.push(track(el, 0, [{ t: 0, x: x + side * 36, y, o: 0, e: IN }, { t: R.land, x, o: 1, e: OUT }, { t: R.land + 50, x: x - side * bump }, { t: R.land + 120, x }, { t: R.dur - 160, o: 1 }, { t: R.dur, o: 0 }]));
     });
     return out;
   },
   // A piece running the length of your bar (reverse: right to left).
   sweep(R, P, c) {
     const el = piece('art', R.art, R.size, {}), y = P.M.y - el.h / 2, a = P.bar.l, b = P.bar.r - el.w;
-    const [x0, x1] = R.reverse ? [b, a] : [a, b];
-    return [track(el, 0, [{ t: 0, x: x0, y, o: 0 }, { t: 60, o: 1 }, { t: R.dur * 0.8, x: x1, o: 1 }, { t: R.dur, x: x1, o: 0 }])];
+    const [x0, x1] = R.reverse ? [b, a] : [a, b], W = c.slam || 0; // the Breaker's holds at the start a beat, then runs
+    return [track(el, 0, [{ t: 0, x: x0, y, o: 0 }, { t: 60, o: 1 }, ...(W ? [{ t: 60 + W, x: x0, e: IN }] : []), { t: R.dur * 0.8, x: x1, o: 1 }, { t: R.dur, x: x1, o: 0 }])];
   },
   // A firewall on your bar: courses of bricks laid bottom-up over it (each settles onto the one under it).
   wall(R, P, c) {
@@ -432,15 +563,9 @@ export const MOTIONS = {
   },
 };
 
-// The streak that takes an effect from where you fired it to where it plays: a bright head and a short trail.
-function streak(P, c) {
-  const out = [], T = P.T;
-  [['*', 13, 0, ''], ['·', 11, 28, ' echo'], ['·', 10, 56, ' echo'], ['·', 9, 84, ' echo']].forEach(([ch, size, lag, cls]) => {
-    const el = piece('art streak' + cls, [ch], size, {});
-    out.push(track(el, lag, [{ t: 0, ...ctrAt(el, P.O), o: 0, e: GO }, { t: T * 0.15, o: 1 }, { t: Math.max(T * 0.86, 1), o: 1 }, { t: T, ...ctrAt(el, P.D), o: 0 }]));
-  });
-  return out;
-}
+// The comet that takes an effect from where you fired it to where it plays: a head of light and its tail (light; it
+// stands in for the old ASCII streak).
+const comet = (P, c) => ({ kind: 'comet', a: P.O, b: P.D, lift: Math.min(30, Math.hypot(P.D.x - P.O.x, P.D.y - P.O.y) * 0.12), t1: 0, t2: c.RT(P.T), R0: 4 });
 
 // ---------- the particles ----------
 // Each: (n, recipe, points, ctx, entry) → pieces, from where the piece lands (ctx.t0: when, in ms).
@@ -640,70 +765,261 @@ export const PARTICLES = {
   },
 };
 
+// ---------- in light ----------
+// What an impact throws, drawn in light (look C), by the table's particle style: every style that isn't characters by
+// nature (PARTICLES keeps those: 1s and 0s, ◇ shards, garbage, drips, +). Each: (n, recipe, points, ctx, entry) → light
+// items (abilitylight.mjs), in real ms (ctx.RT turns the table's ms into them). A flame keeps a few of its characters.
+export const LIGHT = {
+  // The shock where it lands: a ring rolling out flat along the part's bar, wider for a bigger hit.
+  shock(n, R, P, c) { return [{ kind: 'ring', x: P.S.x, y: P.S.y, t0: c.RT(c.t0), rx: Math.min((P.bar.r - P.bar.l) * 0.75, 50 + 90 * c.power + (c.crit ? 30 : 0)), ry: 5 + 5 * c.power, dur: 360, w: 1.3 + c.power }]; },
+  // A quake: two rings running the bar's length.
+  quake(n, R, P, c) { return [0, 1].map((i) => ({ kind: 'ring', x: P.S.x, y: P.S.y, t0: c.RT(c.t0) + i * 60, rx: (P.bar.r - P.bar.l) * (0.55 + 0.2 * i), ry: 5, dur: 340, w: 1.2 })); },
+  // Dust kicked up off the bar's line, either side of where it landed.
+  dust(n, R, P, c) { return [{ kind: 'puffs', list: throwN(c.rnd, Math.ceil(n / 2), { x: P.S.x, y: P.S.y - 2 }, c.RT(c.t0), { a0: 0, spread: 0.3, v: [50, 120], g: -40, drag: 3, life: [380, 520] }).map((q, i) => (i % 2 ? { ...q, vx: -q.vx } : q)) }]; },
+  // Sparks: streaks thrown out of where it went in.
+  spark(n, R, P, c) { return [{ kind: 'sparks', list: throwN(c.rnd, n, P.M, c.RT(c.t0), { a0: -Math.PI / 2, spread: Math.PI * 1.6, v: [90, 240], g: 600, drag: 4, life: [180, 320] }), w: 1 }]; },
+  // Water off a wave: drops thrown up that fall back.
+  splash(n, R, P, c) { return [{ kind: 'sparks', list: throwN(c.rnd, n, { x: P.M.x, y: P.M.y - 4 }, c.RT(c.t0), { a0: -Math.PI / 2, spread: 1.8, v: [80, 200], g: 700, drag: 2, life: [280, 420] }), w: 1.4 }]; },
+  // A flash of light where it lands.
+  flash(n, R, P, c) { return [{ kind: 'flash', x: P.M.x, y: P.M.y, t0: c.RT(c.t0), R: c.crit ? 34 : 26, dur: 220 }]; },
+  // A mastery tier's glint where it landed.
+  glint(n, R, P, c) { return Array.from({ length: n }, (_, i) => ({ kind: 'glint', x: P.M.x + (i ? (c.rnd() - 0.5) * 30 : 0), y: P.M.y, t0: c.RT(c.t0) + 25 + i * 20, s: 10, dur: 190 })); },
+  // The echo coming back: rings spreading round the part's name.
+  ring(n, R, P, c) { return Array.from({ length: n }, (_, i) => ({ kind: 'ring', x: P.M.x, y: P.M.y, t0: c.RT(c.t0) + i * 55, rx: 26 + 14 * i, ry: 8 + 3 * i, dur: 300, w: 1.4 })); },
+  // The echo off every other part on the board (none there: a bigger one off the part itself).
+  echoes(n, R, P, c) {
+    const others = P.parts.filter((q) => Math.hypot(q.M.x - P.M.x, q.M.y - P.M.y) > 8).slice(0, 5);
+    const spots = others.length ? others.map((q) => ({ M: q.M, lag: 90 + Math.min(160, Math.hypot(q.M.x - P.M.x, q.M.y - P.M.y) * 0.6) })) : [{ M: P.M, lag: 160 }];
+    return spots.flatMap(({ M, lag }) => Array.from({ length: n }, (_, i) => ({ kind: 'ring', x: M.x, y: M.y, t0: c.RT(c.t0 + lag) + i * 45, rx: 24 + 12 * i, ry: 7 + 3 * i, dur: 260, w: 1.2 })));
+  },
+  // Cinders: points of light flying up off a fire.
+  cinder(n, R, P, c) { return [{ kind: 'embers', list: throwN(c.rnd, n, { x: P.S.x, y: P.S.y - 6 }, c.RT(c.t0) + 40, { a0: -Math.PI / 2, spread: 1.2, v: [60, 150], g: -40, drag: 1.5, life: [300, 480], jit: 200, xs: (P.bar.r - P.bar.l) * 0.7 }) }]; },
+  // Flames: a fire running out along the part's bar from where it landed (your bar: along the wall's top), standing up
+  // and dying down. Tagged burns it taller and hotter, embers flying off. A burn runs down: lower as its ticks run out
+  // (c.left), and its last tick gutters, short, its embers falling; Keepalive (stoke) flares it up.
+  flame(n, R, P, c) {
+    const you = R.on === 'you', x0 = you ? P.wall?.l ?? P.bar.l : P.bar.l, w = you ? (P.wall ? P.wall.r - P.wall.l : P.bar.r - P.bar.l) : P.bar.r - P.bar.l;
+    const last = c.left === 0, runs = c.left == null ? 1 : last ? 0.45 : 0.45 + (0.55 * Math.min(3, c.left)) / 3;
+    const base = you ? P.top ?? P.bar.t : P.S.y - 2, tn = Math.max(6, Math.round(w / 22)), H = (you ? 15 : n >= 30 ? 26 : n >= 12 ? 22 : 18) * (c.tagged ? 1.4 : 1) * runs * (R.stoke ? 1.5 : 1);
+    const t0 = c.RT(c.t0), span = c.RT(Math.max(120, R.dur - (c.t0 - c.arrive))), rise = Math.min(R.stoke ? 150 : last ? 60 : 110, span * 0.25), fall = Math.max(120, (span - rise - 30) * (last ? 0.6 : 1));
+    const out = [{ kind: 'fire', x0, w, base, n: tn, from: Math.max(x0, Math.min(x0 + w, P.S.x)), run: 900, H, ph: firePhases(c.rnd, tn), t0, rise, fall }];
+    if (c.tagged) out.push({ kind: 'embers', list: throwN(c.rnd, 10, { x: P.S.x, y: base - 4 }, t0 + 30, { a0: -Math.PI / 2, spread: 1.4, v: [50, 150], g: -60, drag: 1.5, life: [300, 460], jit: 200, xs: w * 0.8 }) });
+    if (last) out.push({ kind: 'embers', list: throwN(c.rnd, 7, { x: P.S.x, y: base - 8 }, t0 + rise, { a0: -Math.PI / 2, spread: 2.4, v: [20, 60], g: 260, drag: 1.5, life: [300, 420], jit: 120, xs: w * 0.7 }) }, { kind: 'puffs', list: throwN(c.rnd, 2, { x: P.S.x, y: base - 6 }, t0 + rise + 40, { a0: -Math.PI / 2, spread: 0.6, v: [20, 40], g: -30, drag: 1, life: [360, 460], xs: w * 0.4 }) });
+    return out;
+  },
+};
+
+// A light item as n small even beats (the Operator's rhythm): a flash or a ring n smaller ones PULSE ms apart, a spray split
+// between them; anything else as it was.
+function pulsed(it, n) {
+  if (it.list) return Array.from({ length: n }, (_, k) => ({ ...it, list: it.list.filter((_, i) => i % n === k).map((q) => ({ ...q, t0: q.t0 + k * PULSE })) })).filter((x) => x.list.length);
+  if (it.kind === 'flash') return Array.from({ length: n }, (_, k) => ({ ...it, t0: it.t0 + k * PULSE, R: it.R * 0.6, dur: it.dur * 0.8 }));
+  if (it.kind === 'ring') return Array.from({ length: n }, (_, k) => ({ ...it, t0: it.t0 + k * PULSE, rx: it.rx * (0.55 + 0.45 * (k + 1) / n), ry: it.ry * (0.6 + 0.4 * (k + 1) / n), dur: it.dur * 0.75, w: (it.w || 2) * 0.8 }));
+  return [it];
+}
+// A piece's afterimage: lag ms behind it, fainter (f), gone by the time it makes contact.
+function ghost(el, at, lag, f) {
+  const g = { ...el, cls: el.cls + ' ghost', delay: el.delay + lag, ghost: true };
+  g.keys = el.keys.map((k) => ({ ...k, o: el.delay + k.at * el.dur >= at - 0.5 ? 0 : k.o * f }));
+  return g;
+}
+// The same piece burning white-hot from the moment it makes contact, cooling over 220 ms.
+function hotCopy(el, at) {
+  const h = { ...el, cls: el.cls + ' hot' };
+  h.keys = el.keys.map((k) => { const ms = el.delay + k.at * el.dur; return { ...k, o: Math.min(k.o, ms < at - 0.5 ? 0 : Math.max(0, 0.9 - (ms - at) / 220)) }; });
+  return h;
+}
+// A hit-stop: a piece that is moving at `at` holds still there for `stop` ms; one that starts after it starts later.
+function warp(el, at, stop) {
+  if (el.delay >= at - 0.5) { el.delay += stop; return el; }
+  const ms = (k) => el.delay + k.at * el.dur;
+  if (ms(el.keys[el.keys.length - 1]) <= at + 0.5) return el;
+  let ks = el.keys.map((k) => ({ ...k, ms: ms(k) }));
+  let i = ks.findIndex((k) => Math.abs(k.ms - at) < 1);
+  if (i < 0) { i = ks.findIndex((k) => k.ms > at); const { e, ...k } = keyAt(el, (at - el.delay) / el.dur); ks.splice(i, 0, { ...k, ms: at }); }
+  const { e, ...still } = ks[i];
+  ks = [...ks.slice(0, i), still, { ...still, ms: at + stop, ...(e ? { e } : {}) }, ...ks.slice(i + 1).map((k) => ({ ...k, ms: k.ms + stop }))];
+  el.dur = ks[ks.length - 1].ms - el.delay;
+  el.keys = ks.map(({ ms: m, ...k }) => ({ ...k, at: (m - el.delay) / el.dur }));
+  return el;
+}
+
 // ---------- the layout ----------
-// A recipe on a board → { els, impact, dur, travel, from }, or null if it can't play there (no part, no bar of yours).
-// opts: lvl ('full' | 'calm'), power (0–1), crit, result ('hit' | 'crit' | 'chit'), kind ('you' | 'crew'), rnd,
-// origin ('key' | 'bar' | 'here').
-export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result = 'hit', kind = 'you', rnd = Math.random, origin = 'bar' } = {}) {
+// A recipe on a board → { els, light, tone, impact, dur, travel, from }, or null if it can't play there (no part, no bar
+// of yours). opts: lvl ('full' | 'calm'), power (0–1), crit, result ('hit' | 'crit' | 'chit' | 'miss'), kind ('you' |
+// 'crew'), rnd, origin ('key' | 'bar' | 'here'), marks (the statuses the hit cashed in: exposed, quarantined, hooked,
+// tagged), cadence (its class's rhythm: CADENCE), left (a burn's tick: the ticks after this one). els: the pieces (on
+// the page as spans); light: what is drawn in light (abilitylight.mjs), in tone.
+export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result = 'hit', kind = 'you', rnd = Math.random, origin = 'bar', marks = [], cadence: cad = null, left = null, broke = null, results = null, brokeOn = null } = {}) {
   if (!R || !lvl || !geo) return null;
-  const P = pointsOf(R, geo, origin);
+  if (cad?.wind && R.motion === 'mark' && R.on !== 'you') R = { ...R, drop: true }; // the Breaker's marks slam down
+  if (crit) result = 'crit';
+  const P = pointsOf(R, geo, origin, result);
   if (!P) return null;
-  const travels = TRAVELS.has(R.motion), T = P.T;
-  // A hit that travels lands land ms after it arrives; one that plays where it lands starts when the streak gets there.
-  const arrive = T, impact = T + (R.land || 0);
-  const c = { lvl, power: Math.max(0, Math.min(1, power)), crit, rnd, t0: impact, arrive, grow: 1 + Math.min(1, power) * 0.12 };
-  const tint = kind === 'crew' ? ' crew' : crit ? ' crit' : R.tone === 'steel' ? ' chit' : '';
-  let els = (MOTIONS[R.motion] || MOTIONS.none)(R, P, c);
+  if (cad?.travel && P.T) P.T = Math.round(P.T * cad.travel); // the Infiltrator gets there faster
+  const travels = TRAVELS.has(R.motion), T = P.T, miss = result === 'miss', chit = result === 'chit', contact = CONTACT.has(R.motion) || (LANDS.has(R.motion) && R.on !== 'you') || (R.motion === 'none' && R.on !== 'you' && P.from !== 'here'); // a burn catches where it lands (its ticks keep their own time)
+  // A hit that travels lands land ms after it arrives (a crit's swing or punch draws back first); one that plays where
+  // it lands starts when the comet gets there.
+  const winds = WINDS.has(R.motion), hold = winds && result === 'crit' ? HOLD : winds && !miss && cad?.wind ? cad.wind : 0; // a crit draws back; the Breaker always does
+  const arrive = T, impact = T + hold + (R.land || 0), RT = (ms) => ms / SPEED;
+  const c = { lvl, power: Math.max(0, Math.min(1, power)), crit, rnd, t0: impact, arrive, grow: 1 + Math.min(1, power) * 0.12, hold, result, RT, light: [], tagged: marks.includes('tagged'), at: null, left, broke, results, slam: R.on === 'you' ? cad?.wind || 0 : 0 };
+  const tint = kind === 'crew' ? ' crew' : crit && !results ? ' crit' : R.tone === 'steel' ? ' chit' : '';
+  const tone = kind === 'crew' ? 'crew' : crit ? 'crit' : R.tone === 'steel' ? 'steel' : 'you';
+  // A miss: what plays where it lands never does (only the comet that would have taken it there).
+  let els = miss && !travels && R.motion !== 'clamp' && R.motion !== 'slash' ? [] : (MOTIONS[R.motion] || MOTIONS.none)(R, P, c);
+  if (contact && !c.at && R.motion === 'none') c.at = { x: P.S.x, y: P.S.y };
+  const at = c.at, light = c.light;
   if (!travels) {
     for (const el of els) el.delay += arrive;
-    if (T > 0) els = [...streak(P, c), ...els];
+    if (T > 0) light.push(comet(P, c));
   }
+  // A piece that makes contact leaves afterimages on its way (bold only; a tier's own trail stands in for them) and burns
+  // white-hot where it hits.
+  if (contact) els = [...(lvl === 'full' && !R.trail && travels && R.motion !== 'bolt' ? els.flatMap((el) => (/\becho\b/.test(el.cls) ? [] : [ghost(el, el.hitAt ?? impact, 22, 0.3), ghost(el, el.hitAt ?? impact, 45, 0.2), ghost(el, el.hitAt ?? impact, 67, 0.12)])) : []), ...els, ...(miss ? [] : els.filter((el) => !/\becho\b/.test(el.cls) && el.res !== 'miss').map((el) => hotCopy(el, el.hitAt ?? impact)))];
   els.forEach((el) => { el.cls += tint; });
-  const ptint = (el) => kind === 'crew' ? ' crew' : result === 'chit' && !/\bflame\b|\brise\b/.test(el.cls) ? ' chit' : crit ? ' crit' : R.tone === 'steel' ? ' chit' : '';
+  const ptint = (el) => kind === 'crew' ? ' crew' : chit && !/\bflame\b|\brise\b/.test(el.cls) ? ' chit' : crit ? ' crit' : R.tone === 'steel' ? ' chit' : '';
   const bright = R.bright ? ' bright' : ''; // a mastery tier 3's particles burn brighter (under any tint)
+  // What flies where it lands: in light where its style is (LIGHT; none of it on ◆, where the bar is untouched), else
+  // characters.
+  const throwIt = (b, n, R2, P2, t0, res = result) => {
+    if (b.steel && broke != null) n = Math.round((n * broke) / 3); // ◆ shards: as many as it broke
+    if (!n || res === 'miss') return;
+    if (LIGHT[b.style]) {
+      if (res !== 'chit') light.push(...LIGHT[b.style](n, R2, P2, { ...c, t0 }, b));
+      if (b.style !== 'flame') return;
+      n = Math.max(2, Math.round(n / 5));
+    }
+    for (const el of PARTICLES[b.style](n, R2, P2, { ...c, t0 }, b)) { el.cls += bright + ptint(el); els.push(el); }
+  };
   for (const b of R.burst || []) {
     const n = countOf(b, { lvl, power, crit });
-    if (!n) continue;
     // On every part (all): a share of it each, when its copy arrives.
-    const spots = R.motion === 'all' && P.parts.length ? P.parts.slice(0, 6).map((q, i) => ({ P: { ...P, S: q.S, M: q.M, bar: q.bar, row: q.row, floor: q.name.b + 1 }, t0: i * 40 + Math.max(1, travelOf(P.O, q.M)) + (R.land || 0), n: Math.max(1, Math.round(n / 2)) })) : [{ P, t0: impact, n }];
-    for (const s of spots) {
-      for (const el of PARTICLES[b.style](s.n, R, s.P, { ...c, t0: s.t0 }, b)) {
-        el.cls += bright + ptint(el);
-        els.push(el);
-      }
-    }
+    const spots = R.motion === 'all' && P.parts.length ? P.parts.slice(0, 6).map((q, i) => ({ P: { ...P, S: q.S, M: q.M, bar: q.bar, row: q.row, floor: q.name.b + 1 }, t0: i * 40 + Math.max(1, travelOf(P.O, q.M)) + (R.land || 0), n: Math.max(1, Math.round(n / 2)), res: resultOn(c, q) })) : [{ P, t0: impact, n, res: result }];
+    for (const sp of spots) throwIt(b, sp.n, R, sp.P, sp.t0, sp.res);
   }
   // A mastery tier's beats: more pieces where it landed, after the impact (bold only: a flourish).
-  for (const B of lvl === 'full' ? R.beats || [] : []) {
+  for (const B of lvl === 'full' && !miss ? R.beats || [] : []) {
     const R2 = { ...R, burst: [], beats: null, land: 0, ...B }, shift = (p) => p && { x: p.x + (B.dx || 0), y: p.y + (B.dy || 0) };
     const P2 = B.dx || B.dy ? { ...P, M: shift(P.M), S: shift(P.S), D: shift(P.D) } : P;
-    const at = impact + (B.at || 0);
-    for (const el of (MOTIONS[B.motion] || MOTIONS.none)(R2, P2, c)) { el.delay += at; el.cls += tint; els.push(el); }
-    for (const b of B.burst || []) for (const el of PARTICLES[b.style](countOf(b, { lvl, power, crit }), R2, P2, { ...c, t0: at + (B.land || 0) }, b)) { el.cls += bright + ptint(el); els.push(el); }
+    const t0 = impact + (B.at || 0);
+    for (const el of (MOTIONS[B.motion] || MOTIONS.none)(R2, P2, c)) { el.delay += t0; el.cls += tint; els.push(el); }
+    for (const b of B.burst || []) throwIt(b, countOf(b, { lvl, power, crit }), R2, P2, t0 + (B.land || 0));
   }
+  // Where it makes contact, by how it went: on ◆ a clang in steel at the ◆ (the bar untouched); else a flash, a hammer's
+  // cracks along the bar (bold), a ram's pressure ring, a needle's glint; a crit rings the whole bar and gathers first.
+  const tc = RT(impact), big = c.power;
+  // Each ◆ it broke takes a strike of its own, in steel, a beat apart: where it is on the part's row of ◆ (a hit spent on
+  // ◆ with no count: the one it hit).
+  const C = P.chits, first = C?.n ? Math.max(0, Math.min(C.i, C.n - (broke || 1))) : 0, slot = (k) => (C?.n ? { x: C.l + ((Math.min(C.n - 1, first + k) + 0.5) * (C.r - C.l)) / C.n, y: C.y } : at);
+  const ticks = miss || !contact ? [] : broke > 0 ? Array.from({ length: broke }, (_, k) => slot(k)) : chit && at ? [at] : [];
+  ticks.forEach((q, k) => {
+    const t0 = tc + k * (cad?.pulses ? PULSE : 70), big = k === 0 && chit;
+    light.push({ kind: 'flash', x: q.x, y: q.y, t0, R: big ? 16 : 12, dur: 200, tone: 'steel', contact: k === 0 },
+      { kind: 'ring', x: q.x, y: q.y, t0, rx: big ? 18 : 12, ry: big ? 18 : 12, dur: 260, w: 1.4, tone: 'steel' },
+      { kind: 'sparks', list: throwN(rnd, lvl === 'full' ? (big ? 12 : 6) : 3, q, t0, { a0: -Math.PI / 2 - 0.2, spread: Math.PI * 0.7, v: [140, 320], g: 1300, drag: 3, life: [160, 280] }), w: 1, tone: 'steel' });
+    if (big) light.push({ kind: 'ring', x: q.x, y: q.y, t0: tc + 50, rx: 30, ry: 30, dur: 260, w: 1, tone: 'steel' });
+  });
+  if (contact && at && !miss) {
+    if (chit) {
+      /* the ◆ strikes above */
+    } else {
+      if (!(R.burst || []).some((b) => b.style === 'flash')) light.push({ kind: 'flash', x: at.x, y: at.y, t0: tc, R: crit ? 30 : 16 + 10 * big, dur: 200, contact: true });
+      if ((R.motion === 'swing' || (R.motion === 'bolt' && crit)) && lvl === 'full' && (crit || big >= 0.25)) {
+        const mains = crit ? [[Math.PI + 0.03, Math.max(20, at.x - P.bar.l + 4)], [-0.03, Math.max(20, P.bar.r - at.x + 4)], [-Math.PI / 2 - 0.5, 18]] : [[Math.PI + 0.05, 24 + 60 * big], [-0.05, 28 + 64 * big], [-Math.PI / 2 - 0.5, 14]];
+        light.push({ kind: 'cracks', net: crackNet(rnd, at.x, at.y, mains), t0: tc, grow: crit ? 120 : 90, life: crit ? 500 : 400 });
+      }
+      if (R.motion === 'punch') light.push({ kind: 'ring', x: at.x - 4, y: at.y, t0: tc, rx: 10, ry: 24 + 8 * big, dur: 240, w: 2 });
+      if (R.motion === 'dart') light.push({ kind: 'glint', x: at.x, y: at.y, t0: tc, s: 11, dur: 180, contact: true }, { kind: 'ring', x: at.x, y: at.y, t0: tc, rx: 14, ry: 14, dur: 220, w: 1.2 });
+      if (crit) light.push({ kind: 'ring', x: P.S.x, y: P.S.y, t0: tc + 70, rx: (P.bar.r - P.bar.l) * 0.7, ry: 7, dur: 360, w: 1.2 });
+    }
+    if (crit && !hold) light.push({ kind: 'glint', x: at.x, y: at.y - 2, t0: tc - 70, s: 12, dur: 85, tone: 'crit' }); // it gathers
+  } else if (chit && !miss) light.push({ kind: 'ring', x: P.M.x, y: P.M.y, t0: tc, rx: 20, ry: 20, dur: 280, w: 1.4, tone: 'steel' });
+  // A crit that resets its cooldown (Overload) runs back to its key, and the key glints.
+  if (crit && R.critBack && at && P.from === 'key') {
+    const t1 = tc + 20, t2 = t1 + Math.max(140, RT(P.T));
+    light.push({ kind: 'comet', a: at, b: P.O, lift: -16, t1, t2, R0: 3.2, tone: 'crit' }, { kind: 'glint', x: P.O.x, y: P.O.y, t0: t2 - 10, s: 13, dur: 220, tone: 'crit' });
+  }
+  // An ability's own rule, shown.
+  // spread: it carries on from the part to every other (Shatter's shards in steel, Chain Reaction, Wormable): a spark
+  // jumps to each, nearest first, a beat apart, a small flash where it lands. 'burns' (Propagate): each part catches
+  // fire as its spark lands.
+  if (R.spread && at && !miss) {
+    const others = P.parts.filter((q) => Math.hypot(q.M.x - at.x, q.M.y - at.y) > 8).sort((a, b) => Math.hypot(a.M.x - at.x, a.M.y - at.y) - Math.hypot(b.M.x - at.x, b.M.y - at.y)).slice(0, 5);
+    others.forEach((q, k) => {
+      const t1 = tc + 90 + k * 80, t2 = t1 + 130, tone = R.spread === 'steel' ? 'steel' : undefined;
+      light.push({ kind: 'comet', a: at, b: q.M, lift: 18, t1, t2, R0: 2.4, tone }, { kind: 'flash', x: q.M.x, y: q.M.y, t0: t2, R: 11, dur: 170, tone }, { kind: 'ring', x: q.M.x, y: q.M.y, t0: t2, rx: 12, ry: 8, dur: 220, w: 1, tone });
+      if (R.spread === 'burns') for (const b of R.burst || []) throwIt(b, countOf(b, { lvl, power, crit }), R, { ...P, S: q.S, M: q.M, bar: q.bar, row: q.row, floor: q.name.b + 1 }, t2 * SPEED);
+    });
+  }
+  // breaksAll: it breaks up to that many ◆ on every part (Fork Bomb; brokeOn: how many each part lost, by id): each
+  // part's ◆ take their steel strikes as its copy arrives, a beat apart.
+  if (R.breaksAll && R.motion === 'all') P.parts.slice(0, 6).forEach((q, i) => {
+    const C2 = q.chits, res = resultOn(c, q);
+    if (!C2?.n || res === 'miss') return;
+    const nb = Math.min(brokeOn ? brokeOn[q.id] || 0 : R.breaksAll, C2.n), f0 = Math.max(0, Math.min(C2.i, C2.n - nb)), t0 = RT(i * 40 + Math.max(1, travelOf(P.O, q.M)));
+    for (let k = 0; k < nb; k++) {
+      const x = C2.l + ((f0 + k + 0.5) * (C2.r - C2.l)) / C2.n;
+      light.push({ kind: 'flash', x, y: C2.y, t0: t0 + k * 60, R: 10, dur: 180, tone: 'steel', contact: true }, { kind: 'sparks', list: throwN(rnd, 4, { x, y: C2.y }, t0 + k * 60, { a0: -Math.PI / 2, spread: Math.PI * 0.7, v: [120, 260], g: 1300, drag: 3, life: [150, 250] }), w: 1, tone: 'steel' });
+    }
+  });
+  // cuts: it stops the part's attack: a line of light pulled tight through its attack chip, held a moment.
+  if (R.cuts && P.chip && !miss) { const y = (P.chip.t + P.chip.b) / 2; light.push({ kind: 'tether', from: { x: P.chip.l - 4, y: y + 3 }, to: { x: P.chip.r + 4, y: y - 3 }, t0: tc + 60, dur: 520 }); }
+  // heals: your bar takes it: a light runs along your bar from its left end (a hit that heals, Reclaim: from the part
+  // back to your bar first).
+  const yb = geo.mine?.bar;
+  if (R.heals && yb && !miss) {
+    const back = R.on !== 'you' && at, t1 = back ? tc + 80 : tc + 40, t2 = t1 + (back ? 220 : 0), y = (yb.t + yb.b) / 2;
+    if (back) light.push({ kind: 'comet', a: at, b: { x: yb.l + 20, y }, lift: 30, t1, t2, R0: 3 });
+    light.push({ kind: 'comet', a: { x: yb.l, y }, b: { x: yb.l + (yb.r - yb.l) * 0.7, y }, lift: 0, t1: t2, t2: t2 + 260, R0: 3 }, { kind: 'glint', x: yb.l + (yb.r - yb.l) * 0.7, y, t0: t2 + 240, s: 10, dur: 180 });
+  }
+  // What it does to the part's attack (Rate Limit throttles it): brackets snap onto its attack chip.
+  if (R.onto === 'chip' && P.chip && !miss) light.push({ kind: 'brackets', box: P.chip, t0: tc + 110, dur: 460 });
+  // A mark that misses: a puff where it would have come down.
+  if (miss && R.motion === 'mark') light.push({ kind: 'puffs', list: throwN(rnd, 4, P.M, tc, { a0: -Math.PI / 2, spread: 2.4, v: [30, 70], g: -20, drag: 2, life: [300, 420] }) });
+  // A status cashing in: its mark glows and does its part where the hit lands.
+  const hitAt = at || P.M, mk = (k) => P.marks?.[k] || null;
+  const glow = (k, t0) => { const m = mk(k); if (m) light.push({ kind: 'halo', box: m, t0, dur: 320 }); };
+  if (!miss && R.on !== 'you') {
+    if (marks.includes('exposed') && crit) { // the crosshair flies off its mark and closes on the hit
+      const m = mk('exposed');
+      light.push({ kind: 'cross', from: m ? mid(m) : { x: hitAt.x + 30, y: P.name.t - 14 }, to: hitAt, t0: Math.max(0, tc - 160), t1: tc, t2: tc + 240 });
+      glow('exposed', Math.max(0, tc - 180));
+    }
+    if (marks.includes('quarantined')) { light.push({ kind: 'brackets', box: P.name, t0: tc, dur: 380, contact: true }); glow('quarantined', tc); }
+    if (marks.includes('hooked')) { const m = mk('hooked'); light.push({ kind: 'tether', from: m ? mid(m) : { x: P.name.l, y: P.M.y }, to: hitAt, t0: tc + 30, dur: 320 }); glow('hooked', tc); }
+    if (c.tagged) glow('tagged', tc);
+  }
+  // The hit-stop: what makes contact holds there; what flies goes after it (the flash at contact shows through it).
+  // The Breaker stops dead (longer, and on every hit); the Infiltrator hardly stops.
+  let stop = contact ? stopOf(result, c.power) : 0;
+  if (contact && !miss && cad?.stop) stop = cad.stop > 1 ? Math.round(Math.max(30, stop * cad.stop)) : Math.round(stop * cad.stop);
+  if (stop) els = els.map((el) => (el.ghost || el.res === 'miss' || (R.motion === 'all' && el.hitAt == null) ? el : warp(el, el.hitAt ?? impact, stop))); // on every part: each copy holds at its own; what it throws keeps its time // an afterimage is gone by contact
+  // The Infiltrator's impact spreads out after it goes in: a slow ring from where it went in, what it throws a beat late.
+  const bloom = cad?.bloom && contact && at && !miss ? 50 : 0;
+  if (bloom) light.push({ kind: 'ring', x: at.x, y: at.y, t0: tc + 40, rx: 46, ry: 13, dur: 480, w: 1 });
+  let lights = stop || bloom ? light.map((it) => (it.contact ? it : it.kind === 'cross' ? { ...it, t2: it.t2 + RT(stop) } : lightStart(it) >= tc - 0.5 ? lightLater(it, RT(stop) + bloom) : it)) : light;
+  // The Operator's impact comes in even beats: each flash, ring and spray it throws split into small ones, PULSE apart.
+  if (cad?.pulses > 1 && !miss) lights = lights.flatMap((it) => (it.contact || lightStart(it) < tc - 0.5 ? [it] : pulsed(it, cad.pulses)));
+  // The Bastion's piece stays up a beat once it has landed, where it rests (as long as it still ends by CAP).
+  if (cad?.linger && !miss) els = els.map((el) => { if (el.ghost || !/^art\b/.test(el.cls) || /\bhot\b/.test(el.cls)) return el; const ms = el.keys.map((k) => el.delay + k.at * el.dur), j = el.keys.findLastIndex((k, i) => i < el.keys.length - 1 && k.o >= 0.9), room = Math.min(cad.linger, CAP - (el.delay + el.dur)); return j > 0 && room > 10 && ms[j] >= impact - 0.5 ? warp(el, ms[j], room) : el; });
   // Every piece is gone by CAP and ends unseen: nothing stays behind (one that would start after it never does).
   els = els.filter((el) => el.delay < CAP - 1);
   for (const el of els) {
     if (el.delay + el.dur > CAP) el.dur = Math.max(1, CAP - el.delay);
     el.keys[el.keys.length - 1].o = 0;
   }
-  // Played SPEED times as fast (keys are fractions of each piece's own time, so they keep their shape).
+  lights = lights.map((it) => capped(it, RT(CAP))).filter(Boolean);
+  // Played SPEED times as fast (keys are fractions of each piece's own time, so they keep their shape; light is in real
+  // ms already).
   for (const el of els) { el.delay /= SPEED; el.dur /= SPEED; if (el.fms) el.fms /= SPEED; }
-  return { els, impact: impact / SPEED, travel: T / SPEED, from: P.from, dur: Math.max(...els.map((e) => e.delay + e.dur)) };
+  if (!els.length && !lights.length) return null;
+  return { els, light: lights, tone, impact: tc, stop: RT(stop), travel: RT(T), hold: RT(hold), from: P.from, dur: Math.max(0, ...els.map((e) => e.delay + e.dur), ...lights.map(endOf)) };
 }
 
-// ---------- break finishers ----------
-// The longest a finisher plays (ms): every piece is gone by then.
-export const FIN_CAP = 900;
-// A class's finisher, with its subclass's variation (a subclass of another class changes nothing), or null.
-export function finisherOf(cls, sub = null) {
-  const F = Object.hasOwn(FINISHERS, cls) ? FINISHERS[cls] : null;
-  if (!F) return null;
-  return SUBS[sub]?.cls === cls && SUB_FINISHERS[sub] ? { ...F, ...SUB_FINISHERS[sub], sub } : F;
-}
+// ---------- the winning break ----------
 // The break that wins the fight in a batch of events: the last part broken before its victory (a C2 node's fragments
-// dropping with it aside), and only if it was yours; else null.
-export function finisherBreak(events) {
+// dropping with it aside), and only if it was yours; else null. It plays in slow motion (app.js slowmo).
+export function winningBreak(events) {
   const won = (events || []).findIndex((e) => e?.type === 'victory');
   for (let i = won - 1; i >= 0; i--) {
     const e = events[i];
@@ -711,85 +1027,9 @@ export function finisherBreak(events) {
   }
   return null;
 }
-// Every piece kept on the part's row: a key whose box (turned or not: its widest) pokes out of the row is moved in.
-function confine(el, box) {
-  const turns = el.keys.some((k) => (k.r || 0) !== (el.keys[0].r || 0)); // a turn between keys can poke out mid-way: its widest
-  for (const k of el.keys) {
-    const q = boxAt(el, k), cx = (q.l + q.r) / 2, cy = (q.t + q.b) / 2;
-    const half = turns ? { x: (Math.hypot(el.w, el.h) * (k.s ?? 1)) / 2, y: (Math.hypot(el.w, el.h) * (k.s ?? 1)) / 2 } : { x: (q.r - q.l) / 2, y: (q.b - q.t) / 2 };
-    const dx = cx - half.x < box.l ? box.l - (cx - half.x) : cx + half.x > box.r ? box.r - (cx + half.x) : 0;
-    const dy = cy - half.y < box.t ? box.t - (cy - half.y) : cy + half.y > box.b ? box.b - (cy + half.y) : 0;
-    k.x += dx; k.y += dy;
-  }
-  el.x = el.keys[0].x; el.y = el.keys[0].y;
-  return el;
-}
-// Each: (finisher, points, ctx) → its pieces, on the part's row (P.row), from 0 (the break).
-export const FIN_MOTIONS = {
-  // Shards: the part's name splits into shards that scatter along its row both ways, spinning (a blast at its middle
-  // too, for the Demolitionist).
-  shatter(F, P, c) {
-    const out = [], n = c.lvl === 'full' ? 22 : 11, nm = P.name;
-    for (let i = 0; i < n; i++) {
-      const size = F.size + Math.round(c.rnd() * 3), x0 = nm.l + (nm.r - nm.l) * c.rnd() - (size * CW) / 2, y0 = (nm.t + nm.b) / 2 - (size * LH) / 2 + (c.rnd() - 0.5) * 8;
-      const side = x0 + (size * CW) / 2 < (nm.l + nm.r) / 2 ? -1 : 1, d = 40 + c.rnd() * 150, at = c.rnd() * 60, life = 480 + c.rnd() * 260;
-      out.push(mote('p shard', pick(F.chars, c.rnd), size, x0, y0, at, life, [{ at: 0, x: x0, y: y0, o: 1, s: 1, e: OUT }, { at: 0.55, o: 0.9 }, { at: 1, x: x0 + side * d, y: y0 + (c.rnd() - 0.5) * 18, o: 0, r: (c.rnd() - 0.5) * 540, s: 0.7 }]));
-    }
-    if (F.blast && c.lvl === 'full') { const el = framed('art', { frames: RECIPES.detonate.frames, fms: 90 }, 14); out.push(track(el, 30, [{ t: 0, ...ctrAt(el, P.M), s: 0.7, o: 0 }, { t: 30, o: 1 }, { t: 200, s: 1.15 }, { t: 420, s: 1.3, o: 0 }])); }
-    return out;
-  },
-  // A seal: a stamp comes down on the part's name, tilted, thuds, holds a moment and fades.
-  seal(F, P, c) {
-    const el = piece('art seal', [F.word], F.size, {}), at = ctrAt(el, P.M), L = F.land, D = F.dur;
-    return [track(el, 0, [{ t: 0, ...at, s: 1.7, r: -6, o: 0, e: IN }, { t: L, s: 1, o: 1, e: OUT }, { t: L + 50, s: 1.06 }, { t: L + 120, s: 1 }, { t: D - 220, o: 1 }, { t: D, o: 0, s: 1.02 }])];
-  },
-  // The part's name falls apart into 1s and 0s: a grid of them over its name lit left to right, each dropping away.
-  dissolve(F, P, c) {
-    const out = [], nm = P.name, size = F.size, w = size * CW, h = size * LH;
-    const cols = Math.max(6, Math.floor((nm.r - nm.l) / w)), rows = Math.max(1, Math.min(2, Math.round((nm.b - nm.t) / h)));
-    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
-      if (c.lvl !== 'full' && (i + j) % 2) continue;
-      const x0 = nm.l + i * w, y0 = nm.t + (nm.b - nm.t - rows * h) / 2 + j * h, lit = (i / cols) * 300 + c.rnd() * 40, life = 380 + c.rnd() * 180;
-      const fall = 6 + c.rnd() * 18, drift = (c.rnd() - 0.5) * 12;
-      out.push(mote('p bit', pick(F.chars, c.rnd), size, x0, y0, lit, life, [{ at: 0, x: x0, y: y0, o: 0 }, { at: 0.08, o: 1 }, { at: 0.3, o: 0.6 }, { at: 0.42, o: 1, y: y0 }, { at: 1, x: x0 + drift, y: y0 + fall, o: 0, s: 0.8 }]));
-    }
-    return out;
-  },
-  // Helpers walk in from both sides of the part's row, meet on its name and pop (a flash, or the subclass's piece).
-  converge(F, P, c) {
-    const out = [], n = c.lvl === 'full' ? F.count : Math.max(2, Math.ceil(F.count / 2)), L = F.land;
-    const left = P.row.l + 4, right = Math.min(P.row.r - 4, P.cell.r + 260);
-    for (let k = 0; k < n; k++) {
-      const el = pieceOf('art', F, F.size), fromLeft = k % 2 === 0, lane = Math.floor(k / 2);
-      const a = { x: fromLeft ? left : right - el.w, y: P.M.y - el.h / 2 + (lane % 2 ? 4 : -4) };
-      const b = { x: P.M.x - el.w / 2 + (fromLeft ? -1 : 1) * (6 + lane * el.w * 0.55), y: P.M.y - el.h / 2 };
-      const ks = [{ t: 0, ...a, o: 0 }];
-      for (let i = 1; i <= 6; i++) { const f = i / 6; ks.push({ t: L * f, x: lerp(a.x, b.x, f), y: lerp(a.y, b.y, f) - (i % 2 ? 3 : 0), o: 1 }); }
-      ks.push({ t: L + 60, s: 1.15, x: b.x, y: b.y }, { t: L + 160, s: 0.3, o: 0, x: P.M.x - el.w / 2, y: P.M.y - el.h / 2 });
-      out.push(track(el, k * 30, ks));
-    }
-    const pop = F.pop ? piece('art', [F.pop], 16, {}) : piece('p flash', ['*'], 22, {});
-    out.push(track(pop, L + 150, [{ t: 0, ...ctrAt(pop, P.M), s: 0.5, o: 0, e: OUT }, { t: 50, s: 1.25, o: 1 }, { t: F.pop ? 300 : 200, s: 1.5, o: 0 }]));
-    return out;
-  },
-};
-// A finisher on a board → { els, impact, dur }, or null (no part row). opts: lvl ('full' | 'calm'), rnd, kind.
-export function finisherLayout(F, geo, { lvl = 'full', rnd = Math.random, kind = 'you' } = {}) {
-  if (!F || !lvl || !geo?.part?.row) return null;
-  const P = pointsOf({ ...F, on: 'part' }, geo, 'here');
-  if (!P) return null;
-  const c = { lvl, power: 0.6, crit: false, rnd, t0: F.land || 0, arrive: 0, grow: 1 };
-  const els = (FIN_MOTIONS[F.motion] || MOTIONS.none)(F, P, c);
-  for (const b of F.burst || []) els.push(...PARTICLES[b.style](countOf(b, { lvl, power: 0.6 }), F, P, { ...c, t0: (F.land || 0) + (F.motion === 'converge' ? 150 : 0) }, b));
-  if (!els.length) return null;
-  for (const el of els) {
-    if (kind === 'crew') el.cls += ' crew';
-    confine(el, P.row);
-    if (el.delay + el.dur > FIN_CAP) el.dur = Math.max(1, FIN_CAP - el.delay);
-    el.keys[el.keys.length - 1].o = 0;
-  }
-  return { els, impact: F.land || 0, travel: 0, from: 'here', dur: Math.max(...els.map((e) => e.delay + e.dur)) };
-}
+// Slow motion's speed at ms into it: a quarter speed for SLOW.hold ms, then easing back to full by SLOW.dur.
+export const SLOW = { rate: 0.25, hold: 220, dur: 560 };
+export const slowAt = (ms) => (ms < SLOW.hold ? SLOW.rate : ms >= SLOW.dur ? 1 : SLOW.rate + ((1 - SLOW.rate) * (ms - SLOW.hold)) / (SLOW.dur - SLOW.hold));
 
 // ---------- on the page ----------
 // One layer over the whole page, fixed on <body> (as lash.mjs's is), placed at the board's corner and scaled with it,
@@ -801,6 +1041,14 @@ export function finisherLayout(F, geo, { lvl = 'full', rnd = Math.random, kind =
 //   crewText(): the crew window's names and numbers.
 export function createAbilityFx(board, { canMove = () => true, level = () => 'full', mineBar = () => document.querySelector('.hud-bar.mine .bigbar'), mineNums = () => document.querySelector('.hud-bar.mine .bar-top'), keyEl = (id) => document.querySelector(`#tray .ability[data-ability="${id}"]`), keys = () => [...document.querySelectorAll('#tray .ability')], mateBars = (who) => [...document.querySelectorAll('.pmate[data-mate] .pbar')].filter((x) => x.closest('.pmate')?.dataset.mate === who), crewText = () => [...document.querySelectorAll('.pmate b, .pmate small')] } = {}) {
   let layer = null;
+  // Its clock: light keeps its own (vnow), so slow motion (timeScale) slows it with the pieces.
+  const rnow = () => globalThis.performance?.now() ?? Date.now(), tm = { v: 0, at: rnow(), rate: 1 };
+  const vnow = () => tm.v + (rnow() - tm.at) * tm.rate;
+  function timeScale(r) {
+    if (r === tm.rate) return;
+    tm.v = vnow(); tm.at = rnow(); tm.rate = r;
+    for (const a of layer?.getAnimations?.({ subtree: true }) || []) a.playbackRate = r;
+  }
   const ground = (f) => {
     if (!layer?.isConnected) { layer = document.createElement('div'); layer.id = 'abilityfx'; layer.setAttribute('aria-hidden', 'true'); document.body.appendChild(layer); }
     Object.assign(layer.style, { left: f.box.left + 'px', top: f.box.top + 'px', transform: `scale(${f.scale})` });
@@ -815,12 +1063,34 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
   };
   const shows = (el) => { const r = el?.getBoundingClientRect(); return !!r && r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < (globalThis.innerHeight ?? Infinity); };
   const pad = (q) => q && { l: q.l - 1, t: q.t - 1, r: q.r + 1, b: q.b + 1 };
+  // A part's name can be out of sight: under the phone's dock or a toast, or scrolled off the screen. Its effect doesn't
+  // play over whatever covers it (the plain strike stands in, under the cover with the part).
+  const inSight = (row) => {
+    const r = row.querySelector('.bname')?.getBoundingClientRect();
+    if (!r?.width) return false;
+    const x = r.left + r.width / 2, y = r.top + r.height / 2;
+    if (y < 0 || y > (globalThis.innerHeight ?? Infinity)) return false;
+    const top = globalThis.document?.elementFromPoint?.(x, y);
+    // A row that the hit breaks is dying (style.css .dying: it takes no input, so the point finds what holds it): it is
+    // in sight when nothing but its own board is there, so the hit that breaks it plays its effect too.
+    return top === undefined || !!top && (row === top || !!row.contains?.(top) || (!!row.matches?.('.dying') && !!top.contains?.(row)));
+  };
   const rowGeo = (f, row) => {
-    const p = { row: local(f, row), cell: local(f, row.querySelector('.bname')), name: local(f, row.querySelector('.part-top')), bar: local(f, row.querySelector('.part-bar')) };
+    const p = { id: row.dataset?.target ?? null, row: local(f, row), cell: local(f, row.querySelector('.bname')), name: local(f, row.querySelector('.part-top')), bar: local(f, row.querySelector('.part-bar')) };
     if (!(p.row && p.cell && p.name && p.bar)) return null;
     // Its attack chip: an attack (its icon) or a tell, not a routine's cue, your command, a cut, a patch or a lock.
     const chip = [...row.querySelectorAll('.intent')].find((x) => (x.classList?.contains('tell') || x.querySelector?.('.ico')) && shows(x));
     p.chip = chip ? local(f, chip) : null;
+    // Its ◆ (view.mjs chitsMarkup: ◆ intact, then ◇ broken): a hit on armor lands on the one between them, the one it
+    // breaks (or broke: the board has redrawn by now).
+    const chits = row.querySelector('.chits');
+    if (chits && shows(chits)) {
+      const q = local(f, chits), txt = [...(chits.textContent || '')], n = txt.length || 1, i = Math.min(n - 1, txt.filter((ch) => ch === '◆').length);
+      p.chits = { x: q.l + ((i + 0.5) * (q.r - q.l)) / n, y: (q.t + q.b) / 2, b: q.b, l: q.l, r: q.r, n, i };
+    }
+    // Its status marks (view.mjs marksMarkup: .pmark.m-exposed…): where a status cashing in comes from.
+    p.marks = {};
+    for (const m of row.querySelectorAll('.pmark')) { const k = [...(m.classList || [])].find((x) => x.startsWith('m-')); if (k && shows(m)) p.marks[k.slice(2)] = local(f, m); }
     return p;
   };
   // The page as layout() reads it.
@@ -851,7 +1121,8 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
     const delay = el.delay + shift;
     const keys = el.keys.map((k) => ({ offset: k.at, opacity: k.o, transform: `translate(${k.x.toFixed(1)}px, ${k.y.toFixed(1)}px) rotate(${(k.r || 0).toFixed(1)}deg) scale(${(k.s ?? 1).toFixed(3)})`, ...(k.e ? { easing: k.e } : {}) }));
     try {
-      span.animate(keys, { duration: el.dur, delay, fill: 'forwards' }); // hidden (style.css .afx) until it starts
+      const an = span.animate(keys, { duration: el.dur, delay, fill: 'forwards' }); // hidden (style.css .afx) until it starts
+      an.playbackRate = tm.rate;
       // Frames: one copy each, stacked, shown in turn (every fms ms; over and over if it loops, else the last stays).
       const frames = el.frames?.length > 1 ? el.frames : [el.text];
       const n = frames.length;
@@ -862,8 +1133,9 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
         if (n < 2) return;
         const after = el.loop || i < n - 1 ? 0 : 1, before = i === 0 ? 1 : 0;
         f.animate([{ offset: 0, opacity: before }, { offset: i / n, opacity: before }, { offset: i / n, opacity: 1 }, { offset: (i + 1) / n, opacity: 1 }, { offset: (i + 1) / n, opacity: after }, { offset: 1, opacity: after }],
-          { duration: el.fms * n, delay, iterations: el.loop ? Math.ceil(el.dur / (el.fms * n)) : 1, fill: 'both' });
+          { duration: el.fms * n, delay, iterations: el.loop ? Math.ceil(el.dur / (el.fms * n)) : 1, fill: 'both' }).playbackRate = tm.rate;
       });
+      if (an.finished) { an.finished.then(() => span.remove(), () => span.remove()); return; } // in step with slow motion
     } catch { span.remove(); return; }
     setTimeout(() => span.remove(), Math.max(0, delay + el.dur) + 60);
   }
@@ -872,13 +1144,13 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
   // instead), noKey (as if its key weren't on screen: the playtest's preview of the fallback), landIn (ms from now its
   // number shows: it lands then), onImpact, tier (its mastery tier: tierRecipe).
   // Its plan (layout) on the page as it is now, without playing it: when it would land (app.js waits its numbers for it).
-  function plan(key, row, { power = 0.3, crit = false, result = 'hit', kind = 'you', origin = 'key', ability = null, who = null, keyEl: kEl = null, noKey = false, lvl: force, tier = 1 } = {}) {
+  function plan(key, row, { power = 0.3, crit = false, result = 'hit', kind = 'you', origin = 'key', ability = null, who = null, keyEl: kEl = null, noKey = false, lvl: force, tier = 1, marks = [], left = null, broke = null, results = null, brokeOn = null } = {}) {
     const R = tierRecipe(key, tier);
     const lvl = force || levelOf({ level: level(), motion: canMove() });
     if (!R || !lvl) return null;
-    if (R.on !== 'you' && !row?.isConnected) return null;
+    if (R.on !== 'you' && (!row?.isConnected || !inSight(row))) return null;
     const geo = measure(R.on === 'you' ? null : row, { ability, key: kEl, noKey, who });
-    const out = layout(R, geo, { lvl, power, crit, result, kind, origin });
+    const out = layout(R, geo, { lvl, power, crit, result, kind, origin, marks, left, broke, results, brokeOn, cadence: cadenceOf(key) });
     return out && Object.assign(out, { geo });
   }
   function play(key, row, { landIn = null, onImpact = null, ...opts } = {}) {
@@ -889,20 +1161,22 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
     const shift = landIn == null ? 0 : landIn - p.impact;
     const onto = ground(p.geo.f);
     for (const el of p.els) place(el, onto, shift);
+    shine(p, onto, shift);
     if (onImpact) setTimeout(onImpact, Math.max(0, p.impact + shift));
     return p;
   }
-  // A break finisher on the part's row (its class's, varied by its subclass): its plan if it played, else false.
-  function finish(cls, sub, row, { kind = 'you', lvl: force } = {}) {
-    const F = finisherOf(cls, sub);
-    const lvl = force || levelOf({ level: level(), motion: canMove() });
-    if (!F || !lvl || !row?.isConnected) return false;
-    const geo = measure(row, {});
-    const p = finisherLayout(F, geo, { lvl, kind });
-    if (!p) return false;
-    const onto = ground(geo.f);
-    for (const el of p.els) place(el, onto, 0);
-    return Object.assign(p, { geo });
+  // Its light (abilitylight.mjs) on an SVG of its own in the layer, redrawn every frame until it's over, then taken off.
+  function shine(p, onto, shift) {
+    if (!p.light?.length) return;
+    const doc = globalThis.document;
+    if (!doc.getElementById?.('afx-defs')) doc.body.insertAdjacentHTML?.('beforeend', LIGHT_DEFS);
+    const svg = doc.createElementNS ? doc.createElementNS(NS, 'svg') : doc.createElement('svg');
+    svg.setAttribute('class', 'alight');
+    svg.setAttribute('aria-hidden', 'true');
+    onto.appendChild(svg);
+    const end = Math.max(...p.light.map(endOf)), raf = globalThis.requestAnimationFrame, t0 = vnow();
+    if (raf) { const step = () => { const t = vnow() - t0 - shift; if (t > end) { svg.innerHTML = ''; svg.remove(); return; } svg.innerHTML = t < 0 ? '' : drawLight(p.light, t, p.tone); raf(step); }; raf(step); }
+    else setTimeout(() => svg.remove(), Math.max(0, shift + end) + 60);
   }
-  return { play, plan, finish, measure, layer: () => layer };
+  return { play, plan, measure, timeScale, layer: () => layer };
 }

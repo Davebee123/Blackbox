@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { fresh, command, active, resolveCycle, addLocation, materialsOf } from './dist/combat.mjs';
 import { deal, eventsOf, tickEvents, CARDS, CHAIN, FEUD, HUNT, DIRECTOR, chainOf, schedule, eventKill, returnPay, bountyPay, huntPay, feudPay, zeroCode } from './dist/events.mjs';
 import { rep, FACTIONS } from './dist/factions.mjs';
-import { FACTION_FAMILY } from './dist/hubs.mjs';
+import { FACTION_FAMILY } from './dist/factions.mjs';
 import { codeOf } from './dist/gear.mjs';
 import { mapMarkup } from './dist/view.mjs';
 import { inboxMarkup } from './dist/pager-view.mjs';

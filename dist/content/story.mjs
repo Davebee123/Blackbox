@@ -108,7 +108,7 @@ export default {
         "file": "claims.db",
         "label": "Halcyon’s claims ledger",
         "text": [
-          "binary: Halcyon Mutual’s claims ledger. Fourteen months of payouts, every client named.",
+          "binary: Halcyon Mutual’s claims ledger. Premiums collected this month on 4,112 accounts. 3,960 of the holders are dead.",
           "pull it and bank it, then deliver it from Mail."
         ]
       },
@@ -140,7 +140,7 @@ export default {
       "body": [
         "you have been carrying LOWLIGHT's name around for a while. time you wore it.",
         "take one more server for the crew. any one you have traced: vault, core, the usual.",
-        "do that and the badge is yours. leave the old toolkit with me too. i will rebuild it while you are out."
+        "do that and the badge is yours. the old toolkit’s coming back too. rebuilt. don’t try to scrap it. you can’t."
       ],
       "job": {
         "type": "takeover",

@@ -10,7 +10,7 @@ export function gainComponents(s, n) {
   s.components = componentsOf(s) + n;
   return n;
 }
-// Spending them: a payload (payload.mjs), and a sale at a hub's market (market.mjs). Nothing else costs components.
+// Spending them: a sale at a hub's market (market.mjs). Nothing else costs components.
 export const canAfford = (s, n) => componentsOf(s) >= n;
 export function spend(s, n) {
   s.components = Math.max(0, componentsOf(s) - n);

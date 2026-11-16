@@ -23,6 +23,10 @@ in `sound.mjs`; they are not samples.
 - `city-ambience.mp3`: "Small city ambience with traffic, motors, horn, siren, slight passerby hubbub" by felix.blume, https://freesound.org/people/felix.blume/sounds/705049/ (Freesound HQ preview)
 - `horn-double.mp3`: "Car horn beep beep two beeps honk honk" by AmishRob, https://freesound.org/people/AmishRob/sounds/423990/ (Freesound HQ preview)
 
+## The cold open (`coldopen/`, CC0)
+
+- `crowd.mp3`: "Crowd talking / murmur" by trezz77, https://freesound.org/people/trezz77/sounds/546676/ (Freesound HQ preview)
+
 ## Places, virus families and bodies (`floors/`, `hubs/`, `families/`, `bodies/`, Ogg Vorbis)
 
 Synthesized for BLACKBOX: rendered offline with Web Audio by `tools/sound-preview/` (`FORMAT=ogg node
@@ -67,3 +71,13 @@ Credits for the samples these layer in (all CC0 1.0, public domain; credited any
 | relay, click (UI Audio) | https://kenney.nl/assets/ui-audio | Kenney | CC0 1.0 |
 | subdrop, shimmer (StrongerFX procedural transitions) | https://github.com/smartpage/strongerfx-mcp | StrongerFX | CC0 1.0 |
 | key (Keyboard Soundpack 1, Cherry KC 1000) | https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes | unicaegames | CC0 1.0 |
+
+## Victories (`wins/`, Ogg Vorbis)
+
+Synthesized like the bodies above (`FORMAT=ogg SET=4 node tools/sound-preview/render.mjs dist/sfx`), one-shots at −16 LUFS.
+
+| File | What it is | CC0 samples layered in |
+|---|---|---|
+| wins/win-power-cut | A fight won: a breaker drops, the hum sinks, a fan winds down, the metal ticks as it cools | relay, punch-m, tin |
+| wins/win-blackout | A boss down or a server taken over: four breakers left to right, each taking a hum with it, the fans winding down | relay, punch-m, subdrop, tin |
+| wins/levelup-lift | A level gained: a breaker, the hum climbing to one held note, a relay as it locks, the fan spinning up | relay, punch-m |

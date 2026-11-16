@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, addLocation } from './dist/combat.mjs';
 import { offer, mailCommand } from './dist/mail.mjs';
-import { FACTIONS, FACTION_IDS, rep, repTier, changeRep, hubsOf, shopOf, buyFrom, claimServer, strikeServer, OWNED } from './dist/factions.mjs';
+import { shopOf } from './dist/store.mjs';
+import { FACTIONS, FACTION_IDS, rep, repTier, changeRep, hubsOf, buyFrom, claimServer, strikeServer, REP_FLOOR, commissionOf, stanceLine } from './dist/factions.mjs';
 
 const open = () => { const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; s.server.credits = 5000; return s; };
 
@@ -12,7 +13,7 @@ test('five factions, each with a colour, an icon, tiers, allies and rivals; hubs
   for (const f of FACTION_IDS) {
     assert.match(FACTIONS[f].color, /^#[0-9a-f]{6}$/i);
     assert.ok(GLYPHS['f-' + f], `icon for ${f}`);
-    assert.equal(FACTIONS[f].tiers.length, 5);
+    assert.equal(FACTIONS[f].tiers.length, 4, 'four tiers, shown as four pips');
   }
   assert.equal(hubsOf(fresh()).length, 0, 'not before the board opens');
   assert.equal(hubsOf(open()).length, 5);
@@ -23,36 +24,37 @@ test('rep ripples: helping one costs you with its rivals and warms its allies', 
   const k0 = rep(s, 'kestrel'), n0 = rep(s, 'nullchoir'), h0 = rep(s, 'halcyon');
   changeRep(s, 'kestrel', 20, 'test');
   assert.equal(rep(s, 'kestrel'), k0 + 20);
-  assert.equal(rep(s, 'nullchoir'), n0 - 10, 'its rival loses half');
+  assert.equal(rep(s, 'nullchoir'), Math.max(REP_FLOOR, n0 - 10), 'its rival loses half, never under 1');
   assert.equal(rep(s, 'halcyon'), h0 + 5, 'its ally gains a quarter');
   assert.equal(repTier(s, 'kestrel').name, 'Client');
+  changeRep(s, 'nullchoir', -500, 'test');
+  assert.equal(rep(s, 'nullchoir'), 1, 'one scale, 1 to 100: no Hostile');
+  assert.equal(repTier(s, 'nullchoir').i, 0);
 });
 
-test('a hub’s goods: tier-gated, limited stock, delivered by file transfer; shut when hostile', async () => {
+test('a hub’s Shop: tier-gated, delivered by file transfer; never shut by rep', async () => {
   const { transfersOf, tickMarket } = await import('./dist/market.mjs');
   const { items } = await import('./dist/hidden.mjs');
   const s = open();
-  assert.ok(!shopOf(s, 'kestrel').some((g) => g.id === 'daemon') && !shopOf(s, 'nullchoir').some((g) => g.id === 'daemon'), 'no daemon images: only invasions drop daemons');
-  assert.ok(shopOf(s, 'kestrel').find((g) => g.id === 'cb-snare').locked, 'the Snare codebase takes the second tier');
-  assert.ok(!shopOf(s, 'kestrel').some((g) => ['cipher', 'worm', 'kernel', 'exploit', 'salvage', 'signal', 'repair'].includes(g.id)), 'wares trade on the market; heals are Halcyon’s');
+  const ids = (f) => shopOf(s, f).tools.map((t) => t.id);
+  assert.ok(!ids('kestrel').includes('daemon') && !ids('nullchoir').includes('daemon'), 'no daemon images: only invasions drop daemons');
+  assert.ok(shopOf(s, 'kestrel').codebases.find((x) => x.id === 'snare').locked, 'the Snare codebase takes the second tier');
+  assert.ok(!ids('kestrel').some((id) => ['cipher', 'worm', 'kernel', 'exploit', 'salvage'].includes(id)), 'wares trade on the market');
   const c0 = s.server.credits, r0 = items(s).relay || 0;
   buyFrom(s, 'kestrel', 'relay');
   assert.ok(s.server.credits < c0);
-  assert.equal(shopOf(s, 'kestrel').find((g) => g.id === 'relay').left, 2);
   assert.equal(items(s).relay || 0, r0, 'not yet: it’s in transfer');
   const t = transfersOf(s).at(-1);
   assert.equal(t.side, 'good');
   tickMarket(s, t.landsAt);
   assert.equal(items(s).relay, r0 + 1, 'landed');
-  command(s, 'market buy kestrel injector');
-  assert.equal(transfersOf(s).at(-1).good, 'injector', 'market buy takes goods too');
-  s.standing.kestrel = 0;
+  s.standing.kestrel = 1;
   const c1 = s.server.credits;
-  assert.match(command(s, 'buy kestrel relay').at(-1).message, /won’t trade/);
-  assert.equal(s.server.credits, c1);
+  command(s, 'buy kestrel relay');
+  assert.ok(s.server.credits < c1, 'the bottom tier still trades');
 });
 
-test('faction servers: some traced servers belong to a faction; opening the vault takes it from them', () => {
+test('faction servers: some traced servers belong to a faction; a takeover takes it from them, at no rep', () => {
   const s = open();
   s.net = { nested: true }; // past the guaranteed early Nest
   const loc = addLocation(s, 'worm', 1); addLocation(s, 'worm', 1); addLocation(s, 'worm', 1);
@@ -61,12 +63,12 @@ test('faction servers: some traced servers belong to a faction; opening the vaul
   assert.ok(target.faction && target.faction !== 'halcyon');
   const f = target.faction, r0 = rep(s, f);
   strikeServer(s, target, 'takeover');
-  assert.equal(rep(s, f), r0 - OWNED.takeoverHit, 'hostility has depth: rep goes under zero');
+  assert.equal(rep(s, f), r0, 'rep comes from contracts and receipts only');
   assert.equal(target.faction, undefined, 'it isn’t theirs any more');
   assert.ok(loc);
 });
 
-test('faction contracts: posted by the faction, paid in its rep (no Halcyon standing)', () => {
+test('faction contracts: posted by the faction, paid in its rep', () => {
   const s = open();
   let o = null;
   for (let i = 0; i < 60 && !o; i++) { const x = offer(s); if (['kestrel', 'lantern', 'nullchoir'].includes(x.faction)) o = x; }
@@ -93,7 +95,7 @@ test('faction hubs are found: Halcyon’s is known; another’s trace grows from
   assert.equal(hubTraceOf(s, 'lantern'), HUB_TRACE.server);
   const r0 = rep(s, 'lantern');
   clearedFor(s, loc);
-  assert.equal(rep(s, 'lantern'), r0 + HUB_TRACE.rep, 'they like that');
+  assert.equal(rep(s, 'lantern'), r0, 'a clear traces the hub, no rep');
   assert.equal(hubTraceOf(s, 'lantern'), HUB_TRACE.server + HUB_TRACE.cleared);
   for (let i = 0; i < 3 && !hubFound(s, 'lantern'); i++) clearedFor(s, loc);
   assert.ok(hubFound(s, 'lantern'));
@@ -106,4 +108,54 @@ test('faction hubs are found: Halcyon’s is known; another’s trace grows from
   // And loading again never finds hubs on its own.
   const again = restore(JSON.parse(JSON.stringify(r)));
   assert.deepEqual(hubsOf(again).map((h) => h.faction), ['halcyon', 'lantern']);
+});
+
+test('commissions: Halcyon to start; switch at a found hub out of a fight; it sets the retainer and the stance', async () => {
+  const { retainer, retainerWith } = await import('./dist/mail.mjs');
+  const s = open();
+  assert.equal(commissionOf(s), 'halcyon');
+  assert.equal(stanceLine(s), 'Holds with Halcyon');
+  s.standing.lantern = 60;
+  assert.ok(retainerWith(s, 'lantern') > retainer(s), 'a higher tier pays more');
+  const ev = command(s, 'commission lantern');
+  assert.equal(commissionOf(s), 'lantern');
+  assert.equal(stanceLine(s), 'Settles with LANTERN');
+  assert.equal(retainer(s), retainerWith(s, 'lantern'));
+  assert.equal(ev.filter((e) => /^wick:/.test(e.message)).length, 1, 'one wick line a switch');
+  delete s.hubFound.kestrel;
+  command(s, 'commission kestrel');
+  assert.equal(commissionOf(s), 'lantern', 'only at a hub you have found');
+});
+
+test('an old save: rep under 1 comes back as 1, safely twice', async () => {
+  const { restore } = await import('./dist/combat.mjs');
+  const old = fresh(); old.standing = { halcyon: 0, nullchoir: -40, kestrel: 30 };
+  const r = restore(JSON.parse(JSON.stringify(old)));
+  assert.deepEqual([r.standing.halcyon, r.standing.nullchoir, r.standing.kestrel], [1, 1, 30]);
+  const again = restore(JSON.parse(JSON.stringify(r)));
+  assert.deepEqual([again.standing.halcyon, again.standing.nullchoir], [1, 1]);
+});
+
+test('contract letters: every kind has a variant from every giver, and each giver posts in its own words', async () => {
+  const { CONTRACT_KINDS, SIDES } = await import('./dist/content.mjs');
+  const { roomOffer } = await import('./dist/mail.mjs');
+  const T = (await import('./dist/content/contracts.mjs')).default;
+  for (const k of Object.keys(CONTRACT_KINDS)) for (const g of Object.keys(SIDES)) assert.ok(T[k]?.[g]?.length, `${k} has a ${g} letter`);
+  const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const fits = (line, tpl) => new RegExp('^' + tpl.split(/\{\w+\}/).map(esc).join('.+') + '$').test(line);
+  const own = (o) => { const k = ['takeover', 'item'].includes(o.type) && !o.loc ? o.type + '-unknown' : o.type; return T[k][o.faction].some((v) => fits(o.body[0], v.body[0])); };
+  const s = open(); s.hackers = { [s.loadout.archetype]: { level: 12, xp: 0 } };
+  command(s, 'developer location ransomware'); s.locations[0].lockUntil = 0;
+  const seen = new Set();
+  for (let i = 0; i < 400; i++) { s.mail.offers = []; const o = offer(s); seen.add(o.faction); assert.ok(own(o), `${o.faction} ${o.type}: "${o.body[0]}"`); }
+  assert.deepEqual([...seen].sort(), Object.keys(SIDES).sort(), 'every giver posted');
+  const rooms = new Set();
+  for (let i = 0; i < 200; i++) {
+    s.mail.offers = []; s.mail.jobs = [];
+    const o = roomOffer(s, Date.now(), 'defuse');
+    rooms.add(o.faction); assert.ok(own(o), `room ${o.faction} ${o.type}: "${o.body[0]}"`);
+    const it = roomOffer(s, Date.now(), 'install');
+    if (it) assert.ok(it.faction === 'halcyon' || !/Halcyon/.test(it.label), `${it.faction}'s install: ${it.label}`);
+  }
+  assert.equal(rooms.size, 5, 'room jobs from every giver');
 });

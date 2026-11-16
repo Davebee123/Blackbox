@@ -33,7 +33,7 @@ const toLevel = (s, n) => { while (hackerLevel(s) < n) gainXp(s, 100000, 'test')
 test('save: its own key, a round trip through JSON and restore keeps the whole campaign', () => {
   assert.notEqual(CAMPAIGN_KEY, 'blackbox-v6', 'never the old save');
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
-  assert.match(app, /const \{ key: KEY, bench: BENCH, camp: CAMP \} = BN\.pageSave\(location\.search, CP\.CAMPAIGN_KEY\);/);
+  assert.match(app, /const \{ key: KEY, bench: BENCH, camp: CAMP \} = BK\.pageSave\(location\.search, CP\.CAMPAIGN_KEY\);/);
   assert.equal(pageSave('?campaign=breach', CAMPAIGN_KEY).key, CAMPAIGN_KEY, 'the campaign page saves under its own key (bench.mjs pageSave)');
   assert.equal(pageSave('', CAMPAIGN_KEY).key, 'blackbox-v6');
   assert.ok(!/localStorage\.(get|set)Item\(SAVE_KEY/.test(app), 'every save goes through KEY, so the campaign never writes the old one');
@@ -306,16 +306,21 @@ test('the breach page: while you pick a node, the lit nodes show beside the map 
 // campaignsim.mjs measures it (12 seeds a class): about ten breaches to level 10, and every
 // class winning 55 to 75% of its breaches. Three seeds a class here, with bands wide enough for that sample. Since a
 // decode pays a kill (not a deed's 4 to 8) the climb is a little longer: 11 to 16 breaches a class on these seeds (12 to 13 before).
+// With no damage caps (docs/scaling.md "After step 3": a wild charge is its hit × mult, no longer stopped at 20%) the Breaker takes 17.3: held at 18.
+// With boss rounds (docs/scaling.md "After step 5": the Residents grow each round) the Breaker takes 18.7: held at 19.
+// With floor 2's acts (nativeacts.mjs) the Breaker's seed 1 runs differently from VANTA-RELAY-07's boss on and sticks
+// four breaches longer at REPO-DEPOT-7, dying to its viruses and elites (as on main, where it sticks four): 26 for
+// that run, 18 on average. Each run held at 26.
 let RUNS;
 const campaignRuns = () => (RUNS ||= CLASSES.flatMap((cls) => [1, 2, 3].map((seed) => runCampaign({ cls, seed, to: 10, max: 30 }))));
 test('campaignsim: every class reaches level 10 from level 1 within a bounded number of breaches', { timeout: 600000 }, () => {
   const runs = campaignRuns();
   for (const r of runs) {
     assert.ok(r.level >= 10, `${r.cls} reached ${r.level} in ${r.log.length} breaches`);
-    assert.ok(r.log.length <= 22, `${r.cls}: ${r.log.length} breaches to level 10`);
+    assert.ok(r.log.length <= 26, `${r.cls}: ${r.log.length} breaches to level 10`);
     assert.ok(r.reached[2].breaches <= 2, `${r.cls}: the first level comes fast`);
   }
-  for (const cls of CLASSES) { const rs = runs.filter((r) => r.cls === cls), n = rs.reduce((k, r) => k + r.log.length, 0) / rs.length; assert.ok(n >= 7 && n <= 17, `${cls}: ${n.toFixed(1)} breaches to level 10 on average`); }
+  for (const cls of CLASSES) { const rs = runs.filter((r) => r.cls === cls), n = rs.reduce((k, r) => k + r.log.length, 0) / rs.length; assert.ok(n >= 7 && n <= 19, `${cls}: ${n.toFixed(1)} breaches to level 10 on average`); }
   // Loot is a chase (the designer: "WAY too much loot per run"): one to three items banked a breach, and past the first
   // few levels a real upgrade every two or three breaches, not every node.
   const all = runs.flatMap((r) => r.log), mid = all.filter((x) => x.level >= 6);

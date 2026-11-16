@@ -2,8 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command } from './dist/combat.mjs';
 import { hubOptions, hubBanner, hubTerminalMarkup, setOrder } from './dist/view.mjs';
-import { PAYLOAD as __PAYLOAD } from './dist/payload.mjs';
-__PAYLOAD.on = true; // payloads are switched off in the game for now; capturing a hub still needs them here
 
 const open = () => { const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; return s; };
 const keys = (s, f) => hubOptions(s, f).map((o) => o.key);
@@ -11,13 +9,14 @@ const keys = (s, f) => hubOptions(s, f).map((o) => o.key);
 test('a hub session offers a short menu that fits the situation', () => {
   const s = open();
   assert.deepEqual(keys(fresh(), 'kestrel'), [], 'no hubs before the board');
-  assert.deepEqual(keys(s, 'kestrel').slice(0, 4), ['market', 'shop', 'work', 'payloads'], 'every hub has a Shop');
+  assert.deepEqual(keys(s, 'kestrel').slice(0, 5), ['market', 'shop', 'work', 'commission', 'servers'], 'every hub has a Shop, its Work and a Commission');
   assert.ok(keys(s, 'halcyon').includes('shop'), 'Halcyon’s Shop is its store');
   assert.ok(!keys(s, 'halcyon').includes('donate'));
-  s.standing.nullchoir = -20;
-  assert.deepEqual(keys(s, 'nullchoir'), ['payloads', 'donate', 'servers'], 'hostile: no market, no work');
-  s.hubs.lantern.captured = { at: 0, bank: 5, bankAt: 0 };
-  assert.deepEqual(keys(s, 'lantern'), ['hold', 'market', 'shop'], 'yours: the hub, its market and its shop (at cost)');
+  s.standing.nullchoir = 1;
+  assert.ok(keys(s, 'nullchoir').includes('market') && keys(s, 'nullchoir').includes('work'), 'the bottom tier still trades: no Hostile');
+  assert.ok(!keys(s, 'halcyon').includes('receipts'), 'Receipts only once you keep one');
+  s.receipts = { kept: [{ id: 'TRD-77-1', payer: 'a', payee: 'b', sum: 100, date: '1 Jan 2077', c: 'C+16', server: 'X' }], fresh: null, tally: {}, closed: {} };
+  assert.ok(keys(s, 'halcyon').includes('receipts') && !keys(s, 'kestrel').includes('receipts'), 'at your commission’s hub');
 });
 
 test('connecting reads like jacking into a server: handshake, banner, who answers, the menu', () => {
@@ -41,19 +40,17 @@ test('connecting reads like jacking into a server: handshake, banner, who answer
   assert.match(ticket, /market sell kestrel cipher 3/, 'its order, for the slider’s amount');
   assert.match(ticket, /You get/);
   setOrder(null);
-  assert.doesNotMatch(market, /payload compile/, 'only the window you picked');
-  s.standing.nullchoir = -30;
-  assert.match(hubBanner(s, 'nullchoir')[2].html, /Filtered/);
+  s.standing.nullchoir = 1;
+  assert.match(hubBanner(s, 'nullchoir')[2].html, /Connected\./);
 });
 
-test('the Shop window: a faction’s own shelf as tiles; Halcyon’s is its store', () => {
+test('the Shop window: one shape at every hub, the shelf, the chase line, tools', () => {
   const s = open(); s.server.credits = 5000;
-  const k = hubTerminalMarkup(s, 'kestrel', hubBanner(s, 'kestrel'), 'shop');
-  assert.match(k, /class="ptiles stash"/);
-  assert.match(k, /data-command="buy kestrel /);
-  const h = hubTerminalMarkup(s, 'halcyon', hubBanner(s, 'halcyon'), 'shop');
-  assert.match(h, /Halcyon Mutual/);
-  assert.match(h, /Agency stock/);
+  for (const [f, line] of [['kestrel', 'Bonded'], ['halcyon', 'Indemnified']]) {
+    const k = hubTerminalMarkup(s, f, hubBanner(s, f), 'shop');
+    assert.match(k, new RegExp(`Shelf[\\s\\S]*${line}[\\s\\S]*Tools`), f);
+    assert.match(k, new RegExp(`data-command="buy ${f} `));
+  }
   const m = hubTerminalMarkup(s, 'kestrel', hubBanner(s, 'kestrel'), 'market');
   assert.doesNotMatch(m, /mk-goods/, 'the market is wares only');
 });

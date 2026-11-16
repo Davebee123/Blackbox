@@ -5,7 +5,7 @@ import { fresh, command, active, resolveCycle, addLocation } from './dist/combat
 import { deal, eventsOf, tickEvents, CARDS, FEUD, HUNT, SHOCK, huntPay, feuds, feudShare, feudPay } from './dist/events.mjs';
 import { filtersOf } from './dist/filters.mjs';
 import { rep, FACTIONS } from './dist/factions.mjs';
-import { FACTION_FAMILY } from './dist/hubs.mjs';
+import { FACTION_FAMILY } from './dist/factions.mjs';
 import { priceOf, WARE_IDS } from './dist/market.mjs';
 import { play } from './dist/run.mjs';
 import { SCOUTED, KINDS } from './dist/invasion.mjs';
@@ -42,7 +42,7 @@ test('each new card deals only when its conditions hold', () => {
   { const s = world({ level: 6 }); assert.ok(can(s, 'hunt')); s.locations.pop(); assert.ok(!can(s, 'hunt'), 'one server: nowhere to hop'); }
   // Shock: level 5, a hub you can trade at.
   assert.ok(!can(world({ level: 4 }), 'shock'));
-  { const s = world({ level: 5 }); assert.ok(can(s, 'shock')); s.standing = { halcyon: 0 }; assert.ok(!can(s, 'shock'), 'every hub hostile'); }
+  { const s = world({ level: 5 }); assert.ok(can(s, 'shock')); s.standing = { halcyon: 1 }; assert.ok(can(s, 'shock'), 'no hub shuts on rep'); }
   { const s = world({ level: 5 }); s.mail.boardOpen = false; s.mail.story = 0; assert.ok(!can(s, 'shock'), 'no hubs'); }
   // Spotter: level 6, invasions live (a server you've connected to), none scouted already.
   assert.ok(!can(world({ level: 5 }), 'spotter'));

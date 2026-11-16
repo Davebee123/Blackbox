@@ -4,28 +4,31 @@
 // more drops: each source keeps its own odds.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, hooks, UNIQUES, gearStat, maxSignal, damageMultiplier, hit, heal, takeDamage, takenMult, cooldownOf, timersHidden, fxOn, fxPct, rollDrop, setBonusCount, puzzleUnique, floorUniques, strainTrophies, WORLD_SOURCES, addLocation, finish, hackerLevel, critChance } from './dist/combat.mjs';
-import { uniqueItem, seeded, BASES, STATS, LOOT } from './dist/gear.mjs';
-import { CONFIG, BOSS_LOOT, ABILITIES, defaultSub, lifted } from './dist/data.mjs';
+import { fireEvent, fxAnswer, fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, hooks, UNIQUES, gearStat, maxSignal, damageMultiplier, hit, heal, takeDamage, takenMult, cooldownOf, timersHidden, fxOn, fxPct, rollDrop, setBonusCount, puzzleUnique, floorUniques, strainTrophies, WORLD_SOURCES, addLocation, finish, hackerLevel, critChance } from './dist/combat.mjs';
+import { uniqueItem, seeded, BASES, STATS, LOOT, liftFx } from './dist/gear.mjs';
+import { CONFIG, BOSS_LOOT, ABILITIES, defaultSub, lifted, filled, own } from './dist/data.mjs';
+// These test each heal's and shield's own numbers: sustain potency (CONFIG.length.heal, docs/scaling.md step 3) off.
+CONFIG.length = { ...CONFIG.length, heal: null };
+CONFIG.gearReq = 99; // these tests hand out gear of any level (the requirement has its own test in gear.test.mjs)
 import { checkItems, fxText, fxList } from './dist/content.mjs';
 import ITEMS from './dist/content/items.mjs';
 
 CONFIG.baseCrit = 0; CONFIG.enemyCrit = 0; CONFIG.misses = false;
 
 // The plan's two tables: id, name, slot, level, source (kind, floor), lean.
-const SINK = [
-  ['seawall', 'Seawall', 'proxy', 39, 'lair', 7, 'bastion'], ['undertow', 'Undertow', 'exploit', 39, 'rare', 7, null], ['drain-plug', 'Drain Plug', 'shell', 39, 'vault', 7, 'bastion'],
-  ['backwash', 'Backwash', 'script', 40, 'lair', 7, 'operator'], ['siltstone', 'Siltstone', 'implant', 40, 'vault', 7, null], ['low-tide', 'Low Tide', 'proxy', 40, 'thread', 7, 'infiltrator'],
-  ['brine', 'Brine', 'script', 40, 'rare', 7, null], ['sump-pump', 'Sump Pump', 'shell', 41, 'strain', null, 'bastion'], ['floodgate', 'Floodgate', 'exploit', 41, 'lair', 7, 'breaker'],
+const SINK1 = [
+  ['seawall', 'Seawall', 'proxy', 39, 'lair', 7, 'bastion', 'BIT BUCKET'], ['undertow', 'Undertow', 'exploit', 39, 'rare', 7, null], ['drain-plug', 'Drain Plug', 'shell', 39, 'vault', 7, 'bastion'],
+  ['backwash', 'Backwash', 'script', 40, 'lair', 7, 'operator', 'Sinkhole Residents'], ['siltstone', 'Siltstone', 'implant', 40, 'vault', 7, null], ['low-tide', 'Low Tide', 'proxy', 40, 'thread', 7, 'infiltrator'],
+  ['brine', 'Brine', 'script', 40, 'rare', 7, null], ['sump-pump', 'Sump Pump', 'shell', 41, 'strain', null, 'bastion'], ['floodgate', 'Floodgate', 'exploit', 41, 'lair', 7, 'breaker', 'GOLDEN PARACHUTE'],
   ['brackish', 'Brackish', 'script', 41, 'puzzle', 7, 'infiltrator'], ['mooring', 'Mooring', 'implant', 41, 'rare', 7, null], ['depth-gauge', 'Depth Gauge', 'shell', 41, 'thread', 7, null],
-  ['riptide', 'Riptide', 'proxy', 42, 'lair', 7, 'operator', 'GOLDEN PARACHUTE'], ['pressure-hull', 'Pressure Hull', 'shell', 42, 'vault', 7, 'bastion'], ['ballast', 'Ballast', 'implant', 42, 'vault', 7, 'breaker'],
+  ['riptide', 'Riptide', 'proxy', 42, 'lair', 7, 'operator', 'Sinkhole Residents'], ['pressure-hull', 'Pressure Hull', 'shell', 42, 'vault', 7, 'bastion'], ['ballast', 'Ballast', 'implant', 42, 'vault', 7, 'breaker'],
   ['deepwater', 'Deepwater', 'exploit', 42, 'rare', 7, null], ['silt-map', 'Silt Map', 'script', 42, 'thread', 7, null], ['bilge', 'Bilge', 'proxy', 43, 'strain', null, 'infiltrator'],
-  ['anchor-chain', 'Anchor Chain', 'implant', 43, 'lair', 7, 'bastion'], ['wake', 'Wake', 'exploit', 43, 'raid', null, null], ['ebb', 'Ebb', 'script', 43, 'puzzle', 7, 'operator'],
-  ['flotsam', 'Flotsam', 'shell', 43, 'rare', 7, null], ['outfall', 'Outfall', 'exploit', 43, 'lair', 7, null, 'GOLDEN PARACHUTE'], ['pumphouse', 'Pumphouse', 'proxy', 44, 'lair', 7, 'breaker', 'GOLDEN PARACHUTE'],
+  ['anchor-chain', 'Anchor Chain', 'implant', 43, 'lair', 7, 'bastion', 'SUMP'], ['wake', 'Wake', 'exploit', 43, 'raid', null, null], ['ebb', 'Ebb', 'script', 43, 'puzzle', 7, 'operator'],
+  ['flotsam', 'Flotsam', 'shell', 43, 'rare', 7, null], ['outfall', 'Outfall', 'exploit', 43, 'lair', 7, null, 'PAY RUN'], ['pumphouse', 'Pumphouse', 'proxy', 44, 'lair', 7, 'breaker', 'BIT BUCKET'],
   ['sounding-line', 'Sounding Line', 'implant', 44, 'thread', 7, 'infiltrator'], ['cofferdam', 'Cofferdam', 'shell', 44, 'vault', 7, 'bastion'], ['siphon-tube', 'Siphon Tube', 'script', 44, 'strain', null, null],
-  ['spillway', 'Spillway', 'exploit', 44, 'lair', 7, 'breaker'], ['turbidity', 'Turbidity', 'proxy', 44, 'rare', 7, 'infiltrator'], ['weir', 'Weir', 'implant', 44, 'vault', 7, 'operator'],
+  ['spillway', 'Spillway', 'exploit', 44, 'lair', 7, 'breaker', 'GOLDEN PARACHUTE'], ['turbidity', 'Turbidity', 'proxy', 44, 'rare', 7, 'infiltrator'], ['weir', 'Weir', 'implant', 44, 'vault', 7, 'operator'],
 ];
-const BEDROCK = [
+const BEDROCK1 = [
   ['post-code', 'POST Code', 'exploit', 45, 'rare', 8, null], ['bootstrap', 'Bootstrap', 'script', 45, 'lair', 8, null, 'flash ranks'], ['bedframe', 'Bedframe', 'shell', 45, 'vault', 8, 'bastion'],
   ['init-vector', 'Init Vector', 'implant', 45, 'lair', 8, null, 'INIT'], ['bitrot-ward', 'Bitrot Ward', 'proxy', 45, 'strain', null, 'bastion'], ['firmware', 'Firmware', 'implant', 46, 'lair', 8, null, 'flash ranks'],
   ['read-only', 'Read-Only', 'shell', 46, 'lair', 8, 'bastion'], ['watchdog-timer', 'Watchdog Timer', 'script', 46, 'puzzle', 8, 'operator'], ['fuse-map', 'Fuse Map', 'exploit', 46, 'lair', 8, 'breaker', 'Bedrock bosses'],
@@ -37,6 +40,16 @@ const BEDROCK = [
   ['load-order', 'Load Order', 'script', 49, 'strain', null, 'operator'], ['undervolt', 'Undervolt', 'proxy', 49, 'rare', 8, 'breaker'], ['keystone', 'Keystone', 'implant', 50, 'lair', 8, null, 'INIT'],
   ['signal-floor', 'Signal Floor', 'proxy', 50, 'lair', 8, null, 'flash ranks'], ['warm-reset', 'Warm Reset', 'shell', 50, 'lair', 8, 'bastion', 'Bedrock bosses'], ['root-of-trust', 'Root of Trust', 'exploit', 50, 'lair', 8, null, 'INIT'],
 ];
+// Batch 2 (docs/item-builds.md *Gaps*): build pieces for the empty class slots, the late enablers and the talents' events.
+const SINK2 = [
+  ['breakwater', 'Breakwater', 'exploit', 41, 'lair', 7, 'bastion'], ['riprap', 'Riprap', 'shell', 42, 'vault', 7, 'breaker'], ['spawning-run', 'Spawning Run', 'exploit', 42, 'rare', 7, 'operator'],
+  ['tide-table', 'Tide Table', 'implant', 42, 'puzzle', 7, null], ['banked-fire', 'Banked Fire', 'shell', 43, 'thread', 7, 'infiltrator'],
+];
+const BEDROCK2 = [
+  ['rockfall', 'Rockfall', 'script', 45, 'lair', 8, 'breaker'], ['relief-valve', 'Relief Valve', 'shell', 45, 'vault', 8, 'operator'], ['cutoff-wall', 'Cutoff Wall', 'script', 47, 'vault', 8, 'bastion'],
+  ['bench-mark', 'Bench Mark', 'implant', 48, 'thread', 8, 'infiltrator'], ['flue', 'Flue', 'proxy', 48, 'rare', 8, null],
+];
+const SINK = [...SINK1, ...SINK2], BEDROCK = [...BEDROCK1, ...BEDROCK2];
 const ALL = [...SINK, ...BEDROCK];
 
 // ---------- fixtures ----------
@@ -65,9 +78,10 @@ function landed(s, amount) {
 const ratio = (a, b) => Math.round((a / b) * 1000) / 1000;
 
 // ---------- the data ----------
-test('Batch 1: all 60 uniques, each with the plan\'s name, slot, level, source and lean, an effect, stats and a line of flavour', () => {
+test('Batches 1 and 2: all 70 uniques, each with the plan\'s name, slot, level, source and lean, an effect, stats and a line of flavour', () => {
   assert.deepEqual(checkItems(ITEMS, BASES, STATS).filter((x) => x.bad).map((x) => x.msg), []);
-  assert.equal(ALL.length, 60);
+  assert.equal(SINK1.length + BEDROCK1.length, 60);
+  assert.equal(ALL.length, 70);
   for (const [id, name, slot, level, kind, floor, lean, planned] of ALL) {
     const u = UNIQUES[id];
     assert.ok(u, id);
@@ -94,8 +108,11 @@ test('Batch 1: all 60 uniques, each with the plan\'s name, slot, level, source a
   for (const [id] of ALL) assert.ok(!words.test(fxText(fxList(UNIQUES[id]))), `${id}: a general rule`);
   // The leans as the plan counts them: Sink 11 any, 6 Bastion, 4 Breaker, 5 Infiltrator, 4 Operator; Bedrock 14, 7, 3, 3, 3.
   const leans = (xs) => ['', 'bastion', 'breaker', 'infiltrator', 'operator'].map((c) => xs.filter((x) => (x[6] || '') === c).length);
-  assert.deepEqual(leans(SINK), [11, 6, 4, 5, 4]);
-  assert.deepEqual(leans(BEDROCK), [14, 7, 3, 3, 3]);
+  assert.deepEqual(leans(SINK1), [11, 6, 4, 5, 4]);
+  assert.deepEqual(leans(BEDROCK1), [14, 7, 3, 3, 3]);
+  // Batch 2: each class a piece in a slot its deep pieces lacked (Bastion exploit and script, Breaker shell and script,
+  // Infiltrator shell, Operator exploit and shell), and two for anyone.
+  assert.deepEqual(leans([...SINK2, ...BEDROCK2]), [2, 2, 2, 2, 2]);
 });
 
 // ---------- stats while a condition holds ----------
@@ -110,11 +127,11 @@ test('stat+ and stat%: Siltstone\'s Block for each ◆, Depth Gauge\'s Regen bel
   e.shield = 5;
   assert.equal(gearStat(t, 'reduction', 'hacker'), Math.round(block * 1.25), 'Pressure Hull: Block 25% stronger behind a shield');
   const s = vet();
-  const [gauge] = ['depth-gauge', 'siphon-tube', 'signal-floor'].map((id) => wear(s, id)), four = lifted(4, gauge.level);
+  const [gauge] = ['depth-gauge', 'siphon-tube', 'signal-floor'].map((id) => wear(s, id)), four = filled(4, gauge.level);
   fight(s);
   const regen = gearStat(s, 'regen', 'hacker'), leech = gearStat(s, 'leech', 'hacker');
   s.run.integrity = Math.floor(s.run.max * 0.4); // below half
-  assert.equal(gearStat(s, 'regen', 'hacker'), regen + four, 'Depth Gauge: +4 Regen below half, lifted');
+  assert.equal(gearStat(s, 'regen', 'hacker'), regen + four, 'Depth Gauge: +4 Regen below half, lifted and filled');
   assert.equal(gearStat(s, 'leech', 'hacker'), Math.round(leech * 1.5), 'Siphon Tube: Leech half again below half');
   s.run.integrity = Math.floor(s.run.max * 0.2); // below 25%
   assert.equal(gearStat(s, 'regen', 'hacker'), (regen + four) * 2, 'Signal Floor: Regen doubles below 25%');
@@ -184,7 +201,7 @@ test('one hit at a time: Drain Plug halves the first big one, Read-Only cuts the
   const t = vet(); wear(t, 'read-only'); fight(t);
   const bt = gearStat(t, 'reduction', 'hacker');
   assert.equal(landed(t, 200), 200 - bt, 'it stays above half: untouched');
-  assert.equal(landed(t, 400), Math.round(400 * 0.6) - bt, 'the hit that takes you below half: 40% less');
+  assert.equal(landed(t, 520), Math.round(520 * 0.6) - bt, 'the hit that takes you below half (from anywhere above it, your Regen in): 40% less');
   t.run.integrity = 1000;
   assert.equal(landed(t, 600), 600 - bt, 'once a fight');
   const u = vet(); wear(u, 'mooring'); fight(u);
@@ -311,15 +328,15 @@ test("critical strikes: Deepwater on armored parts, Bit Flip's every fourth, POS
   assert.equal(v.run.integrity, 500 + Math.round(v.run.max * 0.02), 'Root of Trust: 2% of your max on a crit');
 });
 
-const power50 = () => (1 + CONFIG.powerPerLevel) ** (L - 1);
+const power50 = () => own(L); // your own line at 50
 test('Dead Reckoning goes through ◆ on its first hit on each part; Spillway carries the leftover of a breaking hit', () => {
   const s = vet(); wear(s, 'dead-reckoning'); fight(s);
   const p = pulse(s);
   p.integrity = p.max = 100000;
   const a0 = p.armor;
-  const r1 = hit(s, p, 100, { mine: true });
+  const r1 = hit(s, p, 20, { mine: true });
   assert.ok(r1.dealt > 0 && p.armor === a0, 'the first hit: through its ◆');
-  const r2 = hit(s, p, 100, { mine: true });
+  const r2 = hit(s, p, 20, { mine: true }); // not a heavy hit (CONFIG.heavyHit)
   assert.ok(!r2.dealt && p.armor === a0 - 1, 'the next breaks a ◆ as usual');
   const t = vet('operator'); wear(t, 'spillway').stats.crit = 0; fight(t);
   const q = pulse(t), next = part(t, 'encryptor');
@@ -538,9 +555,11 @@ test('a floor\'s lair boss: The Sink\'s own uniques join its network\'s natives 
     lair.spawns = {}; lair.lockUntil = 0;
     connect(s, lair.id); play(s, 'cd core'); play(s, 'attack');
     assert.ok(s.encounter?.virus.boss, 'its boss in /core');
-    for (const p of s.encounter.virus.parts) Object.assign(p, { integrity: 0, armor: 0 });
-    const p = s.encounter.virus.parts[0]; p.integrity = 1;
-    command(s, 'spike ' + p.id); resolveCycle(s);
+    for (let n = 0; n < 4 && s.encounter?.phase === 'active'; n++) { // every act (act bars)
+      for (const p of s.encounter.virus.parts) Object.assign(p, { integrity: 0, armor: 0 });
+      const p = s.encounter.virus.parts[0]; p.integrity = 1;
+      command(s, 'spike ' + p.id); resolveCycle(s);
+    }
     play(s, 'jack out');
   };
   const was = BOSS_LOOT.chance;
@@ -555,7 +574,7 @@ test('a floor\'s lair boss: The Sink\'s own uniques join its network\'s natives 
     for (const id of sink) assert.ok(got.includes(id), `${id} from The Sink's lair boss`);
     assert.ok(got.some((id) => natives.includes(id)), 'and the natives still');
     assert.ok(!got.some((id) => deep.includes(id)), "never Bedrock's");
-    assert.ok(got.every((id) => natives.includes(id) || sink.includes(id)), 'nothing else');
+    assert.ok(got.every((id) => natives.includes(id) || sink.includes(id) || UNIQUES[id].set || ['headcount', 'check-valve'].includes(id)), 'nothing else (set pieces come from their own roll; floor 7\'s two of floor-items.md, floor7.test.mjs)');
     assert.equal(s.pity['lair:you'], 0);
   } finally { BOSS_LOOT.chance = was; }
 });
@@ -691,4 +710,66 @@ test('out of a fight: Silt Map pays 10% more for a Mapped server, Golden Image\'
   assert.equal(FP.WORLD.cacheMult(s), 1);
   wear(s, 'golden-image');
   assert.equal(FP.WORLD.cacheMult(s), 1.1, 'Golden Image: a cache on the network pays 10% more credits');
+});
+
+// ---------- Batch 2 (docs/item-builds.md *Gaps*) ----------
+test("Batch 2's multipliers: Spawning Run's helpers, Banked Fire's burns", () => {
+  assert.equal(against('spawning-run', () => {}, { dot: true, src: 'helper' }), 1.15, 'Spawning Run: helpers deal 15% more');
+  assert.equal(against('spawning-run', () => {}, { dot: true }), 1, 'not burns');
+  assert.equal(against('spawning-run'), 1, 'nor your hits');
+  assert.equal(against('banked-fire', () => {}, { dot: true }), 1.12, 'Banked Fire: burns deal 12% more');
+  assert.equal(against('banked-fire', () => {}, { dot: true, src: 'helper' }), 1, 'not helpers');
+});
+
+test("Batch 2 on the talents' events: Breakwater on a shield, Riprap on a cut, refunds, a shield and a heal", () => {
+  const lifted = (id) => liftFx(UNIQUES[id].effect, UNIQUES[id].level).value;
+  // Timed damage: Breakwater stacks 3 on shields, Riprap 2 on cuts, each gone after 2 cycles.
+  for (const [id, when, per, most] of [['breakwater', 'shielded', 0.05, 3], ['riprap', 'cut', 0.08, 2]]) {
+    const s = vet('bastion'); wear(s, id); const e = fight(s);
+    const t = vet('bastion'); fight(t);
+    const m = () => ratio(damageMultiplier(s, pulse(s), { mine: true }), damageMultiplier(t, pulse(t), { mine: true }));
+    assert.equal(m(), 1, `${id}: nothing yet`);
+    fireEvent(s, when, { part: pulse(s), gained: true });
+    assert.equal(m(), ratio(1 + per, 1), `${id}: one ${when}`);
+    for (let k = 0; k < 4; k++) fireEvent(s, when, { part: pulse(s), gained: true });
+    assert.equal(m(), ratio(1 + per * most, 1), `${id}: stacks ${most} times, no more`);
+    e.cycle += 3; t.encounter.cycle += 3;
+    assert.equal(m(), 1, `${id}: gone 2 cycles later`);
+  }
+  // Refunds: Rockfall on a break, Relief Valve on a cut, Tide Table on an answer; 1 cycle off every cooldown.
+  for (const [id, go] of [['rockfall', (s) => { const q = part(s, 'encryptor'); q.armor = 0; q.integrity = 1; hit(s, q, 100, { mine: true }); }],
+    ['relief-valve', (s) => fireEvent(s, 'cut', { part: pulse(s) })], ['tide-table', (s) => fxAnswer(s, pulse(s))]]) {
+    const s = vet('bastion'); wear(s, id); const e = fight(s);
+    e.readyAt = { firewall: e.cycle + 4, checksum: e.cycle + 2 };
+    go(s);
+    assert.deepEqual(e.readyAt, { firewall: e.cycle + 3, checksum: e.cycle + 1 }, `${id}: every cooldown a cycle shorter`);
+  }
+  // Cutoff Wall shields you on a cut; Flue on a burn tick; Bench Mark heals on a hit on a Tagged part.
+  const s = vet('bastion'); wear(s, 'cutoff-wall'); const e = fight(s);
+  fireEvent(s, 'cut', { part: pulse(s) });
+  assert.equal(e.shield, lifted('cutoff-wall'), 'Cutoff Wall: its shield, grown with its level');
+  const t = vet('infiltrator'); wear(t, 'flue'); const f = fight(t);
+  fireEvent(t, 'burn', { part: pulse(t) });
+  assert.equal(f.shield, lifted('flue'), 'Flue: a shield a burn tick');
+  const u = vet('infiltrator'); wear(u, 'bench-mark'); const g = fight(u);
+  u.run.integrity = 100;
+  fireEvent(u, 'tagged', { part: pulse(u) });
+  assert.ok(u.run.integrity > 100 && u.logs.some((l) => /Bench Mark/.test(l.message || '')), 'Bench Mark: a heal on a Tagged part');
+  assert.equal(g.shield || 0, 0);
+});
+
+test('Catchment: the 3-piece heals on a break, the 4-piece adds 5% a break for the fight, up to 20%', () => {
+  const s = vet('bastion');
+  for (const id of ['gully', 'storm-drain', 'basin', 'reservoir']) wear(s, id);
+  const e = fight(s);
+  const was = damageMultiplier(s, pulse(s), { mine: true });
+  const spare = () => { const x = { ...pulse(s), id: 'x' + s.serial, name: 'Spare', integrity: 1, max: 1, armor: 0, attack: null }; e.virus.parts.push(x); hit(s, x, 100, { mine: true }); };
+  s.run.integrity = 100;
+  spare();
+  assert.ok(s.run.integrity > 100, 'a break heals');
+  assert.equal(ratio(damageMultiplier(s, pulse(s), { mine: true }), was), 1.05, 'one break: +5%');
+  for (let k = 0; k < 5; k++) spare();
+  assert.equal(ratio(damageMultiplier(s, pulse(s), { mine: true }), was), 1.2, 'up to 20%');
+  e.cycle += 30;
+  assert.equal(ratio(damageMultiplier(s, pulse(s), { mine: true }), was), 1.2, 'for the fight');
 });

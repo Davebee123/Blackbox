@@ -16,11 +16,11 @@ const strip = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 const plain = (h) => h.replace(/<[^>]+>/g, '').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 const at = (cls, level, sub = null) => { const s = fresh(); s.loadout.archetype = cls; s.hackers = { [cls]: { level, xp: 0 } }; if (sub) s.loadout.sub = { [cls]: sub }; return s; };
 // Every kind of unlock: skills (3), protocol bases and the kit talent (5), a floor (7), the subclass to pick and SIGINT
-// and a talent point (10), the Implant slot and a daemon slot (15), a protocol slot (30), the capstone point (45) and
+// and a talent tier (10, 16), the Implant slot and a daemon slot (15), a protocol slot (30), the capstone point (45) and
 // its second rank (50); a picked subclass's edge (10); server memory (off for now: its words, by hand).
 function everyKind() {
   const s = at('breaker', 1);
-  const evs = [3, 5, 7, 10, 15, 30, 45, 50].map((L) => levelUpPreview(s, L));
+  const evs = [3, 5, 7, 10, 15, 16, 30, 45, 50].map((L) => levelUpPreview(s, L));
   evs.push(levelUpPreview(at('breaker', 10, 'demolitionist'), 10));
   evs.push({ ...levelUpPreview(s, 12), gains: ['server memory +1'] });
   return evs;
@@ -50,7 +50,9 @@ test('every unlock is a row, with its detail in a tooltip; the power line, the I
   assert.doesNotMatch(h, /undefined|NaN|\[object/);
   assert.ok(h.includes('data-module="loadout"') && h.includes('data-lu-close'), 'Loadout and Continue');
   const one = levelUpPreview(at('breaker', 9), 10), s1 = levelUpSummary([one]), h1 = plain(firmwareMarkup(s1));
-  assert.ok(s1.items.some((it) => it.kind === 'power' && it.value === '+6%') && s1.items.some((it) => it.kind === 'integrity' && it.value === String(one.server)));
+  assert.ok(!s1.items.some((it) => it.kind === 'power') && s1.items.some((it) => it.kind === 'integrity' && it.value === String(one.server)), 'past level 6 a level brings no power of its own (gear carries you)');
+  const early = levelUpSummary([levelUpPreview(at('breaker', 4), 5)]);
+  assert.ok(early.items.some((it) => it.kind === 'power' && it.value === '+6%'), 'to level 6: +6%');
   assert.ok(s1.next && s1.next.level === one.next.level && h1.includes('v11 · Protocol bases +4'), 'the next level that brings something');
   assert.match(h1, /Firmware update · breaker\.rom/);
   assert.match(firmwareMarkup(s1), /v9 → <b>v10<\/b>/);
@@ -71,7 +73,7 @@ test('the tooltips read in the game\'s voice: Name, then plain sentences with th
   assert.match(g('kit').tip, /^Overclocked Core: Increases all damage you deal by 6%/);
   assert.equal(g('skill').value, 'key 3', 'a new skill shows the key it went on');
   assert.equal(g('sigint').value, 'key -');
-  assert.equal(sum.items.find((it) => it.label === 'Talent point').value, '+4', 'counted kinds add up (10, 10 with a subclass, 30, 50)');
+  assert.equal(sum.items.find((it) => it.label === 'Talent tier').value, '+3', 'counted kinds add up (10, 10 with a subclass, 16)');
   for (const it of sum.items) assert.ok(it.label.length <= 24 && /^[A-Z]/.test(it.label), it.label);
 });
 
@@ -110,8 +112,8 @@ test('it waits for the fight\'s end and the spoils, goes when a fight comes up, 
   cards = false; ui.tick();
   assert.ok(!host.hidden && ui.showing() && host.className.startsWith('levelup lu-b'), 'up once it is calm');
   assert.ok(host.innerHTML.includes('Subclass') && host.innerHTML.includes('SIGINT') && host.innerHTML.includes('[ OK ]'));
-  assert.equal(sounds[0], 'win', 'the level\'s own sound, nothing new');
-  assert.ok(sounds.every((k) => ['win', 'cycle'].includes(k)));
+  assert.equal(sounds[0], 'levelup', 'the level\'s own sound');
+  assert.ok(sounds.every((k) => ['levelup', 'cycle'].includes(k)));
   assert.ok(host.style['--lu-bottom'] && host.style['--lu-top'], 'under the top bar, or over the prompt on a phone');
   fighting = true; ui.tick();
   assert.ok(host.hidden && !ui.showing(), 'a fight sends it away');
@@ -148,7 +150,7 @@ test('nothing over the fight board: the host is outside the fight view, docked u
   assert.doesNotMatch(style, /\.levelup|lu-head|lu-timer|levelup-in/, 'the old banner\'s rules are gone');
   const js = read('./dist/levelup-ui.mjs') + read('./dist/levelup-view.mjs');
   assert.doesNotMatch(js, /canvas|Pixi|new Audio|createSound|\.play\(/);
-  for (const m of js.matchAll(/feel\.add\('(\w+)'/g)) assert.ok(['win', 'cycle'].includes(m[1]), m[1]);
+  for (const m of js.matchAll(/feel\.add\('(\w+)'/g)) assert.ok(['levelup', 'cycle'].includes(m[1]), m[1]);
 });
 
 test('app.js: every level-up goes to the firmware update and waits; the old banner and the switch are gone; preview stays', () => {
@@ -157,7 +159,7 @@ test('app.js: every level-up goes to the firmware update and waits; the old bann
   assert.doesNotMatch(app, /function levelUp\(|levelUpLines|privileges escalated|luStyle|params\.get\('levelup'\)|settings\.levelup/);
   assert.match(app, /\/\^developer levelup\( \|\$\)\/\.test\(text\)\) return levelUpCommand/);
   assert.match(app, /const m = arg\.match\(\/\^preview\(\?: \(\\d\+\|all\)\)\?\$\/\);/, 'only preview [level|all]');
-  assert.match(app, /function boFree\(\) \{ return !introOn && !lu\.showing\(\) && !lu\.pending\(\)/, 'the subclass breakout waits its turn');
+  assert.match(app, /function subPrompt\(\) \{\n  if \(CAMP \|\| !V\.subPromptDue\(campaign\) \|\| introOn \|\| lu\.showing\(\) \|\| lu\.pending\(\)/, 'the subclass prompt waits its turn');
   // Developer commands stay behind ?dev (the gate turns them into developer-off before they reach levelUpCommand).
   assert.ok(app.indexOf("text = 'developer-off'") < app.indexOf('return levelUpCommand'));
   assert.doesNotMatch(systemMarkup(fresh()), /levelup|Level-up/, 'no Level-up setting');
@@ -172,4 +174,14 @@ test('every class and level reads: no level-up row is empty or unnamed', () => {
     for (const it of sum.items) assert.ok(it.label && it.value && it.tip && KINDS[it.kind], `${cls} ${L}: ${JSON.stringify(it)}`);
     assert.ok(!sum.items.some((it) => it.kind === 'skill' && !it.id), `${cls} ${L}: every skill row knows its skill`);
   }
+});
+
+test('the card powers on to the lift: the old level dim under the new one until the lock, nothing hidden with motion off', () => {
+  const html = firmwareMarkup(levelUpSummary([{ level: 12, gains: [], message: 'LEVEL 12 Breaker' }]));
+  assert.match(html, /<div class="lu-b-digits" aria-hidden="true"><pre class="lu-b-big lu-old">/);
+  assert.ok(html.includes(`<pre class="lu-b-big lu-old">${bigDigits(11)}</pre><pre class="lu-b-big">${bigDigits(12)}</pre>`));
+  const css = readFileSync(new URL('./dist/levelup.css', import.meta.url), 'utf8');
+  assert.match(css, /\.levelup \.lu-old \{ opacity: 0; \}/, 'the old level shows only while the flash runs');
+  for (const rule of ['.levelup.show .lu-b-bar i { animation: lu-b-flash 0.72s', '.levelup.show .lu-b-pct { animation: lu-pop 0.01s 0.72s', '.levelup.show .lu-old { animation: lu-b-old 0.72s', '.levelup.show .lu-b-big:not(.lu-old) { animation: lu-b-glow 0.6s 0.72s']) assert.ok(css.includes(rule), `${rule}: the lock is at 0.72 s, where the sound's relay is`);
+  assert.match(readFileSync(new URL('./tools/sound-preview/clips4.js', import.meta.url), 'utf8'), /K\.S\(out, 0\.72, 'relay'/);
 });

@@ -1,3 +1,4 @@
+import { restartClass } from './restart.mjs';
 // A virus attack lashing at your screen, in place of a plain red flash (the designer: "1s and 0s and the
 // virus lashing out at the screen"). The attacking part throws a tendril of its own characters (the ones
 // the render panel draws it in, or its row on the board) across the screen into your Signal bar; where it
@@ -26,6 +27,15 @@ export function sizeOf({ power = 0.3, heavy = false, mode = 'hit', full = false 
   const life = Math.round(320 + p * 120 + (heavy ? 120 : 0)); // ms each character of it stays
   return { strands, bits, rain, glitch, locks: 0, travel, life };
 }
+
+// The screen's shake as an attack lands on you (app.js shake): power 0–1 (as sizeOf), heavy (a crit or a charge), full
+// (Screen effects bold; subtle and medium: half) → { px (how far it first jolts), ms (how long until it settles) }.
+export function shakeOf({ power = 0.3, heavy = false, full = false } = {}) {
+  const p = Math.max(0, Math.min(1, power));
+  return { px: Math.round(Math.min(9, (2.5 + 5 * p) * (heavy ? 1.5 : 1)) * (full ? 1 : 0.5) * 10) / 10, ms: Math.round(300 + 80 * p) };
+}
+// Its path: a jolt that swings back and forth, each swing smaller.
+export const SHAKE = [1, -0.8, 0.55, -0.35, 0.18, -0.08];
 
 const HEX = '0123456789ABCDEF';
 const pick = (s) => s[Math.floor(Math.random() * s.length)];
@@ -119,7 +129,7 @@ export function createLash() {
 
   function jolt(bar, cls, ms) {
     if (!bar) return;
-    bar.classList.remove(cls); void bar.offsetWidth; bar.classList.add(cls);
+    restartClass(bar, cls);
     setTimeout(() => bar.classList.remove(cls), ms);
   }
 

@@ -11,8 +11,6 @@
 // the wall left it, its armor is intact, it's worth a full kill, and its bounty (its family's code, lots of it)
 // grows the longer it's contested before you do. Invasions are the only thing that drops daemons (daemons.mjs).
 // A crash puts the server in Degraded mode (see crashServer in combat.mjs); the network waits.
-import { tickFleet } from './fleet.mjs';
-import { tickRetake } from './hubs.mjs';
 import { tickEvents } from './events.mjs';
 import { tickConsortium, consortiumOf, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
 import { isLive } from './memory.mjs';
@@ -172,8 +170,6 @@ export function tickNetwork(s, now = Date.now()) {
   unsabotage(s); // a saboteur that's gone gives your service back
   const gap = Math.max(0, now - prev), dt = Math.min(gap, I().maxTickMs);
   if (gap > dt) away(s, prev, now - dt); // logged off: the network plays on (firewall.mjs is the guard)
-  tickFleet(s, dt, !!s.degraded, now);
-  tickRetake(s, dt, !!s.degraded, now); // hubs you hold, and the factions that want them back
   tickFirewall(s, now); // a defrag that's done
   tickEvents(s, dt); // the event director deals what happens on the net, degraded or not
   tickConsortium(s, dt, now); // the dividend, sieges, raids, the travelling virus, invites (consortium.mjs)
@@ -214,11 +210,6 @@ function away(s, from, to) {
       syncRunSignal(s);
       emit(s, 'rebooted', 'Your server came back online while you were away.');
     }
-    // Swarms and hubs' old owners gather at a quarter pace while you're away (their schedules slip).
-    if (s.net.fleetAt != null && !s.fleet) s.net.fleetAt += AWAY.stepMs * (1 - AWAY.slow);
-    if (s.net.retakeAt != null && !s.retake) s.net.retakeAt += AWAY.stepMs * (1 - AWAY.slow);
-    tickFleet(s, AWAY.stepMs, false, t);
-    tickRetake(s, AWAY.stepMs, false, t);
     stepInvasion(s, AWAY.stepMs, t);
     unsabotage(s);
     // Rested: every safe minute away (no crash) banks its share of 5% of a level every 8 hours, up to 1.5 levels.

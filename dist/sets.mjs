@@ -20,7 +20,7 @@
 // there, from the crew bosses and the Bedrock lair boss, their bonuses stronger than a general set's.
 import SET_TEXT from './content/sets.mjs';
 import ITEMS from './content/items.mjs';
-import { fxHolds, gearFx, active, loaded, emit, hit, heal, alive, parts, livingParts, defender, burnsOn, helpersOn, helperCap, alliesOf, momentumStacks, classOf, delayAttack } from './combat.mjs';
+import { fxHolds, gearFx, active, loaded, emit, hit, heal, alive, parts, livingParts, defender, burnsOn, helpersOn, helperCap, alliesOf, momentumStacks, classOf, delayAttack, shortestOff } from './combat.mjs';
 import { momentumCap } from './classes/breaker.mjs';
 import { ABILITIES, SKILLS, ARCHETYPES } from './data.mjs';
 import { liftFx } from './gear.mjs';
@@ -220,6 +220,15 @@ export function setsRestore(s, was) {
 //                          more with a crew, a crewmate's share on you
 //   late-tick, repeat-every, cd-start   the cycles: an extra cooldown tick, a skill repeating, the first cooldowns shorter
 //   rest-fast, credits%, see-rare   outside a fight: resting, caches and vaults, the map card
+// Floors 5 and 6's (docs/floor-items.md):
+//   tell-shield            a tell landing on you shields you          row%      commands in a row on one part
+//   strip-crit, strip-cd   a part's last ◆ broken: your next hit on another part crits; your nearest cooldown drops
+//   late-cd                cooldowns shorter from your Nth break      delay-open  a part you delay is Open
+//   big-guard              a big hit: the next one within some cycles deals less
+//   burn-through           your burns tick on a part out of reach (combat.mjs hit)
+// Floor 7's:
+//   shield-steal           a part's shield broken by your hit: a share of it shields you for some cycles
+//   heal-every             every Nth cycle, a heal                    reach%    a command that hits several parts
 const who = (s) => s.who || '';
 const pct = (n) => 1 + n / 100;
 // Your set state in this fight (e.sx), made the first time a hook asks, and again at every start (a crewmate's
@@ -244,6 +253,8 @@ const mark = (p, k, s, v) => { (p[k] ||= {})[who(s)] = v; };
 const max = (s) => defender(s).max;
 const pctOf = (s, n) => Math.max(1, Math.round((max(s) * n) / 100));
 const gear = (f) => ({ gear: [{ id: f.id, name: f.name }] }); // the HUD's gear chip flashes (combat.mjs firedOf)
+// Contiguous (3): how many commands in a row, one a cycle, came before this one on the same part.
+const rowOf = (e, x, p) => (x.row && x.row.target === p.id && x.row.cycle === e.cycle - 1 ? x.row.k + 1 : x.row?.cycle === e.cycle && x.row.target === p.id ? x.row.k : 0);
 // The living part beside p on the board (the next one, else the one before).
 function beside(s, p) {
   const all = parts(s), i = all.indexOf(p);
@@ -256,6 +267,8 @@ export const setSignal = (s) => total(custom(s, 'signal%', {}, active(s) && sxOf
 // What the outside-a-fight bonuses give: credits from caches or vaults (Lantern Route), how much faster Signal rests
 // back (Night Shift), and whether a server's map card shows its rare spawn (the Antenna).
 export const setCredits = (s, of) => pct(total(custom(s, 'credits%', {}, gearFx(s)).filter((x) => (x.fx.of || []).includes(of))));
+// Full Coverage (3): a room's first clear pays this share of a kill's XP (floorplan.mjs clear).
+export const clearXp = (s) => total(custom(s, 'clear-xp', {}, gearFx(s)));
 export const restFast = (s) => pct(total(custom(s, 'rest-fast', {}, gearFx(s))));
 export const seesRare = (s) => custom(s, 'see-rare', {}, gearFx(s)).length > 0;
 // Heals you cast (combat.mjs healScaled): larger with Link, and with Mesh for each crewmate in the fight.
@@ -285,15 +298,24 @@ export const SET_HOOKS = {
     if (burnsOn(s, p).length || helpersOn(s, p).length) for (const f of custom(s, 'under%')) m *= pct(f.value);
     if (x.rush?.until >= e.cycle) m *= pct(x.rush.value);
     if (x.back?.until >= e.cycle) m *= pct(x.back.value);
+    if (skill && e.commanding) for (const f of custom(s, 'row%')) m *= pct(Math.min(f.fx.cap || 99, f.value * rowOf(e, x, p))); // Contiguous (3)
     if (p.sxMark?.[who(s)]?.until >= e.cycle) m *= pct(p.sxMark[who(s)].value);
     if (dot && !helper && mineOn(p, 'sxHalf', s)) for (const f of custom(s, 'half-burn')) m *= pct(f.value);
     for (const f of custom(s, 'crew%')) m *= pct(f.value * crewN(s, f));
     return m;
   },
   // Palemask (4): your next hit on a part that dropped below half is a critical strike.
-  crit(s, p, opts = {}) { return sxOf(s) && opts.mine && !opts.dot && mineOn(p, 'sxCrit', s) ? 1000 : 0; },
+  crit(s, p, opts = {}) {
+    const x = sxOf(s);
+    if (!x || !opts.mine || opts.dot) return 0;
+    return mineOn(p, 'sxCrit', s) || (!opts.by && x.stripCrit && x.stripCrit !== p.id) ? 1000 : 0; // Crypter (3): a part other than the one you stripped
+  },
   critDealt(s) { return sxOf(s) ? custom(s, 'crit-more%').reduce((m, x) => m * pct(x.value), 1) : 1; },
-  taken(s) { return sxOf(s) ? custom(s, 'taken-cut%').reduce((m, x) => m * (1 - x.value / 100), 1) : 1; },
+  taken(s) {
+    const e = s.encounter, x = sxOf(s);
+    if (!x) return 1;
+    return custom(s, 'taken-cut%').reduce((m, f) => m * (1 - f.value / 100), 1) * (x.guard?.until >= e.cycle ? 1 - x.guard.value / 100 : 1); // Watertight (3)
+  },
   // Kestrel Clearance (3): once a fight, a hit for more than its share of your max deals that share.
   absorb(s, n, atk) {
     const x = sxOf(s);
@@ -317,7 +339,9 @@ export const SET_HOOKS = {
   },
   cooldown(s, id, cd) {
     const x = sxOf(s);
-    if (!x || !cd || x.used[id]) return cd;
+    if (!x || !cd) return cd;
+    for (const f of custom(s, 'late-cd')) if ((s.encounter.breaks || 0) >= (f.fx.n || 3)) cd = Math.max(1, cd - f.value); // Domain Admin (4)
+    if (x.used[id]) return cd;
     const off = total(custom(s, 'cd-start'));
     return off ? Math.max(1, cd - off) : cd;
   },
@@ -344,7 +368,9 @@ export const SET_HOOKS = {
     if (!x || !(res?.dealt > 0)) return;
     const skill = !!opts.mine && !opts.dot && !opts.by;
     if (skill) x.first[p.id] = true;
+    if (opts.mine && !opts.dot && !opts.reach && e.commanding && custom(s, 'reach%').length) ((x.reach ||= {})[p.id] = (x.reach[p.id] || 0) + res.dealt); // Backbone (3): what this command dealt, part by part
     if (res.crit && skill && mineOn(p, 'sxCrit', s)) delete p.sxCrit[who(s)];
+    else if (res.crit && skill && x.stripCrit && x.stripCrit !== p.id) x.stripCrit = null; // Crypter (3), spent
     // Palemask (4): the hit that takes a part below half.
     if (alive(p) && p.integrity < p.max / 2 && p.integrity + res.dealt >= p.max / 2) {
       const f = custom(s, 'half-crit')[0];
@@ -384,6 +410,14 @@ export const SET_HOOKS = {
     const e = s.encounter, x = sxOf(s);
     if (!x || !(dealt > 0)) return;
     const d = defender(s), live = p && parts(s).includes(p) && alive(p);
+    // Fine Print (3): a tell that lands on you shields you.
+    if (atk?.tell) for (const f of custom(s, 'tell-shield')) { e.shield = (e.shield || 0) + pctOf(s, f.value); emit(s, 'status', `${f.name}: the tell raises your shield to ${e.shield}.`, { mark: 'shield', ...gear(f) }); }
+    // Watertight (3): the hit its guard softened spends it; a big hit sets it for the next one.
+    if (x.guard) x.guard = null;
+    for (const f of custom(s, 'big-guard')) if (dealt > (d.max * (f.fx.over || 15)) / 100) {
+      x.guard = { until: e.cycle + (f.fx.cycles || 2), value: f.value };
+      emit(s, 'status', `${f.name}: the next hit on you within ${f.fx.cycles || 2} cycles deals ${f.value}% less.`, { mark: 'shield', ...gear(f) });
+    }
     // Strongbox (4): a big hit marks the part that dealt it.
     for (const f of custom(s, 'big-mark')) if (live && dealt > (d.max * (f.fx.over || 15)) / 100) {
       mark(p, 'sxMark', s, { until: e.cycle + (f.fx.cycles || 3), value: f.value });
@@ -412,6 +446,34 @@ export const SET_HOOKS = {
       if (cooling.length) emit(s, 'status', `${f.name}: your cooldowns tick one extra cycle.`, gear(f));
     }
     for (const f of custom(s, 'repeat-every')) if (e.cycle % (f.fx.every || 4) === 0) x.repeat = true;
+    for (const f of custom(s, 'heal-every')) if (e.cycle % (f.fx.every || 4) === 0) heal(s, pctOf(s, f.value), f.name); // Payroll (3)
+    if (x.stolen && e.cycle >= x.stolen.until) { const n = Math.min(e.shield || 0, x.stolen.n); e.shield = (e.shield || 0) - n; x.stolen = null; if (n) emit(s, 'status', `The shield you took fades (${e.shield} left).`, { mark: 'shield' }); } // Smash and Grab (3)
+  },
+  // A part's last ◆ broken (combat.mjs stripMark): Crypter (3) arms a crit for another part, Domain Admin (3) takes a
+  // cycle off your nearest cooldown.
+  stripped(s, p) {
+    const x = sxOf(s);
+    if (!x) return;
+    const f = custom(s, 'strip-crit')[0];
+    if (f) { x.stripCrit = p.id; emit(s, 'status', `${f.name}: your next hit on another part is a critical strike.`, { target: p.id, mark: 'buff', ...gear(f) }); }
+    for (const g of custom(s, 'strip-cd')) shortestOff(s, g.value || 1, g.name, g);
+  },
+  // A part's shield broken by your hit (combat.mjs hit, a Buffer's or a Bodyguard's): Smash and Grab (3) takes a share.
+  shieldBroke(s, p, size) {
+    const e = s.encounter, x = sxOf(s);
+    if (!x) return;
+    for (const f of custom(s, 'shield-steal')) {
+      const n = Math.max(1, Math.round((size * f.value) / 100)), was = x.stolen && e.cycle < x.stolen.until ? x.stolen.n : 0;
+      e.shield = (e.shield || 0) + n;
+      x.stolen = { n: was + n, until: e.cycle + (f.fx.cycles || 2) };
+      emit(s, 'status', `${f.name}: you take ${n} of the ${p.name}'s shield for ${f.fx.cycles || 2} cycles (${e.shield}).`, { target: p.id, mark: 'shield', ...gear(f) });
+    }
+  },
+  // An attack you delayed (combat.mjs delayAttack): Semaphore (3) leaves its part Open.
+  delayed(s, p) {
+    const e = s.encounter;
+    if (!sxOf(s) || !alive(p)) return;
+    for (const f of custom(s, 'delay-open')) { p.openUntil = Math.max(p.openUntil || 0, e.cycle + (f.value || 1)); emit(s, 'read', `${f.name}: the ${p.name} is Open.`, { target: p.id, open: true, ...gear(f) }); }
   },
   // After a skill resolves (combat.mjs useAbility). before: the shield, the parts' jams and timers, the helpers and
   // burns and the crew's Signal and shields, from before it.
@@ -420,6 +482,14 @@ export const SET_HOOKS = {
     if (!x || !before) return;
     x.n++;
     if (!x.skills.includes(id)) x.skills.push(id);
+    // Backbone (3): a command that reached several parts deals more on each, after the fact.
+    const reach = x.reach || {}, hitN = Object.keys(reach).length;
+    x.reach = null;
+    if (hitN > 1) for (const f of custom(s, 'reach%')) {
+      const more = Math.min(f.fx.cap || 99, f.value * (hitN - 1));
+      for (const [pid, n] of Object.entries(reach)) { const q = parts(s).find((y) => y.id === pid); if (alive(q) && n > 0) hit(s, q, Math.max(1, Math.round((n * more) / 100)), { by: f.name, flat: true, pierce: true, reach: true, noHook: true }); }
+    }
+    if (target) x.row = { target: target.id, cycle: e.cycle, k: rowOf(e, x, target) }; // Contiguous (3): this command's place in its row
     x.used[id] = true;
     if (x.splashArm) { x.splashArm = false; x.splash = true; }
     // Burns and helpers it started: longer (Hive Mind, Load Balanced), and every third helper as two.
@@ -451,7 +521,7 @@ export const SET_HOOKS = {
     const share = total(custom(s, 'crew-share'));
     if (share) for (const a of before.allies) {
       const healed = defender(a.st).integrity - a.integrity, shielded = (a.st.encounter?.shield || 0) - a.shield;
-      if (healed > 0) heal(s, Math.max(1, Math.round((healed * share) / 100)), `Mesh (3) from ${a.who}`);
+      if (healed > 0) heal(s, Math.max(1, Math.round((healed * share) / 100)), `Mesh (3) from ${a.who}`, { potent: true }); // a share of a heal already sized
       if (shielded > 0) e.shield = (e.shield || 0) + Math.max(1, Math.round((shielded * share) / 100));
     }
   },

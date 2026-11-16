@@ -167,47 +167,6 @@ test('a filter pulled from a vault is banked when you jack out', async () => {
   assert.equal(filtersOf(s)[0].name, 'Packet Filter');
 });
 
-test('a hub you hold has its own firewall at the hub\'s level; a swarm it blocks bounces, one it contests is worn down (outposts\' went in R2)', async () => {
-  const { fwAt, fwLevel: lvAt } = await import('./dist/firewall.mjs');
-  const { launch, tickFleet } = await import('./dist/fleet.mjs');
-  const { hubWall, HUBS } = await import('./dist/hubs.mjs');
-  const { FACTIONS } = await import('./dist/factions.mjs');
-  const s = fresh();
-  (s.hubs ||= {}).kestrel = { id: 'hub-kestrel', faction: 'kestrel', stock: {}, restockAt: 0, captured: { at: 0, bank: 0 } };
-  const wall = hubWall(s, 'kestrel'), L = FACTIONS.kestrel.hub.level;
-  assert.equal(lvAt(s, wall), L, 'it comes with the hub, at its level');
-  const arrive = () => { launch(s, 0, null, { hub: 'kestrel' }); tickFleet(s, 0, false, s.fleet.arriveAt); };
-  fwAt(s, wall).pin = L + 12;
-  arrive();
-  assert.equal(s.fleet, null, 'a swarm well under it bounces off');
-  fwAt(s, wall).pin = L + HUBS.levelUp - 1;
-  arrive();
-  assert.equal(s.fleet?.state, 'siege', 'a weaker firewall lets it in');
-  const ships = s.fleet.ships;
-  s.server.credits = 9999; s.materials = { cipher: 999, worm: 999, kernel: 999 };
-  for (let i = 0; i < 4; i++) command(s, 'firewall upgrade kestrel'); // priced in code since signatures went
-  assert.equal(fwAt(s, wall).plus, 4);
-  s.fleet.siegeLeft = 60 * 60000; // time enough to see the wearing down
-  for (let t = 1; t < 60 && s.fleet; t++) tickFleet(s, 60000, false, s.fleet?.arriveAt + t * 60000);
-  assert.equal(s.fleet, null, `contested: the firewall wore all ${ships} down`);
-  assert.ok(!s.hubs.kestrel.captured.lockdown, 'before the timer ran out');
-
-});
-
-test('a hub you hold: its swarm comes at the hub\'s level, never yours', async () => {
-  const { tickRetake, HUBS } = await import('./dist/hubs.mjs');
-  const { FACTIONS } = await import('./dist/factions.mjs');
-  const s = fresh();
-  command(s, 'developer level 40');
-  s.hubs = { kestrel: { id: 'hub-kestrel', faction: 'kestrel', stock: {}, captured: { at: 0 } } };
-  s.standing = { halcyon: 10, kestrel: -100 }; // Hostile: it wants its hub back
-  s.net = { retakeAt: 0 };
-  tickRetake(s, 1000, false, 1);
-  const { retakeOf } = await import('./dist/hubs.mjs');
-  assert.ok(retakeOf(s), 'a swarm sets out');
-  assert.equal(retakeOf(s).level, FACTIONS.kestrel.hub.level + HUBS.levelUp);
-});
-
 test('fragmentation comes from events: Integrity lost wears nothing, an upgrade leaves the firewall whole', async () => {
   const { wear } = await import('./dist/firewall.mjs');
   const s = fresh(); at(0);

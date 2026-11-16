@@ -17,7 +17,7 @@ import { newCampaign, launch, leave, recOf, migrate, heatOpen, cardFor, SERVER, 
 import { campaignMarkup, campUi } from './dist/campaign-view.mjs';
 
 const SUB = { breaker: 'demolitionist', bastion: 'warden', infiltrator: 'payload', operator: 'herder' };
-// A breach of a server: MERIDIAN-MX-14 (the playtest's), or a campaign server's card.
+// A breach of a server: MERIDIAN-MX-14 (SERVER_CARD), or a campaign server's card.
 function breach(cls = 'breaker', seed = 3, { level = 10, heat = 0, server = null, sub = SUB[cls] } = {}) {
   const s = fresh();
   s.rng = seed * 7777;
@@ -427,12 +427,12 @@ test('skill rules in a fight: Aftershock, Zero Click, Backpressure, Reflective A
 
 test('Phantom talents: Ghost Route (Null Route delays the soonest attack by 2) and Tracking Pixel (Tag moves on a break) replace two run-only picks', () => {
   CONFIG.enemyCrit = 0; CONFIG.misses = false;
-  const tiers = SUBS.phantom.talents;
-  assert.equal(tiers[1][1].id, 'ghost-route');
-  assert.equal(tiers[2][1].id, 'tracking-pixel');
+  const tiers = SUBS.phantom.tiers;
+  assert.equal(tiers[2][1].id, 'ghost-route');
+  assert.equal(tiers[5][1].id, 'tracking-pixel');
   assert.ok(!tiers.flat().some((n) => /Spoof|guards per run/.test(n.rule)), 'no run-only talent left');
-  const s = breach('infiltrator', 9, { sub: 'phantom', level: 30 });
-  s.loadout.picks.phantom = [0, 1, 1];
+  const s = breach('infiltrator', 9, { sub: 'phantom', level: 40 });
+  s.loadout.tiers.phantom = [0, 0, 1, 0, 0, 1];
   s.loadout.equipped.phantom = ['null-route', 'tag', 'opening', 'backstab'];
   fight(s, of(s, 'virus')[0]);
   s.run.max = s.run.integrity = 5000;

@@ -10,7 +10,8 @@
 //   builds         today's strains it wrote (named builds: data.mjs STRAINS) and the guards it fields
 //   bosses         the bosses it wrote (data.mjs BOSSES)
 // Today the byline goes on: a family virus (its crew), a strain (its build's author), ICE and the Sentinel
-// (Kestrel), a faction's server (that faction), a guard (its server's), and a boss (its author). SPRAWL-00's
+// (Kestrel), a faction's server (that faction), a faction's runner or invader (that faction, over a strain's author:
+// data.mjs createVirus signed), a guard (its server's), and a boss (its author). SPRAWL-00's
 // strays are nobody's. Sectors, rosters and ACTUARY's portfolio come in phases 3 and 5.
 export const AUTHORS = {
   tollgate: { name: 'TOLLGATE', crew: 'ransomware', also: ['wiper', 'logicbomb'], colour: '#ff9f43', style: 'TOLLGATE builds with locks and leverage. Everything is behind something, and something is on a clock.',
