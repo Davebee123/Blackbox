@@ -121,4 +121,6 @@ export function processWon(s, e) {
     gainXp(s, deedXpFor(s, loc.level || 1, ROOT.levelXp), `Root ${r.level} on ${loc.name}`, 'build');
   }
 }
+// The same perks as whole sentences, for the Root pips' tooltip (view.mjs rootPips).
+export const ROOT_RULES = { 2: 'A stash room opens by the Core. Its code comes back every two hours.', 3: 'It stops sending invasions.', 4: 'One more socket room opens beside the Core.', 5: 'Its rare spawns come twice as often.' };
 export const ROOT_PERKS = { 1: 'taken over', 2: 'a stash room opens by the Core, its code back every two hours', 3: 'it stops sending invasions', 4: 'one more socket room, beside the Core, open at once', 5: 'its rare spawns come twice as often' };
