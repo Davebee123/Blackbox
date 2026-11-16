@@ -61,6 +61,7 @@ function fight(s, { run = true, hp = 1000, level = L } = {}) {
   if (run) s.run = { loc: 'x', cwd: '/', integrity: hp, max: hp, pack: [], visited: ['/'] };
   selectEncounter(s, 'cryptjack', 7, { level, mutation: null, ...(run ? { mode: 'run' } : {}) });
   command(s, 'engage');
+  s.encounter.surpriseSpent = true; // the Infiltrator's Surprise is tested on its own (skills2.test.mjs)
   const e = s.encounter;
   e.virus.tells = null; e.hardened = 0;
   for (const p of e.virus.parts) if (p.attack) p.attack.due = 999;

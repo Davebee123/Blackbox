@@ -43,7 +43,7 @@ Each pays off only once set up. None ignores ◆, tells or the one-delay rule, s
 | **Bounce Message** | Bastion | When Firewall soaks a whole hit, Retaliate fires that cycle for free | Firewall timed to the hit is your biggest damage |
 | **Stress Test** | Warden | Blowback has no cap, and a charged attack counts double toward it | A charge is a choice: cut it, or take it into Harden or Circuit Breaker and send it back |
 | **Headroom** | Sysop | Overprovision has no cap. Each hit spends up to 10 shield to deal that much more | Heals become shields, shields become damage: the healer fights alone |
-| **First Light** | Infiltrator | Each part you break opens a Surprise window on your next cycle | Breaks timed for Surprise's bonuses, several times a fight |
+| **First Light** | Infiltrator | Each part you break makes your next command a Surprise | Breaks timed for Surprise's bonuses, several times a fight |
 | **Reinfection** | Payload | Up to 3 Injects on a part, each on its own clock. Inject cools a cycle slower | Stack three, then Detonate or Thrash |
 | **Dead Angle** | Phantom | Each attack that misses you makes Weak Spot fresh on every part | Evasion, Null Route, Vanish and Shadow Copy all feed it |
 | **Wakeup Call** | Operator | When a helper expires, each of your daemons acts again (once a cycle) | A daemon build on the extra thread |

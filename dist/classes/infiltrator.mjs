@@ -427,8 +427,8 @@ function pick(s, t0) {
 // what's about to run out, Backdoor between.
 function core(s, t) {
   const e = s.encounter, burns = burnsOn(s, t), q = queued(s, t), inj = injected(s, t);
-  // The Surprise window: open with Inject (it ticks at once in it).
-  if (e.cycle === 1 && e.sync?.surprise) return first(s, ['inject ' + t.id, 'tag ' + t.id]);
+  // Surprise (the first command): open with Inject (it ticks at once).
+  if (!e.surpriseSpent) return first(s, ['inject ' + t.id, 'tag ' + t.id]);
   // A Phantom leads with its direct hits (Weak Spot, Backstab, Side Channel) and keeps an Inject burning under them.
   // Before its hits are on the bar (Opening and Backstab come past level 10), it plays the core kit's burns.
   if (subOf(s) === 'phantom' && usable(s).some((id) => ['opening', 'backstab', 'side-channel'].includes(id))) return first(s, [
@@ -467,8 +467,8 @@ function payloadPlan(s, t, living, hurt) {
   // The Implant on a part that heals or grows (a Patcher, a Tap, a Self-Update on the board): it can't while it burns.
   const healer = living.find((p) => p.attack?.effect === 'heal' || p.attack?.siphon || tellOn(s, p, 'cast')?.does === 'grow');
   if (healer) { const c = first(s, ['implant ' + healer.id]); if (c) return c; }
-  // Opening move (the Surprise window): Inject, for the longer burn.
-  if (e.cycle === 1 && e.sync?.surprise && t.armor === 0) return first(s, ['inject ' + t.id]);
+  // Opening move (Surprise): Inject, for the longer burn.
+  if (!e.surpriseSpent && t.armor === 0) return first(s, ['inject ' + t.id]);
   // A finisher: Detonate when the burns left on it break it (or nearly). Propagate first, when its attack isn't due
   // yet and another part has no Inject: the burns live on there after Detonate spends them here.
   const q = queued(s, t);
@@ -534,10 +534,10 @@ function phantomPlan(s, t, living, hurt) {
   const fresh = living.filter((p) => !e.weakHit?.[p.id]).length;
   if (fresh === 0 && living.length >= 2) { const c = first(s, ['log-wipe']); if (c) return c; }
   if (t.integrity >= 60) { const c = first(s, ['implant ' + t.id]); if (c) return c; }
-  // The Surprise window: Inject ticks at once in it, so a Phantom opens with it, unless the target fires within a
+  // Surprise: Inject ticks at once in it, so a Phantom opens with it, unless the target fires within a
   // cycle and its burst through armor
   // (Backdoor now, then Side Channel or Unmask) breaks it first.
-  if (e.cycle === 1 && e.sync?.surprise) {
+  if (!e.surpriseSpent) {
     const burst = previewDamage(s, 'backdoor', t) + Math.max(0, ...['side-channel', 'unmask'].filter((id) => usable(s).includes(id)).map((id) => previewDamage(s, id, t)));
     const c = first(s, [burst >= t.integrity && dueIn(s, t) <= 1 && 'backdoor ' + t.id, 'inject ' + t.id]); if (c) return c;
   }
