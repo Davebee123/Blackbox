@@ -1,5 +1,5 @@
 // The Achievements page (Rig → Achievements): the categories on the left with their totals, the chosen
-// category's achievements beside them. Pure functions of state. Each row shows; its rule is its tooltip.
+// category's achievements beside them. Pure functions of state. Each row shows its rule under its name.
 //   ui: { cat: 'summary' | a category id, focus: an achievement id to light (a pager line opened it) }
 import { glyph } from './glyphs.mjs';
 import { achievements, CATEGORIES, pointsOf, totalPoints, progressOf, rewardText, terminalReward } from './achievements.mjs';
@@ -44,7 +44,7 @@ export function achRow(s, a, focus = null) {
   const cls = ['ach-row', got ? 'got' : p && p[0] > 0 ? 'part' : '', hide ? 'hidden' : '', focus === a.id ? 'focus' : ''].filter(Boolean).join(' ');
   const body = hide
     ? `<b class="ach-name">???</b><small class="ach-hint">${esc(a.hint)}</small>`
-    : `<b class="ach-name">${esc(a.name)}</b>${p ? `<span class="ach-prog">${bar(p[0], p[1])}<small>${p[0]}/${p[1]}</small></span>` : ''}`;
+    : `<b class="ach-name">${esc(a.name)}</b><small class="ach-rule">${esc(a.rule)}</small>${p ? `<span class="ach-prog">${bar(p[0], p[1])}<small>${p[0]}/${p[1]}</small></span>` : ''}`;
   const side = got ? `<time datetime="${new Date(got).toISOString().slice(0, 10)}">${dmy(got)}</time><button type="button" class="act dim ach-pin" data-run="achieve ${pinned ? 'unpin' : 'pin'} ${esc(a.id)}" aria-pressed="${pinned}" title="${esc(pinned ? 'On your card. Unpin it.' : 'Pin it to your card.')}">${pinned ? 'Pinned' : 'Pin'}</button>` : '';
   return `<li class="${cls}" data-ach="${esc(a.id)}" title="${esc(achTip(s, a))}"><span class="ach-pts" aria-label="${a.pts} points">${glyph('medal')}<b>${a.pts}</b></span><div class="ach-body">${body}</div>${hide ? '' : rewardChips(a, !!got)}${side ? `<div class="ach-side">${side}</div>` : ''}</li>`;
 }
