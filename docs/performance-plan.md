@@ -46,12 +46,12 @@ it is 109 requests and 6.3 MB (a 3.1 MB script, a 0.6 MB stylesheet) against 334
 
 | # | What | Helps | Look |
 |---|---|---|---|
-| 10 | **The fight's render reads layout.** The board's overflow check (`app.js`, `bd.scrollHeight` after `putRows`) is about 28% of `render` on a phone; `fitTopbar` measures the bar on every render (about 9%); `turnTimeline`, `cycleChanged` and `phStage` call `getBoundingClientRect` after writes. Measure only when what they depend on changes (a ResizeObserver, a row added or removed). | both | none |
-| 11 | **The virus picture's loop asks for every frame** just to check the clock: a fight waiting for an order runs 60 frames a second (22% of a phone) though a phone's picture draws 8 a second. A timer until the next draw is due, then one frame. | both, phones most | none |
 | 12 | **The start.** About 2.7 s on a phone's CPU before the power-on shows, one block of 1.3 s evaluating the bundle; the app's start builds what isn't on screen (`invasion.mjs` 169 ms, `profile.mjs` 143, `collection-log.mjs` 114, `codex.mjs` 93). The Horizon drawn before the script runs (HTML and CSS); pages built and modules loaded on first open. | phones most | none |
 | 13 | **Scrolling paints twice a frame** and runs a layout a frame (Map 32%, Settings 14%, Skills 16%); five scroll listeners in `app.js` run on every scroll event. Find what repaints; listeners passive and once a frame. | both | none |
 | 14 | **The strike layer** (`virus-art.mjs` `art-out`) stays a full-screen canvas (3840 × 2160 on a desktop, about 33 MB) between strikes: free it when nothing is on it. The desktop's virus picture is 11 ms a draw in a boss fight. | desktops most | none |
 | 15 | **A queued effect** (`feel.mjs` play) costs 3.4–3.8 ms on a phone, six or seven a second in a fight: profile which. | both | landed |
+| 16 | **The tick runs every frame in a waiting fight** (`app.js` tickBusy holds while `active`, paused or not): 52–62 ms/s and 60 frames a second on a phone with nothing moving. Since batch 11 it is the only thing asking for frames there; with it rested the waiting fight is 8 frames a second (95 ms/s). | both, phones most | none |
+| 17 | **What still forces a layout each fight frame**, now render reads none: the chips' effects (`chipfx.mjs` tick, a new chip before its ResizeObserver has measured it), the virus picture (`virus-art.mjs` draw), the prompt's caret (`shell.mjs` caret, 15 a second on a desktop). Whichever reads first pays the frame's layout. | both | none |
 
 ## The rules (the designer, November 2026)
 
@@ -76,6 +76,7 @@ it is 109 requests and 6.3 MB (a 3.1 MB script, a 0.6 MB stylesheet) against 334
 | Samples, audio textures and the chip effects' defs warmed on the loading screen (`warm.mjs`) | both | landed |
 | One bundled, minified script and stylesheet for the hosted game (`scripts/build.mjs`) | both, phones most | landed |
 | The class pick's border effects on the compositor (`pickfx.mjs`); no flex-basis transitions in its phone layout | both, phones most | landed |
+| The fight's render reads no layout (`app.js`): the board's overflow, the log's scroll, the top bar's fit and the UI scale measured after layout | both | landed |
 | A fight's effects put on the page in one batch a frame, with no forced layout to restart a flash (`feel.mjs` show, `restart.mjs`) | both | landed |
 
 **The same look, by other means (the designer's eye before it lands):**
@@ -136,6 +137,8 @@ One session each, started fresh. Measure before and after with `tools/perf/phone
 | 7 | A build step for the hosted game (approved 2026-11-15); `dist/` stays runnable as plain files for development | `scripts/build.mjs`, the Pages workflow | landed |
 | 8 | The class pick: measure it, fix what costs | the class pick (`app.js` near `classPickMarkup`, `view.mjs` classPickMarkup, its CSS) | landed |
 | 9 | The CRT and the backdrop's textures merged into fewer layers: prototypes, the pick, then the build | `screenfx.css`/`.mjs`, `#crt`, `#fx-back`, `#fx-edge` | landed |
+| 10 | The fight's render reads no layout | `app.js` render, `fitTopbar`, `uiScale`, `casingLookUi`, the board's `.dense` | landed |
+| 11 | The virus picture asks for a frame only when a draw is due | `virus-art.mjs` draw loop | landed |
 
 **Batch 1 (landed).** `frame` runs every frame while `tickBusy` holds: a fight, `dirty`, a queued effect, strike or
 level-up, the Tune window, files moving on the map, co-op, or the second after an input. Otherwise a timer runs it when
@@ -273,21 +276,48 @@ Settings 38, 23 → 26, 25; regular fight 19.0, 31.5 (958, 947) → 26.5, 27.6 (
 15.5, 18.3 (968, 963). Desktop Map 17.3, 20.5 (426, 400) → 22.0, 21.7 (397, 399); Settings 29.4, 28.6 (338, 363) →
 42.4, 45.6 (408, 393: more frames drawn); regular 10.9, 12.6 → 13.3, 15.2; boss 9.2, 9.9 → 9.8, 10.6. No page errors.
 
+**Batch 10 (landed).** The fight's render forced a layout two or three times a render: `fitTopbar` read the bar's
+size, `uiScale` the body's and `casingLookUi` the window's (`innerWidth`, a style pass) on every render; the board's
+overflow check read `scrollHeight` after the rows went in; the log read it to scroll to its newest line. Now the top bar
+refits on a key read without layout (tabs, the integrity note, People, the pager) and on a ResizeObserver for its size;
+the UI scale's room comes from one on the body (measured at once when the casing changes); the window's size is kept
+from its resizes; the board tightens (`.dense`) from one on the board and each row; the log scrolls from one that fires
+on observing. Each runs after the frame's layout, before paint. What measures the board in the same render (a turn's
+FLIP, the strikes, the phone's stage) tightens it first, as before. `turnTimeline`, `cycleChanged` and `phStage` already
+measured once a cycle, not a render: kept. Forced layout and style from render (profiled, phone, regular fight): about
+47 ms/s → 19 (only at a turn, a strike or the stage), but the next reader in the frame now pays it (17). Dense board, the log's end,
+the top bar's fit steps (640–1920 px) and the scale: as on main, no page errors. Same day, two runs each, ports
+alternated, main → branch, frames a second (main thread ms/s; the game's tick ms/s): phone boss 17.4, 19.0 (958, 958;
+292, 258) → 17.3, 24.9 (966, 939; 268, 213); regular 28.0, 29.8 (949, 940; 247, 251) → 31.8, 33.5 (921, 934; 217, 228).
+Desktop boss 10.7, 10.8 (639, 667; 73, 78) → 12.3, 10.8 (639, 649; 64, 66); regular 15.9, 13.7 (589, 603; 66, 74) →
+16.9, 12.6 (579, 648; 63, 78).
+
+**Batch 11 (landed).** The picture's loop (`virus-art.mjs` draw) asked for every frame to check the clock. Now a
+timer runs until half a frame before the Graphics setting's step is up (graphics.mjs frameMs), then frames until it
+is: the same draws at the same times. Resting with nothing to draw, `attach` and `wake` as before. Phone, a fight
+waiting for its first order (`?playtest=random&level=20`, idle): the picture's callbacks 60 → 11 a second, its time
+42 → 35 ms/s, the main thread 235 → 239 ms/s (noise); the frames don't drop yet, as the tick asks for every one (Next, 16). With the tick
+knocked out (`DROP_RAF='^frame$'`), main → branch: phone 60 → 7.7 frames a second, 186 → 95 ms/s; desktop 34 → 36
+frames, 295 → 301 ms/s (within the noise; a desktop at full draws 20–25 a second anyway). Boss fights within the noise: phone
+22.2 → 20.7, 21.3 frames a second (the picture 147 → 135, 127 ms/s), desktop 10.6 → 11.0, 11.6. The first frame of a
+fight and the Codex art come within a frame or two, as before; no page errors.
+
 **Batch 15 (landed).** Profiled on a phone (a JS profile under `play`, boss fight, 25 s): two thirds of a delayed effect
 was forced layout, a third Web Audio. Each flash restarted its class with `void el.offsetWidth` (a layout of the screen,
 even when the class wasn't on), then each number read its element's box after those writes; `juice` (shatter, punch),
-`lash.mjs` and `screenfx.mjs` restarted theirs the same way. Now `feel.mjs` puts an effect's look up in a batch (`show`):
-the classes it restarts come off, every box is read, then everything goes on, one style pass and layout a batch. The
-flush's own effects are one batch; a delayed one's sound and buzz go off on its timer as before, its look in the next
-frame's batch (what a timer writes shows no sooner). The others restart through `restart.mjs` (a style pass only, none
-when the class isn't on). An echo loop released at 5 s rather than its voice's 20 (`sound.mjs`) left the audio thread
-level (24–26% both ways), so it was dropped. The same stream of numbers and flashes on main and the branch: the same 24
-numbers, text, class and position to the pixel, the same flashes, a re-fired one restarting. Same day, before → after,
-the delayed effect alone: phone regular 3.83, 3.71 → 1.49, 1.33 ms each; phone boss 3.38, 3.38, 3.59 → 1.23, 1.13, 1.26
-ms; the frame's batch 5–7 ms at 1–1.6 a second, most of it the layout the frame does anyway. Effects together, phone
-boss 23.5, 23.2, 25.3 → 16.9, 16.9, 19.2 ms/s; a fixed stream of effects over a boss fight (sound off) 31.8, 30.0, 29.8
-→ 21.4, 23.3, 17.2 ms/s, style passes 85–88 → 71–72 a second. Desktop regular 1.36 → 0.41 ms, boss 1.17 → 0.51 ms.
-Frames and the whole main thread within the noise (phone boss 22.6, 22.4 → 24.4, 19.9 frames/s; regular 37.7, 38.0 →
-37.5, 39.3). No page errors.
+`lash.mjs` and `screenfx.mjs` restarted theirs the same way. Now `feel.mjs` puts the effects' look up in one batch a
+frame (`show`), in a ResizeObserver's turn, after the frame's layout and before its paint, as batch 10 measures: every
+box is read there for free, the classes it restarts come off (one style pass), then everything goes on. It lands in the
+same frame as before: what the tick flushes shows that frame, what a timer writes shows no sooner than the next. A
+delayed effect's sound and buzz still go off on its timer. The others restart through `restart.mjs` (a style pass only,
+none when the class isn't on). An echo loop released at 5 s rather than its voice's 20 (`sound.mjs`) left the audio
+thread level (24–26% both ways), so it was dropped. The same stream of numbers and flashes on main and the branch: the
+same 24 numbers, text, class and position to the pixel, the same flashes, a re-fired one restarting, a flush inside a
+frame on the page before the next. Same day, after batches 10 and 11, main → branch, the delayed effect: phone regular
+4.78, 3.60, 4.15 → 1.54, 1.69 ms each; phone boss 3.60, 3.87, 3.63 → 1.07, 1.12, 1.26 ms; the batch 1.2 ms at about 2 a
+second; the effects together, phone boss 25–27 → 10–11 ms/s. Desktop regular 1.18 → 0.53 ms, boss 1.14, 1.25 → 0.48
+ms. Frames and the main thread level or a little better: phone boss 21.2, 21.1, 19.2 → 24.4, 23.4, 22.0 frames/s (954,
+958, 958 → 934, 938, 938 ms/s); regular 24.2, 23.0, 26.1 → 23.3, 23.3; desktop boss 10.0, 12.3 → 12.0, regular 18.8 →
+18.5. No page errors.
 
 Not yet measured: breach and campaign, hubs and shops, co-op, the tutorial, the More sheet, a phone on its side.

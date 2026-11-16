@@ -163,11 +163,23 @@ export function createFeel({ settings, reducedMotion, queued = () => {} }) {
     setTimeout(() => f.remove(), 1100);
   }
 
-  // What the effects put on the page (flashes, numbers, the edge) goes up in batches: every class a flash restarts comes
-  // off, then every box a number rises from is read, then everything goes on. One style pass and layout a batch, where
-  // each effect alone forced its own (about 1.5 ms each on a phone). A delayed effect's batch waits for the next frame:
-  // what a timer writes shows no sooner than that, and its sound and buzz still go off on the timer.
-  let later = [], frameAsked = 0;
+  // What the effects put on the page (flashes, numbers, the edge) goes up in one batch a frame, after the frame's layout
+  // and before its paint (a ResizeObserver's turn): every box a number rises from is read there for free, the classes a
+  // flash restarts come off (one style pass), then everything goes on. Each effect alone used to force a layout of the
+  // screen (2–3 ms on a phone). What a timer or the tick writes shows no sooner than that frame's paint, and a delayed
+  // effect's sound and buzz still go off on its timer.
+  let later = [], asked = false;
+  const afterLayout = typeof ResizeObserver === 'function' ? new ResizeObserver(() => { afterLayout.disconnect(); showLater(); }) : null;
+  function showLater() { asked = false; const items = later; later = []; show(items); }
+  function showSoon(items) {
+    if (!items.length) return;
+    if (document.hidden) { show(items); return; } // no frames come while hidden
+    later.push(...items);
+    if (asked) return;
+    asked = true;
+    if (afterLayout) { afterLayout.observe(document.body); requestAnimationFrame(() => {}); } // a fresh observation reports at the next frame's layout
+    else requestAnimationFrame(showLater);
+  }
   function show(items) {
     const shake = !reducedMotion(), flashes = [];
     for (const it of items) {
@@ -181,11 +193,10 @@ export function createFeel({ settings, reducedMotion, queued = () => {} }) {
       // detail.floatAt: where the number rises, if not off the flashing element (detail.x: how far across it, 0–1).
       it.fl = label ? (detail?.floatAt ? document.querySelector(detail.floatAt) || els[0] : els[0]) : null;
     }
+    for (const it of items) if (it.fl) it.box = it.fl.getBoundingClientRect(); // reads first, before any write
     let off = null;
-    for (const [el, cls] of flashes) if (el.classList.contains(cls)) { el.classList.remove(cls); off = el; } // restarted below
-    let read = false;
-    for (const it of items) if (it.fl) { it.box = it.fl.getBoundingClientRect(); read = true; }
-    if (off && !read) void getComputedStyle(off).animationName; // the style pass that lets a removed animation start over
+    for (const [el, cls] of flashes) if (el.classList.contains(cls)) { el.classList.remove(cls); off = el; }
+    if (off) void getComputedStyle(off).animationName; // the style pass that lets a removed animation start over
     for (const [el, cls, soft] of flashes) {
       if (soft != null) el.classList.toggle('soft', soft);
       el.classList.add(cls);
@@ -193,8 +204,6 @@ export function createFeel({ settings, reducedMotion, queued = () => {} }) {
     }
     for (const { sign, target, label, detail, box } of items) if (label) float(box, label, (sign.float || 'amber') + (detail?.quiet ? ' quiet' : ''), detail?.size, { src: detail?.src, spot: detail?.floatAt || (typeof target === 'string' ? target : ''), stack: detail?.stack, x: detail?.x });
   }
-  function showLater() { frameAsked = 0; const items = later; later = []; show(items); }
-
   // shown: where its look goes (the flush's own batch); none: the next frame's.
   function play({ kind, target, label, detail, mute }, shown) {
     if (typeof kind === 'function') { try { kind(); } catch { /* an effect never breaks the game */ } return; }
@@ -202,8 +211,7 @@ export function createFeel({ settings, reducedMotion, queued = () => {} }) {
     if (!sign) return;
     const it = { sign, target, label, detail };
     if (shown) shown.push(it);
-    else if (document.hidden) show([it]); // no frames come while hidden
-    else { later.push(it); if (!frameAsked) frameAsked = requestAnimationFrame(showLater); }
+    else showSoon([it]);
     // mute: its ability's own sound plays in its voice's place (the flash and the buzz stay).
     if (!detail?.silent) { if (!mute) voice(sign.voice, detail); buzz(sign.buzz); }
   }
@@ -262,7 +270,7 @@ export function createFeel({ settings, reducedMotion, queued = () => {} }) {
         if (item.at > 0) setTimeout(() => play(item), item.at);
         else play(item, now);
       }
-      show(now);
+      showSoon(now);
     },
     canBuzz: () => typeof navigator !== 'undefined' && 'vibrate' in navigator,
   };
