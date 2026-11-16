@@ -1339,7 +1339,7 @@ function react(events) {
         const bp = part(campaign, e.target);
         // (It waits for the number of the hit that broke it.)
         const wait = delay(e);
-        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { markDirty(); }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => { hitfx.dissolve(partRow(e.target)); if (e === last) slowmo(); })); }
+        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { markDirty(); }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => { bp._dyingUntil = Date.now() + DISSOLVE_MS; markDirty(); hitfx.dissolve(partRow(e.target)); if (e === last) slowmo(); setTimeout(() => { markDirty(); }, DISSOLVE_MS + 50); })); }
         if (e === last) pendingStrikes.push(() => later(wait, winSound)); // your class's flourish over the break's voice
       }
         artHit(e.target, 'break'); feel.add(() => flash(e.message)); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
@@ -3576,7 +3576,12 @@ function pagerUi() {
   if (commsOpen) put('comms', PGV.inboxMarkup(campaign, Date.now()));
 }
 // A plain ping's fade runs from when it came in, so a redraw picks it up where it was.
-function pingFades() { for (const el of document.querySelectorAll('.ping[data-t] > .pi-in')) if (!el.style.animationDelay) el.style.animationDelay = `${Number(el.parentElement.dataset.t) - Date.now()}ms`; }
+// Its arrival (pings.css: the slide, the flare, the sweep) runs from then too, so a redraw never plays it again.
+function pingFades() {
+  const now = Date.now();
+  for (const el of document.querySelectorAll('.ping[data-t] > .pi-in')) if (!el.style.animationDelay) el.style.animationDelay = `${Number(el.parentElement.dataset.t) - now}ms`;
+  for (const el of document.querySelectorAll('.ping[data-at]')) if (!el.style.getPropertyValue('--since')) el.style.setProperty('--since', `${Math.min(0, Number(el.dataset.at) - now)}ms`);
+}
 // A click on a ping: the page's thing (pagerAct), or where a line of news happened.
 document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-ping]');

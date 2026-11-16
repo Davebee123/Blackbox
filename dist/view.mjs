@@ -885,7 +885,7 @@ function tethers(rows, links, dying) {
   const armOf = (sp, r) => (arms.get(r) > 1 && sp.a !== sp.b ? (r === sp.b ? -5 : r === sp.a ? 5 : 0) : 0);
   for (const sp of spans) {
     const { l } = sp, mid = (sp.a + sp.b) / 2, nodeRow = Math.floor(mid), edge = mid !== nodeRow; // an even span: on the line between two rows
-    const p = rows[sp.src], snap = l.snap ? `--snap:-${dying(p)}ms;` : '';
+    const p = rows[sp.src], snap = l.snap ? `--snap:${-dying(p)}ms;` : ''; // before its dissolve: a wait
     const cls = `tether k-${l.kind} lane${sp.lane} ${l.up ? 'up' : 'down'}${l.known ? '' : ' unk'}${l.snap ? ' snap' : ''}${sp.a === sp.b ? ' stub' : ''}`;
     for (let r = sp.a; r <= sp.b; r++) {
       const top = r === sp.a ? '50%' : '-1px', bottom = r === sp.b ? '50%' : '0';
@@ -989,13 +989,16 @@ export function boardMarkup(s, selected, preview = null) {
   }
   const pips = (id) => (aims[id] ? `<span class="aim-pips">${aims[id].map((a) => `<span class="aim ${a.kind}" data-who="${esc(a.kind.startsWith('you') ? 'you' : a.who)}" title="${esc(a.who)}${a.text ? ': ' + esc(a.text) : ''}">${esc(initials(a.who))}</span>`).join('')}</span>` : '');
 
-  // A part just broken stays a moment, dissolving (app.js sets _dyingUntil), before it joins the broken list.
+  // A part just broken stays a moment, dissolving (app.js sets _dyingUntil), before it joins the broken list. It
+  // stands whole until the hit that broke it lands (its last DISSOLVE ms are the dissolve), so a late beat (a burn's
+  // tick, a long effect) still finds it there.
   const dying = (p) => !alive(p) && p._dyingUntil > Date.now();
+  const dissolving = (p) => dying(p) && p._dyingUntil - Date.now() <= 1000;
   const fusing = (p) => !alive(p) && p.fuseAt && !p.fused && fighting; // a broken Zip Bomb stays on the board while its fuse burns
   const living = e.virus.parts.filter((p) => alive(p) || dying(p) || fusing(p)), broken = e.virus.parts.filter((p) => !alive(p) && !dying(p) && !fusing(p));
   const patchList = fighting ? patches(s, 4) : [];
   // What protects what, between the rows (a dissolving part's tether snaps with it).
-  const since = (p) => Math.max(0, Math.round(1000 - ((p._dyingUntil || 0) - Date.now())));
+  const since = (p) => Math.round(1000 - ((p._dyingUntil || 0) - Date.now())); // negative: not yet begun
   // And where the helpers of a part breaking this cycle move on to: a dashed teal tether (docs/puzzle-fights.md 3.2).
   const moveOn = hplan.moves.filter((m) => living.some((p) => p.id === m.from) && living.some((p) => p.id === m.to)).map((m) => {
     const from = part(s, m.from), to = part(s, m.to);
@@ -1034,14 +1037,14 @@ export function boardMarkup(s, selected, preview = null) {
     const spike = p.armor > 0 ? 'spike breaks a ◆' : `spike deals ${previewDamage(s, 'spike', p)}`;
     const marks = partMarks(s, p);
     // A redraw mid-dissolve picks the fade up where it was (a negative delay), not from the start.
-    const fade = dying(p) ? ` style="animation-delay:-${Math.max(0, 1000 - (p._dyingUntil - Date.now()))}ms"` : '';
+    const fade = dissolving(p) ? ` style="animation-delay:-${Math.max(0, since(p))}ms"` : '';
     // Its name cell carries what it does (fightread.mjs partTip: ??? until decoded); the rest of the row, the target.
     // A decoded part whose rule reaches another row shows it under its name (a Mutex: "locks Encryptor").
     const known = knowsPart(s, e.virus, p), cue = known ? partCue(s, e.virus, p) : null;
     const cueTag = cue ? `<span class="pcue"${cue.link ? ` data-link="${esc(cue.link)}"` : ''}>${glyph(cue.icon, 'pcue-ico')}${esc(cue.text)}</span>` : '';
     const guard = alive(p) ? guardMarks(s, e.virus, p, fc) : '';
     const gearMark = onParts[p.id] ? `<span class="gpart" title="${esc(`${list2(onParts[p.id])}: live on the ${p.name} now.`)}">${glyph('protocol')}</span>` : '';
-    return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''}${frozenNow(s, p) && !packed(s, e.virus, p) ? ' frozen' : ''}${asleep(p) && alive(p) && !packed(s, e.virus, p) ? ' standby' : ''}${alive(p) && Object.values(GENES).some((g) => g.lever && g.carried(p)) ? ' lever' : ''} ${marks.map((k) => 'm-' + k).join(' ')}${fighting && progExc(s, p) ? ' m-exc' : ''}" data-target="${esc(p.id)}"${chipTheme(p.name) && !packed(s, e.virus, p) ? ` data-th="${chipTheme(p.name)}"` : ''} ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
+    return `<button type="button"${fade} class="brow bpart ${dissolving(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''}${frozenNow(s, p) && !packed(s, e.virus, p) ? ' frozen' : ''}${asleep(p) && alive(p) && !packed(s, e.virus, p) ? ' standby' : ''}${alive(p) && Object.values(GENES).some((g) => g.lever && g.carried(p)) ? ' lever' : ''} ${marks.map((k) => 'm-' + k).join(' ')}${fighting && progExc(s, p) ? ' m-exc' : ''}" data-target="${esc(p.id)}"${chipTheme(p.name) && !packed(s, e.virus, p) ? ` data-th="${chipTheme(p.name)}"` : ''} ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
       <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${exeName(p)}${known ? '' : '<sup class="unk">?</sup>'}${mastered(s, e.virus, p) && !packed(s, e.virus, p) ? masteredMark(p) : ''}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}${leanTag(s, p)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${ghosts(p)}${guard}${capLine(s, p)}${ticksMarkup(s, p)}</span><span class="part-tags">${fighting ? progTag(s, p) : ''}${cueTag}${partTags(s, p)}</span></div>
       ${showCells ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');

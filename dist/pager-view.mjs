@@ -1,7 +1,7 @@
 // The pager on the top bar (the tray) and Comms, its list. pager.mjs sorts the pages; app.js wires the clicks
 // (pagerUi, pagerAct); pager.css draws them.
 //   The tray: a lamp (it opens Comms), then one small icon per page, most urgent first, red for a threat, a soft glow
-//   on a new one; the last slot says +n when more wait. Tap an icon to do the page's thing.
+//   on a new one and a light sweeping it until seen; the last slot says +n when more wait. Tap an icon to do the page's thing.
 //   Comms: the pages, each with its button; the news folded under them.
 // Everything that explains is a tooltip in WoW grammar (pager.mjs tipOf). No new colours: amber for what you act on,
 // red for a threat.
