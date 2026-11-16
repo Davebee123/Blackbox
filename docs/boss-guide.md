@@ -1,8 +1,8 @@
 # Boss guide: floors 2 to 8
 
-**Status.** Floors 2, 3 and 4 built (floorbosses.mjs; the numbers below are the prototypes', GAME_RULES.md has the built ones); the rest designed, not built: how each boss in docs/solo-bosses.md plays, written as a raid guide (what it is, its
+**Status.** Floors 2 to 5 built (floor 5's ACTUARY and PARASITE not yet) (floorbosses.mjs; the numbers below are the prototypes', GAME_RULES.md has the built ones); the rest designed, not built: how each boss in docs/solo-bosses.md plays, written as a raid guide (what it is, its
 abilities, each phase, how you die). docs/solo-bosses.md holds the rules; where the two differ, it wins. Prototyped as
-applets with a board a phase (November 2026). Phases start as the ♛ part crosses 60% and 30%; INIT's as its table
+applets with a board a phase (November 2026). Phases are acts, each a fresh board, the next as the last part of one breaks (act bars, docs/solo-bosses.md); INIT's as its table
 crosses 90, 83, 76 and 68. The numbers are the prototypes' placeholders; the boss sessions set the real ones.
 
 Terms: a **charge** is a big attack shown ahead that you can call off. A **cast** builds something on the virus, and
@@ -56,33 +56,31 @@ phase 3.
 
 ### SHAKEDOWN · floor 2's Pits throne · level 12
 
-**Overview.** A race against a ransom clock, where letting yourself get hit is how you buy time.
+**Overview.** A race against a ransom clock, where letting yourself get hit is how you buy time. Each act sends a new
+invoice.
 
 **Abilities**
-- **Ransom clock**: counts down from 12. At 0 it **leaks**: 30% of your max Signal, and the clock restarts at 6.
-- **Deadline** (Demand, charge, every 5): 36 damage. If it lands, the clock gains 3. If you call it off (cut or
-  SIGINT), it does nothing, and the clock gains nothing.
+- **Ransom clock**: counts down from 14 as each act begins. At 0 it **leaks**: 35% of your max Signal (15% more each
+  leak in that act), and the clock restarts at 7.
+- **Deadline** (Demand, charge, every 5): if it lands, the clock gains 3. If you call it off (cut or SIGINT), it does
+  nothing, and the clock gains nothing.
 - **Ward** (Lockbox): while the Lockbox stands, the Demand loses at most 25% of its max a cycle.
-- **Surge** (Collector ♛, every 4): 30 damage.
-- **Leverage**: while a Demand stands, the Collector loses at most 15% of its max a cycle. The rest of a hit is lost.
+- **Surge** (Collector ♛, every 4).
+- **Leverage**: while a Demand stands, the Collector loses at most 10% of its max a cycle. The rest of a hit is lost.
+- **Missed payment**: a Demand broken while the Collector stands halves the clock.
 
-**Phase 1 (100–60%)**
-- *What happens:* the clock ticks down while you work on the Collector, 15% a cycle at most. Each Deadline asks whether to pay 36 Signal
-  for 3 more cycles.
-- *Strategy:* work the Collector every cycle with a hit that fits the cap, and spend the big ones on a Deadline you
-  don't need. If the clock will reach 0 before the Collector breaks, let Deadlines land; if not, call them off. Killing
-  the Demand lifts the cap, ends the Deadlines, and halves the clock.
-- *How you die:* calling off every Deadline out of habit, then eating a 30% leak at a bad moment.
+**Act 1 · Ransom Clock**
+- *Strategy:* work the Collector with hits that fit the cap. Let a Deadline land when the clock would run out before the
+  Collector breaks; else call it off. The clock stops when the Collector breaks.
+- *How you die:* calling off every Deadline out of habit, or breaking the Demand first and halving the clock.
 
-**Phase 2 (60–30%) · Second demand**
-- *What happens:* a second Demand joins, with its Deadline on the same cycle as the first.
-- *Strategy:* choose how much time to buy: one lands (+3, −36), both (+6, −72), or neither.
-- *How you die:* letting both land when you only needed one, and running low on Signal for phase 3.
+**Act 2 · Second demand**
+- *What happens:* a second Demand takes the Lockbox's seat, its Deadline on the same cycle as the first.
+- *Strategy:* take one Deadline and cut the other, or take both when the clock is short.
 
-**Phase 3 (30–0%) · Final notice**
-- *What happens:* every leak now also refills the Demand's armor and brings the Lockbox back.
-- *Strategy:* never let the clock reach 0. Bank time early in the phase, then burst the Collector.
-- *How you die:* a single leak undoes the work you did on the Demand.
+**Act 3 · Final notice**
+- *What happens:* the Lockbox is back, and every leak re-arms the Demand and rebuilds the Lockbox.
+- *Strategy:* never let the clock reach 0.
 
 **Tips.** Shields make letting Deadlines land cheap. Bastions can buy time almost for free.
 
@@ -199,31 +197,26 @@ back and each other part you broke returns as a Camera at 30%; the Lockout boots
 
 **Overview.** Its attacks don't land; they wait. You decide when to take them, at half, before four pile up.
 
-**As built:** one hit on a part clears every hit held there; only the Desk takes damage
-(12% a hit at most), and its two traders go when it breaks; a full table makes later trades 25% bigger; Finality heals
-the Desk 4% for each hit cleared.
-
 **Abilities**
-- **Held hit**: every attack it makes is held on the part that made it (a red tag on that row). Nothing hits you yet.
-- **Clear**: hit a part with a held hit and that hit lands on you at half.
-- **Table full**: when four hits are held at once, all of them land at full strength.
+- **Held hit**: every attack it makes is held on the part that made it as a pending trade. Nothing hits you yet.
+- **Settle**: hit a part with a held hit and its trades land on you at half.
+- **Table full**: when four are held at once, all of them land at full strength, and later trades that act open 25%
+  bigger.
+- Only the Desk takes damage, 10% of its max a hit at most. When it breaks, its traders and their trades go with it.
 - SIGINT, delays and cuts do nothing to held hits.
 
-**Phase 1 (100–60%)**
-- *What happens:* every part's attack becomes a held hit. Three parts attacking every 3 to 4 cycles reach four held
-  hits in about 5 cycles.
+**Act 1 · No Timeout**
 - *Strategy:* hit the Desk, and when three hits are held, clear the biggest by hitting its part.
-- *How you die:* tunnelling the Desk until four land at once (about −250).
+- *How you die:* tunnelling the Desk until four land at once.
 
-**Phase 2 (60–30%) · Night shift**
-- *What happens:* the Night Clerk clocks in, a third trader holding one hit (it makes none of its own). A held hit
-  grows 15% each cycle it waits.
+**Act 2 · Night shift**
+- *What happens:* the Night Clerk takes the Teller's seat, holding one trade from the start. A held hit grows 15% each
+  cycle it waits.
 - *Strategy:* clear the oldest first, even on a part you didn't want to hit.
 
-**Phase 3 (30–0%) · Finality**
-- *What happens:* clearing a held hit also heals the Desk by the half you didn't take.
-- *Strategy:* clear only when the next hit would make four; otherwise burst the Desk.
-- *How you die:* clearing out of habit and healing the Desk back over 30%.
+**Act 3 · Margin Call**
+- *What happens:* when the Desk's own Margin Call comes due, every held hit lands with it, in full.
+- *Strategy:* settle the traders before it, or burst the Desk and void them.
 
 **Tips.** Shields absorb held hits when they land, so a shield before a deliberate clear makes it nearly free.
 

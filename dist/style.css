@@ -132,6 +132,13 @@ code { font-family: var(--mono); color: var(--amber); }
 .hud-bar.mine.mid .bar-ico { color: var(--next); } .hud-bar.mine.low .bar-ico { color: var(--hot); }
 .bigbar { height: 14px; background: var(--inset); border: 1px solid var(--hot); margin-top: 6px; }
 .bigbar span { display: block; height: 100%; background: linear-gradient(90deg, #a82f20, var(--hot)); transition: width 0.25s; }
+/* Act bars (acts.mjs): the boss's bar, a segment an act (view.mjs actSegments). */
+.act-segs { display: grid; grid-template-columns: repeat(var(--acts, 3), 1fr); gap: 4px; margin-top: 6px; }
+.act-segs .bigbar { margin-top: 0; }
+.act-segs .bigbar.act-done { border-color: var(--gray); opacity: 0.45; }
+.act-segs .bigbar.act-done span { width: 0; }
+.act-segs .bigbar.act-wait { border-color: rgba(255, 91, 61, 0.45); }
+.act-segs .bigbar.act-wait span { width: 100%; background: #5a2a1e; }
 .hud-bar.mine .bigbar { border-color: var(--you); }
 .hud-bar.mine .bigbar span { background: var(--you); }
 .hud-bar.mine .bar-top span { color: var(--you); }
@@ -141,6 +148,10 @@ code { font-family: var(--mono); color: var(--amber); }
 
 .virus-stage { position: relative; min-height: 0; background: var(--inset) url('ui/textures/terminal-grid-fine.png'); border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
 .virus-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.virus-stage.staged { background-image: none; } /* the floor's place (stage.mjs) in place of the grid */
+/* A chip's name coming in the floor's way (boardfx.mjs): a letter at a time, or a caret typing it. */
+.bfx-ch { display: inline-block; white-space: pre; }
+.bfx-caret { display: inline-block; width: 0.55em; height: 1em; margin-left: 1px; vertical-align: -2px; background: currentColor; opacity: 0.8; }
 .stage-flash { position: absolute; left: 0; right: 0; top: 10px; text-align: center; font: 600 13px var(--mono); color: var(--bright); letter-spacing: 1px; pointer-events: none; }
 
 .brow { display: grid; grid-template-columns: minmax(170px, 1.5fr) repeat(4, minmax(0, 1fr)); width: 100%; text-align: left; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 0 12px; background: none; align-items: stretch; }
@@ -182,7 +193,7 @@ code { font-family: var(--mono); color: var(--amber); }
 .tcol:first-child .tcol-head { color: var(--bright); font-weight: 600; }
 .countdown { font: 600 22px var(--mono); color: var(--bright); line-height: 1; }
 .cyclebar { position: relative; height: 7px; background: var(--inset); border: 1px solid var(--line); }
-.cyclebar span { position: relative; display: block; height: 100%; background: var(--you); }
+.cyclebar span { position: relative; display: block; height: 100%; background: var(--you); transform-origin: left; } /* filled by scaleX (app.js tickUi): no layout each frame */
 .intent { display: flex; align-items: center; gap: 6px; padding: 5px 7px; border: 1px solid var(--line-strong); border-radius: 3px; font-size: 13px; background: var(--panel-2); }
 .intent .ico { width: 14px; height: 14px; flex: none; background: currentColor; -webkit-mask: var(--icon) center/contain no-repeat; mask: var(--icon) center/contain no-repeat; }
 .intent b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: clip; min-width: 0; }
@@ -636,9 +647,14 @@ pre[aria-hidden="true"] { max-height: none; overflow: visible; }
 .mscope .maxis { stroke: rgba(241, 185, 47, 0.05); stroke-width: 1; }
 .mring-label { fill: rgba(241, 185, 47, 0.4); font-size: calc(10px / var(--z, 1)); letter-spacing: 2px; text-transform: uppercase; }
 .mlink { stroke: rgba(241, 185, 47, 0.26); stroke-width: 1; }
-.mlink.hot { stroke: rgba(255, 91, 61, 0.75); stroke-dasharray: 3 5; animation: mflow 1.2s linear infinite; }
+.mlink.hot { stroke: rgba(255, 91, 61, 0.75); stroke-dasharray: 3 5; --flow-t: 0.6s; }
+.mlink.flowed { stroke: none; } /* drawn by its flowing dashes */
+/* Flowing dashes (flowfx.mjs): each piece slides by a transform, so the graphics card runs it. A container's
+   .no-ambient stops them all. */
+@keyframes flow-run { to { transform: translateX(var(--p)); } }
+.flow-run { animation: flow-run var(--flow-t, 1s) linear infinite; }
+.no-ambient .flow-run { animation: none; }
 .mlink.ghost { stroke: rgba(241, 185, 47, 0.2); stroke-dasharray: 1 5; }
-@keyframes mflow { to { stroke-dashoffset: -16; } }
 .mnode { cursor: pointer; outline: none; }
 .mlabel { fill: #e6dcc4; font-size: calc(13px / var(--z, 1)); font-weight: 600; letter-spacing: 1.2px; transition: fill 0.15s; }
 .mlabel.home { fill: var(--you); letter-spacing: 2.5px; }
@@ -654,7 +670,9 @@ pre[aria-hidden="true"] { max-height: none; overflow: visible; }
 .mnode.intrusion path { fill: var(--hot); }
 .mnode.intrusion .pulse { fill: none; stroke: var(--hot); stroke-width: 1; animation: mpulse 2s ease-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes mpulse { 0% { opacity: 0.8; transform: scale(0.8); } 100% { opacity: 0; transform: scale(2.6); } }
-.no-motion .mnode .pulse, .no-motion .mnode .ring, .no-motion .mlink.hot { animation: none; }
+.no-motion .mnode .pulse, .no-motion .mnode .ring, .no-motion .mlink.hot, .no-motion .mlink.trunk, .no-motion .mhunt-line { animation: none; }
+.no-ambient .mnode .pulse, .no-ambient .mnode .ring, .no-ambient .mnode.zone .zdot, .no-ambient .mnode.transit .tmover { animation: none; }
+.no-ambient .tmove { animation-play-state: paused !important; } /* the files on the Map pause in mapmotion.mjs */
 .mnode.loc .ring { fill: none; stroke: rgba(241, 185, 47, 0.5); stroke-width: 1.2; animation: svpulse 3s ease-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes svpulse { 0% { opacity: 0.9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.7); } }
 .no-motion .mnode.loc .ring { animation: none; opacity: 0; } /* Motion off stills a new server's pulse too: its steady ring stays */
@@ -691,9 +709,9 @@ details summary { font-size: 13px; }
 .fx-float.big { font-size: calc(22px * var(--size)); }
 @keyframes fx-rise { 0% { opacity: 1; transform: translate(0, 0) scale(1.7); } 14% { transform: translate(calc(var(--dx) * 0.4), -8px) scale(0.92); } 24% { transform: translate(calc(var(--dx) * 0.5), -12px) scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), -44px) scale(0.95); } }
 @keyframes fx-fade { from { opacity: 1; } to { opacity: 0; } }
-#fx-edge { position: fixed; inset: 0; pointer-events: none; z-index: 40; box-shadow: inset 0 0 0 0 rgba(255, 91, 61, 0); }
-#fx-edge.on { animation: fx-edge 0.6s ease-out; }
-@keyframes fx-edge { 0% { box-shadow: inset 0 0 60px 12px rgba(255, 91, 61, 0.45); } 100% { box-shadow: inset 0 0 0 0 rgba(255, 91, 61, 0); } }
+/* the hit's edge flash: inside the tube (#crt), drawn only while it plays */
+#fx-edge { display: none; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 0 rgba(255, 91, 61, 0); }
+#fx-edge.on { display: block; box-shadow: inset 0 0 60px 12px rgba(255, 91, 61, 0.45); animation: fx-fade 0.6s ease-out both; } /* its first frame, faded by opacity: the compositor runs it */
 .fx-hit { animation: fx-hit 0.35s ease-out; }
 @keyframes fx-hit { 0% { background: rgba(255, 216, 92, 0.28); } 100% { background: transparent; } }
 .fx-break { animation: fx-break 0.6s ease-out; }
@@ -768,8 +786,7 @@ details summary { font-size: 13px; }
 .hud-bar.mine .bigbar.fx-locked { animation: fx-locked 0.42s ease-out forwards; }
 @keyframes fx-locked { 0% { box-shadow: inset 0 0 0 1px var(--hot); background-image: repeating-linear-gradient(-45deg, rgba(255, 91, 61, 0.35) 0 2px, transparent 2px 5px); } 100% { box-shadow: none; background-image: none; } }
 /* Effects minimal or Motion off: no lash, a soft edge. */
-#fx-edge.soft.on { animation: fx-edge-soft 0.5s ease-out; }
-@keyframes fx-edge-soft { 0% { box-shadow: inset 0 0 28px 3px rgba(255, 91, 61, 0.24); } 100% { box-shadow: inset 0 0 0 0 rgba(255, 91, 61, 0); } }
+#fx-edge.soft.on { box-shadow: inset 0 0 28px 3px rgba(255, 91, 61, 0.24); animation-duration: 0.5s; }
 .no-motion #lash { display: none; }
 /* Marks on a part: an icon each by its name; Exposed hatches the bar (it's open). */
 .pmarks { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
@@ -789,6 +806,26 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .fx-good { animation: fx-good 0.6s ease-out; }
 @keyframes fx-good { 0% { background: rgba(127, 209, 199, 0.22); } 100% { background: transparent; } }
 .fx-win { animation: fx-win 0.9s ease-out; }
+/* A flash on a part's row, its name block or a HUD bar: its first frame on a layer under the text, faded by opacity, so
+   the compositor runs it where background and box-shadow keyframes restyled and repainted every frame (performance
+   plan batch 16). The hosts are positioned and isolated for good (nothing in them moves); a dying row's dissolve wins,
+   as it did over the flash. */
+.brow, .part-top, .hud-bar { position: relative; isolation: isolate; }
+:is(.brow, .part-top, .hud-bar)::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0; } /* always there: a flash only restyles it, no layout */
+:is(.brow, .part-top, .hud-bar):not(.dying):is(.fx-hit, .fx-break, .fx-hurt, .fx-still, .fx-shove, .fx-enrage, .fx-strike, .fx-mark, .fx-burn, .fx-daemon, .fx-good, .fx-sync, .fx-surprise) { animation: none; }
+:is(.brow, .part-top, .hud-bar):not(.dying):is(.fx-hit, .fx-break, .fx-hurt, .fx-still, .fx-shove, .fx-enrage, .fx-strike, .fx-mark, .fx-burn, .fx-daemon, .fx-good, .fx-sync, .fx-surprise)::before { animation: fx-fade var(--fx-d) ease-out both; }
+:is(.brow, .part-top, .hud-bar).fx-hit::before { --fx-d: 0.35s; background: rgba(255, 216, 92, 0.28); }
+:is(.brow, .part-top, .hud-bar).fx-break::before { --fx-d: 0.6s; background: rgba(255, 242, 200, 0.35); }
+:is(.brow, .part-top, .hud-bar):is(.fx-hurt, .fx-still)::before { --fx-d: 0.45s; background: rgba(255, 91, 61, 0.3); }
+:is(.brow, .part-top, .hud-bar).fx-shove::before { --fx-d: 0.45s; background: rgba(127, 209, 199, 0.25); }
+:is(.brow, .part-top, .hud-bar).fx-enrage::before { --fx-d: 0.6s; box-shadow: inset 4px 0 0 var(--hot), inset 0 0 24px rgba(255, 91, 61, 0.25); }
+:is(.brow, .part-top, .hud-bar).fx-strike::before { --fx-d: 0.5s; box-shadow: inset 3px 0 0 var(--hot), inset 0 0 26px rgba(255, 91, 61, 0.35); }
+:is(.brow, .part-top, .hud-bar).fx-mark::before { --fx-d: 0.55s; background: rgba(127, 209, 199, 0.3); box-shadow: inset 0 0 0 1px rgba(127, 209, 199, 0.8); }
+:is(.brow, .part-top, .hud-bar).fx-burn::before { --fx-d: 0.55s; background: rgba(255, 140, 61, 0.3); }
+:is(.brow, .part-top, .hud-bar).fx-daemon::before { --fx-d: 0.5s; background: rgba(195, 166, 255, 0.22); }
+:is(.brow, .part-top, .hud-bar).fx-good::before { --fx-d: 0.6s; background: rgba(127, 209, 199, 0.22); }
+:is(.brow, .part-top, .hud-bar).fx-sync::before { --fx-d: 0.4s; background: rgba(255, 216, 92, 0.15); box-shadow: inset 0 0 0 2px rgba(255, 216, 92, 0.9); }
+:is(.brow, .part-top, .hud-bar).fx-surprise::before { --fx-d: 0.45s; background: rgba(108, 156, 255, 0.15); box-shadow: inset 0 0 0 2px rgba(108, 156, 255, 0.9); }
 @keyframes fx-win { 0% { box-shadow: 0 0 0 2px var(--bright), 0 0 40px rgba(255, 242, 200, 0.35); } 100% { box-shadow: none; } }
 
 /* ---------- smaller screens ---------- */
@@ -950,6 +987,29 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 /* the header has its own countdown and bar: no playhead over the digits */
 .brow.bhead > .bcell:nth-child(2):not(.span5) { background-image: none; }
 
+/* ---------- the board's frame by floor (the floor's palette up: <html data-sfx-floor>) ----------
+   Only the frame: the playhead's form, the rules between rows and columns, the headings' type. The chips, their colours
+   and every telegraph stay as they are; the playhead keeps its colours (teal, red when an attack closes). */
+html[data-sfx-floor="1"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: linear-gradient(90deg, transparent 0 3px, var(--band-line) 3px 5px, transparent 5px 8px), linear-gradient(90deg, transparent, color-mix(in srgb, var(--band-line) 22%, transparent), transparent); background-size: 8px 100%, 22px 100%; background-position: calc(var(--elapsed) - 3px) 0, calc(var(--elapsed) - 10px) 0; } /* the Sprawl: a neon tube */
+html[data-sfx-floor="2"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: radial-gradient(circle, var(--band-line) 0 3px, transparent 3.5px), linear-gradient(var(--band-line), var(--band-line)); background-size: 10px 10px, 2px 100%; background-position: calc(var(--elapsed) - 4px) 6px, var(--elapsed) 0; } /* Backhaul: a signal post, a lamp on each row */
+html[data-sfx-floor="2"] .board .brow:not(.bhead) { border-top: 2px dashed color-mix(in srgb, var(--amber) 22%, transparent); } /* its rows as sleepers */
+html[data-sfx-floor="4"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: linear-gradient(var(--band-line), var(--band-line)), linear-gradient(90deg, color-mix(in srgb, var(--amber) 10%, transparent), color-mix(in srgb, var(--amber) 4%, transparent)); background-size: 2px 100%, var(--elapsed) 100%; background-position: var(--elapsed) 0, 0 0; } /* Coldline: the Now cell fills like a tide */
+html[data-sfx-floor="4"] .board .brow:not(.bhead) { border-top-style: dashed; } /* its rows as swell lines */
+html[data-sfx-floor="8"] .board .bcell + .bcell { border-left: 3px double color-mix(in srgb, var(--amber) 30%, transparent); } /* Bedrock: the ledger's double column rules */
+html[data-sfx-floor="8"] .board .bhead .bcell, html[data-sfx-floor="8"] .board .bhead .cyc, html[data-sfx-floor="8"] .board .part-name, html[data-sfx-floor="8"] .board .you-top b { font-family: 'Courier Prime', monospace; }
+html[data-sfx-floor="8"] .board .bhead .bcell, html[data-sfx-floor="8"] .board .bhead .cyc { font-style: italic; text-transform: none; letter-spacing: 0.5px; }
+html[data-sfx-floor="8"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-size: 1px 100%; } /* a pen line */
+html[data-sfx-floor="3"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: repeating-linear-gradient(to bottom, var(--band-line) 0 4px, transparent 4px 7px); background-size: 2px 100%; background-position: var(--elapsed) 0; } /* the Stacks: a column of status LEDs */
+html[data-sfx-floor="3"] .board .brow:not(.bhead) { border-top-style: dotted; } /* its rows as rack slots */
+html[data-sfx-floor="5"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: linear-gradient(var(--band-line), var(--band-line)), repeating-linear-gradient(90deg, color-mix(in srgb, var(--amber) 13%, transparent) 0 1px, transparent 1px 5px); background-size: 2px 100%, 100% 100%; background-position: var(--elapsed) 0, 0 0; } /* Deep Core: a grating over the heat */
+html[data-sfx-floor="5"] .board .brow:not(.bhead) { border-top-style: dotted; }
+html[data-sfx-floor="6"] .board .brow:not(.bhead) { border-top-color: transparent; } /* Kernel Space: nothing but the plane */
+html[data-sfx-floor="6"] .board .bcell + .bcell:not(:nth-child(2)) { border-left-color: transparent; }
+html[data-sfx-floor="6"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-size: 1px 100%; }
+html[data-sfx-floor="7"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.span5):not(.span4) { background-image: radial-gradient(circle, var(--band-line) 0 2.5px, transparent 3px), linear-gradient(var(--band-line), var(--band-line)); background-size: 8px 8px, 2px calc(100% - 6px); background-position: calc(var(--elapsed) - 3px) calc(100% - 1px), var(--elapsed) 0; } /* the Sink: a drop at the playhead's foot */
+
+
+
 /* ---------- levels ---------- */
 .meter-level { min-width: 150px; }
 .meter-level strong { font-size: 14px; }
@@ -1098,23 +1158,30 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .shell-on #command-input { caret-color: transparent; }
 .shell-on #command-form:focus-within .caret { display: block; }
 
-/* the CRT itself: scanlines + vignette, a slow refresh band, faint moving grain */
-#crt { position: fixed; inset: 0; pointer-events: none; z-index: 70; display: none; }
+/* the CRT itself: scanlines + vignette, a slow refresh band, faint moving grain. One layer over the screen, clipped
+   to it: the hit's edge flash, the sweep, the bezel and the scanlines draw into it; the roll and the grain move on
+   top (z-index 1), so nothing above them needs a layer of its own. Without the shell it draws only the edge flash. */
+#crt { position: fixed; inset: 0; pointer-events: none; z-index: 70; overflow: hidden; }
+#crt > #crt-sweep, #crt > #crt-bezel { display: none; }
+.shell-on #crt > #crt-sweep, .shell-on #crt > #crt-bezel { display: block; }
 .shell-on #crt {
-  display: block;
   background:
     repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px),
     radial-gradient(ellipse 85% 80% at 50% 45%, transparent 62%, rgba(0, 0, 0, 0.5) 100%);
   transition: box-shadow 1.2s;
 }
-.shell-on #crt::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 22vh; background: linear-gradient(to bottom, transparent, rgba(255, 230, 160, 0.03) 60%, transparent); animation: crt-roll 11s linear infinite; }
+.shell-on #crt::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 22vh; background: linear-gradient(to bottom, transparent, rgba(255, 230, 160, 0.03) 60%, transparent); z-index: 1; animation: crt-roll 11s linear infinite; }
+.no-ambient #crt::before { display: none; } /* Ambient motion off (graphics.mjs): no roll */
 .shell-on #crt::after {
-  content: ''; position: absolute; inset: -50%; opacity: 0.045;
+  content: ''; position: absolute; inset: -160px 0 0 -160px; z-index: 1; opacity: 0.045;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   animation: crt-grain 0.5s steps(3) infinite;
 }
+/* Grain (settings.grain, `grain on|off`): unset, it's off in the phone layout, where its big moving layer costs the most. */
+body.grain-off #crt::after, [data-form='phone'] body:not(.grain-on) #crt::after { display: none; }
 @keyframes crt-roll { from { transform: translateY(-25vh); } to { transform: translateY(105vh); } }
-@keyframes crt-grain { 0% { transform: translate(0, 0); } 33% { transform: translate(-7%, 4%); } 66% { transform: translate(5%, -6%); } 100% { transform: translate(0, 0); } }
+/* the grain's layer is one tile (160px) bigger than the screen up and left: it jumps within the tile */
+@keyframes crt-grain { 0% { transform: translate(0, 0); } 33% { transform: translate(97px, 53px); } 66% { transform: translate(31px, 131px); } 100% { transform: translate(0, 0); } }
 /* your health, felt: screenfx.css (#crt-bezel.warn, .low), at the screen's very edge only. */
 
 /* the tube: rounded corners and darker edges */
@@ -1132,7 +1199,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   body.cased { --side: max(26px, 1.2vw); --top: 22px; --chin: 52px; --desk: 0px; box-sizing: border-box; height: 100dvh; overflow: hidden; padding: var(--top) var(--side) calc(var(--chin) + var(--desk)); background: radial-gradient(120% 90% at 50% 40%, var(--case-hi, #2a2724), var(--case-mid, #181614) 70%, var(--case-lo, #0e0d0c)); } /* the plastic: casing.css colourways set these */
   body.cased::before { content: ''; position: fixed; top: calc(var(--top) - 14px); bottom: calc(var(--desk) + 8px); left: calc(var(--side) - 18px); right: calc(var(--side) - 18px); border-radius: 26px; pointer-events: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -2px 0 rgba(0, 0, 0, 0.6), 0 0 0 8px var(--case-rim, #0b0a09); }
   body.cased .app { height: calc((100dvh - var(--top) - var(--chin) - var(--desk)) / var(--ui, 1)); max-width: none; position: relative; overflow: hidden; border-radius: 18px; background: var(--bg) url('ui/textures/grime-overlay-subtle.png'); box-shadow: 0 0 0 2px #000, 0 0 30px 6px rgba(241, 185, 47, 0.08); }
-  body.cased #crt, body.cased .boot, body.cased #fx-edge, body.cased .poweron, body.cased .class-pick { inset: var(--top) var(--side) calc(var(--chin) + var(--desk)); border-radius: 18px; overflow: hidden; }
+  body.cased #crt, body.cased .boot, body.cased .poweron, body.cased .class-pick, body.cased .first-cover { inset: var(--top) var(--side) calc(var(--chin) + var(--desk)); border-radius: 18px; overflow: hidden; }
   body.cased .class-pick { overflow-y: auto; } /* it scrolls on a short screen, inside the glass */
   body.cased .class-pick::after { display: none; } /* the tube's own scanlines (#crt) cover it now */
   body.cased #crt-bezel { border-radius: 18px; box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.65), inset 0 0 6px rgba(0, 0, 0, 0.9); }
@@ -1164,9 +1231,9 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .shell-on .page:has(> .net-one) { padding-top: 8px; }
 
 /* module change: one bright line sweeps down, the page comes up */
-#crt-sweep { position: absolute; left: 0; right: 0; top: 0; height: 2px; background: rgba(255, 242, 200, 0.55); box-shadow: 0 0 18px 4px rgba(241, 185, 47, 0.25); opacity: 0; }
+#crt-sweep { position: absolute; left: 0; right: 0; top: 0; height: 2px; background: rgba(255, 242, 200, 0.55); box-shadow: 0 0 18px 4px rgba(241, 185, 47, 0.25); opacity: 0; visibility: hidden; } /* drawn only while it sweeps */
 #crt-sweep.go { animation: crt-sweep 0.32s ease-in; }
-@keyframes crt-sweep { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(100vh); } }
+@keyframes crt-sweep { 0% { opacity: 1; visibility: visible; transform: translateY(0); } 100% { opacity: 0; visibility: hidden; transform: translateY(100vh); } }
 .shell-on .workspace.refresh { animation: crt-refresh 0.32s ease-out; }
 @keyframes crt-refresh { 0% { opacity: 0.25; filter: brightness(1.8) blur(1px); } 100% { opacity: 1; filter: none; } }
 
@@ -1216,6 +1283,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 /* boot screen */
 .boot { position: fixed; inset: 0; z-index: 65; background: #050302; display: flex; flex-direction: column; justify-content: center; padding: 8vh 10vw; transition: opacity 0.35s; }
 .boot.out { opacity: 0; }
+.first-cover { position: fixed; inset: 0; z-index: 64; background: #050302; } /* under the first launch's screens (app.js coverUp) */
 .boot pre { margin: 0; max-height: none; overflow: visible; font: 15px/1.7 var(--mono); color: var(--muted); text-shadow: 0 0 8px rgba(241, 185, 47, 0.35); white-space: pre-wrap; }
 .boot pre .b { color: var(--bright); letter-spacing: 2px; margin-bottom: 8px; }
 .boot pre .h { color: var(--hot); }
@@ -2214,8 +2282,7 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .names-hover .mnode:not(.server):not(:hover):not(:focus-visible):not(.selected) .mlabel { opacity: 0; }
 .names-hover .mnode .mlabel { transition: opacity 0.15s; }
 .mscope .mring-range.trunk { stroke: rgba(255, 216, 92, 0.14); stroke-dasharray: 4 6; }
-.mlink.trunk { stroke: rgba(255, 216, 92, 0.55); stroke-width: 1.6; stroke-dasharray: 6 4; animation: mflow 2.4s linear infinite; }
-.no-motion .mlink.trunk { animation: none; }
+.mlink.trunk { stroke: rgba(255, 216, 92, 0.55); stroke-width: 1.6; stroke-dasharray: 6 4; --flow-t: 1.5s; }
 .mnode.member rect { fill: rgba(255, 216, 92, 0.06); stroke: rgba(255, 216, 92, 0.7); stroke-width: 1.3; }
 .mnode.member.online rect { fill: rgba(255, 216, 92, 0.16); }
 .mnode.member .zdot { fill: var(--next); }
@@ -2637,15 +2704,15 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .brow.dying { pointer-events: none; animation: part-dissolve 1s steps(10, end) forwards; }
 .brow.dying .bname { color: var(--amber); }
 .brow.dying .part-top { visibility: hidden; } /* its letters are breaking up on the effects layer (hitfx.mjs) */
-.fx-cell { font: 600 11px/1 var(--mono); color: var(--amber); }
-.fx-letter { position: absolute; z-index: 2; transform: translate(-50%, -50%); white-space: pre; pointer-events: none; text-shadow: 0 0 6px rgba(241, 185, 47, 0.7); }
+.dissolve-fade .brow.dying .part-top { visibility: visible; } /* the plain fade: they go with the row */
+.fx-cell { font: 600 11px/1 var(--mono); color: var(--amber); } /* the bits' font (dissolvefx.mjs draws them) */
+.fx-dissolve { position: absolute; z-index: 2; pointer-events: none; }
 @keyframes part-dissolve { /* a flash, a flicker, then gone: its 1s and 0s take its place (hitfx.mjs) */
   0% { opacity: 1; background: rgba(255, 236, 190, 0.25); }
   10% { opacity: 0.5; }
   15% { opacity: 1; }
   25%, 100% { opacity: 0; background: transparent; }
 }
-.fx-bit.dissolve { opacity: 0; animation-fill-mode: both; color: var(--amber); font-size: 14px; text-shadow: 0 0 6px rgba(241, 185, 47, 0.8); }
 @media (prefers-reduced-motion: reduce) { .brow.dying { animation: none; opacity: 0.3; } }
 /* The server card's two levels: the server's (amber), your class's under it (your colour). */
 .srv-line .srv-bar.xp.you > span { background: var(--you); }
@@ -2926,7 +2993,7 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ct-head { display: flex; align-items: center; gap: var(--s3); margin: 0; padding: 0 2px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber); }
 .ct-head .glyph { width: 12px; height: 12px; }
 .ct-head small { margin-left: auto; font: inherit; color: var(--muted); }
-.ct-row { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 4px 8px; align-items: center; padding: 6px 8px; background: rgba(12, 10, 6, 0.88); border: 1px solid var(--line); border-left: 3px solid var(--amber-deep); border-radius: var(--r-btn); color: var(--text); font: inherit; text-align: left; cursor: pointer; backdrop-filter: blur(2px); }
+.ct-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; padding: 4px 8px; background: rgba(12, 10, 6, 0.88); border: 1px solid var(--line); border-left: 3px solid var(--amber-deep); border-radius: var(--r-btn); color: var(--text); font: inherit; text-align: left; cursor: pointer; backdrop-filter: blur(2px); }
 .ct-row:hover, .ct-row:focus-visible { border-color: var(--line-strong); border-left-color: var(--amber); }
 .ct-row.on { border-color: var(--amber); background: rgba(40, 30, 10, 0.92); }
 /* Pinned (earned.mjs): an earned piece's row, set green's edge for a set piece, amber's for a unique; its cells and n/N. */
@@ -2934,20 +3001,21 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ct-row.pin-row.set > .glyph { color: var(--r-set); }
 .ct-row.pin-row .ct-prog { flex-wrap: wrap; row-gap: 3px; }
 .pin-goal { font: 10px var(--mono); color: var(--muted); white-space: normal; line-height: 1.35; font-variant-numeric: tabular-nums; } /* its goal in words: wraps under the cells, never cut */
-.ct-row > .glyph { width: 14px; height: 14px; color: var(--amber-soft); align-self: start; margin-top: 2px; }
+.ct-row > .glyph { width: 14px; height: 14px; color: var(--amber-soft); align-self: start; margin-top: 1px; }
 .ct-txt { display: grid; min-width: 0; }
 .ct-txt b { font-size: 12px; font-weight: 600; color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ct-for { display: flex; align-items: center; min-width: 0; font: 10px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ct-for .glyph { width: 10px; height: 10px; }
-.ct-prog { grid-column: 2; display: flex; align-items: center; gap: var(--s3); min-width: 0; min-height: 10px; }
+.ct-prog { grid-column: 2 / span 2; display: flex; align-items: center; gap: var(--s3); min-width: 0; min-height: 10px; }
 .ct-bar { flex: 1 1 30px; min-width: 24px; height: 3px; background: rgba(255, 255, 255, 0.06); border-radius: 2px; overflow: hidden; }
 .ct-bar i { display: block; height: 100%; background: var(--amber); }
 .ct-n { flex: 0 1 auto; min-width: 0; font: 600 10px var(--mono); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ct-n.ct-say { white-space: normal; font-weight: 400; color: var(--muted); line-height: 1.35; }
+.ct-n.ct-say { font-weight: 400; color: var(--muted); line-height: 1.35; }
+.ct-prog.ct-side { grid-column: 3; grid-row: 1; }
+.ct-prog.ct-side .ct-bar { width: 40px; flex: none; }
 .ct-turn { padding: 2px 7px; border: 1px solid var(--ready); border-radius: 3px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--ready); white-space: nowrap; }
 .ct-row.ready { grid-template-columns: 16px minmax(0, 1fr) auto; border-color: var(--ready); background: rgba(20, 32, 12, 0.92); }
-.ct-row.ready .ct-prog { grid-column: 3; grid-row: 1 / span 2; }
-.ct-row.ready .ct-txt b { white-space: normal; }
+.ct-row.ready .ct-prog { grid-column: 3; grid-row: 1; }
 .ct-row.ready:hover .ct-turn, .ct-row.ready:focus-visible .ct-turn { background: var(--ready); color: var(--bg); }
 .ct-row.ready > .glyph { color: var(--ready); }
 /* The rail and the tracker share the map's left column; the rail keeps its own rows. */
@@ -2979,6 +3047,15 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .mrun path { fill: var(--bright); stroke: var(--bg); stroke-width: 1.2; }
 .mrun.road path, .mrun.down path { fill: none; stroke: var(--bright); stroke-width: 1.2; }
 .mrun .mrun-hit { fill: transparent; }
+/* A rival (R3, rivals.mjs huntsYou): the one red runner, on the map, the Rail and their card. */
+.mrun.rival path { fill: var(--hot); }
+.mrun.rival.road path { fill: none; stroke: var(--hot); }
+.mrunner.rival .mr-dia { fill: var(--hot); }
+.mrunner.rival .mr-name { fill: var(--hot); }
+.mrunner.rival .mr-route, .mrunner.rival .mr-ring { stroke: var(--hot); }
+.rr-row.rival .rr-dia { border-color: var(--hot); background: var(--hot); }
+.rr-row.rival b { color: var(--hot); }
+.rc-kind.rival { color: var(--hot); }
 /* Several runners at one place: one diamond and how many; its list (runnersList) opens beside it, rows like the Rail's. */
 .mrun .mrun-n { fill: var(--bright); font: 600 calc(11px / var(--z, 1)) var(--mono); dominant-baseline: central; paint-order: stroke; stroke: var(--bg); stroke-width: calc(3px / var(--z, 1)); stroke-linejoin: round; }
 .mrun.crowd.on path { stroke: var(--bright); stroke-width: 2; }
@@ -2994,6 +3071,15 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .rcard { position: absolute; z-index: 6; width: 300px; padding: 12px 14px; background: var(--panel, #120f0a); border: 1px solid rgba(255, 242, 200, 0.35); border-top: 2px solid var(--bright); border-radius: var(--r-btn); filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.65)); visibility: hidden; }
 .rcard.mine { border-top-color: var(--daemon); }
 .rcard .rc-x { position: absolute; top: 6px; right: 6px; }
+/* The head (the *Badge*): the bust left, kind, handle, class and level and the Tier bar right; the × clears it. */
+.rc-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; margin-bottom: 10px; padding-right: 26px; }
+.rc-head .rc-class { margin: 0 0 6px; }
+.rc-bust { margin: 0; padding: 3px 2px; overflow: hidden; font: 500 4px/4px var(--mono); letter-spacing: 0; white-space: pre; color: rgba(255, 242, 200, 0.85); background: radial-gradient(ellipse at 62% 40%, rgba(255, 242, 200, 0.18), transparent 65%), var(--inset); border: 1px solid rgba(255, 242, 200, 0.25); }
+.rc-bust .qf-r { display: block; }
+.rc-bust i { font-style: normal; }
+.rc-bust .g0, .rc-bust .in { color: rgba(255, 242, 200, 0.35); }
+.rc-bust .g1 { opacity: 0.55; }
+.rc-bust .e2, .rc-bust .gl { color: var(--bright); }
 .rc-kind { margin: 0; font: 10px var(--mono); letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
 .rc-handle { display: flex; align-items: center; gap: 6px; margin: 2px 0 0; font: 600 18px var(--sans); color: var(--bright); }
 .rcard.mine .rc-handle { color: var(--daemon); }
@@ -3052,6 +3138,8 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ptip-body .impl { display: block; } /* its text wraps back to the left edge, under the icon */
 .ptip-body .impl .glyph { display: inline-block; vertical-align: -2px; margin-right: 6px; }
 .ptip-body em { color: var(--muted); font-size: 11px; margin-top: 4px; }
+.ptip-body > small.zd { color: var(--text); font: 13px var(--sans); margin-top: 2px; } /* the effect reads as rules text; flavour stays muted */
+.ptip-body > small.zd b { color: var(--r-zeroday); font-weight: 600; }
 .inv-card .inv-state { display: flex; align-items: center; gap: 8px; margin: 6px 0 4px; }
 .inv-card .inv-state b { font: 600 12px var(--mono); color: var(--text); }
 .inv-card.breach { border-color: rgba(255, 91, 61, 0.6); }
@@ -3103,7 +3191,9 @@ details.map-pick { pointer-events: auto; }
 .trace-ways .tw .glyph { width: 14px; height: 14px; color: var(--you); }
 .trace-ways .tw span { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trace-ways .tw b { font: 700 12px var(--mono); color: var(--r-tuned); }
-.trace-ways .tw.off { opacity: 0.45; } .trace-ways .tw.off .glyph { color: var(--muted); } .trace-ways .tw.off b { color: var(--muted); }
+/* A way you don't have yet: hatched and shaded, its words faded, the lock in its icon's place at full strength. */
+.trace-ways .tw.off { background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0 3px, rgba(241, 185, 47, 0.06) 3px 6px); border-color: rgba(241, 185, 47, 0.12); }
+.trace-ways .tw.off span, .trace-ways .tw.off b { opacity: 0.4; color: var(--muted); } .trace-ways .tw.off .glyph { color: var(--text); }
 .trace-ways .tw.done span { text-decoration: line-through; color: var(--muted); } .trace-ways .tw.done b::after { content: ' ✓'; }
 .fam-tag .glyph, .svc-line .tag.dim .glyph { width: 12px; height: 12px; margin-right: 4px; vertical-align: -2px; }
 .op-pick-t { font: 11px var(--mono); color: var(--muted); margin-right: 8px; }
@@ -3218,7 +3308,7 @@ details.map-pick { pointer-events: auto; }
 [aria-checked='true'] > .pk-fx { display: block; }
 .pk-fx i { position: absolute; display: none; }
 /* Breaker, Fracture: cracks open across the border one at a time and throw chips; the third shatters it clean. */
-[data-pick-class='breaker'] > .pk-fx { animation: fx-shatter 3.6s ease-out infinite; }
+[data-pick-class='breaker'] > .pk-fx::before { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 0 0 1px #fff3c4, 0 0 34px rgba(255, 216, 110, 0.9); opacity: 0; animation: fx-shatter 3.6s ease-out infinite; } /* the flash as it shatters: a shadow that fades, so the compositor runs it */
 [data-pick-class='breaker'] .pk-fx i:nth-child(-n + 3) { display: block; width: 14px; height: 26px; margin-left: -7px; opacity: 0; }
 [data-pick-class='breaker'] .pk-fx i:nth-child(-n + 3)::before { content: ''; position: absolute; left: 4px; top: 11px; width: 6px; height: 4px; background: #0b0703; } /* the break in the line */
 [data-pick-class='breaker'] .pk-fx i:nth-child(-n + 3)::after { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 26'%3E%3Cpolyline points='6,0 9,7 5,12 10,18 7,26' fill='none' stroke='%23ffd86e' stroke-width='1.6' stroke-linejoin='bevel'/%3E%3Cpolyline points='9,7 12,9' fill='none' stroke='%23ffd86e' stroke-width='1.2'/%3E%3Cpolyline points='5,12 2,15' fill='none' stroke='%23ffd86e' stroke-width='1.2'/%3E%3C/svg%3E") center/contain no-repeat; filter: drop-shadow(0 0 3px var(--amber)); }
@@ -3228,7 +3318,7 @@ details.map-pick { pointer-events: auto; }
 @keyframes fx-cr1 { 0% { opacity: 0; } 1% { opacity: 1; filter: brightness(1.8); } 8%, 75% { opacity: 1; filter: none; } 80%, 100% { opacity: 0; } }
 @keyframes fx-cr2 { 0%, 22% { opacity: 0; } 23% { opacity: 1; filter: brightness(1.8); } 30%, 75% { opacity: 1; filter: none; } 80%, 100% { opacity: 0; } }
 @keyframes fx-cr3 { 0%, 45% { opacity: 0; } 46% { opacity: 1; filter: brightness(1.8); } 53%, 75% { opacity: 1; filter: none; } 80%, 100% { opacity: 0; } }
-@keyframes fx-shatter { 0%, 75% { box-shadow: 0 0 0 0 transparent; } 76% { box-shadow: 0 0 0 1px #fff3c4, 0 0 34px rgba(255, 216, 110, 0.9); } 92%, 100% { box-shadow: 0 0 0 0 transparent; } }
+@keyframes fx-shatter { 0%, 75% { opacity: 0; } 76% { opacity: 1; } 92%, 100% { opacity: 0; } }
 /* the chips: two from each crack as it opens */
 [data-pick-class='breaker'] .pk-fx i:nth-child(n + 9) { display: block; width: 3px; height: 3px; background: #ffd86e; box-shadow: 0 0 4px var(--amber); opacity: 0; animation: fx-chip 3.6s ease-out infinite; }
 [data-pick-class='breaker'] .pk-fx i:is(:nth-child(9), :nth-child(10)) { top: -2px; left: 31%; --dy: -14px; }
@@ -3249,8 +3339,9 @@ details.map-pick { pointer-events: auto; }
 [data-pick-class='breaker'] .pk-fx i:is(:nth-child(7), :nth-child(8))::after { --d: 180deg; top: 0; transform-origin: top; }
 @keyframes fx-burst { 0%, 75% { opacity: 0; scale: 0.2; } 76% { opacity: 1; scale: 0.2; } 82% { opacity: 1; scale: 1; } 90%, 100% { opacity: 0; scale: 1.15; } }
 /* Bastion, Deflect: a barrier stands off the border; shots come in, flash on it and glance off. Nothing reaches the panel. */
-[data-pick-class='bastion'] > .pk-fx::before { content: ''; position: absolute; inset: -7px; border: 1px solid rgba(241, 185, 47, 0.4); border-radius: 7px; animation: fx-ward 3.6s linear infinite; }
-@keyframes fx-ward { 0%, 8%, 18%, 58%, 68%, 100% { border-color: rgba(241, 185, 47, 0.4); } 10%, 60% { border-color: #ffd86e; } }
+[data-pick-class='bastion'] > .pk-fx::before, [data-pick-class='bastion'] > .pk-fx::after { content: ''; position: absolute; inset: -7px; border: 1px solid rgba(241, 185, 47, 0.4); border-radius: 7px; }
+[data-pick-class='bastion'] > .pk-fx::after { border-color: #ffd86e; opacity: 0; animation: fx-ward 3.6s linear infinite; } /* its flash fades in over it */
+@keyframes fx-ward { 0%, 8%, 18%, 58%, 68%, 100% { opacity: 0; } 10%, 60% { opacity: 1; } }
 [data-pick-class='bastion'] .pk-fx i:is(:nth-child(1), :nth-child(3)) { display: block; width: 2px; height: 18px; margin: -18px 0 0 -1px; transform-origin: 50% 100%; background: linear-gradient(transparent, #fff3c4); opacity: 0; animation: fx-shot 3.6s linear infinite; }
 [data-pick-class='bastion'] .pk-fx i:is(:nth-child(2), :nth-child(4)) { display: block; width: 80px; height: 2px; margin: -1px 0 0 -40px; background: linear-gradient(90deg, transparent, #fff3c4, transparent); opacity: 0; animation: fx-ripple 3.6s ease-out infinite; }
 [data-pick-class='bastion'] .pk-fx i:is(:nth-child(1), :nth-child(2)) { --sy: 1; top: -7px; left: 34%; }
@@ -3258,20 +3349,17 @@ details.map-pick { pointer-events: auto; }
 [data-pick-class='bastion'] .pk-fx i:nth-child(3) { margin-top: 0; transform-origin: 50% 0; background: linear-gradient(#fff3c4, transparent); }
 @keyframes fx-shot { 0% { opacity: 0; translate: -14px calc(var(--sy) * -22px); rotate: calc(var(--sy) * -32deg); } 4% { opacity: 1; } 10% { opacity: 1; translate: 0 0; rotate: calc(var(--sy) * -32deg); } 10.01% { rotate: calc(var(--sy) * 32deg); } 18% { opacity: 0; translate: 14px calc(var(--sy) * -22px); rotate: calc(var(--sy) * 32deg); } 100% { opacity: 0; } }
 @keyframes fx-ripple { 0%, 9% { opacity: 0; scale: 0.1 1; } 10% { opacity: 1; scale: 0.2 1; } 24% { opacity: 0; scale: 1.4 1; } 100% { opacity: 0; } }
-/* Infiltrator, Trace: the border sinks to a hairline and one light runs round it. */
+/* Infiltrator, Trace: the border sinks to a hairline and one light runs round it (pickfx.mjs runs it, and Operator's). */
 .pk-card[data-pick-class='infiltrator'][aria-checked='true'] { border-color: rgba(241, 185, 47, 0.28); box-shadow: 0 14px 44px -22px rgba(241, 185, 47, 0.35); }
-[data-pick-class='infiltrator'] .pk-fx i:nth-child(1) { display: block; width: 90px; height: 2px; offset-path: border-box; offset-rotate: auto; offset-anchor: 100% 50%; background: linear-gradient(90deg, transparent, rgba(241, 185, 47, 0.7) 70%, #fff3c4); filter: drop-shadow(0 0 3px var(--amber)); animation: fx-run 3.6s linear infinite; }
+[data-pick-class='infiltrator'] .pk-fx i:nth-child(1) { display: block; left: -90px; top: -1px; width: 90px; height: 2px; transform-origin: 100% 50%; transform: translateX(var(--r-card)); background: linear-gradient(90deg, transparent, rgba(241, 185, 47, 0.7) 70%, #fff3c4); filter: drop-shadow(0 0 3px var(--amber)); }
 /* Operator, Threads: three processes circle the border, evenly spaced. */
-[data-pick-class='operator'] .pk-fx i:nth-child(-n + 3) { display: block; width: 5px; height: 5px; offset-path: border-box; offset-rotate: 0deg; background: #ffd86e; box-shadow: 0 0 6px 1px rgba(241, 185, 47, 0.8); animation: fx-run 7.5s linear infinite; }
-[data-pick-class='operator'] .pk-fx i:nth-child(2) { animation-delay: -2.5s; }
-[data-pick-class='operator'] .pk-fx i:nth-child(3) { animation-delay: -5s; }
-@keyframes fx-run { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+[data-pick-class='operator'] .pk-fx i:nth-child(-n + 3) { display: block; left: -2.5px; top: -2.5px; width: 5px; height: 5px; transform: translateX(var(--r-card)); background: #ffd86e; box-shadow: 0 0 6px 1px rgba(241, 185, 47, 0.8); }
 
 /* A narrow screen: the squares stack as rows; the picked one opens downward, its drawer a single column. */
 @media (max-width: 900px) {
   .pk-scene { padding: 24px 16px; gap: 16px; align-content: start; }
   .pk-deck, .pk-deck.picked { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: stretch; height: auto; gap: 8px; }
-  .pk-card, .pk-deck.picked .pk-card, .pk-deck.picked .pk-card[aria-checked='true'] { flex-direction: column; height: auto; }
+  .pk-card, .pk-deck.picked .pk-card, .pk-deck.picked .pk-card[aria-checked='true'] { flex-direction: column; height: auto; transition: border-color 0.2s, box-shadow 0.25s; } /* rows of a grid: their flex-basis does nothing here, and its transition laid the page out every frame */
   .pk-sq, .pk-deck.picked .pk-card[aria-checked='true'] .pk-sq, .pk-deck.picked .pk-card:not([aria-checked='true']) .pk-sq { flex: none; height: 64px; }
   .pk-plate, [aria-checked='true'] .pk-plate, .pk-deck.picked .pk-card:not([aria-checked='true']) .pk-plate { left: 40px; top: 50%; transform: translate(-50%, -50%) scale(0.42); transform-origin: 50% 50%; }
   .pk-id, [aria-checked='true'] .pk-id, .pk-deck.picked .pk-card:not([aria-checked='true']) .pk-id { opacity: 1; left: 84px; right: 12px; bottom: auto; top: 50%; transform: translateY(-50%); justify-items: start; gap: 4px; padding: 0; text-align: left; }
@@ -3283,7 +3371,7 @@ details.map-pick { pointer-events: auto; }
   .pk-dt { width: auto; grid-template-columns: 1fr; gap: 14px; padding: 14px 16px 16px; }
   .pk-go.btn { min-width: 0; width: 100%; }
 }
-@media (prefers-reduced-motion: reduce) { .pk-card, .pk-head, .pk-foot, .pk-fx, .pk-fx i, .pk-fx i::before, .pk-fx i::after, .pk-fx::before { animation: none !important; } .pk-deck, .pk-card, .pk-sq, .pk-plate, .pk-dt { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { .pk-card, .pk-head, .pk-foot, .pk-fx, .pk-fx i, .pk-fx i::before, .pk-fx i::after, .pk-fx::before, .pk-fx::after { animation: none !important; } .pk-deck, .pk-card, .pk-sq, .pk-plate, .pk-dt { transition: none !important; } }
 
 /* Collection log (System page) */
 .coll-card .coll-bar { height: 4px; background: var(--inset); border: 1px solid var(--line); border-radius: 2px; margin: 0 0 10px; overflow: hidden; }
@@ -3582,9 +3670,8 @@ button.evc-link:active { transform: translateY(1px); }
 .mnode .hub-shock .hs-in { transform: scale(calc(1 / var(--z, 1))); }
 .mnode .hub-shock .hs-ware { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .mnode .hub-shock.up { color: #8fd46b; } .mnode .hub-shock.down { color: #ff6f91; }
-.mhunt line { stroke: var(--daemon, #c3a6ff); stroke-width: 1.4; stroke-dasharray: 4 4; animation: mflow 1.6s linear infinite; }
+.mhunt-line { stroke: var(--daemon, #c3a6ff); stroke-width: 1.4; stroke-dasharray: 4 4; --flow-t: 0.8s; }
 .mhunt path { fill: var(--daemon, #c3a6ff); }
-.no-motion .mhunt line { animation: none; }
 
 /* Buildings on a held server (outpost.mjs): slots and bandwidth, what's built, the build, the store, the Build list. */
 .outpost .op-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px; }
@@ -3713,6 +3800,10 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 
 /* Themed hover tips (app.js): every title in the game, in the game's own card. */
 .tt { position: fixed; z-index: 90; max-width: calc(300px * var(--ui, 1)); padding: calc(8px * var(--ui, 1)) calc(11px * var(--ui, 1)); background: rgba(10, 8, 5, 0.97); color: var(--text); border: 1px solid var(--line-strong); border-top: 2px solid var(--amber); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55); font: calc(13px * var(--ui, 1))/1.45 var(--sans, inherit); pointer-events: none; white-space: pre-line; animation: ptip-in 0.12s ease-out; }
+.tt:has(.tt-runner) { max-width: none; white-space: normal; border-top-color: var(--bright); }
+.tt-runner .rc-head { margin: 0; padding-right: 0; }
+.tt-runner .rc-handle { margin: 0; }
+.tt .tt-runner .rc-tier b { display: inline; margin: 0; font: 600 12px var(--sans); letter-spacing: 0; color: var(--bright); }
 .tt b { display: block; margin-bottom: 3px; color: var(--amber); font: 600 calc(12px * var(--ui, 1)) var(--mono); letter-spacing: 0.5px; }
 .tt .tt-state { display: block; margin-bottom: 4px; font-size: calc(12px * var(--ui, 1)); } /* what holds now (a tray key's), coloured by its job */
 .tt .tt-state.hot { color: var(--hot); } .tt .tt-state.amber { color: var(--amber); } .tt .tt-state.you { color: var(--you); } .tt .tt-state.steel { color: var(--steel); } .tt .tt-state.muted { color: var(--muted); }
@@ -3803,6 +3894,36 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .settings-grid .btn[aria-pressed='true'] { border-color: var(--line-strong); color: var(--bright); }
 .settings-grid .btn[aria-pressed='true']::before { background: var(--amber); box-shadow: 0 0 6px rgba(241, 185, 47, 0.7); }
 .settings-grid .btn[aria-pressed='false'] { color: var(--muted); }
+/* The Settings page: a slider for a setting with steps, a checkbox for one that is on or off (view.mjs slideRow,
+   checkRow); the Graphics card's preset over its rows, the ones that cost looks under their heading. */
+.set-slide { display: grid; grid-template-columns: 120px 1fr 92px; align-items: center; gap: 12px; padding: 3px 0; cursor: pointer; }
+.set-name { color: var(--text); font-size: 13px; }
+.set-val { font: 600 12px var(--mono); color: var(--bright); text-align: right; white-space: nowrap; }
+.set-rail { position: relative; display: flex; justify-content: space-between; align-items: center; height: 14px; padding: 0 6px; }
+.set-rail::before { content: ''; position: absolute; left: 7px; right: 7px; top: 5px; height: 4px; border-radius: 2px; background: var(--line-strong); }
+.set-rail i { position: relative; width: 2px; height: 10px; background: var(--muted); opacity: 0.7; }
+.set-slide input[type='range'] { -webkit-appearance: none; appearance: none; position: absolute; inset: 0; width: 100%; height: 14px; margin: 0; background: transparent; outline: none; cursor: pointer; }
+.set-slide input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 3px; background: var(--amber); border: 0; box-shadow: 0 0 8px rgba(241, 185, 47, 0.4); }
+.set-slide input[type='range']::-moz-range-thumb { width: 14px; height: 14px; border-radius: 3px; background: var(--amber); border: 0; }
+.set-slide input[type='range']:focus-visible { box-shadow: 0 0 0 2px var(--amber); }
+.set-checks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px var(--s4); margin: 6px 0; }
+.set-check { display: flex; align-items: center; gap: 8px; min-height: 28px; color: var(--text); font-size: 13px; cursor: pointer; }
+.set-check.off { color: var(--dim); cursor: default; }
+.set-check input { -webkit-appearance: none; appearance: none; flex: none; display: grid; place-items: center; width: 14px; height: 14px; margin: 0; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--inset); cursor: inherit; }
+.set-check input:checked { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 6px rgba(241, 185, 47, 0.45); }
+.set-check input:checked::after { content: ''; width: 7px; height: 4px; margin-top: -2px; border: solid #171006; border-width: 0 0 2px 2px; transform: rotate(-45deg); }
+.set-check input:disabled { opacity: 0.45; }
+.set-check input:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.settings-page .card > .row { margin-top: 6px; }
+.gx-card h2 small { margin-left: 8px; color: var(--muted); font: inherit; letter-spacing: inherit; text-transform: none; }
+.gx-sub { margin: 14px 0 4px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--muted); }
+.gx-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line-strong); border-radius: 3px; overflow: hidden; }
+.gx-seg button { padding: 7px 6px; border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--muted); font: 13px var(--sans, inherit); white-space: nowrap; cursor: pointer; }
+.gx-seg button:first-child { border-left: 0; }
+.gx-seg button.on { background: var(--amber-wash); color: var(--bright); box-shadow: inset 0 -2px 0 var(--amber); }
+.gx-seg button small { margin-left: 4px; color: var(--dim); font-size: 11px; }
+.gx-seg button:focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; }
+@media (max-width: 520px) { .set-slide { grid-template-columns: 96px 1fr 76px; gap: 8px; } .gx-seg button { padding: 7px 2px; font-size: 12px; } .gx-seg button small { display: none; } .set-checks { grid-template-columns: 1fr 1fr; } }
 .sound-test { margin-top: var(--s4); padding-top: var(--s5); border-top: 1px solid var(--line); }
 .sound-test .next-label { flex-basis: 100%; font: var(--label); letter-spacing: var(--label-track); }
 .sound-test .btn { min-height: var(--h-btn-sm); padding: 0 var(--s4); font-size: 12px; color: var(--muted); }
@@ -3879,10 +4000,8 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 /* ---- The error card reads as an alert, like any other hot card: its kicker in red. ---- */
 .page-error h2 { color: var(--hot); }
 .page-error pre { border-left: 2px solid var(--hot); }
-.settings-grid .btn[data-toggle='speed'] { grid-column: span 2; }
 .settings-grid .btn { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .net-natives { grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); }
-@media (max-width: 420px) { .settings-grid .btn[data-toggle='speed'] { grid-column: 1 / -1; } }
 
 /* ---- Run header: pack and leads are the same small control, one line each, the same height. ---- */
 .net-pack { display: inline-flex; align-items: center; gap: var(--s3); min-height: var(--h-btn-sm); padding: 0 10px; white-space: nowrap; }
@@ -3970,9 +4089,27 @@ body.no-motion .recap { animation: none; }
    under the picture on the right. Rows are tighter, and if the parts still don't fit, app.js adds .dense and the
    rows tighten again (sub-lines go, chips go to one line). */
 @media (min-width: 901px) {
-  .combat { grid-template-rows: auto minmax(0, 1fr) minmax(96px, 32%); grid-template-areas: 'hud hud' 'board stage' 'board log'; }
+  /* The picture on the left beside the part names, the board on the right: your eyes sit in the middle and see both.
+     The HUD follows: the virus's bar over its picture, yours over the board, your statuses between. */
+  .combat { grid-template-columns: minmax(0, 1fr) minmax(0, 1.55fr); grid-template-rows: auto minmax(0, 1fr) minmax(96px, 32%); grid-template-areas: 'hud hud' 'stage board' 'log board'; }
   .combat .board { max-height: none; min-height: 0; }
-  body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template-areas: 'hud hud' 'log stage'; }
+  body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template-areas: 'hud hud' 'stage log'; }
+  .combat .hud { grid-template-columns: minmax(0, 1fr) minmax(0, 1.55fr); }
+  .combat .hud > .hud-bar.enemy { order: -1; }
+  .combat .hud-left { grid-template-columns: minmax(0, 0.55fr) minmax(0, 1fr); }
+  .combat .hud-left > .hud-you { order: 2; }
+}
+/* The fight log: its newest line until ▴ opens it (app.js setLogOpen), so the render takes the room. A finished fight
+   shows it whole. */
+.log-more { display: none; }
+@media (min-width: 901px) {
+  body:not(.log-open):not(.fight-over) .combat { grid-template-rows: auto minmax(0, 1fr) auto; }
+  body:not(.fight-over) .log.panel { position: relative; }
+  body:not(.log-open):not(.fight-over) .log-lines { overflow: hidden; padding-right: 64px; padding-bottom: 6px; }
+  body:not(.log-open):not(.fight-over) .log-lines > li:not(:last-child) { display: none; }
+  body:not(.fight-over) .log-more { display: flex; align-items: center; gap: 5px; position: absolute; right: 10px; bottom: 6px; font: 500 12px/1 var(--mono); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 3px; padding: 4px 7px; cursor: pointer; }
+  body.log-open .log-more { font-size: 0; }
+  body.log-open .log-more::before { content: '▾'; font-size: 12px; }
 }
 .combat .brow:not(.bhead) > .bcell { padding-top: 7px; padding-bottom: 7px; }
 .combat .intent { padding: 5px 8px; font-size: 13px; }
@@ -4074,9 +4211,10 @@ body.no-motion .recap { animation: none; }
    A Mutex's lock sits on its partner's own bar as an absorb segment (hatched steel, a padlock where hits drain it);
    a Lockbox's ward as a cap line at the most the part can still lose this cycle. ---- */
 
-#board:has(.tether) { --gut: 66px; }
-#board:has(.tether.lane1) { --gut: 80px; }
-@media (max-width: 480px) { #board:has(.tether) { --gut: 56px; } #board:has(.tether.lane1) { --gut: 70px; } }
+/* tt-gut, tt-lane1: the board holds a tether, in two lanes (app.js render; a class, since :has() here restyled the board every frame) */
+#board.tt-gut { --gut: 66px; }
+#board.tt-gut.tt-lane1 { --gut: 80px; }
+@media (max-width: 480px) { #board.tt-gut { --gut: 56px; } #board.tt-gut.tt-lane1 { --gut: 70px; } }
 .tether { --x: 18px; --tt: var(--steel); position: absolute; top: 0; bottom: 0; left: calc(-1 * var(--gut)); width: var(--gut); pointer-events: none; z-index: 1; color: var(--steel); }
 .tether.lane1 { --x: 31px; }
 .tt-line { position: absolute; left: calc(var(--x) - 1px); width: 2px; background: var(--tt); pointer-events: auto; }
@@ -4099,7 +4237,7 @@ body.no-motion .recap { animation: none; }
 .tt-node.clock { width: auto; height: auto; gap: 3px; grid-auto-flow: column; padding: 1px 5px 1px 4px; border-radius: var(--r-tag); }
 .tt-node.clock .tt-ico { width: 11px; height: 11px; }
 .tether:has(.tt-node) { z-index: 2; } /* a node on a row's edge sits over the next row's piece of line */
-#board:has(.tether.lane1) .tt-node.clock { left: 25px; } /* two lanes: every chip in one column, over both lines */
+#board.tt-gut.tt-lane1 .tt-node.clock { left: 25px; } /* two lanes: every chip in one column, over both lines */
 .tt-count { color: var(--bright); font: 700 13px/16px var(--mono); }
 /* Two arms on one row (view.mjs tethers --arm): one a little above the middle, one below, so neither hides the other. */
 .tether .tt-arm.dst { top: calc(50% - 1px + var(--arm, 0px)); }
@@ -4113,6 +4251,7 @@ body.no-motion .recap { animation: none; }
 @keyframes tt-snap { 0% { background: #eefaff; box-shadow: 0 0 10px #eefaff; opacity: 1; } 35% { opacity: 1; transform: scale(1, 0.55); } 100% { opacity: 0; transform: scale(1, 0); } }
 @keyframes tt-node-snap { 0% { transform: translate(-50%, -50%) scale(1); color: #eefaff; box-shadow: 0 0 12px #eefaff; } 30% { transform: translate(-50%, -50%) scale(1.5) rotate(-20deg); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(0.3) rotate(40deg); opacity: 0; } }
 .no-motion .tether.up .tt-line, body[data-fx="minimal"] .tether.up .tt-line { animation: none; }
+.tether-steady .tether.up .tt-line { animation: none; } /* Breathing tether off (graphics.mjs): its glow holds */
 .no-motion .tether.snap, body[data-fx="minimal"] .tether.snap { display: none; }
 @media (prefers-reduced-motion: reduce) { .tether.up .tt-line { animation: none; } .tether.snap { display: none; } }
 .part-bar.guarded { overflow: visible; }
@@ -4239,7 +4378,16 @@ body.no-motion .recap { animation: none; }
 .po-box { position: absolute; left: 50%; top: var(--hz); width: clamp(110px, 21vmin, 210px); aspect-ratio: 1; transform: translate(-50%, -50%); }
 .po-box::before { content: ''; position: absolute; inset: -3%; background: #ffe6a6; filter: blur(clamp(4px, 0.9vmin, 9px)); opacity: 0; animation: po-glow 1.8s 1.5s ease-out forwards; }
 .po-box::after { content: ''; position: absolute; inset: -40%; background: radial-gradient(closest-side, rgba(241, 185, 47, 0.34), transparent); opacity: 0; animation: po-glow 2.4s 1.5s ease-out forwards; }
-.po-box b { position: absolute; inset: 0; z-index: 1; background: #030201; box-shadow: 0 0 0 1px rgba(255, 242, 210, 0.7); opacity: 0; animation: po-in 0.6s 1.1s ease-out forwards; }
+.po-box b { position: absolute; inset: 0; z-index: 1; background: #030201; opacity: 0; animation: po-in 0.6s 1.1s ease-out forwards; }
+/* The Trace: the box's outline draws itself round while the game warms up (poweron.mjs sets each side's scale); its
+   light waits for the outline to close. */
+.po-edge { position: absolute; z-index: 2; background: rgba(255, 242, 210, 0.7); opacity: 0; animation: po-in 0.3s 1.1s ease-out forwards; }
+.po-edge.t { left: -1px; top: -1px; width: calc(100% + 2px); height: 1px; transform-origin: left; transform: scaleX(0); }
+.po-edge.r { right: -1px; top: -1px; width: 1px; height: calc(100% + 2px); transform-origin: top; transform: scaleY(0); }
+.po-edge.b { right: -1px; bottom: -1px; width: calc(100% + 2px); height: 1px; transform-origin: right; transform: scaleX(0); }
+.po-edge.l { left: -1px; bottom: -1px; width: 1px; height: calc(100% + 2px); transform-origin: bottom; transform: scaleY(0); }
+.poweron.loading .po-box::before, .poweron.loading .po-box::after { animation-play-state: paused; }
+.poweron.loaded .po-box::before, .poweron.loaded .po-box::after { animation-delay: var(--glow-at, 0s); }
 @keyframes po-glow { 0% { opacity: 0; } 35% { opacity: 1; } 100% { opacity: 0.8; } }
 @keyframes po-in { to { opacity: 1; } }
 .po-word { position: absolute; left: 0; right: 0; top: 72%; margin: 0; text-align: center; font: 400 clamp(15px, 2.4vmin, 22px) var(--sans); letter-spacing: 0.72em; margin-right: -0.72em; color: var(--bright); opacity: 0; animation: po-in 1.6s 2.3s ease-out forwards; }
@@ -4251,6 +4399,8 @@ body.no-motion .recap { animation: none; }
 .poweron.skip .po-flash { display: none; }
 .poweron.skip :is(.po-horizon, .po-haze, .po-box b, .po-word, .po-sub) { animation: none; opacity: 1; transform: none; }
 .poweron.skip .po-box::before, .poweron.skip .po-box::after { animation: none; opacity: 0.8; }
+.poweron.skip .po-edge { animation: none; opacity: 1; }
+.poweron.skip.loading .po-box::before, .poweron.skip.loading .po-box::after { opacity: 0; }
 /* Starting: the box's light flares and the screen goes. */
 .poweron.out { animation: po-out 0.5s ease-in forwards; }
 .poweron.out .po-box::after { animation: po-flare 0.5s ease-out forwards; }
@@ -4259,6 +4409,8 @@ body.no-motion .recap { animation: none; }
 .poweron.still .po-flash { display: none; }
 .poweron.still :is(.po-horizon, .po-haze, .po-box b, .po-word, .po-sub) { animation: none; opacity: 1; transform: none; }
 .poweron.still .po-box::before, .poweron.still .po-box::after { animation: none; opacity: 0.8; }
+.poweron.still .po-edge { animation: none; opacity: 1; }
+.poweron.still.loading .po-box::before, .poweron.still.loading .po-box::after { opacity: 0; }
 .poweron.still.ready .po-press { animation: none; opacity: 0.95; }
 .poweron.still.out { animation: none; }
 /* The unknown-server card: the way tracing it now, with pips for what's left, then the other ways (view.mjs traceWays). */
@@ -4477,7 +4629,7 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .intent.bufup { border-style: dashed; border-color: var(--steel); color: var(--steel); background: transparent; }
 .tag.hotspot { display: inline-flex; align-items: center; gap: 3px; color: var(--amber); border-color: var(--amber); box-shadow: 0 0 6px var(--amber-wash); }
 .tag.hotspot .glyph { width: 10px; height: 10px; margin: 0; }
-.brow.bpart:has(.tag.hotspot) { box-shadow: inset 3px 0 0 var(--amber-soft); }
+.board .brow.bpart.has-hotspot { box-shadow: inset 3px 0 0 var(--amber-soft); }
 .tag.idlepips { display: inline-flex; align-items: center; gap: 2px; letter-spacing: 1px; font-size: 9px; }
 .tag.idlepips .glyph { width: 10px; height: 10px; margin: 0 2px 0 0; }
 .tag.idlepips i { opacity: 0.4; font-style: normal; }
@@ -4777,3 +4929,8 @@ button.tk-b:hover, button.tk-b:focus-visible { border-color: var(--line); }
 .comm-line { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; color: var(--fc); }
 .comm-line .comm-pay { color: var(--amber); font: 600 12px var(--mono); }
 .comm-line .btn, .comm-line .tag { margin-left: auto; }
+
+/* A game, not a page: a click-drag over the UI selects nothing. What you type and what you'd copy (letters, #net, an
+   error) still select. */
+body { -webkit-user-select: none; user-select: none; }
+input, textarea, [contenteditable], .mbody, .ch-lines, .page-error pre { -webkit-user-select: text; user-select: text; }

@@ -13,6 +13,7 @@
 // beep, a reply. Sometimes a numbers station, sometimes a modem burst. It never says anything,
 // on purpose: it's texture, not information.
 import { FIGHT_THEMES, playTheme } from './fightmusic.mjs';
+import { outputOf } from './mixout.mjs';
 
 const HOME = ['music/home.ogg', 'music/home.mp3'];
 export const MUSIC = {
@@ -147,7 +148,7 @@ export function createSoundtrack(getCtx) {
     ctx = getCtx();
     if (!ctx) return false;
     // Two buses: music, and everything else here (radio, rain, thunder, the street).
-    if (!out) { out = ctx.createGain(); out.connect(ctx.destination); mus = ctx.createGain(); mus.connect(ctx.destination); applyVol(); }
+    if (!out) { out = ctx.createGain(); out.connect(outputOf(ctx)); mus = ctx.createGain(); mus.connect(outputOf(ctx)); applyVol(); }
     return true;
   }
   function fadeOut(p) {
@@ -179,9 +180,9 @@ export function createSoundtrack(getCtx) {
     if (!should) { fadeOut(playing); playing = null; theme?.stop(THEME_FADE); theme = null; return; }
     // A fight with a theme of its own: the track makes way for it.
     const id = want.mood === 'fight' && FIGHT_THEMES[want.family] ? want.family : null;
-    if (theme && theme.id !== id) { theme.stop(THEME_FADE); theme = null; }
+    if (theme && (theme.id !== id || theme.floor !== (want.floor || null))) { theme.stop(THEME_FADE); theme = null; } // a floor's room and era are its own
     if (id) {
-      if (!theme) { fadeOut(playing); playing = null; theme = playTheme(ctx, mus, id, { level: THEME_LEVEL, fadeIn: THEME_FADE, heat: want.heat }); }
+      if (!theme) { fadeOut(playing); playing = null; theme = playTheme(ctx, mus, id, { level: THEME_LEVEL, fadeIn: THEME_FADE, heat: want.heat, floor: want.floor || null }); }
       theme?.setHeat(want.heat);
       return;
     }

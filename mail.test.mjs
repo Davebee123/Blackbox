@@ -19,8 +19,10 @@ const job = (s) => openContracts(s).find((j) => j.story !== undefined) || openCo
 // Win whatever fight is running: every part on 1 Integrity, no armor, no attacks.
 const win = (s) => {
   if (s.encounter?.phase === 'alert') command(s, 'engage');
-  for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: 1, attack: null });
-  for (let i = 0; i < 30 && active(s); i++) { const p = s.encounter.virus.parts.find((x) => x.integrity > 0); command(s, "spike " + p.id); resolveCycle(s); }
+  for (let i = 0; i < 30 && active(s); i++) { // a boss's acts (act bars) refill its board: weaken it each cycle
+    for (const p of s.encounter.virus.parts) if (p.integrity > 0) Object.assign(p, { armor: 0, integrity: 1, attack: null });
+    const p = s.encounter.virus.parts.find((x) => x.integrity > 0); command(s, "spike " + p.id); resolveCycle(s);
+  }
 };
 // SPRAWL-00's folders are rooms (netrooms.mjs): cd walks there, beating what holds the way.
 const killInSprawl = (s, room) => {

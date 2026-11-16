@@ -22,23 +22,17 @@ const atGate = (s) => { const e = s.encounter; return !!((e && e.mode !== 'run' 
 // A short guided tour of a server's room map (the Run tab), a step at a time, each pointing at the thing to do and
 // moving on when you do it (click it, or type its command): walk into a room, a virus's card, then Jack out once
 // you've won a fight. A cache, the hunter and the rest room get their step the first time you meet them (SPRAWL-00,
-// where you start, has none), and Scan the first time a room next to you that scan reads is on the map. Got it
-// closes a step, Skip tour ends them all, and tips off stops it. The tour is kept on the save (s.tour), so it shows
+// where you start, has none). Got it closes a step, Skip tour ends them all, and tips off stops it. The tour is kept on the save (s.tour), so it shows
 // once a save. Each step: mark(s) is taken as it shows, done(s, mark) says you did it,
 // also is another click that does it (Step back, Leave it).
 const visitOf = (s) => (s.rooms?.at ? s.rooms : null);
 const hereKind = (s) => s.rooms?.at && s.rooms.graph.rooms[s.rooms.at]?.kind;
 const movesOf = (s) => s.rooms?.stats?.moves || 0;
-const scansOf = (s) => s.run?.scans || 0; // scans on this run (run.mjs scanRoom)
 const TOUR_STEPS = [
   { id: 'tour-walk', at: '.fp-room.reach', when: (s) => !!visitOf(s) && !s.rooms.screen, mark: movesOf, done: (s, m) => movesOf(s) > m,
     wick: true, text: 'pick a room with a number on its corner. that\'s the signal it costs to walk in.' },
   { id: 'tour-engage', at: '#fp-pop [data-rooms="engage"]', also: '#fp-pop [data-rooms="back"]', after: ['tour-walk'], when: (s) => s.rooms?.screen?.kind === 'virus', done: (s) => s.rooms?.screen?.kind !== 'virus',
     wick: true, text: 'something\'s living in there. engage, or step back the way you came.' },
-  // Scan: the first time a room next to you that scan reads is on the map, its chip's SCAN (floorplan-view.mjs; it shows
-  // on hover, and while the step points at it). Walking into a room instead closes it too.
-  { id: 'tour-scan', at: '.fp-scanbtn:not([aria-disabled])', also: '.fp-room.reach', after: ['tour-walk'], when: (s) => !!visitOf(s) && !!s.run?.rooms, mark: scansOf, done: (s, m) => scansOf(s) > m,
-    wick: true, text: 'scan a room next to you to see what\'s in it before you walk in.', more: (s) => (classOf(s) === 'infiltrator' ? 'you scan free, and you read deeper.' : 'costs 1 signal.') },
   { id: 'tour-cache', at: '#fp-pop [data-rooms="pull"]', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'cache' && !s.rooms.screen,
     mark: (s) => `${s.rooms.at}:${s.rooms.taken[s.rooms.at] ?? ''}`, done: (s, m) => `${s.rooms?.at}:${s.rooms?.taken[s.rooms?.at] ?? ''}` !== m,
     wick: true, text: 'a cache: credits and code. one in four is bait, and its card says which.' },
@@ -85,7 +79,7 @@ export const TIPS = [
   { id: 'room-elite', page: 'rooms', at: '.fp-room.k-elite', text: `An elite room. Its virus is tougher and brings one more tell, and it enrages from cycle ${ROOM_RULES.enrage.elite}. It drops a blue or better.` },
   { id: 'room-thread', page: 'rooms', at: '.fp-quest.m-start', text: 'Someone in this room has work for you. Walk in to talk. Threads you take are tracked in Mail.' },
   { id: 'run-signal', page: 'rooms', at: '.fp-sig.mid, .fp-sig.low', after: ['tour-walk'], wick: true, text: 'your signal\'s getting thin. at 0 you\'re home and the pack stays here. find a rest room or jack out.' },
-  { id: 'run-rival', page: 'rooms', at: '.fp-rvstat', wick: true, lead: (s) => (rivalOf(s) ? wickLine(s, rivalOf(s)) : ''), text: 'it\'s racing you to the vault. if it reaches you, you fight the lot. beat it and its pack is yours.' },
+  { id: 'run-rival', page: 'rooms', at: '.fp-rvstat', wick: true, lead: (s) => (rivalOf(s) ? wickLine(s, rivalOf(s)) : ''), text: 'they\'re racing you to the vault. if they reach you, you fight the lot. beat them and their pack is yours.' },
   { id: 'exfil', page: 'rooms', at: '.fp-exfil', text: 'An Exfil is uploading a stolen archive from this server, and it runs from you. Corner it and break its Uplink before the upload finishes.' },
   // A puzzle room's board, the first time you see each one (puzzle-view.mjs). One go a board: played to its end, it refills in two hours.
   { id: 'pz-quarantine', page: 'rooms', at: '.pz-panel.k-quarantine .pz-well', text: 'After each firewall you place, the worm copies into the marked node. Wall it in early, against an edge. Every node it never reaches pays this server\'s code.' },
@@ -228,6 +222,12 @@ export function nextTip(s, page, visible, pace = {}) {
 // Seen: a tip with your settings (a new game keeps them), a tour step on the save itself (s.tour: once a save).
 const isTour = (id) => tourIds.includes(id);
 export const seenOf = (s, id) => !!(isTour(id) ? s.tour?.[id] : s.settings?.seen?.[id]);
+// A tip that waits for you (done, no mark: map-start) is seen once you've done it, shown or not: connect from
+// anywhere and the opening pointer never comes back.
+export function settleTips(s) {
+  if (!s?.settings) return;
+  for (const t of TIPS) if (t.done && !t.mark && !seenOf(s, t.id) && t.done(s)) markSeen(s, t.id);
+}
 export function markSeen(s, id) {
   if (isTour(id)) { (s.tour ||= {})[id] = 1; return; }
   s.settings.seen ||= {};

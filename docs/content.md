@@ -252,6 +252,8 @@ achievement's reward.
 | **INIT** | The last Resident, PID 1, on Bedrock's deepest server at level 50. Its first fall is the end of the climb: a letter from wick, its uniques. |
 | **Flash ranks** | A Mapped Bedrock server can be reflashed: every room back, one rank up. Each rank keeps the ones under it and adds one modifier (heat.mjs's, rewritten for rooms); each pays gear a level higher (past 50, up to 55) and more yellows. Nothing resets on a clock and nothing is lost by stopping. |
 | **Reflash** | Optional, once all of Bedrock is Mapped: a new network seed (docs/genome.md 6). |
+| **Epoch items** | The flash ranks drop Epoch versions of uniques and set pieces: the same rule, rolled at the rank's item level (docs/legends.md). |
+| **Legends** | Very rare, very strong uniques at 45–50; they push the flash ranks. Build legends drop from the floor 8 lair's native boss (docs/legends.md). |
 
 ## 5. Priorities
 
@@ -295,3 +297,5 @@ Ordered for the most variety per hour of work, floors 2–4 first. S is a day or
 5. **Floors 2–4** to the same standard: a floor job's boss is never in the lair (SHAKEDOWN takes floor 2's throne),
    RECURSION is floor 3's fixed-place boss, and a transmission a floor.
 6. **Every act adds a pressure that costs to ignore** (docs/solo-bosses.md): the audit's fixes are in its table.
+7. **Legends and Epoch items** (docs/legends.md): very rare, very strong endgame uniques, tested by simulation and
+   play; *Epoch* names the flash ranks' versions of uniques and sets. Trading later.
