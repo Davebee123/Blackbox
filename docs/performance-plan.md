@@ -5,22 +5,22 @@ The graphics are software there, so the main thread's numbers are the ones to tr
 
 ## Where it stands
 
-| Screen | Main thread busy | Frames a second |
-|---|---|---|
-| Settings, Mail, Loadout, Server, Codex, Rig (idle or scrolling) | 22–29% | 60 |
-| Class pick, a drawer open (batch 8; was 33–49%, 60) | 3–4% | 1 |
-| Power-on, login prompt | 27–28% | 60 |
-| Cold open | 44% | 60 |
-| Map (idle) | 55% | 60 |
-| Fight, waiting for the first order | 73% | 59 |
-| Run on a server (idle) | 91% | 53 |
-| Rooms map (idle) | 96% | 51 |
-| Regular fight, playing | 75% | 30 |
-| Boss fight, playing | 98% | 12 |
-| Boss fight, Motion off | 83% | 38 |
+Phone, main thread busy (frames a second), the first audit (2026-11-15) against after batches 1–9 (2026-11-16):
 
-A first load is 328 requests and 9 MB (5.3 MB of scripts in 196 files, 2.2 MB of samples, 0.75 MB of styles in 24).
-The hosted game now loads one script and one stylesheet (batch 7).
+| Screen | First audit | After batch 9 |
+|---|---|---|
+| Settings, Mail, Loadout, Server, Codex, Rig, House, More, a hub, the campaign (idle) | 22–29% (60) | 2–3% (1) |
+| The same, scrolling | 26–29% (60) | 14–16% (60) |
+| Power-on; the class pick | 27–49% (60) | 2% (1) |
+| Map (idle; scrolling) | 55% (60) | 3% (1); 32% (60) |
+| Run on a server; rooms map (idle) | 91–96% (51–53) | 6% (1–2) |
+| Fight, waiting for the first order | 73% (59) | 22% (60) |
+| Regular fight, playing | 75% (30) | 70% (37) |
+| Boss fight, playing | 98% (12) | 92% (28) |
+
+Desktop (1920 × 1080 at 2×, after batch 9): idle pages 37% (the window's city, a canvas), a boss fight 68% (15).
+A cold load reaches the first screen in about 2.7 s on a phone's CPU (no network), plain files or bundled; bundled
+it is 109 requests and 6.3 MB (a 3.1 MB script, a 0.6 MB stylesheet) against 334 and 9 MB.
 
 **Why, biggest first:**
 
@@ -41,6 +41,17 @@ The hosted game now loads one script and one stylesheet (batch 7).
    to 1 (the status line's clock).
 7. **Six full-screen layers** on every screen (the CRT's sweep and roll, the backdrop's texture, static and edge):
    about 57 MB of textures on a phone. Landed (batch 9): a phone's Settings 66 → 27 MB, the Map 73 → 45 MB.
+
+## Next (found 2026-11-16, after batch 9)
+
+| # | What | Helps | Look |
+|---|---|---|---|
+| 10 | **The fight's render reads layout.** The board's overflow check (`app.js`, `bd.scrollHeight` after `putRows`) is about 28% of `render` on a phone; `fitTopbar` measures the bar on every render (about 9%); `turnTimeline`, `cycleChanged` and `phStage` call `getBoundingClientRect` after writes. Measure only when what they depend on changes (a ResizeObserver, a row added or removed). | both | none |
+| 11 | **The virus picture's loop asks for every frame** just to check the clock: a fight waiting for an order runs 60 frames a second (22% of a phone) though a phone's picture draws 8 a second. A timer until the next draw is due, then one frame. | both, phones most | none |
+| 12 | **The start.** About 2.7 s on a phone's CPU before the power-on shows, one block of 1.3 s evaluating the bundle; the app's start builds what isn't on screen (`invasion.mjs` 169 ms, `profile.mjs` 143, `collection-log.mjs` 114, `codex.mjs` 93). The Horizon drawn before the script runs (HTML and CSS); pages built and modules loaded on first open. | phones most | none |
+| 13 | **Scrolling paints twice a frame** and runs a layout a frame (Map 32%, Settings 14%, Skills 16%); five scroll listeners in `app.js` run on every scroll event. Find what repaints; listeners passive and once a frame. | both | none |
+| 14 | **The strike layer** (`virus-art.mjs` `art-out`) stays a full-screen canvas (3840 × 2160 on a desktop, about 33 MB) between strikes: free it when nothing is on it. The desktop's virus picture is 11 ms a draw in a boss fight. | desktops most | none |
+| 15 | **A queued effect** (`feel.mjs` play) costs 3.4–3.8 ms on a phone, six or seven a second in a fight: profile which. | both | none |
 
 ## The rules (the designer, November 2026)
 
