@@ -67,6 +67,23 @@ export default {
         { kind: 'temp', server: 'copy', goal: 'kill', text: 'Shut the copy down: its Core, on {copy}.' },
       ],
     },
+    // No floor: the scanner's clue pins it (scanner.mjs findPost), on a server of yours near your level. Its end puts
+    // the Listening Post on your map (opens: 'post').
+    'listening-post': {
+      title: 'Nine Days Deaf', giver: 'repeater · lantern', faction: 'lantern', opens: 'post',
+      reason: "A LANTERN repeater on your server keeps replaying a numbers broadcast. Its uplink to LANTERN's relay is down.",
+      lore: 'LANTERN let you use its Listening Post, beside your HOME.',
+      places: { relay: { near: [1, 2], label: 'Relay' } },
+      steps: [
+        { kind: 'talk', at: 'start', who: 'repeater · lantern', icon: 'file', verb: 'Read',
+          lines: ['> repeater · owner: LANTERN · uplink: DOWN', "This process sends LANTERN's radio recordings on to their relay. With the uplink down, it keeps replaying the last one: a numbers broadcast.", 'The relay is on {relay}, {relay.at}. Get it running again.'],
+          text: 'Read the repeater.' },
+        { kind: 'goto', at: 'relay', text: 'Restart the relay on {relay}, {relay.at}.', lines: ["The viruses here had killed the relay process. It's running again, and LANTERN's recordings are coming through."] },
+        { kind: 'talk', at: 'relay', who: 'LANTERN · over the relay', icon: 'npc', verb: 'Talk',
+          lines: ["You got our relay back up. We've been cut off for nine days. Thanks.", 'Someone broadcasts lists of numbers most nights. We record them and try to decode them.', 'Our Listening Post is next to your HOME server. Use it: tune in, catch what you can, and we will decode it for you.'],
+          text: 'Talk to LANTERN at the relay.' },
+      ],
+    },
   },
   // The one-off threads: seeded on any floor, a variant each from the server's seed.
   templates: {

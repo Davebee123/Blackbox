@@ -20,8 +20,8 @@ first transmission comes in over the map (Transmissions).
 
 ### The loop
 
-1. `connect sprawl`: **SPRAWL-00**, the starter server, six rooms of strays, each at its own level (1 near the
-   entry, up to 4; `ZONE_LEVEL`). Walk into a room and `engage`. Your first two kills there hit at 60%
+1. `connect sprawl`: **SPRAWL-00**, the starter server, ten rooms of strays, each at its own level (four at 1
+   beside the entry, up to 4 deepest; `ZONE_LEVEL`). An older save's SPRAWL-00 is laid out again on load. Walk into a room and `engage`. Your first two kills there hit at 60%
    (`CONFIG.zone.starterHit`). A kill pays at once, and the room fills again 90 seconds later. Its Core opens from
    level 3.
 2. The network is a stack of eight **floors**; SPRAWL-00 is floor 1's entry. The servers linked to what you know show
@@ -1080,8 +1080,9 @@ farm have none.
 
 About 1 in 6 servers you trace is **rogue** (never your first two, never more than five tame ones in a row); the first
 after those is always a **Nest** of the family that traced it. A rogue server is a hexagon on the map, never beside a
-floor's entry or on its main road. It has 4–8 fight rooms at the server's level and grade (it keeps up with you inside
-its floor's band) and 2–4 **quiet rooms**: an **Empty** (nothing) or a **Stash** (4 + level/2 credits into your bank
+floor's entry or on its main road. It has 8–11 fight rooms (4–8 on one traced before they grew) at the server's grade;
+its deepest rooms are at the server's level (it keeps up with you inside its floor's band), each room nearer the entry
+a level lower, at most 3 lower. It has 2–4 **quiet rooms**: an **Empty** (nothing) or a **Stash** (4 + level/2 credits into your bank
 as you walk in, 1 code one time in five). No vault, nothing to take over, no puzzle rooms, no invasions.
 
 | Kind | Rule |
@@ -1148,6 +1149,7 @@ docs/threads.md). Never given, never timed, nothing missable.
 | Restore Point | 1 (3) | M. Wren's photos | Talk to a stalled restore job; reach her archive; walk it to the restore point a link or two off; talk to it |
 | The Night Operator | 2 (7) | Forty people's payroll | Talk to an idle session; fight to the payroll file on another server; carry it to her terminal two servers over; hand it over (Kestrel +12) or sell it to GLASSJAW (GLASSJAW +10, Kestrel −8, 150 + 25L credits) |
 | Mirror | 3 (13) | Your ground, copied and sold | Read an index (MIRROR-nn appears, copied from your server); read its logs; talk to its builder Quill a floor up (he unseals the kill switch); beat its Core |
+| Nine Days Deaf | the clue's server (any) | LANTERN's relay | Read a LANTERN repeater replaying a numbers broadcast; fight to its relay a link or two off and restart it; talk to LANTERN there. The Listening Post shows on the map |
 | One-offs | any | Each its own | An escort, a talk, or a temporary server (a beacon names it) |
 
 ## Floors and tracing
@@ -1299,7 +1301,8 @@ a favoured card once it has come up twice, its rich code once it leans your way;
 - **Your server's level is your highest class level.** It sets your server's Integrity (100, +6% a level, compounding: the server isn't on your own line) and opens
   daemon slots (+1 at 15, 30 and 45).
 - **Enemies have a level (1–60).** A server keeps the level it was found at, so old servers get easier. Enemy levels
-  are coloured WoW-style: red (5+ above you), orange (3–4), yellow (about even), green (below), grey (10+ below, no XP).
+  are coloured WoW-style: red (5+ above you), orange (3–4), yellow (about even), green (below), grey (10+ below, no XP). A room's
+  map tile and card add **▲n** when its live virus is n levels above you, orange (red from 5 above).
 
 | Level | Unlocks |
 |---|---|
@@ -2221,8 +2224,8 @@ minutes after you take it.
 | Past the Tracker | Bank a file planted in a Tracker server's vault from a visit it never reached you (waking is fine) | 8 | 65 + 10L, +8, a protocol half the time |
 
 A contract that points at a room marks it on that server's map (its address amber, the contract's mark), and so does any
-job a room's live virus would count for. The strip shows **Contract** and its progress (its tip has each one, a row each as
-the map's tracker draws it), the map's card each contract on that server. Pinned earned pieces sit under the tracker
+job a room's live virus would count for. The strip shows **Contract** and its progress (its tip has each one, a row each with
+its progress; the map's tracker keeps a row to one line, the rest in its tooltip), the map's card each contract on that server. Pinned earned pieces sit under the tracker
 (*Earned pieces*). A takeover or recovery points at a server you've found, or at an **unknown server** one hop past one: you
 trace it to find it.
 
@@ -2404,9 +2407,11 @@ floor, "hub · on the air" with an amber ping while a broadcast is up, "hub · q
 `connect post`) opens it like a hub's terminal (`ssh <you>@post-07`, instant): LANTERN's line, then **[1] tune** (the
 radio in a window beside it), **[2] recordings** (the tape), **[3] log**, **[0] disconnect**.
 
-- **Found** from a clue: the first broadcast on the air outside a fight breaks into the radio chatter as numbers, a
-  line says so, and the post shows on the map (`s.scanner.found`; already true for a save that had the old top-bar
-  radio).
+- **Found** through a thread, **Nine Days Deaf**: the first broadcast on the air outside a fight breaks into the radio
+  chatter as numbers, from a LANTERN repeater on a server of yours (traced, no thread, nearest your level; with none
+  yet, a later broadcast tries again). Its ! goes on that server. Read the repeater, fight to LANTERN's relay a link or
+  two off and restart it, talk to LANTERN there, and the post shows on the map (`s.scanner.found`; already true for a
+  save that had the old top-bar radio).
 - **On the air.** One station at a time, for 2–3 minutes, then 15–30 minutes quiet (the first 5 minutes into a new
   save). Stations not yet logged come up first, then the ones that still pay. A broadcast starts with a quiet two-tone
   ping once the post is found, never in a fight.
@@ -2426,7 +2431,7 @@ radio in a window beside it), **[2] recordings** (the tape), **[3] log**, **[0] 
 
 | Kind | Stations | Pays |
 |---|---|---|
-| Numbers station | 4 | A line of lore, kept in the log |
+| Numbers station | 4 | LANTERN's decode, kept in the log: a hit schedule read out to the rival crews |
 | Pirate broadcast | 3 | A tip for a hub you've found: one ware's price there moves (Kernel ×1.3 for 20 min, Cipher ×0.75 for 60, Worm ×1.5 for 40), shown on the hub like a market shock. Only once you've found a hub |
 | Distress call | 3 | A one-off thread on the traced server it names (one with no thread, at most 3 levels over you), its ! on the map |
 
@@ -2681,7 +2686,7 @@ props, boots, prompts, cursors and the house's furniture. None changes a number.
 - **Earning one** is a quiet pager line and a #net line naming it (and the title it brings). No new sound.
 - **The page:** Rig → **Achievements** (`achievements`): the categories down the left with their bars, *Summary*
   first; each achievement's points on a medal, its bar while under way, what it brings shown as itself, and once earned
-  the date and **Pin** (up to three on your card; `achieve pin|unpin <name>`). Its rule is its tooltip. Four are
+  the date and **Pin** (up to three on your card; `achieve pin|unpin <name>`). Its rule shows under its name. Four are
   **hidden** (*???* and a hint).
 - An older save gets what it has already done on load, quietly, in one pager line.
 
