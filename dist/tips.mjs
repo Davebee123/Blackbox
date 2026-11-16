@@ -7,7 +7,7 @@
 // on screen) · when (optional: state it needs) · text · pause (fight tips) · under (optional:
 // sit below this container instead, so the thing it explains stays in view).
 import { keyMap } from './combat.mjs';
-import { QUIRKS, ARCHETYPES, SYNC } from './data.mjs';
+import { ARCHETYPES, SYNC } from './data.mjs';
 import { GENES } from './genes.mjs';
 import { rivalOf, wickLine } from './rivals.mjs';
 import { ROOM_RULES } from './families.mjs';
@@ -143,7 +143,6 @@ export const TIPS = [
   { id: 'fight-miss', page: 'combat', at: '#board', when: (s) => (s.encounter?.metrics?.misses || 0) > 0, text: 'You missed. A miss deals no damage but still uses the cooldown. Enemies above your level make you miss more often.' },
   { id: 'fight-daemon', page: 'combat', at: '.board .intent.daemon:not(.cron)', under: '#board', text: 'That\'s your daemon. It acts on its own cooldown, in the cycle where its chip sits, on top of your own move.' },
   { id: 'fight-proc', page: 'combat', pause: true, at: '#tray .lit', text: 'A skill lit up. It only works for a cycle or two after something happens, so use it while it glows.' },
-  ...Object.entries(QUIRKS).map(([id, q]) => ({ id: 'quirk-' + id, page: '*', at: `.tag-quirk[data-quirk="${id}"]`, text: `This location has the ${q.name} quirk. ${q.rule}` })),
 
   // ---------- server ----------
   { id: 'server-level', page: 'server', at: '.hsv-top', text: 'Your server\'s level matches your highest class level. Its wall holds invasions back, and your codebases let you build programs on other servers.' },
