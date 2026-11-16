@@ -2681,15 +2681,15 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .brow.dying { pointer-events: none; animation: part-dissolve 1s steps(10, end) forwards; }
 .brow.dying .bname { color: var(--amber); }
 .brow.dying .part-top { visibility: hidden; } /* its letters are breaking up on the effects layer (hitfx.mjs) */
-.fx-cell { font: 600 11px/1 var(--mono); color: var(--amber); }
-.fx-letter { position: absolute; z-index: 2; transform: translate(-50%, -50%); white-space: pre; pointer-events: none; text-shadow: 0 0 6px rgba(241, 185, 47, 0.7); }
+.dissolve-fade .brow.dying .part-top { visibility: visible; } /* the plain fade: they go with the row */
+.fx-cell { font: 600 11px/1 var(--mono); color: var(--amber); } /* the bits' font (dissolvefx.mjs draws them) */
+.fx-dissolve { position: absolute; z-index: 2; pointer-events: none; }
 @keyframes part-dissolve { /* a flash, a flicker, then gone: its 1s and 0s take its place (hitfx.mjs) */
   0% { opacity: 1; background: rgba(255, 236, 190, 0.25); }
   10% { opacity: 0.5; }
   15% { opacity: 1; }
   25%, 100% { opacity: 0; background: transparent; }
 }
-.fx-bit.dissolve { opacity: 0; animation-fill-mode: both; color: var(--amber); font-size: 14px; text-shadow: 0 0 6px rgba(241, 185, 47, 0.8); }
 @media (prefers-reduced-motion: reduce) { .brow.dying { animation: none; opacity: 0.3; } }
 /* The server card's two levels: the server's (amber), your class's under it (your colour). */
 .srv-line .srv-bar.xp.you > span { background: var(--you); }
