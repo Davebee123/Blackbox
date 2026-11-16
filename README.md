@@ -25,8 +25,9 @@ other file copied but the editor. The Pages workflow (`.github/workflows/pages.y
 
 ## How a session goes
 
-- **SPRAWL-00** is where you start: a rogue server of eight rooms with a stray in each, two at each level from 1 to 4.
-  Kill them to trace the servers linked to it. A room fills again 90 seconds after its stray falls. Its Core (RELAY-KING) opens from level 3.
+- **SPRAWL-00** is where you start: a rogue server of eight rooms with a stray in each, two to each level band
+  (1–2, 2–3, 3–4, 4–5). Kill them to trace the servers linked to it. A room fills again 90 seconds after its stray
+  falls. Its Core (RELAY-KING) opens from level 3.
 - **Floors.** The network is a stack of eight floors. Each server you trace sits on one, at a fixed level; each floor
   has an exit down.
 - **Rooms.** `connect` to a server and walk its rooms: fight what holds them, take the vault's key from its elite, beat
