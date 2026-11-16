@@ -52,7 +52,7 @@ test('your first server located brings wick\'s second transmission, only on a sa
   SC.skip(s);
   const now = SC.sceneNow(s), loc = s.locations[0];
   assert.equal(now.id, 'first-server');
-  assert.ok(now.said[0].text.includes(loc.name) && now.said[0].text.includes('level 1'));
+  assert.ok(now.said[0].text.includes(loc.name) && now.said[0].text.includes(`level ${loc.level}`) && loc.level === 3);
   const show = SC.choicesOf(s).find((c) => c.id === 'show');
   assert.deepEqual(SC.choose(s, show.n), { go: `map:${loc.id}` });
 });

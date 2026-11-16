@@ -661,7 +661,9 @@ three solo bosses, the floor 2–5 bosses and the natives. A crew boss keeps its
 | HOLLOW CHOIR | **Copy**: its Mimic copies what you fire and turns it on you (a second voice from act 2) | 4 | What costs least to have copied, hold, or break a voice |
 | The floor bosses | Its own part's attack: the Gavel's Surge, the Demand's Deadline, the Logger's Dump, main()'s Surge | its own | Their rules (above) |
 
-The Backlash's chips (*Lash −N*) sit on every part with an attack, in the columns the beat falls in.
+The Backlash's chips (*↩ −N if hit*, hatched and pointing back at you) sit on every part with an attack, in the
+columns the beat falls in. The Resident's fight opens with act 1's strip, *ACT 1 / 3 · BACKLASH*, and wick's tip on
+the first.
 
 **Loot.** A boss always drops one item at its level (`bossLoot`): a blue, or a yellow one kill in four. The Resident
 rolls like an elite instead (one is met on every takeover). Each boss has **two uniques of its own**: 15% a kill, +5%
@@ -1210,7 +1212,7 @@ until a relay pings it or it sends an invader at you).
 At 100% the server is **located**: an ordinary server at its slot, with its own ? neighbours; contracts aimed at it
 follow it there. Its card shows the way you're tracing it now on top, with a pip for each step still needed, then the
 other ways, shaded with a lock in the icon's place until you have them. Your first server is always SPRAWL-00's
-level-1 neighbour; reaching level 4 with nothing traced traces it for you, and at 5 wick pages you with one you
+neighbour nearest level 3 (`CONFIG.zone.firstLevel`); reaching level 4 with nothing traced traces it for you, and at 5 wick pages you with one you
 haven't cracked.
 
 **Relays** (Halcyon sells them; the storyline gives you one) go on a server you've taken over (`relay <server>`, or its

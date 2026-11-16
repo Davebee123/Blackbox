@@ -45,7 +45,7 @@ import { runDaemons, daemonsOn, daemonsHurt, flushDaemons, lifeline, lifelineHea
 export { daemonSlots, slottedDaemons, daemonLevel, daemonAmount, daemonNext, watchmanBar, gainDaemon } from './daemons.mjs';
 import { LEG, legendFired } from './legends.mjs';
 import { filterCommand, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
-import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, traceNear, leadOf } from './hidden.mjs';
+import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, traceNear, leadOf, firstRank } from './hidden.mjs';
 import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, floorLairBosses, reached, floorCommand, floorsRestore, floorsLetter } from './floors.mjs';
 import { reqLevel, meetsReq, STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, liftFx, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, IMPLICITS, implicitFx, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore, curveRestore } from './gear.mjs';
 
@@ -1562,10 +1562,10 @@ export function firstTime(s, id, why, kind = 'build', share = 0.5) {
   gainXp(s, deedXpFor(s, hackerLevel(s), share), why, kind);
 }
 // Out of SPRAWL-00 (WoW's starter-zone breadcrumb): by level 4 you've traced a server (SPRAWL-00's
-// lowest-level neighbour, level 1), and at 5 wick points you at one you haven't cracked yet.
+// neighbour nearest level 3, hidden.mjs firstRank), and at 5 wick points you at one you haven't cracked yet.
 function breadcrumb(s, level) {
   const tame = (s.locations || []).filter((l) => !l.rogue && !l.member);
-  if (level === 4 && !tame.length) { const h = hiddenNear(s, { id: CONFIG.zone.id }).sort((a, b) => a.level - b.level || b.lead - a.lead)[0]; addLocation(s, h?.family || 'worm', 1, h?.via || null, h?.slot || null); }
+  if (level === 4 && !tame.length) { const h = hiddenNear(s, { id: CONFIG.zone.id }).sort((a, b) => firstRank(a, b) || b.lead - a.lead)[0]; addLocation(s, h?.family || 'worm', 1, h?.via || null, h?.slot || null); }
   const open = (s.locations || []).find((l) => !l.rogue && !l.member && !l.takenOver);
   if (level === 5 && open && !tame.some((l) => Object.keys(l.state?.unlocked || {}).length)) emit(s, 'breadcrumb', `wick: strays won't feed you forever. ${open.name} has a vault. go open it.`, { location: open.id });
 }
@@ -2255,6 +2255,8 @@ function engage(s) {
   barsSnap(s); // act bars: the board act 2 refills (acts.mjs)
   tellStart(s); // a solo fight's tells (tells.mjs)
   barsTells(s); // act bars: the tells every act deals again (acts.mjs)
+  // A boss whose act 1 has a name (BOSSES acts name: the Resident's Backlash): the act break's strip names it as the fight opens.
+  { const v = s.encounter.virus, A = actsOf(v), a = A?.name && actInfo(v); if (a) emit(s, 'act-open', `ACT 1: ${A.name.toUpperCase()}. ${A.say || ''}`.trim(), { boss: v.boss, act: { ...a, name: A.name, emote: A.emote || null } }); }
 }
 
 // Fast kills: beat your own usual pace (cycles per 100 Integrity of virus, kept per class) by a

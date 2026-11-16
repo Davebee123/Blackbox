@@ -27,6 +27,15 @@ test('the worm and ransomware Residents and the three solo bosses are P4 bosses;
   assert.equal(actsOf(boss('resident', 'ghostroot').encounter.virus), null);
 });
 
+test('the Resident names its act 1 as the fight opens (the act break\'s strip); a boss with no act 1 name does not', () => {
+  for (const fam of ['worm', 'ransomware']) {
+    const ev = boss('resident', fam).logs.filter((l) => l.type === 'act-open');
+    assert.equal(ev.length, 1, fam);
+    assert.deepEqual([ev[0].act.n, ev[0].act.of, ev[0].act.name], [1, 3, 'Backlash'], fam);
+  }
+  assert.equal(boss('repoman').logs.filter((l) => l.type === 'act-open').length, 0);
+});
+
 test('Backlash: on the beat, a part your command hits lashes back unless the hit breaks it', () => {
   const s = boss('resident', 'ransomware'), v = s.encounter.virus, pulse = part(s, 'pulse');
   assert.ok(intents(s).some((i) => i.effect === 'backlash' && i.source === 'pulse'), 'the beat is on the board');

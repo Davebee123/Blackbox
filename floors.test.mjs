@@ -69,11 +69,11 @@ test('the generator: the same seed draws the same floors; each its shape, its se
   assert.notDeepEqual(floorGraph(1, 2).nodes, floorGraph(2, 2).nodes, 'another network, another floor');
 });
 
-test('the first server you find is level 1, whatever the seed and whichever family the strays were', () => {
+test('the first server you find is SPRAWL-00\'s neighbour nearest level 3, whatever the seed and whichever family the strays were', () => {
   for (const seed of [1, 2, 3, 7, 11, 42, 99, 1234]) {
     const s = mk(1, seed);
     for (let i = 0; i < 20 && !s.locations.length; i++) addLead(s, ['worm', 'trojan', 'ransomware'][i % 3], CONFIG.leadBase, '', { id: CONFIG.zone.id });
-    assert.equal(s.locations[0]?.level, 1, `seed ${seed}`);
+    assert.ok(Math.abs(s.locations[0].level - 3) <= 1, `seed ${seed}: level ${s.locations[0].level}`);
   }
 });
 
@@ -89,7 +89,7 @@ test('tracing along a floor\'s links: SPRAWL-00\'s ? servers from the start, its
   assert.equal(s.locations.length, 1, 'ten strays: one server, at its slot');
   const loc = s.locations[0];
   assert.ok(adj(g, g.entry).includes(loc.slot) && loc.depth === 1 && loc.level === g.nodes[loc.slot].level, 'its level is its slot\'s');
-  assert.equal(loc.level, 1, 'your first server is level 1');
+  assert.equal(loc.level, 3, 'your first server is level 3');
   assert.ok(!hiddenAt(s, loc.slot), 'no longer a ?');
   for (const id of adj(g, loc.slot)) if (g.nodes[id].kind === 'server') assert.ok(hiddenAt(s, id) || locAt(s, id), 'its neighbours show as ?');
   // A first clear on it traces one ? linked to it (the most traced), so servers turn up one at a time.

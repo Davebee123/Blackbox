@@ -201,7 +201,7 @@ export const CONFIG = {
   // The rogue server: where you go to fight from the start. Viruses sit in its folders at
   // your level, up to level 3 (it's a starter area), and come back a while after you kill them. Signal carries between connections
   // (and rests back up like the server); you need a quarter of it to connect.
-  zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 5, starterKills: 2, starterHit: 0.6, bossRespawnMs: 30 * 60000 }, // your first two kills: SPRAWL's hits land at 60% while you learn the board // SPRAWL follows you up to level 5 (a spawn now and then one higher); past that it's grey-ish filler
+  zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 5, starterKills: 2, starterHit: 0.6, firstLevel: 3, bossRespawnMs: 30 * 60000 }, // your first two kills: SPRAWL's hits land at 60% while you learn the board; firstLevel: your first server is SPRAWL's neighbour nearest it // SPRAWL follows you up to level 5 (a spawn now and then one higher); past that it's grey-ish filler
   relockMs: 30000, // any server but an outpost won't take you back for 30 seconds after you leave: no jack out, top up, return
   // Each disconnect on a server's run (Signal 0, a lost fight) adds this to its wait, up to the cap in all; a clean jack
   // out clears the count (combat.mjs relockWait, loc.deaths).
@@ -1071,6 +1071,8 @@ const STRAIN_BOSS_LATE = [[8, 1], [10, 0.8], [18, 1.1], [30, 1.45]];
 // HASHLORD's own step, flatter and longer: its Pulse Node carried the fight (a Surge took half your Signal at 30), and a
 // charge on top of a plain hit that big went past the spike cap (docs/genome.md rule 5). More Integrity, smaller hits.
 const HASHLORD_LATE = [[8, 1], [10, 0.8], [18, 0.95], [30, 1.1]];
+// The Resident's act 1, named as the fight opens (combat.mjs engage, the act break's strip): name, emote, say (the log).
+const LASH_OPEN = { name: 'Backlash', emote: 'Touch a handler on the beat and it answers.', say: 'Hit a part on the Resident\'s beat and it lashes back.' };
 export const BOSSES = {
   // The Resident (run.mjs /core): about two wins in three for a geared player at its level.
   // bar: how long its acts run against the rest (acts.mjs ACT_BARS: each act 15 to 20 cycles for the planner); the Resident's
@@ -1083,7 +1085,7 @@ export const BOSSES = {
   // (backlash, copy, bend, broadcast or collect), every and first its rhythm; a phase's every quickens it. The Resident's are by family: the
   // worm's and the ransomware's are built, the ghostroot's keeps the old phase until P4's next batch.
   resident: { long: { hp: 1.6, dmg: 0.54, enrageAt: 36 }, name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, work: { share: 0.5 }, watchdog: { every: 5 }, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }],
-    acts: { worm: { beat: 'backlash', every: 4, first: 3, hp: 1.1, enrageAt: 24, bar: 0.6 }, ransomware: { beat: 'backlash', every: 4, first: 4, hp: 1.1, enrageAt: 24, bar: 1.2 } },
+    acts: { worm: { beat: 'backlash', every: 4, first: 3, hp: 1.1, enrageAt: 24, bar: 0.6, ...LASH_OPEN }, ransomware: { beat: 'backlash', every: 4, first: 4, hp: 1.1, enrageAt: 24, bar: 1.2, ...LASH_OPEN } },
     // Its acts by family (docs/solo-bosses.md "The act-bars redesign"): act 2 the Watchdog, act 3 the worm's Outbreak (a lash
     // hatches a fragment) or the ransomware's Lockdown (a lash encrypts you).
     actPhases: { worm: [{ at: 0.5, do: ['watchdog'], name: 'Watchdog', emote: 'Watchdog armed. Every handler reports to me now.', say: 'The Resident arms its Watchdog. While its ♛ stands above its next tick, every other part patches a ◆ every 5 cycles.' }, { at: 0.25, do: ['outbreak'], name: 'Outbreak', emote: 'Every handler spawns now. Hit me and I spread.', say: 'The Resident breaks out. Each Backlash hatches a fragment.' }],
