@@ -36,6 +36,14 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   bots to pass it.
 - **Sessions.** Start a fresh session for each batch of work, after the last one is pushed. A long session re-reads
   its whole context on every step, and that is most of the token cost.
+- **Performance** (docs/performance-plan.md). Phones are the bar. New code costs nothing while idle: no loop, timer or
+  infinite animation runs when its thing isn't on screen. Animate `transform` and `opacity` only; never `box-shadow`,
+  `filter`, colours or SVG attributes in a loop. Update the DOM in place rather than rebuilding it, never read layout
+  (`getBoundingClientRect`, `offsetWidth`, `scrollHeight`) right after writing it, and build per-sample or per-pixel
+  work once, not per frame. A change to a fight, a map or anything that animates gets a before and after from
+  `tools/perf/phone-audit.mjs` (phone, and `DEVICE=desk`), and it lands only if it doesn't get slower. What nobody can
+  see ships for everyone; what costs looks goes behind a Graphics setting, full by default on a desktop. Keep the
+  plan's table current.
 - **Screenshots.** One good set per feature, looked at before showing. Scripts and screenshots go in the session's
   scratchpad, never in the repo. Chromium is preinstalled for Playwright; never run `playwright install`.
 - **Processes.** Never `pkill -f`; kill by PID.
