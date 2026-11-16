@@ -65,13 +65,15 @@ export function hiddenLead(s, n, amount, why = '') {
   if (n.lead >= 100 && locate(s, n) && why !== 'Mapped: ') hooks.earnEvent?.(s, { kind: 'locate', floor: n.depth }); // Long Shot's count: by tracing, not a Mapped neighbour's gift
 }
 // A place's trace along its links (floors.mjs hiddenNear): every ? linked to it, or one (one: the most traced, so they
-// come one at a time; then its family's, then the lowest level). Until you've found a server, the lowest level comes
-// first: your first server is SPRAWL-00's level-1 neighbour (firstFind). Returns the nodes it moved.
+// come one at a time; then its family's, then the lowest level). Until you've found a server, the one nearest
+// CONFIG.zone.firstLevel comes first: your first server is SPRAWL-00's level-3 neighbour, its Resident no pushover (firstFind).
+// Returns the nodes it moved.
 export const firstFind = (s) => !(s.locations || []).some((l) => !l.rogue && !l.zone && !l.member);
+export const firstRank = (a, b) => Math.abs(a.level - CONFIG.zone.firstLevel) - Math.abs(b.level - CONFIG.zone.firstLevel) || a.level - b.level;
 export function traceNear(s, loc, amount, why = '', { one = false, family = null } = {}) {
   const near = hiddenNear(s, loc);
   if (!near.length || amount <= 0) return [];
-  const low = one && firstFind(s) ? (a, b) => a.level - b.level : () => 0;
+  const low = one && firstFind(s) ? firstRank : () => 0;
   const pick = one ? [[...near].sort((a, b) => low(a, b) || b.lead - a.lead || (b.family === family) - (a.family === family) || a.level - b.level)[0]] : near;
   for (const n of pick) hiddenLead(s, n, amount, why);
   return pick;

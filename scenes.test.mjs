@@ -43,16 +43,16 @@ test('the welcome: wick opens, a question you asked is gone, an answer ends it w
 
 test('your first server located brings wick\'s second transmission, only on a save that heard the welcome', () => {
   const old = mk();
-  for (let i = 0; i < 8 && !old.locations.length; i++) addLead(old, 'worm', CONFIG.leadBase, '', { id: CONFIG.zone.id });
+  for (let i = 0; i < 20 && !old.locations.length; i++) addLead(old, 'worm', CONFIG.leadBase, '', { id: CONFIG.zone.id });
   assert.equal(SC.sceneNow(old), null, 'an old save or a bench: no scene');
   const s = mk();
   SC.queueScene(s, 'welcome');
-  for (let i = 0; i < 8 && !s.locations.length; i++) addLead(s, 'worm', CONFIG.leadBase, '', { id: CONFIG.zone.id });
+  for (let i = 0; i < 20 && !s.locations.length; i++) addLead(s, 'worm', CONFIG.leadBase, '', { id: CONFIG.zone.id });
   assert.equal(SC.sceneNow(s).id, 'welcome', 'it waits behind the one playing');
   SC.skip(s);
   const now = SC.sceneNow(s), loc = s.locations[0];
   assert.equal(now.id, 'first-server');
-  assert.ok(now.said[0].text.includes(loc.name) && now.said[0].text.includes('level 1'));
+  assert.ok(now.said[0].text.includes(loc.name) && now.said[0].text.includes(`level ${loc.level}`) && loc.level === 3);
   const show = SC.choicesOf(s).find((c) => c.id === 'show');
   assert.deepEqual(SC.choose(s, show.n), { go: `map:${loc.id}` });
 });

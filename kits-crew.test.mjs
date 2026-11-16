@@ -27,9 +27,12 @@ test('crew-leaning damage dealers carry a crew: over Lv 18 and 30, more boss tri
     // The Overclocker leans crew since its Turbo Boost runs the crew hot (GAME_RULES.md "Subclasses"): 88% of boss tries on these seeds (91% on
     // 24), within 5 points of the Demolitionist's 92%, and the highest low point of the damage dealers but the Payload's.
     // Held: 85%, within 5 of every solo-leaning one, and a higher low point than each, until the designer has played it.
-    if (c === 'overclocker') { for (const s of solo) assert.ok(r[c].won >= 0.85 && r[c].won >= r[s].won - 0.05 && r[c].low > r[s].low, `${c} vs ${s}: ${line}`); continue; }
-    // With the Overclocker leaning crew the weakest solo-leaning one is the Phantom (77%): the Hijacker held within 16.5 of it.
-    if (c === 'hijacker') { assert.ok(r[c].won >= 0.6 && r[c].won >= r.phantom.won - 0.165, line); continue; }
+    // The Phantom excepted on the low point: since its Surprise lands on its first command (no window), it opens every
+    // fight with it here too, 24% low against the Overclocker's 22% (21% before). The designer kept it (November 2026).
+    if (c === 'overclocker') { for (const s of solo) assert.ok(r[c].won >= 0.85 && r[c].won >= r[s].won - 0.05 && (r[c].low > r[s].low || s === 'phantom'), `${c} vs ${s}: ${line}`); continue; }
+    // With the Overclocker leaning crew the weakest solo-leaning one is the Phantom: 87% since its Surprise needs no window
+    // (77% before). The Hijacker held within 27 of it.
+    if (c === 'hijacker') { assert.ok(r[c].won >= 0.6 && r[c].won >= r.phantom.won - 0.27, line); continue; }
     const herder = c === 'herder';
     assert.ok(r[c].won >= (herder ? 0.65 : 0.9), line);
     for (const s of solo) assert.ok((herder ? s !== 'overclocker' || r[c].won >= r[s].won : r[c].won >= r[s].won) && (r[c].low > r[s].low || (herder && s === 'phantom')), `${c} vs ${s}: ${line}`);

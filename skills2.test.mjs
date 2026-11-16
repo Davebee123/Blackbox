@@ -244,7 +244,7 @@ test('Infiltrator Ghost: slip past one guard a run, no fight, no reward; it is b
   assert.match(play(b, 'slip').at(-1).message, /Infiltrator/);
 });
 
-test('Infiltrator Surprise: a blue window on cycle 1; Inject, Tag and Keepalive fired in it do more', async () => {
+test('Infiltrator Surprise: the first command lands synced, no window; Inject, Tag and Keepalive do more', async () => {
   const { CONFIG } = await import('./dist/data.mjs');
   const { resolveCycle } = await import('./dist/combat.mjs');
   const start = () => {
@@ -255,29 +255,33 @@ test('Infiltrator Surprise: a blue window on cycle 1; Inject, Tag and Keepalive 
     return s;
   };
   const s = start();
-  assert.ok(s.encounter.sync?.surprise, 'cycle 1 always opens a surprise window');
-  assert.equal(s.encounter.sync.width, CONFIG.surprise.width);
+  assert.ok(!s.encounter.sync?.surprise, 'no surprise window');
   const p = s.encounter.virus.parts[0];
   command(s, 'inject ' + p.id);
-  s.encounter.synced = true;
+  s.encounter.synced = false; // fired outside any window: still a Surprise
   const ev = resolveCycle(s);
   assert.equal(s.encounter.burns.filter((b) => b.target === p.id).length, 1, 'still one Inject: it does not stack');
   assert.equal(ev.filter((e) => /^Inject \(Surprise\)/.test(e.message)).length, CONFIG.surprise.injectNow, 'it ticks at once, on top of its cycle\'s tick');
   assert.ok(ev.some((e) => e.type === 'synced' && e.surprise && /SURPRISE/.test(e.message) && /Inject ticks at once/.test(e.message)));
-  assert.ok(!s.encounter.sync?.surprise, 'only the first cycle');
-  // Tag in the window: 6 cycles, burns +75%.
+  // Tag as the first command: 6 cycles, burns +75%.
   const t = start();
   const q = t.encounter.virus.parts[0];
-  command(t, 'tag ' + q.id); t.encounter.synced = true; resolveCycle(t);
+  command(t, 'tag ' + q.id); resolveCycle(t);
   assert.equal(q.taggedUntil, 1 + CONFIG.surprise.tagCycles);
   assert.ok(Math.abs(q.tagBoost - 0.25) < 1e-9);
-  // Missing the window: the normal effect.
+  // A hold doesn't spend it; the first real command after it is the Surprise, and only that one.
   const m = start();
   const r = m.encounter.virus.parts[0];
-  const mev = (command(m, 'inject ' + r.id), resolveCycle(m));
-  assert.equal(m.encounter.burns.filter((b) => b.target === r.id).length, 1);
-  assert.ok(!mev.some((e) => /^Inject \(Surprise\)/.test(e.message)), 'no extra tick');
-  // Other classes get no surprise window.
+  command(m, 'hold'); resolveCycle(m);
+  command(m, 'backdoor ' + r.id);
+  assert.ok(resolveCycle(m).some((e) => e.type === 'synced' && e.surprise), 'any first command is a Surprise');
+  command(m, 'inject ' + r.id); m.encounter.synced = false;
+  const mev = resolveCycle(m);
+  assert.ok(!mev.some((e) => /^Inject \(Surprise\)/.test(e.message) || e.type === 'synced'), 'only the first');
+  // Other classes get no Surprise.
   const b = fresh(); command(b, 'encounter cryptjack'); command(b, 'engage');
-  assert.ok(!b.encounter.sync?.surprise);
+  const bp = b.encounter.virus.parts[0];
+  command(b, 'overload ' + bp.id); b.encounter.synced = false;
+  const bev = resolveCycle(b);
+  assert.ok(!bev.some((e) => e.type === 'synced'));
 });
