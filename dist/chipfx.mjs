@@ -23,10 +23,11 @@ export const CHIP_THEMES = {
 // What a part spawns in the fight (a Replicator's fragments, a nest's hatchlings) is numbered, and its Gnaw wears byte.
 const SPAWNED = /^(Fragment|Hatchling) \d+$/;
 export const chipTheme = (name) => { const n = String(name || '').replace(/\.exe$/i, '').trim(); return CHIP_THEMES[n] || (SPAWNED.test(n) ? 'byte' : null); };
-// How hard a chip plays, by its column (0 is Now) and the ms left in the cycle: [intensity, opacity].
-export function chipLevel(col, left) {
+// How hard a chip plays, by its column (0 is Now) and the ms left in the cycle: [intensity, opacity]. plusOne false
+// (the Graphics setting Chip effects at +1 off, graphics.mjs): Now only.
+export function chipLevel(col, left, plusOne = true) {
   if (col === 0) return left <= 1500 ? [1.6, 0.7] : [1, 0.55];
-  if (col === 1) return [0.4, 0.36];
+  if (col === 1 && plusOne) return [0.4, 0.36];
   return [0, 0];
 }
 
@@ -751,13 +752,13 @@ export function createChipFx() {
     // Every frame: dt ms (0 while paused), p the cycle's progress, left its ms to go, k the screen effects' strength (0 is off).
     // Each chip's size comes from measure() above (read here only before its first measure), then the themes write.
     // Effects off: the boxes are hidden (opacity 0) and the themes rest.
-    tick({ dt, p, left, k }) {
+    tick({ dt, p, left, k, plusOne = true }) {
       const run = [];
       for (const rec of kept.values()) {
         const el = rec.box.parentNode;
         if (!el?.isConnected) continue;
         const cell = el.closest('.bcell'), col = cell ? [...cell.parentNode.children].indexOf(cell) - 1 : 9;
-        const [lv, op] = k ? chipLevel(col, left) : [0, 0];
+        const [lv, op] = k ? chipLevel(col, left, plusOne) : [0, 0];
         if (rec.op !== op * k) rec.box.style.opacity = rec.op = op * k;
         if (!k || !(lv || Object.keys(rec.st).length) || !THEMES[rec.th]) continue;
         run.push([rec, el, lv, col === 0 ? p : 0, rec.el === el && rec.sz ? rec.sz : measure(el, rec.th)]);

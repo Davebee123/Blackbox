@@ -1149,6 +1149,7 @@ html[data-sfx-floor="7"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.spa
   transition: box-shadow 1.2s;
 }
 .shell-on #crt::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 22vh; background: linear-gradient(to bottom, transparent, rgba(255, 230, 160, 0.03) 60%, transparent); animation: crt-roll 11s linear infinite; }
+.no-ambient #crt::before { display: none; } /* Ambient motion off (graphics.mjs): no roll */
 .shell-on #crt::after {
   content: ''; position: absolute; inset: -15%; opacity: 0.045;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -3873,6 +3874,36 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .settings-grid .btn[aria-pressed='true'] { border-color: var(--line-strong); color: var(--bright); }
 .settings-grid .btn[aria-pressed='true']::before { background: var(--amber); box-shadow: 0 0 6px rgba(241, 185, 47, 0.7); }
 .settings-grid .btn[aria-pressed='false'] { color: var(--muted); }
+/* The Settings page: a slider for a setting with steps, a checkbox for one that is on or off (view.mjs slideRow,
+   checkRow); the Graphics card's preset over its rows, the ones that cost looks under their heading. */
+.set-slide { display: grid; grid-template-columns: 120px 1fr 92px; align-items: center; gap: 12px; padding: 3px 0; cursor: pointer; }
+.set-name { color: var(--text); font-size: 13px; }
+.set-val { font: 600 12px var(--mono); color: var(--bright); text-align: right; white-space: nowrap; }
+.set-rail { position: relative; display: flex; justify-content: space-between; align-items: center; height: 14px; padding: 0 6px; }
+.set-rail::before { content: ''; position: absolute; left: 7px; right: 7px; top: 5px; height: 4px; border-radius: 2px; background: var(--line-strong); }
+.set-rail i { position: relative; width: 2px; height: 10px; background: var(--muted); opacity: 0.7; }
+.set-slide input[type='range'] { -webkit-appearance: none; appearance: none; position: absolute; inset: 0; width: 100%; height: 14px; margin: 0; background: transparent; outline: none; cursor: pointer; }
+.set-slide input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 3px; background: var(--amber); border: 0; box-shadow: 0 0 8px rgba(241, 185, 47, 0.4); }
+.set-slide input[type='range']::-moz-range-thumb { width: 14px; height: 14px; border-radius: 3px; background: var(--amber); border: 0; }
+.set-slide input[type='range']:focus-visible { box-shadow: 0 0 0 2px var(--amber); }
+.set-checks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px var(--s4); margin: 6px 0; }
+.set-check { display: flex; align-items: center; gap: 8px; min-height: 28px; color: var(--text); font-size: 13px; cursor: pointer; }
+.set-check.off { color: var(--dim); cursor: default; }
+.set-check input { -webkit-appearance: none; appearance: none; flex: none; display: grid; place-items: center; width: 14px; height: 14px; margin: 0; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--inset); cursor: inherit; }
+.set-check input:checked { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 6px rgba(241, 185, 47, 0.45); }
+.set-check input:checked::after { content: ''; width: 7px; height: 4px; margin-top: -2px; border: solid #171006; border-width: 0 0 2px 2px; transform: rotate(-45deg); }
+.set-check input:disabled { opacity: 0.45; }
+.set-check input:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.settings-page .card > .row { margin-top: 6px; }
+.gx-card h2 small { margin-left: 8px; color: var(--muted); font: inherit; letter-spacing: inherit; text-transform: none; }
+.gx-sub { margin: 14px 0 4px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--muted); }
+.gx-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line-strong); border-radius: 3px; overflow: hidden; }
+.gx-seg button { padding: 7px 6px; border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--muted); font: 13px var(--sans, inherit); white-space: nowrap; cursor: pointer; }
+.gx-seg button:first-child { border-left: 0; }
+.gx-seg button.on { background: var(--amber-wash); color: var(--bright); box-shadow: inset 0 -2px 0 var(--amber); }
+.gx-seg button small { margin-left: 4px; color: var(--dim); font-size: 11px; }
+.gx-seg button:focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; }
+@media (max-width: 520px) { .set-slide { grid-template-columns: 96px 1fr 76px; gap: 8px; } .gx-seg button { padding: 7px 2px; font-size: 12px; } .gx-seg button small { display: none; } .set-checks { grid-template-columns: 1fr 1fr; } }
 .sound-test { margin-top: var(--s4); padding-top: var(--s5); border-top: 1px solid var(--line); }
 .sound-test .next-label { flex-basis: 100%; font: var(--label); letter-spacing: var(--label-track); }
 .sound-test .btn { min-height: var(--h-btn-sm); padding: 0 var(--s4); font-size: 12px; color: var(--muted); }
@@ -3949,10 +3980,8 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 /* ---- The error card reads as an alert, like any other hot card: its kicker in red. ---- */
 .page-error h2 { color: var(--hot); }
 .page-error pre { border-left: 2px solid var(--hot); }
-.settings-grid .btn[data-toggle='speed'] { grid-column: span 2; }
 .settings-grid .btn { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .net-natives { grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); }
-@media (max-width: 420px) { .settings-grid .btn[data-toggle='speed'] { grid-column: 1 / -1; } }
 
 /* ---- Run header: pack and leads are the same small control, one line each, the same height. ---- */
 .net-pack { display: inline-flex; align-items: center; gap: var(--s3); min-height: var(--h-btn-sm); padding: 0 10px; white-space: nowrap; }
@@ -4202,6 +4231,7 @@ body.no-motion .recap { animation: none; }
 @keyframes tt-snap { 0% { background: #eefaff; box-shadow: 0 0 10px #eefaff; opacity: 1; } 35% { opacity: 1; transform: scale(1, 0.55); } 100% { opacity: 0; transform: scale(1, 0); } }
 @keyframes tt-node-snap { 0% { transform: translate(-50%, -50%) scale(1); color: #eefaff; box-shadow: 0 0 12px #eefaff; } 30% { transform: translate(-50%, -50%) scale(1.5) rotate(-20deg); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(0.3) rotate(40deg); opacity: 0; } }
 .no-motion .tether.up .tt-line, body[data-fx="minimal"] .tether.up .tt-line { animation: none; }
+.tether-steady .tether.up .tt-line { animation: none; } /* Breathing tether off (graphics.mjs): its glow holds */
 .no-motion .tether.snap, body[data-fx="minimal"] .tether.snap { display: none; }
 @media (prefers-reduced-motion: reduce) { .tether.up .tt-line { animation: none; } .tether.snap { display: none; } }
 .part-bar.guarded { overflow: visible; }

@@ -7,6 +7,7 @@
 // its window, drawn bigger and nearer on a layer over the page (#art-out), and snaps back. Reads
 // state; never changes it.
 
+import { GFX } from './graphics.mjs';
 import { bossShape, bossKit, BOSS_BUILD, BOSS_STRIKES } from './boss-art.mjs';
 
 const COLORS = { amber: '#f1b92f', bright: '#fff2c8', hot: '#ff5b3d', dim: '#7e5311', gold: '#ffd85c', deep: '#a8741c' };
@@ -154,7 +155,7 @@ export const sprayAt = (u) => (u > 0.15 && u < 0.75 ? Math.sin(((u - 0.15) / 0.6
 // When a broken part's point lets go, 0–1 of the dissolve: stable per point, so it crumbles in a scatter.
 export const releaseOf = (i) => ((i * 0.6180339887) % 1) * 0.8;
 
-export function createArt({ getState, canMove, getSelected, getNowSources, breakout = () => true, stage = null }) {
+export function createArt({ getState, canMove, getSelected, getNowSources, breakout = () => true, stage = null, rate = () => 'full' }) {
   let canvas = null, ctx = null, previous = 0, angle = 0, clock = 0;
   let builtFor = '', points = [], anims = [], radius = 1, rx = 1, ry = 1, style = { core: 'lunge', limb: 'lunge' };
   let enteredFor = null, camBase = 300;
@@ -561,8 +562,9 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     const v = s?.encounter?.virus;
     if (!canvas?.isConnected || !v) return rest();
     requestAnimationFrame(draw);
-    if (rested) { rested = false; previous = now - 40; } // back from a rest: one frame's step, as if it had been running
-    if (now - previous < 40) return;
+    const r = rate(), step = GFX.frameMs[r] || 40; // the Graphics setting (graphics.mjs): full, slow or still
+    if (rested) { rested = false; previous = now - step; } // back from a rest: one frame's step, as if it had been running
+    if (now - previous < step) return;
     const delta = Math.min(100, now - previous);
     previous = now;
     const key = v.id + v.parts.length;
@@ -573,7 +575,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     const shot = S?.cam(now);
     Object.assign(COLORS, S?.colors() || BASE);
     cam = shot?.dist && !facing ? shot.dist : camBase; // a boss keeps its own distance, fitted to the window
-    const motion = canMove();
+    const motion = canMove() && r !== 'still';
     const moving = motion && s.encounter.phase === 'active' && !s.encounter.paused;
     if (moving) angle += delta * 0.00016;
     if (motion) clock += delta / 1000;

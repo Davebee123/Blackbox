@@ -94,6 +94,7 @@ import { startTraffic } from './traffic.mjs';
 import { watchPackets, shipOf } from './mapmotion.mjs';
 import { postFound } from './scanner.mjs';
 import { createScanner, postBanner, postOptions, postTerminalMarkup, POST } from './scanner-view.mjs';
+import * as GX from './graphics.mjs';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -111,6 +112,7 @@ if (BENCH) { const c = BK.benchCurve(location.search); if (c != null) CONFIG.pow
 // ---------- state ----------
 let campaign = load();
 migrateEffects(campaign); // the old Effects setting becomes its Screen effects level (screenfx.mjs)
+GX.migrateGraphics(campaign); GX.applyAuto(campaign, F.isPhone()); // the Graphics settings; Auto reads the device (graphics.mjs)
 if (DEV) Object.defineProperty(window, '__bb', { get: () => campaign }); // dev only: the live state, for tests
 // The scanner (scanner.mjs): its own clock, saved as it changes; the radio sits in the Listening Post's Tune window
 // (render mounts it). Not in the breach campaign.
@@ -290,7 +292,8 @@ const canMove = () => campaign.settings.motion && !reducedMotion.matches;
 const fxLevel = () => boardFxOf(campaign); // one setting: Screen effects off is minimal, subtle and medium calm, bold full
 // Hit effects (hitfx.mjs): when a command lands, it lands on the part's own cell in the shooter's
 // colour (flash, slash, a bright jolt that never moves it); a crit slashes twice; a miss dims it; a broken chit flashes it white.
-const hitfx = createHitFx(document.getElementById('board'), { canMove: () => canMove() });
+const gfx = () => GX.graphicsOf(campaign); // the Graphics settings (graphics.mjs)
+const hitfx = createHitFx(document.getElementById('board'), { canMove: () => canMove(), dissolveMode: () => gfx().dissolve });
 const partRow = (id) => document.querySelector(`#board .bpart[data-target="${CSS.escape(id)}"]`);
 const initials = (h) => (h || '').replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'YO'; // as on the board (view.mjs)
 // Only commands: burns, helpers and other ticks ("Inject: …") don't strike. Crack's chits do.
@@ -440,6 +443,7 @@ const art = createArt({
   stage,
   getState: shown,
   canMove: () => canMove(),
+  rate: () => gfx().virus, // full, slow or still (graphics.mjs)
   breakout: () => fxLevel() !== 'minimal', // an attack strikes out of the render's window (Screen effects on)
   getSelected: () => selected,
   getNowSources: () => {
@@ -1617,7 +1621,8 @@ function run(raw) {
   if (text === 'house') return goTo('house'); // the page; house place and store go to the engine (house.mjs)
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
   if (text === 'terminal preview' || text.startsWith('terminal preview ')) return bootPreview(text.slice(17).trim()); // the rest of terminal … is the engine's (terminal.mjs)
-  { const said = screenFxCommand(campaign, text); if (said) { save(); markDirty(); return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
+  { const said = screenFxCommand(campaign, text); if (said) { GX.settle(campaign, F.isPhone()); save(); markDirty(); return notice(said); } }
+  { const said = GX.graphicsCommand(campaign, text, { phone: F.isPhone() }); if (said) { save(); markDirty(); return notice(said); } } // graphics <preset> / graphics <row> <value> (graphics.mjs) // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
   if (/^developer levelup( |$)/.test(text)) return levelUpCommand(text.slice(17).trim());
   if (/^developer thread preview\b/.test(text)) return threadPreview(text.replace(/^developer thread preview\s*/, ''));
   if (/^developer scene\b/.test(text)) { const id = text.replace(/^developer scene\s*/, ''); if (!SC.replay(campaign, id)) return notice(`developer scene: ${Object.keys(SC.SCENES).join(', ')}.`, true); if (module === 'combat') go('map'); markDirty(); return; }
@@ -2197,6 +2202,8 @@ function renderMeters() {
   document.body.classList.toggle('no-motion', !campaign.settings.motion);
   document.body.classList.toggle('grain-on', campaign.settings.grain === true); // either way by choice; unset, by the layout (style.css)
   document.body.classList.toggle('grain-off', campaign.settings.grain === false);
+  document.body.classList.toggle('no-ambient', !gfx().ambient); // the Graphics settings (graphics.mjs): the maps, the backdrop and the CRT hold still
+  document.body.classList.toggle('tether-steady', !gfx().tether);
   document.body.dataset.fx = fxLevel(); // Effects: style.css quiets what moves on the board (a tether's snap) at minimal
 }
 
@@ -2768,7 +2775,7 @@ function chipTick() {
   const s = shown();
   if (module !== 'combat' || !active(s)) return;
   const lvl = levelOf(campaign), k = !canMove() || lvl === 'off' ? 0 : lvl === 'subtle' ? 0.7 : 1, L = cycleLength(s);
-  chipfx.tick({ dt: s.encounter.paused ? 0 : dt, p: Math.min(1, s.encounter.elapsedMs / L), left: L - s.encounter.elapsedMs, k });
+  chipfx.tick({ dt: s.encounter.paused ? 0 : dt, p: Math.min(1, s.encounter.elapsedMs / L), left: L - s.encounter.elapsedMs, k, plusOne: gfx().chips });
 }
 
 // Once a second: finish an install whose time is up, and move the Server page's progress bar.
@@ -4113,6 +4120,16 @@ document.addEventListener('change', (e) => {
   if (r.dataset.volume === 'sfx' && campaign.settings.sound) feel.preview('good');
   if (r.dataset.volume === 'ambience' && campaign.settings.sound) feel.radioTest();
   save(); markDirty();
+});
+
+// Settings sliders (view.mjs slideRow): the label follows while you drag; letting go runs the setting's command.
+document.addEventListener('input', (e) => {
+  const r = e.target.closest?.('[data-slide]'), label = r?.parentNode.querySelector('.set-val');
+  if (label) label.textContent = r.dataset.labels.split('|')[r.value] || '';
+});
+document.addEventListener('change', (e) => {
+  const r = e.target.closest?.('[data-slide]');
+  if (r) run(`${r.dataset.slide} ${r.dataset.opts.split(' ')[r.value]}`);
 });
 
 // The logo goes to the Map (a plain click; it used to reload the page).

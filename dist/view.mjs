@@ -30,6 +30,7 @@ import { GENES, CATS, AXES, CLASHES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import * as UI from './uiscale.mjs';
+import * as GX from './graphics.mjs';
 import { chipOf, virusGenes, scannedDeep, scannedRead, packedChip, packsGene } from './genome.mjs';
 import { mastered, RESEARCH, TIER } from './research.mjs';
 import { SFX, levelOf as sfxLevel } from './screenfx.mjs';
@@ -3007,31 +3008,68 @@ function devMarkup(s, coop) {
     <section class="card"><h2>Fight reports</h2>${s.reports.length ? `<details><summary>${s.reports.length} report(s)</summary><pre>${esc(JSON.stringify(s.reports.slice(-5), null, 1))}</pre></details>` : '<p>None yet.</p>'}</section></div>
     <section class="card"><h2>Log</h2><ol class="fulllog">${s.logs.slice(-300).map((e) => `<li>c${e.cycle} · ${esc(e.message)}</li>`).join('')}</ol></section></div>`;
 }
+// The Settings page's controls: a slider for a setting with steps, a checkbox for one that is on or off. Each says
+// what it does in its tooltip (WoW's grammar: name, kind, what it does, the answer muted).
+const tipAttrs = (tip, kind) => (tip ? ` title="${esc(tip)}"` : '') + (kind ? ` data-tt-kind="${esc(kind)}"` : '');
+// opts: [[value, label], ...] from least to most; run: the command, the value after it (app.js runs it on change).
+function slideRow(run, name, opts, cur, { tip = '', kind = '' } = {}) {
+  const i = Math.max(0, opts.findIndex(([v]) => String(v) === String(cur)));
+  return `<label class="set-slide"${tipAttrs(tip, kind)}><span class="set-name">${name}</span><span class="set-rail">${'<i></i>'.repeat(opts.length)}<input type="range" min="0" max="${opts.length - 1}" step="1" value="${i}" data-slide="${esc(run)}" data-opts="${esc(opts.map(([v]) => v).join(' '))}" data-labels="${esc(opts.map(([, l]) => l).join('|'))}" aria-label="${esc(name)}"></span><b class="set-val">${esc(opts[i][1])}</b></label>`;
+}
+// attr: the input's own action (data-run="…" or data-toggle="…").
+const checkRow = (attr, name, on, { tip = '', kind = '', disabled = false } = {}) => `<label class="set-check${disabled ? ' off' : ''}"${tipAttrs(tip, kind)}><input type="checkbox" ${attr} ${on ? 'checked' : ''} ${disabled ? 'disabled' : ''}><span>${name}</span></label>`;
+const LOOKS = 'Graphics · costs looks';
+function graphicsCard(s, phone) {
+  const g = GX.graphicsOf(s), on = GX.presetOf(s, phone), plain = s.settings.shell === 'plain', lvl = sfxLevel(s);
+  const presetTip = { auto: `Auto: your device's preset, ${GX.PRESET_NAMES[GX.autoPreset(phone)]} on this one.\n▸ A phone plays Balanced, a desktop Quality.`, quality: 'Quality: every row at its full look.', balanced: 'Balanced: the virus drawn slower, a part breaking into fewer bits, a steady tether.\n▸ A phone runs smoother with it.', performance: 'Performance: the virus still, nothing ambient moving, a part fading out, chip effects in Now only, subtle screen effects.\n▸ For a slow phone.' };
+  const presets = ['auto', 'quality', 'balanced', 'performance'].map((k) => `<button type="button" class="${on === k ? 'on' : ''}" data-run="graphics ${k}" aria-pressed="${on === k}"${tipAttrs(presetTip[k], 'Graphics preset')}>${GX.PRESET_NAMES[k]}${k === 'auto' ? ` <small>${GX.PRESET_NAMES[GX.autoPreset(phone)]}</small>` : ''}</button>`).join('');
+  const fxOff = (id) => !!s.settings.screenFxOff?.[id];
+  const fxTip = { signal: 'Low Signal: the screen\'s edges warm as your Signal falls under a half, and pulse under a quarter.', hits: 'Hits: a big hit on you tears the backdrop.', crits: 'Crits: a crit tears the virus picture.', floor: 'Floor colour: each floor paints the screen in its own palette.', lamps: 'Status lights: the casing\'s lamps show the gate, the wall, the net and your daemons.' };
+  return `<section class="card gx-card"><h2>Graphics${on === 'custom' ? ' <small>Custom</small>' : ''}</h2>
+    <div class="gx-seg" role="group" aria-label="Graphics preset">${presets}</div>
+    <h3 class="gx-sub">Costs looks</h3>
+    ${slideRow('graphics virus', 'Virus picture', [['still', 'Still'], ['slow', 'Slow'], ['full', 'Full']], g.virus, { tip: 'Virus picture: the virus in a fight, drawn at 25 frames a second (Full), 8 (Slow) or Still.\n▸ On a phone it is a small icon, and Slow looks the same there.', kind: LOOKS })}
+    ${slideRow('graphics dissolve', 'Part dissolve', [['fade', 'Fade'], ['fewer', 'Fewer'], ['all', 'All bits']], g.dissolve, { tip: 'Part dissolve: a broken part flies apart in all its 1s and 0s, in a third of them (Fewer), or fades out.', kind: LOOKS })}
+    ${slideRow('screen fx', 'Screen effects', SFX.levels.map((l) => [l, l[0].toUpperCase() + l.slice(1)]), lvl, { tip: 'Screen effects: light around the game (the backdrop, the screen\'s edges, the casing\'s lamps) and how much moves in a fight. Off is numbers and bars only; Subtle and Medium add the number, the bar and who did it; Bold adds impact bursts, sparks and flashes.', kind: LOOKS })}
+    <div class="set-checks">
+      ${checkRow(`data-run="graphics ambient ${g.ambient ? 'off' : 'on'}"`, 'Ambient motion', g.ambient, { tip: 'Ambient motion: the map\'s pulses and files, the rooms\' bits and links, the backdrop\'s drift and the screen\'s roll.\n▸ Off, they hold still.', kind: LOOKS })}
+      ${checkRow(`data-run="graphics chips ${g.chips ? 'off' : 'on'}"`, 'Chip effects at +1', g.chips, { tip: 'Chip effects at +1: a themed part\'s chips play its effect faintly a cycle ahead, as well as in Now.', kind: LOOKS })}
+      ${checkRow(`data-run="graphics tether ${g.tether ? 'off' : 'on'}"`, 'Breathing tether', g.tether, { tip: 'Breathing tether: a tether\'s glow swells and fades.\n▸ Off, it glows steady.', kind: LOOKS })}
+    </div>
+    <h3 class="gx-sub">Screen</h3>
+    <div class="set-checks">
+      ${checkRow('data-toggle="motion"', 'Motion', !!s.settings.motion, { tip: 'Motion: everything that moves. Off, the game holds still, whatever the rows above say.', kind: 'Setting' })}
+      ${checkRow('data-run="shell toggle"', 'Immersive shell', !plain, { tip: 'Immersive shell: the CRT screen, the boot sequence, the status line and the glitches when you\'re hit.', kind: 'Setting' })}
+      ${checkRow(`data-run="casing ${s.settings.casing === false ? 'on' : 'off'}"`, 'Casing', s.settings.casing !== false, { tip: 'Casing: the monitor around the screen, on wide screens.', kind: 'Setting', disabled: plain })}
+      ${checkRow(`data-run="window ${s.settings.window === false ? 'on' : 'off'}"`, 'Window', s.settings.window !== false, { tip: 'Window: the city outside, beside the monitor.', kind: 'Setting', disabled: plain || s.settings.casing === false })}
+      ${((g2) => checkRow(`data-run="grain ${g2 ? 'off' : 'on'}"`, 'Grain', g2, { tip: 'Grain: film grain moving over the screen.\n▸ It starts off on a phone.', kind: 'Setting', disabled: plain }))(s.settings.grain ?? !phone)}
+      ${Object.entries(SFX.effects).map(([id, name]) => checkRow(`data-run="screen fx ${id} ${fxOff(id) ? 'on' : 'off'}"`, name, !fxOff(id), { tip: fxTip[id], kind: 'Screen effect', disabled: plain || lvl === 'off' })).join('')}
+    </div>
+    <div class="row"><button type="button" class="btn" data-run="shell boot" ${plain ? 'disabled' : ''}>Reboot screen</button></div></section>`;
+}
+function optionsCard(s) {
+  const avail = UI.ROOM.avail, fits = UI.STEPS.filter((z) => z <= UI.maxScale(avail)), set = s.settings.uiScale ?? 1;
+  const scales = [['auto', `Auto ${Math.round(UI.scaleFor('auto', avail) * 100)}%`], ...fits.map((z) => [Math.round(z * 100), `${Math.round(z * 100)}%`])];
+  const cur = set === 'auto' ? 'auto' : Math.round(UI.scaleFor(set, avail) * 100);
+  return `<section class="card settings-card"><h2>Options</h2>
+    ${slideRow('speed', 'Speed', [['relaxed', 'Relaxed 12s'], ['normal', 'Normal 8s'], ['fast', 'Fast 5s']], s.settings.speed || 'normal', { tip: 'Speed: how long a fight\'s cycle lasts.\n▸ Rules count cycles, so the balance never changes.', kind: 'Setting' })}
+    ${slideRow('ui scale', 'UI scale', scales, cur, { tip: 'UI scale: the screen drawn larger or smaller, for big displays. Auto sizes it to your screen, as far as the layout has room.\n▸ Type ui scale 125 for a size of your own.', kind: 'Setting' })}
+    <div class="set-checks">
+      ${checkRow('data-toggle="sound"', 'Sound', !!s.settings.sound)}
+      ${checkRow(`data-run="music ${s.settings.music === false ? 'on' : 'off'}"`, 'Music', s.settings.music !== false, { tip: 'Music: a track for home, runs and fights.', kind: 'Setting', disabled: !s.settings.sound })}
+      ${checkRow(`data-run="radio ${s.settings.radio === false ? 'on' : 'off'}"`, 'Radio', s.settings.radio !== false, { tip: 'Radio: stray transmissions in the static.', kind: 'Setting', disabled: !s.settings.sound })}
+      ${checkRow('data-toggle="haptics"', 'Vibrate', !!s.settings.haptics, { tip: 'Vibrate: the phone buzzes on hits.\n▸ Android phones only.', kind: 'Setting' })}
+      ${checkRow(`data-run="tips ${s.settings.tips === false ? 'on' : 'off'}"`, 'Tips', s.settings.tips !== false)}
+      ${checkRow(`data-run="channel ${s.settings.channel === false ? 'on' : 'off'}"`, '#net', s.settings.channel !== false, { tip: '#net: the channel\'s latest line over the prompt.', kind: 'Setting' })}
+    </div>
+    <div class="row"><button type="button" class="btn" data-run="tips replay">Replay tips</button></div></section>`;
+}
 export function systemMarkup(s, { coop = false, dev = false, tab = 'settings', phone = false } = {}) {
   if (tab !== 'dev' || !dev) tab = 'settings';
   const head = systemTabs(tab, dev);
   if (tab === 'dev') return head + devMarkup(s, coop);
-  return `${head}<div class="page-grid"><div style="display:grid;gap:12px">${volumeCard(s)}
-    <section class="card settings-card"><h2>Options</h2><div class="row settings-grid">
-      <button type="button" class="btn" data-toggle="speed">Speed: ${esc(s.settings.speed || 'normal')} (${cycleLength(s) / 1000}s per cycle)</button>
-      <button type="button" class="btn" data-toggle="sound" aria-pressed="${!!s.settings.sound}">Sound ${s.settings.sound ? 'on' : 'off'}</button>
-      <button type="button" class="btn" data-toggle="motion" aria-pressed="${!!s.settings.motion}">Motion ${s.settings.motion ? 'on' : 'off'}</button>
-      <button type="button" class="btn" data-run="music ${s.settings.music === false ? 'on' : 'off'}" aria-pressed="${s.settings.music !== false}" ${s.settings.sound ? '' : 'disabled'} title="Music from the music folder, one track for home, runs and fights">Music ${s.settings.music === false ? 'off' : 'on'}</button>
-      <button type="button" class="btn" data-run="radio ${s.settings.radio === false ? 'on' : 'off'}" aria-pressed="${s.settings.radio !== false}" ${s.settings.sound ? '' : 'disabled'} title="Stray transmissions in the static">Radio ${s.settings.radio === false ? 'off' : 'on'}</button>
-      <button type="button" class="btn" data-toggle="haptics" aria-pressed="${!!s.settings.haptics}" title="Vibration works on Android phones">Vibrate ${s.settings.haptics ? 'on' : 'off'}</button>
-      <button type="button" class="btn" data-run="shell toggle" aria-pressed="${s.settings.shell !== 'plain'}" title="CRT screen, boot sequence, status line, glitches when you're hit">Shell: ${s.settings.shell === 'plain' ? 'plain' : 'immersive'}</button>
-      <button type="button" class="btn" data-run="shell boot" ${s.settings.shell === 'plain' ? 'disabled' : ''}>Reboot screen</button>
-      <button type="button" class="btn" data-run="casing ${s.settings.casing === false ? 'on' : 'off'}" aria-pressed="${s.settings.casing !== false}" ${s.settings.shell === 'plain' ? 'disabled' : ''} title="The monitor around the screen, on wide screens">Casing ${s.settings.casing === false ? 'off' : 'on'}</button>
-      <button type="button" class="btn" data-run="window ${s.settings.window === false ? 'on' : 'off'}" aria-pressed="${s.settings.window !== false}" ${s.settings.shell === 'plain' || s.settings.casing === false ? 'disabled' : ''} title="The city outside, beside the monitor">Window ${s.settings.window === false ? 'off' : 'on'}</button>
-      ${((on) => `<button type="button" class="btn" data-run="grain ${on ? 'off' : 'on'}" aria-pressed="${on}" ${s.settings.shell === 'plain' ? 'disabled' : ''} title="Film grain moving over the screen. It starts off on a phone.">Grain ${on ? 'on' : 'off'}</button>`)(s.settings.grain ?? !phone)}
-      <button type="button" class="btn" data-run="ui scale" title="The screen drawn larger or smaller, for big displays. Auto sizes it to your screen. It scales up only as far as the layout has room: none at 1920 pixels wide, about 140% at 2560. Type ui scale 125 for a size of your own.">${esc(UI.scaleLabel(s.settings.uiScale ?? 1, UI.ROOM.avail))}</button>
-      <button type="button" class="btn" data-run="screen fx next" title="Light around the game (the backdrop, the screen's edges, the casing's lamps) and how much moves in a fight. Off: numbers and bars only. Subtle and medium: the number, the bar and who did it. Bold: impact bursts, sparks and flashes too">Screen effects: ${esc(sfxLevel(s))}</button>
-      ${Object.entries(SFX.effects).map(([id, name]) => `<button type="button" class="btn" data-run="screen fx ${id} ${!s.settings.screenFxOff?.[id] ? 'off' : 'on'}" aria-pressed="${!s.settings.screenFxOff?.[id]}" ${s.settings.shell === 'plain' || sfxLevel(s) === 'off' ? 'disabled' : ''}>${name} ${!s.settings.screenFxOff?.[id] ? 'on' : 'off'}</button>`).join('')}
-      <button type="button" class="btn" data-run="tips ${s.settings.tips === false ? 'on' : 'off'}" aria-pressed="${s.settings.tips !== false}">Tips ${s.settings.tips === false ? 'off' : 'on'}</button>
-      <button type="button" class="btn" data-run="tips replay">Replay tips</button>
-      <button type="button" class="btn" data-run="channel ${s.settings.channel === false ? 'on' : 'off'}" aria-pressed="${s.settings.channel !== false}" title="#net's latest line over the prompt">#net ${s.settings.channel === false ? 'muted' : 'on'}</button>
-    </div></section></div>
-    <div style="display:grid;gap:12px">${collectionMarkup(s)}
+  return `${head}<div class="page-grid settings-page"><div style="display:grid;gap:12px;align-content:start">${volumeCard(s)}${optionsCard(s)}</div>
+    <div style="display:grid;gap:12px;align-content:start">${graphicsCard(s, phone)}${collectionMarkup(s)}
     <section class="card"><h2>New game</h2><div class="row"><button type="button" class="btn" data-run="reset game">Reset game</button></div></section></div></div>`;
 }
 
