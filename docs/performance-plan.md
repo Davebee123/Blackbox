@@ -46,12 +46,12 @@ it is 109 requests and 6.3 MB (a 3.1 MB script, a 0.6 MB stylesheet) against 334
 
 | # | What | Helps | Look |
 |---|---|---|---|
-| 11 | **The virus picture's loop asks for every frame** just to check the clock: a fight waiting for an order runs 60 frames a second (22% of a phone) though a phone's picture draws 8 a second. A timer until the next draw is due, then one frame. | both, phones most | none |
 | 12 | **The start.** About 2.7 s on a phone's CPU before the power-on shows, one block of 1.3 s evaluating the bundle; the app's start builds what isn't on screen (`invasion.mjs` 169 ms, `profile.mjs` 143, `collection-log.mjs` 114, `codex.mjs` 93). The Horizon drawn before the script runs (HTML and CSS); pages built and modules loaded on first open. | phones most | none |
 | 13 | **Scrolling paints twice a frame** and runs a layout a frame (Map 32%, Settings 14%, Skills 16%); five scroll listeners in `app.js` run on every scroll event. Find what repaints; listeners passive and once a frame. | both | none |
 | 14 | **The strike layer** (`virus-art.mjs` `art-out`) stays a full-screen canvas (3840 × 2160 on a desktop, about 33 MB) between strikes: free it when nothing is on it. The desktop's virus picture is 11 ms a draw in a boss fight. | desktops most | none |
 | 15 | **A queued effect** (`feel.mjs` play) costs 3.4–3.8 ms on a phone, six or seven a second in a fight: profile which. | both | none |
-| 16 | **What still forces a layout each fight frame**, now render reads none: the chips' effects (`chipfx.mjs` tick, a new chip before its ResizeObserver has measured it), the virus picture (`virus-art.mjs` draw), the prompt's caret (`shell.mjs` caret, 15 a second on a desktop). Whichever reads first pays the frame's layout. | both | none |
+| 16 | **The tick runs every frame in a waiting fight** (`app.js` tickBusy holds while `active`, paused or not): 52–62 ms/s and 60 frames a second on a phone with nothing moving. Since batch 11 it is the only thing asking for frames there; with it rested the waiting fight is 8 frames a second (95 ms/s). | both, phones most | none |
+| 17 | **What still forces a layout each fight frame**, now render reads none: the chips' effects (`chipfx.mjs` tick, a new chip before its ResizeObserver has measured it), the virus picture (`virus-art.mjs` draw), the prompt's caret (`shell.mjs` caret, 15 a second on a desktop). Whichever reads first pays the frame's layout. | both | none |
 
 ## The rules (the designer, November 2026)
 
@@ -134,6 +134,8 @@ One session each, started fresh. Measure before and after with `tools/perf/phone
 | 7 | A build step for the hosted game (approved 2026-11-15); `dist/` stays runnable as plain files for development | `scripts/build.mjs`, the Pages workflow | landed |
 | 8 | The class pick: measure it, fix what costs | the class pick (`app.js` near `classPickMarkup`, `view.mjs` classPickMarkup, its CSS) | landed |
 | 9 | The CRT and the backdrop's textures merged into fewer layers: prototypes, the pick, then the build | `screenfx.css`/`.mjs`, `#crt`, `#fx-back`, `#fx-edge` | landed |
+| 10 | The fight's render reads no layout | `app.js` render, `fitTopbar`, `uiScale`, `casingLookUi`, the board's `.dense` | landed |
+| 11 | The virus picture asks for a frame only when a draw is due | `virus-art.mjs` draw loop | landed |
 
 **Batch 1 (landed).** `frame` runs every frame while `tickBusy` holds: a fight, `dirty`, a queued effect, strike or
 level-up, the Tune window, files moving on the map, co-op, or the second after an input. Otherwise a timer runs it when
@@ -280,11 +282,21 @@ from its resizes; the board tightens (`.dense`) from one on the board and each r
 on observing. Each runs after the frame's layout, before paint. What measures the board in the same render (a turn's
 FLIP, the strikes, the phone's stage) tightens it first, as before. `turnTimeline`, `cycleChanged` and `phStage` already
 measured once a cycle, not a render: kept. Forced layout and style from render (profiled, phone, regular fight): about
-47 ms/s → 19 (only at a turn, a strike or the stage), but the next reader in the frame now pays it (16). Dense board, the log's end,
+47 ms/s → 19 (only at a turn, a strike or the stage), but the next reader in the frame now pays it (17). Dense board, the log's end,
 the top bar's fit steps (640–1920 px) and the scale: as on main, no page errors. Same day, two runs each, ports
 alternated, main → branch, frames a second (main thread ms/s; the game's tick ms/s): phone boss 17.4, 19.0 (958, 958;
 292, 258) → 17.3, 24.9 (966, 939; 268, 213); regular 28.0, 29.8 (949, 940; 247, 251) → 31.8, 33.5 (921, 934; 217, 228).
 Desktop boss 10.7, 10.8 (639, 667; 73, 78) → 12.3, 10.8 (639, 649; 64, 66); regular 15.9, 13.7 (589, 603; 66, 74) →
 16.9, 12.6 (579, 648; 63, 78).
+
+**Batch 11 (landed).** The picture's loop (`virus-art.mjs` draw) asked for every frame to check the clock. Now a
+timer runs until half a frame before the Graphics setting's step is up (graphics.mjs frameMs), then frames until it
+is: the same draws at the same times. Resting with nothing to draw, `attach` and `wake` as before. Phone, a fight
+waiting for its first order (`?playtest=random&level=20`, idle): the picture's callbacks 60 → 11 a second, its time
+42 → 35 ms/s, the main thread 235 → 239 ms/s (noise); the frames don't drop yet, as the tick asks for every one (Next, 16). With the tick
+knocked out (`DROP_RAF='^frame$'`), main → branch: phone 60 → 7.7 frames a second, 186 → 95 ms/s; desktop 34 → 36
+frames, 295 → 301 ms/s (within the noise; a desktop at full draws 20–25 a second anyway). Boss fights within the noise: phone
+22.2 → 20.7, 21.3 frames a second (the picture 147 → 135, 127 ms/s), desktop 10.6 → 11.0, 11.6. The first frame of a
+fight and the Codex art come within a frame or two, as before; no page errors.
 
 Not yet measured: breach and campaign, hubs and shops, co-op, the tutorial, the More sheet, a phone on its side.

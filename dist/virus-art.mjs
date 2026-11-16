@@ -551,20 +551,26 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
 
   // ---------- drawing ----------
   const LIGHT = (() => { const l = [-0.45, -0.6, -0.66], n = Math.hypot(...l); return l.map((v) => v / n); })();
-  // The loop runs every frame only while there is a picture to draw (a canvas on the page, a virus in the state).
-  // Otherwise it rests: a slow timer looks again, and attach() or wake() starts it at once, so the first frame of a
+  // The loop asks for a frame only when a draw is due: a timer until half a frame before the Graphics setting's step
+  // (graphics.mjs frameMs) is up, then frames until it is. With no picture to draw (no canvas on the page, no virus in
+  // the state) it rests: a slow timer looks again, and attach() or wake() starts it at once, so the first frame of a
   // fight or a Codex page comes as soon as it did.
-  let resting = 0, rested = false;
-  const rest = () => { rested = true; if (!resting) resting = setTimeout(() => { resting = 0; draw(performance.now()); }, 250); }; // the look itself asks for no frame
-  const wake = () => { if (resting) { clearTimeout(resting); resting = 0; requestAnimationFrame(draw); } };
+  let timer = 0, queued = false, rested = false;
+  const ask = () => { if (!queued) { queued = true; requestAnimationFrame(draw); } };
+  const after = (ms) => { if (!timer) timer = setTimeout(() => { timer = 0; ask(); }, ms); };
+  const EARLY = 8; // half a frame: the timer wakes this early, and a wait shorter than it waits in frames
+  const rest = () => { rested = true; after(250); }; // the look itself asks for no frame
+  const wake = () => { if (rested && timer) { clearTimeout(timer); timer = 0; ask(); } };
   function draw(now) {
+    queued = false;
     const s = getState();
     const v = s?.encounter?.virus;
     if (!canvas?.isConnected || !v) return rest();
-    requestAnimationFrame(draw);
     const r = rate(), step = GFX.frameMs[r] || 40; // the Graphics setting (graphics.mjs): full, slow or still
     if (rested) { rested = false; previous = now - step; } // back from a rest: one frame's step, as if it had been running
-    if (now - previous < step) return;
+    const wait = step - (now - previous);
+    if (wait > 0) { if (wait > EARLY) after(wait - EARLY); else ask(); return; }
+    after(step - EARLY);
     const delta = Math.min(100, now - previous);
     previous = now;
     const key = v.id + v.parts.length;
@@ -852,7 +858,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       shards.push({ x: from.x, y: from.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2, c: set[Math.floor(Math.random() * set.length)], life: 700 + Math.random() * 500 });
     }
   }
-  requestAnimationFrame(draw);
+  ask();
 
   return {
     attach(el) { if (canvas !== el) { canvas = el; ctx = el.getContext('2d'); } wake(); },
