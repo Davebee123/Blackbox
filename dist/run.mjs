@@ -22,13 +22,15 @@ import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
 import { deal, developerChain, CARDS as EVENT_CARDS, dealBlip, BLIPS, RUNCARD_DEAL } from './events.mjs';
 import { RUN_CARDS, dealCard } from './runcards.mjs';
 import { crewCommand } from './crew.mjs';
-import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
+import { runnerOf, cutOf } from './runners.mjs';
+import { presenceCommand, at, peopleOn, PRESENCE, online } from './presence.mjs';
 import { profileCommand } from './profile.mjs';
 import { achieveCommand, developerAchieve } from './achievements.mjs';
 import { masteryCommand, developerMastery } from './mastery.mjs';
 import { developerPager } from './pager.mjs';
 import { casingCommand, districtCommand } from './casing.mjs';
 import { terminalCommand } from './terminal.mjs';
+import { houseCommand } from './house.mjs';
 import { say, muted } from './channel.mjs';
 import { consortiumCommand, isGround, arrive, memberServers } from './consortium.mjs';
 import { isLive, joinCost, liveCount, memoryCap, memoryCommand } from './memory.mjs';
@@ -411,7 +413,7 @@ export function connect(s, id) {
   else if (loc.fresh && loc.detached && !joinCost(s, loc).fits) warn(s, `${loc.name} needs ${joinCost(s, loc).add} memory; ${memoryCap(s) - liveCount(s)} free (${liveCount(s)}/${memoryCap(s)}). Detach something first.`);
   else if (!loc.fresh && (loc.detached || (s.locations.includes(loc) && !isLive(s, loc)))) warn(s, `${loc.name} is detached from your network. Attach it first (its map card).`);
   else if (relocks(loc) && relockLeft(loc)) warn(s, `${loc.name} is still tracing your last connection. Reconnect in ${relockLeft(loc)}s.`);
-  else if (loc.farm && !(s.crewSim || []).length) warn(s, `${loc.name} is built for a crew. Bring one first with crew sim <class> or crew invite <friend>.`);
+  else if (loc.farm && !(s.crewSim || []).length) warn(s, `${loc.name} is built for a crew. Hire a runner first.`);
   else if (loc.member && (loc.depth || 1) > floorsReached(s)) warn(s, `${loc.name} is on floor ${loc.depth}. Reach that floor yourself first.`); // a member's servers: on floors you've opened (GAME_RULES.md "Consortium")
   else {
     // A found server joins your network as you connect (the game asks first: app.js).
@@ -502,7 +504,7 @@ export function peopleIn(s, loc, folder, deep) {
   const inside = (p) => p === folder || (deep && p.startsWith(folder === '/' ? '/' : folder + '/'));
   const crew = Object.entries(s.run?.crew || {}).filter(([, c]) => inside(c.cwd)).map(([handle, c]) => ({ handle, crew: true, linked: c.link === 'you' }));
   const key = loc.zone ? 'sprawl' : isGround(s, loc) ? loc.id : null;
-  const others = key && simOn(s) ? at(s, key, folder, deep).filter((x) => !s.run?.crew?.[x.handle]).map((x) => ({ handle: x.handle, friend: x.friend, member: x.member, fighting: x.place.fighting })) : [];
+  const others = key && peopleOn(s) ? at(s, key, folder, deep).filter((x) => !s.run?.crew?.[x.handle]).map((x) => ({ handle: x.handle, friend: x.friend, member: x.member, fighting: x.place.fighting })) : [];
   return [...crew, ...others];
 }
 
@@ -701,6 +703,9 @@ export function bank(s, loc, why = '') {
   // A clean job: the vault opened and the trace still low.
   const clean = !!s.run.cracked && !s.run.hunter && (s.run.trace || 0) < TRACE.clean;
   if (clean) credits += Math.round(credits * TRACE.cleanCredits);
+  // Hired runners take their cut (runners.mjs cutOf), each of what the run banks.
+  const cuts = (s.crewSim || []).filter((x) => x.runner && runnerOf(s, x.name)).map((x) => [x.name, Math.round(credits * cutOf(runnerOf(s, x.name)))]).filter(([, n]) => n > 0);
+  for (const [h, n] of cuts) { credits -= n; emit(s, 'info', `${h}'s cut: ${n} credits.`, { runner: h, cut: n }); }
   s.server.credits += credits;
   const items = pack.filter((f) => f.kind === 'item').map((f) => f.item);
   s.signal = s.run.integrity;
@@ -745,7 +750,8 @@ export function play(s, input) {
   const [word, ...restWords] = text.split(' ');
   const rest = restWords.join(' ');
   if (word === 'connect') return connect(s, rest);
-  if (word === 'crew') return crewCommand(s, rest); // simulated co-op (crew.mjs)
+  if (word === 'crew') return crewCommand(s, rest); // your crew (crew.mjs)
+  if (word === 'hire') return crewCommand(s, text); // any runner on your net (runners.mjs)
   if (word === 'program') return command(s, input); // routines.mjs: your program, anywhere
   if (word === 'consortium' || word === 'guild') return consortiumCommand(s, input.trim().replace(/^\S+\s*/, '')); // consortium.mjs (as typed: a name keeps its capitals)
   if (['online', 'who', 'friends', 'friend'].includes(word)) { const first = s.serial; presenceCommand(s, word, rest, emit, warn); return since(s, first); } // presence.mjs
@@ -753,6 +759,7 @@ export function play(s, input) {
   if (word === 'casing' && rest !== 'on' && rest !== 'off') { const first = s.serial; casingCommand(s, text); return since(s, first); } // casing.mjs: colourway, plate, stickers (casing on|off is app.js's)
   if (word === 'district') { const first = s.serial; districtCommand(s, text); return since(s, first); } // casing.mjs: the window's district
   if (word === 'terminal' && !/^preview\b/.test(rest)) { const first = s.serial; terminalCommand(s, text); return since(s, first); } // terminal.mjs: boot, prompt, cursor (terminal preview is app.js's)
+  if (word === 'house') { const first = s.serial; houseCommand(s, text); return since(s, first); } // house.mjs: place and store furniture (in the game, house alone opens the page: app.js)
   if (word === 'achievements' || word === 'achieve') { const first = s.serial; achieveCommand(s, text); return since(s, first); } // achievements.mjs
   if (word === 'mastery') { const first = s.serial; masteryCommand(s, text, { emit, warn, classOf }); return since(s, first); } // mastery.mjs: an ability effect's tier
   if (/^developer mastery /.test(text)) { const first = s.serial; developerMastery(s, text, { emit, warn, classOf }); return since(s, first); }
@@ -796,10 +803,9 @@ export function play(s, input) {
     if (word === 'pack') { const first = s.serial; out(s, s.run.pack.length ? s.run.pack.map((f) => `${f.name.padEnd(14)} ${packLine(f)}`).concat('unbanked until you jack out.') : 'pack is empty.', 'rooms-out'); return since(s, first); }
     if (word === 'help') { const first = s.serial; out(s, ['ls            this room and its exits', 'go <room>     walk: a name or an address (cd C2; cd .. toward the entry)', 'map           the rooms you have seen', 'wait          stay a move', 'engage, back  fight what holds the room, or step back', 'cat, pull     read and take a cache (pull in an open vault)', 'open, force   the vault', 'rest          the rest room', 'install       a contract\'s item, in its room (plant)', 'play          a puzzle room\'s board (play wall c4, play up, play tap b2, play ping d4)', 'talk          who waits in a thread\'s room (talk 1, talk 2 to choose; read a log)', 'threads       your threads (thread <id>, thread abandon <id>)', 'slip          past the hunter (Infiltrator)', 'pack          what you carry', 'jack out      home, banking the pack'], 'rooms-out'); return since(s, first); }
     if (['split', 'link', 'goto', 'regroup', 'unlink'].includes(word)) { const first = s.serial; crewMove(s, word, rest); return since(s, first); }
-    if (word === 'scan') { const first = s.serial; scanRoom(s, rest); return since(s, first); }
     const ev = roomsCommand(s, text.replace(/^look$/, 'ls').replace(/^attack\b.*/, 'engage').replace(/^tree$/, 'map'));
     if (ev) return ev;
-    if (RUN_COMMANDS.includes(word) && !['scan', 'boost', 'crew'].includes(word) && !(word === 'jack' && rest !== 'out')) { const first = s.serial; warn(s, `${word}: not on rooms. Type help.`); return since(s, first); }
+    if (RUN_COMMANDS.includes(word) && !['boost', 'crew'].includes(word) && !(word === 'jack' && rest !== 'out')) { const first = s.serial; warn(s, `${word}: not on rooms. Type help.`); return since(s, first); }
     return command(s, input);
   }
   const isRun = RUN_COMMANDS.includes(word) && !(word === 'jack' && rest !== 'out') && !(word === 'scan' && active(s)); // scan mid-fight reads the fight (genome.mjs)
@@ -898,7 +904,7 @@ export function crewWander(s) {
 // Consortium members in this folder of the consortium's ground join a fight there (crew.mjs).
 hooks.crewGuests = (s, room) => {
   const loc = currentLocation(s);
-  if (!loc || !isGround(s, loc) || !simOn(s)) return [];
+  if (!loc || !isGround(s, loc) || !peopleOn(s)) return [];
   const folder = s.run?.rooms ? roomList(s).find((x) => x.path === room)?.path0 ?? room : room; // a room's folder (its name is what's shown)
   return at(s, loc.id, folder).map((x) => ({ cls: x.cls, name: x.handle, level: x.level }));
 };
@@ -965,36 +971,6 @@ function scan(s, arg) {
   showCard(s, v, { deep, type: 'net-scan' });
 }
 
-// scan [room] on rooms: the genome card of what holds this room, or a room next to you that you've discovered (been in:
-// floorplan.mjs fog) and holds a fight. An unknown room can't be read from outside.
-// It costs SCAN.signal Signal (an Infiltrator scans quietly and for free, and reads deeper).
-// What scan reads on rooms: a room you've been in whose fight is up (a sealed Core never is).
-const scanReads = (s, room) => !!room && seenOf(s, room.id) === 'kind' && FIGHTS.includes(room.kind) && isUp(s, room) && !(room.kind === 'core' && !coreOpen(s));
-// The Scan button on a room's pop-up card (floorplan-view.mjs, through netrooms.mjs): a room next to you that scan
-// reads, out of a fight. It runs scan <room>, as the prompt does. Null where scan can't read it, your own room too.
-export function scanButton(s, room) {
-  const R = s.rooms;
-  if (!s.run?.rooms || !R?.at || active(s) || !room || room.id === R.at || !neighbours(R.graph, R.at).includes(room.id) || !scanReads(s, room)) return null;
-  const free = classOf(s) === 'infiltrator';
-  return { cmd: `scan ${room.dir}`, free, cost: free ? 0 : SCAN.signal, short: !free && s.run.integrity <= SCAN.signal };
-}
-function scanRoom(s, arg) {
-  const R = s.rooms, g = R.graph, a = (arg || '').toLowerCase();
-  const near = [R.at, ...neighbours(g, R.at)].map((id) => g.rooms[id]);
-  const room = a ? near.find((x) => x.dir === a.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || x.path0 === a || x.path0 === '/' + a || x.path.toLowerCase() === a) : g.rooms[R.at];
-  if (room && seenOf(s, room.id) !== 'kind') return err(s, `scan: you haven't been in that room. You can't read what's in it from outside.`);
-  if (!scanReads(s, room)) return err(s, a ? `Nothing to scan at ${arg}. Scan a room next to you that holds a fight.` : 'Nothing to scan here. scan <room> reads a fight next door.');
-  const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts);
-  const deep = classOf(s) === 'infiltrator';
-  if (!deep) {
-    if (s.run.integrity <= cost(s, SCAN.signal)) return err(s, 'Not enough Signal to scan.');
-    s.run.integrity -= cost(s, SCAN.signal);
-  } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
-  (s.run.unpack ||= []).includes(v.id) || s.run.unpack.push(v.id); // a Packer's rules show once you've scanned it (combat.mjs packerOn)
-  (s.run.named ||= []).includes(v.id) || s.run.named.push(v.id); // its rules show by name, on the card and in the fight (genome.mjs scannedRead)
-  s.run.scans = (s.run.scans || 0) + 1; // the rooms tour's scan step (tips.mjs)
-  showCard(s, v, { deep, type: 'net-scan' });
-}
 
 // attack <name>: the start of its name, in any case, with or without .exe.
 const named = (name, arg) => name.toLowerCase().startsWith(arg.toLowerCase().replace(/\.exe$/, ''));
@@ -1086,14 +1062,14 @@ export function runSuggestions(s, input) {
   return ['history', 'ls', 'ls -a', 'cd ', 'cat ', ...(canCloak(s) ? ['spoof'] : []), ...(equipped(s, 'tap') ? ['tap'] : []), ...(slipsLeft(s) > 0 ? ['slip'] : []), 'pull ', 'unlock ', 'jack out', 'tree', 'pack', 'help', 'engage'].filter((c) => c.startsWith(text));
 }
 
-// On rooms: the room verbs, and for cd/go/scan the rooms you've discovered (by the slug you type; never an unknown one).
+// On rooms: the room verbs, and for cd/go the rooms you've discovered (by the slug you type; never an unknown one).
 function roomSuggestions(s, text) {
   const [word, arg = ''] = text.split(/ (.*)/);
   if (text.includes(' ')) {
-    if (['cd', 'go', 'scan'].includes(word)) return [...(word === 'cd' ? ['..'] : []), ...roomList(s).filter((x) => seenOf(s, x.id) === 'kind' && x.dir).map((x) => x.dir)].filter((d) => d.startsWith(arg)).map((d) => `${word} ${d}`);
+    if (['cd', 'go'].includes(word)) return [...(word === 'cd' ? ['..'] : []), ...roomList(s).filter((x) => seenOf(s, x.id) === 'kind' && x.dir).map((x) => x.dir)].filter((d) => d.startsWith(arg)).map((d) => `${word} ${d}`);
     return [];
   }
-  return ['ls', 'map', 'cd ', 'go ', 'wait', 'back', 'engage', 'cat', 'pull', 'open', 'force', 'rest', 'slip', 'scan', 'pack', 'help', 'jack out'].filter((c) => c.startsWith(text));
+  return ['ls', 'map', 'cd ', 'go ', 'wait', 'back', 'engage', 'cat', 'pull', 'open', 'force', 'rest', 'slip', 'pack', 'help', 'jack out'].filter((c) => c.startsWith(text));
 }
 
 export { guarded, locked };

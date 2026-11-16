@@ -195,7 +195,7 @@ test('the Mimic\'s beat cell says what your command would copy, and a red ghost 
   const html = boardMarkup(s, null, { ok: true, ability: 'overload', target: t.id, text: `overload ${t.id}` });
   const c = copyOf(s, 'overload', t);
   assert.match(html, new RegExp(`tl-what copy dear">${c.short}<`));
-  assert.match(html, /title="Mimic: Beat, this cycle\. Copies the command you fire then and turns it on you\. Copies your Overload: deals \d+ damage to you\.\n▸ Fire what costs you least to have copied, or hold/);
+  assert.match(html, /title="Mimic: Beat, this cycle\. Copies the command you fire then and turns it on you\. Copies your Overload: deals \d+ damage to you\."/);
   assert.match(hudMarkup(s, { preview: { ok: true, ability: 'overload', target: t.id } }), /class="copy-ghost"/);
   s.encounter.chits = 2;
   for (const p of livingParts(s)) Object.assign(p, { armor: 3, maxArmor: 3 });

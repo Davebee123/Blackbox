@@ -13,6 +13,7 @@ import { isNative } from './network.mjs';
 import { entries, partsOf } from './codex.mjs';
 import { syncSlots, homes, OTHER, BOSS_FEATS, floorFeat } from './collection.mjs';
 import { JOURNALS, foundOf } from './journals.mjs';
+import { achById } from './achievements.mjs';
 
 export const LOG_GROUPS = [
   { id: 'family', name: 'Families' },
@@ -49,7 +50,7 @@ export function logOf(s) {
     for (const src of u.sources || []) for (const [key, where] of homes(src)) {
       const [group, id] = key.split(/:(.*)/);
       const e = E.get(key) || add(group, id, OTHER[id] || id, true, u.level);
-      const slot = { key: u.id, kind: set ? 'set' : 'unique', name: u.name, level: u.level, slot: slotName(u), where, set: set?.id || null };
+      const slot = { key: u.id, kind: set ? 'set' : 'unique', name: u.name, level: u.level, slot: slotName(u), where, set: set?.id || null, earn: !!u.earn }; // earn: an earned piece (earned.mjs), named from the start
       if (set) { if (!e.sets.has(set.id)) e.sets.set(set.id, []); if (!e.sets.get(set.id).some((x) => x.key === u.id)) e.sets.get(set.id).push(slot); }
       else if (!e.uniques.some((x) => x.key === u.id)) e.uniques.push(slot);
     }
@@ -59,7 +60,7 @@ export function logOf(s) {
   jr.journals = JOURNALS.map((j) => ({ key: 'j:' + j.id, kind: 'journal', id: j.id }));
   const out = [];
   for (const e of E.values()) {
-    for (const id of e.sets.keys()) e.feats.push({ ach: (SETS[id]?.tier ? 'cl-set-' : 'k-set-') + id });
+    for (const id of e.sets.keys()) { const a = (SETS[id]?.tier ? 'cl-set-' : 'k-set-') + id; if (achById(a)) e.feats.push({ ach: a }); } // an earned set has none (achievements.mjs)
     const sections = [];
     if (e.uniques.length) sections.push({ kind: 'unique', slots: e.uniques.sort((a, b) => a.level - b.level) });
     for (const [id, slots] of e.sets) { const all = piecesOf(id); sections.push({ kind: 'set', set: id, name: setOf(all[0])?.name || id, have: all.filter((p) => got[p]).length, of: all.length, slots }); }

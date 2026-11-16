@@ -4,7 +4,7 @@
 // gets a dashed lane with its trigger, and the next locked slot shows the level it opens at. Pick a cycle and the
 // order of play for it reads across under the bar (daemons.mjs playOrder). Bench: what you hold but haven't slotted.
 // Roster: all forty by the levels that drop them, the unfound as silhouettes. Each daemon wears its sprite
-// (daemon-sprites.mjs). Nothing on the cards is a rule: a sticky panel says what the picked one does (a bottom sheet
+// (daemon-sprites.mjs). Nothing on the cards is a rule: a sticky panel says what the picked one does (the one sheet
 // on a phone), and it alone carries the rule's highlights (ruletext.mjs) and the Slot, Unslot and Swap buttons.
 // Styles: daemons.css. Clicks: app.js (data-dmn-sel, data-dmn-cycle, data-dmn-view; the buttons are data-command).
 import { DAEMONS, DAEMON_BANDS, DAEMON_DROP, bandDaemons, daemonBand, daemonN, codeUnit, SERVER, FLOORS, ARCHETYPES, SUBS } from './data.mjs';

@@ -1,6 +1,6 @@
 // Rooms are unknown until you discover them (GAME_RULES.md "Walking and fog"; floorplan.mjs look, known, inSight, fogRestore):
-// a room you've never been in is a "?" chip with only its cost when you can walk in, the rooms next to you included;
-// once you've been in it, it's discovered for good and shows everything from anywhere. The hunter and the Exfil show
+// the rooms next to you are discovered; one further is a "?" chip with nothing about it; once you've stood in or next
+// to a room, it's discovered for good and shows everything from anywhere. The hunter and the Exfil show
 // in your room, next to you and in a discovered room. Everywhere rooms show: the playtest, traced servers, SPRAWL-00,
 // the farm; an old save keeps what it can't rule out.
 import test from 'node:test';
@@ -31,40 +31,28 @@ const tile = (s, id, ui) => chipOf(wideOf(roomsMarkup(s, ui)), id);
 const pop = (html) => html.match(/<div class="map-pop fp-pop"[\s\S]*$/)?.[0] || '';
 const UNKNOWN_CHIP = /fp-icon|fp-name|fp-plate|fp-tag|fp-live|fp-respawn|fp-hair/;
 
-test('an adjacent room you have never been in: a ? chip with its cost and nothing else (no icon, name, colour, tags, light or ring)', () => {
+test('the rooms next to you are discovered, at their first-walk cost; one further, a ? chip with nothing else', () => {
   const s = server({ hunter: 'patrol' }), R = s.rooms, g = R.graph;
   const exits = FP.exits(s);
   assert.ok(exits.length >= 2);
-  // Give the rooms next door every badge they could wear: a live fight, a rare spawn, a respawn ring, a key.
-  const fight = exits.find((x) => FP.FIGHTS.includes(x.kind));
-  assert.ok(fight, 'a fight next to the entry');
-  R.rare[fight.id] = true;
-  const other = exits.find((x) => x !== fight);
   for (const x of exits) {
-    assert.equal(FP.seenOf(s, x.id), 'shape', `${x.id}: drawn, not discovered`);
-    assert.equal(FP.known(s, x.id), false);
+    assert.ok(FP.known(s, x.id), `${x.id}: discovered from next door`);
+    assert.ok(!R.been[x.id], 'never been in');
+    assert.equal(FP.moveCost(s, x), Math.round(R.max * FP.ROOMS.moveNew), 'still the new room\'s cost');
     const chip = tile(s, x.id);
-    assert.match(chip, /class="fp-room k-fog t-fog reach/, 'a ghost, no kind colour');
-    assert.match(chip, /<text class="fp-q"[^>]*>\?<\/text>/, 'a ? for its name');
-    assert.doesNotMatch(chip, UNKNOWN_CHIP, `${x.id}: nothing about what it is`);
-    assert.doesNotMatch(chip, new RegExp(x.path.toUpperCase()), 'no name plate');
-    assert.match(chip, new RegExp(`fp-cost[\\s\\S]*−${FP.moveCost(s, x)}<`), 'its Signal cost');
+    assert.doesNotMatch(chip, /k-fog/, 'its kind shows');
     assert.match(chip, new RegExp(`data-rooms="go" data-arg="${x.id}"`), 'one click walks in');
-    assert.match(chip, /title="Unknown room\nA first step in costs \d+ Signal\."/);
-    assert.match(chip, /aria-label="Unknown room"/);
   }
-  // A ring it could have (down, as if cleared) never shows on an unknown room.
-  R.down[other.id] = clock;
-  assert.doesNotMatch(tile(s, other.id), UNKNOWN_CHIP);
-  // The exits still light up as exits, unknown or not.
-  assert.equal((wideOf(roomsMarkup(s)).match(/class="fp-link live/g) || []).length, exits.length);
-  // Its pop-up card: Unknown room, with its cost, and no kind, virus or rule text.
-  const ui = { sel: null, selAt: null, closed: null };
-  pickRoom(s, fight.id, ui);
-  const card = pop(roomsMarkup(s, ui));
-  assert.match(card, /<h1>Unknown room<\/h1>/);
-  assert.match(card, new RegExp(`A first step in costs ${FP.moveCost(s, fight)} Signal\\.`));
-  assert.doesNotMatch(card, /Process|Elite|Level \d|lv \d|live|rare|Enrages|Spam|Core|DEADBOLT|data-rooms=/);
+  // Two off: a ghost, no kind, no name, no cost, and a ring it could have never shows.
+  const d = FP.distances(g, R.at), two = FP.roomList(s).find((x) => d[x.id] === 2 && x.id !== g.core);
+  assert.equal(FP.seenOf(s, two.id), 'shape');
+  R.down[two.id] = clock; R.rare[two.id] = true;
+  const chip = tile(s, two.id);
+  assert.match(chip, /class="fp-room k-fog t-fog/, 'a ghost, no kind colour');
+  assert.match(chip, /<text class="fp-q"[^>]*>\?<\/text>/, 'a ? for its name');
+  assert.doesNotMatch(chip, UNKNOWN_CHIP, 'nothing about what it is');
+  assert.doesNotMatch(chip, new RegExp(two.path.toUpperCase()), 'no name plate');
+  assert.match(chip, /aria-label="Unknown room"/);
   assert.doesNotMatch(roomsMarkup(s), /undefined|NaN/);
 });
 
@@ -82,16 +70,14 @@ test('a room out of reach you have never been in: clickable for its card, which 
   assert.doesNotMatch(tile(s, g.core), /SEALED|fp-icon|CORE/);
 });
 
-test('walking into an unknown room that holds a virus still stops you at the door: Engage or Step back, never a fight by itself', () => {
+test('walking into a room that holds a virus stops you at the door: Engage or Step back, never a fight by itself', () => {
   const s = server(), R = s.rooms;
   const fight = FP.exits(s).find((x) => FP.FIGHTS.includes(x.kind) && FP.isUp(s, x));
-  assert.equal(FP.known(s, fight.id), false);
   const ui = { sel: null, selAt: null, closed: null };
   FP.go(s, fight.id, { pause: true });
   assert.equal(R.at, fight.id);
   assert.equal(R.screen?.kind, 'virus');
   assert.equal(active(s), false, 'no fight yet');
-  assert.ok(FP.known(s, fight.id), 'and now you know it');
   const card = pop(roomsMarkup(s, ui));
   assert.match(card, /data-rooms="engage"[\s\S]*data-rooms="back"/);
   assert.match(card, new RegExp(`<h1>${FP.virusName(s, fight)}</h1>`), 'its card is titled by the virus in it');
@@ -124,32 +110,24 @@ test('a discovered room keeps its icon, name, badges, live light and ring from a
   for (const x of unknown) assert.ok(!map.includes(x.path + ' ') && !map.endsWith(x.path), `${x.path}: never named`);
 });
 
-test('ls: the rooms next to you as ? with their cost until you have been in them', () => {
-  const s = server(), R = s.rooms;
+test('ls: the rooms next to you by name and tag, with their cost', () => {
+  const s = server();
   const ls = FP.roomsCommand(s, 'ls').find((e) => e.type === 'rooms-out').message;
   const lines = ls.split('\n').slice(1).filter((l) => /^\d+ /.test(l));
   assert.equal(lines.length, FP.exits(s).length);
-  for (const l of lines) assert.match(l, /^\d+  [A-Z]+\d+  \?  \[\?\]  −\d+ Signal$/); // its address: where, never what
-  for (const x of FP.exits(s)) assert.ok(!ls.includes(x.path), `${x.path} not named`);
-  const first = FP.exits(s)[0];
-  FP.go(s, first.id);
-  if (R.screen?.kind === 'virus') FP.act(s, 'back');
-  const again = FP.roomsCommand(s, 'ls').find((e) => e.type === 'rooms-out').message;
-  assert.match(again, new RegExp(`${first.path}  \\[`), 'been in: named, its tag');
+  for (const x of FP.exits(s)) assert.match(ls, new RegExp(`${x.path}  \\[[^\\]]+\\]  −\\d+ Signal`), `${x.path}: named, its tag, its cost`);
 });
 
-test('the hunter: its skull shows in a room next to you (unknown or not) and in a discovered room; deeper in the fog it is out of sight', () => {
+test('the hunter: its skull shows in a room next to you and in a discovered room; deeper in the fog it is out of sight', () => {
   const s = server({ hunter: 'patrol' }), R = s.rooms, g = R.graph, h = FP.hunterOf(s);
   assert.ok(h);
   const reset = () => { R.seen = {}; };
-  // You next to its room, its room unknown: the skull and its arrow.
+  // You next to its room: the skull and its arrow.
   const door = FP.neighbours(g, h.at)[0];
   reset(); place(s, door);
-  assert.equal(FP.known(s, h.at), false);
   assert.equal(FP.hunterSeen(s), true);
-  assert.match(tile(s, h.at), /class="fp-skull/, 'next to you: its skull on the ? chip');
-  assert.doesNotMatch(tile(s, h.at), UNKNOWN_CHIP);
-  assert.match(FP.hunterLine(s), /1 room off, in an unknown room/);
+  assert.match(tile(s, h.at), /class="fp-skull/, 'next to you: its skull');
+  assert.match(FP.hunterLine(s), /1 room off/);
   // Two rooms off, its room unknown: out of sight (a red pulse at the edge of the fog), and ls says so.
   const d = FP.distances(g, h.at), two = FP.roomList(s).find((x) => d[x.id] === 2 && x.id !== g.entry && !FP.neighbours(g, x.id).includes(h.at));
   reset(); place(s, two.id);
@@ -165,14 +143,15 @@ test('the hunter: its skull shows in a room next to you (unknown or not) and in 
   assert.match(FP.hunterLine(s), new RegExp(`in ${g.rooms[h.at].path}`));
 });
 
-test('everywhere rooms show: a fresh SPRAWL-00, a traced server and the farm open with every room unknown but the entry', () => {
+test('everywhere rooms show: a fresh SPRAWL-00, a traced server and the farm open with the entry and its neighbours discovered', () => {
   const s = fresh();
   play(s, 'connect sprawl');
+  const open = (x, R) => x.id === R.graph.entry || FP.neighbours(R.graph, R.graph.entry).includes(x.id);
   const check = (tag) => {
     const R = s.rooms, html = roomsMarkup(s), wide = wideOf(html);
     for (const x of FP.roomList(s)) {
-      assert.equal(FP.known(s, x.id), x.id === R.graph.entry, `${tag} ${x.id}`);
-      if (FP.seenOf(s, x.id) && x.id !== R.graph.entry) assert.doesNotMatch(chipOf(wide, x.id), UNKNOWN_CHIP, `${tag} ${x.id}: a ? chip`);
+      assert.equal(FP.known(s, x.id), open(x, R), `${tag} ${x.id}`);
+      if (FP.seenOf(s, x.id) && !open(x, R)) assert.doesNotMatch(chipOf(wide, x.id), UNKNOWN_CHIP, `${tag} ${x.id}: a ? chip`);
     }
     assert.doesNotMatch(html, /undefined|NaN/);
   };
@@ -182,11 +161,11 @@ test('everywhere rooms show: a fresh SPRAWL-00, a traced server and the farm ope
   const loc = t.locations[0]; loc.lockUntil = 0;
   play(t, 'connect ' + loc.id);
   assert.ok(t.rooms?.world);
-  for (const x of FP.roomList(t)) assert.equal(FP.known(t, x.id), x.id === t.rooms.graph.entry, `traced ${x.id}`);
+  for (const x of FP.roomList(t)) assert.equal(FP.known(t, x.id), open(x, t.rooms), `traced ${x.id}`);
   const f = fresh(); f.hackers = { [f.loadout.archetype]: { level: 7, xp: 0 } };
   openFarm(f); play(f, 'crew sim bastion'); play(f, 'connect kessler');
   assert.ok(f.run?.rooms);
-  for (const x of FP.roomList(f)) assert.equal(FP.known(f, x.id), x.id === f.rooms.graph.entry, `farm ${x.id}`);
+  for (const x of FP.roomList(f)) assert.equal(FP.known(f, x.id), open(x, f.rooms), `farm ${x.id}`);
 });
 
 test('an old save: a room it showed by kind stays discovered unless the save can tell you were never in it', () => {
@@ -230,4 +209,17 @@ test('Mapped (100%) means every room discovered', () => {
   place(s, c.id); FP.act(s, 'pull');
   assert.ok(R.mapped, 'Mapped');
   for (const x of FP.roomList(s)) assert.ok(FP.known(s, x.id), `${x.path} discovered`);
+});
+
+test('a live fight you can see wears its level on the chip, red when it\'s over yours', () => {
+  const s = server(), R = s.rooms;
+  const fight = FP.exits(s).find((x) => FP.FIGHTS.includes(x.kind) && FP.isUp(s, x));
+  const lv = FP.fightOf(s, fight).level;
+  assert.match(tile(s, fight.id), new RegExp(`<g class="fp-lvl"><rect[^>]*/><text[^>]*>lv ${lv}</text>`));
+  R.rare[fight.id] = true; // two levels up
+  assert.match(tile(s, fight.id), new RegExp(`<g class="fp-lvl over">[\\s\\S]*>lv ${lv + FP.ROOMS.rareLevel}<`));
+  R.down[fight.id] = clock;
+  assert.doesNotMatch(tile(s, fight.id), /fp-lvl/, 'down: no level');
+  const d = FP.distances(R.graph, R.at), two = FP.roomList(s).find((x) => d[x.id] === 2 && x.id !== R.graph.core);
+  assert.doesNotMatch(tile(s, two.id), /fp-lvl/, 'unknown: no level');
 });

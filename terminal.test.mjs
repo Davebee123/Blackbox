@@ -175,7 +175,7 @@ test('each boot plays on the screen, ends by itself, and a key skips it; Motion 
 
 test('at launch the boot you picked plays after the power-up, and the stock one by default (shell.mjs, app.js)', () => {
   const src = read('./dist/shell.mjs');
-  assert.match(src, /powerOn\(\{ sound, reducedMotion: \(\) => !canMove\(\) \}\)\.then\(\(\) => bootLinesRun\(bootOf\(getState\(\)\)\)\)/);
+  assert.match(src, /powerOn\(\{ sound, reducedMotion: \(\) => !canMove\(\), warm: [^\n]*\}\)\.then\(\(\) => bootLinesRun\(bootOf\(getState\(\)\)\)\)/);
   assert.match(src, /function boot\(force = false\) \{\n    if \(!isOn\(\) \|\| !canMove\(\)\) return;/, 'skipped with Motion off, as it always was');
   assert.doesNotMatch(src, /sound\('(?!jackin)/, 'no new sounds');
   const app = read('./dist/app.js');
@@ -229,8 +229,8 @@ test('locked looks can\'t be chosen, and the unlocks follow achievements', () =>
   assert.equal(y.cosmetics.boot, undefined);
   // The rewards show on the achievement: its tooltip's words and a chip by name.
   assert.match(rewardText(achById('c-patient')), /a boot sequence/);
-  assert.match(rewardText(achById('f-kestrel')), /a casing colourway, a boot sequence and a prompt\.$/);
-  assert.match(rewardText(achById('x-mapped')), /^Rewards a cursor\.$/);
+  assert.match(rewardText(achById('f-kestrel')), /a monitor color, a boot sequence and a prompt\.$/);
+  assert.match(rewardText(achById('x-mapped')), /^Rewards a cursor and the Milk-crate desk for your house\.$/);
   const z = me(); grant(z, 'c-patient');
   assert.match(achRow(z, achById('c-patient')), /<b>POST boot<\/b>/);
   // Reused achievements only: the table and its points are as they were.
@@ -262,9 +262,9 @@ test('every prompt format renders, escaped, one line high, and the input stays e
   assert.match(fn, /\} else \{\n[^\n]*\n    const P = promptLabel\(campaign\);\n    el\.className = P\.cls;\n    el\.innerHTML = P\.html;/);
   for (const was of ["el.className = 'prompt acting'", "el.className = 'prompt hub'", "el.className = 'prompt run ' + V.signalLevel(r)"]) assert.ok(fn.includes(was), was);
   assert.doesNotMatch(fn, /command-input'\)\.(focus|blur|value|disabled|readOnly)|addEventListener/, 'the input is never touched');
-  // The touch-screen rule stands: focusPrompt skips touch, and the only direct focus is a printable key.
+  // The touch-screen rule stands: focusPrompt skips touch; the direct focuses are a printable key and the phone's >_.
   const direct = app.split('\n').filter((l) => /\$\('command-input'\)\.focus\(|input\.focus\(/.test(l));
-  assert.equal(direct.length, 2);
+  assert.equal(direct.length, 3);
   assert.ok(direct.some((l) => /const focusPrompt = \(\) => \{ if \(touch\(\) \|\| lastPointer === 'touch'/.test(l)));
   // The same height: terminal.css never sizes the command line, and the two-line one fits in the input's height.
   const css = strip(read('./dist/terminal.css'));

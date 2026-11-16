@@ -5,7 +5,7 @@
 // what it is, lights the facts that matter (ruletext.mjs ruleHtml: the only place on the page that does) and holds
 // the buttons, each a real command. Point at a button that changes the wall or the server (or tap it once on a
 // phone) and the panel shows before and after, worked out by running that command on a copy of the save
-// (previewOf). On a phone the panel is a bottom sheet.
+// (previewOf). On a phone the panel is in the one sheet.
 import { glyph } from './glyphs.mjs';
 import { ruleHtml } from './ruletext.mjs';
 import { esc, wallRuler, safetyTip, serverNext, fmtTime, invaderStatus, sickPct, sickTip } from './view.mjs';

@@ -24,12 +24,12 @@ test('every scene is whole: a start, each choice a node, each node said or an en
 test('the welcome: wick opens, a question you asked is gone, an answer ends it where it says', () => {
   const s = mk();
   assert.ok(SC.queueScene(s, 'welcome'));
-  assert.equal(SC.sceneNow(s).said.length, 2);
+  assert.equal(SC.sceneNow(s).said.length, 3);
   assert.deepEqual(SC.choicesOf(s).map((c) => c.id), ['lowlight', 'halcyon', 'begin']);
   assert.deepEqual(SC.choose(s, 1), { more: true });
   const said = SC.sceneNow(s).said;
-  assert.equal(said[2].who, 'you');
-  assert.equal(said[2].text, "Who's LOWLIGHT?");
+  assert.equal(said[3].who, 'you');
+  assert.equal(said[3].text, "Who's LOWLIGHT?");
   assert.deepEqual(SC.choicesOf(s).map((c) => c.id), ['halcyon', 'begin']);
   SC.choose(s, 1);
   assert.deepEqual(SC.choicesOf(s).map((c) => c.id), ['begin'], 'both asked: only the way on is left');
@@ -63,7 +63,7 @@ test('the window: the portrait, your answers marked, only the newest exchange ar
   SC.queueScene(s, 'welcome');
   let html = sceneMarkup(s);
   assert.ok(html.includes('q-face') && html.includes('sc-first') && html.includes('data-scene-pick="3"') && html.includes('data-scene-skip'));
-  assert.equal((html.match(/sc-new/g) || []).length, 2);
+  assert.equal((html.match(/sc-new/g) || []).length, 3);
   SC.choose(s, 2);
   html = sceneMarkup(s);
   assert.ok(!html.includes('sc-first'));

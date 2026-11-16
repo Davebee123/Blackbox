@@ -41,16 +41,23 @@ test('only the contracts you hold: not the board, not the delivered ones', () =>
   const html = mapMarkup(s);
   assert.equal(rows(html).length, 3, 'three held, the delivered one and the offer left out');
   assert.deepEqual(trackedJobs(s).map((j) => j.id), openContracts(s).map((c) => c.id));
-  assert.match(tracker(html), new RegExp(`Contracts<small>3/${MAIL.take}</small>`), 'the kicker counts them against the hand');
-  // Its name, who it's for and its progress, on the row itself.
+  assert.match(tracker(html), /Contracts<small>3<\/small>/, 'the kicker counts the rows you see');
+  assert.match(tracker(html), new RegExp(`title="3 of ${MAIL.take} contract slots in use\\."`), 'the slots it takes on hover');
+  s.mail.jobs.push({ id: 5, type: 'kill', family: 'ransomware', count: 5, got: 0, level: 12, from: 'Halcyon Mutual · Claims', chain: 1, reward: { credits: 10 } });
+  const more = tracker(mapMarkup(s));
+  assert.match(more, /Contracts<small>4<\/small>/, 'a floor job is a row, so it counts in the kicker');
+  assert.match(more, /3 of 6 contract slots in use; story and floor jobs don’t take a slot\./, 'but not toward the slots');
+  s.mail.jobs.pop();
+  // Lean: its name and its progress on the row; who it's for in the tooltip.
   const [kill, take, item] = rows(html);
   assert.match(kill, /<b>Kill 5 Ransomware viruses, Lv 8\+<\/b>/);
-  assert.match(kill, /Halcyon Mutual · Claims/);
-  assert.match(kill, /ct-say">3\/5 viruses killed</, 'a count as its numbers and words, not pips');
+  assert.match(kill, /title="[^"]*Contract for Halcyon Mutual · Claims/);
+  assert.doesNotMatch(kill, /ct-for/, 'no line for who it is for');
+  assert.match(kill, /ct-prog ct-side"><small class="ct-n">3\/5</, 'a count as n/N beside its name');
   assert.match(take, new RegExp(`Take over ${loc.name}`));
   assert.match(take, /ct-say">Vault shut</, 'anything else as its few words');
   assert.match(item, /<b>Recover ledger\.db<\/b>/);
-  assert.match(item, /wick · LOWLIGHT/);
+  assert.match(item, /Contract for wick · LOWLIGHT/);
   assert.match(item, new RegExp(`In the vault on ${loc.name}`));
   // Delivered: it leaves the map.
   s.mail.jobs[0].done = true;

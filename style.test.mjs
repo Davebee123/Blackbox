@@ -52,6 +52,7 @@ function everything() {
     for (const t of codexTells(s, 'boss', id)) out.push({ kind: 'tell', where: `boss:${id}`, name: t.name, does: t.does, answer: t.answer });
     if (BOSSES[id].about) out.push({ kind: 'boss', where: id, name: BOSSES[id].name, does: BOSSES[id].about });
     if (BOSSES[id].signature) out.push({ kind: 'boss', where: id, name: BOSSES[id].signature.name, does: BOSSES[id].signature.rule });
+    for (const [name, does] of [...(BOSSES[id].guide?.open || []), ...(BOSSES[id].guide?.phases || []).flat()]) out.push({ kind: 'boss', where: id, name, does }); // its Codex guide
   }
   for (const [id, g] of Object.entries(GENES)) out.push({ kind: 'gene', where: id, name: g.name, does: g.does, answer: g.answer });
   for (const [id, m] of Object.entries(MUTATIONS)) out.push({ kind: 'mutation', where: id, name: m.name, does: m.rule });
@@ -103,7 +104,7 @@ test('every fight board tooltip of a basic or a third part: its name as the titl
   }
 });
 
-test('the tell tooltips: what it does, then its answer on its own ▸ line, in the same grammar', () => {
+test('the tell tooltips: what it does, in the same grammar; never the answer', () => {
   const s = fresh(); s.hackers = { breaker: { level: 17, xp: 0 } };
   selectEncounter(s, 'random', 7, { level: 17, family: 'ransomware', mutation: null, basic: 'pulse' });
   command(s, 'engage');
@@ -116,9 +117,8 @@ test('the tell tooltips: what it does, then its answer on its own ▸ line, in t
   assert.ok(tips.length >= 2, tips.join('\n'));
   for (const tip of tips) {
     const name = tip.split(':')[0], lines = tip.split('\n');
-    assert.equal(lines.length, 2, tip);
-    assert.ok(lines[1].startsWith(ANSWER), tip);
-    assert.deepEqual(faults({ name, does: mechanicsOf(tip), answer: answerOf(tip) }), [], tip);
+    assert.equal(lines.length, 1, tip);
+    assert.deepEqual(faults({ name, does: mechanicsOf(tip) }), [], tip);
   }
 });
 
@@ -139,7 +139,7 @@ test('the Encryptor, the Packer, the Mimic and the Pulse Node read in the same g
   assert.match(tipOf(enc, 'encryptor'), /^Encryptor: Encrypts you every 5 cycles\. Each Encrypt deals \d+ damage to you every cycle until the Encryptor breaks\. A ◆ on you blocks one Encrypt\.( Charges [A-Za-z -]+\.)?( Casts [A-Za-z -]+\.)?\n▸ Break it to end the encryption\.$/);
   assert.match(tipOf(enc, 'pulse'), /^Pulse Node: Deals \d+ damage to you every 4 cycles\.\n▸ Delay it, or soften the hit with ◆ and shields\.$/);
   const pk = liveFight('packer');
-  assert.match(tipOf(pk, 'packer'), /^Packer: While it stands, each rolled part shows as a Packed part, its attack as \?\?\?\. The virus's rolled rules show as \?\?\?, even ones your Codex knows\. Hides its timers while it wears ◆\.\n▸ Scan before you engage, or break it\.$/);
+  assert.match(tipOf(pk, 'packer'), /^Packer: While it stands, each rolled part shows as a Packed part, its attack as \?\?\?\. The virus's rolled rules show as \?\?\?, even ones your Codex knows\. Hides its timers while it wears ◆\.\n▸ Break it\.$/);
   const packed = pk.encounter.virus.parts.find((p) => p.packedAs);
   assert.ok(packed, 'the Packer\'s page packs a part');
   assert.match(tipOf(pk, packed.id), /^Packed part: .*\nIts name and rule are hidden until the Packer breaks\.$/, 'a packed part says so plainly');

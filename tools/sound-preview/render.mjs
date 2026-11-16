@@ -2,6 +2,7 @@
 //   node tools/sound-preview/render.mjs [outDir] [clipId...]
 //   SET=2 node tools/sound-preview/render.mjs /home/user/Blackbox/sound-preview/round2   (round 2)
 //   SET=3 node tools/sound-preview/render.mjs <outDir>   (round 3: the bodies without a set; demo.mjs mixes their demos)
+//   SET=4 node tools/sound-preview/render.mjs <outDir>   (round 4: the victory sounds)
 // FORMAT=ogg encodes Ogg Vorbis instead, for the game (dist/sfx): the chosen clips, rendered again
 // with the same levels. A loop's sample count is kept exactly, so it repeats without a gap.
 //   FORMAT=ogg node tools/sound-preview/render.mjs dist/sfx floor-4-coldline-b hub-halcyon ...

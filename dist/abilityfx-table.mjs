@@ -54,7 +54,7 @@ export const ART = {
 export const RECIPES = {
   // ----- everyone -----
   spike: { label: 'Spike', motion: 'dart', art: ['───>'], size: 12, land: 0, dur: 380, burst: [b('spark', 4, 3)] },
-  sigint: { label: 'SIGINT', at: 'chip', motion: 'slash', art: ['^C'], size: 14, land: 90, dur: 560, burst: [b('spark', 5, 0)] },
+  sigint: { label: 'SIGINT', at: 'chip', cuts: true, motion: 'slash', art: ['^C'], size: 14, land: 90, dur: 560, burst: [b('spark', 5, 0)] },
   'burn:tick': { label: 'A burn ticks', motion: 'none', size: 11, land: 0, dur: 380, burst: [b('flame', 6, 6), b('ember', 2, 2)] },
 
   // ----- Breaker -----
@@ -63,9 +63,9 @@ export const RECIPES = {
   flood: { label: 'Flood', motion: 'fly', art: ART.wave, size: 13, land: 0, dur: 520, burst: [b('splash', 12, 10), b('shock', 6, 6)] },
   exploit: { label: 'Exploit', motion: 'mark', art: ART.crosshair, size: 13, land: 80, dur: 620, burst: [b('spark', 3, 2)] },
   crack: { label: 'Crack', at: 'chits', motion: 'mark', art: ['<◆>'], tone: 'steel', size: 16, land: 120, dur: 520, burst: [b('shards', 12, 0, { steel: true })] },
-  shatter: { label: 'Shatter', motion: 'fly', art: ['◇'], spin: 540, size: 18, land: 0, dur: 520, burst: [b('shards', 16, 10), b('shock', 6, 6)] },
+  shatter: { label: 'Shatter', spread: 'steel', motion: 'fly', art: ['◇'], spin: 540, size: 18, land: 0, dur: 520, burst: [b('shards', 16, 10), b('shock', 6, 6)] },
   segfault: { label: 'Segfault', motion: 'fly', art: ['0x0'], size: 13, land: 0, dur: 560, burst: [b('glitch', 12, 8), b('bits', 6, 8)] },
-  'fork-bomb': { label: 'Fork Bomb', motion: 'all', art: [':|:'], size: 12, land: 0, dur: 520, burst: [b('shards', 5, 0, { steel: true }), b('spark', 2, 0)] },
+  'fork-bomb': { label: 'Fork Bomb', breaksAll: 3, motion: 'all', art: [':|:'], size: 12, land: 0, dur: 520, burst: [b('shards', 5, 0, { steel: true }), b('spark', 2, 0)] },
   'thermal-runaway': { label: 'Thermal Runaway', motion: 'none', chars: '^~', grow: true, size: 13, land: 0, dur: 760, burst: [b('flame', 46, 0), b('ember', 6, 0)] },
   brace: { label: 'Brace', on: 'you', motion: 'shell', art: ['{', '}'], size: 20, land: 120, dur: 640, burst: [b('spark', 4, 0)] },
   sudo: { label: 'Sudo', on: 'you', motion: 'sweep', art: ['# sudo'], size: 12, land: 0, dur: 600, burst: [b('dust', 6, 0)] },
@@ -73,7 +73,7 @@ export const RECIPES = {
   // Demolitionist
   backfire: { label: 'Backfire', motion: 'fly', art: ['(*)'], size: 14, land: 0, dur: 560, burst: [b('flash', 1, 0, { full: true }), b('bits', 14, 12), b('shock', 6, 6)] },
   'bit-rot': { label: 'Bit Rot', motion: 'mark', art: ['%#%'], size: 14, land: 80, dur: 640, burst: [b('glitch', 12, 0), b('drip', 6, 0)] },
-  'chain-reaction': { label: 'Chain Reaction', motion: 'fly', art: ['o-o-o'], turn: true, size: 12, land: 0, dur: 560, burst: [b('bits', 12, 14), b('ring', 2, 0)] },
+  'chain-reaction': { label: 'Chain Reaction', spread: true, motion: 'fly', art: ['o-o-o'], turn: true, size: 12, land: 0, dur: 560, burst: [b('bits', 12, 14), b('ring', 2, 0)] },
   'debris-field': { label: 'Debris Field', on: 'you', motion: 'stamp', art: ['.:◇:.'], size: 14, land: 80, dur: 620, burst: [b('shards', 8, 0)] },
   'logic-bomb': { label: 'Logic Bomb', motion: 'fly', art: ['{!}'], size: 14, land: 160, dur: 640, burst: [b('flash', 1, 0), b('bits', 18, 14), b('shock', 10, 6)] },
   'rm-rf': { label: 'rm -rf', on: 'you', motion: 'sweep', art: ['rm -rf'], size: 12, land: 0, dur: 600, burst: [b('dust', 8, 0)] },
@@ -92,12 +92,12 @@ export const RECIPES = {
   'rate-limit': { label: 'Rate Limit', motion: 'clamp', onto: 'chip', art: ['>|', '|<'], size: 16, land: 120, dur: 560, burst: [b('shock', 8, 8), b('spark', 3, 0)] },
   firewall: { label: 'Firewall', on: 'you', motion: 'wall', size: 11, land: 0, dur: 820, burst: [b('flame', 30, 0)] },
   retaliate: { label: 'Retaliate', motion: 'fly', art: ['<=='], turn: true, size: 14, land: 0, dur: 520, burst: [b('shock', 10, 8), b('bits', 8, 10)] },
-  suspend: { label: 'Suspend', at: 'chip', motion: 'mark', art: ['||'], size: 16, land: 80, dur: 620, burst: [b('spark', 3, 0)] },
-  patch: { label: 'Patch', on: 'you', motion: 'stamp', art: ['[+]'], size: 15, land: 80, dur: 620, burst: [b('rise', 10, 0, { chars: '+' })] },
+  suspend: { label: 'Suspend', at: 'chip', cuts: true, motion: 'mark', art: ['||'], size: 16, land: 80, dur: 620, burst: [b('spark', 3, 0)] },
+  patch: { label: 'Patch', on: 'you', heals: true, motion: 'stamp', art: ['[+]'], size: 15, land: 80, dur: 620, burst: [b('rise', 10, 0, { chars: '+' })] },
   throttle: { label: 'Throttle', at: 'chip', motion: 'mark', art: ['=[X]='], size: 13, land: 100, dur: 620, burst: [b('spark', 4, 0)] },
   purge: { label: 'Purge', motion: 'none', chars: '*+', size: 13, land: 0, dur: 760, burst: [b('flame', 40, 0), b('ember', 6, 0), b('siphon', 5, 0)] },
   harden: { label: 'Harden', on: 'you', motion: 'stamp', art: ['◆'], tone: 'steel', size: 20, land: 80, dur: 620, burst: [b('shards', 6, 0, { steel: true })] },
-  reclaim: { label: 'Reclaim', motion: 'fly', art: ['<+>'], size: 14, land: 0, dur: 640, burst: [b('bits', 8, 10), b('siphon', 8, 6)] },
+  reclaim: { label: 'Reclaim', heals: true, motion: 'fly', art: ['<+>'], size: 14, land: 0, dur: 640, burst: [b('bits', 8, 10), b('siphon', 8, 6)] },
   quarantine: { label: 'Quarantine', motion: 'clamp', art: ['[', ']'], wide: true, size: 22, land: 140, dur: 640, burst: [b('spark', 4, 0)] },
   failover: { label: 'Failover', motion: 'all', art: ['<<'], size: 13, land: 0, dur: 520, burst: [b('shock', 4, 4), b('spark', 2, 0)] },
   // Warden
@@ -128,7 +128,7 @@ export const RECIPES = {
   detonate: { label: 'Detonate', motion: 'blast', frames: ART.blast, fms: 100, size: 15, land: 0, dur: 700, burst: [b('bits', 18, 22), b('shock', 10, 8), b('flame', 12, 0, { full: true })] },
   keepalive: { label: 'Keepalive', motion: 'mark', art: ['(+)'], stoke: true, size: 14, land: 80, dur: 640, burst: [b('ring', 2, 0), b('ember', 6, 0), b('flame', 14, 0)] },
   opening: { label: 'Opening', motion: 'dart', art: ['──────>>'], size: 14, land: 0, dur: 520, burst: [b('shock', 8, 8), b('bits', 10, 12)] },
-  propagate: { label: 'Propagate', motion: 'all', art: ['~'], size: 14, land: 0, dur: 620, burst: [b('flame', 10, 0)] },
+  propagate: { label: 'Propagate', spread: 'burns', motion: 'fly', art: ['~'], size: 14, land: 0, dur: 620, burst: [b('flame', 10, 0)] },
   'null-route': { label: 'Null Route', on: 'you', motion: 'stamp', art: ['(/)'], size: 16, land: 80, dur: 620, burst: [b('dust', 6, 0)] },
   implant: { label: 'Rootkit Implant', motion: 'mark', art: ['[:]'], size: 13, land: 80, dur: 700, burst: [b('ember', 8, 0), b('flame', 14, 0)] },
   // Payload
@@ -139,7 +139,7 @@ export const RECIPES = {
   polymorph: { label: 'Polymorph', motion: 'fly', frames: ART.morph, fms: 70, loop: true, size: 17, land: 0, dur: 620, burst: [b('flame', 18, 0), b('spark', 3, 0)] },
   skim: { label: 'Skim', motion: 'none', chars: '10', size: 12, land: 0, dur: 700, burst: [b('flame', 26, 0), b('siphon', 7, 0)] },
   thrash: { label: 'Thrash', motion: 'mark', art: ['@@'], spin: 360, size: 15, land: 80, dur: 620, burst: [b('flame', 12, 0), b('spark', 3, 0)] },
-  wormable: { label: 'Wormable', motion: 'fly', art: ['~~o'], turn: true, size: 14, land: 0, dur: 640, burst: [b('flame', 20, 0)] },
+  wormable: { label: 'Wormable', spread: true, motion: 'fly', art: ['~~o'], turn: true, size: 14, land: 0, dur: 640, burst: [b('flame', 20, 0)] },
   // Phantom
   backstab: { label: 'Backstab', motion: 'fly', art: ['-|==>'], turn: true, size: 14, land: 0, dur: 520, burst: [b('spark', 5, 4), b('bits', 8, 10)] },
   fingerprint: { label: 'Fingerprint', motion: 'mark', art: ['(@)'], size: 15, land: 80, dur: 620, burst: [b('spark', 4, 0)] },
@@ -156,7 +156,7 @@ export const RECIPES = {
   hook: { label: 'Hook', motion: 'mark', art: ART.hook, drop: true, size: 13, land: 90, dur: 620, burst: [b('spark', 4, 0)] },
   spawn: { label: 'Spawn', motion: 'walk', frames: ART.bot1, fms: 100, loop: true, size: 12, land: 0, dur: 500, burst: [b('spark', 3, 0)] },
   botnet: { label: 'Botnet', motion: 'walk', frames: ART.bot1, count: 3, fms: 100, loop: true, size: 12, land: 0, dur: 520, burst: [b('spark', 5, 0)] },
-  jam: { label: 'Jam', at: 'chip', motion: 'mark', art: ['###'], size: 14, land: 80, dur: 620, burst: [b('glitch', 8, 0)] },
+  jam: { label: 'Jam', at: 'chip', cuts: true, motion: 'mark', art: ['###'], size: 14, land: 80, dur: 620, burst: [b('glitch', 8, 0)] },
   'kill-switch': { label: 'Kill Switch', motion: 'all', art: ['[!]'], size: 13, land: 0, dur: 560, burst: [b('bits', 6, 6), b('flash', 1, 0, { full: true })] },
   'garbage-collect': { label: 'Garbage Collect', motion: 'all', art: ['[x]'], size: 13, land: 0, dur: 540, burst: [b('dust', 4, 0), b('spark', 2, 0)] },
   fork: { label: 'Fork', on: 'you', motion: 'stamp', art: ['-<'], size: 18, land: 80, dur: 620, burst: [b('spark', 4, 0)] },
@@ -172,7 +172,7 @@ export const RECIPES = {
   nohup: { label: 'nohup', motion: 'fly', art: ['&'], spin: 360, size: 17, land: 0, dur: 560, burst: [b('bits', 8, 10), b('spark', 3, 0)] },
   'oom-kill': { label: 'OOM Kill', on: 'you', motion: 'none', chars: '+x', size: 12, land: 0, dur: 640, burst: [b('rise', 14, 0)] },
   // Hijacker
-  blackhole: { label: 'Blackhole', at: 'chip', motion: 'mark', art: ['(O)'], collapse: true, size: 18, land: 80, dur: 620, burst: [b('dust', 6, 0)] },
+  blackhole: { label: 'Blackhole', at: 'chip', cuts: true, motion: 'mark', art: ['(O)'], collapse: true, size: 18, land: 80, dur: 620, burst: [b('dust', 6, 0)] },
   'cache-poison': { label: 'Cache Poison', motion: 'fly', art: ['x_x'], size: 13, land: 0, dur: 620, burst: [b('drip', 8, 0), b('spark', 3, 2)] },
   'echo-cancel': { label: 'Echo Cancel', motion: 'wave', art: ART.echo, size: 17, land: 0, dur: 460, burst: [b('ring', 2, 0), b('shock', 4, 4)] },
   hijack: { label: 'Hijack', at: 'chip', motion: 'clamp', art: ['>[', ']<'], size: 15, land: 120, dur: 620, burst: [b('spark', 4, 0)] },
@@ -258,29 +258,4 @@ export const TIERS = {
     2: { count: 4 },
     3: { count: 5, hop: true, plus: [b('ring', 2, 0)] },
   },
-};
-
-// ---------- break finishers (abilityfx.mjs finisherLayout; app.js plays one on the fight-winning break) ----------
-// A short class flourish on the part whose break wins the fight, on that part's row only, gone within FIN_CAP
-// (900 ms). Yours only: a crewmate's winning break keeps the plain dissolve. A subclass varies its class's
-// (SUB_FINISHERS: the fields it changes).
-//   motion  shatter (shards scatter along the row) · seal (a stamp comes down on its name) · dissolve (its name falls
-//           apart into 1s and 0s, left to right) · converge (helpers walk in from both sides, meet on it and pop)
-//   word    the seal's stamp · chars: the shards' (or the 1s and 0s') · blast: a blast at its middle too ·
-//   count   how many helpers · pop: what they pop into (a flash, else this piece)
-export const FINISHERS = {
-  breaker: { label: 'Shards scatter', motion: 'shatter', chars: '◇<>/\\◇', size: 13, land: 0, dur: 820, burst: [b('flash', 1, 0, { full: true })] },
-  bastion: { label: 'Seal stamp', motion: 'seal', word: '[ SEALED ]', size: 15, land: 140, dur: 840, burst: [b('shock', 10, 0), b('dust', 6, 0)] },
-  infiltrator: { label: '1s and 0s', motion: 'dissolve', chars: '01', size: 12, land: 0, dur: 860, burst: [] },
-  operator: { label: 'Helpers converge', motion: 'converge', frames: ART.bot1, fms: 100, loop: true, count: 4, size: 12, land: 380, dur: 860, burst: [b('spark', 8, 0)] },
-};
-export const SUB_FINISHERS = {
-  demolitionist: { label: 'Shards and a blast', blast: true },
-  overclocker: { label: 'Hot shards', chars: '*^~<>' },
-  warden: { label: 'Denied stamp', word: '[ DENIED ]' },
-  sysop: { label: 'Clean stamp', word: '[ CLEAN ]' },
-  payload: { label: 'Burnt to 1s and 0s', chars: '01#' },
-  phantom: { label: 'Gone to dots', chars: '.:' },
-  herder: { label: 'The herd converges', count: 6 },
-  hijacker: { label: 'Helpers seize it', pop: '<@>' },
 };

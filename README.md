@@ -3,8 +3,11 @@
 A hacking game in the browser, played on a terminal. You fight viruses part by part, walk servers room by room down
 eight floors of a network, and climb one of four hacker classes to level 50.
 
-**Play:** [davebee123.github.io/Blackbox](https://davebee123.github.io/Blackbox/) (GitHub Pages deploys `dist/` on
-every push to main). The game saves in your browser.
+**Play:** [davebee123.github.io/Blackbox](https://davebee123.github.io/Blackbox/) (GitHub Pages deploys the build of
+`dist/` on every push to main). The game saves in your browser.
+
+**Website:** [`site/`](site/) is the game's website (static, no build step), deployed by Cloudflare Pages on every push
+to main (build command: none; build output directory: `site`).
 
 ## Run locally
 
@@ -15,6 +18,10 @@ node serve.mjs
 ```
 
 Open http://127.0.0.1:4173. The content editor is at `/editor.html`.
+
+**The hosted build.** `npm ci && node scripts/build.mjs` writes `build/`: `dist/` as one minified script
+(`app-<hash>.js`, esbuild, its dynamic imports made static) and one stylesheet (`index.html`'s sheets in order), every
+other file copied but the editor. The Pages workflow (`.github/workflows/pages.yml`) builds it and deploys `build/`.
 
 ## How a session goes
 
@@ -43,7 +50,7 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 | `/?playtest=cryptjack` | A paused fight against a fixture or strain (`splinter`, `ghostroot`…); `random` for a wild one. `&level=`, `&cls=`, `&sub=`, `&family=`, `&seed=`. Type `resume`. |
 | `/?playtest=boss:<id>` | A paused boss fight (`resident`, `repoman`, `choir`…), geared for `&level=` (10 by default). `&family=worm\|ransomware` for the Resident, `&cls=`, `&sub=`, `&seed=`. |
 | `/?playtest=part:<id>` | A fight with that part, at the level it opens (or `&level=`); `part:<id>.exe` its .exe build. |
-| `/?playtest=fx` | The ability effects playtest: a panel that fires every ability's effect, at each Screen effects level and mastery tier, as a hit, crit, hit on ◆ or miss, with a status for it to cash in, and a burn's tick by how far it has run down. `&cls=`, `&crew=<class>`. |
+| `/?playtest=fx` | The ability effects playtest: a panel that fires every ability's effect, at each Screen effects level and mastery tier, as a hit, crit, hit on ◆ or miss, with a status for it to cash in, and a burn's tick by how far it has run down. `&cls=`, `&crew=<class>`. Virus attacks: every chip theme's strike on your bar, the lash, and what isn't a hit on you (Scramble, Replicate, Patch, a cast, a seal), as a hit, crit, blocked, evaded, a charge or a boss's beat, with today's sound or their own in a style. |
 | `/?playtest=run` | Connected to a fresh server. `&family=worm\|ghostroot`, `&template=mailhub\|mirror\|archive\|lab` (its rooms' kind), `&depth=<floor>`. |
 | `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&card=surge\|escort\|pack` (a run card), `&seed=`, `&puzzle=<board>` (its room, and you in it), `&seen` (every room discovered). |
 | `/?playtest=story&beat=<id>` | A test save at a story beat (the editor's *Play from here*). |
@@ -62,7 +69,7 @@ Common developer commands (with `?dev` or on a bench; the **Dev** drawer above t
 | `developer parts` | The parts roll's numbers and mix. |
 | `developer event [card]`, `developer runcard [kind]`, `developer invade [kind]` | Deals an event card; a run card (this run, or the next connect); sends an invasion. |
 | `developer levelup preview`, `developer thread preview`, `developer scene <id>`, `terminal preview` | Plays the level-up, a thread's windows, a transmission, a boot look. |
-| `crew sim <class…>`, `online sim` | Bot crewmates in your fights; simulated hackers online. |
+| `crew sim <class…>`, `online sim` | Bot crewmates in your fights; the old simulated pool on a save with no network. |
 | `reset game` (twice) | Starts over from level 1. Settings stay. |
 
 ## Tests and landing
@@ -98,7 +105,10 @@ comment saying what it does.
 | `dist/tells.mjs` | Solo tells: the big moves a part announces ahead (charges, casts, seals). |
 | `dist/interrupt.mjs` | The interrupt: crossing a part's 50% or 25% tick on its due cycle cancels its move. |
 | `dist/order.mjs` | The order levers: parts whose right moment to break depends on the board. |
-| `dist/acts.mjs` | Boss acts (P4): a boss's three acts, its beat (the Backlash, a Mimic, a Decoy), and the ♛ left until its beat plays. |
+| `dist/acts.mjs` | Boss acts: a boss's three acts as act bars (each a fresh board from act 1's board, rules and tells), their pacing (`ACT_BARS`: Integrity, hits, rounds and enrage an act), and its beat (the Backlash, a Mimic, a Decoy; the Resident's Outbreak and Lockdown ride the Backlash). |
+| `dist/actbreak.mjs` | Presentation only: the act break as a boss starts its next act (the strip, the emote, the board's parts coming back). |
+| `dist/floorbosses.mjs` | The floor 2 to 5 bosses' rules (CENTRIFUGE's Bidding, SHAKEDOWN's Ransom Clock, SHOULDER SURFER's Replay, RECURSION's Call, NIGHT DESK's No Timeout, BYZANTINE's Vote, CAMSWARM's Telnet Sweep, GRACE PERIOD's Grace, EXIT NODE's Rollback), their phase verbs, and their uniques' hooks. |
+| `dist/nativeacts.mjs` | Floor 2's lair bosses' act rules (DEADBOLT's Tumblers, BACK ORIFICE's Round robin, PATCH TUESDAY's Out of band and Hotfix, SLEEPWALKER's REM and Night Terror, MIRRORSHADE's Shatter) and their board numbers. |
 | `dist/mechanics.mjs` | The mechanics list: twenty third parts built lean, each rule's hooks in one place. Eleven strains and the eleven mutated ones are built from them (`STRAINS`). |
 | `dist/situations.mjs` | The moment on the board each situational skill is built for; the tray lights it. |
 | `dist/raid.mjs` | Crew bosses: phases and mechanics for KESSLER-FARM-00's three. |
@@ -113,6 +123,7 @@ comment saying what it does.
 |---|---|
 | `dist/gear.mjs` | Protocols: slots, rarities, item levels, stats and rule affixes; flat numbers lifted at their level, and the ones that carry your power filled (`liftItem`, `liftFx`, `FILLS`, `curveRestore`). Pure data and functions. |
 | `dist/sets.mjs` | Sets: piece counts and their bonuses in a fight. |
+| `dist/earned.mjs`, `dist/content/earned.mjs` | Earned pieces (a floor feat's unique): their counts in one table, each from its band, the piece once it fills, and the map's pins. |
 | `dist/faction-gear.mjs` | Faction gear: implicit lines on a faction's items, and the five faction uniques assembled from parts (feuds, receipts). |
 | `dist/filters.mjs` | Filters: rolled gear for your firewall's slots. |
 | `dist/salvage.mjs` | Components, one currency every broken part drops. |
@@ -139,16 +150,17 @@ comment saying what it does.
 | `dist/hidden.mjs` | Unknown servers along your floors' links, and tracing them. |
 | `dist/address.mjs` | Every room's grid address (C2). |
 | `dist/zone.mjs` | SPRAWL-00, the starting zone. |
-| `dist/rogue.mjs` | Rogue servers, where viruses gather, and the KESSLER-FARM-00 crew dungeon. |
+| `dist/rogue.mjs` | Rogue servers, where viruses gather (a floor-2 Pit's, a floor-3 Gauntlet's and a floor-4 Pit's last room hold SHAKEDOWN, RECURSION and BYZANTINE), and the KESSLER-FARM-00 crew dungeon. |
 | `dist/root.mjs` | Root access: perks on a server you hold, by respawned rooms cleared. |
 | `dist/sockets.mjs` | Sockets: build a program in a cleared socket room; it changes its own server. |
 | `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, its pull on invasions, and its leaning's id (`leaningOf`). |
 | `dist/leanings.mjs` | Leanings: a server's one positive rule (Venting, Wind-up, Brownout), its multipliers in the fight and what it has paid. |
-| `dist/rivals.mjs` | Rivals: named runners who race you to a server's vault and fight you two or three in a row. |
+| `dist/rivals.mjs` | Rivals: runners from the cast who race you to a server's vault and fight you two or three in a row; lineup by faction, counter-picks by temperament; `huntsYou` (runners.mjs) marks one red. |
 | `dist/runcards.mjs` | Run cards: the director's Surge room, Escort and Hunter pack inside a run. |
 | `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: eight boards that aren't fights (deeper chase and Cascade boards from floor 3), and the cryptogram's key (`s.cipher`). |
 | `dist/forensics.mjs`, `dist/logsweep.mjs` | Log sweep: a short detective puzzle in an incident file (logsweep.mjs builds the logs: a thread's process log, the Terminal room). |
 | `dist/traffic.mjs`, `dist/travelfx.mjs` | Ambient packets on the room map; the step between rooms as a train of code. |
+| `dist/flowfx.mjs`, `dist/mapmotion.mjs` | Map motion the graphics card runs: flowing dashes (clipped pieces slid by a transform), the files moving on the Map. `.no-ambient` on a container stills them. |
 | `dist/network.mjs` | Your network's signature, rolled from its seed. |
 | `dist/memory.mjs` | Server memory: how many servers your network holds. Switched off (`MEMORY.on`). |
 
@@ -172,11 +184,11 @@ comment saying what it does.
 | `dist/mail.mjs` | Letters, contracts (one engine, five givers) and your commission's retainer. |
 | `dist/content.mjs` | Fills and checks the written content's blanks. |
 | `dist/content/story.mjs`, `dist/content/contracts.mjs` | The story beats and contract templates (a letter set per giver), written in the editor. |
-| `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts (its Boss step and extra letters), and its page in Mail. |
+| `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts (its Boss step, its built boss in a road server's Core, and extra letters), and its page in Mail. |
 | `dist/threads.mjs`, `dist/threads-view.mjs`, `dist/content/threads.mjs` | Threads: quests found in rooms, their marks and dialogue, and their data. |
 | `dist/scanner.mjs`, `dist/scanner-view.mjs`, `dist/scanner.css` | The scanner: the Listening Post (its map node, card and hub terminal), its radio, the stations, the reel, the tape and what each pays. |
 | `dist/quest-view.mjs`, `dist/quest.css` | The quest window: a thread as an intercepted transmission. |
-| `dist/portraits.mjs` | The speaker's portrait in the quest window: a backlit ASCII silhouette, the cast's own or one from their name. |
+| `dist/portraits.mjs` | Backlit ASCII busts: the quest window's speaker (the cast's own or one from their name) and a runner's on their card (from the handle alone). |
 | `dist/coldopen.mjs` | First launch: the cold open (KESSLER's clearing house crashing), its own sound mix through `feel.scene()`. |
 | `dist/intro.mjs` | First launch: the login, then Halcyon's transmission. |
 | `dist/scenes.mjs`, `dist/scenes-view.mjs`, `dist/scenes.css`, `dist/content/scenes.mjs` | Transmissions: conversations with a contact over the map, their window and their words. |
@@ -190,7 +202,7 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/view.mjs` | Markup builders for every page and the fight board. Pure functions of state. |
-| `dist/fightread.mjs` | Reading a fight: what a tell does and how to stop it, live gear rules, decoded parts. |
+| `dist/fightread.mjs` | Reading a fight: what a tell does, live gear rules, decoded parts. |
 | `dist/ruletext.mjs` | Picks out a rule's key facts (numbers, ◆, statuses) for highlighting. |
 | `dist/skills-view.mjs` | Loadout → Skills and talents (the class page, where you choose your subclass) and the Toolkit (key T). |
 | `dist/routines.mjs` | Routines: a program per virus that plays your moves when you don't; its RAM, benchmark and cues. |
@@ -202,17 +214,20 @@ comment saying what it does.
 | `dist/achievements.mjs`, `dist/achievements-view.mjs`, `dist/achievements.css` | Achievements and their cosmetic rewards; the **Rig** page (Achievements, Casing, Terminal; `rigMarkup` in view.mjs). |
 | `dist/profile.mjs`, `dist/profile-view.mjs` | Your profile card (`finger`), and #net's markup. |
 | `dist/channel.mjs`, `dist/presence.mjs` | #net, the public channel; who's online and your friends. |
-| `dist/comms.mjs`, `dist/pager.mjs`, `dist/pager-view.mjs`, `dist/pager.css` | The pager: world events as entries, which ones ask something of you, and the tray. |
-| `dist/casing.mjs`, `dist/casing-view.mjs`, `dist/casing.css` | Casing cosmetics: the monitor's colourway, plate, stickers and desk. |
+| `dist/runners.mjs`, `dist/runners-view.mjs` | Runners: the cast from the network seed, their loop on logged-on time; meeting, standing and hiring; dead runner rooms (`deadOf`, `pulledOut`); the map's diamonds, counts and lists (only where you've revealed: `revealed`, `inSight`), the Rail (a phone's sheet), the runner and crew cards. |
+| `dist/comms.mjs`, `dist/pager.mjs`, `dist/pings.mjs`, `dist/pings.css`, `dist/pager-view.mjs`, `dist/pager.css` | The pager: world events as entries, which ones ask something of you; the ping log (desktop: the map's left column, above the prompt elsewhere); a phone's lamp and Comms. |
+| `dist/casing.mjs`, `dist/casing-view.mjs`, `dist/casing.css` | Casing cosmetics: the monitor color and plate, stickers anywhere on its plastic, props on the desk or on top. Rig → Casing is a rail of sections beside the open one's pane. |
 | `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on Rig → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |
+| `dist/house.mjs`, `dist/house-view.mjs`, `dist/house.css`, `dist/content/furniture.mjs` | Your house on Rig → **House**: floors opened by achievement points, furniture from achievements, placed by click. |
 | `dist/recap.mjs` | The death recap on the Disconnected card. |
 | `dist/uiscale.mjs` | UI scale: the whole screen drawn larger or smaller. |
+| `dist/form.mjs`, `dist/phone-shell.mjs`, `dist/sheet.mjs`, `dist/phone.css` | The phone: the one "is this a phone" answer (`<html data-form>`), its tab bar and More, the one bottom sheet (every pop-up on a phone: app.js `phPops` lifts each into it), every phone rule, the fight on one screen, the maps full bleed (docs/phone-plan.md). |
 
 ### Co-op
 
 | File | What it does |
 |---|---|
-| `dist/crew.mjs` | Bot crewmates in your fights (`crew sim`), played by the planner. |
+| `dist/crew.mjs` | Crewmates in your fights (hired runners, `crew sim` bots, a runner you help), played by the planner. |
 | `dist/coop.mjs` | Peer-to-peer co-op sessions: the host runs the world, a guest sends commands. |
 | `dist/coop-net.mjs` | Co-op transports: in memory, BroadcastChannel, WebRTC. |
 | `dist/coop-char.mjs` | The character a guest sends the host. |
@@ -224,21 +239,35 @@ comment saying what it does.
 |---|---|
 | `dist/index.html`, `dist/app.js` | The page and its shell: modules, command line, clock, save, rendering, URL parameters. |
 | `dist/style.css` | Tokens and every shared component (docs/ui.md). Each page has its own stylesheet beside its view. |
-| `dist/shell.mjs`, `dist/poweron.mjs` | The CRT shell, boot lines and status line; the power-up. |
+| `dist/shell.mjs`, `dist/poweron.mjs` | The CRT shell, boot lines and status line; the power-up. Its grain (`settings.grain`, off by default on a phone) is style.css `#crt::after`. |
+| `dist/warm.mjs` | The loading screen's warm-ups (docs/performance-plan.md batch 6), run under the power-up's Trace: the samples (`sound.mjs` warmBank), the hall, noises and fight music's reverb (warmTextures), the chip effects' defs. |
 | `dist/screenfx.mjs`, `dist/screenfx.css` | Screen effects: light on the glass around the game, never on it. |
-| `dist/bootfx.mjs`, `dist/bootfx.css` | A new fight: the screen boots into it, the virus first; leaving a won one, a channel cut; connecting to a server, the dial-up; jacking out, the hang-up. |
-| `dist/window.mjs` | The slum outside the window behind the monitor, and its weather. |
+| `dist/graphics.mjs` | The Graphics settings: presets (Auto by device), the rows that cost looks, `settings.graphics` and its migration. |
+| `dist/bootfx.mjs`, `dist/bootfx.css` | A new fight: the screen boots into it, the virus first; leaving a won one, a channel cut; connecting to a server, the carrier; jacking out, the carrier backwards. |
+| `dist/window.mjs`, `dist/districts.mjs` | The slum outside the window behind the monitor, and its weather (loaded only on a desktop); its districts as data. |
 | `dist/abilityfx.mjs`, `dist/abilityfx-table.mjs`, `dist/abilityfx-playtest.mjs` | Ability effects on the board, the table of every ability's effect, and its playtest. |
 | `dist/abilitylight.mjs` | What an ability effect does where it lands, drawn in light: flashes, shock rings, cracks, sparks, flames, the comet, a status cashing in. |
-| `dist/hitfx.mjs`, `dist/dmgfx.mjs`, `dist/lash.mjs` | Hits landing on a part (a MISS or RESISTED stamped on it; a broken one's row and name breaking into 1s and 0s), damage numbers one per source, a virus lashing at the screen. |
-| `dist/chipfx.mjs` | Themed timeline chips: a part's theme (docs/chip-themes.md) played faint inside its chips at +1 and in Now, and its strike into your bar when it goes off. |
+| `dist/hitfx.mjs`, `dist/dissolvefx.mjs`, `dist/dmgfx.mjs`, `dist/lash.mjs` | Hits landing on a part (a MISS or RESISTED stamped on it; a broken one's row and name breaking into 1s and 0s, drawn on one canvas over the part while it lasts), damage numbers one per source, a virus lashing at the screen (and its shake). |
+| `dist/chipfx.mjs` | Themed timeline chips: a part's theme (docs/chip-themes.md) played faint inside its chips at +1 and in Now, and its strike into your bar when it goes off (STRIKE_PLAN: when a strike does what, for its sound). |
 | `dist/virus-art.mjs` | Each virus as animated 3D ASCII art: each body's core and limbs attack their own ways out of its window (`STRIKE_OF`, `STRIKES`), a broken part dissolves into 1s and 0s. |
+| `dist/stage.mjs` | The floor's place in the render window behind the virus: its scene, light, camera, a new virus's entrance, a broken part's physics, its reflection. |
+| `dist/boardfx.mjs` | The board's floor motion: a new chip's name typed in or flipped in, a moving chip flapping once; the spoils card arriving the floor's way. |
+| `dist/ground.mjs` | The floor's material under the rooms map: a texture in the map's SVG, clear of rooms and links. |
+| `dist/boss-art.mjs` | Each boss's own body for it (`BOSS_SHAPE`, the Resident's by family): its parts are the model's regions, the ones that join mid-fight modelled from the start. A boss faces you (`BOSS_SWING`) and is fitted to the window. |
 | `dist/nocarrier.mjs`, `dist/nocarrier.css` | Losing a fight: static and NO CARRIER, then the Disconnected card. |
 | `dist/class-emblems.mjs` | The class picker's ASCII emblems. |
-| `dist/feel.mjs` | The feedback language: each kind of event's one signature in motion and sound. |
-| `dist/sound.mjs`, `dist/sfx/` | Sound effects from recorded CC0 samples (CREDITS.md), and `outputOf`: the limiter every sound reaches the speakers through. |
+| `dist/pickfx.mjs` | The class picker's border lights (Infiltrator's, Operator's) run round the picked square as transform keyframes, rebuilt when it changes size. |
+| `dist/feel.mjs` | The feedback language: each kind of event's one signature in motion and sound, its look put up in one batch a frame. |
+| `dist/restart.mjs` | Restarts a one-shot animation class with a style pass only (no layout), and none when the class isn't on. |
+| `dist/sound.mjs`, `dist/sfx/` | Sound effects from recorded CC0 samples (CREDITS.md). A fight won, a boss down and a level gained are whole clips (`sfx/wins`, rendered by `tools/sound-preview/clips4.js`). The audio context runs at the output's own rate up to 48 kHz (`openContext`): over that the game renders at 48 kHz and the browser resamples. |
+| `dist/abilitysound.mjs` | Ability sounds timed to their effects (docs/ability-sounds-plan.md): the kit, the style round and each class's key 1. `app.js` strikes() plays the picked style in a fight (abilitySound, abilityVoices); `?playtest=fx` plays any. |
+| `dist/abilitysound-all.mjs` | Every other ability's sound in the picked style, built from its row in the effects table, with the mastery tiers' layers and the winning break's flourishes; `abilitysound-levels.mjs` holds their measured levels. |
+| `dist/virussound.mjs` | Virus attack sounds (docs/ability-sounds-plan.md, "Virus attacks"): the list of attacks (ATTACKS), the style round's four in three styles (Corrupt picked, Latch for its Encrypt), timed to their chips' strikes. A fight plays the pick (`virusvoice.mjs`); `?playtest=fx` plays any. |
+| `dist/virussound-all.mjs` | Every other attack's sound in the picked style: each other chip theme's strike, the lash, Scramble, Replicate, Patch, a cast and a seal, and the layers over a hit for a charge and a boss's beat; `virussound-levels.mjs` holds their measured levels. |
+| `dist/virusvoice.mjs` | Virus attack sounds in a fight: which of a batch's events play which attack's sound (one an attack a batch, the biggest hit leading), and how long the numbers wait for a strike's impact. `app.js` attackVoices() plays them and holds each chip's strike for its number. |
 | `dist/soundtrack.mjs`, `dist/music/` | Music and radio chatter (CC0 tracks, CREDITS.md). |
-| `dist/fightmusic.mjs` | Each virus family's fight theme, synthesized live; heat brings its layers in. |
+| `dist/mixout.mjs` | The one way out to the speakers: every bus meets there, and a limiter keeps their sum from clipping. |
+| `dist/fightmusic.mjs` | Each virus family's fight theme, synthesized live; heat brings its layers in; on Coldline and Bedrock it plays through the floor's old hardware (`ERAS`). |
 | `dist/places.mjs` | A sound bed for each floor, and the virus you're fighting. |
 | `dist/ui/` | Icons, textures and the favicon. Some of the set is unused. |
 
@@ -248,9 +277,10 @@ comment saying what it does.
 |---|---|
 | `dist/breach.mjs`, `dist/breach-view.mjs`, `dist/breach.css` | The campaign's breach: one run through one server on a branching map. |
 | `dist/campaign.mjs`, `dist/campaign-view.mjs`, `dist/campaign.css` | The breach campaign: servers by layer, its own save. |
+| `dist/legends.mjs` | The 27 legends (docs/legends.md), bench only: none drops, and none changes a fight until `registerLegends` runs (only the legends simulation calls it). |
 | `dist/heat.mjs`, `dist/scripts.mjs`, `dist/rewrites.mjs`, `dist/skillrules.mjs` | The breach's heat ranks, one-shot scripts, rewrites and skill rules. |
 | `dist/world.mjs`, `dist/room.mjs`, `dist/room-view.mjs`, `dist/room.css`, `dist/content/room.mjs` | LOWLIGHT's back room and the world turn between breaches. |
-| `dist/bench.mjs` | The test bench and the Dev drawer; `build()` is shared with the simulations. |
+| `dist/bench.mjs`, `dist/bench-key.mjs` | The test bench and the Dev drawer (loaded only on a bench or with `?dev`); `build()` is shared with the simulations. The save keys. |
 | `dist/arena.mjs` | The Arena: every fightable thing from the data tables, and `developer fight`. |
 
 ### Root: server, scripts and simulations
@@ -260,6 +290,7 @@ comment saying what it does.
 | `serve.mjs` | The local server, and the editor's save endpoint. Listens on 127.0.0.1 only. |
 | `scripts/test.mjs` | The test runner: fast files, plus slow simulations whose imports changed. |
 | `scripts/land.mjs` | Lands a branch on main, tested against the main it lands on. |
+| `scripts/build.mjs` | The hosted game: `dist/` bundled into one minified script and stylesheet, in `build/`. |
 | `balance.mjs` | Class balance by level → [`docs/BALANCE.md`](docs/BALANCE.md). |
 | `bot.mjs` | A scripted player from a fresh save to a level, through the real commands. |
 | `pacing.mjs` | Hours of real play to each level, against the targets. |
@@ -273,6 +304,7 @@ comment saying what it does.
 | `playtest.mjs` | Kill-order strategies against the fixtures; prints its tables. |
 | `golden-virus.mjs` | The virus builder before genes, frozen for `golden.test.mjs`. |
 | `tools/sound-preview/` | Renders sound preview clips to MP3 for the designer to hear. |
+| `tools/perf/phone-audit.mjs` | What a screen costs on an emulated phone or desktop: frames, the main thread by kind of work and by script, long blocks, animations, layers (docs/performance-plan.md). |
 
 ### Tests
 
@@ -288,7 +320,8 @@ and `style.test.mjs` the tooltip grammar.
 |---|---|
 | [`GAME_RULES.md`](GAME_RULES.md) | The rules as built. |
 | [`docs/ui.md`](docs/ui.md), [`docs/style-guide.md`](docs/style-guide.md) | The look (colours, tokens, components); how every line is written. |
-| [`docs/phone-plan.md`](docs/phone-plan.md) | Plan: a phone UI of its own, prototypes first (not built). |
+| [`docs/phone-plan.md`](docs/phone-plan.md) | Plan: a phone UI of its own. P1 (shell), P2 (fight) and P3 (maps and sheets) built; P4 (pages) next. |
+| [`docs/performance-plan.md`](docs/performance-plan.md) | Plan: performance, phones first. The audit's numbers, what ships for everyone and what becomes a Graphics setting, the loading screen, the batches. |
 | [`docs/lore.md`](docs/lore.md) | The world and the story: the machine, the factions' answers, wick (decided, not built). [`docs/story-script.md`](docs/story-script.md): its letters and dialogue, drafted. [`docs/receipts.md`](docs/receipts.md): the vault receipt stamped for a faction at each takeover (built lean; its payoffs wait). [`docs/factions-plan.md`](docs/factions-plan.md): commissions, every hub's board, rep from contracts, receipts, feuds and defence calls, faction sets, the payload cut (1–4 built lean; 5 and 7–10 wait). |
 | [`docs/journals.md`](docs/journals.md) | Journals: dated entries from people across the city, either side of the Cascade, found in vaults. |
 | [`docs/servers.md`](docs/servers.md) | Servers as rooms, floors, sockets and puzzle rooms. |
@@ -301,12 +334,15 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/progression.md`](docs/progression.md), [`docs/economy.md`](docs/economy.md), [`docs/content.md`](docs/content.md), [`docs/variety-plan.md`](docs/variety-plan.md) | Pacing, the economy, activities and variety. |
 | [`docs/rivals.md`](docs/rivals.md) | Rivals: the roster, the rules and the picked look. |
 | [`docs/loot-plan.md`](docs/loot-plan.md) | Sets and uniques. |
+| [`docs/legends.md`](docs/legends.md) | Legends (very rare, very strong endgame uniques) and Epoch items from the flash ranks (decided, not built). |
+| [`docs/floor-items.md`](docs/floor-items.md) | Floors 2–8's sets and uniques, boss by boss (designed). |
 | [`docs/builds.md`](docs/builds.md) | Builds: skill affixes on gear and combos (design, not built). |
-| [`docs/house.md`](docs/house.md) | Your house and its furniture (decided, not built). |
+| [`docs/item-builds.md`](docs/item-builds.md) | Item builds: combos the uniques and sets already make, what doesn't stack, loops to watch. |
+| [`docs/house.md`](docs/house.md) | Your house and its furniture (built: GAME_RULES.md "Your house"). |
 | [`docs/leanings.md`](docs/leanings.md) | Leanings: a server's one positive rule (built: GAME_RULES.md "Server kinds, specials and quirks"). |
 | [`docs/server-specials.md`](docs/server-specials.md) | Server specials: an upside, a cost and the programs for each (picked, not built). |
 | [`docs/threads.md`](docs/threads.md), [`docs/director.md`](docs/director.md) | Threads, and the event director. |
-| [`docs/invasions.md`](docs/invasions.md), [`docs/networks.md`](docs/networks.md), [`docs/bosses.md`](docs/bosses.md), [`docs/solo-bosses.md`](docs/solo-bosses.md) | Review sheets: invasions, network signatures, crew bosses, solo bosses. |
+| [`docs/invasions.md`](docs/invasions.md), [`docs/networks.md`](docs/networks.md), [`docs/bosses.md`](docs/bosses.md), [`docs/solo-bosses.md`](docs/solo-bosses.md), [`docs/boss-guide.md`](docs/boss-guide.md) | Review sheets: invasions, network signatures, crew bosses, solo bosses; how each floor 2–8 boss plays. |
 | [`docs/coop.md`](docs/coop.md) | Co-op, peer to peer. |
 | [`docs/runners.md`](docs/runners.md) | Runners: the people on the net, solo-first multiplayer, the picked looks (decided, not built). |
 | [`docs/BALANCE.md`](docs/BALANCE.md) | Generated by `node balance.mjs`. |

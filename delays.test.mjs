@@ -12,6 +12,7 @@ import { tellsOf } from './dist/tells.mjs';
 import { boardMarkup } from './dist/view.mjs';
 
 CONFIG.baseCrit = 0; CONFIG.enemyCrit = 0; CONFIG.misses = false;
+CONFIG.gearReq = 99; // these tests hand out gear of any level (the requirement has its own test in gear.test.mjs)
 
 const vet = (cls, sub, bar, level = 30) => { const s = fresh(); s.hackers = { [cls]: { level, xp: 0 } }; s.loadout.archetype = cls; s.loadout.sub = { [cls]: sub }; s.loadout.equipped[sub] = bar; return s; };
 const wear = (s, id, level) => { const it = addItem(s, uniqueItem(UNIQUES[id], level ?? UNIQUES[id].level, seeded(1))); command(s, 'load ' + it.id); assert.ok(loaded(s).some((x) => x.id === it.id), `${id} loaded`); };

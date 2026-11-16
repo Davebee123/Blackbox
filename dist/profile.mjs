@@ -11,11 +11,13 @@ import { ARCHETYPES, BOSSES } from './data.mjs';
 import { FACTIONS, FACTION_IDS, rep, REP_TIERS, hubFound, commissionOf, stanceLine } from './factions.mjs';
 import { PIECES } from './faction-gear.mjs';
 import { SETS, piecesOf, isPiece } from './sets.mjs';
-import { PRESENCE, profileOf as simOf, online, simOn, whereText } from './presence.mjs';
+import EARN from './content/earned.mjs';
+import { profileOf as simOf, online, peopleOn, isPerson, whereText } from './presence.mjs';
 import { uniqueItem, seeded } from './gear.mjs';
 import { tickAchievements, rewardStickers, bannersOf, pointsOf, shownAchievements, achievements, DEED_STICKERS } from './achievements.mjs';
 import { masteredN } from './mastery.mjs';
 import { syncSlots } from './collection.mjs';
+import { tickHouse } from './house.mjs';
 
 export const PROFILE = { rows: 4, cols: 24, plan: 60 };
 const clock = () => hooks.now?.() ?? Date.now();
@@ -220,8 +222,10 @@ export function tickProfile(s) {
     if (e.card === 'hunt' || e.card === 'returning') p.deeds.hunts++;
   }
   p.seen = s.serial || 0;
+  hooks.earnTick?.(s); // the earned pieces' floor goals (earned.mjs), paid before the log stamps them
   (hooks.syncCollection || syncSlots)(s); // the collection log's new slots and full entries (collection-log.mjs), before the achievements that read them
   tickAchievements(s);
+  tickHouse(s); // a floor of your house the points just opened (house.mjs)
   p.seen = s.serial || 0;
 }
 
@@ -231,7 +235,8 @@ export function tickProfile(s) {
 export function stickersOf(s) {
   const out = [];
   for (const f of FACTION_IDS) if ((s.standing?.[f] ?? -1) >= REP_TIERS[3]) out.push({ id: 'f-' + f, kind: 'faction', label: FACTIONS[f].tiers[3], color: FACTIONS[f].color, glyph: 'f-' + f, tip: `${FACTIONS[f].tiers[3]} with ${FACTIONS[f].name}` });
-  for (const id of setsDone(s)) out.push({ id: 'set-' + id, kind: 'set', label: SETS[id].name, color: '#7ee787', glyph: 'item', tip: `Every piece of ${SETS[id].name}` });
+  // An earned set's sticker would be no achievement's reward (achievements.mjs), so it has none.
+  for (const id of setsDone(s).filter((x) => !piecesOf(x).every((p) => EARN[p]))) out.push({ id: 'set-' + id, kind: 'set', label: SETS[id].name, color: '#7ee787', glyph: 'item', tip: `Every piece of ${SETS[id].name}` });
   for (let n = 2; n <= (s.floors?.reached || 1); n++) out.push({ id: 'floor-' + n, kind: 'floor', label: `F${n}`, color: '#9aa7b4', glyph: 'node', tip: `Reached floor ${n}` });
   for (const b of natives().filter((k) => won(s, k))) out.push({ id: 'lair-' + b, kind: 'lair', label: BOSSES[b].name, color: '#ff8a5c', glyph: 'kill', tip: `Beat ${BOSSES[b].name} in its lair` });
   // And every sticker an achievement you've earned brought (achievements.mjs), its own few among them: kept for good,
@@ -277,7 +282,7 @@ export function fingerOf(s, handle) {
       points: pointsOf(s), achievements: shownAchievements(s), got: s.achievements?.got || {}, // achievements.mjs: your points, and the few you pinned or earned last
     };
   }
-  if (!PRESENCE.pool.includes(handle) || !(simOn(s) || (s.channel?.lines || []).some((l) => l.from === handle))) return null;
+  if (!isPerson(s, handle) || !(peopleOn(s) || (s.channel?.lines || []).some((l) => l.from === handle))) return null;
   return simCard(s, handle);
 }
 
@@ -316,7 +321,7 @@ export function simTitle(h) {
 }
 // A simulated hacker's card, from the handle alone (and their place, if they're on).
 export function simCard(s, h) {
-  const p = simOf(h), r = seeded(Math.floor(hash(h, 40) * 2 ** 31));
+  const p = simOf(h, s), r = seeded(Math.floor(hash(h, 40) * 2 ** 31));
   const cls = p.cls, others = Object.keys(ARCHETYPES).filter((c) => c !== cls);
   const classes = [{ cls, level: p.level }];
   if (p.level >= 6) classes.push({ cls: others[Math.floor(hash(h, 43) * others.length)], level: Math.max(1, Math.floor(p.level * (0.2 + hash(h, 44) * 0.5))) });

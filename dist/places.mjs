@@ -15,7 +15,7 @@
 import { CONFIG, GUARDS } from './data.mjs';
 import { active, findLocation } from './combat.mjs';
 import { floorOfSlot } from './floors.mjs';
-import { outputOf } from './sound.mjs';
+import { outputOf } from './mixout.mjs';
 
 export const FLOOR_BEDS = {
   1: 'floors/floor-1-sprawl-r2-a.ogg', // The Sprawl

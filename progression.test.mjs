@@ -9,6 +9,7 @@ import { uniqueItem, rollItem, seeded, RULES, RARITIES, BASES, baseFor, primarie
 const VERSIONS = [{ code: 12, credits: 120 }, { code: 40, credits: 600 }]; // what a service's v1 and v2 cost (the retired table)
 import { tickPlay, CRAFT_REFUND } from './dist/progression.mjs';
 import { levelUpSummary } from './dist/levelup-view.mjs';
+CONFIG.gearReq = 99; // these tests hand out gear of any level (the requirement has its own test in gear.test.mjs)
 
 // Exact numbers: no crits, no misses, flat numbers, no level gap.
 Object.assign(CONFIG, { baseCrit: 0, enemyCrit: 0, misses: false, partToughness: 1, enemyRamp: 0 });

@@ -20,6 +20,7 @@ import STORY from './dist/content/story.mjs';
 import ITEMS from './dist/content/items.mjs';
 
 CONFIG.baseCrit = 0; CONFIG.enemyCrit = 0; CONFIG.misses = false;
+CONFIG.gearReq = 99; // these tests hand out gear of any level (the requirement has its own test in gear.test.mjs)
 const T0 = 2_000_000;
 hooks.now = () => T0;
 const KESTREL = ['kestrel-badge', 'kestrel-token', 'kestrel-lanyard'];
@@ -55,6 +56,27 @@ const PLAN = {
   hotspare: ['Hot Spare', { Standby: 'shell', Failback: 'implant' }, [2]],
   mesh: ['Mesh', { Node: 'proxy', Link: 'script', Hub: 'implant' }, [2, 3]],
   deeparchive: ['Deep Archive', { Index: 'script', Spine: 'shell', Folio: 'exploit', Vellum: 'implant' }, [2, 3, 4]],
+  catchment: ['Catchment', { Gully: 'exploit', 'Storm Drain': 'proxy', Basin: 'shell', Reservoir: 'implant' }, [2, 3, 4]],
+  // Floors 5 and 6 (docs/floor-items.md).
+  fineprint: ['Fine Print', { Rider: 'proxy', Copay: 'shell', Exclusion: 'script', Premium: 'implant' }, [2, 3, 4]],
+  contiguous: ['Contiguous', { Sector: 'exploit', Cluster: 'implant', 'Allocation Table': 'script' }, [2, 3]],
+  crypter: ['Crypter', { Stub: 'exploit', 'Junk Code': 'script', Decryptor: 'shell' }, [2, 3]],
+  domainadmin: ['Domain Admin', { Ticket: 'implant', 'Group Policy': 'proxy', Schema: 'shell', 'Admin Rights': 'exploit' }, [2, 3, 4]],
+  semaphore: ['Semaphore', { Spinlock: 'script', Semaphore: 'implant', 'Critical Section': 'shell' }, [2, 3]],
+  hiddenprocess: ['Hidden Process', { Unlink: 'exploit', Hollow: 'script', Driver: 'implant' }, [2, 3]],
+  watertight: ['Watertight', { Hatch: 'proxy', 'Seal Plate': 'shell', 'Pressure Door': 'implant' }, [2, 3]],
+  // Floor 7.
+  smashandgrab: ['Smash and Grab', { Grabber: 'exploit', Clipper: 'script', Dropzone: 'implant' }, [2, 3]],
+  payroll: ['Payroll', { 'Pay Slip': 'script', 'Direct Deposit': 'proxy', 'Year End': 'shell' }, [2, 3]],
+  backbone: ['Backbone', { Hop: 'script', CRC: 'implant', 'Broadcast Storm': 'exploit' }, [2, 3]],
+  // The earned sets (earned.mjs): pieces on a count, never a roll.
+  switchback: ['Switchback', { 'Dead End': 'proxy', 'One Way': 'script', Turnout: 'shell' }, [2, 3]],
+  coldstart: ['Cold Start', { 'Ice Pick': 'exploit', Rime: 'implant', Thaw: 'proxy' }, [2, 3]],
+  bootloader: ['Bootloader', { Grub: 'script', Chainload: 'implant', POST: 'shell' }, [2, 3]],
+  atoll: ['Atoll', { Lagoon: 'shell', Reef: 'proxy', Causeway: 'exploit' }, [2, 3]],
+  fullcoverage: ['Full Coverage', { 'Plumb Line': 'exploit', 'Field Book': 'script', 'Hi-Vis': 'shell', Datum: 'implant' }, [2, 3, 4]],
+  longhaul: ['Long Haul', { Waybill: 'script', Dray: 'proxy', Tailgate: 'shell' }, [2, 3]],
+  tenure: ['Tenure', { Freehold: 'implant', Deed: 'shell', 'Sitting Tenant': 'proxy' }, [2, 3]],
   bedrock: ['Bedrock', { 'Bedrock Plate': 'shell', 'Core Sample': 'implant', Pick: 'exploit', Survey: 'proxy' }, [2, 3, 4]],
 };
 const SUBS_OF = { breaker: ['demolitionist', 'overclocker'], bastion: ['warden', 'sysop'], infiltrator: ['phantom', 'payload'], operator: ['herder', 'hijacker'] };
@@ -634,7 +656,7 @@ test('a class set: anyone wears its 2- and 3-piece and the 4-piece\'s base line;
 });
 
 test('Kestrel pieces held from save v45 keep working, as the retuned set', () => {
-  assert.equal(SAVE_VERSION, 61, 'no save bump since v45 for sets (v61 one shop shape, v60 payloads cut, v59 journals, v58 one rep scale, v46 is the subclass pick, v47 components, v48 Indemnity, v49 crafting, v50 specials, v51 the scanner, v52 rivals, v54 the curve lifts every item alike, v55 fills them, v56 refills them on the tiers, v57 the talent tiers): a piece reads its bonuses from its unique, and its id and stats are unchanged');
+  assert.equal(SAVE_VERSION, 63, 'no save bump since v45 for sets (v63 graphics settings, v62 runners, v61 one shop shape, v60 payloads cut, v59 journals, v58 one rep scale, v46 is the subclass pick, v47 components, v48 Indemnity, v49 crafting, v50 specials, v51 the scanner, v52 rivals, v54 the curve lifts every item alike, v55 fills them, v56 refills them on the tiers, v57 the talent tiers): a piece reads its bonuses from its unique, and its id and stats are unchanged');
   const s = at(12);
   const items = wear(s, KESTREL);
   (s.pity ||= {})['set:bouncer'] = 3;
@@ -656,22 +678,26 @@ test('Kestrel pieces held from save v45 keep working, as the retuned set', () =>
 
 // ---------- sources ----------
 test('every piece has a source that rolls; a source rolls the pieces you lack first, with pity, then a flat chance', () => {
-  const ROLLS = [['guard', { id: 'bouncer' }], ['guard', { id: 'tracer' }], ['guard', { id: 'sentinel' }], ['boss', { id: 'relayking' }], ['boss', { id: 'choir' }], ['boss', { id: 'repoman' }], ['crew', { id: 'foreman' }],
+  const ROLLS = [['guard', { id: 'bouncer' }], ['guard', { id: 'tracer' }], ['guard', { id: 'sentinel' }], ['boss', { id: 'relayking' }], ['boss', { id: 'choir' }], ['boss', { id: 'repoman' }], ['boss', { id: 'shouldersurfer' }], ['boss', { id: 'nightdesk' }], ['boss', { id: 'byzantine' }], ['crew', { id: 'foreman' }],
     ...[1, 2, 3, 4, 5, 6, 7, 8].flatMap((f) => [['lair', { floor: f }], ['rare', { floor: f }], ['vault', { floor: f }], ['thread', { floor: f }]]),
     ['strain', { lineage: 'ransomware' }], ['strain', { lineage: 'worm' }], ['strain', { lineage: 'ghostroot' }], ['author', { id: 'glassjaw' }], ['courier', {}], ['takeover', {}],
-    ...PUZZLE_KINDS.map((id) => ['puzzle', { id }])];
+    ...PUZZLE_KINDS.map((id) => ['puzzle', { id }]), ['puzzle', { id: 'deadlock', floor: 6 }], ['puzzle', { id: 'routing', floor: 7 }]];
   const reach = new Set(ROLLS.flatMap(([kind, x]) => setDropPool({ kind, layer: 9, ...x }).map((u) => u.id)));
-  for (const id of Object.values(SETS).flatMap((x) => x.pieces).filter((p) => !UNIQUES[p].sources.every((x) => x.kind === 'story'))) assert.ok(reach.has(id), `${id} drops from somewhere`);
+  for (const id of Object.values(SETS).flatMap((x) => x.pieces).filter((p) => !UNIQUES[p].sources.every((x) => x.kind === 'story' || x.kind === 'feat'))) assert.ok(reach.has(id), `${id} drops from somewhere`); // an earned set's pieces come on a count (earned.test.mjs)
   for (const [kind, o] of Object.entries(SET_LOOT)) assert.ok(o.chance > 0 && o.pity > 0 && o.found > 0 && o.found <= o.chance, kind);
   // The floor 3 lair boss: On-Call's alone (the class sets are the level-50 tier sets now).
-  assert.deepEqual(setDropPool({ kind: 'lair', floor: 3 }, 20).map((u) => u.id).sort(), ['pager', 'runbook']);
+  assert.deepEqual(setDropPool({ kind: 'lair', floor: 3 }, 20).map((u) => u.id).sort(), []); // the Pager moved to SHOULDER SURFER, the Runbook to NIGHT DESK, Failover to BYZANTINE (docs/floor-items.md)
+  assert.deepEqual(setDropPool({ kind: 'boss', id: 'nightdesk' }).map((u) => u.id), ['runbook']);
+  assert.deepEqual(setDropPool({ kind: 'boss', id: 'byzantine' }).map((u) => u.id), ['failover']);
+  assert.deepEqual(setDropPool({ kind: 'boss', id: 'shouldersurfer' }).map((u) => u.id), ['pager']);
+  assert.deepEqual(setDropPool({ kind: 'boss', id: 'centrifuge' }).map((u) => u.id), ['rotor']);
   const was = structuredClone(SET_LOOT);
   try {
-    const s = at(20);
+    const s = at(24);
     SET_LOOT.lair.chance = 0;
-    setDrop(s, { kind: 'lair', floor: 3 }, 20, 'DEADBOLT');
-    assert.equal(s.pity['set:lair:3'], 1);
-    assert.ok(s.logs.some((l) => new RegExp(`No On-Call piece from DEADBOLT this time\\. The next kill has a ${Math.round(SET_LOOT.lair.pity * 100)}% chance\\.`).test(l.message)), 'the next chance, said');
+    setDrop(s, { kind: 'lair', floor: 4 }, 24, 'TRIPMINE'); // floor 4's lair: the Pager
+    assert.equal(s.pity['set:lair:4'], 1);
+    assert.ok(s.logs.some((l) => new RegExp(`No On-Call piece from TRIPMINE this time\\. The next kill has a ${Math.round(SET_LOOT.lair.pity * 100)}% chance\\.`).test(l.message)), 'the next chance, said');
     // A crew boss at 50: Mesh's three and the tier sets' sixteen, the pieces you lack first, then the flat chance.
     const t = at(50);
     SET_LOOT.crew.chance = 0;
@@ -733,9 +759,11 @@ test('the class sets are the end-game tier sets: every piece level 50, the best 
   }
   assert.deepEqual(setDropPool({ kind: 'lair', floor: 8 }, 50).map((u) => u.id).filter((p) => !tierIds.includes(p)).sort(), ['bedrock-plate', 'core-sample', 'pick', 'survey']);
   assert.deepEqual(setDropPool({ kind: 'lair', floor: 8 }, 50).filter((u) => setOf(u.id).tier).map((u) => u.id).sort(), tierIds);
-  // Floors 3 to 6 no longer drop them: their lair bosses keep their other pieces (On-Call on 3 and 4), and 5 and 6 none.
+  // Floors 3 to 6 no longer drop them: their lair bosses keep their other pieces (On-Call on 3 and 4), and 5 and 6 their
+  // own sets' until those sources are built (docs/floor-items.md).
   for (const floor of [3, 4, 5, 6]) assert.ok(setDropPool({ kind: 'lair', floor }, 50).every((u) => !setOf(u.id).tier), `floor ${floor}`);
-  assert.deepEqual([3, 4, 5, 6].map((floor) => setDropPool({ kind: 'lair', floor }, 50).map((u) => u.id).sort()), [['pager', 'runbook'], ['failover', 'pager', 'runbook'], [], []]);
+  const own = (...ids) => ids.flatMap((id) => SETS[id].pieces).sort();
+  assert.deepEqual([3, 4, 5, 6].map((floor) => setDropPool({ kind: 'lair', floor }, 50).map((u) => u.id).sort()), [[], ['pager'], own('fineprint', 'contiguous', 'crypter'), own('domainadmin', 'hiddenprocess', 'watertight')]);
   // No other source reaches them.
   for (const [kind, ctx] of [['vault', { floor: 8 }], ['rare', { floor: 8 }], ['thread', { floor: 8 }], ['boss', { id: 'relayking' }], ['strain', {}], ['takeover', {}], ['courier', {}]]) assert.ok(setDropPool({ kind, ...ctx }, 50).every((u) => !setOf(u.id).tier), kind);
 });
@@ -766,7 +794,7 @@ test('a tier set drop comes up three times as often for your own class, pieces y
 });
 
 test('tier pieces held from the floor 3 to 6 version keep their item level and stats, and work as the set', () => {
-  assert.equal(SAVE_VERSION, 61, 'no save bump since v45 for sets (v61 one shop shape, v60 payloads cut, v59 journals, v58 one rep scale, v46 is the subclass pick, v47 components, v48 Indemnity, v49 crafting, v50 specials, v51 the scanner, v52 rivals, v54 the curve lifts every item alike, v55 fills them, v56 refills them on the tiers, v57 the talent tiers): a held piece keeps its stats and reads its bonuses from its unique and its set');
+  assert.equal(SAVE_VERSION, 63, 'no save bump since v45 for sets (v63 graphics settings, v62 runners, v61 one shop shape, v60 payloads cut, v59 journals, v58 one rep scale, v46 is the subclass pick, v47 components, v48 Indemnity, v49 crafting, v50 specials, v51 the scanner, v52 rivals, v54 the curve lifts every item alike, v55 fills them, v56 refills them on the tiers, v57 the talent tiers): a held piece keeps its stats and reads its bonuses from its unique and its set');
   // A Wrecking Crew found before, at its old levels and bases.
   const OLD = { crowbar: ['exploit-chain', 15, { damage: [15, 19] }], 'det-cord': ['loader', 20, { damage: 9, signal: 40, payload: 4 }], 'hard-hat': ['ghost-shell', 26, { signal: 70, regen: 15, restore: 30 }], 'blast-map': ['implant', 32, { damage: 6, signal: 30 }] };
   const s = as('breaker', 'demolitionist', 32);

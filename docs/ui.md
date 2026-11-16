@@ -50,9 +50,9 @@ teal, violet or a threat's red.
   poster, a boss frame), a feud's two faction halves over its bar, a price tile, a price tag. Rewards are an icon and a
   number. The card's sentence is the strip's tooltip. Motion is locked to the clock (`--ph`) so a redraw never restarts
   it. The map pop-up widens to 376px while it holds one.
-- **Contract tracker** (`.ctrack`, `view.mjs` `contractTracker`): under the threat rail; an icon column, who it's for over
-  the name, the progress in amber (its few words, *3/5 viruses killed*; past 10 a bar
-  with *n/N*); a done one has a green border and **Turn in**. A row is a
+- **Contract tracker** (`.ctrack`, `view.mjs` `contractTracker`): under the threat rail; its kicker counts the rows (the slots they fill of 6 in its tooltip; story and floor jobs take none). A row is lean:
+  its icon, its name and *n/N* on one line (past 10 a bar too), or else its few words under the name on one line;
+  who it's for is in the tooltip; a done one has a green border and **Turn in**. A row is a
   button (`data-locate`, `data-go` to Mail, or a done one's `mail deliver`); its tooltip shows the pay as icon chips. No teal.
 - **Labelled rows** (`.op-row`, `.net-row`, `.srv-line`): a fixed label column (`--label`, `--dim`) and the value
   beside it, every row in a block at one label width.
@@ -72,7 +72,7 @@ teal, violet or a threat's red.
 - **Hover tips** (`.tt`): every `title` shows in the game's own card (amber top rule, mono title line); never the
   browser's default.
 - **Card and detail panel** (the Server page): a card of picks (names and state only) beside one sticky panel that
-  explains the picked, hovered or focused item, the only place its facts are lit. On a phone the panel is a bottom
+  explains the picked, hovered or focused item, the only place its facts are lit. On a phone the panel is in the one
   sheet. Skills and talents is a card alone (`.cls`, docs/class-page.md): its rules are tooltips.
 - **Tethers** (`.tether`, `view.mjs` `tethers`, `fightread.mjs` `partLinks`): one look for every rule that reaches from
   one part to another. A steel bracket in the board's left gutter from the part the rule sits on (a square) to the part
@@ -93,7 +93,9 @@ teal, violet or a threat's red.
 
 ## The fight board
 
-- **The HUD**, left to right: your Signal (your server at home) with your crew's bars under it; **Status**, everything on
+- **The layout** (desktop; the designer's *Swap*): the virus's picture on the left beside the part names, the board on
+  the right, so the eyes sit in the middle and see both. The HUD follows it.
+- **The HUD**, right to left: your Signal (your server at home) with your crew's bars under it; **Status**, everything on
   you, names in their colours (teal yours, red against you, violet helpers), each with its rule on hover; under it
   **Gear**, a chip for each equipped rule that waits on a condition (`fightread.mjs` gearLive), lit teal while it holds,
   struck through once a once-a-fight one is spent; and the virus, its name and level over its bar, its tags and the
@@ -108,8 +110,10 @@ teal, violet or a threat's red.
   the name won't fit (Surge → SRG), never an ellipsis.
 - **Themed chips** (chipfx.mjs `CHIP_THEMES`; each theme in docs/chip-themes.md): a part with a theme plays it faint
   inside its own chips, under the text, in the chip's colour and white: nothing at +2 and +3, faint at +1, stronger in
-  Now and its last 1.5 s. When it goes off (`chipStrike`), its strike flies from the chip into your bar in the threat's
-  red, in place of the chip's ghost (beside it for the frost), and its hit throws no lash. A packed part shows none.
+  Now and its last 1.5 s. When it goes off (`chipStrike`: at its own hit, a step before the board turns for all but
+  the last; its number waits for the impact), its strike flies from the chip into your bar in the threat's
+  red (a replicate's into the new fragment's bar), in place of the chip's ghost (beside it for the frost), and its hit
+  throws no lash. A replicate that fizzles plays out in place. A packed part shows none.
   Screen effects off, Motion off or reduced motion: none; subtle: fainter.
 - **Hits land on the thing hit** (hitfx.mjs): the part's cell flashes and a burst of 1s and 0s flies out (amber yours,
   violet a crewmate's); a crit bursts gold-white; a hit spent on ◆ floats *◆ ABSORBED* in steel; a miss stamps MISS. A
@@ -134,6 +138,10 @@ teal, violet or a threat's red.
     miss grounds past the bar, ◆ throws a steel arc, and a crit (its cooldown resets) runs back to the key as a gold
     comet. Crack lands on the ◆ row and strikes each ◆ it broke a beat apart (combat.mjs `broke`), glancing off when
     none are left. Rate Limit's brackets snap onto the attack it throttles; on a miss the halves pass each other.
+    What spreads jumps on to every other part as a spark, nearest first (Shatter's shards in steel; Propagate sets each
+    part burning as it lands). What stops an attack (SIGINT, Suspend, Jam, Blackhole) pulls a line tight through its
+    chip. A heal runs a light along your bar (Reclaim's comes back from the part first). Fork Bomb strikes each ◆ it
+    broke on every part (a strip's `broke`).
   - **A status cashing in** (combat.mjs damage `marks`): Exposed's crosshair flies off its mark and closes on a crit;
     Quarantined's brackets snap onto the name; Hooked's line pulls tight as its +6 lands; Tagged burns taller. The mark
     glows.
@@ -144,10 +152,9 @@ teal, violet or a threat's red.
   - **A burn runs down** (combat.mjs tick `left`): each tick's fire stands lower than the last, the last one gutters to
     falling embers, and Keepalive stokes it up.
   - **Mastery tiers** (`tierRecipe`): tier 2 more particles and a spark burst, tier 3 a glint and each iconic skill's own
-    flourish; a crewmate's always plays tier 1. **Break finishers** (`FINISHERS`, `SUB_FINISHERS`): the break that wins
-    plays your class's flourish on that row within 0.9 s, varied by subclass. Subtle and medium drop the afterimages,
-    the swing's fan and the cracks; the result's timing and a status cashing in show on both. `?playtest=fx` reviews
-    them all, by result, status and ticks left.
+    flourish; a crewmate's always plays tier 1. The hit that breaks a part plays its effect like any other; the part
+    then dissolves into 1s and 0s, the fight-winning one in slow motion. Subtle and medium drop the afterimages, the
+    swing's fan and the cracks; the result's timing and a status cashing in show on both. `?playtest=fx` reviews them all, by result, status and ticks left.
 - **Damage numbers** (dmgfx.mjs): every source its own number with an icon (a hit, a crit, a burn, a helper or daemon,
   a reflect, a shield's soak, a heal, encryption, an interrupt, a virus's claw), landing one after another in the
   order they resolved (0.45 s apart for two, faster for more, a batch never over 2.2 s), the bars dropping with each.
@@ -160,8 +167,10 @@ teal, violet or a threat's red.
   would take the hit.
 - **How much moves** follows Screen effects: subtle and medium show the number, the bar and the strike (a crewmate's
   quieter); bold adds impact bursts, sparks and row flashes; off shows numbers and bars only, a soft red edge when you're
-  hit, and a cycle's numbers stacked at once. Nothing on the interface moves: no screen shake, no nudge; flashes keep
-  their light and lose their movement.
+  hit, and a cycle's numbers stacked at once. Two things move the screen: an attack that hurts you shakes it as its
+  number lands (`shakeOf`: harder for a bigger hit, a crit or a charge; half on subtle and medium), and the hit that wins
+  the fight plays in slow motion (`slowAt`: a quarter speed, back to full in about half a second). Nothing else moves;
+  flashes keep their light and lose their movement.
 - **On a phone** the board shows Now, +1 and +2, chips drop their icon, and a part's name sits on its own line.
 
 ## Feedback language
@@ -188,9 +197,9 @@ short vibration on phones that have it.
 
 ## The pages, at a glance
 
-- **The top bar:** the pages on the left; in the middle your handle · class · level with the class's XP as a thin bar;
-  on the right the people button, the pager, then Integrity (a server tower that drains), Signal (five bars) and
-  credits, each with its **+**. At 1440 with the casing the pager's tray tightens so the class name keeps its place.
+- **The top bar:** the pages on the left, each with a one-line tooltip; in the middle your handle · class · level with the class's XP as a thin bar;
+  on the right the people button (a phone's strip: the pager's lamp), then Integrity (a server tower that drains), Signal (five bars) and
+  credits, each with its **+**.
 - **The map** shows one floor at a time. A server (the *Glyph*, `view.mjs` serverIcon) is its kind's glyph on a dark
   plate, a bar under it filling as you clear it, and a ring round one you haven't been into, a pulse going out from it;
   amber, gray when done, teal where you are and what's yours, yellow for a contract's. Its kind's rule is the glyph's
@@ -202,6 +211,12 @@ short vibration on phones that have it.
   zooms (up to 5×), drag pans, double-click or ⤢ fits. A **Show** picker (**Mine**, **Targets**, **Threats**) dims the
   rest. **Map · List** toggles a sortable list of every server (name, family, level, floor, explored, status), then hubs
   and leads, each with a **locate** button.
+- **The class picker** (`view.mjs` classPickMarkup, app.js pickClass): four translucent squares (emblem, name, roles).
+  The picked one opens a drawer from its side (Traits, Starts with, Subclass; rules in tooltips) and the rest narrow to
+  strips (small emblem, name up the side). Its border plays its class, always amber: Breaker cracks and shatters,
+  Bastion deflects shots off a standing barrier, Infiltrator dims to one light tracing the edge, Operator circles three
+  processes (the two lights run by `pickfx.mjs`, all of it on the compositor). Start is a lit command line, the class
+  typed in. A phone stacks rows that open downward. No slogans.
 - **The threat rail** (down the map's left): everything coming for you, hottest first, then soonest; red for what's
   hitting you, amber for what's on its way. Under it the contract tracker.
 - **Map cards** pop up beside the node you click (never over it): the server card (level, Integrity, the wall as one
@@ -223,7 +238,7 @@ short vibration on phones that have it.
 - **Puzzle boards** are drawn like the room map (chips and traces): the worm and the Tracker red, firewalls steel, data
   nodes and caches gold, you teal. A board boots in with a line, each action has its own small animation and sound, and
   the end is a card like a reward's. Motion off: the board just changes.
-- **The Server page** (`server-view.mjs`, `server.css`): one card and a detail panel (a bottom sheet on a phone). The
+- **The Server page** (`server-view.mjs`, `server.css`): one card and a detail panel (in the one sheet on a phone). The
   card's header draws your firewall as a ring of sixteen blocks round your server's core (whole blocks solid teal,
   fragmented ones hollow, an amber arc while an invasion is at the wall, a red marker coming down its road), the
   Integrity ring inside. Then quiet rows: Threat, Wall (level, tier pips, the readout), Filters, Code. Pointing at a
@@ -234,9 +249,10 @@ short vibration on phones that have it.
   the speaker's backlit ASCII portrait beside their lines (portraits.mjs, scanning in a row at a time, once), its opening line resolving out of noise once, its steps as a job (`job 0003`, ✓, ▸, the rest dim hex). The reward
   card is a signed receipt. Calm: lines arrive once, Mail's page never animates.
 - **The level-up** (the *Firmware update*, levelup-view.mjs): an amber *Firmware update · <class>.rom* strip, the
-  level in teal dot-font digits, `[ OK ]` a row at a time with a tick each; it waits for a calm moment.
-- **The pager** (the *Tray*): a lamp and one icon per page (up to four on a desktop, three on a phone, then **+n**),
-  amber, red for a threat, a soft glow on one you haven't seen; its tooltip is the line and, muted, ▸ what the tap does.
+  level in teal dot-font digits, `[ OK ]` a row at a time with a tick each; it waits for a calm moment. It powers on
+  to its sound (the lift): the strip flickers on, the bar climbs with the hum, the new level snaps in at the lock.
+- **The pager** (the *Log*, pings.mjs/pings.css): on a desktop, frameless ping lines in the map's left column and
+  above the prompt elsewhere (see GAME_RULES.md); a phone keeps the lamp and Comms.
 - **The player card** (the *NET ID badge*, profile-view.mjs): an amber NET ID strip, the banner framed as a photo
   (teal corners), the handle large in teal, the title amber, the plan a quiet italic quote, sections on one column,
   a bar code at the foot.
@@ -268,8 +284,8 @@ short vibration on phones that have it.
 The designer's rules for anything that sets a mood: **everything is light on glass**, and **nothing interferes with the
 interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the screen).
 
-- An effect lives behind or around the interface: the backdrop (`#fx-back`, z-index −1 inside `.app`, carrying the
-  screen's own background), the tube's edge (`#crt-bezel`), the casing's lamps, and the virus picture (`#virus-canvas`,
+- An effect lives behind or around the interface: the backdrop (`#fx-back`, z-index −1 inside `.app`, drawn only while
+  a floor's texture, Low Signal or a tear shows; the casing's screen background), the tube's edge (`#crt-bezel`), the casing's lamps, and the virus picture (`#virus-canvas`,
   a crit's tear through the `#sfx-tear-a/b` SVG filters). `screenfx.test.mjs` fails on any rule that styles anything
   else.
 - Text, numbers, bars, chips and the board never move, dim, blur or get covered; no effect shifts layout or takes a
@@ -285,6 +301,9 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
   roots and legs stab or rake, nodes and cells blink to the glass, cores throb at you, cells swarm; and some stay put
   and throw something instead: rings, sparks, a spill of packets, clumps of characters, a sweeping beam. The body
   never leaves its window. No input; Screen effects off or Motion off: none.
+- **Boss bodies** (boss-art.mjs): every boss wears a model of its own, built from what its fight is about (a rotor
+  and a Gavel, a tunnel of frames, three domed towers). Wide and bold, to fill the window; a boss faces you, swinging
+  side to side, and a part that strikes swells out from where it stands.
 - **A broken part** dissolves into drifting 1s and 0s inside the render; on the board its row flickers out into a block
   of 1s and 0s, its name and health breaking up letter by letter, which drift up and fade (hitfx.mjs).
 - **The fight boot** (bootfx.mjs, bootfx.css) is another effect on the panels, approved by the designer (*Centre stage*).
@@ -292,12 +311,13 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
   the virus comes up alone at the centre, decoding out of red noise, and drops into its panel; a boot console types
   your bar, class, keys and the virus where the board will be; your panels come up. About two seconds; any key or
   click ends it and still acts. Leaving a won fight (*Channel cut*): the page folds to a teal line and a dot, the next
-  page opens out of it and your room rings teal, under 0.9 s. Connecting to a server (*Handshake*): its node locks
-  teal and pings, the map dims into black, the name decodes over a dial readout and flies into the server strip, the
-  rooms come up outward from the entry; about 2.3 s. Jacking out (*Hang-up*, the Handshake backwards): your room locks
-  teal, the rooms go dark toward it, the hang-up readout, then the map with the server's node ringed; 1.7 s. **No
-  flash, no blink** (the designer): a panel only brightens or only dims, in held steps; chrome dims to 15%, never out
-  (bootfx.test.mjs). Any key or click ends each. Screen effects off or Motion off: none of them.
+  page opens out of it and your room rings teal, under 0.9 s. Connecting to a server (*Carrier*): a teal line runs
+  from HOME to its node, the node pings, and the rooms open in a circle from there, the map dimming behind the edge;
+  the entry rings teal. Eased, no black, no text, chrome lit; 1.7 s (1.3 s with no HOME on the map). Jacking out
+  (the *Carrier* backwards): your room locks teal, the rooms close in a circle onto the server's node, the map
+  brightening outside it; the node pings and the line runs back to HOME, which rings; 1.7 s (0.8 s not from the rooms
+  page). **No flash, no blink** (the designer): in the boot a panel only brightens or only
+  dims, in held steps; chrome dims to 15%, never out (bootfx.test.mjs). Any key or click ends each. Screen effects off or Motion off: none of them.
 - **Floor palettes** are the one exception to *No new colours*, approved by the designer. A floor swaps the surface
   tokens (`--bg`, `--panel`, `--panel-2`, `--inset`), the structure colour (`--amber` and its forms) and the text tints
   inline on `<html>`; the job colours (`--hot`, `--next`, `--you`, `--daemon`, `--exception`, `--steel`, `--gray`) never
@@ -315,15 +335,36 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
 | The Sink | `#e09a94` blood rose | `#0a0303` / `#130606` | drips | 4.9 to 4.8 |
 | Bedrock | `#cfc7b4` stone | `#080807` / `#0f0f0d` | heavy static | 4.9 to 4.6 |
 
+## The stage
+
+- **The floor's place** (stage.mjs) is drawn inside the virus picture (`#virus-canvas`), never behind the board: in
+  characters on the virus's own grid, in the floor's structure colour, faint (mean alpha under 0.3). Its still part is
+  cached; only what moves is drawn each frame. The render's label names the floor (`[ coldline/render ]`).
+- **It acts on the virus, not the board:** light (brightness only), camera, entrance, a broken part's bits, a
+  reflection where there is water. The board's chips and telegraphs keep their look on every floor; only how a chip
+  comes in changes (boardfx.mjs: typed on the old ledgers, flipped on the departure boards).
+- **The fight log** folds to its newest line by default (`▴ N` opens it), so the picture takes the room.
+- **The rooms map** carries the floor as a material (ground.mjs), never a picture: a picture's landmarks fell under rooms
+  (rejected). It sits in the map's SVG under the links, masked clear of rooms and links, fading at the edges.
+- **The virus's tint** follows the floor but on Deep Core and the Sink (stage.mjs `TINT_SKIP`).
+- **The board's frame** by floor (style.css, keyed on `data-sfx-floor`): the playhead's form, the row and column rules,
+  the headings' type. Never a chip, never the playhead's colours.
+- Prototyped first (picked by the designer, November 2026): *Place* over *Era* for the picture, the era kept for the
+  theme's sound.
+
 ## The casing and the window
 
 - **The monitor casing** (immersive shell, desktop): BLACKBOX · MODEL 7, two knobs (sound, speed) and labelled lamps
   (PWR, GATE, WALL, NET, INST, DMN) that glow with real state and blink at medium and bold.
-- **Casing cosmetics** (`casing.mjs`, `casing.css`): only the casing changes, never the screen. A colourway sets only
+- **Rig → Casing** (`casing-view.mjs`): a rail of sections (Monitor color, Nameplate, Stickers, Props, Window), each
+  with what it holds now; the open one's options fill the pane beside it. On a phone the rail is a strip of tabs.
+- **Casing cosmetics** (`casing.mjs`, `casing.css`): only the casing changes, never the screen. A monitor color sets only
   `--case-*` variables, each read in style.css with the stock colour as its fallback, and fills the bezel's frame with
-  the glass cut out exactly. Stickers sit in two strips on the chin that end short of the knobs, the plate and the lamps,
-  still, a little crooked; one that doesn't fit is left off. Desk props sit on the desk under the monitor (or on the
-  chin without the window), still but for the mug's steam. `casing.test.mjs` holds them to the bezel.
+  the glass cut out exactly. Stickers sit anywhere on the plastic (the top, a side, where they read upward, or the
+  chin, a little crooked), over each other but never over the glass, the knobs, the plate or the lamps; they drag only
+  while Rig → Casing is open. Props stand on top of the monitor (with the window, when there is room over it), on the
+  desk under it, or on the chin without the window, still but for the mug's steam. `casing.test.mjs` holds them to the
+  plastic.
 - **The window behind the monitor** (`window.mjs`): a canvas of the original city behind the page (`.window-out`,
   z-index −2, no pointer events), with the casing and the Window on at 1700px and wider, painted only in the strips
   beside and above the monitor and the desk. Four depths with atmospheric perspective, the near tower's face in detail,
