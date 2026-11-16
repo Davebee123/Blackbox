@@ -1,5 +1,5 @@
 /* The pager (pager-view.mjs): the tray on the top bar (a lamp, then one icon per page) and Comms, its list. No new
-   colours: amber is what you act on, red a threat. Nothing here moves: the lamp blinks (light), a new page glows. */
+   colours: amber is what you act on, red a threat. The lamp blinks, a new page glows and a light sweeps its tile, and an arriving page sweeps the tray. */
 .pager { display: flex; align-items: center; gap: 4px; flex: none; min-height: 30px; padding: 3px 5px 3px 4px; color: var(--muted); background: #1b1409; border: 1px solid #3a2c14; border-radius: 6px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 1px 0 rgba(0, 0, 0, 0.6); }
 .pager[aria-expanded='true'] { border-color: var(--amber); }
 .pager button { font-family: var(--mono); }
@@ -15,6 +15,14 @@
 .pg-tile .glyph { width: 14px; height: 14px; margin: 0; }
 .pg-tile:hover { background: rgba(241, 185, 47, 0.16); }
 .pg-tile.new { border-color: var(--amber); box-shadow: 0 0 6px rgba(241, 185, 47, 0.35); }
+/* A page you haven't seen: a band of light sweeps across its tile every few seconds until you look. */
+.pg-tile.new, .pg-tile.threat.new { background-image: linear-gradient(100deg, transparent 40%, rgba(255, 228, 165, 0.7) 50%, transparent 60%); background-size: 300% 100%; background-repeat: no-repeat; animation: pgsweep 2.6s ease-in-out infinite; }
+.pg-tile.threat.new { background-image: linear-gradient(100deg, transparent 40%, rgba(255, 140, 110, 0.55) 50%, transparent 60%); animation-duration: 1.6s; }
+@keyframes pgsweep { 0% { background-position: 100% 0; } 45%, 100% { background-position: 0 0; } }
+/* A page arriving: one sweep across the whole tray (feel.mjs fx-pager). */
+.pager { position: relative; }
+.pager.fx-pager::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(100deg, transparent 40%, rgba(255, 228, 165, 0.45) 50%, transparent 60%) no-repeat; background-size: 300% 100%; animation: pgsweep 0.8s ease-out; }
+.no-motion .pg-tile.new, .no-motion .pager.fx-pager::after { animation: none; background-image: none; }
 .pg-tile.threat { color: var(--hot); border-color: rgba(255, 91, 61, 0.6); background: var(--hot-soft); }
 .pg-tile.threat.new { border-color: var(--hot); box-shadow: 0 0 6px rgba(255, 91, 61, 0.45); }
 .pg-more { padding: 0 3px; font: 600 11px var(--mono); color: var(--muted); background: none; border: 0; cursor: pointer; }
