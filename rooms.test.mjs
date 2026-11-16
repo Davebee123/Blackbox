@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { fresh, hooks, active, finish, stashItem, command, resolveCycle } from './dist/combat.mjs';
 import { CONFIG, GUARDS } from './dist/data.mjs';
 import * as FP from './dist/floorplan.mjs';
-import { roomsMarkup, popOf, pickRoom, closePop, stepPath, traceHop, TRACE } from './dist/floorplan-view.mjs';
+import { roomsMarkup, roomsView, popOf, pickRoom, closePop, stepPath, traceHop, TRACE } from './dist/floorplan-view.mjs';
 import { runServer } from './roomsim.mjs';
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false;
@@ -684,9 +684,10 @@ test('the page is the map and a pop-up: it opens on a decision and on a click, c
   assert.equal(pop(html)[1], g.core);
   assert.match(pop(html)[0], /sealed[\s\S]*<h1>Core<\/h1>[\s\S]*DEADBOLT[\s\S]*Sealed until you open the Vault/);
   assert.doesNotMatch(pop(html)[0], /data-rooms=/, 'a far room has no verbs');
-  assert.doesNotMatch(html, new RegExp(`data-room="${g.core}"[^>]*title=`), 'no tooltip on the room the card is about');
+  const shell = roomsView(s, ui).shell;
   pickRoom(s, g.core, ui);
   assert.equal(popOf(s, ui), null, 'a second click closes it');
+  assert.equal(roomsView(s, ui).shell, shell, 'the map is the same with the card up or not: a click swaps the card alone (app.js putRooms)');
   // Walk into a live virus: the card opens by itself, Engage and Step back.
   pickRoom(s, g.core, ui);
   FP.go(s, p.id);
