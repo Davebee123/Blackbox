@@ -45,8 +45,7 @@ import { giveScript, rollScript } from './scripts.mjs';
 import { arcChallenge, jobBossAt } from './arcs.mjs';
 import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
-import { traceNear, hiddenLead, HIDDEN } from './hidden.mjs';
-import { hiddenNear } from './floors.mjs';
+import { traceNear, openNext, HIDDEN } from './hidden.mjs';
 import { zoneSpawns, kingOpen, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn } from './run.mjs';
 import { blipStood, blipRooms, runCardRoll, runCardUp, runCardEnd } from './events.mjs';
 import { RUN_CARDS } from './runcards.mjs';
@@ -323,8 +322,8 @@ WORLD_hook('drops', () => {}); // what a kill drops comes with what it pays (won
 WORLD_hook('won', (s, room, e, { first = false, mirror = false, rare = false } = {}) => {
   const loc = locOf(s), R = s.rooms;
   if (!loc) return;
-  // A first clear on a server traces the ? servers linked to it on its floor (floors.mjs, GAME_RULES.md "The hidden network").
-  if (first && !loc.zone && !loc.member) traceNear(s, loc, HIDDEN.firstClear, `${room.path} cleared: `);
+  // A first clear on a server traces one ? linked to it on its floor (the most traced) (floors.mjs, GAME_RULES.md "The hidden network").
+  if (first && !loc.zone && !loc.member) traceNear(s, loc, HIDDEN.firstClear, `${room.path} cleared: `, { one: true });
   if (room.wild) return wildWon(s, loc, room, e);
   // Earned counts (earned.mjs): a Cold storage fight won before its viruses wake; an Armored server's Core beaten.
   if (R.kind === 'Cold' && e.cycle < 6) earnEvent(s, { kind: 'cold-quick', floor: loc.depth || 1 });
@@ -411,7 +410,7 @@ function wildWon(s, loc, room, e) {
   if (sp) { sp.diedAt = t; if (named) delete sp.bounty; }
   if (loc.zone) { if (sp) { sp.alive = false; sp.respawnAt = t + (sp.boss ? CONFIG.zone.bossRespawnMs : CONFIG.zone.respawnMs); } }
   else if (rogueKill(s, loc, room.path0, t, () => { const more = ctx?.more?.(); if (more) addItem(s, more, 'The Pit gives up more: '); }) && !loc.member && HIDDEN.opens) {
-    for (const n of hiddenNear(s, loc)) hiddenLead(s, n, 100 - n.lead, 'Full clear: '); // a full clear opens its links, as Mapped does
+    openNext(s, loc, 'Full clear: '); // a full clear opens one link, as Mapped does
   }
 }
 // A wild room's loss: a named target or a boss stays put (a named one that beat you twice wears down to v1); a Pit
@@ -631,8 +630,8 @@ WORLD_hook('mapped', (s) => {
   if (!loc) return;
   contractMapped(s, loc);
   if (!s.rooms.mappedRest) earnEvent(s, { kind: 'map-norest', floor: loc.depth || 1 }); // No Rest's count (earned.mjs)
-  // Mapped: every ? linked to it is traced the rest of the way (floors.mjs), so a floor always opens outward.
-  if (!loc.zone && !loc.member && HIDDEN.opens) for (const n of hiddenNear(s, loc)) hiddenLead(s, n, 100 - n.lead, 'Mapped: ');
+  // Mapped: one ? linked to it is traced the rest of the way (floors.mjs), so a floor opens outward one server at a time.
+  if (!loc.zone && !loc.member && HIDDEN.opens) openNext(s, loc, 'Mapped: ');
   if (s.rooms.type === 'server') { const n = NET.mapped(levelOf(loc)); s.server.credits += n; emit(s, 'info', `Mapped: +${n} credits.`, { credits: n }); }
 });
 
