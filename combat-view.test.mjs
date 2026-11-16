@@ -72,12 +72,12 @@ test('a tray key shows its name, not what it does; its tooltip has that, WoW sty
   assert.doesNotMatch(key, /<kbd>/, 'icon and name only');
 });
 
-test('a mutation is a tag, its rule on hover (and in a first-time tip); the gate card is just the virus and Engage', async () => {
+test('a mutation is a tag, its rule on hover, never a first-time tip; the gate card is just the virus and Engage', async () => {
   const { TIPS } = await import('./dist/tips.mjs');
   const s = start('splinter');
   assert.match(hudMarkup(s), /data-mut="regenerative" title="[^"]*patches its ◆ back 1 cycle sooner/);
   assert.doesNotMatch(hudMarkup(s), /<p class="mutation-rule"/);
-  assert.ok(TIPS.some((t) => t.id === 'mut-regenerative' && /1 cycle sooner/.test(t.text)));
+  assert.ok(!TIPS.some((t) => /^(mut|strain)-/.test(t.id)), 'no virus or mutation tips');
   const h = fresh();
   selectEncounter(h, 'splinter', 1);
   assert.match(mapMarkup(h, 'intrusion'), /At the gate/);

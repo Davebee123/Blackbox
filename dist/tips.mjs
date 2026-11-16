@@ -7,7 +7,7 @@
 // on screen) · when (optional: state it needs) · text · pause (fight tips) · under (optional:
 // sit below this container instead, so the thing it explains stays in view).
 import { keyMap } from './combat.mjs';
-import { MUTATIONS, QUIRKS, STRAINS, GUARDS, ARCHETYPES, SYNC } from './data.mjs';
+import { ARCHETYPES, SYNC } from './data.mjs';
 import { GENES } from './genes.mjs';
 import { rivalOf, wickLine } from './rivals.mjs';
 import { ROOM_RULES } from './families.mjs';
@@ -143,23 +143,6 @@ export const TIPS = [
   { id: 'fight-miss', page: 'combat', at: '#board', when: (s) => (s.encounter?.metrics?.misses || 0) > 0, text: 'You missed. A miss deals no damage but still uses the cooldown. Enemies above your level make you miss more often.' },
   { id: 'fight-daemon', page: 'combat', at: '.board .intent.daemon:not(.cron)', under: '#board', text: 'That\'s your daemon. It acts on its own cooldown, in the cycle where its chip sits, on top of your own move.' },
   { id: 'fight-proc', page: 'combat', pause: true, at: '#tray .lit', text: 'A skill lit up. It only works for a cycle or two after something happens, so use it while it glows.' },
-  ...Object.entries({
-    keylogger: 'This is a Keylogger. Only moves made inside the Sync Window hurt the Logger. Three moves outside it come back at you as a Dump.',
-    hashrat: 'This is a Hashrat. While its Miner lives, your cooldowns run at half speed. The Miner attacks only once it is the last part left, so break it first.',
-    floodgate: 'This is a Floodgate. Its Flooder hits every cycle, a little harder each time. Any delay resets it.',
-    leech: 'This is a Leech. Its Tap heals the most damaged part for what it bites, and removes a burn from it.',
-    sleeper: 'This is a Sleeper. It does nothing until you hit it or cycle 6 begins. Set up first, because when it wakes, its Alarm lands at once.',
-    patchwork: 'This is a Patchwork. Its Patcher heals the most damaged part every 3 cycles. Break the Patcher first, or finish a part between heals.',
-    flicker: 'This is a Flicker. Its Shade is only there on even cycles. On odd cycles your hits pass through it.',
-    extortion: 'This is an Extortion. The Demand winds up a big Deadline. Hit it hard in the 2 cycles before it lands and the Deadline is called off.',
-    echo: 'This is an Echo. While the Echo lives, every hit you take repeats a cycle later at half damage. Break it early.',
-    bricker: 'This is a Bricker. Each part hits 30% harder once it drops below half health. Finish a part quickly once you start on it.',
-    overrun: 'This is an Overrun. Its fragments bite harder every cycle they live. Clear them while they are young, or break the Hive.',
-    bouncer: 'Bouncer ICE: its Keyring re-arms the Gate every 4 cycles, and takes over the Gate\'s Ram if the Gate breaks first. Break the Gate between re-arms, then the Keyring.',
-    tracer: 'This is Tracer ICE. Its Trace-back deals more damage every cycle the fight lasts, so finish it fast.',
-  }).filter(([id]) => STRAINS[id] || GUARDS[id]).map(([id, text]) => ({ id: 'strain-' + id, page: 'combat', pause: true, at: `.tag-strain[data-strain="${id}"]`, text })),
-  ...Object.entries(MUTATIONS).map(([id, m]) => ({ id: 'mut-' + id, page: '*', pause: true, at: `.tag-mut[data-mut="${id}"]`, text: `This virus is ${m.name}. ${m.rule}` })),
-  ...Object.entries(QUIRKS).map(([id, q]) => ({ id: 'quirk-' + id, page: '*', at: `.tag-quirk[data-quirk="${id}"]`, text: `This location has the ${q.name} quirk. ${q.rule}` })),
 
   // ---------- server ----------
   { id: 'server-level', page: 'server', at: '.hsv-top', text: 'Your server\'s level matches your highest class level. Its wall holds invasions back, and your codebases let you build programs on other servers.' },

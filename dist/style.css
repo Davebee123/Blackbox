@@ -1401,6 +1401,11 @@ body.grain-off #crt::after, [data-form='phone'] body:not(.grain-on) #crt::after 
 .contract .lvl-row { display: flex; align-items: center; gap: 10px; }
 .contract .lvl-row small { color: var(--muted); font-size: 12px; }
 .contract.ready .lvl-bar span { background: var(--you); }
+/* The reader stays in view while the inbox scrolls. */
+@media (min-width: 901px) {
+  .page:has(> .mail-page) { container-type: size; }
+  .mail-page > :not(.inbox) { position: sticky; top: 0; max-height: 100cqh; overflow-y: auto; scrollbar-width: thin; }
+}
 @media (max-width: 900px) { .mail-page { grid-template-columns: 1fr; } }
 .modules .count.new { background: var(--you); }
 .modules .count { display: inline-block; min-width: 16px; padding: 0 4px; margin-left: 6px; border-radius: 8px; background: var(--amber); color: var(--bg); font: 600 10px/16px var(--mono); text-align: center; vertical-align: middle; }
