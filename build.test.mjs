@@ -26,8 +26,8 @@ test('the build is one script and one stylesheet, with every asset and nothing o
     for (const f of walk('dist').map((x) => relative('dist', x))) if (!['.js', '.mjs', '.css'].includes(extname(f)) && f !== 'editor.html') assert.ok(files.includes(f), `${f} copied`);
     const js = readFileSync(join(out, r.script), 'utf8');
     assert.doesNotMatch(js, /\bimport\s*\(\s*["'`]\.|\bfrom\s*["']\./, 'every import inlined');
-    const css = readFileSync(join(out, r.style), 'utf8');
-    for (const m of css.matchAll(/url\(["']?([^)"'#][^)"']*)["']?\)/g)) if (!m[1].startsWith('data:')) assert.ok(existsSync(join(out, m[1])), `${m[1]} in the stylesheet exists`);
+    const css = readFileSync(join(out, r.style), 'utf8').replace(/url\((["']?)data:.*?\1\)/g, '');
+    for (const m of css.matchAll(/url\(["']?([^)"'#][^)"']*)["']?\)/g)) assert.ok(existsSync(join(out, m[1])), `${m[1]} in the stylesheet exists`);
     assert.ok(html.includes('<script type="module"'), 'still a module (top-level await, import.meta.url)');
   } finally { rmSync(out, { recursive: true, force: true }); }
 });

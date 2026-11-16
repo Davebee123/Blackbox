@@ -20,7 +20,7 @@ node serve.mjs
 Open http://127.0.0.1:4173. The content editor is at `/editor.html`.
 
 **The hosted build.** `npm ci && node scripts/build.mjs` writes `build/`: `dist/` as one minified script
-(`app-<hash>.js`, esbuild, its dynamic imports inlined) and one stylesheet (`index.html`'s sheets in order), every
+(`app-<hash>.js`, esbuild, its dynamic imports made static) and one stylesheet (`index.html`'s sheets in order), every
 other file copied but the editor. The Pages workflow (`.github/workflows/pages.yml`) builds it and deploys `build/`.
 
 ## How a session goes

@@ -19,6 +19,7 @@ The graphics are software there, so the main thread's numbers are the ones to tr
 | Boss fight, Motion off | 83% | 38 |
 
 A first load is 328 requests and 9 MB (5.3 MB of scripts in 196 files, 2.2 MB of samples, 0.75 MB of styles in 24).
+The hosted game now loads one script and one stylesheet (batch 7).
 
 **Why, biggest first:**
 
@@ -61,7 +62,7 @@ A first load is 328 requests and 9 MB (5.3 MB of scripts in 196 files, 2.2 MB of
 | The fight screen rebuilds only what changed (`app.js` putRows) | both | landed |
 | A click on a room swaps its card, not the rooms map (`app.js` putRooms); virus names and room outlines kept between draws. Click to frame, median: desktop 76 → 55 ms, phone 158 → 89 ms | both | landed |
 | Samples, audio textures and the chip effects' defs warmed on the loading screen (`warm.mjs`) | both | landed |
-| One bundled, minified script and stylesheet for the hosted game | both, phones most | batch 7 (build step approved) |
+| One bundled, minified script and stylesheet for the hosted game (`scripts/build.mjs`) | both, phones most | landed |
 
 **The same look, by other means (the designer's eye before it lands):**
 
@@ -115,7 +116,7 @@ One session each, started fresh. Measure before and after with `tools/perf/phone
 | 4 | The dissolve on a canvas | `hitfx.mjs`, `dissolvefx.mjs` | landed |
 | 5 | The Graphics settings: prototypes, the pick, then the build | the Settings page, `settings` in the save | landed |
 | 6 | The loading screen: prototypes, the pick, then the build and the warm-ups | `poweron.mjs`, `shell.mjs` boot, `sound.mjs` loadBank | landed |
-| 7 | A build step for the hosted game (approved 2026-11-15); `dist/` stays runnable as plain files for development | new | last |
+| 7 | A build step for the hosted game (approved 2026-11-15); `dist/` stays runnable as plain files for development | `scripts/build.mjs`, the Pages workflow | landed |
 
 **Batch 1 (landed).** `frame` runs every frame while `tickBusy` holds: a fight, `dirty`, a queued effect, strike or
 level-up, the Tune window, files moving on the map, co-op, or the second after an input. Otherwise a timer runs it when
@@ -198,6 +199,25 @@ frames/s and regular 30.6, 30.8 → 31.8, 32.0 (both on port 4173: one port read
 the same code); desktop boss 11.0, 10.9 → 10.4, 11.0, regular 13.7, 13.8 → 13.5, 13.1. The Horizon as picked, a key
 or tap starting it, an early tap, samples 9 s away (the prompt at 8.3, 8.6 s), Motion off and a fresh player's cold
 open: as before, no page errors.
+
+**Batch 7 (landed).** `node scripts/build.mjs` (esbuild, pinned) writes `build/`, which the Pages workflow deploys:
+`app.js` and its imports as one minified `app-<hash>.js` at the root (`import.meta.url` still finds `sfx/`), index.html's
+24 sheets as one minified `style-<hash>.css`, everything else copied but the editor. `dist/` is unchanged and runs as
+before. The three dynamic imports (the window, the bench, the effects playtest) are made static in the bundle: left
+dynamic, esbuild wraps the 104 modules they reach in lazy closures, and split into chunks they load as six more
+requests. The one dev-visible difference: `developer fight` under `?dev` finds the Arena without `?bench`. Samples stay
+files (96 small WAVs, 1.8 MB; packing them into one file would save requests but delay the first sound to the whole
+pack). Same day, both served the way Pages serves (gzip, `max-age=600`) from one server, ports swapped between the two
+rounds, dist → build. A cold load to the prompt (a fresh player): 334 → 110 requests, 4.2 → 3.3 MB over the wire
+(scripts 1.9 → 1.1 MB, styles 181 → 112 KB). Unslowed network, phone: prompt 5.24, 5.13 → 5.26, 5.21 s, main thread
+3.36, 2.80 → 3.53, 3.02 s; desktop: prompt 4.25, 3.74 → 4.14, 4.23 s, main thread 2.69, 2.68 → 2.70, 2.97 s. A phone on a
+slow network (1.6 Mb/s, 150 ms a request): the Horizon 14.6, 14.3 → 8.7, 8.8 s, the prompt 21.6, 21.7 → 16.2, 16.2 s
+(a local HTTP/1.1 server; Pages speaks HTTP/2, where 300 requests cost less, so read this as the most it buys). Warm
+loads (cached) level: phone prompt 3.76–4.20 → 3.69–4.09 s. The bundle counts more as script (phone 0.8–1.0 → 1.6–1.8
+s), unminified too, and less as everything else: 200 module loads gone. Fights level: phone boss 17.8, 19.3 → 18.0,
+18.9 frames/s, regular 24.7, 25.7 → 27.4, 28.6; desktop boss 10.6, 9.7 → 10.0, 9.9, regular 12.0, 12.3 → 12.2, 11.1.
+The Horizon and its prompt (desktop and phone), a fresh player's cold open with its samples, both playtest fights, the
+desktop window, `?dev`, `?playtest=fx` and `?bench=arena`: as on dist, no page errors, no new 404s.
 
 Not yet measured: breach and campaign, hubs and shops, co-op, the class pick and tutorial, the More sheet, a phone on
 its side.
