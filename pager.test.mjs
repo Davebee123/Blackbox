@@ -168,10 +168,13 @@ test('one pager, no switch: the classic list, its filters and the trial styles a
   assert.equal(s.settings.pager, undefined, 'pager b is no command');
 });
 
-test('the pager keeps the rules: no teal, nothing moves, the same chirp, only for a page', () => {
+test('the pager keeps the rules: no teal, only a light sweep moves, the same chirp, only for a page', () => {
   const css = readFileSync(new URL('./dist/pager.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   assert.doesNotMatch(css, /--you|#7fd1c7/, 'teal is only ever you');
-  assert.doesNotMatch(css.replace(/text-transform/g, ''), /transform|translate|rotate|@keyframes/, 'nothing moves (the lamp reuses the blink)');
+  // The only motion: a light sweeping a new page's tile, and the tray once as a page arrives (both off with motion off).
+  assert.doesNotMatch(css.replace(/text-transform/g, ''), /transform|translate|rotate/, 'nothing moves but the light');
+  assert.deepEqual([...css.matchAll(/@keyframes (\S+)/g)].map((m) => m[1]), ['pgsweep'], 'one sweep, nothing else animates');
+  assert.match(css, /\.no-motion \.pg-tile\.new, \.no-motion \.pager\.fx-pager::after \{ animation: none/, 'the sweep stops with motion off');
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
   assert.match(app, /logComms\(campaign, events\)\.filter\(PG\.isPage\)/, 'news never chirps');
   assert.match(app, /feel\.add\('pager', '#pager', null, \{ alert \}\)/, 'the pager chirp is the one it always had');
