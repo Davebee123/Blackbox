@@ -60,7 +60,7 @@ import { runScript, scriptsOf, SCRIPTS } from './scripts.mjs';
 import * as FP from './floorplan.mjs';
 import { spawnRival } from './rivals.mjs';
 import { RUN_CARDS, dealCard } from './runcards.mjs';
-import { roomsMarkup, fillClocks, popOf, pickRoom, closePop, stepPath, traceHop } from './floorplan-view.mjs';
+import { roomsMarkup, roomsView, POP_MARK, fillClocks, popOf, pickRoom, closePop, stepPath, traceHop } from './floorplan-view.mjs';
 import { createPuzzleFx, panelRoom, closePanel, openPanel, pzUi } from './puzzle-view.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { threadPanel, thUi, offerMarkup as thOfferMarkup } from './threads-view.mjs';
@@ -2039,6 +2039,37 @@ document.addEventListener('click', (e) => { if (e.target.closest?.('[data-map-zo
 
 // ---------- rendering ----------
 const cache = new Map();
+// The rooms page (floorplan-view.mjs roomsView): when the map is as drawn, a click that opens, closes or changes a
+// pop-up swaps the card alone, so the map keeps its nodes (and its traffic) and the browser lays out one card.
+let roomsDrawn = null; // { shell, root }: the map's markup and the node it was drawn into
+const popTpl = document.createElement('template');
+function putRooms() {
+  let v = null;
+  const html = pageOrError(() => { v = roomsView(campaign); return v.shell.replace(POP_MARK, POP_MARK + v.pop); }); // the mark stays: the card goes after it
+  const el = $('page-view');
+  if (cache.get('page-view') === html) return holdPopTip(v?.id);
+  const mark = v && roomsDrawn?.shell === v.shell && roomsDrawn.root === el.firstElementChild && cache.has('page-view') ? markOf(el) : null;
+  if (!mark) { put('page-view', html); roomsDrawn = v ? { shell: v.shell, root: el.firstElementChild } : null; return holdPopTip(v?.id); }
+  cache.set('page-view', html);
+  const old = $('fp-pop'), open = old && old.dataset.pop === v.id ? [...old.querySelectorAll('details')].map((d) => d.open) : [];
+  popTpl.innerHTML = v.pop;
+  const card = popTpl.content.firstElementChild;
+  if (old) old.remove();
+  if (card) { mark.after(card); card.querySelectorAll('details').forEach((d, i) => { if (open[i]) d.open = true; }); }
+  holdPopTip(v.id);
+}
+const markOf = (el) => { const w = document.createTreeWalker(el.querySelector('.fp-map') || el, NodeFilter.SHOW_COMMENT); for (let n = w.nextNode(); n; n = w.nextNode()) if (`<!--${n.data}-->` === POP_MARK) return n; return null; };
+// The popped room is marked (.sel), and its tooltip held off while its card is up (it would cover the card) and given back after.
+function holdPopTip(id) {
+  for (const g of $('page-view').querySelectorAll('.fp-room.sel')) if (g.dataset.room !== id) { g.classList.remove('sel'); if (g.dataset.ttHeld != null) { g.setAttribute('title', g.dataset.ttHeld); delete g.dataset.ttHeld; } }
+  if (!id) return;
+  for (const g of $('page-view').querySelectorAll(`.fp-room[data-room="${CSS.escape(id)}"]`)) {
+    g.classList.add('sel');
+    if (g.dataset.ttHeld != null) continue;
+    g.dataset.ttHeld = g.getAttribute('title') ?? g.dataset.tt ?? ''; g.removeAttribute('title'); delete g.dataset.tt;
+    if (tt.at && g.contains(tt.at)) ttHide();
+  }
+}
 function put(id, html) {
   if (cache.get(id) === html) return;
   cache.set(id, html);
@@ -2430,7 +2461,8 @@ function render(force = false) {
     const focusSk = module === 'loadout' ? skFocusKey() : null; // and the Skills page its item
     const focusRow = module === 'loadout' ? document.activeElement?.closest?.('.silk-tile') : null; // and the stash its row, or the next once it's loaded
     const focusRowAt = focusRow ? [...focusRow.parentElement.children].indexOf(focusRow) : -1;
-    if (!(module === 'hub' && mkDrag)) put('page-view', pageOrError(() => (pages[module] || pages.map)(campaign))); // not while you drag a ticket's slider
+    if (module === 'rooms') putRooms();
+    else if (!(module === 'hub' && mkDrag)) put('page-view', pageOrError(() => (pages[module] || pages.map)(campaign))); // not while you drag a ticket's slider
     if (focusRoom && !document.activeElement?.closest?.('.fp-room')) [...$('page-view').querySelectorAll(`.fp-room[data-room="${CSS.escape(focusRoom)}"][tabindex]`)].find((t) => t.getBoundingClientRect().width)?.focus({ preventScroll: true });
     if (module === 'breach') breachScroll(keep);
     if (module === 'codex') codexDrawn(focusCxKey);
