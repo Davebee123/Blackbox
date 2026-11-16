@@ -83,7 +83,7 @@ it is 109 requests and 6.3 MB (a 3.1 MB script, a 0.6 MB stylesheet) against 334
 
 | What | Helps | State |
 |---|---|---|
-| A fight's flashes (`fx-hit`, `fx-hurt`, `fx-break`, `fx-strike`, `fx-mark` and the rest, `style.css`) and the hit's edge (`#fx-edge`) animate `background`, `box-shadow`, `border-color` and `filter`: restyled and repainted every frame they play. As an overlay fading by opacity (batch 8's flash) they'd look nearly the same: the tint over the row's text, not under it, and a shadow that fades where it shrank. Knocked out on a phone, paint 26 → 9 ms/s under a steady stream of effects | both | for the designer |
+| A fight's flashes on a part's row, its name block and the HUD bars, and the hit's edge: the first frame on a layer under the text, faded by opacity (`style.css`). The designer's pick, *under the text*, over *over the text* (it turned your teal bar red) | both | landed |
 | A synthesized voice (hit, crit, chit, break, patch, interrupt: `sound.mjs`) builds 30–100 audio nodes each time, about half of a delayed effect's 1.1–1.3 ms left on a phone. Rendered once into a few variants each, they'd cost a sample's play, but every hit would no longer be its own | both | for the designer (to hear) |
 | Map and rooms animations the graphics card can run | both | landed |
 | A part's dissolve drawn on a canvas | both | landed |
@@ -319,5 +319,18 @@ second; the effects together, phone boss 25–27 → 10–11 ms/s. Desktop regul
 ms. Frames and the main thread level or a little better: phone boss 21.2, 21.1, 19.2 → 24.4, 23.4, 22.0 frames/s (954,
 958, 958 → 934, 938, 938 ms/s); regular 24.2, 23.0, 26.1 → 23.3, 23.3; desktop boss 10.0, 12.3 → 12.0, regular 18.8 →
 18.5. No page errors.
+
+**The flashes under the text (landed, after batch 15).** A flash on a part's row (`.brow`), its name block
+(`.part-top`) or a HUD bar animated `background` and `box-shadow`; the hit's edge (`#fx-edge`) an inset shadow over the
+screen. Shown to the designer as frozen frames (today, a layer over the text, a layer under it); the designer picked
+under. Now the hosts are positioned and isolated for good, each with a `::before` under its text at opacity 0; a flash
+puts its first frame there and fades it by opacity, and the edge holds its glow and fades. Tints match today to the
+computed value (a hit at 30%: alpha 0.153 → 0.155); the row's 1px top border is no longer tinted; shadows fade where
+they shrank. A dying row's dissolve still wins. At rest the fight screen is pixel-identical (desktop and phone, a
+waiting fight and a boss) and nothing positioned in the hosts moves. A layer made and dropped with each flash cost a
+layout as big as the paint it saved (18 → 31 ms/s), so the layer stays. Same day, main → branch: a fixed stream of
+effects over a boss fight (phone, sound off), paint 25, 26, 28 → 17, 14, 17 ms/s, layout and style level; fights,
+phone boss paint 144, 146 → 135, 141 ms/s (157 → 131, 135 paints a second), regular level; desktop boss 185 → 155
+paints a second. Frames, the main thread, layers and texture memory level. No page errors.
 
 Not yet measured: breach and campaign, hubs and shops, co-op, the tutorial, the More sheet, a phone on its side.

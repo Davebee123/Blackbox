@@ -711,8 +711,7 @@ details summary { font-size: 13px; }
 @keyframes fx-fade { from { opacity: 1; } to { opacity: 0; } }
 /* the hit's edge flash: inside the tube (#crt), drawn only while it plays */
 #fx-edge { display: none; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 0 rgba(255, 91, 61, 0); }
-#fx-edge.on { display: block; animation: fx-edge 0.6s ease-out; }
-@keyframes fx-edge { 0% { box-shadow: inset 0 0 60px 12px rgba(255, 91, 61, 0.45); } 100% { box-shadow: inset 0 0 0 0 rgba(255, 91, 61, 0); } }
+#fx-edge.on { display: block; box-shadow: inset 0 0 60px 12px rgba(255, 91, 61, 0.45); animation: fx-fade 0.6s ease-out both; } /* its first frame, faded by opacity: the compositor runs it */
 .fx-hit { animation: fx-hit 0.35s ease-out; }
 @keyframes fx-hit { 0% { background: rgba(255, 216, 92, 0.28); } 100% { background: transparent; } }
 .fx-break { animation: fx-break 0.6s ease-out; }
@@ -787,8 +786,7 @@ details summary { font-size: 13px; }
 .hud-bar.mine .bigbar.fx-locked { animation: fx-locked 0.42s ease-out forwards; }
 @keyframes fx-locked { 0% { box-shadow: inset 0 0 0 1px var(--hot); background-image: repeating-linear-gradient(-45deg, rgba(255, 91, 61, 0.35) 0 2px, transparent 2px 5px); } 100% { box-shadow: none; background-image: none; } }
 /* Effects minimal or Motion off: no lash, a soft edge. */
-#fx-edge.soft.on { animation: fx-edge-soft 0.5s ease-out; }
-@keyframes fx-edge-soft { 0% { box-shadow: inset 0 0 28px 3px rgba(255, 91, 61, 0.24); } 100% { box-shadow: inset 0 0 0 0 rgba(255, 91, 61, 0); } }
+#fx-edge.soft.on { box-shadow: inset 0 0 28px 3px rgba(255, 91, 61, 0.24); animation-duration: 0.5s; }
 .no-motion #lash { display: none; }
 /* Marks on a part: an icon each by its name; Exposed hatches the bar (it's open). */
 .pmarks { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
@@ -808,6 +806,26 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .fx-good { animation: fx-good 0.6s ease-out; }
 @keyframes fx-good { 0% { background: rgba(127, 209, 199, 0.22); } 100% { background: transparent; } }
 .fx-win { animation: fx-win 0.9s ease-out; }
+/* A flash on a part's row, its name block or a HUD bar: its first frame on a layer under the text, faded by opacity, so
+   the compositor runs it where background and box-shadow keyframes restyled and repainted every frame (performance
+   plan batch 16). The hosts are positioned and isolated for good (nothing in them moves); a dying row's dissolve wins,
+   as it did over the flash. */
+.brow, .part-top, .hud-bar { position: relative; isolation: isolate; }
+:is(.brow, .part-top, .hud-bar)::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0; } /* always there: a flash only restyles it, no layout */
+:is(.brow, .part-top, .hud-bar):not(.dying):is(.fx-hit, .fx-break, .fx-hurt, .fx-still, .fx-shove, .fx-enrage, .fx-strike, .fx-mark, .fx-burn, .fx-daemon, .fx-good, .fx-sync, .fx-surprise) { animation: none; }
+:is(.brow, .part-top, .hud-bar):not(.dying):is(.fx-hit, .fx-break, .fx-hurt, .fx-still, .fx-shove, .fx-enrage, .fx-strike, .fx-mark, .fx-burn, .fx-daemon, .fx-good, .fx-sync, .fx-surprise)::before { animation: fx-fade var(--fx-d) ease-out both; }
+:is(.brow, .part-top, .hud-bar).fx-hit::before { --fx-d: 0.35s; background: rgba(255, 216, 92, 0.28); }
+:is(.brow, .part-top, .hud-bar).fx-break::before { --fx-d: 0.6s; background: rgba(255, 242, 200, 0.35); }
+:is(.brow, .part-top, .hud-bar):is(.fx-hurt, .fx-still)::before { --fx-d: 0.45s; background: rgba(255, 91, 61, 0.3); }
+:is(.brow, .part-top, .hud-bar).fx-shove::before { --fx-d: 0.45s; background: rgba(127, 209, 199, 0.25); }
+:is(.brow, .part-top, .hud-bar).fx-enrage::before { --fx-d: 0.6s; box-shadow: inset 4px 0 0 var(--hot), inset 0 0 24px rgba(255, 91, 61, 0.25); }
+:is(.brow, .part-top, .hud-bar).fx-strike::before { --fx-d: 0.5s; box-shadow: inset 3px 0 0 var(--hot), inset 0 0 26px rgba(255, 91, 61, 0.35); }
+:is(.brow, .part-top, .hud-bar).fx-mark::before { --fx-d: 0.55s; background: rgba(127, 209, 199, 0.3); box-shadow: inset 0 0 0 1px rgba(127, 209, 199, 0.8); }
+:is(.brow, .part-top, .hud-bar).fx-burn::before { --fx-d: 0.55s; background: rgba(255, 140, 61, 0.3); }
+:is(.brow, .part-top, .hud-bar).fx-daemon::before { --fx-d: 0.5s; background: rgba(195, 166, 255, 0.22); }
+:is(.brow, .part-top, .hud-bar).fx-good::before { --fx-d: 0.6s; background: rgba(127, 209, 199, 0.22); }
+:is(.brow, .part-top, .hud-bar).fx-sync::before { --fx-d: 0.4s; background: rgba(255, 216, 92, 0.15); box-shadow: inset 0 0 0 2px rgba(255, 216, 92, 0.9); }
+:is(.brow, .part-top, .hud-bar).fx-surprise::before { --fx-d: 0.45s; background: rgba(108, 156, 255, 0.15); box-shadow: inset 0 0 0 2px rgba(108, 156, 255, 0.9); }
 @keyframes fx-win { 0% { box-shadow: 0 0 0 2px var(--bright), 0 0 40px rgba(255, 242, 200, 0.35); } 100% { box-shadow: none; } }
 
 /* ---------- smaller screens ---------- */
