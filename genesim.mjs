@@ -37,7 +37,6 @@ export function playOut(s, move, cap = 80, { sync = true } = {}) {
     const text = move(s) || 'hold';
     command(s, text);
     if (sync && s.encounter?.sync && s.encounter.virus.parts.some((p) => p.syncOnly && p.integrity > 0)) s.encounter.synced = text !== 'hold';
-    if (s.encounter?.sync?.surprise) s.encounter.synced = text !== 'hold';
     const was = defender(s).integrity, c = s.encounter.cycle, ev = resolveCycle(s);
     for (const x of ev) if (x.type === 'server-hit' && !x.who && (x.amount || 0) > spike) { spike = x.amount; spikeBy = `${x.message} (max ${max}, ${classOf(s)})`; }
     for (const x of ev) if (x.type === 'phase' && x.act) acts.push(c + 1); // the act begins the cycle after

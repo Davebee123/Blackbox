@@ -153,10 +153,10 @@ export const CONFIG = {
   // forgiving: a press up to `grace` (of the cycle) either side of it still counts.
   // Auto-repeat and planned steps never sync.
   sync: { width: 0.1, grace: 0.03, from: 0.05, to: 0.5, bonus: 0.1, chance: 0.25 },
-  // Infiltrator Surprise: the first cycle of every fight always opens a (blue, wider) window.
-  // Fired in it: Inject ticks once at once (on top of its cycle's tick), Tag lasts 6 cycles and burns
-  // tick +75%, Keepalive stretches burns 4 cycles.
-  surprise: { width: 0.15, injectNow: 1, tagCycles: 6, tagged: 1.75, keepalive: 4 },
+  // Infiltrator Surprise: an Infiltrator's first command of every fight lands as if synced (+10% damage and the
+  // class's sync bonus), no window to hit. On top: Inject ticks once at once (on top of its cycle's tick), Tag lasts
+  // 6 cycles and burns tick +75%, Keepalive stretches burns 4 cycles.
+  surprise: { injectNow: 1, tagCycles: 6, tagged: 1.75, keepalive: 4 },
   // Infiltrator Slip: walk past a guard without a fight, once a run (Leaked Creds: 3).
   slip: { perRun: 1 },
   daemonSlots: 2, // +1 at server levels 15, 30 and 45 (your highest class level); Operators +1
@@ -1990,7 +1990,7 @@ export const ARCHETYPES = {
   infiltrator: {
     name: 'Infiltrator', role: ['DPS', 'Damage over time', 'Stealth runs'], idea: 'Know where to hit, and slip through runs.', does: 'Deals precise damage and damage over time. It gets the crew past guards on runs.', solo: 'Precision damage and the easiest runs.', crew: 'Tags targets and gets the crew past guards.',
     status: 'tagged',
-    passive: { name: 'Ghost', rule: 'Slips you past the hunter once a visit, without a fight. Every fight opens with a blue Surprise window, and Inject, Tag and Keepalive fired in it are stronger.' },
+    passive: { name: 'Ghost', rule: 'Slips you past the hunter once a visit, without a fight. Your first command of every fight is a Surprise: +10% damage, and Inject, Tag and Keepalive are stronger.' },
     core: ['inject', 'backdoor', 'keepalive', 'tag'], // levels 1–7; the rest of a kit is its subclass's (subs)
     spec: [f('heap-spray', 'Heap Spray', 'Increases the damage of each Inject tick by 3 per rank.', 3), f('recon', 'Recon', 'Increases the damage of Opening by 5 per rank.', 5)], // the level-5 specialty: one of these, two free ranks
     subs: subsOf('infiltrator'),

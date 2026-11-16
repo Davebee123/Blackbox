@@ -18,7 +18,7 @@ const LIST = [
   ['bounce-message', 'Bounce Message', 'bastion', 'shell', 'When your shield soaks a whole hit, Retaliate fires that cycle for free.'],
   ['stress-test', 'Stress Test', 'warden', 'shell', 'Blowback has no cap, and a charged attack counts double toward it.'],
   ['headroom', 'Headroom', 'sysop', 'script', 'Overprovision has no cap. Each hit spends up to 10 shield to deal that much more.'],
-  ['first-light', 'First Light', 'infiltrator', 'script', 'Each part you break opens a Surprise window on your next cycle.'],
+  ['first-light', 'First Light', 'infiltrator', 'script', 'Each part you break makes your next command a Surprise.'],
   ['reinfection', 'Reinfection', 'payload', 'script', 'Up to 3 Injects on a part, each on its own clock. Inject cools a cycle slower.'],
   ['dead-angle', 'Dead Angle', 'phantom', 'proxy', 'Each attack that misses you makes Weak Spot fresh on every part.'],
   ['wakeup-call', 'Wakeup Call', 'operator', 'implant', 'When a helper expires, each of your daemons acts again (once a cycle).'],
