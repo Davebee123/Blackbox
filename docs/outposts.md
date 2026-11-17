@@ -1,6 +1,6 @@
 # Outposts: faction markets on every floor
 
-**Status.** A concept, prototyped November 2026; not built. The numbers come from a scratchpad simulation (100 network
+**Status.** Tabled (the designer, November 2026: too complicated for now). A concept, prototyped; not built. The numbers come from a scratchpad simulation (100 network
 seeds × 20 logged-on hours), and the looks from mock-ups drawn on the real floor map. Building it re-measures both.
 
 **Decided (the designer, November 2026).**
@@ -13,9 +13,10 @@ seeds × 20 logged-on hours), and the looks from mock-ups drawn on the real floo
 - **Exploits may pay best**, as the hardest and riskiest ware to get: they come from the Exfil, elites, guard posts and
   raids, and sell best on black markets.
 - **Siding buys knowledge:** members' word (section 5).
-- **A transfer can be lost** (section 7). A risk the player is shown and chooses isn't loss aversion; nothing is lost
+- **A transfer can be lost** (section 8). A risk the player is shown and chooses isn't loss aversion; nothing is lost
   that the player didn't stake.
-- **The marker is C:** a small hub (section 7).
+- **The marker is C:** a small hub (section 10).
+- **A dropped share is gone.** Walking a lot in risks a third of it on a lost fight (section 7).
 - **Servers spread further apart** to make room: neighbours about 180 map units apart, from 132 (floors.mjs
   `FLOOR.gap`). The map pans, and labels keep their size.
 - Of market.md, only the ticker's cards stay, as the events here. Sway, INIT's count and the rest of the Charter are
@@ -109,14 +110,31 @@ connected this session.
 | Balance | Rule |
 |---|---|
 | **Need** | Each outpost takes only so much (section 2), so a big haul goes to several |
-| **In person or by transfer** | In person you connect to it, about 2 minutes a stop, and nothing can go wrong. A transfer sells from anywhere, now, with a shown chance it's intercepted (section 7) |
+| **Walk it in or send it** | In person you carry the lot through the outpost's route to its desk, and a lost fight costs a third of it (section 7). A transfer sells from anywhere with a shown chance it's intercepted |
 | **Rep** | Your cut by rep tier with the owner: 20%, 15%, 10%, 5% |
 | **Contraband** | Halcyon and Kestrel ban Exploits at their outposts, LANTERN Cipher code. A banned ware sells on the outpost's black market at its want: the fence takes 15%, and each 140 credits' worth costs 2 rep with the owner. A squat bans nothing |
 | **Raids** | A raided outpost wants the most (section 4), and you fight your way to its desk |
 
-## 7. Transfers
+## 7. Walking it in
 
-Selling in person means stopping what you're doing. A **transfer** sells from wherever you are, at today's price, and
+An outpost is a small server: its entry, a route of fight rooms, then the desk. You carry the lot you mean to sell.
+
+- **Lose a fight on the route** and you drop a third of what you carry, for good, and you're disconnected as from any
+  fight. The card shows the rooms, their level in WoW colours and the share at stake before you connect.
+- **Your Signal carries** from room to room; the route has no rest room.
+- **It scales, so it can't be farmed or walked for free:**
+  - its viruses are at the outpost's level or yours, whichever is higher, at the floor's grade;
+  - its length: 2 rooms on floors 1–2, 3 on floors 3–5, 4 on floors 6–8;
+  - the lot: one room more for each hour of your income you carry, measured at your level (an elite in the last room
+    from three hours);
+  - it refills every trip: a cleared route never waits for a second load;
+  - its kills pay no drops and a quarter of a kill's XP;
+  - a crew makes it harder, as it does any fight.
+- **A raid** puts the raiders' elite in the last room.
+
+## 8. Transfers
+
+Walking a lot in costs fights. A **transfer** sells from wherever you are, at today's price, and
 pays when it lands (10 minutes, plus 3 a floor down). On the way it can be **intercepted**, and the lot is gone.
 
 | Risk to a lot | Adds |
@@ -134,7 +152,7 @@ pays when it lands (10 minutes, plus 3 a floor down). On the way it can be **int
 
 Measured, the bold follower on floors 1–4, by how often it stops to sell in person:
 
-| Sells | Stops every 45 min | Stops every 90 min |
+| Sells (in person modelled as a 2-minute stop, before the route) | Every 45 min | Every 90 min |
 |---|---|---|
 | In person only | 680 an hour | 641 |
 | Covered transfers | 671 | 674 (×1.05) |
@@ -142,7 +160,7 @@ Measured, the bold follower on floors 1–4, by how often it stops to sell in pe
 
 Transfers pay most to a player on long runs, and bare ones pay most of all, for a loss you see coming.
 
-## 8. Measured
+## 9. Measured
 
 100 seeds × 20 hours, trading on floors 1–4. An ordinary hour (the level-12 bot) is 190 credits, 15 code, 14
 components and 0.4 Exploits; an hour of one activity pays that much at base prices, all in its ware. A raid's fight is
@@ -164,7 +182,7 @@ lost 1 time in 4.
 - **Siding barely moves the price** (+1–3%, even with no cut at your own faction), so it pays in knowledge instead.
   Members' word isn't simulated yet.
 
-## 9. On the screen
+## 10. On the screen
 
 - **The map marker (C, picked):** a small hub hanging off its server by a dotted line: its owner's mark in a diamond in
   the owner's colour, its top want as an amber badge, the quality as its name. ▲ by the badge marks a spike, a dashed
@@ -175,20 +193,20 @@ lost 1 time in 4.
 - **The sell list:** one ware's markets on floors you've reached, best first, each with its floor, price, ▲ and need
   bar, a raid's ⚔. It lives in the market's order ticket, which already shows the same order at other hubs.
 
-## 10. Open
+## 11. Open
 
 - Hubs roll a quality per network, or keep today's fixed conditions?
 - Do hubs ban too? Halcyon's hub buys Exploits today.
 - The phone's map and card.
 
-## 11. Building it
+## 12. Building it
 
 One slice a session, after the activities' pay (market.md M6). Outposts and qualities come from the seed; only needs
 and events are saved.
 
 | # | Slice | Builds | Saved |
 |---|---|---|---|
-| O1 | **Outposts** | The wider gap between servers (with a phone audit before and after); the nodes on the floor map, owners, qualities, the card; selling in person with need, refill and your cut | `s.outposts` (needs) |
+| O1 | **Outposts** | The wider gap between servers (with a phone audit before and after); the nodes on the floor map, owners, qualities, the card; the route and its scaling, the desk, need, refill and your cut | `s.outposts` (needs) |
 | O2 | **Events** | Spikes, raids (the fight to the desk) and dumps from the ticker's cards; members' word | The live events |
 | O3 | **Contraband** | Bans and the black market | — |
 | O4 | **Transfers** | Selling by transfer from anywhere, its risk on the order, Halcyon's cover, interception | Lots in transit |

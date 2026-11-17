@@ -1,7 +1,7 @@
 // BLACKBOX browser shell: modules, command line, clock, save, sound.
 import { CONFIG, ABILITIES, LOADOUT, FAMILIES, BOSSES, xpToNext, spikeOf, SUBS, SUBCLASS, defaultSub, partGenesFor } from './data.mjs';
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
-import { selectEncounter, partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync, packed } from './combat.mjs';
+import { selectEncounter, partKey, parse, validate, toIntent, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync, packed } from './combat.mjs';
 import * as V from './view.mjs';
 import { subPrompted, levelUpPreview, barKeys, hackerLevel as heroLevel, virusIntegrity } from './combat.mjs';
 import { luCalm } from './levelup-view.mjs';
@@ -822,30 +822,31 @@ function attackGo() {
   }
 }
 let cueAt = 0; // when the last damage number queued lands (performance.now() ms)
-// A forced turn (an order entered, or an empty Enter) waits for the last turn's numbers to land: at least TURN_GAP
-// after the last forced one, at most TURN_CAP from the press. Mashing a key can't run cycles ahead of the screen.
-// Presses meanwhile fold into one waiting turn, with whatever order is queued then; it's dropped if the cycle turns.
+// One entry a turn: once an order goes in, the next is dropped until its turn has played out on screen: the order
+// gone, the virus's answer stepped through, the numbers landed (at least TURN_GAP after the turn, at most TURN_CAP
+// after each batch).
+// An empty Enter turns the cycle only then too, so mashing can't run cycles ahead of what the screen shows.
 const TURN_GAP = 450, TURN_CAP = 1500;
-let turnedAt = -Infinity, turnWait = 0;
-function turnNow(order) {
-  const now = performance.now(), e = campaign.encounter;
-  const at = Math.max(turnedAt + TURN_GAP, Math.min(cueAt, now + TURN_CAP));
-  if (now < at) {
-    if (!turnWait) {
-      const cycle = e?.cycle;
-      turnWait = setTimeout(() => {
-        turnWait = 0;
-        const e = campaign.encounter;
-        if (!active(campaign) || e.paused || e.cycle !== cycle || (order && !e.queue) || (coop?.hosting() && !humansReady(campaign))) return;
-        turnedAt = performance.now();
-        react(command(campaign, 'now')); save(); markDirty();
-      }, at - now);
-    }
-    return [];
-  }
-  turnedAt = now;
+let turnedAt = -Infinity, landedBy = 0, mine = null; // landedBy: the last numbers landed (capped); mine: your order, waiting for its turn
+function turnLocked(own = true) {
+  const e = campaign.encounter;
+  if (!active(campaign) || e.paused) return false;
+  const now = performance.now();
+  return !!e.steps || (own && !!mine && e.queue === mine) || now < turnedAt + TURN_GAP || now < landedBy;
+}
+function turnNow(own) {
+  if (turnLocked(own)) return [];
+  turnedAt = performance.now();
   return command(campaign, 'now');
 }
+// A press dropped by turnLocked: the prompt, and the key it named, give a short shake (with Motion off, a dip).
+function refused(ability) {
+  const key = ability && document.querySelector(`#tray .ability[data-ability="${CSS.escape(ability)}"]`);
+  const frames = canMove() ? [{ transform: 'translateX(0)' }, { transform: 'translateX(-3px)' }, { transform: 'translateX(3px)' }, { transform: 'translateX(-2px)' }, { transform: 'translateX(0)' }] : [{ opacity: 1 }, { opacity: 0.4 }, { opacity: 1 }];
+  for (const el of [$('command-form'), key]) el?.animate(frames, { duration: 220, easing: 'ease-out' });
+}
+// A fight order (a key or a plan), as against a setting, a page or cancel.
+const isOrder = (text) => !/^(cancel|pause|resume|speed |jack out)/.test(text) && !toIntent(campaign, text.split(';')[0].trim(), false).error;
 // A part's bar steps down hit by hit (the designer: "each instance of damage tick separately on the enemy component bar"):
 // while a batch's numbers play out, each damaged part's bar and HP read what it had before that hit, and drop as its
 // number lands. held: part id → the HP shown now; every render re-applies it until the batch has played out.
@@ -1166,6 +1167,7 @@ function markFx(e, mate) {
 }
 
 function react(events) {
+  if (events.some((e) => e.type === 'resolved')) turnedAt = performance.now(); // a turn on the timer counts too (turnLocked)
   const won = events.find((e) => e.type === 'victory');
   const last = module === 'combat' ? winningBreak(events) : null; // the break that wins the fight: slow motion
   // The wall stopping a weak invasion is quiet: a log line and a pager entry, no sound or float (invasion.mjs).
@@ -1184,7 +1186,7 @@ function react(events) {
   // The virus's attacks in this batch (virusvoice.mjs): which play their own sound, and how long the numbers wait so
   // each lands on its strike's impact. Every beat below reads delay().
   const incoming = module === 'combat' && active(campaign) ? attackVoices(events, split.delay, lashing) : { voiced: new Set(), shift: 0, delay: split.delay }, delay = incoming.delay;
-  if (split.count && !stack) cueAt = performance.now() + split.total + incoming.shift;
+  if (split.count && !stack) { cueAt = performance.now() + split.total + incoming.shift; landedBy = Math.min(cueAt, performance.now() + TURN_CAP); }
   if (!stack) stepBars(events, delay); // the bars drop with the numbers, one hit at a time
   const artHit = (id, kind) => feel.add(() => art.hit(id, kind)); // the render reacts on the event's beat
   // Crewmates' events (crew.mjs). Their turns play a beat apart, so their hits sound like yours.
@@ -1542,6 +1544,7 @@ function run(raw) {
   if (text === 'reset game' || text === 'new game') return resetGame();
   if (text === 'help') return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload and deconstruct. For your server, use install, uninstall, firewall upgrade|defrag and filter equip. On the net, use connect, relay, detach and mail. The pages are map, mail, server, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
 
+  if (fighting && !realSave && turnLocked() && isOrder(text)) return refused(toIntent(campaign, text.split(';')[0].trim(), false).ability); // one entry a turn (turnLocked)
   // A co-op guest: a fight command goes to the host, a loadout change to their own save (and on to the host).
   if (coop?.intercept(text, realSave ? campaign : null)) { markDirty(); return; }
   const wasAlert = campaign.encounter?.phase === 'alert';
@@ -1554,7 +1557,8 @@ function run(raw) {
   // In a fight, an order you enter goes now: the cycle turns without waiting out the bar.
   const e = campaign.encounter;
   // (Co-op: once every human in the fight has a command in; else the timer turns it. coop.mjs humansReady.)
-  if (fighting && !warning && active(campaign) && !e.paused && e.queue && e.queue !== queuedBefore && (!coop?.hosting() || humansReady(campaign))) { const more = turnNow(true); react(more); events = [...events, ...more]; }
+  if (fighting && e?.queue !== queuedBefore) mine = e?.queue || null;
+  if (fighting && !warning && active(campaign) && !e.paused && e.queue && e.queue !== queuedBefore && (!coop?.hosting() || humansReady(campaign))) { const more = turnNow(false); react(more); events = [...events, ...more]; }
   if (warning) notice(warning.message, true, warning.suggest);
   else {
     // Rewards have their card; the corner keeps warnings and plain status (never "Server +N XP").
@@ -3311,7 +3315,7 @@ $('command-form').addEventListener('submit', (e) => {
     if (!active(campaign) && lu.dismiss()) return; // the level-up goes with an empty Enter
     // Empty Enter in a fight: stop waiting and resolve this cycle now.
     if (realSave) return; // a co-op guest: the cycle turns when everyone's in, or on the host's timer
-    if (active(campaign) && !campaign.encounter.paused) { react(turnNow(false)); save(); markDirty(); }
+    if (active(campaign) && !campaign.encounter.paused) { if (turnLocked()) return refused(); react(turnNow(true)); save(); markDirty(); }
     else if (module === 'combat' && ended && !$('spoils').hidden && performance.now() - endedAt > 1200) leaveFight();
     return;
   }
