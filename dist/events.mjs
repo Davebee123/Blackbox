@@ -679,7 +679,8 @@ export const BLIPS = {
   },
   sighting: {
     name: 'Sighting', icon: 'target', label: 'Sighting',
-    where: (s) => roomSpots(s, (R, r) => R.cleared[r.id] && ['process', 'elite'].includes(r.kind) && !R.rare[r.id]).filter((x) => !taken(s, x.loc.id, x.room.id)),
+    where: (s) => roomSpots(s, (R, r) => R.cleared[r.id] && ['process', 'elite'].includes(r.kind) && !R.rare[r.id]).filter((x) => !taken(s, x.loc.id, x.room.id))
+      .filter((x) => withRooms(s, x.loc.floorplan, () => hooks.roomsFP.isUp(s, x.room) || hooks.roomsFP.backAt(s, x.room) != null)), // not a room waiting on its server's reboot
     // The room's next virus is a ★ rare spawn, up within due (sooner than its own respawn, never later).
     make: (s, { loc, room }) => {
       const R = loc.floorplan, FP = hooks.roomsFP, due = bspan(s, BLIP.sighting.due), now = wall();

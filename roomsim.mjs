@@ -12,6 +12,8 @@ import { planner } from './dist/planner.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { buildBlock as programBlock } from './dist/sockets.mjs';
 import { botMove } from './dist/puzzles.mjs';
+import { castOf, cantHire, feeOf, levelOf as runnerLevel } from './dist/runners.mjs';
+import { hireRunner } from './dist/crew.mjs';
 
 export const CLASSES = ['breaker', 'bastion', 'infiltrator', 'operator'];
 export const PICK = { breaker: 'demolitionist', bastion: 'warden', infiltrator: 'payload', operator: 'herder' };
@@ -22,6 +24,18 @@ export const NEED = { process: 0.32, elite: 0.6, guard: 0.38, nest: 0.45, core: 
 // What the bot builds in a socket it has cleared (sockets.mjs): the first of these it knows and can pay for. log: a
 // sim's eye on each build. (It only ever builds what pays as it plays: components, respawns, code, caches, a rest.)
 export const BUILD = { order: ['harvester', 'cron', 'siphon', 'mill', 'defrag', 'tunnel', 'snare'], log: null };
+// Runners the bot hires (runners.mjs, crew.mjs): after a loss on the server, at home, the strongest it can pay for, up
+// to this many. A traced server's rooms stay down until it reboots (floorplan.mjs ROOMS.reboot), so there's no farming
+// its easy rooms between tries at an elite: a player hires help instead. off: never (a sim's switch).
+export const HIRE_BOT = { crew: 1, off: false };
+function hireHelp(s) {
+  if (HIRE_BOT.off || !Object.values(s.rooms.stats.lostAt || {}).some((n) => n >= 1)) return;
+  while ((s.crewSim || []).length < HIRE_BOT.crew) {
+    const r = castOf(s).filter((x) => !cantHire(s, x)).sort((a, b) => runnerLevel(s, b) - runnerLevel(s, a))[0];
+    if (!r) return;
+    hireRunner(s, r.handle);
+  }
+}
 // Puzzle-room moves the bot has made (a sim's tally).
 export const PLAY = { moves: 0 };
 
@@ -136,19 +150,23 @@ export function botStep(s) {
 export function runServer({ cls = 'breaker', level = 10, seed = 1, size = 'medium', kind = 'Mailhub', boss = 'a', hunter = null, hours = 4, rep = 0, author = null, session = 0 } = {}) {
   const s = fresh();
   s.rng = (seed * 2654435761 + cls.length * 97 + rep * 40503) >>> 0;
+  s.netSeed = (seed * 7919 + 1) >>> 0; // a network's runners to hire (runners.mjs castOf)
   let clock = Date.UTC(2026, 0, 1);
   const was = hooks.now;
   hooks.now = () => clock;
   try {
     FP.outfit(s, { cls, level, sub: PICK[cls], gearSeed: seed });
     FP.startRooms(s, { seed, size, kind, level, boss, hunter, author });
+    // Savings for one hire: the cheapest runner's fee on its net (a fresh save has none; a player at this level would).
+    if (!HIRE_BOT.off && castOf(s).length) s.server.credits = (s.server.credits || 0) + Math.min(...castOf(s).map((r) => feeOf(s, r)));
     const R = s.rooms, end = clock + hours * 3600000, xp0 = FP.xpTotal(s);
     let fights = 0, steps = 0, mappedAt = null, xpAtMap = null, visitsAtMap = null;
     while (clock < end && steps < 20000) {
       steps++;
       FP.tick(s, clock);
       if (!R.at) {
-        // Home: rest until the bar is nearly full, then reconnect.
+        // Home: hire help after a loss, rest until the bar is nearly full, then reconnect.
+        hireHelp(s);
         const want = Math.ceil(R.max * 0.95), need = Math.max(0, want - FP.signalNow(s, clock));
         clock += Math.max(TIME.home * 1000, Math.ceil((need / (R.max * 0.2)) * 60000), R.reconnectAt - clock);
         FP.connect(s);

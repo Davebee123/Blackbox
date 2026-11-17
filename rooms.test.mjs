@@ -166,7 +166,11 @@ test('respawns: a fallen room comes back on its timer (never while you stand in 
   assert.equal(FP.ROOMS.respawn.cache, 120, 'caches and puzzle boards: 2 hours either way');
   assert.equal(FP.ROOMS.rare, 0.04, 'one respawn in 25 is a rare spawn');
   R.mapped = null;
+  // A traced server reboots (floorplan.mjs ROOMS.reboot, reboot.test.mjs): past its own timer it is still down.
   tick(T + 1000);
+  assert.equal(FP.isUp(s, room), false, 'down until the reboot');
+  R.rebootFrom = clock; R.rebootAt = clock + FP.rebootMs(s);
+  tick(FP.rebootMs(s) + 1000);
   assert.equal(FP.isUp(s, room), false, 'never while you stand in it');
   const out = FP.neighbours(R.graph, room.id)[0];
   R.at = out;
@@ -205,6 +209,7 @@ test('progress: rooms cleared at least once, for good; it never goes down', () =
   place(s, room.id); FP.fight(s, room); win(s);
   const done = FP.progressOf(s).done;
   assert.ok(done > last);
+  R.rebootFrom = clock; R.rebootAt = clock + FP.rebootMs(s); // the server reboots (floorplan.mjs ROOMS.reboot)
   tick(3 * 3600000);
   R.at = R.graph.entry;
   assert.equal(FP.isUp(s, room), true);
@@ -540,6 +545,7 @@ test('the map chips: one badge language for state, countdowns and rings that tic
   // markup holds still while it ticks.
   const p = FP.roomList(s).find((r) => r.kind === 'process');
   R.down[p.id] = clock; R.cleared[p.id] = clock; R.seen[p.id] = 'kind';
+  R.rebootFrom = clock; R.rebootAt = clock + 120000; // its ring runs to the server's reboot (floorplan.mjs ROOMS.reboot)
   html = roomsMarkup(s);
   const at = FP.backAt(s, p);
   assert.match(tile(html, p.id), /class="fp-room k-process t-gray/);
@@ -645,6 +651,7 @@ test('Schematic HD: chips by kind and colour, KEY, LOCKED and SEALED, the hunter
   // A cleared fight room wears a respawn ring; an emptied cache an amber one.
   const p = FP.roomList(s).find((x) => x.kind === 'process' && x.id !== R.at), c = FP.roomList(s).find((x) => x.kind === 'cache' && !x.mirror);
   R.down[p.id] = clock; R.cleared[p.id] = clock; R.taken[c.id] = clock;
+  R.rebootFrom = clock; R.rebootAt = clock + 120000; // the reboot under way: its ring runs to it
   wide = wideOf(roomsMarkup(s));
   assert.match(chipOf(wide, p.id), /class="fp-respawn hot"/);
   assert.match(chipOf(wide, c.id), /class="fp-respawn amber"/);
@@ -735,7 +742,9 @@ test('the bot maps a medium server, the Resident and all (four times in twelve a
   const runs = [101, 7, 23, 58, ...Array.from({ length: 8 }, (_, i) => 200 + i * 37)].map((seed) => runServer({ cls: 'bastion', seed, kind: 'Relay' }));
   // With every boss's ♛ act ticks at 60% and 30% (docs/solo-bosses.md "Act length") DEADBOLT re-arms a little sooner,
   // and the bot loses one more of these lair fights: 4 (the planner's DEADBOLT band moved 58% to 61% over every
-  // subclass). Held at 4 until the designer has played the acts.
+  // subclass). Held at 4 until the designer has played the acts. With the reboot (ROOMS.reboot) nothing respawns behind
+  // it to farm between tries at an elite, so alone it maps 1; it hires a runner after a loss (roomsim.mjs HIRE_BOT), as
+  // a player would, and maps 9.
   const mapped = runs.filter((r) => r.mapped);
   assert.ok(mapped.length >= 4, `${mapped.length}/12 mapped`);
   for (const r of mapped) { assert.equal(r.progress.done, r.progress.total); assert.ok(r.bossWon >= 1); }

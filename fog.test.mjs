@@ -89,6 +89,8 @@ test('a discovered room keeps its icon, name, badges, live light and ring from a
   place(s, post.id); place(s, p.id); place(s, g.entry);
   assert.ok(FP.known(s, post.id) && FP.known(s, p.id));
   R.down[p.id] = clock; R.cleared[p.id] = clock;
+  assert.doesNotMatch(tile(s, p.id), /class="fp-respawn/, 'no ring while it waits on the reboot');
+  R.rebootFrom = clock; R.rebootAt = clock + 120000; // the reboot under way (floorplan.mjs ROOMS.reboot)
   let chip = tile(s, post.id);
   assert.match(chip, /class="fp-room k-guard t-hot/);
   assert.match(chip, /href="#fp-i-elite"/);

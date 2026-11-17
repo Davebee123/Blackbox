@@ -27,7 +27,7 @@ import { consortiumLinked } from './consortium.mjs';
 // rule: its tooltip, one line. weight: light | medium (6.3). code: what it costs in, if not the server's own code.
 export const PROGRAMS = {
   harvester: { name: 'Harvester', weight: 'light', rule: 'Every virus you kill on this server drops 1 more component.' },
-  cron: { name: 'Cron Spawner', weight: 'light', rule: 'Fight rooms on this server respawn twice as fast.' },
+  cron: { name: 'Cron Spawner', weight: 'light', rule: 'This server reboots twice as fast: its fight rooms come back sooner.' },
   siphon: { name: 'Code Siphon', weight: 'light', rule: 'Every fight room you clear on this server pays 3 more of its code.' },
   mill: { name: 'Cache Mill', weight: 'light', rule: 'Caches on this server refill twice as fast and pay 50% more.' },
   defrag: { name: 'Defrag Bay', weight: 'light', rule: 'Turns this room into a rest room: restores 25% of your max Signal, once a visit.' },
