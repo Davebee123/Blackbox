@@ -145,6 +145,9 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - each starts from its ability key, or from the bar when the key isn't visible;
   - a crewmate's starts from their own bar;
   - Firewall plays on your bar.
+- **The market moves** (November 2026, docs/market.md): prices and factions' sway move on logged-on time, seeded per
+  network and run by the director, each mover with a reason in the lore. No faction dominates. *No entropy* and no loss
+  aversion guard the time you're away; the market moves both ways while you play.
 - **Rested XP** comes only from time logged off. There is no catch-up XP.
 - **Unlocks:** cosmetic unlocks (districts, boots, prompts, desk props, mastery looks) come from achievements, not
   from server floors.

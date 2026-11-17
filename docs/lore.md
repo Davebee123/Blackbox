@@ -194,6 +194,7 @@ sentence or two, ??? until found, never timed.
 | Threads | Every chain's ending is one sentence that settles, seals or rolls back something small. |
 | Rivals | Each rival's loss line names who pays its crew, or that nobody does. |
 | Hubs and shops | Each hub's vendor speaks its faction's voice (8.2). |
+| The market | INIT's count, each answer's cost and the institutions' cards move its prices (docs/market.md). |
 | Invasions | Attacks on your wall come mid-settlement: the strip shows a trade at risk. |
 | KESSLER-FARM-00 | A Kessler farm still mining for an owner who died in the Cascade; its ledger vault says whose. |
 | Pager | LANTERN's broadcasts arrive as numbers, decoded once you stand with LANTERN. |

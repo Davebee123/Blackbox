@@ -10,7 +10,7 @@ What it does **not** do: read how you're doing. It never looks at your Signal, d
 - **The world moves; you choose.** Every card is an offer. Missing one costs nothing, and that holds for chains too: a follow-up only comes from something you did (a fight you won, a side you picked), never as a punishment for skipping.
 - **More small things beat fewer big ones.** A net that blinks every few minutes feels alive. A big card every half hour feels like a timer.
 - **It remembers.** Names, sides and outcomes carry forward, so the next card is about you.
-- **No faction losses.** Picking a side never costs rep with anyone, and nothing the director deals closes a shop or lowers prices against you. Factions only reward: the side you back gains, the others stay where they were. No loss aversion.
+- **No faction losses.** Picking a side never costs rep with anyone, and nothing the director deals closes a shop. Rep only rewards: the side you back gains, the others stay where they were. The market is the exception the designer chose (November 2026): its prices and factions' sway move both ways while you play, never while you're away (docs/market.md).
 - **Fair dice.** The director rolls its own dice on the save, as now, so it never shifts the game's rolls and the same choices on the same seed give the same net.
 - **Show it, don't explain it.** Map marks, faction colours, pips, a minutes chip and a link icon to the event that caused it. Detail goes in tooltips (style guide, section 0).
 - **Levels 1 to 50 first.** Everything here scales with your level and floor. Nothing waits for level 50.
@@ -96,7 +96,7 @@ Each phase gets a pacing check in the sims: events and blips per hour of play, r
 ## 8. Decided
 
 - **Blips** come about every 5 minutes of logged-on time.
-- **No loss aversion with factions.** Feuds, counter-raids and turf wars only ever add rep or a discount; nothing lowers rep or closes a shop.
+- **No loss aversion with factions.** Feuds, counter-raids and turf wars only ever add rep or a discount; nothing lowers rep or closes a shop. Sway and prices are the market's (docs/market.md).
 - **A crisis runs on logged-on time**, like the director's other clocks: it pauses while you're logged off.
 - **Run cards (D3) come before crises (D4).**
 

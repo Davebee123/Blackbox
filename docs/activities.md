@@ -69,7 +69,7 @@ Variety across viruses, one rule each, with an answer in every kit.
 | Ripening cache | Feature creep |
 | Class-flavoured server moods | Push people to switch class |
 | Weaknesses by damage shape (burst, burn, helpers, spread, reactive) | A part weak to one shape favours the class that deals it |
-| A world that moves while you're logged off; factions that gain and lose ground (Starsector's drift) | Hard to design around, and the politics and economy add more than they give (docs/runners.md) |
+| A world that moves while you're logged off | Hard to design around. Factions gaining and losing ground while you play came back (November 2026): docs/market.md |
 | Trace-back after an invasion | Repeats systems already there |
 | Daily seed | Out of scope for now |
 | Home layout as tower defense | The house is a cosmetic, not a defence game |

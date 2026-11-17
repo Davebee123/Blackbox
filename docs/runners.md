@@ -28,8 +28,9 @@ be on the net, like Guild Wars 1's heroes and Starsector's officers and fleets.
 - **Runners only add.** Leads (a server one traced shows on your map), tips, help in a room you share, an offer to
   crew, a dead runner room when one crashes. They never clear your rooms, take your vaults or lock anything. Their
   work is kept on the runner; a server's state stays yours. Rivals racing you to a vault stay as built.
-- **No entropy.** Factions are fixed backdrops. A runner works for one, and nothing a runner does moves a faction's
-  power, territory or prices. Feuds stay director cards; runners appear in them by name.
+- **They move the market, never your servers** (the designer, November 2026, replacing *No entropy*). A runner works for
+  one faction; their jobs and sales move its sway and the hubs' prices while you play (docs/market.md). Feuds stay
+  director cards; runners appear in them by name.
 - **A rotating cast.** Eight on a network at once, from its seed and a pool of 60 handles, so each new game has its
   own. Each stays 2–4 hours of logged-on time, then moves on and the next takes their place; they come back later in
   the playthrough as the same person, standing kept. A hire stays while they're with you. Their levels keep to a band
