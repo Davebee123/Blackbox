@@ -129,9 +129,9 @@ test('root access: respawned fight rooms cleared on a server you hold raise Root
   FP.act(s, 'pull');
   assert.equal(s.run.pack.length, before + 1, 'its code into your pack');
   assert.equal(FP.cacheFull(s, stash), false, 'and it fills again later');
-  // Root 3: off your memory, no invasions; Root 4: one more socket room, by the Core and open; Root 5: rare spawns twice as often.
+  // Root 3: off your memory, a second loot roll; Root 4: one more socket room, by the Core and open; Root 5: rare spawns twice as often.
   const held = liveCount(s); // (its kills' leads may have found more servers by now)
-  loc.root.level = 3; assert.equal(liveCount(s), held - 1);
+  loc.root.level = 3; assert.equal(liveCount(s), held - 1); assert.equal(R.rootRoll(loc), 1);
   const sockets = () => Object.values(g.rooms).filter((x) => x.kind === 'socket');
   const n = sockets().length;
   loc.root.cleared = R.ROOT.need[4] - 1;

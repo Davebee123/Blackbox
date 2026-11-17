@@ -88,8 +88,6 @@ is worked from the formulas.
 - **Two filled amber tags.** A leaning is also a filled amber tag (docs/leanings.md). The card's table now labels them
   (Server, Leaning); whether specials should step back to outlined tags is the designer's call.
 - **Backbone's cost.**
-- **Hardened and Root 3:** Root 3 stops a server's invasions, which works against daemon farming. Root climbing twice
-  as fast gets there sooner.
 - **Rich and the Hoard quirk** overlap (caches and Armored guards): fold Hoard in, or keep quirks as family flavour.
 - **Code ×2 against the markets:** code is sold at hubs, so Rich needs a check against their prices.
 - **Components:** give them a job, or fold them into credits. Credits never modify gear.

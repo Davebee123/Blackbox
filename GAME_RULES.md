@@ -662,7 +662,9 @@ three solo bosses, the floor 2–5 bosses and the natives. A crew boss keeps its
 | HOLLOW CHOIR | **Copy**: its Mimic copies what you fire and turns it on you (a second voice from act 2) | 4 | What costs least to have copied, hold, or break a voice |
 | The floor bosses | Its own part's attack: the Gavel's Surge, the Demand's Deadline, the Logger's Dump, main()'s Surge | its own | Their rules (above) |
 
-The Backlash's chips (*Lash −N*) sit on every part with an attack, in the columns the beat falls in.
+The Backlash's chips (*↩ −N if hit*, hatched and pointing back at you) sit on every part with an attack, in the
+columns the beat falls in. The Resident's fight opens with act 1's strip, *ACT 1 / 3 · BACKLASH*, and wick's tip on
+the first.
 
 **Loot.** A boss always drops one item at its level (`bossLoot`): a blue, or a yellow one kill in four. The Resident
 rolls like an elite instead (one is met on every takeover). Each boss has **two uniques of its own**: 15% a kill, +5%
@@ -1199,19 +1201,19 @@ until a relay pings it or it sends an invader at you).
 
 | Trace from | Adds |
 |---|---|
-| A stray killed in SPRAWL-00 | +25% to one ? (the most traced first; your first, the level-1 one), falling with the level gap like XP |
+| A stray killed in SPRAWL-00 | +10% to one ? (the most traced first; your first, the level-1 one), falling with the level gap like XP |
 | A first clear of a fight room on a server linked to it | +20% to one ? (the most traced first) |
 | A vault's trace record (`signal.trc`), banked | +50% on one ? (a flagged one first) |
 | Mapping the server it hangs off, or a rogue server's full clear | the rest of the way, for one ? (the most traced, then the lowest level) |
 | An invader from a ? beaten by you / stopped by your wall | +40% / +10% |
-| An invader from a found server, beaten | +25% to one ? linked to it |
+| An invader from a found server, beaten | +10% to one ? linked to it |
 | A trace injector (store, Kestrel, LANTERN) | +30% |
 | A relay's family kill / its route file banked | +12% / +50% |
 
 At 100% the server is **located**: an ordinary server at its slot, with its own ? neighbours; contracts aimed at it
 follow it there. Its card shows the way you're tracing it now on top, with a pip for each step still needed, then the
 other ways, shaded with a lock in the icon's place until you have them. Your first server is always SPRAWL-00's
-level-1 neighbour; reaching level 4 with nothing traced traces it for you, and at 5 wick pages you with one you
+neighbour nearest level 3 (`CONFIG.zone.firstLevel`); reaching level 4 with nothing traced traces it for you, and at 5 wick pages you with one you
 haven't cracked.
 
 **Relays** (Halcyon sells them; the storyline gives you one) go on a server you've taken over (`relay <server>`, or its
@@ -2134,7 +2136,7 @@ kill's deed XP, and a held server's respawned rooms count as Building XP.
 |---|---|
 | 1 | Taken over |
 | 2 | A **stash room** beside the Core: the server's code (4 + level/4), back every two hours |
-| 3 | It stops sending invasions |
+| 3 | Its elites and guard posts roll for loot once more |
 | 4 | One more socket room, beside the Core, open at once |
 | 5 | Its rare spawns come twice as often |
 
@@ -2471,7 +2473,7 @@ docs/invasions.md). On the map an invasion moves in from its server; its card, t
 it is, what it does and what it pays (`invasions` in the terminal).
 
 - **When.** The first sets out 3 minutes after you first connect to a server; the next 20–30 minutes after the last is
-  dealt with. Logged off, one every 2–4 hours. A server you hold at Root 3 sends none.
+  dealt with. Logged off, one every 2–4 hours.
 - **Who.** Half the time your strongest server sends it, otherwise any, a Volatile server counted twice and a Stable
   one half. A virus of that server's family **at its level** (Volatile and an Amplifier +2, a Lockdown −2) and floor
   grade, maybe a strain, maybe mutated (from level 4). The very first is a plain raider.

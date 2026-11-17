@@ -134,6 +134,8 @@ export const TIPS = [
   { id: 'fight-patch', page: 'combat', pause: true, at: '.board .intent.patch', under: '#board', text: 'a part with no ◆ left grows one back five cycles later, unless you break it first.' },
   // Bosses: the ♛ part's ticks start acts (interrupt.mjs rule a).
   { id: 'fight-crown', page: 'combat', pause: true, at: '.board .tag.crown', under: '#board', text: 'the ♛ part is the boss. push it past a mark and it starts its next act, and the fight changes.' },
+  // The Resident's act 1 (acts.mjs backlash): the Return chip, on your first Resident.
+  { id: 'fight-backlash', page: 'combat', pause: true, at: '.board .intent.lash', under: '#board', text: 'see the ↩? that\'s the resident\'s beat. hit a part on that cycle and it hits you back. shield up then, or hit something with no attack.' },
   // Levers (docs/puzzle-levers.md): an elite's clash, then a plain fight's one lever, from level 6.
   { id: 'fight-clash', page: 'combat', pause: true, at: '.board .tag.clash', under: '#board', text: 'this elite\'s two rules pull against each other, so answering one makes the other harder. hover ⇄ for the pull and the answer.' },
   { id: 'fight-lever', page: 'combat', pause: true, at: '.board .bpart.lever', under: '#board', text: 'this part has a rule that makes your usual move the wrong one. read the red tag on its row before you hit.' },

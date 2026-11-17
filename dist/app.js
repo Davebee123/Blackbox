@@ -1414,6 +1414,8 @@ function react(events) {
       case 'warning': feel.add('nope', '#command-form'); break;
       // A boss changes phase (combat.mjs bossPhases): across its ♛'s act tick, the act break (actbreak.mjs), once the hit
       // has played; the clock holds for it. Its enrage, or a phase of a boss with no act ticks: the flash.
+      // A boss's act 1 named as the fight opens (combat.mjs act-open): the same strip, no tick to burst.
+      case 'act-open': feel.add(() => { actHold = Date.now() + actBreakMs(e.act); actBreak.play(e.act, campaign.encounter?.virus?.name); }); break;
       case 'phase': if (e.act && !e.enrage) { feel.add(() => { actHold = Date.now() + actBreakMs(e.act); actBreak.play(e.act, campaign.encounter?.virus?.name); }); feel.add('act', null); } else { flash(e.enrage ? 'ENRAGED' : e.message.split('.')[0]); feel.add('hurt', null); } break;
       case 'scan': art.hit(e.target); flash(e.message.split('.')[0].toUpperCase()); feel.add('good', row(e.target), 'WEAK'); break;
       case 'proc': feel.add('good', null); break;

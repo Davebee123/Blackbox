@@ -52,7 +52,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   const policy = POLICIES[cls[0].toUpperCase() + cls.slice(1)];
   const stats = { fights: {}, wins: 0, losses: 0, xp: {}, levelAt: { 1: 0 }, realAt: { 1: 0 }, fightsAt: { 1: 0 }, puzzles: 0, runs: 0, vaults: 0, events: {}, crashes: 0, mins: 0, drops: {}, firstAt: {}, bountyLosses: 0, did: { run: 0, rogue: 0, sprawl: 0, sprawlOverLevel: 0 } };
   let real = 0; // real play so far, ms (REAL)
-  const seen = new Set(), losses = {}, lostIn = {}; // lostIn: fights lost in each room, by server and your level: a room that beat it twice is walked around until it levels
+  const seen = new Set(), losses = {}, lostIn = {}, fruitless = {}; // lostIn: fights lost in each room, by server and your level: a room that beat it twice is walked around until it levels
   BUILD.log = (x, id) => { (stats.built ||= []).push(`${id}@lv${hackerLevel(x)}`); }; // what it builds in the sockets it clears (sockets.mjs)
   // The ledger: what came in, by where it came from (positive changes only; the bot spends nothing but code on contracts).
   const purse = () => ({ credits: s.server.credits, code: ['cipher', 'worm', 'kernel'].reduce((n, k) => n + (s.materials?.[k] || 0), 0), exploit: s.materials?.exploit || 0, salvage: s.components || 0 });
@@ -336,7 +336,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     const deep = (l) => Math.max(0, ...hiddenNear(s, l).map((h) => h.level));
     // Once the floor below fits, it pushes for the exit first: the server whose unknown neighbours are deepest.
     const push = L >= bandOf(floorsOf(s).reached + 1)[0] && !canDescend(s);
-    const scout = (push || !todo) && s.locations.filter((l) => !l.rogue && !l.member && l.slot && l.depth === floorsOf(s).reached && open(l) && !l.floorplan?.mapped && deep(l) && l.level <= L + 2 && (losses[l.id + '@' + L] || 0) < 6).sort((a, b) => deep(b) - deep(a))[0]; // the way forward: it tries harder (the rooms that beat it twice are walked around)
+    const scout = (push || !todo) && s.locations.filter((l) => !l.rogue && !l.member && l.slot && l.depth === floorsOf(s).reached && open(l) && !l.floorplan?.mapped && deep(l) && l.level <= L + 2 && (losses[l.id + '@' + L] || 0) < 6 && (fruitless[l.id + '@' + L] || 0) < 2).sort((a, b) => deep(b) - deep(a))[0]; // the way forward: it tries harder (the rooms that beat it twice are walked around)
     // A server you hold, its rooms respawned (rotations before R1): their clears climb its Root (root.mjs, 2.8).
     const respawned = (l) => { const R = l.floorplan; return R ? Object.values(R.graph.rooms).filter((x) => FP.FIGHTS.includes(x.kind) && x.kind !== 'core' && R.down[x.id] != null && t >= R.down[x.id] + FP.ROOMS.respawn[x.kind === 'guard' ? 'guard' : x.kind === 'elite' ? 'elite' : 'process'] * 60000).length : 0; };
     const rot = s.locations.filter((l) => (procOf(l, t) && procOf(l, t).level <= L + 3) || (l.floorplan && l.takenOver && !l.member && (l.root?.level || 1) < 5 && (l.level || 1) >= L - 3 && respawned(l) >= 3)).filter((l) => open(l) && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => (b.level || 1) - (a.level || 1))[0];
@@ -344,9 +344,11 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     const hunt = contracts && stats.bountyLosses < 2 && openContracts(s).some((c) => c.type === 'bounty' && !c.got);
     let did = false;
     if (hunt) { did = book('sprawl', sprawl); if (did) stats.did.sprawl++; }
-    if (!did && push && scout) { did = book('runs', () => runLoc(scout)); if (did) stats.did.push = (stats.did.push || 0) + 1; }
+    // A scout run that traced nothing (its rooms' first clears spent) counts against it: two at a level and the bot looks elsewhere.
+    const traced = () => hiddenNear(s, scout).reduce((n, h) => n + h.lead, 0) + s.locations.length * 1000, scoutRun = () => { const a = traced(); const r = runLoc(scout); if (traced() <= a) fruitless[scout.id + '@' + L] = (fruitless[scout.id + '@' + L] || 0) + 1; return r; };
+    if (!did && push && scout) { did = book('runs', scoutRun); if (did) stats.did.push = (stats.did.push || 0) + 1; }
     if (!did && todo) { did = book('runs', () => runLoc(todo)); if (did) stats.did.run++; }
-    if (!did && scout) { did = book('runs', () => runLoc(scout)); if (did) stats.did.scout = (stats.did.scout || 0) + 1; }
+    if (!did && scout) { did = book('runs', scoutRun); if (did) stats.did.scout = (stats.did.scout || 0) + 1; }
     if (!did && rot) { did = book('rotation', () => runLoc(rot)); if (did) stats.did.rotation = (stats.did.rotation || 0) + 1; }
     if (!did && rogue) { did = book('rogue', () => runLoc(rogue)); if (did) stats.did.rogue++; }
     // SPRAWL-00 once you've outgrown it is grey: a player waits out a reconnect timer instead.
