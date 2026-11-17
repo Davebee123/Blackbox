@@ -185,9 +185,8 @@ export const RULES = {
   'race-window': { tier: 'major', name: 'Race Window', fx: { when: 'crit', do: 'refund-skill' } },
   'deep-inspection': { tier: 'major', name: 'Deep Inspection', fx: { when: 'hit', if: 'target-telling', do: 'damage%' }, value: [30, 45] },
   'clean-room': { tier: 'major', name: 'Clean Room', fx: { when: 'struck', do: 'crit-normal' } },
-  // Skill rules (dist/skillrules.mjs): each changes how one skill of one class plays. They were drafted mods on a breach;
-  // now they roll like any rule, but only when the roll names a class (rollItem's cls: the breach campaign), and only
-  // that class's. text(v): the rule's sentence. patch(v): the skill's fields while a fight runs.
+  // Skill rules: each changed how one skill of one class played, on the breach campaign, which is gone. They no longer
+  // roll (rulePool); they stay so an item that carries one still reads. text(v): the rule's sentence.
   aftershock: { tier: 'minor', cls: 'breaker', skill: 'crack', name: 'Aftershock', of: 'of Aftershocks', value: [5, 12], text: (v) => `Crack also deals ${v} damage to the target for each ◆ it breaks.` },
   'zero-click': { tier: 'major', cls: 'breaker', skill: 'exploit', name: 'Zero Click', value: [4, 10], text: (v) => `Exploit also deals ${v} damage to every other part, and Exposes every part for 2 cycles.` },
   backpressure: { tier: 'minor', cls: 'bastion', skill: 'rate-limit', name: 'Backpressure', of: 'of Backpressure', text: () => 'Rate Limit also delays the target\'s next attack by 1 cycle.' },
@@ -223,7 +222,7 @@ export const withImplicit = (it, f) => (IMPLICITS[f] && it && !it.unique && (!it
 // The implicit's effect blocks, its value in (a half block at half), or [] for an item with none.
 export const implicitFx = (it, v = it?.implicitValue) => (IMPLICITS[it?.implicit]?.fx || []).map((fx) => ({ ...fx, value: fx.half ? Math.max(1, Math.round(v / 2)) : v }));
 // The rules a roll can carry: the general ones, and a class's skill rules when the roll names that class.
-export const rulePool = (tier, cls = null) => Object.keys(RULES).filter((k) => RULES[k].tier === tier && (!RULES[k].cls || RULES[k].cls === cls));
+export const rulePool = (tier) => Object.keys(RULES).filter((k) => RULES[k].tier === tier && !RULES[k].skill);
 // A rule's number at an item level (roll: 0–1, ±10%).
 export const ruleValue = (id, level, roll = 0.5) => {
   const v = RULES[id]?.value;
@@ -450,7 +449,7 @@ export function rollItem(rand, opts = {}) {
   if (cut) for (const [k, v] of Object.entries(prim)) stats[k] -= v - Math.max(1, Math.round((v * (100 - cut)) / 100));
   // Its rule: a minor one on a blue, a major one on a yellow (RULES).
   const tier = !zeroDay && r.rule;
-  const rule = tier ? pick(rand, rulePool(tier, opts.cls)) : null;
+  const rule = tier ? pick(rand, rulePool(tier)) : null;
   const ruleVal = rule ? ruleValue(rule, level, rand()) : undefined;
   const pre = affixes.map((a) => AFFIXES[a]).find((a) => a.kind === 'prefix'), suf = affixes.map((a) => AFFIXES[a]).find((a) => a.kind === 'suffix');
   const name = zeroDay ? ZERO_DAYS[zeroDay].name
@@ -541,8 +540,8 @@ export const statLine = (stats) => Object.entries(stats).filter(([k]) => STATS[k
 // The level an item loads from: CONFIG.gearReq under its own, so a reward a level or two over you loads at once and
 // gear from far deeper waits for you.
 export const reqLevel = (item) => Math.max(1, (item?.level || 1) - CONFIG.gearReq);
-// Whether this save's hacker can load it. The breach campaign (its own save, its own gear curve) has no requirement.
-export const meetsReq = (s, item, level) => !!(s.camp || s.breach) || level >= reqLevel(item);
+// Whether this save's hacker can load it.
+export const meetsReq = (s, item, level) => level >= reqLevel(item);
 export const itemLabel = (item) => `${item.name} v${item.level}`;
 
 // ---------- code materials ----------

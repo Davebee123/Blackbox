@@ -8,8 +8,6 @@ import { CONFIG } from './dist/data.mjs';
 import { play } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { tellsOf } from './dist/tells.mjs';
-import { nodeList, startBreach, outfit, fight } from './dist/breach.mjs';
-import { breachMarkup } from './dist/breach-view.mjs';
 import { gainMarkup } from './dist/view.mjs';
 import { deathRecap, recapMarkup, RECAP } from './dist/recap.mjs';
 
@@ -25,17 +23,6 @@ function runFight() {
   const next = FP.roomList(s).find((r) => FP.isUp(s, r) && r.kind === 'process'), R = s.rooms;
   R.at = FP.neighbours(R.graph, next.id)[0]; R.screen = null; FP.go(s, next.id);
   play(s, 'engage');
-  return s;
-}
-function breachFight(tells) {
-  const s = fresh();
-  s.rng = 5 * 7777;
-  outfit(s, { cls: 'breaker', level: 10, gearSeed: 5 });
-  startBreach(s, { seed: 5, level: 10 });
-  const n = nodeList(s.breach.map).find((x) => x.kind === 'virus' && x.act === 0);
-  if (tells) n.tells = tells;
-  fight(s, n);
-  s.encounter.hardened = 0;
   return s;
 }
 // What's on the card to read, without its tags and attributes (the tooltips and the screen-reader label).
@@ -87,26 +74,6 @@ test('rows: the same attack is one row, summed; past 4 rows the last hit still s
   assert.deepEqual(r.kill, { name: 'Hit e', part: 'Part e', amount: 5, kind: 'attack', tell: null });
   assert.deepEqual([r.took, r.healed, r.shielded], [125, 7, 9]);
   assert.deepEqual(r.bars.map((b) => [b.c, b.from, b.to]), [[1, 200, 200], [2, 200, 170], [3, 170, 115], [4, 115, 87], [5, 87, 0]], 'from the cycle the fight started');
-});
-
-test('a charge that lands as the killing blow wears its tell, and its tip names the answer', () => {
-  const s = breachFight(['overcharge']), e = s.encounter, T = tellsOf(s);
-  for (const p of e.virus.parts) if (p.attack) p.attack.due = 999;
-  const t = T.list.find((x) => x.id === 'overcharge'), p = part(s, t.part);
-  p.attack.due = e.cycle + 2;
-  Object.assign(t, { told: true, said: e.cycle, next: e.cycle + 2, n: p.attack.n || 0, wound: 0, hitBy: [], after: 999, opened: null, early: null, need: 0 });
-  s.run.integrity = 5;
-  hold(s, 10);
-  assert.equal(s.breach.result, 'lost');
-  const r = s.breach.lost.recap;
-  assert.ok(r, 'the breach keeps it on the loss');
-  assert.deepEqual(r.kill.tell, { kind: 'charge', name: 'Overcharge' });
-  assert.equal(r.kill.part, p.name);
-  const html = recapMarkup(r);
-  assert.match(html, /class="rc-tell t-charge" style="--icon:url\('ui\/icons\/event-warning.svg'\)"/, 'the charge chip\'s icon');
-  assert.match(html, new RegExp(`Overcharge is a charge\\. Cut the ${p.name} on its cycle to call it off\\.`));
-  assert.match(html, /took your Signal to 0\./);
-  assert.match(breachMarkup(s), /bx-capture lost[\s\S]*class="recap"/, 'on the breach\'s loss card');
 });
 
 test('the card shows it, not explains it: numbers, marks and labels; the sentences live in tooltips', () => {

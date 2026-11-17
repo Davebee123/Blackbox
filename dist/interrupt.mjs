@@ -43,7 +43,7 @@ export const ticked = (e) => !!e?.ticked;
 // by default, `developer bossrule a|b|c` switches it; a server room sets its own first, floorplan.mjs).
 export function prepareTicks(s) {
   const e = s.encounter, v = e?.virus;
-  if (!v || raidDef(v) || e.breach) return; // a crew boss keeps its framework; the breach build (R5 deletes it) its own rules
+  if (!v || raidDef(v)) return; // a crew boss keeps its framework
   e.ticked = true;
   armTicks(s);
   if (v.boss && !e.bossRule) bossRule(s, s.bossRule || 'a');

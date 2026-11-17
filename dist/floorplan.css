@@ -44,10 +44,6 @@
 .fp-rule { height: var(--h-chip); min-width: 22px; padding: 0 var(--s3); border: 1px solid var(--line-strong); border-radius: var(--r-tag); background: transparent; color: var(--muted); font: 600 11px var(--mono); cursor: pointer; }
 .fp-rule.on { border-color: var(--hot); color: var(--hot); background: var(--hot-soft); }
 .fp-rule:hover:not(.on) { border-color: var(--amber); color: var(--amber); }
-.fp-perks { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); min-width: 0; }
-.fp-perks .lbl { margin-right: var(--s2); cursor: help; }
-.fp-perk { flex: none; display: inline-flex; align-items: center; height: var(--h-chip); padding: 0 var(--s3); border: 1px solid var(--line); border-left: 2px solid var(--r-stock); border-radius: var(--r-tag); font: 600 11px var(--mono); color: var(--bright); white-space: nowrap; cursor: help; }
-.fp-perk.r-tuned { border-left-color: var(--r-tuned); } .fp-perk.r-custom { border-left-color: var(--r-custom); }
 /* Wait and Jack out (Connect at home): the strip's last thing on a wide screen, beside the server's name on a phone */
 .fp-acts { display: inline-flex; gap: var(--s3); flex: none; }
 .fp-acts .btn { white-space: nowrap; }
@@ -300,8 +296,6 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 #tray .ability.wiped { border-color: var(--hot); }
 #tray .ability.wiped .name { color: transparent; text-shadow: none; }
 #tray .ability.wiped .ico { background: var(--hot); }
-#tray .ability.script { border-left: 2px solid var(--r-stock); }
-#tray .ability.script.r-tuned { border-left-color: var(--r-tuned); } #tray .ability.script.r-custom { border-left-color: var(--r-custom); }
 
 /* the rooms playtest: the old game's tabs and meters step aside */
 .rooms-mode .modules button[data-module="map"], .rooms-mode .modules button[data-module="mail"], .rooms-mode .modules button[data-module="server"], .rooms-mode .modules button[data-module="craft"],

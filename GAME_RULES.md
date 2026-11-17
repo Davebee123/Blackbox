@@ -79,7 +79,7 @@ factor (`length.drawn`). Adds (fragments, Packages, Droppers), breaches and crew
 | Clean | A fight where nothing got through says so. |
 | Idle | Type nothing and you fire key 1 at the last part you hit (from level 5, your routine moves instead: Routines). `hold` does nothing. |
 | No part picked | A skill that needs a part goes at the last part you hit, else the part that attacks soonest. |
-| Delays | Skills push an attack back (the Warden's Suspend and Quarantine, the Hijacker's Jam and Spoofed ACK, SIGINT's read of a tell), and so do talents, capstones, uniques, set bonuses, daemons, Stealth and scripts. **One delay a wind-up:** once an attack has been pushed later, no other delay moves it until it lands (or is cut); the next attack can be delayed again (`delayAttack` in combat.mjs). A held attack wears a teal pause mark. A delay moves an attack, never a tell's own clock. A miss is not a delay. |
+| Delays | Skills push an attack back (the Warden's Suspend and Quarantine, the Hijacker's Jam and Spoofed ACK, SIGINT's read of a tell), and so do talents, capstones, uniques, set bonuses, daemons and Stealth. **One delay a wind-up:** once an attack has been pushed later, no other delay moves it until it lands (or is cut); the next attack can be delayed again (`delayAttack` in combat.mjs). A held attack wears a teal pause mark. A delay moves an attack, never a tell's own clock. A miss is not a delay. |
 | Edge | Each subclass's signature passive, from level 10 (Subclasses). |
 | Encryption | Each Encrypt adds to a stack that hits you every cycle. Breaking the Encryptor clears it. A ◆ on you stops an Encrypt; shields soak the stack's damage; Purge and Rollback wipe it. |
 | Scramble | For a couple of cycles, each of your attacks has a 25% chance to hit you instead, at half. A ◆ stops it. |
@@ -839,7 +839,7 @@ strip (the server, its kind, level and rule, your Signal, **Rooms n/N**, your ke
 | Guard post | ◆▣ KEY | A guard or ICE holding the vault's key, shown as an elite. Hoard, Rich and Hardened servers' are Armored. |
 | Vault | ▥ | `open` with its key, or `force` it for 15% of your max Signal. It holds the server's files: a protocol half the time (your first server's always), code, a trace record, spare credits, now and then a Zero-day (floor 2+) or a filter, a contract's planted file, and on half the servers a journal entry (*Journals*). Everything goes in your pack. |
 | Core | ♛ | The Resident, **SEALED** until the vault opens. |
-| Cache | ▤ | Credits and code, now and then a script; one in four is **bait** (10% of your max Signal; `cat` shows it). Refills 2 hours after you take it. |
+| Cache | ▤ | Credits and code; one in four is **bait** (10% of your max Signal; `cat` shows it). Refills 2 hours after you take it. |
 | Rest room | ☰ | `rest`: 30% of your max Signal, once a visit. |
 | Den | ☠ | The hunter's. |
 | Junction | · | A crossing. |
@@ -900,7 +900,7 @@ when you walk into a room next to it (a discovered one wears **WAKES**); it foll
 walks home. Either moves a room for every two of your moves (a Lab's awake Tracker every move), only when you walk or
 wait. It shows its next room with a red dashed arrow and never enters the entry or the rest room. You see it in your
 room, next to you (an Infiltrator two off) or in a discovered room; within two rooms but out of sight, the room at the
-fog's edge pulses red. Meet it and you fight it (two levels over the server); beat it and it drops a script and is down
+fog's edge pulses red. Meet it and you fight it (two levels over the server); beat it and it is down
 for the visit. An Infiltrator can `slip` past it (one of their two slips).
 
 ### Rivals (rivals.mjs)
@@ -1027,7 +1027,7 @@ Every traced server has its family's quirk (`QUIRKS`): one rule, a tag on its ca
 |---|---|---|
 | Ransomware | Hoard | Caches pay 50% more, but the guards are Armored. |
 | Worm | Nest | An optional **nest** room holds a Crawler and its brood (two hatchlings already out), an elite-lite fight at the server's level. A kill pays the usual and **6 components**. It respawns like an elite, never as a rare spawn. |
-| Ghostroot | Hidden | A **hidden room** stays off the map (no chip, no ?, no address) until you clear the room beside it, then opens for good: a stash (a cache's pile, a 15% script, a blue one time in ten), refilling 2 hours after you take it, never bait. |
+| Ghostroot | Hidden | A **hidden room** stays off the map (no chip, no ?, no address) until you clear the room beside it, then opens for good: a stash (a cache's pile, a blue one time in ten), refilling 2 hours after you take it, never bait. |
 
 Each quirk room hangs off a dead end of a branch, never in the way of the vault or the Core, and never counts for
 Rooms n/N, Mapped or a no-rest job. Invasions carry the quirk too (Invasions).
@@ -1545,7 +1545,7 @@ stat the fill, its rarity the colour; uniques flicker now and then; `protocol-gl
 15). `load <id>` puts an item in its slot (a full slot swaps), `unload <id|slot#>`; loadouts change at home only. Each
 class loads its own. One of each unique and each Zero-day a loadout. **An item loads from 3 levels under its own**
 (`CONFIG.gearReq`, `reqLevel`): below that its datasheet says *Requires Level N* in red and Load is off. One already
-loaded stays on. The breach campaign has none. The stash holds 40; a drop into a full stash is
+loaded stays on. The stash holds 40; a drop into a full stash is
 deconstructed.
 
 ### An item: a base, affixes and a rule
@@ -1772,7 +1772,7 @@ yellow, its epic our gold). Targets, at about 150 kills an hour of real play (`L
   roll; a Pit rolls again after the kill. Deeper layers add 25% a layer to blue and yellow odds.
 - **The Resident** rolls like an elite (no sure item) and for its two uniques once each.
 - **Vaults:** half hold a protocol (`kit.bin`; your first server's always), white 94 · blue 6 · yellow 0.4 · gold 0.03
-  (a unique that drops from vaults that deep). A second vault holds the same a third of the time, else a script.
+  (a unique that drops from vaults that deep). A second vault holds a protocol at a vault's rarity.
 - **Pace:** Settings → **Dev** (with `?dev`) shows your kills an hour of active play. Odds are set a kill at a
   time, so a faster or slower player sees the same drops a kill.
 - A good drop shows as a notice; whites drop quietly. **Deconstruct** (`deconstruct <id>`, `scrap`): white 1–2
@@ -3043,22 +3043,6 @@ Developer commands work only in tests, playtest pages, a test bench and with `?d
   or fixture>`, `?playtest=part:<id>` (`part:<id>.exe` for its .exe build), `?playtest=fx` (every ability effect and tier, fired from its key, by result, status and ticks left; every virus attack on your bar, by result, with its sound).
 - `developer scene <id>` plays a transmission again. `developer levelup preview`, `developer thread preview`, `developer pager fill`, `developer parts`, `developer
   event`, `developer exfil`, and the rest under each section.
-
-## Side modes
-
-**The breach campaign** (`?campaign=breach`, unlinked from the map) is a roguelite of breaches with its own save
-(`blackbox-campaign-v1`): the main game's save and systems never touch it. You log in, pick a class at level 1 and breach
-14 servers in 4 layers (The Sprawl 1–5, Backhaul 6–11, The Stacks 12–17, Deep Core 18–25), each a branching map of up to
-three acts (five rows each, a gate after acts 1 and 2) ending at its Resident. **Signal** is the breach's health and
-carries fight to fight; only a defrag, a broker's patch or a script restores it. **Trace** (0–100) is how loud you've
-been: at 55 a hunter ICE comes for you. **Scripts** are one-shot exploits you carry (3 slots). Vaults take keycards;
-switches weaken an act's gate; every subsystem you clear lets you pick a **rewrite** whose output runs on later
-breaches once you capture the server. Gear, scripts and XP bank at gates and on capture; a gate you beat is a
-checkpoint. **Heat 1–8** adds a modifier a rank and pays more. **LOWLIGHT's room** (`world.mjs`, `room.mjs`) is where
-you come back after each breach: wick has a line about it, the board lists what moved, and from your second capture a
-**world turn** runs after every breach (an author digs in on its nearest open server, dead drops appear, never on a
-clock). Code: `breach.mjs`, `campaign.mjs`,
-`scripts.mjs`, `rewrites.mjs`, `heat.mjs`, `world.mjs`; bots `breachsim.mjs`, `campaignsim.mjs`.
 
 ## Balance targets
 

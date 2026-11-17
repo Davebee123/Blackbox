@@ -1,7 +1,7 @@
 // Runs: connecting to a server, the pack, banking it at jack out, the crew on a run. Since R1 (docs/servers.md) every
 // connect plays the server as rooms (netrooms.mjs, floorplan.mjs): the terminal's ls, cd, map, go, wait, back,
 // engage, cat, pull, open, force, rest and slip work on its rooms. The old file system below (layouts, passwords,
-// Trace, quirk folders) no longer runs on the real game; phase R5 deletes it with the breach code.
+// Trace, quirk folders) no longer runs on the real game; nothing has deleted it yet.
 // Pure like the combat engine: state in, events out.
 import { vaultFilter, addFilter, filterLine } from './filters.mjs';
 import { gainComponents } from './salvage.mjs';

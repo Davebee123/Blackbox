@@ -46,7 +46,6 @@ import { GUARDS, BOSSES, CONFIG } from './data.mjs';
 import { itemLabel, statLine, shownRarity } from './gear.mjs';
 import { stashItem, active, classOf, hackerLevel } from './combat.mjs';
 import { AUTHORS } from './authors.mjs';
-import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
 import { familyName, ROOM_RULES } from './families.mjs';
 import { RUNCARD, RUN_CARDS, cardOf as runCardOf, surgeAt, surgeFill, escortOf, escortRoute, packOf, packRoute, packRooms } from './runcards.mjs';
@@ -262,9 +261,9 @@ function aboutOf(s, room) {
   let who = '';
   if (fightKind(room) || room.mirror) who = room.mirror ? mirrorLine(s, room) : whoOf(s, room).line;
   else if (room.kind === 'den') who = g.hunter === 'track' ? 'The Tracker sleeps here.' : 'The Patroller walks its loop from here.';
-  else if (room.kind === 'cache') who = 'Credits and code, sometimes a script.';
+  else if (room.kind === 'cache') who = 'Credits and code.';
   else if (room.kind === 'stash') who = 'The server\'s code, back every two hours.';
-  else if (room.kind === 'secret') who = 'A stash: credits and code, now and then a script or a blue.';
+  else if (room.kind === 'secret') who = 'A stash: credits and code, now and then a blue.';
   else if (room.kind === 'purse') who = `A few credits, taken as you walk in. Full again ${ROOMS.respawn.purse} minutes later.`;
   else if (room.nook) who = room.log ? 'A log. Read it.' : nookLive(s, room, R_th(s)) ? 'Someone, or something, waits here.' : 'Quiet now.';
   else if (room.kind === 'empty') who = 'Nothing here.';
@@ -647,9 +646,8 @@ function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, fi
 // ---------- the strip ----------
 function hudMarkup(s) {
   const R = s.rooms, sig = signalNow(s), max = R.max, f = max ? sig / max : 0, lvl = f <= 0.3 ? 'low' : f <= 0.6 ? 'mid' : 'ok';
-  const prog = progressOf(s), h = hunterOf(s), K = net(s, 'kind') || KINDS[R.kind], bag = scriptsOf(s), author = (AUTHORS[R.author]?.name || R.author).toUpperCase();
+  const prog = progressOf(s), h = hunterOf(s), K = net(s, 'kind') || KINDS[R.kind], author = (AUTHORS[R.author]?.name || R.author).toUpperCase();
   const step = pctOf(s, R.floor >= 5 ? ROOMS.moveDeep : ROOMS.move), stepNew = pctOf(s, R.floor >= 5 ? ROOMS.moveNewDeep : ROOMS.moveNew);
-  const scripts = bag.map((id) => `<li class="fp-perk r-${TIER[SCRIPTS[id].rarity]}" title="${esc(scriptTip(id))}">${esc(SCRIPTS[id].name)}</li>`).join('');
   const hunt = R.at && h ? `<span class="fp-stat fp-hunt${h.down ? ' out' : ''}" title="${esc(`${hunterLine(s)}\n${huntName(h)}: ${HUNTERS[h.kind].text} It moves only when you walk or wait.`)}">${ic('den')}<span class="lbl">${esc(huntName(h))}</span><b>${h.down ? 'down' : h.kind === 'track' && !h.awake && !h.returning ? 'asleep' : `<span class="fp-in">moves in </span>${paceOf(s) - h.count}`}</b></span>` : '';
   const ml = R.at && exfilShown(s) ? `<span class="fp-stat fp-exfilstat" title="${esc(`${exfilLine(s)}\nAn Exfil is uploading a stolen archive off this server. It runs from you, a room for each of your moves. Corner it where it can't run, then walk in: its upload completes after ${CONFIG.exfil.escape} cycles.`)}">${ic('archive')}<span class="lbl">Exfil</span><b>${exfilNext(s) ? 'running' : 'cornered'}</b></span>` : '';
   const rv = R.at ? rivalOf(s) : null, race = rv ? raceOf(s, rv) : null;
@@ -674,7 +672,6 @@ function hudMarkup(s) {
     <div class="fp-prog" title="${esc(`Rooms cleared: ${prog.done} of ${prog.total}. ${R.mapped ? 'The server is Mapped.' : `At ${Math.ceil(prog.total / 2)} the whole map is drawn. At ${prog.total} the server is Mapped.`}`)}"><span class="lbl">Rooms</span><span class="pbar"><span style="width:${(prog.done / prog.total) * 100}%"></span><i style="left:50%"></i></span><b>${prog.done}/${prog.total}</b>${R.mapped ? '<small class="fp-mapped">MAPPED</small>' : ''}</div>
     ${keys}${hunt}${rival}${cardStat}${ml}${pack}${job}${R.world && s.threads ? threadHud(s) : ''}
     <span class="fp-tools">${R.world ? '' : `<span class="fp-rules" role="group" aria-label="Boss rule"><span class="lbl" title="${esc(`Boss rule: how ${BOSSES[RESIDENT].name}'s ticks work. It applies to your next fight with it.`)}">Boss</span>${rule}</span>`}
-    <ul class="fp-perks" aria-label="Scripts"><li class="lbl" title="Scripts: run one a fight, from the fight's tray. It takes no cycle.">Scripts ${bag.length}/${slotsOf(s)}</li>${scripts}</ul>
     <span class="fp-acts">${acts}</span></span>
   </header>`;
 }
@@ -770,7 +767,7 @@ function hereCard(s) {
   if (sc?.kind === 'rival') return rivalCard(s, room, sc);
   if (sc?.kind === 'hunter') {
     st = { word: 'caught', cls: 'hot' };
-    body = holder('den', `${huntName(h).toUpperCase()} ICE`, `Level ${fightOf(s, room, 'hunter').level} hunter`, '', 'hot', hackerLevel(s)) + note('Beat it for a script. It stays down the rest of the visit.');
+    body = holder('den', `${huntName(h).toUpperCase()} ICE`, `Level ${fightOf(s, room, 'hunter').level} hunter`, '', 'hot', hackerLevel(s)) + note('Beat it and it stays down the rest of the visit.');
     acts = btn('engage', 'Fight it', { primary: true }) + btn('slip', 'Slip past', { tip: slipTip(s) });
   } else if (sc?.kind === 'virus' && sc.as === 'surge') {
     const c = surgeAt(s, room.id);
@@ -811,7 +808,7 @@ function hereCard(s) {
     if (full) {
       body = note(esc(room.mirror ? mirrorLine(s, room) : bait ? `Bait. Taking it costs ${lose} Signal.` : 'Clean: credits and code.'), bait || room.mirror ? 'hot' : '');
       acts = btn('pull', room.mirror ? 'Break the mirror' : 'Take it', { primary: !bait && !room.mirror, hot: bait || room.mirror, note: bait ? `−${lose} Signal` : '' }) + '<button type="button" class="btn" data-fp-pop-close>Leave it</button>';
-    } else body = note('Credits and code, sometimes a script.', 'dim');
+    } else body = note('Credits and code.', 'dim');
   } else if (room.kind === 'vault') {
     const open = opened(s, room), has = R.visit.keys.includes(room.id), main = room.id === g.vaults[0], force = pctOf(s, ROOMS.force);
     const left = open && R.world ? net(s, 'vaultLeft', room) || 0 : 0;
@@ -824,7 +821,7 @@ function hereCard(s) {
     }
   } else if (room.kind === 'secret') {
     const full = cacheFull(s, room);
-    body = note(full ? 'A stash: credits and code, now and then a script or a blue.' : 'Taken. It fills again in two hours.', full ? '' : 'dim');
+    body = note(full ? 'A stash: credits and code, now and then a blue.' : 'Taken. It fills again in two hours.', full ? '' : 'dim');
     acts = full ? btn('pull', 'Take it', { primary: true }) + '<button type="button" class="btn" data-fp-pop-close>Leave it</button>' : '';
   } else if (room.kind === 'stash') {
     body = note(cacheFull(s, room) ? 'The server\'s code, kept for its owner.' : 'Empty. It fills again in two hours.', cacheFull(s, room) ? '' : 'dim');
