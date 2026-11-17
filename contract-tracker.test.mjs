@@ -57,9 +57,9 @@ test('only the contracts you hold: not the board, not the delivered ones', () =>
   assert.match(take, new RegExp(`Take over ${loc.name}`));
   assert.doesNotMatch(take, /ct-say|ct-prog/, 'no count: one line, its few words in the tooltip');
   assert.match(take, /title="[^"]*Vault shut\./);
-  assert.match(item, /<b>Recover ledger\.db<\/b>/);
+  assert.match(item, new RegExp(`<b>Recover ledger\\.db from ${loc.name}</b>`), 'the server it sits on, in its name');
   assert.match(item, /Contract for wick · LOWLIGHT/);
-  assert.match(item, new RegExp(`In the vault on ${loc.name}`));
+  assert.match(item, /In the vault\./);
   // Delivered: it leaves the map.
   s.mail.jobs[0].done = true;
   assert.equal(rows(mapMarkup(s)).length, 2);
@@ -104,7 +104,7 @@ test('its tooltip reads in the house grammar: the name, its kind, its progress, 
   const tips = rows(mapMarkup(s)).map((r) => unesc(r.match(/title="([^"]*)"/)[1]));
   const [kill, item] = s.mail.jobs;
   assert.equal(tips[0], `Kill 5 Ransomware viruses, Lv 8+: Contract for Halcyon Mutual · Claims. 3 of 5 viruses killed.\n▸ Open it in Mail.`);
-  assert.equal(tips[1], `Recover ledger.db: Contract for wick · LOWLIGHT. In the vault on ${loc.name}.\n▸ Show it on the map.`);
+  assert.equal(tips[1], `Recover ledger.db from ${loc.name}: Contract for wick · LOWLIGHT. In the vault.\n▸ Show it on the map.`);
   for (const t of tips) {
     const [body, answer] = t.split('\n');
     assert.doesNotMatch(body, /;/, 'no semicolon chains');

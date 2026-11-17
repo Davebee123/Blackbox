@@ -2228,8 +2228,8 @@ minutes after you take it.
 A contract that points at a room marks it on that server's map (its address amber, the contract's mark), and so does any
 job a room's live virus would count for. The strip shows **Contract** and its progress (its tip has each one, a row each with
 its progress; the map's tracker keeps a row to one line, the rest in its tooltip), the map's card each contract on that server. Pinned earned pieces sit under the tracker
-(*Earned pieces*). A takeover or recovery points at a server you've found, or at an **unknown server** one hop past one: you
-trace it to find it.
+(*Earned pieces*). A recovery points at a server you've found (its name in the contract's, *Show on map* on the offer);
+a takeover at one, or at an **unknown server** one hop past one: you trace it to find it.
 
 **The board** opens with the turf letter (the storyline's fourth), or once you've held the claimjack or turf job for an
 hour. Up to ten offers sit on it; a new one arrives every 1 to 3 minutes, and an untaken offer is gone after 15. Its kind
@@ -3087,11 +3087,14 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 62 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 64 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
 - **Earned pieces** (no version of their own): `s.earned` (each count) and `s.pins`, made on first use (`earned.mjs`). A
   piece you had found stays found.
+- **v64** a board recovery (held or offered) aimed at an unknown server moves to a server you've found, its letter
+  rewritten; with none found, an offer goes (`mail.mjs itemRestore`, keyed on `hidden` with no `loc`).
+- **v63** the Graphics settings, `s.settings.graphics` (`graphics.mjs migrateGraphics`, keyed on the field).
 - **v62** runners: `s.runners` (the logged-on clock, who you know), made on first use (`runners.mjs`).
 - **v61** every hub's Shop has one shape: the agency stock, the premium shelves and the hubs' stock counts go
   (`store.mjs shopRestore`, keyed on the fields).

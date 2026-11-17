@@ -181,7 +181,7 @@ comment saying what it does.
 
 | File | What it does |
 |---|---|
-| `dist/mail.mjs` | Letters, contracts (one engine, five givers) and your commission's retainer. |
+| `dist/mail.mjs` | Letters, contracts (one engine, five givers; a recovery only on a server you've found, `itemRestore` for older saves) and your commission's retainer. |
 | `dist/content.mjs` | Fills and checks the written content's blanks. |
 | `dist/content/story.mjs`, `dist/content/contracts.mjs` | The story beats and contract templates (a letter set per giver), written in the editor. |
 | `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts (its Boss step, its built boss in a road server's Core, and extra letters), and its page in Mail. |

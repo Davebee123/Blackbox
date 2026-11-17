@@ -462,3 +462,42 @@ test('activity contracts: each from its level, and each counts what it wraps', a
   loc.root.level = 3;
   assert.ok(ready(s, root), 'Root 3 reached on a server you hold');
 });
+
+import { itemRestore } from './dist/mail.mjs';
+test('a recovery is offered only on a server you have found, and points at it; an older one aimed at an unknown server moves to one', () => {
+  // None found: no recovery on the board.
+  const none = contractor();
+  for (let i = 0; i < 200; i++) offer(none, T0);
+  assert.ok(!offers(none).some((o) => o.type === 'item'), 'nothing found, nothing to recover');
+  // Found servers, with unknown ones beside them: every recovery names a found one.
+  const s = contractor();
+  command(s, 'developer location worm'); command(s, 'developer location ransomware');
+  assert.ok(hiddenNodes(s).length, 'unknown servers to aim at');
+  const got = [];
+  for (let i = 0; i < 300 && got.length < 8; i++) { const o = offer(s, T0); if (o.type === 'item') got.push(o); s.mail.offers = []; }
+  assert.ok(got.length >= 4);
+  for (const o of got) {
+    const at = s.locations.find((l) => l.id === o.loc);
+    assert.ok(at && !o.hidden, 'a found server');
+    assert.ok(o.body.join(' ').includes(at.name) && !/haven.t found|relay/i.test(o.body.join(' ')), 'its letter names it; no trace to run');
+    assert.doesNotMatch(o.body.join(' '), new RegExp(o.file.replace('.', '\\.')), 'the file is in its name, not again in the letter');
+  }
+  // An older save: a board recovery and an offer on an unknown server, and the storyline's own.
+  const old = contractor();
+  command(old, 'developer location worm');
+  const h = hiddenNodes(old)[0].id;
+  old.mail.jobs.push({ id: 501, type: 'item', hidden: h, loc: null, file: 'breach.rpt', label: 'a breach report', faction: 'halcyon', subject: 'Recover breach.rpt', body: ['A relay nearby will flag the server.'], got: 0, reward: { credits: 1 } });
+  old.mail.offers.push({ id: 502, type: 'item', hidden: h, loc: null, file: 'claims.db', label: 'a claims database', faction: 'kestrel', subject: 'x', body: ['x'], expiresAt: T0 + 1e12, reward: { credits: 1 } });
+  old.mail.jobs.push({ id: 503, type: 'item', hidden: h, loc: null, file: 'claims.db', story: 4, got: 0, reward: { credits: 1 } });
+  const r = restore(JSON.parse(JSON.stringify(old)));
+  const [a, b, c] = [501, 502, 503].map((id) => [...r.mail.jobs, ...r.mail.offers].find((j) => j.id === id));
+  for (const j of [a, b]) {
+    const at = r.locations.find((l) => l.id === j.loc);
+    assert.ok(at && !j.hidden, `${j.id}: on a found server`);
+    assert.match(j.body.join(' '), new RegExp(at.name), 'its letter rewritten to name it');
+  }
+  assert.ok(r.locations.find((l) => l.id === a.loc).extraFiles.some((f) => f.name === 'breach.rpt'), 'a held one: its file planted in that vault');
+  assert.equal(c.hidden, h, 'the storyline keeps its trace');
+  const again = JSON.stringify(r.mail); itemRestore(r);
+  assert.equal(JSON.stringify(r.mail), again, 'safe to run twice');
+});
