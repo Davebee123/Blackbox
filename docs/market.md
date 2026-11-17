@@ -292,34 +292,36 @@ faction's **thanks**, +2.5. Unanswered: half the time it **comes back** a quarte
 
 ### Bulk orders and two buyers
 
-- **A bulk order:** three price cards in ten at one hub are orders of 20–60 units, gone once filled. It holds its price
-  until it's filled: a unit sold into it takes nothing off the hub's price, so it's worth farming for and keeping code
-  in stock for. Runners fill about a third before an order closes; the rest is there for you. The hub shows how much
-  is left.
+- **A bulk order:** three price cards in ten at one hub post an order: 30–60 code, 60–120 components or 3–6 Exploits
+  (the same worth in each), open for 90 minutes of play or until it's filled, at the price the card opened at. A unit
+  sold into it takes nothing off the hub's price. That's long enough to go out for the ware (below). Runners fill about
+  two units in five; the hub shows how much is left.
 - **Two buyers** (lore.md's built choice, threads.md 5): two rivals bid ×1.4 for one ware at once (Halcyon and
   GLASSJAW, GLASSJAW and LANTERN, Kestrel and NULL CHOIR, Halcyon and NULL CHOIR). Whoever you sell to takes the sway.
 
-### Sites: a lot of one thing
+### What pays what
 
-A price card opens a **site** one time in three: a temporary server on your floor, at your level, beside a server
-you've connected to (a dashed line, like a thread's). It holds one ware. About three open in 10 hours of play: two in
-three hold code, one in four components, one in seven Exploits.
+No place holds a ware. Each activity pays in **one thing**: a lot of it, and hardly anything else. What an activity
+pays today, at usual prices, goes into that one thing, so nothing pays more on an ordinary day. A card that wants a
+ware makes its activities worth more, and the ware's bulk order holds the price for what they bring in.
 
-- **The rule.** Every kill there drops the site's ware and nothing else: no gear, no other code, no caches, and half
-  the XP. An hour there is an ordinary hour's worth at usual prices, all in one ware: about 47 code of one family
-  (three times an hour's code of all three), 93 components (almost seven times) or 4.7 Exploits (twelve times), at
-  level 12, scaling as drops do.
-- **Its buyer.** The card's hub buys the whole haul at the card's price until the site closes: a bulk order the size
-  of the haul. Without it a site loses money, because each unit sold at a hub takes 4% off its price (section 8).
-- **Its life.** About an hour's clearing, open for 90 minutes of play; then it closes, cleared or not. Missing one
-  costs nothing: the ware's usual sources pay as before, and another opens in about three hours. Runners turn up and
-  fight there; the haul and its order are yours.
+| Pays in | Activities | Changed from today |
+|---|---|---|
+| One family's code | Invasions (the bounty), Outbreak and Patient zero, Quarantine, Packet routing, a Nest | Patient zero pays a second code cache in place of an elite's loot |
+| Components | Surge room, Cascade, Deadlock, scrapping | A surge's waves pay components in place of credits; Deadlock pays as Cascade does |
+| Exploits | Terminal, the Exfil | The Terminal's cache and the Exfil's credits and item come as Exploits; the Exfil's 5% unique stays |
+| Credits | Contracts, Bounty, Bounty hunt, the Gauntlet, Ping sweep, Stray cache | The code in their caches comes as credits |
+| Gear | Courier, Escort, a Pit, Sighting, Hunter pack, a rival's lineup | The courier's, the escort's and the rival's credits go into the item's rarity |
+| Rep | Defence call, Feud | A feud's wins pay rep in place of credits and protocols; its faction piece stays |
 
-| Site | Opened by | Holds | Its file |
-|---|---|---|---|
-| **Nest** (the built rogue kind) | A code card at a hub; a crew's run | One family's code | *(the Nest's lines)* |
-| **Scrapyard** | Rack closure (Kestrel), Beacon repair (LANTERN) | Components | *rack 4's hardware, stacked for the auditors. something moved in overnight.* |
-| **Testbed** | Report auction, Audit, The heirs, Claim files (GLASSJAW) | Exploits | *a researcher's testbed. every finding glassjaw is about to sell, running live.* |
+The lore: a Terminal's incident file names the flaw that was used, and GLASSJAW buys the write-up as an Exploit. An
+Exfil's archive is someone's findings on the way to a buyer. A surge breaks the same virus over and over, and the room
+fills with parts.
+
+- **Reacting.** While a card wants a ware, the director deals what pays it twice as often: its events (a courier, a
+  bounty, an outbreak), the surge among run cards, the Exfil's roll. Puzzle rooms stay where they are.
+- **Who it's for.** A player holding stock fills an order from their pack. Going out for a ware pays when you're short
+  of it, which is most often Exploits (section 8).
 
 ### Runner cards
 
@@ -369,7 +371,7 @@ built.
 | The map | An amber ▲ on the glyph of each server whose family's code is dearest right now: where to farm |
 | Contracts | A premium as an amber ▲ and its percentage on the offer's pay, the reason in its tooltip (*Kestrel is short-handed.*) |
 | A bulk order | How many units are left, on the hub's price row |
-| A site | Its server with its ware's icon in amber and a bar of the time left; the card's Log line names it; its tooltip says what it holds and what the hub pays |
+| A ware's price | Its tooltip lists the activities that pay it |
 | The network map's top right | INIT's count as a small bar, the harvest and sale bands marked, the number in its tooltip |
 | The Log (the pager) | A card's line in its voice; LANTERN's count; the tide turning; a cancel round |
 | The Network card | The Charter as you learn it: standings once you've seen the hub's market, institutions once their card has come, ??? until then (like the rich code) |
@@ -392,7 +394,7 @@ In brackets: loyal to Halcyon alone, the hardest case for dominance.
 | Market cards | 2.4 an hour |
 | A network's prices | Each good's best standing runs ×1.2–1.8 from one seed to another (Cipher ×1.4–1.7, Worm ×1.2–1.7, Kernel ×1.2–1.8, Exploits ×1.2–1.6, components ×1.0–1.8); on a seed, one code is dearest 83% of the time |
 | Variety | 53 distinct cards a seed (card and modifier) in 40 hours, against 24 with only the moves, institutions and crews; the commonest card is 15% of a ticker; two seeds' tickers are 0.49 alike (cosine), against 0.57 |
-| Follow-ups, orders, arcs | 4.8 thanks and 2.3 come-backs in 10 hours; 14 bulk orders a seed in 40 hours, runners filling under a third; 2.7 arcs finished; a rare card about once in 43 hours |
+| Follow-ups, orders, arcs | 4.8 thanks and 2.3 come-backs in 10 hours; 14 bulk orders a seed in 40 hours, runners filling two units in five; 2.7 arcs finished; a rare card about once in 43 hours |
 | What your sales fetch | 2% more than today's market, base prices eased 10% (0.62 against 0.61 of today's best prices) |
 
 | You | Contracts pay | Retainer | Credit income |
@@ -409,26 +411,25 @@ Exploits an hour), against selling at the best hub every 30 minutes on today's m
 | Seller | Credits an hour | Against today |
 |---|---|---|
 | Sells everything at their own commission's hub | 153 | ×0.65 |
-| Sells at the best hub every 30 minutes | 242 | ×1.02 |
-| Reactive: farms the dearest code, chases outbreaks, keeps stock for bulk orders and price spikes | 328 | ×1.39 |
-| Also buys cheap to resell | 355 | ×1.50 |
+| Sells at the best hub every 30 minutes | 242 | ×1.03 |
+| Reactive: farms the dearest code, chases outbreaks, keeps stock for bulk orders and price spikes | 366 | ×1.55 |
+| Also buys cheap to resell | 389 | ×1.65 |
 
-Bulk orders are most of the reactive player's edge: about 7 units an hour into them, at 21 credits a unit against
+Bulk orders are most of the reactive player's edge: about 9 units an hour into them, at 20 credits a unit against
 about 15 at a hub. Before orders held their price, reacting paid only 6% over the best hub, because each unit sold
-takes 4% off a spike. Buying to resell is capped by how many units the orders want. The three tables come out within
-a few percent of each other.
+takes 4% off a spike; orders that closed with their card's 20 minutes paid ×1.39. Buying to resell is capped by how
+many units the orders want. The three tables come out within 7% of each other.
 
-**Sites.** 100 seeds × 40 hours, everything sold the reactive way above (credits, and goods at what they fetched).
-The second player also goes to any open site worth 10% more than an ordinary hour; moving costs 10 minutes:
+**Going out for a ware.** 100 seeds × 40 hours, everything sold the reactive way above. While an order is open and
+worth 10% more than an ordinary hour, the player goes out for its ware: an ordinary hour's worth an hour, all in that
+ware (what pays what), and 10 minutes to get there and back.
 
-| Player | An hour | XP | Time at sites |
+| Their stock | An hour out | Over a session | Time out |
 |---|---|---|---|
-| Ordinary play only | 555 | ×1 | none |
-| Takes sites | 600 (×1.08; ×0.95–×1.25 across seeds) | ×0.82 | 17% |
+| Large: 250 code or components, 8 Exploits | ×2.2 an ordinary hour (×1.5–×3.0) | ×0.97 | 6% |
+| Small: 40 code or components, 2 Exploits | ×2.4 (×1.7–×3.4) | ×1.05 (×0.89–×1.22) | 10% |
 
-A site taken is worth ×2.0 an ordinary hour (×1.56–×2.41), the card's price on the whole haul, so it pays to react
-and costs XP to live there. Sized at ×0.8 an hour, sites earn nothing over a session; at ×1.2 they beat ordinary play
-at usual prices (×1.18). Without their buyer, sold at the hubs, they lose 6% against ordinary play.
+Sold at the hubs without an order, a lot of one ware loses 6% against ordinary play, at 4% off a unit.
 
 ## 9. Building it
 
@@ -445,4 +446,4 @@ gives a different result in each JavaScript engine.
 | M3 | **Moves and the tide** | Faction moves with variants, dispositions and favoured moves; cost cards; the tide; modifiers and follow-ups; bulk orders, two buyers; feuds and calls move sway | `s.market.tide`, `due` |
 | M4 | **INIT's count** | The count, the network's table, its movers and bands, cancel rounds, the bar on the network map, LANTERN's readout; runners' trades and corners; rare cards | `s.market.count`, the rare cards left |
 | M5 | **Arcs and Turf war** | Institution arcs; Turf war (director.md D4): two rivals within 2 points at the top contest a floor, the winner takes 5 | Each arc's step, the crisis |
-| M6 | **Sites** (after M3) | A price card opens a site one time in three: the Nest, Scrapyard and Testbed as temporary servers, the drop rule, the held order, the map mark and tooltip | `s.market.sites` |
+| M6 | **What pays what** (after M3) | Each activity's pay in its one thing (the table's changes), the director dealing a wanted ware's activities twice as often, the activities in a price's tooltip | Nothing new |
