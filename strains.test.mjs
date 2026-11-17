@@ -228,8 +228,10 @@ test('Extortion: enough damage while the Demand winds up calls the Deadline off'
   const demand = part(s, 'demand'), atk = demand.attack;
   atk.due = s.encounter.cycle + 1;
   atk.windup = 1; // any hit is enough here
+  const c0 = s.encounter.cycle;
   fire(s, 'spike demand');
   assert.ok(atk.due > s.encounter.cycle + 1, 'called off and started over');
+  assert.equal(demand.cutAt, c0, 'marked as cut, so its chip fizzles instead of striking');
   const t = bare(start('extortion'));
   part(t, 'pulse').attack = null;
   const d2 = part(t, 'demand');

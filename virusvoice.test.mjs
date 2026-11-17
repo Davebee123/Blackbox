@@ -95,6 +95,8 @@ test('a fight plays them: react() asks for the batch\'s voices, fire() holds a c
   assert.match(src, /const incoming = [^\n]*attackVoices\(events, /);
   assert.match(src, /feel\.mute\(voiced\.has\(e\) \|\| incoming\.voiced\.has\(e\)\)/);
   assert.match(src, /function fire\(b, spawned = \[\], cycle = null\) \{[^]*?takeStrike\(/);
-  assert.match(src, /function fire\(b, spawned = \[\], cycle = null\) \{[^]*?cutAt === cycle/); // a chip you cut fizzles; it never strikes
+  assert.match(src, /const cutChip = \(b, cycle = null\) => \{[^\n]*cutAt === at/); // a chip you cut: by its own key's cycle
+  assert.match(src, /function fire\(b, spawned = \[\], cycle = null\) \{\s*const cut = cutChip\(b, cycle\);/); // fizzles as the board turns
+  assert.match(src, /x\.mode === 'chip' && x\.chip && !x\.taken && cutChip\(x\.chip\)\) \{[^\n]*fireNow\(x\.chip, false/); // and never strikes from where it stands
   assert.equal(src.match(/feel\.attack\(/g)?.length, 1, 'one place plays them: attackSound');
 });

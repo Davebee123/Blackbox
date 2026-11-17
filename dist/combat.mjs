@@ -3168,6 +3168,7 @@ export function hit(s, p, base, opts = {}) {
     if (p.attack.wound >= w) {
       p.attack.due = e.cycle + p.attack.interval;
       p.attack.wound = 0;
+      p.cutAt = e.cycle; // (the board: its chip fizzles instead of striking)
       emit(s, 'blocked', `${p.attack.name} is called off. You hit the ${p.name} hard enough, and it starts over.`, { source: p.id });
     }
   }
