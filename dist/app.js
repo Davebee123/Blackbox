@@ -805,6 +805,7 @@ function attackGo() {
   for (const go of attackHeld.splice(0)) go();
   for (const x of attackQueue.splice(0)) {
     if (x.played) continue;
+    if (x.mode === 'chip' && x.chip && !x.taken && cutChip(x.chip)) { x.taken = true; spend(x.chip.k); fireNow(x.chip, false, false, null); continue; } // cut: it fizzles in place, silent
     if (x.mode === 'chip' && x.chip && !x.taken) { // the board hasn't turned: its chip strikes from where it stands
       const b = x.chip, wait = Math.max(0, x.land - x.plan.impact), replicate = /\breplicate\b/.test(b.cls), stays = !!$('board')?.querySelector(`[data-k="${CSS.escape(b.k)}"]`);
       const hold = stays ? null : ghostOf(b); // (the board dropped it already: it holds as a ghost)
@@ -2481,9 +2482,11 @@ function turnTimeline(before) {
 }
 // What resolved this cycle: a ghost of the chip plays out where it was.
 const ghostOf = (b) => { const g = document.createElement('div'); g.className = 'fx-ghost'; g.innerHTML = b.html; Object.assign(g.style, { left: b.rect.left + 'px', top: b.rect.top + 'px', width: b.rect.width + 'px', height: b.rect.height + 'px' }); document.body.appendChild(g); return g; };
+// An attack you cut on the cycle it was due (interrupt.mjs cancelAttack) never goes off: its chip fizzles in place. The
+// chip's own key names its cycle (<id>@<cycle>), so this holds however the board turned.
+const cutChip = (b, cycle = null) => { const at = Number(b.k.slice(b.k.lastIndexOf('@') + 1)), cutAt = b.src ? part(campaign, b.src)?.cutAt : null; return cutAt != null && (cutAt === at || cutAt === cycle); };
 function fire(b, spawned = [], cycle = null) {
-  // An attack you cut on the cycle it was due (interrupt.mjs cancelAttack) never goes off: its chip fizzles in place.
-  const cut = cycle != null && b.src && part(campaign, b.src)?.cutAt === cycle;
+  const cut = cutChip(b, cycle);
   const theirs = !cut && /\bnow\b/.test(b.cls) && !/mine|daemon|patch/.test(b.cls);
   // A replicate aims at the fragment it spawned (one each), not your bar; one that fizzled plays out in place.
   const replicate = theirs && /\breplicate\b/.test(b.cls);
