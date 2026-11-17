@@ -11,6 +11,8 @@ them. Today's market (GAME_RULES *Markets*) is the floor this builds on: wares, 
 - **No faction dominates.** In Starsector with Nexerelin, one faction can snowball across the sector. Here a faction's
   lead feeds two others, and the lead turns.
 - **Lore first.** Every mover has a reason in the fiction (lore.md) and speaks in its owner's voice.
+- **A short-handed faction pays more credits for its contracts** (never XP), and siding with a faction keeps its own
+  rewards (section 3, *Pay*).
 
 ## 1. The shape
 
@@ -36,6 +38,10 @@ lean, rich code) stay as they are. The ticker rolls the director's own dice, so 
 | **Variants** | Each card's code, size and length, within its own range (a price card ×1.4–1.8, 15–30 min) | One network's Premium review wants Kernel, another's Cipher |
 | **Temper** | Steady, restless or jittery | Cards ×0.7, ×1 or ×1.3 as big |
 | **First tide** | One faction | Who the net leans to first |
+| **Dispositions** | Each faction Bold (1 in 4), Steady (2 in 4) or Careful (1 in 4) | Its office on this network: Bold moves half again as often, a fifth bigger, and its cost comes due half again as fast; Careful 0.7×, 0.9× and 0.6× |
+| **Favoured moves** | Two of the deck's ordinary moves | Each comes up 2.5 times as often (the signature's favoured cards, for the market) |
+| **Style** | Plain, leaky, quiet or contested | The modifier its cards lean to (section 5) |
+| **Rare cards** | Two of five | Each once a playthrough (section 5) |
 | **Scarcity** | The signature's lean | Its commonest code ×0.97, the middle one ×1, its rarest ×1.12 |
 
 ### Standings
@@ -86,6 +92,19 @@ the faction's own good (need to the power 1.4), the ware its supply order wants 
 Kernel, LANTERN Worm, NULL CHOIR components, GLASSJAW Exploits. On everything else it buys it counts lightly (to the
 power 0.4). The runners and you sell where a faction is short, and that brings it back toward its share.
 
+### Pay: follow the need, or back a side
+
+| Rule | Does |
+|---|---|
+| **Need pays credits** | A faction's contracts pay its need over 1 as a credits premium, up to +40%, never XP and never under par. It's set when the offer posts and kept until you deliver, like the XP. |
+| **A short-handed board** | A faction's share of the offers on the board weighs by its need squared, so the factions that need work post more of it. |
+| **Halcyon's line** | Its kill work (Kill, Grind, Strain, Named process) pays up to +20% more credits as the count climbs from 85% to 95%: it needs the table under the line. |
+| **The patron's share** | Your commission's retainer rises with your patron's lead: +1.5 × its sway over its baseline (as a share of the baseline), up to +30%. Backing a side pays when it rises, and your work is what raises it. |
+| **Siding, as built** | Rep tiers (shops, chase lines), receipts and set pieces, defence calls at ×1.5, the stance. A mercenary spreads that rep thin. |
+
+Measured (section 8): a loyal player's credits come out ×1.03, a mercenary's ×1.05. Mercenaries also steady the market:
+the faction that leads most holds it 44% of the time against 51%.
+
 ### The web: each answer's cost feeds two others
 
 The five answers to *what should happen to the frozen payments* (lore.md 3) each carry a cost. When one leads, its
@@ -116,17 +135,36 @@ your play steers it. Its faction's line goes to the Log:
 
 ## 4. INIT's count
 
-The process table's fill, *process table at N%*, one number a save. It starts at 80–86%.
+The process table's fill, *process table at N%*, one number a save, 80–86% at the start. It's the lore's pulse: the
+table is filling again, Halcyon pays crews like LOWLIGHT to keep it under the line, and every clean kill frees a slot.
+It never reaches 100%: that was the Cascade. The story's pages keep their own numbers (81% on floor 2's schedule, 99%
+at the Cascade); this is today's.
 
-- **Up:** orphans pile up, +5 points an hour, up to half again as fast while Halcyon holds more than its share (*the
-  table fills while it waits*). Crews' runs and the frozen institutions' cards add 2 or 3.
-- **Down:** every clean kill frees a slot, 0.035 points one of yours and 0.02 a runner's job. Cards take it down 1 to 6
-  (the schedule, a rack, a seal, a rollback). At 95% INIT runs a **cancel round**: −8, with the line *init: cancel
-  round. process table at 87%*. It never reaches 100: that was the Cascade.
-- **What it does:** a full table means more strays and more code, so code sells for up to 12% less above 85% and up to
-  12% more below it. Some cards only come above a line (the schedule over 86%, a report auction over 88%), and crews'
-  runs come more often the fuller it is. LANTERN reads it out on the Log at each two points: *Four. Nine. Nine. The
-  table is at eighty-eight.*
+### What moves it
+
+| Up | Points | Down | Points |
+|---|---|---|---|
+| Orphans piling up | +5 an hour, up to half again while Halcyon holds more than its share | Your kills | −0.035 each (a session's 70 an hour: −2.5 an hour) |
+| A crew's run | +3 | A runner's job | −0.02 |
+| Account nine, the Margin call | +2 | Halcyon's schedule, a cancel round | −6, −8 |
+| Pellucid's wage run | +3 | A rollback night, a seal drill, a rack closure | −5, −4, −3 |
+| | | LANTERN's settlement drive, its census; rare cards | −2, −1; −3 to −6 |
+
+Your play is the brake. A heavy session pulls the table down; a light one lets it fill.
+
+### What it does to the world
+
+Both ends pay something, so neither is a penalty: a full table is a harvest, a quiet one a sale.
+
+| Count | The world | Why |
+|---|---|---|
+| **88% and over** (37% of the time) | Crews' runs (double code for a family, 30 min) come more often: twice as often at 90%. ★ rare spawns up to a quarter more often at 95%. Code sells for less, 1.2% a point over 85% (−12% at 95%). Halcyon's kill work pays more (*Pay*). Report auctions open. INIT's warnings join the Log (*warn: process table at 91%*, the cold open's lines). Over 90% the ticker runs 1.4 times as fast. | Orphans everywhere: strays crowd the servers and old ones surface. Halcyon needs it under the line, and GLASSJAW has something to sell. |
+| **80–88%** | Code near its price. | The usual. |
+| **Under 80%** (16% of the time) | Code sells for more, 1.2% a point under 85% (+12% at 75%). Runners' frozen payments climb twice as fast; a cleared one is a #net beat and +2.5 to the runner's faction. LANTERN's settlement cards come up more often. The ticker runs at 0.75 times. | Room on the table: strays are scarce, and trades can finish. |
+| **95%: a cancel round** (about one in 12 hours) | −8. Live market cards end. LANTERN reads the cancelled accounts; GLASSJAW sells the list. | Kessler's cancel job, run again (lore.md 1). |
+
+**Where it shows:** LANTERN's line on the Log at each two points (*Four. Nine. Nine. The table is at eighty-eight.*),
+INIT's own warnings over 90%, and the number on the Network card.
 
 ## 5. The ticker: market cards
 
@@ -157,14 +195,16 @@ marks the card that comes due (section 3).
 | | **Vigil** | *Another one for the dead account holders. Sing along.* | +3.75 |
 | | **Rehearsal** | *Send us TOLLGATE's code. We're learning the words.* | Cipher ×1.5 at NULL CHOIR, 20 min |
 | | **Rollback night** (cost) | *Everyone's dead and still paying. Funny, isn't it? Let it roll back.* | The count −5; components ×0.7 everywhere, 30 min; −3.75; Kestrel and GLASSJAW +1.9 |
-| GLASSJAW | **Report auction** (over 88%) | *Ninety-one percent, the day before. I have the original. Make an offer.* | Exploits ×1.8 at GLASSJAW, 20 min; +2.5 |
+| GLASSJAW | **Report auction** (over 88%) | *Today's count, signed by INIT. Bids open.* | Exploits ×1.8 at GLASSJAW, 20 min; +2.5 |
 | | **Early word** | *Three prices move in the next twenty minutes. I know which.* | Three flickers (×1.3 or ×0.75) across the hubs, 20 min |
 | | **Sink clearance** | *Whatever falls to the Sink, I buy. Kernel first.* | Kernel ×1.5 at GLASSJAW, 20 min |
 | | **Leaked report** (cost) | *Someone gave my report away. It was worth more than that.* | −3.75; LANTERN and Halcyon +1.9; Exploits ×0.8 at GLASSJAW, 20 min |
 
-### Institutions
+### Institutions and their arcs
 
-A network's two clients and its ghost (the Charter) each bring a card.
+A network's two clients and its ghost (the Charter) each bring a card, then an arc: a crisis, and a resolution that
+goes to one of two factions, the one that needs it more seven times in ten. The winner takes +3.75 and its good ×1.3
+at its hub for 20 min. Then the arc starts again.
 
 | Institution | Card | Line | Does |
 |---|---|---|---|
@@ -177,17 +217,69 @@ A network's two clients and its ghost (the Charter) each bring a card.
 | Pellucid Payroll (frozen, the Sink) | **Wage run** | *A month of the city's wages, still settling.* | Worm strays stir: Worm ×0.8 everywhere, 30 min; the count +3; NULL CHOIR +2.5 |
 | Kessler Systems (bankrupt) | **A farm wakes** | *KESSLER-FARM, still mining for an owner who died in the Cascade.* | Components ×0.75 everywhere, 30 min; Kestrel +2.5 (it was paid in Kessler's hardware) |
 
+| Institution | The crisis | Line | Does | Ends with |
+|---|---|---|---|---|
+| Corvid Exchange | **Margin call** | *Corvid Exchange is selling lots below cost. Insured, of course.* | Kernel ×0.6 everywhere, 20 min; the count +2 | Kestrel or Halcyon takes it over |
+| Harrow Street | **A run on the union** | *Members are queuing at Harrow Street.* | Worm ×1.5 at LANTERN, 20 min; LANTERN −2.5 | LANTERN holds it, or it joins the Guarantee (Halcyon) |
+| City Treasury | **Audit** | *The Treasury is being audited. Copies are available.* | Exploits ×1.5 at GLASSJAW, 20 min | A write-off vote (NULL CHOIR) or the pension fund (LANTERN) |
+| Tenements Board | **Arrears** | *Arrears notices are posted on every floor.* | Components ×0.8 everywhere, 20 min; NULL CHOIR +2.5 | Leases renewed (Halcyon) or a rent strike (NULL CHOIR) |
+| Brandt & Vey | **The heirs** | *Brandt and Vey's heirs are selling their claim.* | Exploits ×1.5 at GLASSJAW, 20 min | Account nine settles (LANTERN) or is sold (GLASSJAW); the count −3 |
+| Annick Life | **The policyholders' letter** | *Annick Life's policyholders have written to Halcyon. Again.* | Halcyon −2.5, LANTERN +2.5 | Halcyon buys the files back, or GLASSJAW sells them to the Sink |
+| Pellucid Payroll | **The payday that never came** | *Thirty years late. Still pending.* | NULL CHOIR +2.5, LANTERN +1.25 | A month settles (LANTERN) or rolls back (NULL CHOIR); the count −4 |
+| Kessler Systems | **The farm's ledger** | *Whose farm was it? GLASSJAW knows.* | GLASSJAW +2.5 | Kestrel claims the rack, or the Choir strips it (components ×0.6) |
+
 ### Crews' runs
 
 TOLLGATE, SWARMLINE and PALEMASK have no paymaster. A run is the built **Outbreak** card with a crew's name: its
 family's strays surge and their kills drop double code for 30 minutes, its code ×0.8 everywhere, the count +3. The
-ticker deals them, more often the fuller the table (×1 at 80%, ×2 at 90%), and the schedule starts one.
+ticker deals them more often the fuller the table (×1 at 80%, ×2 at 90%, ×2.5 at 95%), and the schedule starts one.
 
 | Crew | Run | Family |
 |---|---|---|
 | TOLLGATE | **TOLLGATE's run** | Ransomware: Cipher |
 | SWARMLINE | **SWARMLINE's rental** | Worm: Worm |
 | PALEMASK | **PALEMASK's harvest** | Ghostroot: Kernel |
+
+### Modifiers and follow-ups
+
+Two cards in five carry a modifier, weighted by the network's style:
+
+| Modifier | Does |
+|---|---|
+| **Rushed** | Half as long, half again as big |
+| **Lingering** | Twice as long, half as big |
+| **Wide** | A second hub posts it too |
+| **Leaked** | GLASSJAW's early word puts it on the Log five minutes ahead |
+| **Quiet** | No Log line: only the hub's chip shows it, for whoever checks the markets |
+| **Contested** | A rival answers at its own hub, smaller, and takes +1.25 |
+
+When a card ends, the director remembers it (director.md 1). Sold into (10 units or more, by you or the runners): its
+faction's **thanks**, +2.5. Unanswered: half the time it **comes back** a quarter bigger, once.
+
+### Bulk orders and two buyers
+
+- **A bulk order:** three price cards in ten at one hub are orders of 20–60 units, gone once filled. Runners fill about
+  a third before an order closes; the rest is there for you. The hub shows how much is left.
+- **Two buyers** (lore.md's built choice, threads.md 5): two rivals bid ×1.4 for one ware at once (Halcyon and
+  GLASSJAW, GLASSJAW and LANTERN, Kestrel and NULL CHOIR, Halcyon and NULL CHOIR). Whoever you sell to takes the sway.
+
+### Runner cards
+
+- **A corner:** a runner buys up one code at their hub (×1.4, 10 min). On #net: *buying every kernel lot at kestrel. sell me yours*
+- **A trade clears:** a runner's frozen payment comes through (runners.md *Someone's money*): +2.5 to their faction,
+  the count −1, their line on #net. Twice as often under 80%.
+
+### Rare cards
+
+Each network holds two of the five, each once a playthrough.
+
+| Card | Line | Does |
+|---|---|---|
+| **The original** (GLASSJAW) | *Ninety-one percent, the day before. I have the original. Make an offer.* | Exploits ×3 at GLASSJAW, 10 min; GLASSJAW +2.5 |
+| **Rack zero** (Kestrel) | *Rack 0 is open for inspection. It has not been opened since 2041.* | Kernel ×0.6 everywhere and components ×1.5 at Kestrel, 30 min; Kestrel +2.5 |
+| **Every name** (LANTERN) | *Four. Nine. Nine. Tonight we read every name.* | Worm ×1.5 at LANTERN, 30 min; the count −3; LANTERN +3.75 |
+| **The long rollback** (NULL CHOIR) | *One whole floor of debts. We sang it back to nothing.* | The count −6; components ×0.6 everywhere, 30 min; NULL CHOIR +2.5 |
+| **The Guarantee, renewed** (Halcyon) | *The Halcyon Guarantee is renewed for a further thirty years.* | Cipher ×1.5 at Halcyon, 30 min; Halcyon +3.75 |
 
 **What it replaces:** the world event (market.mjs `EVENTS`, chosen by the wall clock, so every save has the same one
 at the same moment) and the Market shock card: their moves now come from the ticker, with a reason. Flickers (blips),
@@ -201,6 +293,8 @@ population:
 - **They sell where it pays.** They read every hub and stay loyal to their own unless another pays 15% more. Each sale
   gives that hub +0.25 sway and presses its price 0.2% (yours press 4% a unit, as built).
 - **They work for their paymaster.** Each job gives it +0.1 sway, and their clean kills lower the count.
+- **They fill orders and corner codes.** A bulk order draws them, and a corner or a cleared trade is a card of
+  their own (section 5).
 - **They talk about it on #net:** a card (*kestrel's closing rack 4. kernel's up*), a tide, the count.
 - **The cast leans each net.** Eight runners from the seed, so a network with three Kestrel runners has Kestrel's work
   done for it.
@@ -215,28 +309,39 @@ built.
 | The hub's market (built ▲ ▼) | Each price's tooltip names what moved it: the standing, the hub's need, a card and its minutes left |
 | Sway | A five-part bar in the factions' colours (the market window's head, the hub's menu), the tide's faction marked, numbers in its tooltip |
 | The map | An amber ▲ on the glyph of each server whose family's code is dearest right now: where to farm |
+| Contracts | A premium as an amber ▲ and its percentage on the offer's pay, the reason in its tooltip (*Kestrel is short-handed.*) |
+| A bulk order | How many units are left, on the hub's price row |
 | The Log (the pager) | A card's line in its voice; LANTERN's count; the tide turning; a cancel round |
 | The Network card | The Charter as you learn it: standings once you've seen the hub's market, institutions once their card has come, ??? until then (like the rich code) |
 | #net | Runners reacting |
 
 ## 8. Measured
 
-The prototype, 200 seeds × 40 logged-on hours, you delivering work for a mix of factions. In brackets: you working for
-Halcyon alone, the hardest case for dominance.
+The prototype, 200 seeds × 40 logged-on hours, every layer on, you loyal to one faction (a different one each seed).
+In brackets: loyal to Halcyon alone, the hardest case for dominance.
 
 | Check | Result |
 |---|---|
-| Highest sway any faction reaches | 27% typical, 32% at most (31%); over 30% under 0.5% of the time |
+| Highest sway any faction reaches | 28% typical, 33% at most (33%); over 30% almost never |
 | A faction's range (5th to 95th percentile) | 15–25% |
-| The lead changes hands | 2.6 times an hour (2.4); 1.6 on the slowest tenth of seeds (1.4) |
-| The faction that leads most, by seed | 54% of the time typical, 76% at the 90th percentile (58%, 86%) |
-| Time in the lead | Halcyon 30%, Kestrel 26%, NULL CHOIR 16%, LANTERN 15%, GLASSJAW 13% (Halcyon 53%) |
+| The lead changes hands | 2.7 times an hour (2.5); 1.9 on the slowest tenth of seeds (1.7) |
+| The faction that leads most, by seed | 51% of the time typical, 73% at the 90th percentile (54%, 77%) |
+| Time in the lead | Halcyon 29%, Kestrel 27%, NULL CHOIR 16%, LANTERN 15%, GLASSJAW 13% (Halcyon 50%) |
 | Tide turns | 2.8 in 40 hours |
-| INIT's count | 76% to 94% (5th to 95th percentile), 88% typical; a cancel round every 8 hours |
-| Market cards | About 2 an hour |
-| The dearest code | Changes about once an hour; on a seed, one code is dearest 73% of the time, 14% over the next (40% at the 90th percentile) |
-| Which code is dearest most often | Kernel on 47% of seeds, Cipher on 31%, Worm on 22% |
-| What your sales fetch | 3% more than today's market, with your own selling's pressure (0.63 against 0.61 of today's best prices) |
+| INIT's count | 74% to 93% (5th to 95th percentile), 86% typical; 88% and over 37% of the time, under 80% 16% |
+| Market cards | 2.2 an hour; a cancel round every 12 hours |
+| Variety | 52 distinct cards a seed (card and modifier) in 40 hours, against 24 with only the moves, institutions and crews; the commonest card is 14% of a ticker; two seeds' tickers are 0.52 alike (cosine), against 0.57 |
+| Follow-ups, orders, arcs | 4.8 thanks and 2 come-backs in 10 hours; 12 bulk orders a seed in 40 hours; 2.5 arcs finished; a rare card about once in 50 hours |
+| The dearest code | Changes 1.3 times an hour; on a seed, one code is dearest 68% of the time, 14% over the next (42% at the 90th percentile) |
+| What your sales fetch | 5% more than today's market, with your own selling's pressure (0.64 against 0.61 of today's best prices) |
+
+| You | Contracts pay | Retainer | Credit income |
+|---|---|---|---|
+| Loyal to one faction | ×1.03 | ×1.12 | ×1.03 |
+| A mercenary (the neediest board) | ×1.13 | ×1.05 | ×1.05 |
+| Loyal to Halcyon | ×1.06 | ×1.10 | ×1.04 |
+
+Credit income weighs caches at half, contracts a third, the retainer the rest (GAME_RULES *Credits*).
 
 ## 9. Building it
 
@@ -247,16 +352,17 @@ A test on the engine keeps section 8's guardrails: on fixed seeds no sway over 3
 
 | # | Slice | Builds | Saved |
 |---|---|---|---|
-| M1 | **The Charter and the ticker** | Standings, scarcity, clients and ghost; the ticker with crews' runs and institution cards, replacing the wall-clock world event and the shock; price tooltips name their causes; runners read every hub | The ticker's cards |
-| M2 | **Sway** | Sway, need and the web; your sales, contracts and receipts and runners' sales move it; the sway bar | `s.market.sway` |
-| M3 | **Moves and the tide** | Faction moves with their variants, cost cards, the tide and its lines; feuds and calls move sway | `s.market.tide`, `due` |
-| M4 | **INIT's count** | The count, its effects, cancel rounds, LANTERN's readout | `s.market.count` |
-| M5 | **Turf war** (director.md D4) | Two rivals within 2 points at the top contest a floor; the winner takes 5 points | The crisis |
+| M1 | **The Charter and the ticker** | Standings, scarcity, institutions' first cards, crews' runs, replacing the wall-clock world event and the shock; price tooltips name their causes; runners read every hub | The ticker's cards |
+| M2 | **Sway and pay** | Sway, need and the web; sales, contracts and receipts move it; need on prices and contract credits, a short-handed board, the patron's share; the sway bar | `s.market.sway` |
+| M3 | **Moves and the tide** | Faction moves with variants, dispositions and favoured moves; cost cards; the tide; modifiers and follow-ups; bulk orders, two buyers; feuds and calls move sway | `s.market.tide`, `due` |
+| M4 | **INIT's count** | The count, its movers and bands, fronts, cancel rounds, LANTERN's readout; runners' trades and corners; rare cards | `s.market.count`, the rare cards left |
+| M5 | **Arcs and Turf war** | Institution arcs; Turf war (director.md D4): two rivals within 2 points at the top contest a floor, the winner takes 5 | Each arc's step, the crisis |
 
 ## 10. Open
 
 - Halcyon's baseline is one point over the others (it insures half the net). More, if it should read as the incumbent?
-- Need could also pay a credits premium on a short-handed faction's contracts (never XP). Today one table pays every
-  board (factions-plan.md 4).
 - Should sway also set the share of faction servers you trace (one in eight today)?
-- A tide line from wick when it turns, or only the faction's own voice?
+- A tide line from wick when it turns, or only the faction's own?
+- The count on the top bar as a small meter, or only on the Log and the Network card?
+- An arc's resolution could freeze a living institution (Corvid unrescued becomes a ghost, the count +5). That changes
+  lore.md 8.1's *Now* for a save. Allowed?
