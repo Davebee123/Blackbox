@@ -212,7 +212,10 @@ const DEFS = `<defs><radialGradient id="sc-cloud"><stop offset="0" stop-color="#
 export function padSvg(s, A, t, { me = A?.me || [W * 0.2, H * 0.8], aim = null, stream = { chars: [], acc: 0 } } = {}) {
   const done = A && (A.stage === 'logged' || A.stage === 'lost');
   let o = `${DEFS}<mask id="sc-pmask"><circle cx="${n1(me[0])}" cy="${n1(me[1])}" r="${LIGHT * 1.35}" fill="url(#sc-lamp)"/></mask></defs>${corners()}`;
-  o += `<g style="opacity:${!A || done ? 0.35 : 1}"><rect width="${W}" height="${H}" fill="url(#sc-grid)" mask="url(#sc-pmask)"/><circle cx="${n1(me[0])}" cy="${n1(me[1])}" r="${LIGHT * 1.35}" fill="url(#sc-light)"/></g>`;
+  // The grid shows only under the lamp, so it covers the lamp's square, not the pad: a whole-pad masked fill redrawn
+  // every frame cost most of Tune's frame time.
+  const R = LIGHT * 1.35;
+  o += `<g style="opacity:${!A || done ? 0.35 : 1}"><rect x="${n1(me[0] - R)}" y="${n1(me[1] - R)}" width="${n1(2 * R)}" height="${n1(2 * R)}" fill="url(#sc-grid)" mask="url(#sc-pmask)"/><circle cx="${n1(me[0])}" cy="${n1(me[1])}" r="${LIGHT * 1.35}" fill="url(#sc-light)"/></g>`;
   o += streamSvg(stream);
   if (!A) return o + idleSvg(s, t);
   if (A.stage === 'search' || A.stage === 'lock') {

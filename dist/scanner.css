@@ -27,7 +27,7 @@
 .sc-decs button[aria-pressed="true"] { background: rgba(127, 209, 199, 0.14); color: var(--you); }
 .sc-pad { margin: 10px; border-radius: 3px; background: radial-gradient(circle, rgba(241, 185, 47, 0.045) 0.8px, transparent 1.3px) 10px 10px / 20px 20px, radial-gradient(ellipse 70% 65% at 50% 45%, #0c0905, #040302 85%); box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6); cursor: crosshair; touch-action: none; user-select: none; -webkit-user-select: none; outline: none; min-height: 0; }
 .sc-pad:focus-visible { box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--line-strong); }
-.sc-pad svg { display: block; width: 100%; height: auto; aspect-ratio: 900 / 562; }
+.sc-pad svg { display: block; width: 100%; height: auto; aspect-ratio: 900 / 562; will-change: transform; } /* its own layer: a frame repaints the pad, not the window */
 .sc-pad .p-corner { fill: none; stroke: var(--line-strong); stroke-width: 1.2; }
 .sc-pad .p-mid { stroke: rgba(241, 185, 47, 0.09); }
 .sc-pad .p-axis { font: 600 9px var(--mono); letter-spacing: 1px; fill: var(--dim); }
