@@ -310,13 +310,12 @@ ware makes its activities worth more, and the ware's bulk order holds the price 
 |---|---|---|
 | One family's code | Invasions (the bounty), Outbreak and Patient zero, Quarantine, Packet routing, a Nest | Patient zero pays a second code cache in place of an elite's loot |
 | Components | Surge room, Cascade, Deadlock, scrapping | A surge's waves pay components in place of credits; Deadlock pays as Cascade does |
-| Exploits | Terminal, the Exfil | The Terminal's cache and the Exfil's credits and item come as Exploits; the Exfil's 5% unique stays |
-| Credits | Contracts, Bounty, Bounty hunt, the Gauntlet, Ping sweep, Stray cache | The code in their caches comes as credits |
+| Exploits | The Exfil, elites, guard posts, a raid's attackers | The hardest and riskiest to get (outposts.md 4): the Exfil's credits and item come as Exploits, its 5% unique stays; elites and guards drop them more often |
+| Credits | Contracts, Bounty, Bounty hunt, the Gauntlet, Ping sweep, Terminal, Stray cache | The code in their caches comes as credits |
 | Gear | Courier, Escort, a Pit, Sighting, Hunter pack, a rival's lineup | The courier's, the escort's and the rival's credits go into the item's rarity |
 | Rep | Defence call, Feud | A feud's wins pay rep in place of credits and protocols; its faction piece stays |
 
-The lore: a Terminal's incident file names the flaw that was used, and GLASSJAW buys the write-up as an Exploit. An
-Exfil's archive is someone's findings on the way to a buyer. A surge breaks the same virus over and over, and the room
+The lore: an Exploit is a flaw somebody guards. An Exfil's archive is someone's findings on the way to a buyer. A surge breaks the same virus over and over, and the room
 fills with parts.
 
 - **Reacting.** While a card wants a ware, the director deals what pays it twice as often: its events (a courier, a

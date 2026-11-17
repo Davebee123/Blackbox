@@ -112,6 +112,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
     eased, no black screen, no readout), and jacking out plays it backwards (your room locks teal, the rooms close in
     a circle onto the node, the line runs home);
   - network map servers: the *Glyph* (each server its kind's glyph, a bar of what's cleared, a ring round a new one);
+  - outposts on the map: the *small hub* (C: the owner's mark in a diamond, its top want as an amber badge, the quality
+    as its name; docs/outposts.md);
   - network map ground: the *Chart* (faint crosshairs and hairlines that pan and zoom with the map);
   - fights by floor: the *Place* (the floor's scene in characters inside the render, its light and camera on the virus,
     the floor's entrance and break physics; stage.mjs), the fight log on its newest line (▴ opens it), chips typed or
