@@ -292,8 +292,10 @@ faction's **thanks**, +2.5. Unanswered: half the time it **comes back** a quarte
 
 ### Bulk orders and two buyers
 
-- **A bulk order:** three price cards in ten at one hub are orders of 20–60 units, gone once filled. Runners fill about
-  a third before an order closes; the rest is there for you. The hub shows how much is left.
+- **A bulk order:** three price cards in ten at one hub are orders of 20–60 units, gone once filled. It holds its price
+  until it's filled: a unit sold into it takes nothing off the hub's price, so it's worth farming for and keeping code
+  in stock for. Runners fill about a third before an order closes; the rest is there for you. The hub shows how much
+  is left.
 - **Two buyers** (lore.md's built choice, threads.md 5): two rivals bid ×1.4 for one ware at once (Halcyon and
   GLASSJAW, GLASSJAW and LANTERN, Kestrel and NULL CHOIR, Halcyon and NULL CHOIR). Whoever you sell to takes the sway.
 
@@ -377,6 +379,21 @@ In brackets: loyal to Halcyon alone, the hardest case for dominance.
 | Loyal to Halcyon | ×1.07 | ×1.10 | ×1.04 |
 
 Credit income weighs caches at half, contracts a third, the retainer the rest (GAME_RULES *Credits*).
+
+**Trading.** What a player earns from what they farm (the bot's yield at level 12: 15 code, 14 components and 0.4
+Exploits an hour), against selling at the best hub every 30 minutes on today's market (236 credits an hour):
+
+| Seller | Credits an hour | Against today |
+|---|---|---|
+| Sells everything at their own commission's hub | 153 | ×0.65 |
+| Sells at the best hub every 30 minutes | 242 | ×1.02 |
+| Reactive: farms the dearest code, chases outbreaks, keeps stock for bulk orders and price spikes | 328 | ×1.39 |
+| Also buys cheap to resell | 355 | ×1.50 |
+
+Bulk orders are most of the reactive player's edge: about 7 units an hour into them, at 21 credits a unit against
+about 15 at a hub. Before orders held their price, reacting paid only 6% over the best hub, because each unit sold
+takes 4% off a spike. Buying to resell is capped by how many units the orders want. The three tables come out within
+a few percent of each other.
 
 ## 9. Building it
 
