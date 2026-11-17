@@ -299,6 +299,28 @@ faction's **thanks**, +2.5. Unanswered: half the time it **comes back** a quarte
 - **Two buyers** (lore.md's built choice, threads.md 5): two rivals bid ×1.4 for one ware at once (Halcyon and
   GLASSJAW, GLASSJAW and LANTERN, Kestrel and NULL CHOIR, Halcyon and NULL CHOIR). Whoever you sell to takes the sway.
 
+### Sites: a lot of one thing
+
+A price card opens a **site** one time in three: a temporary server on your floor, at your level, beside a server
+you've connected to (a dashed line, like a thread's). It holds one ware. About three open in 10 hours of play: two in
+three hold code, one in four components, one in seven Exploits.
+
+- **The rule.** Every kill there drops the site's ware and nothing else: no gear, no other code, no caches, and half
+  the XP. An hour there is an ordinary hour's worth at usual prices, all in one ware: about 47 code of one family
+  (three times an hour's code of all three), 93 components (almost seven times) or 4.7 Exploits (twelve times), at
+  level 12, scaling as drops do.
+- **Its buyer.** The card's hub buys the whole haul at the card's price until the site closes: a bulk order the size
+  of the haul. Without it a site loses money, because each unit sold at a hub takes 4% off its price (section 8).
+- **Its life.** About an hour's clearing, open for 90 minutes of play; then it closes, cleared or not. Missing one
+  costs nothing: the ware's usual sources pay as before, and another opens in about three hours. Runners turn up and
+  fight there; the haul and its order are yours.
+
+| Site | Opened by | Holds | Its file |
+|---|---|---|---|
+| **Nest** (the built rogue kind) | A code card at a hub; a crew's run | One family's code | *(the Nest's lines)* |
+| **Scrapyard** | Rack closure (Kestrel), Beacon repair (LANTERN) | Components | *rack 4's hardware, stacked for the auditors. something moved in overnight.* |
+| **Testbed** | Report auction, Audit, The heirs, Claim files (GLASSJAW) | Exploits | *a researcher's testbed. every finding glassjaw is about to sell, running live.* |
+
 ### Runner cards
 
 - **A corner:** a runner buys up one code at their hub (×1.4, 10 min). On #net: *buying every kernel lot at kestrel. sell me yours*
@@ -347,6 +369,7 @@ built.
 | The map | An amber ▲ on the glyph of each server whose family's code is dearest right now: where to farm |
 | Contracts | A premium as an amber ▲ and its percentage on the offer's pay, the reason in its tooltip (*Kestrel is short-handed.*) |
 | A bulk order | How many units are left, on the hub's price row |
+| A site | Its server with its ware's icon in amber and a bar of the time left; the card's Log line names it; its tooltip says what it holds and what the hub pays |
 | The network map's top right | INIT's count as a small bar, the harvest and sale bands marked, the number in its tooltip |
 | The Log (the pager) | A card's line in its voice; LANTERN's count; the tide turning; a cancel round |
 | The Network card | The Charter as you learn it: standings once you've seen the hub's market, institutions once their card has come, ??? until then (like the rich code) |
@@ -395,6 +418,18 @@ about 15 at a hub. Before orders held their price, reacting paid only 6% over th
 takes 4% off a spike. Buying to resell is capped by how many units the orders want. The three tables come out within
 a few percent of each other.
 
+**Sites.** 100 seeds × 40 hours, everything sold the reactive way above (credits, and goods at what they fetched).
+The second player also goes to any open site worth 10% more than an ordinary hour; moving costs 10 minutes:
+
+| Player | An hour | XP | Time at sites |
+|---|---|---|---|
+| Ordinary play only | 555 | ×1 | none |
+| Takes sites | 600 (×1.08; ×0.95–×1.25 across seeds) | ×0.82 | 17% |
+
+A site taken is worth ×2.0 an ordinary hour (×1.56–×2.41), the card's price on the whole haul, so it pays to react
+and costs XP to live there. Sized at ×0.8 an hour, sites earn nothing over a session; at ×1.2 they beat ordinary play
+at usual prices (×1.18). Without their buyer, sold at the hubs, they lose 6% against ordinary play.
+
 ## 9. Building it
 
 One session a slice, each landing before the next. It's the economy's lane, so nothing else on the economy, factions
@@ -410,3 +445,4 @@ gives a different result in each JavaScript engine.
 | M3 | **Moves and the tide** | Faction moves with variants, dispositions and favoured moves; cost cards; the tide; modifiers and follow-ups; bulk orders, two buyers; feuds and calls move sway | `s.market.tide`, `due` |
 | M4 | **INIT's count** | The count, the network's table, its movers and bands, cancel rounds, the bar on the network map, LANTERN's readout; runners' trades and corners; rare cards | `s.market.count`, the rare cards left |
 | M5 | **Arcs and Turf war** | Institution arcs; Turf war (director.md D4): two rivals within 2 points at the top contest a floor, the winner takes 5 | Each arc's step, the crisis |
+| M6 | **Sites** (after M3) | A price card opens a site one time in three: the Nest, Scrapyard and Testbed as temporary servers, the drop rule, the held order, the map mark and tooltip | `s.market.sites` |
