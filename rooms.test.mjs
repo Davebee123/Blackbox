@@ -742,7 +742,9 @@ test('the bot maps a medium server, the Resident and all (four times in twelve a
   const runs = [101, 7, 23, 58, ...Array.from({ length: 8 }, (_, i) => 200 + i * 37)].map((seed) => runServer({ cls: 'bastion', seed, kind: 'Relay' }));
   // With every boss's ♛ act ticks at 60% and 30% (docs/solo-bosses.md "Act length") DEADBOLT re-arms a little sooner,
   // and the bot loses one more of these lair fights: 4 (the planner's DEADBOLT band moved 58% to 61% over every
-  // subclass). Held at 4 until the designer has played the acts.
+  // subclass). Held at 4 until the designer has played the acts. With the reboot (ROOMS.reboot) nothing respawns behind
+  // it to farm between tries at an elite, so alone it maps 1; it hires a runner after a loss (roomsim.mjs HIRE_BOT), as
+  // a player would, and maps 9.
   const mapped = runs.filter((r) => r.mapped);
   assert.ok(mapped.length >= 4, `${mapped.length}/12 mapped`);
   for (const r of mapped) { assert.equal(r.progress.done, r.progress.total); assert.ok(r.bossWon >= 1); }
