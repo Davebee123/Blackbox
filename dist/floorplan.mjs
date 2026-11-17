@@ -84,6 +84,10 @@ export const ROOMS = {
   // core: R0 has no takeover, so it comes back on its own.
   respawn: { process: 2, elite: 5, guard: 3, core: 10, cache: 120, purse: 30 },
   respawnNew: { process: 15, elite: 45, guard: 20, core: 60 },
+  // The reboot, on a traced server (not a wild one: rogue servers, SPRAWL-00, lairs and the farm keep their own
+  // timers): a fight room that falls stays down until every counted fight room on the server is down; then the
+  // server reboots and this many minutes later they all come back at once. A Cron Spawner halves the wait.
+  reboot: { minutes: 2 },
   speed: 1, // the playtest runs the clocks ten times as fast (app.js)
   reconnect: 30000, // after you leave, the server takes you back this much later
   rare: 0.04, rareLevel: 2, // one respawn in 25 is a ★ rare spawn (it was one in ten: 11% of all kills on the long climb and 70% of the blues)
@@ -678,6 +682,27 @@ const respawnKind = (room) => (room.kind === 'core' || room.kind === 'boss' ? 'c
 // A room's respawn in minutes, before a Cron Spawner or a Hostile server: the farm timers once farmed, else the slow ones.
 export const respawnBase = (s, room) => (farmed(s) ? ROOMS.respawn : ROOMS.respawnNew)[respawnKind(room)];
 export const respawnMs = (s, room) => mins(s, ((world(s) ? ask('respawn', s, room) : undefined) ?? respawnBase(s, room)) * (runs(s, 'cron') && !['core', 'boss'].includes(room.kind) ? 0.5 : 1)); // a Cron Spawner: twice as fast
+// The reboot (ROOMS.reboot): a traced server's fight rooms come back together, once every one has fallen.
+// R.rebootAt: when the pending (or last) reboot brings them back; R.rebootFrom: when it started.
+export const rebooting = (s) => !!s.rooms && !roomList(s).some((x) => x.wild);
+const resets = (x) => FIGHTS.includes(x.kind) && x.kind !== 'socket' && counted(x); // what must be down for a reboot
+export const rebootMs = (s) => mins(s, ROOMS.reboot.minutes * (runs(s, 'cron') ? 0.5 : 1));
+// A room that fell at `at` comes back with the first reboot after it, or not yet (null).
+const rebootBack = (R, at) => (R.rebootAt != null && R.rebootAt > at ? R.rebootAt : null);
+// The fight rooms still up (the reboot waits on them), and the reboot if one is under way; null off a traced server.
+export function rebootOf(s, now = nowOf()) {
+  if (!rebooting(s)) return null;
+  const R = s.rooms, pending = R.rebootAt != null && R.rebootAt > now;
+  return { pending, at: pending ? R.rebootAt : null, from: pending ? R.rebootFrom : null, up: pending ? 0 : roomList(s).filter((x) => resets(x) && isUp(s, x, now)).length, ms: rebootMs(s) };
+}
+// After a kill: the last fight room down starts the reboot.
+function rebootCheck(s, now = nowOf()) {
+  const R = s.rooms, rb = rebootOf(s, now);
+  if (!rb || rb.pending || rb.up) return;
+  R.rebootFrom = now;
+  R.rebootAt = now + rb.ms;
+  say(s, `Every room is down: ${R.name} reboots in ${fmtLeft(rb.ms)}, and they all come back.`, 'rooms-good');
+}
 export function isUp(s, room, now = nowOf()) {
   const R = s.rooms, at = R.down[room.id];
   if (!FIGHTS.includes(room.kind)) return false;
@@ -686,13 +711,14 @@ export function isUp(s, room, now = nowOf()) {
   if (room.kind === 'core' && !coreOpen(s)) return true; // sealed, with its Resident behind it
   if (room.kind === 'socket') return !R.cleared[room.id] && !room.open; // guarded until its first clear, then a socket for good
   if (at == null) return true;
-  const back = at + respawnMs(s, room);
+  const back = rebooting(s) ? rebootBack(R, at) : at + respawnMs(s, room);
+  if (back == null) return false; // down until the reboot
   return now >= back && !(R.at === room.id && (R.inSince ?? 0) < back); // it waits while you stand in it
 }
 // When a fallen room comes back (ms), or null.
-export const backAt = (s, room) => { const w = world(s) ? ask('back', s, room) : undefined; return w !== undefined ? w : s.rooms.down[room.id] != null ? s.rooms.down[room.id] + respawnMs(s, room) : null; };
+export const backAt = (s, room) => { const w = world(s) ? ask('back', s, room) : undefined, at = s.rooms.down[room.id]; return w !== undefined ? w : at == null ? null : rebooting(s) ? rebootBack(s.rooms, at) : at + respawnMs(s, room); };
 // When it fell (the respawn ring's start), or null.
-export const downAt = (s, room) => { const w = world(s) ? ask('from', s, room) : undefined; return w !== undefined ? w : s.rooms.down[room.id] ?? null; };
+export const downAt = (s, room) => { const w = world(s) ? ask('from', s, room) : undefined, at = s.rooms.down[room.id]; return w !== undefined ? w : at != null && rebooting(s) && rebootBack(s.rooms, at) != null ? s.rooms.rebootFrom : at ?? null; }; // a reboot's ring starts with the reboot
 const refillMs = (s, room) => mins(s, ROOMS.respawn[room.kind === 'purse' ? 'purse' : 'cache']) * (room.kind === 'cache' && runs(s, 'mill') ? 0.5 : 1); // a Cache Mill: twice as fast
 export const cacheFull = (s, room, now = nowOf()) => STOCKED.includes(room.kind) && (s.rooms.taken[room.id] == null || now >= s.rooms.taken[room.id] + refillMs(s, room));
 export const refillAt = (s, room) => (s.rooms.taken[room.id] != null ? s.rooms.taken[room.id] + refillMs(s, room) : null);
@@ -781,7 +807,7 @@ function mapped(s) {
   const xp = Math.round(deedXpFor(s, R.level, mappedShare(roomList(s))) * exploreMult(s));
   gainXp(s, xp, `${R.name} Mapped`, 'breakin'); // exploration XP (the old break-ins' share): finishing a server
   say(s, `MAPPED. ${it ? `${itemLabel(it)} goes in your bank. ` : ''}+${xp} XP.`, 'rooms-good');
-  say(s, `${R.name}'s rooms now respawn fast: a fight room in ${ROOMS.respawn.process} minutes, a guard post in ${ROOMS.respawn.guard}, an elite in ${ROOMS.respawn.elite}.`, 'rooms-good');
+  if (!rebooting(s)) say(s, `${R.name}'s rooms now respawn fast: a fight room in ${ROOMS.respawn.process} minutes, a guard post in ${ROOMS.respawn.guard}, an elite in ${ROOMS.respawn.elite}.`, 'rooms-good');
   if (R.world) ask('mapped', s);
 }
 
@@ -1688,7 +1714,7 @@ hooks.roomEnd = (s, result) => {
     takeCache(s, room);
     return stood(s, room);
   }
-  if (room.kind !== 'socket') R.down[room.id] = nowOf(); // a socket's guard never comes back
+  if (room.kind !== 'socket') { R.down[room.id] = nowOf(); rebootCheck(s); } // a socket's guard never comes back
   R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
   const wasRare = !!R.rare[room.id], first = !R.cleared[room.id];
   // One respawn in 25 is a rare spawn (ROOMS.rare): it waits until you kill it (a held server's Root 5, a Legacy server's twice).
@@ -1755,12 +1781,14 @@ export function setBossRule(s, rule) {
 export function tick(s, now = nowOf()) {
   const R = s.rooms;
   if (!R) return [];
-  const first = s.serial;
+  const first = s.serial, reboot = rebooting(s) && R.rebootAt != null && now >= R.rebootAt && R.rebooted !== R.rebootAt;
+  if (reboot) { R.rebooted = R.rebootAt; if (R.at) say(s, `${R.name} reboots: every room is back.`, 'rooms-bad'); }
   for (const room of roomList(s)) {
     if (!FIGHTS.includes(room.kind) || R.down[room.id] == null) continue;
     if (isUp(s, room, now) && !R.back?.[room.id]) {
       (R.back ||= {})[room.id] = true;
-      if (R.at) say(s, `${room.path} respawns${R.rare[room.id] ? ': a rare spawn' : ''}.`, 'rooms-bad');
+      if (R.at && !reboot) say(s, `${room.path} respawns${R.rare[room.id] ? ': a rare spawn' : ''}.`, 'rooms-bad');
+      else if (R.at && R.rare[room.id]) say(s, `${room.path} is a rare spawn.`, 'rooms-bad');
     }
     if (!isUp(s, room, now) && R.back?.[room.id]) delete R.back[room.id];
   }
@@ -1768,6 +1796,8 @@ export function tick(s, now = nowOf()) {
 }
 
 // ---------- the terminal (2.3) ----------
+// A fallen room's ↻ countdown, or that it waits on the server's reboot.
+const backLeft = (s, room) => (backAt(s, room) != null ? ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}` : ' · down until reboot');
 const tagOf = (s, room) => {
   const seen = seenOf(s, room.id);
   if (seen !== 'kind') return '?'; // unknown until you've been in it
@@ -1780,10 +1810,10 @@ const tagOf = (s, room) => {
   if (isSocket(s, room) && room.kind === 'socket') { const p = programIn(s, room.id); return !socketOpen(s, room) ? `socket · guarded · ${familyName(room.family) || 'process'}` : p ? `socket · ${PROGRAMS[p].name}${socketOff(s, room) ? ' · offline' : ''}` : 'socket · open'; }
   if (room.kind === 'stash' || room.kind === 'purse') return `stash${cacheFull(s, room) ? '' : ` · ↻ ${fmtLeft(refillAt(s, room) - nowOf())}`}`;
   if (room.kind === 'core') return `core · ${BOSSES[RESIDENT].name}${coreOpen(s) ? '' : ' · sealed'}`;
-  if (room.kind === 'guard') return `elite · ${GUARDS[room.guard].name}${room.key && !s.rooms.opened[room.key] ? ' · key' : ''}${up ? '' : ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}`}`;
-  if (['process', 'elite'].includes(room.kind)) return `${room.kind} · ${familyName(room.family)} · ${(AUTHORS[room.author]?.name || '').toUpperCase()}${up ? '' : ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}`}`;
+  if (room.kind === 'guard') return `elite · ${GUARDS[room.guard].name}${room.key && !s.rooms.opened[room.key] ? ' · key' : ''}${up ? '' : backLeft(s, room)}`;
+  if (['process', 'elite'].includes(room.kind)) return `${room.kind} · ${familyName(room.family)} · ${(AUTHORS[room.author]?.name || '').toUpperCase()}${up ? '' : backLeft(s, room)}`;
   if (room.kind === 'cache' || room.kind === 'secret') return `${room.kind === 'secret' ? 'hidden stash' : 'cache'}${cacheFull(s, room) ? '' : ` · ↻ ${fmtLeft(refillAt(s, room) - nowOf())}`}`;
-  if (room.kind === 'nest') return `nest · Crawler and brood${up ? '' : ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}`}`;
+  if (room.kind === 'nest') return `nest · Crawler and brood${up ? '' : backLeft(s, room)}`;
   if (room.kind === 'vault') return `vault${opened(s, room) ? ' · open' : ''}`;
   if (isPuzzle(room.kind)) { const st = puzzleState(s, room); return `puzzle · ${PUZZLES[room.kind].name}${st === 'ready' ? '' : st === 'live' ? ' · in play' : ` · ${st === 'won' ? 'solved' : 'failed'} · ↻ ${fmtLeft(refillAt(s, room) - nowOf())}`}`; }
   return room.kind;

@@ -945,10 +945,11 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
 
 ### Respawns and progress
 
-- **Respawns** (real time, never while you stand in the room): a process room 15 minutes, a guard post 20, an elite 45,
-  the Core 60 while you explore; once the server is **Mapped** or yours, 2, 3, 5 and 10 (`ROOMS.respawn`), so a
-  finished server carries a session of farming (*Fast respawns* on its card). A Cron Spawner halves
-  either. One respawn in 25 is a **★ rare spawn**: two levels up, five kills' worth of XP, usually an item.
+- **The reboot** (traced servers; `ROOMS.reboot`): a fight room that falls stays down until every counted fight room
+  on the server has fallen. Then the server reboots, and 2 minutes later they all come back at once, never the one you
+  stand in until you leave. **Reboot n up** on the strip counts the fight rooms still standing, then the countdown; a
+  fallen room's card says it waits on the reboot. A Cron Spawner halves the wait. One respawn in 25 is a **★ rare
+  spawn**: two levels up, five kills' worth of XP, usually an item.
 - **Progress** counts rooms cleared at least once and never goes down: **Rooms n/N** on the strip and the map card. At
   all of them the server is **Mapped**: an item two levels over it and one lump of XP (5 kills plus half of each fight
   room's kill, an elite's three times and the Core's four, times the deed scale: about 40 kills of your level on a
@@ -2111,7 +2112,7 @@ that server's rules and nothing else.
 | Program | Weight | On its server |
 |---|---|---|
 | Harvester | light | Every virus you kill drops 1 more component |
-| Cron Spawner | light | Fight rooms respawn twice as fast |
+| Cron Spawner | light | The reboot comes twice as fast |
 | Code Siphon | light | Every fight room you clear pays 3 more of its code |
 | Cache Mill | light | Caches refill twice as fast and pay 50% more |
 | Defrag Bay | light | Its room is a rest room: 25% of your max Signal, once a visit (a Tracker won't walk in) |
