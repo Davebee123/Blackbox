@@ -835,6 +835,12 @@ function turnNow(own) {
   turnedAt = performance.now();
   return command(campaign, 'now');
 }
+// A press dropped by turnLocked: the prompt, and the key it named, give a short shake (with Motion off, a dip).
+function refused(ability) {
+  const key = ability && document.querySelector(`#tray .ability[data-ability="${CSS.escape(ability)}"]`);
+  const frames = canMove() ? [{ transform: 'translateX(0)' }, { transform: 'translateX(-3px)' }, { transform: 'translateX(3px)' }, { transform: 'translateX(-2px)' }, { transform: 'translateX(0)' }] : [{ opacity: 1 }, { opacity: 0.4 }, { opacity: 1 }];
+  for (const el of [$('command-form'), key]) el?.animate(frames, { duration: 220, easing: 'ease-out' });
+}
 // A fight order (a key or a plan), as against a setting, a page or cancel.
 const isOrder = (text) => !/^(cancel|pause|resume|speed |jack out)/.test(text) && !toIntent(campaign, text.split(';')[0].trim(), false).error;
 // A part's bar steps down hit by hit (the designer: "each instance of damage tick separately on the enemy component bar"):
@@ -1532,7 +1538,7 @@ function run(raw) {
   if (text === 'reset game' || text === 'new game') return resetGame();
   if (text === 'help') return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload and deconstruct. For your server, use install, uninstall, firewall upgrade|defrag and filter equip. On the net, use connect, relay, detach and mail. The pages are map, mail, server, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
 
-  if (fighting && !realSave && turnLocked() && isOrder(text)) return; // one entry a turn (turnLocked)
+  if (fighting && !realSave && turnLocked() && isOrder(text)) return refused(toIntent(campaign, text.split(';')[0].trim(), false).ability); // one entry a turn (turnLocked)
   // A co-op guest: a fight command goes to the host, a loadout change to their own save (and on to the host).
   if (coop?.intercept(text, realSave ? campaign : null)) { markDirty(); return; }
   const wasAlert = campaign.encounter?.phase === 'alert';
@@ -3302,7 +3308,7 @@ $('command-form').addEventListener('submit', (e) => {
     if (!active(campaign) && lu.dismiss()) return; // the level-up goes with an empty Enter
     // Empty Enter in a fight: stop waiting and resolve this cycle now.
     if (realSave) return; // a co-op guest: the cycle turns when everyone's in, or on the host's timer
-    if (active(campaign) && !campaign.encounter.paused) { react(turnNow(true)); save(); markDirty(); }
+    if (active(campaign) && !campaign.encounter.paused) { if (turnLocked()) return refused(); react(turnNow(true)); save(); markDirty(); }
     else if (module === 'combat' && ended && !$('spoils').hidden && performance.now() - endedAt > 1200) leaveFight();
     return;
   }
