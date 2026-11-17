@@ -18,7 +18,7 @@ export default {
     who: 'wick', from: 'LOWLIGHT',
     nodes: {
       start: { lines: ['you traced one. {server}, level {level}.', 'a server is rooms. walk them, clear what holds them, open the vault.'], ask: ['how', 'vault', 'show', 'later'] },
-      how: { q: 'How do I get in?', lines: ['connect from the map. it dials, you walk.', 'jack out any time to bank what you carry. go down in there and the pack is gone.'], ask: ['vault', 'show', 'later'] },
+      how: { q: 'How does a run work?', lines: ['hit connect on the map. you come up in the first room.', 'jack out any time to bank what you carry. go down in there and the pack is gone.'], ask: ['vault', 'show', 'later'] },
       vault: { q: "What's in the vault?", lines: ['its files. your first vault always has a protocol in it.', "an elite holds the key. or force the lock, if you've got signal to burn."], ask: ['how', 'show', 'later'] },
       show: { q: 'Show me.', end: 'map:{id}' },
       later: { q: 'Later.', end: true },
