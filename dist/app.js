@@ -818,6 +818,30 @@ function attackGo() {
   }
 }
 let cueAt = 0; // when the last damage number queued lands (performance.now() ms)
+// A forced turn (an order entered, or an empty Enter) waits for the last turn's numbers to land: at least TURN_GAP
+// after the last forced one, at most TURN_CAP from the press. Mashing a key can't run cycles ahead of the screen.
+// Presses meanwhile fold into one waiting turn, with whatever order is queued then; it's dropped if the cycle turns.
+const TURN_GAP = 450, TURN_CAP = 1500;
+let turnedAt = -Infinity, turnWait = 0;
+function turnNow(order) {
+  const now = performance.now(), e = campaign.encounter;
+  const at = Math.max(turnedAt + TURN_GAP, Math.min(cueAt, now + TURN_CAP));
+  if (now < at) {
+    if (!turnWait) {
+      const cycle = e?.cycle;
+      turnWait = setTimeout(() => {
+        turnWait = 0;
+        const e = campaign.encounter;
+        if (!active(campaign) || e.paused || e.cycle !== cycle || (order && !e.queue) || (coop?.hosting() && !humansReady(campaign))) return;
+        turnedAt = performance.now();
+        react(command(campaign, 'now')); save(); markDirty();
+      }, at - now);
+    }
+    return [];
+  }
+  turnedAt = now;
+  return command(campaign, 'now');
+}
 // A part's bar steps down hit by hit (the designer: "each instance of damage tick separately on the enemy component bar"):
 // while a batch's numbers play out, each damaged part's bar and HP read what it had before that hit, and drop as its
 // number lands. held: part id → the HP shown now; every render re-applies it until the batch has played out.
@@ -1524,7 +1548,7 @@ function run(raw) {
   // In a fight, an order you enter goes now: the cycle turns without waiting out the bar.
   const e = campaign.encounter;
   // (Co-op: once every human in the fight has a command in; else the timer turns it. coop.mjs humansReady.)
-  if (fighting && !warning && active(campaign) && !e.paused && e.queue && e.queue !== queuedBefore && (!coop?.hosting() || humansReady(campaign))) { const more = command(campaign, 'now'); react(more); events = [...events, ...more]; }
+  if (fighting && !warning && active(campaign) && !e.paused && e.queue && e.queue !== queuedBefore && (!coop?.hosting() || humansReady(campaign))) { const more = turnNow(true); react(more); events = [...events, ...more]; }
   if (warning) notice(warning.message, true, warning.suggest);
   else {
     // Rewards have their card; the corner keeps warnings and plain status (never "Server +N XP").
@@ -3280,7 +3304,7 @@ $('command-form').addEventListener('submit', (e) => {
     if (!active(campaign) && lu.dismiss()) return; // the level-up goes with an empty Enter
     // Empty Enter in a fight: stop waiting and resolve this cycle now.
     if (realSave) return; // a co-op guest: the cycle turns when everyone's in, or on the host's timer
-    if (active(campaign) && !campaign.encounter.paused) { react(command(campaign, 'now')); save(); markDirty(); }
+    if (active(campaign) && !campaign.encounter.paused) { react(turnNow(false)); save(); markDirty(); }
     else if (module === 'combat' && ended && !$('spoils').hidden && performance.now() - endedAt > 1200) leaveFight();
     return;
   }
