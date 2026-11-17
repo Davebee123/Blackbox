@@ -1,6 +1,6 @@
 # Outposts: faction markets on every floor
 
-**Status.** A concept, prototyped November 2026; not built. The numbers come from a scratchpad simulation (100 network
+**Status.** Tabled (the designer, November 2026: too complicated for now). A concept, prototyped; not built. The numbers come from a scratchpad simulation (100 network
 seeds × 20 logged-on hours), and the looks from mock-ups drawn on the real floor map. Building it re-measures both.
 
 **Decided (the designer, November 2026).**
