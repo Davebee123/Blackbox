@@ -13,6 +13,8 @@ seeds × 20 logged-on hours), and the looks from mock-ups drawn on the real floo
 - **Exploits may pay best**, as the hardest and riskiest ware to get: they come from the Exfil, elites, guard posts and
   raids, and sell best on black markets.
 - **Siding buys knowledge:** members' word (section 5).
+- **A transfer can be lost** (section 7). A risk the player is shown and chooses isn't loss aversion; nothing is lost
+  that the player didn't stake.
 - **The marker is C:** a small hub (section 7).
 - **Servers spread further apart** to make room: neighbours about 180 map units apart, from 132 (floors.mjs
   `FLOOR.gap`). The map pans, and labels keep their size.
@@ -86,8 +88,8 @@ one prone to that kind three times as likely, one on a floor you've reached thre
 
 ## 5. Risk and profit
 
-Nothing you own is ever taken (no loss aversion). The risks are time, a fight, and rep, and the screen shows each one
-before you commit.
+The risks are time, a fight, rep, and goods you send by transfer. The screen shows each one before you commit, and
+only a transfer you chose to send uninsured can lose what you own.
 
 | Risk | What it costs | What it pays | On the screen |
 |---|---|---|---|
@@ -95,6 +97,7 @@ before you commit.
 | **The black market** | 2 rep with the owner each 140 credits' worth: your cut there rises a tier for every 25, and your own faction's black market costs your patron | A banned ware at the outpost's want | The rep cost on the event strip |
 | **A wild outpost** | A dump can halve it while you're bringing goods | Up to ×3 on a spike | Its swing on the tooltip |
 | **The window** | You farm for a spike; it ends, or the need fills, before you sell | The spike's price | Minutes left and the need bar |
+| **A bare transfer** | About 8% a lot that it's intercepted, and the lot is gone | Selling from anywhere, now, at today's price | The chance on the order |
 | **Exploits** | The Exfil, elites and guards are the hardest fights; the best buyers are black markets | The best price per hour of any ware | — |
 
 **Members' word** (siding): your commission's outposts post their spikes and raids to your Log 15 minutes before they
@@ -106,12 +109,40 @@ connected this session.
 | Balance | Rule |
 |---|---|
 | **Need** | Each outpost takes only so much (section 2), so a big haul goes to several |
-| **In person** | You sell at an outpost by connecting to it: about 2 minutes a stop. Hubs keep their file transfers |
+| **In person or by transfer** | In person you connect to it, about 2 minutes a stop, and nothing can go wrong. A transfer sells from anywhere, now, with a shown chance it's intercepted (section 7) |
 | **Rep** | Your cut by rep tier with the owner: 20%, 15%, 10%, 5% |
 | **Contraband** | Halcyon and Kestrel ban Exploits at their outposts, LANTERN Cipher code. A banned ware sells on the outpost's black market at its want: the fence takes 15%, and each 140 credits' worth costs 2 rep with the owner. A squat bans nothing |
 | **Raids** | A raided outpost wants the most (section 4), and you fight your way to its desk |
 
-## 7. Measured
+## 7. Transfers
+
+Selling in person means stopping what you're doing. A **transfer** sells from wherever you are, at today's price, and
+pays when it lands (10 minutes, plus 3 a floor down). On the way it can be **intercepted**, and the lot is gone.
+
+| Risk to a lot | Adds |
+|---|---|
+| Any transfer | 2% |
+| Each floor below the first | 1.5% |
+| A raid on the outpost's floor | 4% |
+| Contraband | 8% |
+| Its size | 2% a 1,000 credits, up to 6% |
+
+- **The chance shows on the order** before you send, and a lot averages about 8%. A raided desk takes no transfers.
+- **Halcyon's cover:** 10% of the lot up front, 90% back if it's lost. Halcyon won't cover contraband.
+- So each lot is a choice: in person (your time, no risk), covered (a sure 10% less), or bare (the most, now and then
+  nothing).
+
+Measured, the bold follower on floors 1–4, by how often it stops to sell in person:
+
+| Sells | Stops every 45 min | Stops every 90 min |
+|---|---|---|
+| In person only | 680 an hour | 641 |
+| Covered transfers | 671 | 674 (×1.05) |
+| Bare transfers | 700 (×1.03) | 710 (×1.11); a lot of 200+ credits lost about once in 17 hours |
+
+Transfers pay most to a player on long runs, and bare ones pay most of all, for a loss you see coming.
+
+## 8. Measured
 
 100 seeds × 20 hours, trading on floors 1–4. An ordinary hour (the level-12 bot) is 190 credits, 15 code, 14
 components and 0.4 Exploits; an hour of one activity pays that much at base prices, all in its ware. A raid's fight is
@@ -133,7 +164,7 @@ lost 1 time in 4.
 - **Siding barely moves the price** (+1–3%, even with no cut at your own faction), so it pays in knowledge instead.
   Members' word isn't simulated yet.
 
-## 8. On the screen
+## 9. On the screen
 
 - **The map marker (C, picked):** a small hub hanging off its server by a dotted line: its owner's mark in a diamond in
   the owner's colour, its top want as an amber badge, the quality as its name. ▲ by the badge marks a spike, a dashed
@@ -144,13 +175,13 @@ lost 1 time in 4.
 - **The sell list:** one ware's markets on floors you've reached, best first, each with its floor, price, ▲ and need
   bar, a raid's ⚔. It lives in the market's order ticket, which already shows the same order at other hubs.
 
-## 9. Open
+## 10. Open
 
 - Hubs roll a quality per network, or keep today's fixed conditions?
 - Do hubs ban too? Halcyon's hub buys Exploits today.
 - The phone's map and card.
 
-## 10. Building it
+## 11. Building it
 
 One slice a session, after the activities' pay (market.md M6). Outposts and qualities come from the seed; only needs
 and events are saved.
@@ -160,4 +191,5 @@ and events are saved.
 | O1 | **Outposts** | The wider gap between servers (with a phone audit before and after); the nodes on the floor map, owners, qualities, the card; selling in person with need, refill and your cut | `s.outposts` (needs) |
 | O2 | **Events** | Spikes, raids (the fight to the desk) and dumps from the ticker's cards; members' word | The live events |
 | O3 | **Contraband** | Bans and the black market | — |
-| O4 | **The sell list** | In the order ticket | — |
+| O4 | **Transfers** | Selling by transfer from anywhere, its risk on the order, Halcyon's cover, interception | Lots in transit |
+| O5 | **The sell list** | In the order ticket | — |

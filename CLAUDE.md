@@ -65,7 +65,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   grammar: whole sentences, never cryptic labels.
 - **Colours keep one meaning each:** teal is only ever the player, red is threat, amber is loot and what you use,
   violet is daemons, steel is armor.
-- **Friction, not spikes.** No loss aversion; reward attention, never punish its absence.
+- **Friction, not spikes.** No loss aversion; reward attention, never punish its absence. A risk the player is shown
+  and chooses (an uninsured transfer) may cost what they staked; that isn't loss aversion.
 - **No intrusion metaphors** (keyhole, way in, backdoor).
 - **No canvas or PixiJS for new UI.** Screen effects never cover or interfere with the UI, and there is no rain on
   the screen.
