@@ -1134,7 +1134,8 @@ export function back(s, opts = {}) {
 // What a room does when you walk in: a live virus holds it, the rest wait for your verbs.
 function arrive(s, room, opts = {}) {
   const R = s.rooms;
-  const people = R.world ? ask('people', s, room) || [] : [];
+  const m = R.world && isUp(s, room) ? meetingOf(s, isUp, room.id) : null; // a runner fighting it (runners.mjs): Help, or step back
+  const people = (R.world ? ask('people', s, room) || [] : []).filter((h) => h !== m?.r.handle);
   if (people.length) say(s, `${people.join(', ')} ${people.length === 1 ? 'is' : 'are'} here.`, 'rooms');
   for (const h of people) if (runnerOf(s, h)) know(s, h, 'met'); // a runner in the room (SPRAWL-00): you've met them
   if (['junction', 'den', 'empty'].includes(room.kind)) clear(s, room);
@@ -1144,8 +1145,7 @@ function arrive(s, room, opts = {}) {
     const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts), name = f.name || v.name;
     R.screen = { kind: 'virus', room: room.id, name, pause: !!opts.pause };
     say(s, `${name} holds ${room.path}.${R.rare[room.id] ? ' A rare spawn.' : ''}`, 'intrusion');
-    const m = R.world ? meetingOf(s, isUp) : null; // a runner fighting it (runners.mjs): Help, or step back
-    if (m?.room.id === room.id) say(s, `The runner ${m.r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Signal.`, 'rooms');
+    if (m) say(s, `The runner ${m.r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Signal.`, 'rooms');
   } else stood(s, room);
 }
 // You stand in a room with nothing live in it (walked in, or what held it beaten): this visit's tally (a no-rest map
@@ -1211,8 +1211,8 @@ export function act(s, verb, arg = null, opts = {}) {
   // Help a runner fighting in this room (runners.mjs meetingOf): they fight beside you (crew.mjs), and a win raises
   // their standing.
   if (verb === 'assist') {
-    const m = R.world && sc?.kind === 'virus' ? meetingOf(s, isUp) : null;
-    if (m?.room.id !== here.id) deny(s, 'No runner here to help.');
+    const m = R.world && sc?.kind === 'virus' ? meetingOf(s, isUp, here.id) : null;
+    if (!m) deny(s, 'No runner here to help.');
     else { R.visit.helping = { h: m.r.handle, room: here.id, sig: m.sig }; R.screen = null; fight(s, here, { pause: !!opts.pause || !!sc.pause, as: sc.as || null }); }
     return out(s, first);
   }

@@ -13,8 +13,14 @@
 // the first time (smaller the better you know them), a cut of each run's credits, their bar from their presets. Hired, they're crew
 // (crew.mjs, s.crewSim with runner: true); their Signal carries over (sig, a share of their max, refilling on logged-on
 // time), at 0 they disconnect and are hireable again once full.
-import { hackerLevel } from './combat.mjs';
-import { ARCHETYPES, FLOORS, floorFor } from './data.mjs';
+//
+// Jobs are picked at the hub (chooseJob): what each server near their level pays them on the market now, against the
+// risk their temperament takes. A pick is kept on the save (s.runners.jobs), since prices move.
+import { hackerLevel, hooks } from './combat.mjs';
+import { ARCHETYPES, CONFIG, FLOORS, floorFor } from './data.mjs';
+import { codeOf } from './gear.mjs';
+import { zoneRooms } from './zone.mjs';
+import { marketRead } from './market.mjs'; // called at play, never at load (market.mjs reaches back here through events.mjs)
 import { FACTIONS, FACTION_IDS, hubsOf } from './factions.mjs';
 import { graphOf, locAt, floorsOf, exitOpen } from './floors.mjs';
 
@@ -28,6 +34,10 @@ export const RUNNERS = {
   temper: { Careful: 0.08, Steady: 0, Bold: -0.08 }, // and by temperament
   trade: [300, 900], // cycles to climb to the floor their trade is frozen on (50 to 150 hours logged on)
   star: 0.12, // a trait's chance of a ★
+  pool: 6, // a job: one of the servers nearest their level (chooseJob)
+  risk: { Careful: 3, Steady: 1, Bold: 0.3 }, // how hard the odds weigh on a pick, by temperament
+  richer: 0.08, // a server a level above them pays 8% more code
+  noise: 0.2, // and ±10% on each pick, so the cast spreads out
 };
 export const TEMPERS = ['Careful', 'Steady', 'Bold'];
 export const TRAITS = {
@@ -142,21 +152,70 @@ const pathOf = (g, a, b) => {
   return out;
 };
 const chance = (r, L, server) => Math.max(RUNNERS.odds.min, Math.min(RUNNERS.odds.max, RUNNERS.odds.base + RUNNERS.odds.perLevel * (L - server) + RUNNERS.temper[r.temper]));
-// Where a runner is at logged-on time t: { stage (hub | out | work | back | down), floor, base, target, path, at (the node
-// they're on or just passed), f (0–1 along the path), k (the cycle), ok (the job's outcome), level, trade }.
-export function stateOf(s, r, t = clockOf(s)) {
+// Their loop at logged-on time t, before the job: level, cycle (k) and how far into it (u), floor, its graph, their base.
+function loopAt(s, r, t) {
   const L = levelOf(s, r), x = t + r.phase, k = Math.floor(x / r.cycle), u = (x % r.cycle) / r.cycle;
   const fl = floorFor(L), g = graphOf(s, fl);
-  const base = g.hubs[r.faction] || g.entry;
-  const servers = Object.values(g.nodes).filter((n) => n.kind === 'server').sort((a, b) => Math.abs(a.level - L) - Math.abs(b.level - L) || (a.id < b.id ? -1 : 1));
-  const target = servers[Math.floor(hash(r.handle, k * 7 + 1) * Math.min(4, servers.length))] || g.nodes[g.entry];
+  return { L, k, u, fl, g, base: g.hubs[r.faction] || g.entry };
+}
+const serversNear = (g, L) => Object.values(g.nodes).filter((n) => n.kind === 'server').sort((a, b) => Math.abs(a.level - L) - Math.abs(b.level - L) || (a.id < b.id ? -1 : 1));
+// ---------- the job ----------
+// What the market tells a runner about a ware at their own hub (market.mjs marketRead: the hub's condition, the world
+// event, a shock; never your own selling, never a tip you logged): { mult, hub, event, shock, eventName }.
+const readOf = (s, r, w) => (w ? marketRead(s, r.faction, w) : { mult: 1, hub: 1, event: 1, shock: 1 });
+// Their job on cycle k: the one they picked at the hub (chooseJob), else the old roll among the four servers nearest
+// their level (a cycle that began before you logged on). { k, fl, target, ware, why, ev }.
+function jobOf(s, r, k, fl, g, L) {
+  const kept = s.runners?.jobs?.[r.handle]?.find((j) => j.k === k && j.fl === fl && g.nodes[j.target]);
+  if (kept) return kept;
+  const servers = serversNear(g, L), n = servers[Math.floor(hash(r.handle, k * 7 + 1) * Math.min(4, servers.length))] || g.nodes[g.entry];
+  return { k, fl, target: n.id, ware: codeOf(n.family) || null, why: null };
+}
+// At the hub, a runner picks the cycle's job: of the servers nearest their level (RUNNERS.pool), the one whose code
+// their hub pays most for now, a level above them a little more, weighed by their odds on it to their temperament's
+// power (Careful dreads a crash, Bold barely minds), with a little noise. why: what decided it (event, shock, hub,
+// safe, rich, or null). Kept on the save, the newest two a runner. Returns the job, or null off the hub stage.
+export function chooseJob(s, r, t = clockOf(s)) {
+  const { L, k, u, fl, g } = loopAt(s, r, t);
+  const jobs = (runnersOf(s).jobs ||= {}), mine = jobs[r.handle] || [];
+  const kept = mine.find((j) => j.k === k && j.fl === fl);
+  if (kept || u >= RUNNERS.stages[0][1]) return kept || null; // picked at the hub; a cycle seen first on the road keeps the roll
+  const risk = RUNNERS.risk[r.temper] ?? 1;
+  let best = null;
+  serversNear(g, L).slice(0, RUNNERS.pool).forEach((n, i) => {
+    const ware = codeOf(n.family) || null, m = readOf(s, r, ware);
+    const score = m.mult * Math.max(0.2, 1 + RUNNERS.richer * (n.level - L)) * chance(r, L, n.level) ** risk * (1 + RUNNERS.noise * (hash(r.handle, k * 7 + 1 + i * 131) - 0.5));
+    if (!best || score > best.score) best = { score, n, ware, m };
+  });
+  if (!best) return null;
+  const m = best.m, why = !best.ware ? null : m.event > 1 ? 'event' : m.shock > 1 ? 'shock' : m.hub > 1 ? 'hub' : r.temper === 'Careful' && best.n.level < L ? 'safe' : r.temper === 'Bold' && best.n.level > L ? 'rich' : null;
+  const job = { k, fl, target: best.n.id, ware: best.ware, why, ...(why === 'event' ? { ev: m.eventName } : {}) };
+  jobs[r.handle] = [job, ...mine.filter((j) => j.k !== k)].slice(0, 2);
+  return job;
+}
+// Why they took it, in a sentence (the runner card's ware tooltip). Numbers from the market as it is now.
+export function whyText(s, r, job) {
+  if (!job?.ware) return '';
+  const hub = FACTIONS[r.faction]?.short || 'Their hub', m = readOf(s, r, job.ware), x = (n) => `${Math.round(n * 100) / 100}×`;
+  if (job.why === 'event') return `${job.ev || 'A world event'}: every hub pays ${x(m.event)} for it.`;
+  if (job.why === 'shock') return `A market shock has it at ${x(m.shock)} at ${hub}.`;
+  if (job.why === 'hub') return `${hub}, who pay them, pay ${x(m.hub)} for it.`;
+  if (job.why === 'safe') return 'Careful: a server below their level.';
+  if (job.why === 'rich') return 'Bold: a server above their level, for more code.';
+  return 'Work near their level.';
+}
+// Where a runner is at logged-on time t: { stage (hub | out | work | back | down), floor, base, target, path, at (the node
+// they're on or just passed), f (0–1 along the path), k (the cycle), ok (the job's outcome), level, trade, job }.
+export function stateOf(s, r, t = clockOf(s)) {
+  const { L, k, u, fl, g, base } = loopAt(s, r, t);
+  const job = jobOf(s, r, k, fl, g, L), target = g.nodes[job.target];
   const path = pathOf(g, base, target.id), ok = hash(r.handle, k * 7 + 3) < chance(r, L, target.level);
   let stage = 'hub', from = 0;
   for (const [name, w] of RUNNERS.stages) { if (u < from + w) { stage = name; break; } from += w; }
   const w = Object.fromEntries(RUNNERS.stages)[stage], f = Math.min(1, (u - from) / w);
   if (stage === 'back' && !ok) stage = 'down'; // crashed: pulled out, back at the hub next cycle
   const trade = tradeOf(r, k, fl);
-  const st = { handle: r.handle, stage, floor: fl, base, target: target.id, path, f, k, ok, level: L, trade, g, left: Math.round((from + w - u) * r.cycle) }; // left: ms to the stage's end
+  const st = { handle: r.handle, stage, floor: fl, base, target: target.id, path, f, k, ok, level: L, trade, job, g, left: Math.round((from + w - u) * r.cycle) }; // left: ms to the stage's end
   st.pos = posOf(st);
   return st;
 }
@@ -239,8 +298,11 @@ export function tickRunners(s, dt) {
   if (!castOf(s).length || !dt) return [];
   const out = [];
   if (R.down) for (const [id, d] of Object.entries(R.down)) if (!runnerOf(s, d.h)) delete R.down[id]; // moved on: their mark goes
+  if (R.jobs) for (const h of Object.keys(R.jobs)) if (!runnerOf(s, h)) delete R.jobs[h]; // and their picks
   for (const r of castOf(s)) {
-    const a = stateOf(s, r, t0), b = stateOf(s, r, R.ms), kind = turnOf(a, b);
+    const a = stateOf(s, r, t0);
+    chooseJob(s, r, R.ms); // at the hub: the next job
+    const b = stateOf(s, r, R.ms), kind = turnOf(a, b);
     if (kind) out.push({ h: r.handle, kind, st: b, prev: a });
     if (kind === 'crash' && locAt(s, b.target)) R.down = { ...R.down, [b.target]: { h: r.handle, k: b.k } }; // a dead runner room (R3)
   }
@@ -251,9 +313,22 @@ export function tickRunners(s, dt) {
 // A runner's place in presence's words: SPRAWL-00 for floor 1's entry (a folder there), else a server, a hub or the road.
 export function placeOf(s, r, t = clockOf(s)) {
   const st = stateOf(s, r, t), g = st.g, at = st.pos.at, n = g.nodes[at];
-  if (n?.kind === 'entry' && g.n === 1) return { kind: 'sprawl', stage: st.stage, at, floor: g.n, fighting: false };
+  if (n?.kind === 'entry' && g.n === 1) return { kind: 'sprawl', stage: st.stage, at, floor: g.n, ...sprawlSpot(s, r, st) };
   if (st.stage === 'out' || st.stage === 'back') return { kind: 'travel', stage: st.stage, to: headingOf(st), toName: shortPlace(s, g, headingOf(st)), words: nodeName(s, g, headingOf(st)), floor: g.n };
   return { kind: n?.kind === 'hub' ? 'hub' : 'server', stage: st.stage, at, name: shortPlace(s, g, at), words: nodeName(s, g, at), floor: g.n, fighting: st.stage === 'work' };
+}
+
+// ---------- SPRAWL-00 ----------
+// A runner between jobs at SPRAWL-00 (floor 1's entry their base) spends the cycle in one of its stray rooms (never
+// RELAY-KING's Core), picked by the cycle. While its stray is live they're fighting it, never to the end: it holds
+// until you walk in and Help. With the stray down, once you've helped them this cycle, or crashed or on the road, they
+// stand at the entry. { folder, fighting }.
+const SPRAWL_CORE = '/net/relay'; // run.mjs KING_ROOM
+const strayUp = (s, folder) => { const sp = s.zone?.spawns?.[folder]; return !sp || sp.alive || !(sp.respawnAt > (hooks.now?.() ?? Date.now())); };
+export function sprawlSpot(s, r, st = stateOf(s, r)) {
+  const rooms = zoneRooms().filter((p) => p !== SPRAWL_CORE), folder = rooms[Math.floor(hash(r.handle, st.k * 7 + 9) * rooms.length)];
+  const fighting = st.stage === 'hub' && st.base === st.g.entry && !hired(s, r.handle) && entryOf(s, r.handle)?.helped !== st.k && strayUp(s, folder);
+  return fighting ? { folder, fighting } : { folder: '/', fighting: false };
 }
 
 // ---------- standing (R2) ----------
@@ -330,14 +405,27 @@ export function busyOf(s, r, t = clockOf(s)) {
 }
 
 // ---------- meeting ----------
-// The runner fighting in a room on the server you're on: one whose job is this server, at work, whom you haven't helped
-// on this job and haven't hired. Their room: a live process or elite room, picked from their handle and job, kept on
-// the visit (R.visit.runner) so it doesn't move while you walk. { r, st, room, sig } or null.
-export function meetingOf(s, isUp = null) {
+// A runner's Signal in the room you find them fighting in, from their handle and the cycle.
+const sigFor = (r, st) => { const [lo, hi] = HIRE.sig; return Math.round((lo + hash(r.handle, st.k * 7 + 6) * (hi - lo)) * 100) / 100; };
+// The runners fighting in rooms of the place you're on: [{ r, st, room, sig }]. On a server, the one whose job it is, at
+// work, whom you haven't helped on this job and haven't hired: their room a live process or elite room, picked from
+// their handle and job and kept on the visit (R.visit.runner) so it doesn't move while you walk. In SPRAWL-00, each one
+// fighting a stray (sprawlSpot), one a room.
+export function meetingsOf(s, isUp = null) {
   const R = s.rooms;
-  if (!R?.world || !R.visit || !castOf(s).length) return null;
+  if (!R?.world || !R.visit || !castOf(s).length) return [];
+  if (R.loc === CONFIG.zone.id) {
+    const out = [];
+    for (const r of castOf(s)) {
+      const st = stateOf(s, r);
+      if (st.g.n !== 1 || st.pos.at !== st.g.entry) continue;
+      const spot = sprawlSpot(s, r, st), room = spot.fighting && Object.values(R.graph.rooms).find((x) => x.path0 === spot.folder);
+      if (room && !room.concealed && (!isUp || isUp(s, room)) && !out.some((m) => m.room.id === room.id)) out.push({ r, st, room, sig: sigFor(r, st) });
+    }
+    return out;
+  }
   const loc = (s.locations || []).find((l) => l.id === R.loc);
-  if (!loc?.slot) return null;
+  if (!loc?.slot) return [];
   const kept = R.visit.runner;
   for (const r of castOf(s)) {
     const st = stateOf(s, r);
@@ -349,11 +437,12 @@ export function meetingOf(s, isUp = null) {
       room = rooms[Math.floor(hash(r.handle, st.k * 7 + 5) * rooms.length)];
       R.visit.runner = { h: r.handle, k: st.k, room: room.id };
     }
-    const [lo, hi] = HIRE.sig;
-    return { r, st, room, sig: Math.round((lo + hash(r.handle, st.k * 7 + 6) * (hi - lo)) * 100) / 100 };
+    return [{ r, st, room, sig: sigFor(r, st) }];
   }
-  return null;
+  return [];
 }
+// The runner fighting in a room (roomId), or the first anywhere on this place. { r, st, room, sig } or null.
+export const meetingOf = (s, isUp = null, roomId = null) => meetingsOf(s, isUp).find((m) => !roomId || m.room.id === roomId) || null;
 // ---------- dead runner rooms (R3) ----------
 // A runner who crashes on a server on your map leaves a mark there (s.runners.down[slot]: { h, k }, the newest a
 // server), kept until you pull them out or they've moved on. On your next visit it's one of the server's live process
@@ -388,7 +477,7 @@ export function pulledOut(s, roomId) {
 export function helped(s, h) {
   const m = s.rooms?.visit?.runner, r = runnerOf(s, h);
   if (!r) return null;
-  const st = stateOf(s, r), loc = (s.locations || []).find((l) => l.id === s.rooms?.loc);
+  const st = stateOf(s, r), loc = s.rooms?.loc === CONFIG.zone.id ? { name: CONFIG.zone.name } : (s.locations || []).find((l) => l.id === s.rooms?.loc);
   const tier = raiseStanding(s, h, STANDING.help, `You helped them clear a room on ${loc?.name || 'a server'}.`);
   runnersOf(s).known[h].helped = st.k;
   if (m?.h === h) s.rooms.visit.runner = null;

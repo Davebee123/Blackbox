@@ -2,7 +2,8 @@
 // drawn on it: a paper-white diamond with the handle, a dotted route through the servers they've passed, a dashed ring
 // on where they're heading. Paper white throughout (--bright); a runner hunting you (R3) is the one red.
 // The map draws a runner only where you've revealed (runners.mjs revealed, inSight); the Rail gives the rest a floor.
-import { castOf, knownOf, runnerOf, stateOf, clsLabel, doing, shortPlace, headingOf, revealed, inSight, hash, TRAITS, standingOf, tierOf, busyOf, cantHire, feeOf, feePaid, cutOf, hired, clockOf, gainOf, PRESET_PLAY, PRESET_TIP, huntsYou, RUNNERS } from './runners.mjs';
+import { castOf, knownOf, runnerOf, stateOf, clsLabel, doing, shortPlace, headingOf, revealed, inSight, hash, TRAITS, standingOf, tierOf, busyOf, cantHire, feeOf, feePaid, cutOf, hired, clockOf, gainOf, PRESET_PLAY, PRESET_TIP, huntsYou, RUNNERS, whyText } from './runners.mjs';
+import { MATERIALS } from './gear.mjs';
 import { FACTIONS } from './factions.mjs';
 import { glyph } from './glyphs.mjs';
 import { portraitMarkup } from './portraits.mjs';
@@ -15,8 +16,13 @@ export const RAIL = { rows: 6 };
 // then, muted, how you know them and what they're after.
 export function runnerTip(s, r, st = stateOf(s, r)) {
   const how = huntsYou(s, r.handle) ? "They're hunting you. Beat them in a race to a vault to settle it." : (s.runners?.known?.[r.handle]?.by || 'net') === 'net' ? 'You know them from #net.' : 'You have met them.';
-  return `${r.handle}: ${clsLabel(r, st.level)}, level ${st.level}, ${doing(s, st)}.\n▸ ${how} After ${st.trade.what}, frozen on floor ${st.trade.floor}.`;
+  return `${r.handle}: ${clsLabel(r, st.level)}, level ${st.level}, ${doing(s, st)}${forWare(st)}.\n▸ ${how} After ${st.trade.what}, frozen on floor ${st.trade.floor}.`;
 }
+// On the road out or at work: the code the job pays (runners.mjs chooseJob).
+const onJob = (st) => (st.stage === 'out' || st.stage === 'work') && MATERIALS[st.job?.ware];
+const forWare = (st) => (onJob(st) ? `, for its ${MATERIALS[st.job.ware].name}` : '');
+// The Now row's ware, leading it: the code's glyph in amber, why they took the job in its tooltip.
+const wareMark = (s, r, st) => (onJob(st) ? `<span class="rc-ware" title="${esc(`${MATERIALS[st.job.ware].name}\nWhat ${r.handle} is after on this job.\n▸ ${whyText(s, r, st.job)}`)}">${glyph(st.job.ware)}</span>` : '');
 // The tooltip's kind line: Runner · faction, or Rival · faction for one hunting you (red).
 export const kindOf = (s, r) => `${huntsYou(s, r.handle) ? 'Rival' : 'Runner'} · ${FACTIONS[r.faction].short}`;
 // Where, on the Rail: a place, or → a place for one on the road.
@@ -148,9 +154,9 @@ export function roomRunner(s, m) {
 function nowRow(s, r, st, busy) {
   if (hired(s, r.handle)) return '<span class="rc-now">With you</span>';
   if (busy) return `<span class="rc-now busy">Busy · free in ${mmss(busy.until - clockOf(s))}</span>`;
-  const left = st.left, to = headingOf(st);
-  if (st.stage === 'out' || st.stage === 'back') return `<span class="rc-now">→ ${esc(shortPlace(s, st.g, to))} · ${mmss(left)}</span>`;
-  return `<span class="rc-now">${esc(doing(s, st))}${st.stage === 'work' ? ` · ${mmss(left)}` : ''}</span>`;
+  const left = st.left, to = headingOf(st), ware = wareMark(s, r, st);
+  const text = st.stage === 'out' || st.stage === 'back' ? `→ ${esc(shortPlace(s, st.g, to))} · ${mmss(left)}` : `${esc(doing(s, st))}${st.stage === 'work' ? ` · ${mmss(left)}` : ''}`;
+  return ware ? `<span class="rc-now ware">${ware}<span>${text}</span></span>` : `<span class="rc-now">${text}</span>`;
 }
 const lastLine = (s, h) => [...(s.channel?.lines || [])].reverse().find((l) => l.from === h)?.text || '';
 const row = (label, html) => `<div class="rc-r"><dt>${label}</dt><dd>${html}</dd></div>`;

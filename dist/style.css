@@ -3112,6 +3112,9 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .rc-tierbar { height: 4px; background: rgba(255, 242, 200, 0.12); position: relative; }
 .rc-tierbar::after { content: ''; position: absolute; inset: 0 auto 0 0; width: calc(var(--f) * 100%); background: var(--bright); }
 .rc-now.busy { color: var(--muted); }
+.rc-now.ware { display: flex; gap: 6px; align-items: flex-start; }
+.rc-ware { flex: none; color: var(--amber); cursor: help; }
+.rc-ware .glyph { width: 13px; height: 13px; margin: 2px 0 0; }
 .rc-said { margin: 8px 0 0; padding-top: 7px; border-top: 1px solid var(--line); font-size: 12px; font-style: italic; color: var(--muted); }
 .rcard .acts { margin-top: 10px; }
 .rcard .acts .glyph { width: 12px; height: 12px; margin-right: 4px; vertical-align: -2px; }

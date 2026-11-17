@@ -15,6 +15,7 @@ import { ARCHETYPES, BOSSES, FAMILIES } from './data.mjs';
 import { FACTIONS, FACTION_IDS, hubFound, rep, REP_TIERS } from './factions.mjs';
 import { online } from './presence.mjs';
 import { tickRunners, know, nodeName, runnerOf, stateOf } from './runners.mjs';
+import { MATERIALS } from './gear.mjs';
 import { handleOf, shownTitle, simTitle, voice, worldUniques, hash, titleById } from './profile.mjs';
 import { pieceOf } from './faction-gear.mjs';
 import { achById } from './achievements.mjs';
@@ -196,7 +197,7 @@ function simLine(s) {
   const x = pick(s, fresh.length ? fresh : on), h = x.handle, L = x.level, need = pick(s, Object.keys(ARCHETYPES).filter((c) => c !== x.cls)), opts = [];
   const live = (s.events || []).filter((ev) => ev.loc || ev.card === 'outbreak' || ev.card === 'shock');
   if (L >= 7) opts.push(() => { const l = simSay(s, h, [`anyone farming KESSLER? need a ${clsName(need)}`, `KESSLER? need ${clsName(need)}`], { lfg: need }); answer(s, l, need); return l; });
-  if (x.place.kind === 'sprawl') opts.push(() => { const l = simSay(s, h, x.place.fighting ? [`elite up in ${room(x.place.folder)}. need a ${clsName(need)}`, `${room(x.place.folder)} elite. ${clsName(need)}?`] : [`${room(x.place.folder)} is busy tonight`, `${room(x.place.folder)} is packed`], x.place.fighting ? { lfg: need } : {}); if (x.place.fighting) answer(s, l, need); return l; });
+  if (x.place.kind === 'sprawl') opts.push(() => { const l = simSay(s, h, x.place.fighting ? [`stray in ${room(x.place.folder)} won't drop. need a ${clsName(need)}`, `${room(x.place.folder)} stray. ${clsName(need)}?`] : ['SPRAWL-00 is busy tonight', 'SPRAWL-00 is packed'], x.place.fighting ? { lfg: need } : {}); if (x.place.fighting) answer(s, l, need); return l; });
   if (x.place.kind === 'run') opts.push(() => simSay(s, h, ['on a run, back in ten', 'on a run']));
   if (x.place.kind === 'rogue') opts.push(() => simSay(s, h, ["rogue server. signal's bad", 'rogue server. brb']));
   if (x.place.kind === 'home') opts.push(() => simSay(s, h, ['fixing my wall. back soon', 'wall stuff']));
@@ -275,8 +276,20 @@ function ambient(s) {
 // ---------- runners' turns (runners.mjs) ----------
 // What a runner says about a turn of their loop. A crash or a trade reached is told a few seconds later, now and then;
 // the rest wait in c.rq for an ambient line (turnLine). Only the last CHANNEL.turns are kept.
+// Arriving, a runner says why they took the job (runners.mjs chooseJob): the market, or their nerve.
+const WHY = {
+  event: (j, at, code) => [`${(j.ev || 'the market').toLowerCase()}. on ${at} for the ${code}`, `${code} is up everywhere. working ${at}`],
+  shock: (j, at, code, hub) => [`${code} spiked at ${hub}. on ${at}`, `${hub} wants ${code}. working ${at}`],
+  hub: (j, at, code, hub) => [`${hub} pays well for ${code}. on ${at}`, `${code} for ${hub}. working ${at}`],
+  safe: (j, at) => [`on ${at}. an easy one`, `working ${at}. low and slow`],
+  rich: (j, at) => [`on ${at}. it's above me and it pays`, `working ${at}. bit above my level`],
+};
 const TURN = {
-  arrive: (s, q) => [`on ${nodeName(s, q.st.g, q.st.target)} now`, `working ${nodeName(s, q.st.g, q.st.target)}`],
+  arrive: (s, q) => {
+    const j = q.st.job, at = nodeName(s, q.st.g, q.st.target), r = runnerOf(s, q.h);
+    if (j?.why && WHY[j.why] && r) return WHY[j.why](j, at, (MATERIALS[j.ware]?.short || 'code').toLowerCase(), FACTIONS[r.faction]?.short || 'my hub');
+    return [`on ${at} now`, `working ${at}`];
+  },
   clear: (s, q) => [`${nodeName(s, q.st.g, q.st.target)} cleared. level ${q.st.g.nodes[q.st.target]?.level}, no trouble`, `cleared ${nodeName(s, q.st.g, q.st.target)}`],
   crash: (s, q) => [`crashed out of ${nodeName(s, q.st.g, q.st.target)}. back at ${nodeName(s, q.st.g, q.st.base)} in a bit`, `pulled out of ${nodeName(s, q.st.g, q.st.target)}. need a minute`],
   paid: (s, q) => [`${nodeName(s, q.st.g, q.st.base)} paid for ${nodeName(s, q.st.g, q.prev.target)}`, 'paid. going again'],

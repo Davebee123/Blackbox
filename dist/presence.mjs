@@ -10,7 +10,7 @@ import { hooks } from './combat.mjs';
 import { ARCHETYPES } from './data.mjs';
 import { zoneRooms } from './zone.mjs';
 import { groundOf, isMember } from './consortium.mjs';
-import { castOf, runnerOf, levelOf, placeOf as runnerPlace, hash as rhash } from './runners.mjs';
+import { castOf, runnerOf, levelOf, placeOf as runnerPlace } from './runners.mjs';
 
 export const PRESENCE = {
   pool: ['nyx', 'kilo', 'vanta', 'sable', 'wisp', 'quill', 'rook', 'byte', 'ash', 'lumen', 'cipher_', 'zer0', 'echo9', 'grim', 'static', 'wren', 'halt', 'fen', 'oxide', 'marrow'],
@@ -76,9 +76,8 @@ export function online(s, now = clock()) {
   const crew = (s.crewSim || []).map((x) => x.name);
   const cast = castOf(s);
   if (!cast.length && !simOn(s)) return [];
-  const rooms = cast.length ? zoneRooms() : null;
-  // A runner in SPRAWL-00 is in one of its rooms, the same one all their cycle (a new one the next).
-  const runner = (h) => { const r = runnerOf(s, h), p = runnerPlace(s, r); return p.kind === 'sprawl' ? { ...p, folder: rooms[Math.floor(rhash(h, Math.floor(((s.runners?.ms || 0) + r.phase) / r.cycle)) * rooms.length)] } : p; };
+  // A runner in SPRAWL-00 is in one of its rooms (runners.mjs sprawlSpot): fighting its stray, or standing at the entry.
+  const runner = (h) => runnerPlace(s, runnerOf(s, h));
   // Your crew is with you (on your run, or waiting for one), wherever they'd otherwise be.
   const where = (h) => (crew.includes(h) ? { kind: 'crew', folder: s.run?.crew?.[h]?.cwd || null } : groundPlace(s, h, now, runnerOf(s, h) ? runner(h) : placeOf(h, now)));
   const crewCls = (h) => (s.crewSim || []).find((x) => x.name === h)?.cls;

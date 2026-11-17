@@ -135,7 +135,7 @@ import { play } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import './dist/netrooms.mjs';
 import { matesOf } from './dist/crew.mjs';
-import { STANDING, HIRE, tierOf, standingOf, raiseStanding, meetingOf, deadOf, feeOf, cutOf, sigOf, setSig, busyOf, cantHire, gainOf } from './dist/runners.mjs';
+import { STANDING, HIRE, tierOf, standingOf, raiseStanding, meetingOf, meetingsOf, deadOf, feeOf, cutOf, sigOf, setSig, busyOf, cantHire, gainOf, chooseJob, sprawlSpot, placeOf } from './dist/runners.mjs';
 import { runnerCard, tierBar, runnersMap, runnersOn, runnersAt, runnersList } from './dist/runners-view.mjs';
 import { listed } from './dist/presence.mjs';
 import { roomsMarkup } from './dist/floorplan-view.mjs';
@@ -428,8 +428,8 @@ test('the Rail, the tooltip and the card give a runner at an unlocated server it
   assert.equal(shortPlace(s, st.g, st.target), 'F1');
   assert.equal(doing(s, st), 'working a server on floor 1');
   const row = runnerRail(s);
-  assert.match(row, /<small class="rr-at">F1<\/small>/); assert.match(row, /working a server on floor 1\./);
-  assert.match(runnerCard(s, r.handle), /class="rc-now">working a server on floor 1 · /);
+  assert.match(row, /<small class="rr-at">F1<\/small>/); assert.match(row, /working a server on floor 1, for its (Cipher|Worm|Kernel) code\./);
+  assert.match(runnerCard(s, r.handle), /class="rc-now ware"><span class="rc-ware"[^>]*><svg[^]*?<\/svg><\/span><span>working a server on floor 1 · /);
   assert.match(nodeName(s, st.g, st.target), /^a [A-Z][\w ]+ on floor 1$/, '#net: its kind, in their words');
   const out = when(s, (x) => x.floor === 1 && x.stage === 'out');
   know(s, out.r.handle);
@@ -512,4 +512,100 @@ test('a runner on a road glides to its end by the time the clock gets them there
   const [, , bx, by, gms, t0] = m[1].split(' ').map(Number);
   assert.deepEqual([bx, by, gms, t0], [Math.round(P(x.st.pos.next).x * 10) / 10, Math.round(P(x.st.pos.next).y * 10) / 10, ms, 123456]);
   assert.match(runnerMark(s, x.r.handle, 1), /data-glide="/, 'and so does the picked one');
+});
+
+// Jobs (runners.mjs chooseJob): picked at the hub from what the market pays them, against the risk their temperament takes.
+// Every pick a runner in the cast makes over n cycles at level L under a world event.
+function picks(L, event, n = 40) {
+  const s = world(4242, L); s.market = { event, pressure: {}, transfers: [] };
+  const out = [];
+  for (const r of castOf(s)) {
+    const k0 = Math.ceil(r.phase / r.cycle) + 1;
+    for (let k = k0; k < k0 + n; k++) { const t = k * r.cycle - r.phase + 1000, j = chooseJob(s, r, t), st = stateOf(s, r, t); out.push({ r, j, st, gap: st.g.nodes[j.target].level - st.level }); }
+  }
+  return out;
+}
+test('jobs: picked at the hub from what the market pays them now, against the risk their temperament takes; kept on the save', () => {
+  const s = world(4242, 14);
+  const { r, st } = when(s, (x) => x.stage === 'hub');
+  const job = chooseJob(s, r);
+  assert.ok(job && job.k === st.k && st.g.nodes[job.target]?.kind === 'server');
+  assert.deepEqual(s.runners.jobs[r.handle][0], job, 'kept on the save');
+  assert.equal(stateOf(s, r).target, job.target, 'their loop goes there');
+  assert.equal(chooseJob(s, r), job, 'once a cycle');
+  const road = when(s, (x, y) => x.stage === 'work' && !s.runners.jobs?.[y.handle]?.some((j) => j.k === x.k));
+  assert.equal(chooseJob(s, road.r), null, 'a cycle first seen on the road keeps its roll');
+  // A world event pulls them toward its code, and they say so.
+  const count = (xs, w) => xs.filter((x) => x.j.ware === w).length;
+  const calm = picks(14, 'calm'), outbreak = picks(14, 'outbreak'), worms = picks(14, 'wormseason');
+  assert.ok(count(outbreak, 'cipher') > count(calm, 'cipher'), `Cipher: ${count(calm, 'cipher')} → ${count(outbreak, 'cipher')}`);
+  assert.ok(count(worms, 'worm') > count(calm, 'worm'), `Worm: ${count(calm, 'worm')} → ${count(worms, 'worm')}`);
+  assert.ok(outbreak.some((x) => x.j.why === 'event' && x.j.ware === 'cipher' && x.j.ev === 'Ransomware outbreak'));
+  assert.ok(calm.some((x) => x.j.why === 'hub'), 'a hub that pays over the odds for a code draws its runners');
+  // Careful takes the servers below them, Bold the ones above.
+  const gap = (t) => { const xs = calm.filter((x) => x.r.temper === t); return xs.reduce((a, x) => a + x.gap, 0) / xs.length; };
+  assert.ok(gap('Careful') < gap('Steady') && gap('Steady') < gap('Bold'), `${gap('Careful')} < ${gap('Steady')} < ${gap('Bold')}`);
+});
+
+test('jobs on the screen: the card shows the code they are after and why; arriving, they say why on #net', () => {
+  const s = world(4242, 14); s.market = { event: 'wormseason', pressure: {}, transfers: [] };
+  let x = null;
+  for (let i = 0; i < 4 * 3600 && !x; i++) {
+    tickRunners(s, 1000);
+    x = castOf(s).map((r) => ({ r, st: stateOf(s, r) })).find((y) => y.st.stage === 'work' && y.st.job.why === 'event');
+  }
+  assert.ok(x, 'someone took a job for Worm season');
+  know(s, x.r.handle);
+  const card = runnerCard(s, x.r.handle);
+  assert.match(card, /class="rc-ware" title="Worm code\nWhat [^"]+ is after on this job\.\n▸ Worm season: every hub pays 1\.5× for it\."><svg class="glyph"/);
+  assert.match(runnerRail(s), /, for its Worm code\./, 'the tooltip says it in words');
+  // #net: their arrival line names the event.
+  const lines = []; s.channel = null;
+  for (let i = 0; i < 2 * 3600; i++) { tickChannel(s, 1000); }
+  for (const l of channelOf(s).lines) lines.push(l.text);
+  assert.ok(lines.some((l) => /worm season\. on .+ for the worm|worm is up everywhere\. working /.test(l)), lines.join(' | '));
+});
+
+// SPRAWL-00: a runner between jobs there whose base is the entry, at the hub stage with a minute to go.
+function inSprawl(level = 4) {
+  RIVAL.chance = 0; CONFIG.exfil.chance = 0; CONFIG.enemyCrit = 0; CONFIG.misses = false;
+  const s = world(4242, level);
+  for (let t = 0; t < 6 * RUNNERS.cycleMs[1]; t += 5000) for (const r of castOf(s, t)) {
+    const st = stateOf(s, r, t);
+    if (st.floor === 1 && st.stage === 'hub' && st.base === st.g.entry && st.left > 40000) { runnersOf(s).ms = t; return { s, r }; }
+  }
+  throw new Error('nobody between jobs at SPRAWL-00');
+}
+test('SPRAWL-00: a runner between jobs fights the stray in their room and never finishes it; Help pays standing; with no stray they stand at the entry', () => {
+  const { s, r } = inSprawl();
+  const spot = sprawlSpot(s, r);
+  assert.ok(spot.fighting && spot.folder !== '/net/relay', 'in a stray room, never the Core');
+  play(s, 'connect sprawl');
+  const room = FP.roomList(s).find((x) => x.path0 === spot.folder);
+  const m = meetingOf(s, FP.isUp, room.id);
+  assert.equal(m?.r.handle, r.handle, 'fighting its stray');
+  assert.equal(placeOf(s, r).fighting, true);
+  const html = roomsMarkup(s);
+  assert.match(html, new RegExp(`class="fp-rn-tab"><rect[^>]*/><text[^>]*>${r.handle}</text><rect class="sig"`), 'their tab and Signal on its chip');
+  assert.match(html, new RegExp(`The runner ${r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Signal\\.`));
+  // Never to the end: the stray holds while the clock runs on their stage.
+  tickRunners(s, 30000);
+  assert.equal(s.zone.spawns[spot.folder].alive, true, 'the stray holds');
+  assert.equal(meetingOf(s, FP.isUp, room.id)?.r.handle, r.handle, 'still at it');
+  // A clear way in, then Help: they fight beside you and their standing rises.
+  for (const [f, sp] of Object.entries(s.zone.spawns)) if (f !== spot.folder) Object.assign(sp, { alive: false, respawnAt: Date.now() + 3600000 });
+  walkIn(s, { room });
+  const card = roomsMarkup(s);
+  assert.match(card, /data-rooms="assist"[^>]*>Help/); assert.doesNotMatch(card, /data-rooms="engage"/);
+  FP.act(s, 'assist');
+  assert.ok(active(s));
+  winFight(s);
+  assert.equal(standingOf(s, r.handle), gainOf(r));
+  assert.match(runnersOf(s).known[r.handle].met, /SPRAWL-00/);
+  // Helped this cycle: they stand at the entry, and so does anyone whose stray is down.
+  assert.deepEqual(sprawlSpot(s, r), { folder: '/', fighting: false });
+  assert.equal(meetingsOf(s, FP.isUp).some((x) => x.r.handle === r.handle), false);
+  const entry = FP.roomList(s).find((x) => x.path0 === '/');
+  assert.match(roomsMarkup(s), new RegExp(`${r.handle}[^"]* here between jobs`), 'standing at the entry');
+  assert.ok(FP.WORLD.people(s, entry).includes(r.handle));
 });

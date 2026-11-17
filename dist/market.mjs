@@ -67,6 +67,12 @@ export function outsideMult(s, f, w) {
   const cond = CONDITIONS[HUB_CONDITION[f]]?.mult[w] ?? 1, ev = eventOf(s).mult[w] ?? 1;
   return cond * ev * shockMult(s, f, w) * flickerMult(s, f, w) * tipMult(s, f, w);
 }
+// What a runner reads off the market (runners.mjs chooseJob): the public part of a hub's price for a ware (never your
+// selling, never a tip you logged) and what moved it. Reads the save without writing to it.
+export function marketRead(s, f, w) {
+  const e = EVENTS[s.market?.event] || EVENTS.calm, hub = CONDITIONS[HUB_CONDITION[f]]?.mult[w] ?? 1, event = e.mult[w] ?? 1, shock = shockMult(s, f, w) * flickerMult(s, f, w);
+  return { mult: hub * event * shock, hub, event, shock, eventName: e.name };
+}
 // The price at a hub for one unit, before the spread: base × outside factors × your own pressure
 // (selling pushes it down to 35% at most, buying up to 160%).
 export function priceOf(s, f, w) {

@@ -2625,7 +2625,13 @@ no attaching, detaching or memory pips.
   back to be paid. A job's outcome is rolled from their level against the server's (Careful +8%, Bold −8%), never
   fought; a crash pulls them out until the next cycle. Every cycle climbs them toward their trade's floor (300–900
   cycles); reaching it, they start on another. They never touch your servers or move a faction. Saved: `s.runners`
-  (the logged-on clock, who you know, standing, fee paid, a hire's Signal).
+  (the logged-on clock, who you know, standing, fee paid, a hire's Signal, their last two jobs).
+- **Their job** (`chooseJob`), picked at the hub from the six servers nearest their level: the code its family writes,
+  at what their own hub pays for it now (its condition, the world event, a shock or flicker; never your selling or a
+  tip you logged), 8% more a level above them, times their odds to a power by temperament (Careful 3, Steady 1, Bold
+  0.3), ±10% noise. A cycle first seen on the road keeps the old roll. They read the market and never move it. The
+  runner card's Now row shows the code as its amber glyph, why in its tooltip (*Worm season: every hub pays 1.5× for
+  it.*); the map tooltip says *for its Worm code*; arriving, their #net line says why.
 - **Meeting**: a runner at work on the server you're on fights in one of its live process or elite rooms: a paper-white
   tab with their handle and their Signal on its chip. Walk in and the card shows their row and line, the standing a win
   pays (+25), and **Help** (`assist`) in place of Engage. They fight beside you at the Signal they had, take none of the
@@ -2670,8 +2676,10 @@ no attaching, detaching or memory pips.
   (the other runners are on the map);
   a save with no network seed keeps the old simulated pool behind `?dev` `online sim`. `friend add|remove <handle>`,
   `friends`, `who`. SPRAWL-00 is shared: `ls` and arriving in a room say who else is there. A runner between jobs there
-  stays in one room their whole cycle, a paper-white tab with their handle on its chip (*+1* for more); walking in, you've
-  met them (no standing).
+  (`sprawlSpot`) takes one stray room a cycle (never the Core) and fights its stray while it's live, never to the end:
+  their tab and Signal on its chip and **Help**, as on a server. With the stray down, once you've helped them that
+  cycle, or crashed or on the road, they stand at the entry: a paper-white tab with their handle (*+1* for more);
+  walking in, you've met them (no standing).
 - **#net** (channel.mjs), the net talking to itself like WoW's General chat. Its latest line sits over the prompt; click
   it for the drawer. `say <text>` (or `'text`) posts, up to 120 characters; `channel off|on` mutes it. Every line comes
   from real game state: the director's events and how they end, faction contacts speaking for their side after a feud

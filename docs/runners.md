@@ -3,8 +3,10 @@
 **Status.** R1 and R2 built (the cast, the loop, the Rail, #net lines; meeting, standing and hiring). R3 in part:
 rivals are runners (the *red diamond*, picked; beating one raises their standing), feuds name runners, and dead
 runner rooms (a crash marks an existing room, a skull beside the handle on its tab, picked; win it to pull them out). In
-SPRAWL-00 a runner between jobs wears a paper-white tab on their room's chip (the *Tab*, picked); walk in to meet them.
-R4 to come. R2's follow-ups: trait
+SPRAWL-00 a runner between jobs fights a stray in one room (their tab and Signal, Help) and never finishes it; with
+none live they stand at the entry under the *Tab* (picked). Jobs are picked from the market (November 2026): what
+their hub pays for a server's code now, against the risk their temperament takes; they read prices and never move
+them. R4 to come. R2's follow-ups: trait
 effects in fights (only Known face and Haggler are in play), temperament steering the planner, Known's leads and
 Close's consortium. The looks are picked: the map (the *Rail*), and meeting and hiring (below).
 Talked through with the designer, November 2026.
@@ -40,7 +42,7 @@ be on the net, like Guild Wars 1's heroes and Starsector's officers and fleets.
 
 | Layer | What it is | What you see |
 |---|---|---|
-| **Work** | The table is filling again. Paymasters pay per process ended: Halcyon pays crews like LOWLIGHT; the factions run contracts. A runner does your job for their own paymaster | Hub → a server near their level → work it → back to the hub to be paid |
+| **Work** | The table is filling again. Paymasters pay per process ended: Halcyon pays crews like LOWLIGHT; the factions run contracts. A runner does your job for their own paymaster, and picks the server whose code their hub pays most for now | Hub → a server near their level → work it → back to the hub to be paid; the code they're after on their card |
 | **Someone's money** | In 2091 nearly everyone has a payment frozen in the table: a pension, a shop that died mid-trade. Each runner is after one trade, on a fixed floor | Over weeks they climb toward it (#net shows it). Arriving is a story beat: a letter, or a request to help with the last server |
 
 ## On the map: the *Diamonds* and the *Rail* (picked)

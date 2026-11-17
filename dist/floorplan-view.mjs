@@ -51,7 +51,7 @@ import { familyName, ROOM_RULES } from './families.mjs';
 import { RUNCARD, RUN_CARDS, cardOf as runCardOf, surgeAt, surgeFill, escortOf, escortRoute, packOf, packRoute, packRooms } from './runcards.mjs';
 import { rivalP, COUNTERS, READS, rivalOf, routeOf, raceOf, lineupOf, memoryOf, wickLine, crewName, crewColour, rivalSays, rivalLine } from './rivals.mjs';
 import { GENES } from './genes.mjs';
-import { meetingOf, deadOf, runnerOf } from './runners.mjs';
+import { meetingOf, meetingsOf, deadOf, runnerOf } from './runners.mjs';
 import { roomRunner, runnerRow, tierBar } from './runners-view.mjs';
 import { held, slipsLeft, slippable, ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, restUsed, lureFamilies, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
 import { puzzlePanel } from './puzzle-view.mjs';
@@ -436,7 +436,7 @@ function mapSvg(s, tall) {
   // A run card's way (runcards.mjs): the courier's route to its drop, violet dots; the pack's way to you, red dashes.
   const line = (ids, cls) => (ids.length > 1 ? `<polyline class="${cls}" points="${ids.map((id) => { const p = at(g.rooms[id]); return `${p.x},${p.y}`; }).join(' ')}"/>` : '');
   const cardWay = line(escortRoute(s), 'fp-cr-route') + line(packRoute(s), 'fp-pk-route');
-  const ctx = { reach, next, near, G, marks: net(s, 'marks') || {}, th: R_th(s), bl: net(s, 'blips') || {}, files, rv, mt: meetingOf(s, isUp), dd: deadOf(s, isUp) };
+  const ctx = { reach, next, near, G, marks: net(s, 'marks') || {}, th: R_th(s), bl: net(s, 'blips') || {}, files, rv, mt: meetingsOf(s, isUp), dd: deadOf(s, isUp) };
   ctx.pp = (room) => (R.world && WORLD.people ? (WORLD.people(s, room) || []).filter((h) => runnerOf(s, h)) : []); // runners standing in a room (SPRAWL-00)
   const rooms = roomList(s).filter((r) => shown(r.id)).map((room) => roomSvg(s, room, at(room), ctx)).join('');
   const bits = here ? bitsSvg(at(g.rooms[here]), G, here) : '';
@@ -524,7 +524,7 @@ function revealing(s, id) {
 const standTip = (s, room, hs) => `${hs.join(' and ')} ${hs.length === 1 ? 'is' : 'are'} here between jobs.${s.rooms.at === room.id ? '' : `\n▸ Walk in to meet ${hs.length === 1 ? 'them' : 'them all'}.`}`;
 const deadRoomTip = (d) => `The runner ${d.r.handle} crashed here.\n▸ Win the room to pull them out.`;
 const runnerRoomTip = (s, m) => `The runner ${m.r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Signal.${s.rooms.at === m.room.id ? '' : '\n▸ Walk in to help.'}`;
-function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, files = [], rv = null, mt = null, dd = null, pp = null }) {
+function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, files = [], rv = null, mt = [], dd = null, pp = null }) {
   const R = s.rooms, g = R.graph, kind = known(s, room.id), h = hunterOf(s);
   const look = lookOf(s, room);
   const sock = kind && isSocket(s, room) && socketOpen(s, room), prog = sock ? programIn(s, room.id) : null; // an open socket (a held server's Core too) and what runs in it
@@ -543,7 +543,7 @@ function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, fi
   // A room you can walk into walks on one click (Enter too); any other room on the map opens its pop-up.
   const attrs = can ? ` data-rooms="go" data-arg="${esc(room.id)}" tabindex="0" role="button"` : ` data-fp-sel="${esc(room.id)}" tabindex="0" role="button" aria-haspopup="dialog"`;
   const hw = G.nw / 2, hh = G.nh / 2, x0 = n1(p.x - hw), y0 = n1(p.y - hh), d = chipD(look, p.x, p.y, hw, hh, G.ch), ring = chipD(look, p.x, p.y, hw + 5, hh + 5, G.ch + 2);
-  const meet = mt?.room.id === room.id ? mt : null, dead = dd?.room.id === room.id ? dd : null, met = meet || dead ? [] : pp?.(room) || [];
+  const meet = mt.find((m) => m.room.id === room.id) || null, dead = dd?.room.id === room.id ? dd : null, met = meet || dead ? [] : pp?.(room) || [];
   let out = `<g class="${cls}" data-room="${esc(room.id)}"${attrs} title="${esc(tileTip(s, room, marks) + (meet ? '\n' + runnerRoomTip(s, meet) : '') + (dead ? '\n' + deadRoomTip(dead) : '') + (met.length ? '\n' + standTip(s, room, met) : ''))}" aria-label="${esc(kind ? labelOf(s, room) : 'Unknown room')}">`;
   // You: a soft teal glow and a pulsing outline. The hunter just out of sight next door: a red pulse.
   if (here) out += `<path class="fp-you-glow" d="${d}" filter="url(#fp-glow)"/><path class="fp-you-ring" d="${d}"/>`;
@@ -790,7 +790,7 @@ function hereCard(s) {
     if (room.kind === 'core' && !R.world) notes.push(esc(`Boss rule ${R.bossRule}: ${BOSS_RULES[R.bossRule].name}.`));
     if (R.world) { const extra = net(s, 'fightNote', room); if (extra) notes.push(esc(extra)); }
     body += notes.map((n) => note(n)).join('');
-    const meet = R.world ? meetingOf(s, isUp) : null, helping = meet?.room.id === room.id; // a runner fighting it (runners.mjs)
+    const meet = R.world ? meetingOf(s, isUp, room.id) : null, helping = !!meet; // a runner fighting it (runners.mjs)
     if (helping) body += roomRunner(s, meet);
     acts = (helping ? btn('assist', 'Help', { primary: true, tip: `Help ${meet.r.handle}: they fight beside you, and take no XP.` }) : btn('engage', 'Engage', { primary: true })) + (R.visit.back ? btn('back', 'Step back', { tip: `Step back: to ${g.rooms[R.visit.back].path}. The move in stays spent.` }) : '')
       + (slippable(s, room) && slipsLeft(s) ? btn('slip', 'Slip past', { tip: slipTip(s) }) : '');
