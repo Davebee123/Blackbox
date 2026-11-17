@@ -261,5 +261,5 @@ test('the look: one filled amber tag, its glyph and name; the tooltip says what 
   assert.match(tag, /<template class="tt-more">.*class="rw".*class="rw neg"/s);
   play(s, 'jack out');
   assert.match(mapMarkup(s, loc.id), /class="mspecial"[^>]*>⚡\uFE0E</);
-  assert.match(mapMarkup(s, loc.id), /<text [^>]*class="msub"><tspan class="mlv[^"]*">lv \d+<\/tspan><tspan class="mspecial" dx="0.5em" title="Volatile: Server special\./, 'after the level, on the line under the name');
+  assert.match(mapMarkup(s, loc.id), /<text [^>]*class="mlabel [^"]*">[^<]+<tspan dx="0.5em"><tspan class="mlv[^"]*">lv \d+<\/tspan><\/tspan><tspan class="mspecial" dx="0.5em" title="Volatile: Server special\./, 'after the level, beside the name');
 });
