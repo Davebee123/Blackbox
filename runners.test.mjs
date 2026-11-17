@@ -510,7 +510,8 @@ test('a runner on a road glides to its end by the time the clock gets them there
   const m = runnersMap(s, 1).match(new RegExp(`data-runner="${x.r.handle}"[^>]*data-glide="([^"]+)"`));
   assert.ok(m, 'its diamond carries the glide');
   const [, , bx, by, gms, t0] = m[1].split(' ').map(Number);
-  assert.deepEqual([bx, by, gms, t0], [Math.round(P(x.st.pos.next).x * 10) / 10, Math.round(P(x.st.pos.next).y * 10) / 10, ms, 123456]);
+  const end = roadSpot(P(x.st.pos.at), P(x.st.pos.next), 1).end; // it stops short of the place, clear of its mark
+  assert.deepEqual([bx, by, gms, t0], [Math.round(end.x * 10) / 10, Math.round(end.y * 10) / 10, ms, 123456]);
   assert.match(runnerMark(s, x.r.handle, 1), /data-glide="/, 'and so does the picked one');
 });
 
@@ -608,4 +609,39 @@ test('SPRAWL-00: a runner between jobs fights the stray in their room and never 
   const entry = FP.roomList(s).find((x) => x.path0 === '/');
   assert.match(roomsMarkup(s), new RegExp(`${r.handle}[^"]* here between jobs`), 'standing at the entry');
   assert.ok(FP.WORLD.people(s, entry).includes(r.handle));
+});
+
+import { clearSpot, roadSpot, CLEAR_R } from './dist/runners-view.mjs';
+test('a runner mark keeps off the map: no node\'s mark or name under it, and off the places at a road\'s ends', () => {
+  const meets = (b, a) => b[0] < a[2] && b[2] > a[0] && b[1] < a[3] && b[3] > a[1], box = [-7, -7, 7, 7], at = (p) => [p.x - 7, p.y - 7, p.x + 7, p.y + 7];
+  const c = { x: 100, y: 100 }, node = [84, 84, 116, 116];
+  assert.deepEqual(clearSpot(c, box, [node]), { x: 100, y: 130 }, 'nothing in the way: under the place');
+  const under = [70, 118, 130, 150]; // the name set under the node
+  const p = clearSpot(c, box, [node, under]);
+  assert.ok(![node, under].some((a) => meets(at(p), a)), 'clear of the node and its name');
+  assert.ok(Math.hypot(p.x - c.x, p.y - c.y) <= 30.5, 'still beside its place');
+  // Hemmed in all round at 30: it steps further out, still clear.
+  const ring = [[50, 50, 150, 150], under];
+  assert.ok(!ring.some((a) => meets(at(clearSpot(c, box, ring)), a)));
+  // On a road: never within CLEAR_R of either end, and its glide stops short of the far one.
+  const a = { x: 0, y: 0 }, b = { x: 100, y: 0 };
+  for (const f of [0, 0.5, 1]) { const r = roadSpot(a, b, f); assert.ok(r.at.x >= CLEAR_R && r.at.x <= 100 - CLEAR_R, `f ${f}`); }
+  assert.equal(roadSpot(a, b, 0.5).at.x, 50);
+  assert.equal(roadSpot(a, b, 0).end.x, 100 - CLEAR_R);
+  // A name lying over the road by its far end: the stretch stops short of it too.
+  const name = [60, -8, 90, 8], r = roadSpot(a, b, 1, [name]);
+  assert.ok(r.end.x + 6 <= 60 && r.at.x === r.end.x, 'clear of the name, and f 1 lands where the glide ends');
+});
+
+test('the map\'s runner diamonds keep off what it hands them to avoid', () => {
+  const s = world(4242, 6);
+  revealFloor(s, 1);
+  moment(s, 1, (on) => on.some((x) => !x.st.pos.next));
+  const svg0 = runnersMap(s, 1);
+  const spots = [...svg0.matchAll(/<g class="mrun[^"]*" data-runners?(?:-at)?="[^"]+"[^>]*transform="translate\(([-\d.]+) ([-\d.]+)\)"/g)].map((m) => ({ x: +m[1], y: +m[2] }));
+  assert.ok(spots.length);
+  const block = spots.map((p) => [p.x - 20, p.y - 10, p.x + 20, p.y + 10]); // a name where each was
+  const svg = runnersMap(s, 1, null, false, null, [...block]);
+  const moved = [...svg.matchAll(/<g class="mrun(?! road)[^"]*" data-runners?(?:-at)?="[^"]+"[^>]*transform="translate\(([-\d.]+) ([-\d.]+)\)"/g)].map((m) => ({ x: +m[1], y: +m[2] }));
+  for (const p of moved) assert.ok(!block.some((a) => p.x + 7 > a[0] && p.x - 7 < a[2] && p.y + 7 > a[1] && p.y - 7 < a[3]), 'off every box it was told to avoid');
 });

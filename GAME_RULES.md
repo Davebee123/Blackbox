@@ -2658,10 +2658,11 @@ no attaching, detaching or memory pips.
   jack out, the hire at whatever Signal they had.
 - **On the map**: a place you've revealed on the floor drawn has one small paper-white diamond under it while runners
   are there, and how many beside it from two up; a runner on the road between two is a hollow diamond of their own,
-  gliding along it (`mapmotion.mjs` `runRunners`, `runners-view.mjs` `roadLeft`);
-  your crew isn't drawn. A lone diamond's tooltip says who and what they're doing, and a click opens their card. A
-  counted one's names who's there, and a click opens the list beside it (handle, class and level; again, or ×, shuts
-  it); a row opens that runner's card. The picked runner has their own mark and leaves the count.
+  gliding along it (`mapmotion.mjs` `runRunners`, `runners-view.mjs` `roadLeft`). A mark never sits on a node or a
+  name: under its place if that's clear, else the nearest clear spot round it (`clearSpot`), and a road's stops short
+  of the places at its ends (`roadSpot`); your crew isn't drawn. A lone diamond's tooltip says who and what they're
+  doing, and a click opens their card. A counted one's names who's there, and a click opens the list beside it
+  (handle, class and level; again, or ×, shuts it); a row opens that runner's card. The picked runner has their own mark and leaves the count.
 - **Revealed** (`runners.mjs` `revealed`, `inSight`): a located server, SPRAWL-00 or an up-link, a hub you've found, an
   exit on your map. A `?` isn't. A runner under a `?`, at a server or hub off your map, or on a road with an unrevealed
   end isn't drawn; they appear once you locate the server.
