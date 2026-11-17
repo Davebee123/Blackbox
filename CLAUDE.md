@@ -113,8 +113,6 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
     eased, no black screen, no readout), and jacking out plays it backwards (your room locks teal, the rooms close in
     a circle onto the node, the line runs home);
   - network map servers: the *Glyph* (each server its kind's glyph, a bar of what's cleared, a ring round a new one);
-  - outposts on the map: the *small hub* (C: the owner's mark in a diamond, its top want as an amber badge, the quality
-    as its name; docs/outposts.md);
   - network map ground: the *Chart* (faint crosshairs and hairlines that pan and zoom with the map);
   - fights by floor: the *Place* (the floor's scene in characters inside the render, its light and camera on the virus,
     the floor's entrance and break physics; stage.mjs), the fight log on its newest line (▴ opens it), chips typed or
@@ -150,9 +148,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - Firewall plays on your bar.
 - **The market moves** (November 2026): prices move on logged-on time, run by the director, each mover with a reason
   in the lore. *No entropy* and no loss aversion guard the time you're away; the market moves both ways while you play.
-  Factions hold **outposts** on every floor (docs/outposts.md): markets beside the servers that can't be taken, each
-  with a quality that sets what it wants, pushed to extremes by the ticker's cards. Activities pay mostly one thing.
-  Of docs/market.md only the cards stay; sway and INIT's count are shelved.
+  What's next is the ticker (docs/ticker.md): lore-voiced cards that move hub prices. Sway and INIT's count are shelved,
+  and outposts (docs/outposts.md) are tabled as too complicated for now.
 - **Rested XP** comes only from time logged off. There is no catch-up XP.
 - **Unlocks:** cosmetic unlocks (districts, boots, prompts, desk props, mastery looks) come from achievements, not
   from server floors.
