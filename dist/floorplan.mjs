@@ -701,8 +701,12 @@ function rebootCheck(s, now = nowOf()) {
   if (!rb || rb.pending || rb.up) return;
   R.rebootFrom = now;
   R.rebootAt = now + rb.ms;
-  say(s, `Every room is down: ${R.name} reboots in ${fmtLeft(rb.ms)}, and they all come back.`, 'rooms-good');
+  say(s, R.mapped ? `Every room is down: ${R.name} goes offline to reboot. Back in ${fmtLeft(rb.ms)}.` : `Every room is down: ${R.name} reboots in ${fmtLeft(rb.ms)}, and they all come back.`, 'rooms-good');
 }
+// Offline: a Mapped server with every fight room down reboots with you jacked out (app.js leaveFight), and takes no
+// connection until it's back. ms left, or 0. Takes the server's rooms (loc.floorplan), connected or not.
+export const offlineLeft = (R, now = nowOf()) => (R?.mapped && R.rebootAt != null && R.rebootAt > now && R.rebooted !== R.rebootAt ? R.rebootAt - now : 0);
+export const goesOffline = (s) => !!s.rooms?.at && offlineLeft(s.rooms) > 0;
 export function isUp(s, room, now = nowOf()) {
   const R = s.rooms, at = R.down[room.id];
   if (!FIGHTS.includes(room.kind)) return false;
@@ -990,6 +994,7 @@ export function connect(s) {
   settle(s);
   if (R.at) { deny(s, `You are already on ${R.name}.`); return out(s, first); }
   if (now < R.reconnectAt) { deny(s, `${R.name} won't take you back for ${fmtLeft(R.reconnectAt - now)}.`); return out(s, first); }
+  if (offlineLeft(R, now)) { deny(s, `${R.name} is offline, rebooting. Back in ${fmtLeft(offlineLeft(R, now))}.`); return out(s, first); }
   const sig = signalNow(s, now);
   if (sig < Math.ceil(R.max * CONFIG.zone.minSignal)) { deny(s, `You need ${Math.ceil(R.max * CONFIG.zone.minSignal)} Signal to connect. You have ${sig}. It rests back at home.`); return out(s, first); }
   R.max = maxSignal(s);
@@ -1714,7 +1719,7 @@ hooks.roomEnd = (s, result) => {
     takeCache(s, room);
     return stood(s, room);
   }
-  if (room.kind !== 'socket') { R.down[room.id] = nowOf(); rebootCheck(s); } // a socket's guard never comes back
+  if (room.kind !== 'socket') R.down[room.id] = nowOf(); // a socket's guard never comes back
   R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
   const wasRare = !!R.rare[room.id], first = !R.cleared[room.id];
   // One respawn in 25 is a rare spawn (ROOMS.rare): it waits until you kill it (a held server's Root 5, a Legacy server's twice).
@@ -1722,6 +1727,7 @@ hooks.roomEnd = (s, result) => {
   programsPay(s, room, e);
   // First clear: progress toward Mapped (its XP comes in Mapped's lump).
   if (!R.cleared[room.id]) clear(s, room);
+  if (room.kind !== 'socket') rebootCheck(s); // after the clear: the kill that maps the server takes it offline
   // The key: beat the guard while its vault is shut and it goes in your pack, for this visit.
   if (room.kind === 'guard' && room.key && !R.opened[room.key] && !R.visit.keys.includes(room.key)) { R.visit.keys.push(room.key); say(s, `You take the ${R.graph.rooms[room.key].path} key.`, 'rooms-good'); }
   if (room.kind === 'socket' && first) say(s, `${room.path} is open: a socket. Build a program in it.`, 'rooms-good');

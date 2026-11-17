@@ -948,7 +948,9 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
 - **The reboot** (traced servers; `ROOMS.reboot`): a fight room that falls stays down until every counted fight room
   on the server has fallen. Then the server reboots, and 2 minutes later they all come back at once, never the one you
   stand in until you leave. **Reboot n up** on the strip counts the fight rooms still standing, then the countdown; a
-  fallen room's card says it waits on the reboot. A Cron Spawner halves the wait. One respawn in 25 is a **★ rare
+  fallen room's card says it waits on the reboot. A Cron Spawner halves the wait. On a **Mapped** server the reboot
+  takes it **offline**: leaving the fight jacks you out, and it takes no connection until its rooms are back (*offline ·
+  m:ss* under it on the map). The spoils card waits for the last part to finish dissolving. One respawn in 25 is a **★ rare
   spawn**: two levels up, five kills' worth of XP, usually an item.
 - **Progress** counts rooms cleared at least once and never goes down: **Rooms n/N** on the strip and the map card. At
   all of them the server is **Mapped**: an item two levels over it and one lump of XP (5 kills plus half of each fight

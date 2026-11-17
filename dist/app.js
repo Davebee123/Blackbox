@@ -415,6 +415,10 @@ const later = (ms, f) => (ms > 0 ? setTimeout(f, ms) : f());
 const winSound = () => { const cls = classOf(campaign), sub = heroLevel(campaign, cls) >= SUBCLASS.from ? campaign.loadout?.sub?.[cls] : null; feel.ability(flourishKey(cls, sub), { travel: 0, impact: FIN_LAND[cls] || 0 }, {}); };
 let pendingStrikes = [];
 const DISSOLVE_MS = 1000; // a broken part's last moment on the board
+// The spoils card waits for the last broken part to finish dissolving (the winning break's slow motion stretches it).
+let dyingUntil = 0;
+const SLOW_LOST = 350; // about what slowmo (abilityfx.mjs SLOW) adds to the dissolve under it
+function whenStill(fn) { const left = dyingUntil - Date.now(); if (left > 0) setTimeout(() => whenStill(fn), left + 100); else fn(); }
 
 // The floor's stage in the render (stage.mjs): the fight's floor, as its palette is up (screenFx sets stageFloor).
 let stageFloor = null;
@@ -901,7 +905,7 @@ function showSpoils(events) {
   const to = need ? Math.min(1, h.xp / need) : 1;
   const xp = { level: h.level, from: leveled ? 0 : Math.max(0, (h.xp - gained) / (need || 1)), to };
   const head = { name: e.virus.name, level: e.virus.level, family: FAMILY_NAMES[e.virus.family] || '', cycles: e.cycle, damage: e.metrics.attackDamage, clean: !e.metrics.attackDamage };
-  el.innerHTML = V.spoilsMarkup(head, rows, xp, ended === 'rooms' ? 'Back to the server' : ended === 'run' && campaign.run ? 'Back to the run' : 'Back to the map');
+  el.innerHTML = V.spoilsMarkup(head, rows, xp, ended === 'rooms' ? (FP.goesOffline(campaign) ? 'Jack out' : 'Back to the server') : ended === 'run' && campaign.run ? 'Back to the run' : 'Back to the map');
   el.hidden = false;
   // Each line lands with a small tick; names decode from noise first.
   const motion = campaign.settings.motion !== false;
@@ -936,7 +940,9 @@ function decode(node) {
 function leaveFight() {
   if (leaving()) return stopCut();
   const to = ended === 'rooms' || campaign.rooms ? 'rooms' : ended === 'run' && campaign.run ? 'net' : 'map';
-  const swap = () => { ended = null; go(to); };
+  // Mapped with every fight room down: the server goes offline to reboot, and you're jacked out (floorplan.mjs offlineLeft).
+  const out = to === 'rooms' && FP.goesOffline(campaign);
+  const swap = () => { ended = null; go(to); if (out) setTimeout(() => { if (FP.goesOffline(campaign) && !active(campaign)) { roomsDone(FP.jackOut(campaign, `${campaign.rooms.name} goes offline to reboot.`)); } }, dialFx() ? 600 : 0); };
   if (module !== 'combat' || !canMove() || fxLevel() === 'minimal') return swap();
   const at = campaign.rooms?.at;
   playCut($('app'), [$('workspace'), document.querySelector('.command-dock')], swap, () => (at && to === 'rooms' ? [...$('page-view').querySelectorAll(`[data-room="${CSS.escape(at)}"]`)].find((c) => c.getBoundingClientRect().width) : null));
@@ -1168,7 +1174,7 @@ function react(events) {
   const hush = !active(campaign) && events.some((e) => e.type === 'invasion-cleared' && e.quiet);
   const fx = canMove();
   if (events.some((e) => e.type === 'engage')) { barsBefore = null; hideSpoils(); fightFrom = events.find((e) => e.type === 'engage').id; }
-  if (won) { const batch = [...campaign.logs.filter((e) => e.id >= fightFrom && e.id < events[0].id && (e.type === 'loot' || e.type === 'xp' || e.type === 'fresh')), ...events.filter((e) => e.id >= won.id || e.type === 'loot')]; setTimeout(() => { if (ended) { document.body.classList.add('fight-over'); showSpoils(batch); } }, 900); }
+  if (won) { const batch = [...campaign.logs.filter((e) => e.id >= fightFrom && e.id < events[0].id && (e.type === 'loot' || e.type === 'xp' || e.type === 'fresh')), ...events.filter((e) => e.id >= won.id || e.type === 'loot')]; dyingUntil = 0; setTimeout(() => whenStill(() => { if (ended) { document.body.classList.add('fight-over'); showSpoils(batch); } }), 900); }
   // Every damage instance gets its own number, with an icon for its source, one after another in the order
   // they resolved (dmgfx.mjs). Effects minimal or Motion off: all at once, stacked.
   const lvl0 = fxLevel(), stack = !fx || lvl0 === 'minimal', lashing = fx && lvl0 !== 'minimal';
@@ -1246,7 +1252,7 @@ function react(events) {
         const bp = part(campaign, e.target);
         // (It waits for the number of the hit that broke it.)
         const wait = delay(e);
-        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { markDirty(); }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => { bp._dyingUntil = Date.now() + DISSOLVE_MS; markDirty(); hitfx.dissolve(partRow(e.target)); if (e === last) slowmo(); setTimeout(() => { markDirty(); }, DISSOLVE_MS + 50); })); }
+        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); dyingUntil = Math.max(dyingUntil, bp._dyingUntil + (e === last ? SLOW_LOST : 0)); setTimeout(() => { markDirty(); }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => { bp._dyingUntil = Date.now() + DISSOLVE_MS; dyingUntil = Math.max(dyingUntil, bp._dyingUntil + (e === last ? SLOW_LOST : 0)); markDirty(); hitfx.dissolve(partRow(e.target)); if (e === last) slowmo(); setTimeout(() => { markDirty(); }, DISSOLVE_MS + 50); })); }
         if (e === last) pendingStrikes.push(() => later(wait, winSound)); // your class's flourish over the break's voice
       }
         artHit(e.target, 'break'); feel.add(() => flash(e.message)); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
@@ -3069,6 +3075,7 @@ function frame(now) {
     if (campaign.run && ++wanderTick % 4 === 0 && Object.values(campaign.run.crew || {}).some((c) => c.link !== 'you')) { const ev = crewWander(campaign); if (ev.length) react(ev); save(); markDirty(); }
     // A wild server's reconnect countdown (rogue.mjs relockMs) ticks on its card.
     if ([campaign.zone, ...(campaign.locations || [])].some((l) => l && relockLeft(l, wall - 1000))) markDirty(); // one more render as it ends
+    if (module === 'map' && (campaign.locations || []).some((l) => FP.offlineLeft(l.floorplan, wall - 1000))) markDirty(); // an offline server's reboot counts down on the map
   }
   if (loop) return; // something in this frame already woke it (a frame is asked for)
   if (tickBusy(performance.now())) { loop = 1; requestAnimationFrame(frame); return; }

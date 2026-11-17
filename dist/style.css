@@ -1561,7 +1561,7 @@ body.no-motion .spoils, body.no-motion .sp-card, body.no-motion .sp-xp, body.no-
 body.no-motion .sp-go { animation: none; opacity: 1; }
 .btn.buyout { color: var(--amber); border-color: rgba(241, 185, 47, 0.5); } .btn.buyout .glyph { margin-right: 4px; }
 .install.mini .btn.buyout { margin-top: 6px; }
-.mnode.detached { opacity: 0.38; } .mnode.detached .ring { stroke-dasharray: 2 2; }
+.mnode.detached { opacity: 0.38; } .mnode.loc.offline > :not(text) { opacity: 0.4; } /* Mapped and rebooting: no connection (floorplan.mjs offlineLeft) */ .mnode.detached .ring { stroke-dasharray: 2 2; }
 .btn.mem-x { margin-left: auto; color: var(--muted); }
 /* Factions: their colour (--fc) on their hub, their servers, their icons */
 .fmark-i { display: inline-flex; color: var(--fc); vertical-align: -2px; } .fmark-i .glyph { margin: 0 3px 0 0; }

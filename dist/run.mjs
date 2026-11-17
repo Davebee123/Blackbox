@@ -39,7 +39,7 @@ import { biasCode, netOf } from './network.mjs';
 import { showCard } from './genome.mjs';
 import { owned, procIn, procOf, rootFileInfo, rootFiles, rootOf, CACHE_FILE, STASH_DIR, STASH_FILE } from './root.mjs';
 import { enterRooms, roomsFor } from './netrooms.mjs';
-import { roomsCommand, jackOut as roomsJackOut, settle as roomsSettle, hereOf, FIGHTS, roomList, neighbours, isUp, coreOpen, walkToRoom, seenOf, fightOf, WORLD as ROOMS_WORLD } from './floorplan.mjs';
+import { roomsCommand, jackOut as roomsJackOut, settle as roomsSettle, hereOf, FIGHTS, roomList, neighbours, isUp, coreOpen, walkToRoom, seenOf, fightOf, offlineLeft, WORLD as ROOMS_WORLD } from './floorplan.mjs';
 import { threadCommand, developerThread, isDark } from './threads.mjs';
 export { zoneOf, zoneRooms };
 
@@ -419,6 +419,7 @@ export function connect(s, id) {
   else if (s.server.integrity <= 0) warn(s, 'Your server crashed. Reboot before running.');
   else if (loc.fresh && loc.detached && !joinCost(s, loc).fits) warn(s, `${loc.name} needs ${joinCost(s, loc).add} memory; ${memoryCap(s) - liveCount(s)} free (${liveCount(s)}/${memoryCap(s)}). Detach something first.`);
   else if (!loc.fresh && (loc.detached || (s.locations.includes(loc) && !isLive(s, loc)))) warn(s, `${loc.name} is detached from your network. Attach it first (its map card).`);
+  else if (offlineLeft(loc.floorplan)) warn(s, `${loc.name} is offline, rebooting. Back in ${Math.ceil(offlineLeft(loc.floorplan) / 1000)}s.`); // Mapped and every room down (floorplan.mjs)
   else if (relocks(loc) && relockLeft(loc)) warn(s, `${loc.name} is still tracing your last connection. Reconnect in ${relockLeft(loc)}s.`);
   else if (loc.farm && !(s.crewSim || []).length) warn(s, `${loc.name} is built for a crew. Hire a runner first.`);
   else if (loc.member && (loc.depth || 1) > floorsReached(s)) warn(s, `${loc.name} is on floor ${loc.depth}. Reach that floor yourself first.`); // a member's servers: on floors you've opened (GAME_RULES.md "Consortium")
