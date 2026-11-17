@@ -82,13 +82,15 @@ test('a click centres the map on its server and selects it; with no server, it o
   const { s, loc } = setup();
   s.mail.jobs.push(
     { id: 1, type: 'takeover', loc: loc.id, from: 'Halcyon Mutual · Claims', reward: { credits: 200 } },
-    { id: 2, type: 'kill', family: 'ransomware', count: 4, got: 0, level: 12, from: 'Halcyon Mutual · Claims', reward: { credits: 90 } },
+    { id: 2, type: 'kill', family: 'worm', count: 4, got: 0, level: 12, from: 'Halcyon Mutual · Claims', reward: { credits: 90 } },
     { id: 3, type: 'bounty', name: 'GRAVEMIND', from: 'Halcyon Mutual · Claims', reward: { credits: 90 } },
   );
   const [take, kill, bounty] = rows(mapMarkup(s));
   assert.match(take, new RegExp(`data-locate="${loc.id}"`), 'its server, through the map\'s Locate');
   assert.doesNotMatch(take, /data-go=/);
-  assert.match(kill, /data-go="mail:j2"/, 'no server: its letter in Mail');
+  assert.match(kill, /data-go="mail:j2"/, 'no server of its family: its letter in Mail');
+  s.mail.jobs[1].family = loc.family;
+  assert.match(rows(mapMarkup(s))[1], new RegExp(`data-locate="${loc.id}"`), "a family's kills: its traced server of that family");
   assert.match(bounty, /data-locate="sprawl"/, 'a bounty lives in SPRAWL-00');
   // The selected server's contract is lit.
   assert.match(rows(mapMarkup(s, loc.id))[0], /class="ct-row on"/);
@@ -103,7 +105,7 @@ test('its tooltip reads in the house grammar: the name, its kind, its progress, 
   );
   const tips = rows(mapMarkup(s)).map((r) => unesc(r.match(/title="([^"]*)"/)[1]));
   const [kill, item] = s.mail.jobs;
-  assert.equal(tips[0], `Kill 5 Ransomware viruses, Lv 8+: Contract for Halcyon Mutual · Claims. 3 of 5 viruses killed.\n▸ Open it in Mail.`);
+  assert.equal(tips[0], `Kill 5 Ransomware viruses, Lv 8+: Contract for Halcyon Mutual · Claims. 3 of 5 viruses killed.\n▸ Show it on the map.`);
   assert.equal(tips[1], `Recover ledger.db from ${loc.name}: Contract for wick · LOWLIGHT. In the vault.\n▸ Show it on the map.`);
   for (const t of tips) {
     const [body, answer] = t.split('\n');
