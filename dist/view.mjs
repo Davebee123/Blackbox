@@ -77,7 +77,7 @@ import { usable, hooks, watchdogIn } from './combat.mjs';
 import { EXE } from './exe.mjs';
 import { sigintWindows, sigintCharges, plannedTells } from './tells.mjs';
 import { daemonText } from './daemons.mjs';
-import { ROOMS as ROOMS_FP, KIND_OF, KINDS as KINDS_FP } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
+import { ROOMS as ROOMS_FP, KIND_OF, KINDS as KINDS_FP, offlineLeft } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
 import { rivalP } from './rivals.mjs';
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
 import { arcRows, arcReader } from './arcs-view.mjs';
@@ -2275,6 +2275,7 @@ function labelBox(n, side, r, w, z) {
 const label = (n, r, name, sub, cls = '') => { const p = labelAt(n, r, !sub); return `<text ${p.name} class="mlabel ${cls}">${esc(name)}</text>${sub ? `<text ${p.sub} class="msub">${esc(sub)}</text>` : ''}`; };
 // A server's label: its name, and under it the level coloured by how hard it is for you (WoW colours), its specials'
 // glyphs (each with its tooltip), then whatever else (outpost, siege…). The name can hide.
+const clockOf = (ms) => { const sec = Math.ceil(ms / 1000); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; }; // a countdown, m:ss
 const lvLabel = (s, n, r, name, level, depth, rest = '', cls = '', specials = []) => {
   const gap = level - hackerLevel(s);
   // A server you own needs no level (its colour says it's yours).
@@ -2593,13 +2594,14 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const l = n.loc, st = nodeState(s, l);
     const job = openContracts(s).some((c) => c.loc === l.id);
     const progs = programsOn(l).length;
-    const rest = st === 'here' ? 'here' : job ? 'contract' : progs ? `${progs} ${progs === 1 ? 'program' : 'programs'}` : l.takenOver ? '' : st === 'done' ? 'clean' : '';
+    const off = offlineLeft(l.floorplan); // Mapped and every room down: rebooting, no connection (floorplan.mjs)
+    const rest = off ? `offline · ${clockOf(off)}` : st === 'here' ? 'here' : job ? 'contract' : progs ? `${progs} ${progs === 1 ? 'program' : 'programs'}` : l.takenOver ? '' : st === 'done' ? 'clean' : '';
     const op = progs ? ' outpost' : '';
     if (l.rogue) {
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
       return `<g class="mnode rogue${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${st === 'here' ? ' here' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${l.lair && BOSSES[l.lair] ? BOSSES[l.lair].name : ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
     }
-    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${eventsAt(s, l.id).length ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(`${l.name}, ${layoutName(l)}`)}"><circle r="18" class="mhit"/>${serverIcon(l, st)}${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(s, l)}${blipSvg(s, l)}${serverMarkSvg(s, l.id, thMarks)}${pick}${lvLabel(s, n, SV_R, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest, '', specialsOf(l))}</g>`;
+    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${off ? ' offline' : ''}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${eventsAt(s, l.id).length ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(`${l.name}, ${layoutName(l)}`)}"><circle r="18" class="mhit"/>${serverIcon(l, st)}${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(s, l)}${blipSvg(s, l)}${serverMarkSvg(s, l.id, thMarks)}${pick}${lvLabel(s, n, SV_R, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest, '', specialsOf(l))}</g>`;
   }).join('');
   const hoverNames = s.settings?.mapNames === 'hover';
   // The ground is a chart (the *Chart*): a faint crosshair every CHART units, hairlines between, drawn in the map so it
@@ -2943,7 +2945,7 @@ function mapSide(s, sel, node) {
   return `<section class="card ${st === 'new' ? 'alert' : ''}"><h2>${l.member ? `${esc(l.member)}'s server` : `Floor ${l.depth || 1}`} · ${esc(FAMILIES[l.family].name)}</h2><h1>${esc(l.name)}</h1>
     ${serverTags(s, l, `<span class="tag tag-kind" data-kind="${esc(l.template || '')}" title="${esc(layoutRule(l))}">${kindIcon(l)}${esc(layout)}</span>${specialTags(l)}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}`)}
     <div class="stats">${roomsStat}${vaultStat}${stat('Runs', l.runs || 0)}</div>
-    ${R?.mapped || (R && l.takenOver) ? `<p class="svc-line">${R.mapped ? '<span class="tag you" title="Every room cleared at least once">Mapped</span> ' : ''}${Object.values(R.graph?.rooms || {}).some((x) => x.wild) ? `<span class="tag" title="Mapped or held, a server's rooms come back fast">Fast respawns</span> <small>fight rooms ${ROOMS_FP.respawn.process} min, guard posts ${ROOMS_FP.respawn.guard}, elites ${ROOMS_FP.respawn.elite}</small>` : `<span class="tag" title="Its fight rooms stay down until every one has fallen, then all come back ${ROOMS_FP.reboot.minutes} minutes later">Reboot</span>`}</p>` : ''}
+    ${R?.mapped || (R && l.takenOver) ? `<p class="svc-line">${R.mapped ? '<span class="tag you" title="Every room cleared at least once">Mapped</span> ' : ''}${offlineLeft(R) ? `<span class="tag warn" title="Offline\nEvery fight room is down, so the server is rebooting. It takes no connection until its rooms are back.">Offline · ${clockOf(offlineLeft(R))}</span> ` : ''}${Object.values(R.graph?.rooms || {}).some((x) => x.wild) ? `<span class="tag" title="Mapped or held, a server's rooms come back fast">Fast respawns</span> <small>fight rooms ${ROOMS_FP.respawn.process} min, guard posts ${ROOMS_FP.respawn.guard}, elites ${ROOMS_FP.respawn.elite}</small>` : `<span class="tag" title="Its fight rooms stay down until every one has fallen, then all come back ${ROOMS_FP.reboot.minutes} minutes later">Reboot</span>`}</p>` : ''}
     ${openContracts(s).filter((c) => c.loc === l.id).map((c) => `<p class="svc-line"><span class="tag${c.offBooks ? ' hot' : ''}">Contract</span> ${esc(contractTitle(s, c))} <small class="svc-prog">· ${esc(contractProgress(s, c).text)}</small></p>`).join('')}
     ${parent ? `<p class="svc-line">via ${esc(parent.name)}</p>` : ''}
     ${l.passwordKnown && !leakShown(l) ? `<p class="svc-line">key <code>${esc(l.password)}</code></p>` : ''}

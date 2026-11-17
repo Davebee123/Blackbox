@@ -99,3 +99,40 @@ test('the strip shows the fight rooms still up, then the countdown; a fallen roo
   kill(s, last);
   assert.match(roomsMarkup(s), new RegExp(`fp-reboot on"[^>]*><span class="lbl">Reboot</span><b><span data-at="${clock + 2 * 60000}"></span></b>`));
 });
+
+test('Mapped with every fight room down: the server goes offline to reboot and takes no connection until it is back', () => {
+  const s = server(), R = s.rooms, rooms = resets(s);
+  R.opened[R.graph.vaults[0]] = clock;
+  const last = rooms.find((x) => x.kind === 'process');
+  for (const x of FP.roomList(s)) if (FP.counted(x) && x !== last) R.cleared[x.id] = clock;
+  for (const x of rooms) if (x !== last) R.down[x.id] = clock;
+  assert.equal(FP.goesOffline(s), false);
+  const first = s.serial;
+  kill(s, last);
+  assert.ok(R.mapped, 'the kill maps it');
+  assert.equal(FP.offlineLeft(R), 2 * 60000);
+  assert.equal(FP.goesOffline(s), true, 'leaving the fight jacks you out (app.js)');
+  assert.ok(s.logs.some((e) => e.id > first && /goes offline to reboot\. Back in 2:00/.test(e.message)));
+  FP.jackOut(s);
+  assert.equal(FP.goesOffline(s), false, 'home');
+  const denied = s.serial;
+  tick(40 * 1000); // past the reconnect wait
+  FP.connect(s);
+  assert.equal(R.at, null, 'no connection while it reboots');
+  assert.ok(s.logs.some((e) => e.id > denied && /offline, rebooting\. Back in/.test(e.message)));
+  tick(2 * 60000);
+  assert.equal(FP.offlineLeft(R), 0, 'back up');
+  FP.connect(s);
+  assert.ok(R.at, 'connected');
+  assert.ok(rooms.every((x) => FP.isUp(s, x)), 'every room back');
+});
+
+test('an unmapped server with every fight room down reboots with you still on it', () => {
+  const s = server(), R = s.rooms, rooms = resets(s);
+  R.opened[R.graph.vaults[0]] = clock;
+  const last = rooms.find((x) => x.kind === 'process');
+  for (const x of rooms) if (x !== last) R.down[x.id] = clock;
+  kill(s, last);
+  assert.ok(!R.mapped && FP.rebootOf(s).pending);
+  assert.equal(FP.goesOffline(s), false);
+});
