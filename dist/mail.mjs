@@ -238,9 +238,11 @@ function storyTick(s, at) {
 // A takeover or item contract points at a found server you haven't taken over, or at an unknown
 // server one hop past one you've found (you'll need a relay to flag it, then trace it yourself).
 const targeted = (s) => new Set([...jobs(s), ...offers(s)].filter((j) => !j.done).flatMap((j) => [j.loc, j.hidden]).filter(Boolean));
-function pickTarget(s) {
+// found: only a server you've found (a recovery: its vault is on your map), never an unknown one.
+function pickTarget(s, found_ = false) {
   const busy = targeted(s);
   const found = s.locations.filter((l) => !l.takenOver && !l.rogue && !busy.has(l.id)); // a rogue server can't be taken
+  if (found_) return found.length ? { loc: found[Math.floor(rand(s) * found.length)].id } : null;
   const hid = hiddenNodes(s).filter((n) => !busy.has(n.id) && s.locations.some((l) => l.id === n.via));
   // Unknown servers next to one of your relays (or one you could put a relay on) come first.
   const near = hid.filter((n) => s.locations.find((l) => l.id === n.via)?.takenOver);
@@ -301,11 +303,12 @@ export function offer(s, at = now()) {
   const { faction, off, theirs } = giverOf(s);
   const rivals = rivalServers(s, faction).filter((l) => !targeted(s).has(l.id));
   const target = rivals.length && rand(s) < 0.6 ? { loc: pick(s, rivals).id } : pickTarget(s);
+  const vaultFound = !!target?.loc || s.locations.some((l) => !l.takenOver && !l.rogue && !targeted(s).has(l.id)); // a recovery needs a server you've found
   // Named processes live in SPRAWL-00: posted only while it's still your level (it tops out at CONFIG.zone.maxLevel).
   const roomsAt = roomsTarget(s), mapAt = mapTarget(s);
   const rootAt = rootTarget(s), logs = unswept(s);
   const acts = Object.keys(ACTIVITY).filter((k) => L >= ACTIVITY[k].from && (k !== 'root' || rootAt) && (k !== 'sweeps' || logs.length) && (k !== 'hold' || tracedOf(s).length));
-  const kinds = (['kill', 'kill', 'bounty', 'bounty', 'materials', 'takeover', 'item', 'item', 'rooms', 'rooms', 'map', ...acts]).filter((k) => (target || !['takeover', 'item'].includes(k)) && (k !== 'bounty' || L <= CONFIG.zone.maxLevel + 2) && (k !== 'rooms' || roomsAt) && (k !== 'map' || mapAt));
+  const kinds = (['kill', 'kill', 'bounty', 'bounty', 'materials', 'takeover', 'item', 'item', 'rooms', 'rooms', 'map', ...acts]).filter((k) => (k !== 'takeover' || target) && (k !== 'item' || vaultFound) && (k !== 'bounty' || L <= CONFIG.zone.maxLevel + 2) && (k !== 'rooms' || roomsAt) && (k !== 'map' || mapAt));
   // Strain contracts (RuneScape Slayer): once strains are open at your level, a quarter of the board.
   const strainsOpen = Object.keys(STRAINS).filter((k) => STRAINS[k].from <= L && L >= CONFIG.zone.maxLevel + 2);
   const type = strainsOpen.length && rand(s) < 0.25 ? 'strain' : pick(s, kinds);
@@ -337,7 +340,7 @@ export function offer(s, at = now()) {
     j = { type, ...ACTIVITY[type].job(s, L, { rootAt, logs }), reward: { credits: pay(35, 6), ...repFor(5) } };
   } else {
     const f = pick(s, T.files?.length ? T.files : [{ file: 'policy.db', label: 'a stolen policy database', line: 'binary: policy records.' }]);
-    j = { type, ...target, file: f.file, label: f.label, text: [f.line, off ? 'GLASSJAW has a buyer waiting.' : 'pull it and bank it, then deliver it from Mail.'],
+    j = { type, ...(target?.loc ? target : pickTarget(s, true)), file: f.file, label: f.label, text: [f.line, off ? 'GLASSJAW has a buyer waiting.' : 'pull it and bank it, then deliver it from Mail.'],
       reward: { credits: pay(50, 8), ...repFor(6) } };
   }
   // Its XP, fixed now (its kind and size at this level). GLASSJAW's premium: more XP, and a protocol on delivery.
@@ -346,7 +349,7 @@ export function offer(s, at = now()) {
   // Halcyon sends a relay with one server job at a time, while you have none.
   if (faction === 'halcyon' && !off && ['takeover', 'item'].includes(type) && !items(s).relay && ![...openContracts(s), ...offers(s)].some((c) => c.reward?.relay)) j.reward.relay = 1;
   // The words: the giver's own variant from content/contracts.mjs for this kind.
-  const kind = ['takeover', 'item'].includes(type) && !j.loc ? type + '-unknown' : type;
+  const kind = type === 'takeover' && !j.loc ? 'takeover-unknown' : type;
   const v = pick(s, textFor(kind, faction));
   const vars = jobVars(s, j);
   const from = theirs ? FACTIONS[faction].name : v.from ? SENDERS[v.from] : off ? SENDERS.glassjaw : pick(s, [SENDERS.claims, SENDERS.claims, SENDERS.wick]);
@@ -626,6 +629,24 @@ export function contractTakeover(s, loc) {
     if (c.any ? c.took === loc.id : c.loc === loc.id) emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
   }
 }
+// A recovery points only at a server you've found: an older save's board recovery (job or offer) aimed at an unknown
+// server moves to a found one (a free one first), its letter rewritten; with none found, an offer goes and a held one
+// keeps its trace. The storyline's and a floor chain's keep theirs. Keyed on the field: a recovery with `hidden` and no
+// `loc`.
+export function itemRestore(s) {
+  if (!s.mail?.jobs) return;
+  for (const list of [s.mail.jobs, s.mail.offers || []]) for (const j of [...list]) {
+    if (j.type !== 'item' || j.done || j.loc || !j.hidden || j.story !== undefined || j.chain) continue;
+    const busy = targeted(s), free = s.locations.filter((l) => !l.takenOver && !l.rogue && !busy.has(l.id)), pool = free.length ? free : s.locations.filter((l) => !l.rogue);
+    const to = pool[j.id % (pool.length || 1)];
+    if (!to) { if (list === s.mail.offers) list.splice(list.indexOf(j), 1); continue; }
+    j.loc = to.id; delete j.hidden;
+    const vs = textFor('item', j.faction || 'halcyon'), v = vs[j.id % vs.length], vars = jobVars(s, j);
+    j.subject = fill(v.subject, vars); j.body = (v.body || []).map((p) => fill(p, vars)).filter(Boolean);
+    for (const l of s.mail.list || []) if (l.job === j.id) { l.subject = j.subject; l.body = j.body; }
+    if (list === s.mail.jobs) plant(s, j);
+  }
+}
 // An unknown server you traced: contracts aimed at it follow it there.
 export function contractLocated(s, n, loc) {
   for (const j of [...jobs(s), ...offers(s)].filter((x) => !x.done && x.hidden === n.id)) {
@@ -671,7 +692,7 @@ export function title(s, c) {
   if (c.type === 'map') return `Map ${locName(s, c.loc) || 'a server'}`;
   if (c.type === 'takeover') return c.any ? 'Take over a server' : `Take over ${locName(s, c.loc) || 'an unknown server'}`;
   if (c.type === 'materials') return `Deliver ${c.amount} ${MATERIALS[c.material].name}`;
-  if (c.type === 'item') return `Recover ${c.file}`;
+  if (c.type === 'item') { const at = c.loc && locName(s, c.loc); return at ? `Recover ${c.file} from ${at}` : `Recover ${c.file}`; }
   if (c.type === 'install') return `Install ${c.label} at ${c.addr} on ${locName(s, c.loc) || 'a server'}`;
   if (c.type === 'defuse') return `Break ${c.count} Encryptors before they Encrypt`;
   if (c.type === 'sweep') return `Map ${locName(s, c.loc) || 'a server'} without resting`;
@@ -718,7 +739,7 @@ export function progress(s, c) {
     if (ready(s, c)) return { text: 'Banked', part: 1 };
     if (!c.loc) return hunt(s, c);
     const inPack = s.run?.pack.some((f) => f.kind === 'contract' && f.name === c.file);
-    return { text: inPack ? 'In your pack. Jack out to bank it.' : `In the vault on ${locName(s, c.loc)}`, part: inPack ? 0.85 : 0.5 };
+    return { text: inPack ? 'In your pack. Jack out to bank it.' : 'In the vault', part: inPack ? 0.85 : 0.5 };
   }
   if (c.type === 'install') return c.got ? { text: 'Installed', part: 1 } : c.carry === 'pack' && s.run?.loc === c.loc ? { text: `In your pack. Install it at ${c.addr}.`, part: 0.6 } : { text: `In your stash. It goes in your pack on ${locName(s, c.loc)}.`, part: 0.25 };
   if (c.type === 'defuse') return { text: `${c.got}/${c.count} broken before they Encrypt`, part: c.got / c.count, n: c.got, of: c.count };

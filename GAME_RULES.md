@@ -2228,8 +2228,8 @@ minutes after you take it.
 A contract that points at a room marks it on that server's map (its address amber, the contract's mark), and so does any
 job a room's live virus would count for. The strip shows **Contract** and its progress (its tip has each one, a row each with
 its progress; the map's tracker keeps a row to one line, the rest in its tooltip), the map's card each contract on that server. Pinned earned pieces sit under the tracker
-(*Earned pieces*). A takeover or recovery points at a server you've found, or at an **unknown server** one hop past one: you
-trace it to find it.
+(*Earned pieces*). A recovery points at a server you've found (its name in the contract's, *Show on map* on the offer);
+a takeover at one, or at an **unknown server** one hop past one: you trace it to find it.
 
 **The board** opens with the turf letter (the storyline's fourth), or once you've held the claimjack or turf job for an
 hour. Up to ten offers sit on it; a new one arrives every 1 to 3 minutes, and an untaken offer is gone after 15. Its kind
@@ -2658,10 +2658,11 @@ no attaching, detaching or memory pips.
   jack out, the hire at whatever Signal they had.
 - **On the map**: a place you've revealed on the floor drawn has one small paper-white diamond under it while runners
   are there, and how many beside it from two up; a runner on the road between two is a hollow diamond of their own,
-  gliding along it (`mapmotion.mjs` `runRunners`, `runners-view.mjs` `roadLeft`);
-  your crew isn't drawn. A lone diamond's tooltip says who and what they're doing, and a click opens their card. A
-  counted one's names who's there, and a click opens the list beside it (handle, class and level; again, or ×, shuts
-  it); a row opens that runner's card. The picked runner has their own mark and leaves the count.
+  gliding along it (`mapmotion.mjs` `runRunners`, `runners-view.mjs` `roadLeft`). A mark never sits on a node or a
+  name: under its place if that's clear, else the nearest clear spot round it (`clearSpot`), and a road's stops short
+  of the places at its ends (`roadSpot`); your crew isn't drawn. A lone diamond's tooltip says who and what they're
+  doing, and a click opens their card. A counted one's names who's there, and a click opens the list beside it
+  (handle, class and level; again, or ×, shuts it); a row opens that runner's card. The picked runner has their own mark and leaves the count.
 - **Revealed** (`runners.mjs` `revealed`, `inSight`): a located server, SPRAWL-00 or an up-link, a hub you've found, an
   exit on your map. A `?` isn't. A runner under a `?`, at a server or hub off your map, or on a road with an unrevealed
   end isn't drawn; they appear once you locate the server.
@@ -3086,11 +3087,14 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 62 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 64 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
 - **Earned pieces** (no version of their own): `s.earned` (each count) and `s.pins`, made on first use (`earned.mjs`). A
   piece you had found stays found.
+- **v64** a board recovery (held or offered) aimed at an unknown server moves to a server you've found, its letter
+  rewritten; with none found, an offer goes (`mail.mjs itemRestore`, keyed on `hidden` with no `loc`).
+- **v63** the Graphics settings, `s.settings.graphics` (`graphics.mjs migrateGraphics`, keyed on the field).
 - **v62** runners: `s.runners` (the logged-on clock, who you know), made on first use (`runners.mjs`).
 - **v61** every hub's Shop has one shape: the agency stock, the premium shelves and the hubs' stock counts go
   (`store.mjs shopRestore`, keyed on the fields).

@@ -1231,7 +1231,7 @@ export default {
       {
         "subject": "Recover {file}",
         "body": [
-          "{Label} ended up in a vault on {server}, as {file}.",
+          "{Label} ended up in a vault on {server}.",
           "Bring it back."
         ]
       }
@@ -1240,7 +1240,7 @@ export default {
       {
         "subject": "A file for a friend",
         "body": [
-          "There is {label} in a vault on {server}: {file}. Bring it to us.",
+          "There is {label} in a vault on {server}. Bring it to us.",
           "We have two offers on it already."
         ]
       }
@@ -1249,7 +1249,7 @@ export default {
       {
         "subject": "Recover {file}",
         "body": [
-          "{Label} left our custody. It sits in a vault on {server}, as {file}.",
+          "{Label} left our custody. It sits in a vault on {server}.",
           "Bring it back before the end of this cycle."
         ]
       }
@@ -1258,7 +1258,7 @@ export default {
       {
         "subject": "Recover {file}",
         "body": [
-          "Four. Nine. Nine. {Label} sits in a vault on {server}, as {file}. Somebody is still owed by it.",
+          "Four. Nine. Nine. {Label} sits in a vault on {server}. Somebody is still owed by it.",
           "Bring it back. We will read it on air."
         ]
       }
@@ -1267,55 +1267,8 @@ export default {
       {
         "subject": "Recover {file}",
         "body": [
-          "{Label} sits in a vault on {server}, as {file}. Halcyon would love it back.",
+          "{Label} sits in a vault on {server}. Halcyon would love it back.",
           "Bring it to us first."
-        ]
-      }
-    ]
-  },
-  "item-unknown": {
-    "halcyon": [
-      {
-        "subject": "Recover {file}",
-        "body": [
-          "{Label} ended up in a vault on a server you haven’t found yet, as {file}.",
-          "A relay nearby will flag the server. Trace it, then bring the file back."
-        ]
-      }
-    ],
-    "glassjaw": [
-      {
-        "subject": "A file for a friend",
-        "body": [
-          "There is {label} in a vault on a server you haven’t found yet: {file}. A relay nearby will flag the server.",
-          "Trace it, then bring the file to us. We have two offers on it already."
-        ]
-      }
-    ],
-    "kestrel": [
-      {
-        "subject": "Recover {file}",
-        "body": [
-          "{Label} left our custody. It sits in a vault on a server you haven’t found yet, as {file}.",
-          "A relay nearby will flag the server. Trace it, then bring the file back."
-        ]
-      }
-    ],
-    "lantern": [
-      {
-        "subject": "Recover {file}",
-        "body": [
-          "Four. Nine. Nine. {Label} sits in a vault on a server you haven’t found yet, as {file}.",
-          "A relay nearby will flag the server. Trace it, then bring the file back."
-        ]
-      }
-    ],
-    "nullchoir": [
-      {
-        "subject": "Recover {file}",
-        "body": [
-          "{Label} sits in a vault on a server you haven’t found yet, as {file}. Halcyon would love it back.",
-          "A relay nearby will flag the server. Trace it, then bring the file to us first."
         ]
       }
     ]

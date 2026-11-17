@@ -44,18 +44,21 @@ export function runnerRail(s, pick = null, shut = false) {
 // The picked runner on the map, on the floor drawn (fl), in its map units (portrait: x and y swapped, as mapLayout).
 // Nothing while they're out of sight; the route runs back only as far as the first place you haven't revealed, and the
 // ring is drawn only on a revealed one.
-export function runnerMark(s, handle, fl, portrait = false) {
+// At a place it keeps off avoid as the diamonds do (runnersMap; z: screen pixels per map unit, for its name's box).
+export function runnerMark(s, handle, fl, portrait = false, avoid = [], z = 1) {
   const r = handle && runnerOf(s, handle);
   if (!r) return '';
   const st = stateOf(s, r);
   if (st.floor !== fl || !inSight(s, st)) return '';
   const g = st.g, P = (id) => { const n = g.nodes[id]; return n ? (portrait ? { x: n.y, y: n.x } : { x: n.x, y: n.y }) : null; };
-  const a = P(st.pos.at), b = st.pos.next && P(st.pos.next), me = b ? { x: a.x + (b.x - a.x) * st.pos.f, y: a.y + (b.y - a.y) * st.pos.f } : a;
+  const a = P(st.pos.at), b = st.pos.next && P(st.pos.next), road = b && roadSpot(a, b, st.pos.f, avoid), me = b ? road.at : a;
+  const w = Math.max(7, (r.handle.length * 8.5) / z / 2), box = [-w, -7 - 18 / z, w, 7], spot = b ? me : clearSpot(a, box, avoid);
+  if (!b) avoid.push([spot.x + box[0], spot.y + box[1], spot.x + box[2], spot.y + box[3]]);
   const passed = st.pos.passed, from = passed.findLastIndex((id) => !revealed(s, g, id)) + 1;
   const pts = passed.slice(from).map(P).filter(Boolean).concat(b ? [me] : []), to = headingOf(st), ring = to && revealed(s, g, to) ? P(to) : null;
   const f = (v) => Math.round(v * 10) / 10;
   const route = pts.length > 1 ? `<polyline class="mr-route" points="${pts.map((p) => `${f(p.x)},${f(p.y)}`).join(' ')}"/>` : '';
-  return `<g class="mrunner${st.stage === 'down' ? ' down' : ''}${huntsYou(s, r.handle) ? ' rival' : ''}" data-runner-mark="${esc(r.handle)}">${route}${ring ? `<circle class="mr-ring" cx="${f(ring.x)}" cy="${f(ring.y)}" r="22"/>` : ''}<g transform="translate(${f(me.x)} ${f(me.y - (b ? 0 : 16))})"${glideAttr(s, r, st, me, b)} data-tt="${esc(runnerTip(s, r, st))}" data-tt-runner="${esc(r.handle)}"><path class="mr-dia" d="M0 -7 L7 0 L0 7 L-7 0 Z"/><text class="mr-name" y="-12" text-anchor="middle">${esc(r.handle)}</text></g></g>`;
+  return `<g class="mrunner${st.stage === 'down' ? ' down' : ''}${huntsYou(s, r.handle) ? ' rival' : ''}" data-runner-mark="${esc(r.handle)}">${route}${ring ? `<circle class="mr-ring" cx="${f(ring.x)}" cy="${f(ring.y)}" r="22"/>` : ''}<g transform="translate(${f(spot.x)} ${f(spot.y)})"${glideAttr(s, r, st, me, b && road.end)} data-tt="${esc(runnerTip(s, r, st))}" data-tt-runner="${esc(r.handle)}"><path class="mr-dia" d="M0 -7 L7 0 L0 7 L-7 0 Z"/><text class="mr-name" y="-12" text-anchor="middle">${esc(r.handle)}</text></g></g>`;
 }
 // The runners the map draws on a floor: those in sight, less your crew (they're with you) and the picked one (runnerMark).
 export const runnersOn = (s, fl, pick = null) => castOf(s).filter((r) => r.handle !== pick && !hired(s, r.handle)).map((r) => ({ r, st: stateOf(s, r) })).filter((x) => x.st.floor === fl && inSight(s, x.st));
@@ -74,23 +77,49 @@ const STAGE = Object.fromEntries(RUNNERS.stages);
 // Logged-on ms to the road's end: a road is its stage's share of the cycle over the route's roads (runners.mjs stateOf).
 export const roadLeft = (r, st) => Math.round(((1 - st.pos.f) * STAGE[st.stage] * r.cycle) / (st.path.length - 1));
 const glideAttr = (s, r, st, a, b) => (st.pos.next && b ? ` data-glide="${r1(a.x)} ${r1(a.y)} ${r1(b.x)} ${r1(b.y)} ${roadLeft(r, st)} ${s.net?.wall || 0}"` : '');
-export function runnersMap(s, fl, pick = null, portrait = false, open = null) {
+// Where a runner's mark sits by a place (c): under it, else round it and further out, at the first spot where its box
+// (about the spot: [x0, y0, x1, y1]) meets none of avoid (the map's node marks, names and other runners, map units).
+const near = (b, a) => b[0] < a[2] && b[2] > a[0] && b[1] < a[3] && b[3] > a[1];
+export function clearSpot(c, box, avoid = []) {
+  for (const d of [30, 40, 52, 66]) for (const deg of [90, 45, 135, 0, 180, -45, -135, -90]) {
+    const p = { x: c.x + Math.round(d * Math.cos(deg * Math.PI / 180)), y: c.y + Math.round(d * Math.sin(deg * Math.PI / 180)) };
+    if (!avoid.some((a) => near([p.x + box[0], p.y + box[1], p.x + box[2], p.y + box[3]], a))) return p;
+  }
+  return { x: c.x, y: c.y + 30 };
+}
+// On a road, a mark keeps off the places at both ends and any name over the road by them: its share of the road (f)
+// runs over the clear stretch between (box: its own, about it; avoid as clearSpot's).
+export const CLEAR_R = 26;
+export function roadSpot(a, b, f, avoid = [], box = [-6, -6, 6, 6]) {
+  const len = Math.hypot(b.x - a.x, b.y - a.y), at = (t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+  const clear = (t) => { const p = at(t); return !avoid.some((q) => near([p.x + box[0], p.y + box[1], p.x + box[2], p.y + box[3]], q)); };
+  const k = len > 2 * CLEAR_R ? CLEAR_R / len : 0.5, step = 1 / Math.max(1, len);
+  let t0 = k, t1 = 1 - k;
+  while (t0 < t1 && !clear(t0)) t0 += step;
+  while (t1 > t0 && !clear(t1)) t1 -= step;
+  return { at: at(t0 + f * (t1 - t0)), end: at(t1) };
+}
+const DIA_BOX = [-7, -7, 7, 7], CROWD_BOX = [-13, -8, 19, 8];
+// avoid: what the marks keep off (mapMarkup: every node's mark and every name shown), map units; each mark drawn joins it.
+export function runnersMap(s, fl, pick = null, portrait = false, open = null, avoid = []) {
   const here = runnersOn(s, fl, pick);
   if (!here.length) return '';
   const g = here[0].st.g, P = (id) => { const n = g.nodes[id]; return n ? (portrait ? { x: n.y, y: n.x } : { x: n.x, y: n.y }) : null; };
   const at = {};
   for (const x of here) if (!x.st.pos.next) (at[x.st.pos.at] ||= []).push(x);
   const f = (v) => Math.round(v * 10) / 10;
-  const dia = (x, p, road) => `<g class="mrun${road ? ' road' : ''}${x.st.stage === 'down' ? ' down' : ''}${huntsYou(s, x.r.handle) ? ' rival' : ''}" data-runner="${esc(x.r.handle)}" role="button" tabindex="0" aria-label="${esc(x.r.handle)}" data-tt="${esc(runnerTip(s, x.r, x.st))}" data-tt-runner="${esc(x.r.handle)}" transform="translate(${f(p.x)} ${f(p.y)})"${road ? glideAttr(s, x.r, x.st, p, P(x.st.pos.next)) : ''}><circle class="mrun-hit" r="7"/><path d="${DIA}"/></g>`;
+  const dia = (x, p, road, end) => `<g class="mrun${road ? ' road' : ''}${x.st.stage === 'down' ? ' down' : ''}${huntsYou(s, x.r.handle) ? ' rival' : ''}" data-runner="${esc(x.r.handle)}" role="button" tabindex="0" aria-label="${esc(x.r.handle)}" data-tt="${esc(runnerTip(s, x.r, x.st))}" data-tt-runner="${esc(x.r.handle)}" transform="translate(${f(p.x)} ${f(p.y)})"${road ? glideAttr(s, x.r, x.st, p, end) : ''}><circle class="mrun-hit" r="7"/><path d="${DIA}"/></g>`;
   const crowd = (id, list, p) => { const tip = `${list.length} runners at ${shortPlace(s, g, id)}: ${list.map((x) => x.r.handle).sort().join(', ')}.`; return `<g class="mrun crowd${id === open ? ' on' : ''}" data-runners-at="${esc(id)}" role="button" tabindex="0" aria-label="${esc(tip)}" transform="translate(${f(p.x)} ${f(p.y)})"><title>${esc(tip)}</title><rect class="mrun-hit" x="-13" y="-8" width="32" height="16"/><path transform="translate(-6 0)" d="${DIA}"/><text class="mrun-n" x="2">${list.length}</text></g>`; };
   let out = '';
   for (const [id, all] of Object.entries(at)) { // a rival stands out of the count, red, beside it
     const c = P(id); if (!c) continue;
     const red = all.filter((x) => huntsYou(s, x.r.handle)), list = all.filter((x) => !red.includes(x)), dx = red.length && list.length ? 14 : 0;
-    if (list.length) out += list.length > 1 ? crowd(id, list, { x: c.x - dx, y: c.y + 30 }) : dia(list[0], { x: c.x - dx, y: c.y + 30 }, false);
-    red.forEach((x, i) => { out += dia(x, { x: c.x + dx + i * 14, y: c.y + 30 }, false); });
+    const lb = list.length > 1 ? CROWD_BOX : DIA_BOX, box = [list.length ? lb[0] - dx : -dx - 7, -8, red.length ? dx + (red.length - 1) * 14 + 7 : lb[2] - dx, 8];
+    const p = clearSpot(c, box, avoid); avoid.push([p.x + box[0], p.y + box[1], p.x + box[2], p.y + box[3]]);
+    if (list.length) out += list.length > 1 ? crowd(id, list, { x: p.x - dx, y: p.y }) : dia(list[0], { x: p.x - dx, y: p.y }, false);
+    red.forEach((x, i) => { out += dia(x, { x: p.x + dx + i * 14, y: p.y }, false); });
   }
-  for (const x of here.filter((y) => y.st.pos.next)) { const a = P(x.st.pos.at), b = P(x.st.pos.next); if (a && b) out += dia(x, { x: a.x + (b.x - a.x) * x.st.pos.f, y: a.y + (b.y - a.y) * x.st.pos.f }, true); }
+  for (const x of here.filter((y) => y.st.pos.next)) { const a = P(x.st.pos.at), b = P(x.st.pos.next); if (a && b) { const r = roadSpot(a, b, x.st.pos.f, avoid); out += dia(x, r.at, true, r.end); } }
   return `<g class="mruns">${out}</g>`;
 }
 // Who's at a place (a counted diamond opens it beside itself): the place and how many, then each runner a row (handle,

@@ -181,7 +181,7 @@ comment saying what it does.
 
 | File | What it does |
 |---|---|
-| `dist/mail.mjs` | Letters, contracts (one engine, five givers) and your commission's retainer. |
+| `dist/mail.mjs` | Letters, contracts (one engine, five givers; a recovery only on a server you've found, `itemRestore` for older saves) and your commission's retainer. |
 | `dist/content.mjs` | Fills and checks the written content's blanks. |
 | `dist/content/story.mjs`, `dist/content/contracts.mjs` | The story beats and contract templates (a letter set per giver), written in the editor. |
 | `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts (its Boss step, its built boss in a road server's Core, and extra letters), and its page in Mail. |
@@ -214,7 +214,7 @@ comment saying what it does.
 | `dist/achievements.mjs`, `dist/achievements-view.mjs`, `dist/achievements.css` | Achievements and their cosmetic rewards; the **Rig** page (Achievements, Casing, Terminal; `rigMarkup` in view.mjs). |
 | `dist/profile.mjs`, `dist/profile-view.mjs` | Your profile card (`finger`), and #net's markup. |
 | `dist/channel.mjs`, `dist/presence.mjs` | #net, the public channel; who's online and your friends. |
-| `dist/runners.mjs`, `dist/runners-view.mjs` | Runners: the cast from the network seed, their loop on logged-on time; jobs picked from the market (`chooseJob`); SPRAWL-00's stray fights (`sprawlSpot`); meeting, standing and hiring; dead runner rooms (`deadOf`, `pulledOut`); the map's diamonds, counts and lists (only where you've revealed: `revealed`, `inSight`), the Rail (a phone's sheet), the runner and crew cards. |
+| `dist/runners.mjs`, `dist/runners-view.mjs` | Runners: the cast from the network seed, their loop on logged-on time; jobs picked from the market (`chooseJob`); SPRAWL-00's stray fights (`sprawlSpot`); meeting, standing and hiring; dead runner rooms (`deadOf`, `pulledOut`); the map's diamonds, counts and lists (only where you've revealed: `revealed`, `inSight`; clear of nodes and names: `clearSpot`, `roadSpot`), the Rail (a phone's sheet), the runner and crew cards. |
 | `dist/comms.mjs`, `dist/pager.mjs`, `dist/pings.mjs`, `dist/pings.css`, `dist/pager-view.mjs`, `dist/pager.css` | The pager: world events as entries, which ones ask something of you; the ping log (desktop: the map's left column, above the prompt elsewhere); a phone's lamp and Comms. |
 | `dist/casing.mjs`, `dist/casing-view.mjs`, `dist/casing.css` | Casing cosmetics: the monitor color and plate, stickers anywhere on its plastic, props on the desk or on top. Rig → Casing is a rail of sections beside the open one's pane. |
 | `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on Rig → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |

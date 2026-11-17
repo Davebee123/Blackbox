@@ -233,7 +233,7 @@ test('migration (v41): an older save\'s layers become floors, every server kept 
   const cleared = Object.keys(b.floorplan.cleared).length;
   s.hidden = [{ id: 'h77', family: 'worm', via: b.id, depth: 3, level: 18, lead: 60, pinged: true, signal: 3 }];
   s.leadProgress = { ransomware: 0, worm: 0, ghostroot: 40 }; // a family with a ? of its own on these floors (floors.mjs holders)
-  s.mail.jobs.push({ id: 991, type: 'item', hidden: 'h77', got: 0, reward: { credits: 1 } });
+  s.mail.jobs.push({ id: 991, type: 'takeover', hidden: 'h77', got: 0, reward: { credits: 1 } });
   const t = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(t.version, SAVE_VERSION);
   const A = t.locations.find((l) => l.id === a.id), B = t.locations.find((l) => l.id === b.id), Cc = t.locations.find((l) => l.id === c.id), D = t.locations.find((l) => l.id === d.id);
