@@ -81,3 +81,18 @@ test('the log keeps the rules: no teal but yours, only a new line moves, and onc
   assert.match(css, /\.no-motion \.ping, \.no-motion \.ping::after \{ animation: none/, 'none of it with motion off');
   assert.doesNotMatch(css, /border:\s*1px|background:\s*[^n\s]/, 'frameless');
 });
+
+test('an eye after a page with a place on the map: an offer on its server, an event; none on a contract to deliver', () => {
+  const s = world();
+  s.locations.push({ id: 'vault-9', name: 'VAULT-9', family: 'worm', level: 3 });
+  s.mail.offers[0] = { id: 7, type: 'map', loc: 'vault-9', expiresAt: T + 1e9, reward: {} };
+  line(s, 'board', 'New offer on the board: a job.', { offer: 7 });
+  line(s, 'contract-ready', 'Contract ready: a job. Deliver it from Mail.', { contract: 8 }, T + 1);
+  line(s, 'retainer', 'Halcyon retainer: +38 credits.', {}, T + 2);
+  const eyes = [...pingsMarkup(s, T + 10).matchAll(/class="pi-eye" data-go="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(eyes, ['map:vault-9'], 'only the offer has one, and it goes to its server');
+  s.mail.offers[0] = { id: 7, type: 'kill', family: 'worm', count: 3, expiresAt: T + 1e9, reward: {} };
+  assert.match(pingsMarkup(s, T + 10), /data-go="map:vault-9"/, "a family's kills: the traced server of that family");
+  s.mail.offers[0] = { id: 7, type: 'decode', count: 2, expiresAt: T + 1e9, reward: {} };
+  assert.doesNotMatch(pingsMarkup(s, T + 10), /pi-eye/, 'no place, no eye');
+});

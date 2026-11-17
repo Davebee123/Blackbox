@@ -1189,8 +1189,8 @@ from your network's seed, with its own level band, shape and size.
   you've found on any floor you've reached. Each floor you've reached is a **waypoint** (its landing server): **Start
   here** on its ▲ card.
 - **The map** shows one floor at a time, home drawn above it with a line to its entry. A server is its kind's glyph
-  (its rule on hover), a bar under it filling as you clear it, a ring round one you haven't been into; under its name,
-  its level and its specials' glyphs. **The floor panel** runs down
+  (its rule on hover), a bar under it filling as you clear it, a ring round one you haven't been into; its name with
+  its level and its specials' glyphs beside it, shown on hover (**Aa** shows them always). **The floor panel** runs down
   the map's right side like a lift's buttons (`floors`, `floor <n>`, `floor up|down`).
 - **Layers.** Content that names a layer reads floors 1, 2, 3–4, 5–6 and 7–8 as layers 1 to 5. Each layer down adds
   25% to blue and yellow drop odds and 40% to cache credits.
@@ -2181,7 +2181,9 @@ Every faction's tiers also gate its Shop. A crash costs no rep; declining or dro
 ### Contracts
 
 They track themselves once taken; you hand them in from Mail (`mail deliver <n>`), and a **Contract delivered** card
-lists what it paid. **Contracts are the best XP an hour** (WoW's quests): each pays a fixed XP set when it's posted, on
+lists what it paid. Each shows the **level** of what it sends you against, in WoW colours (its server's, the named
+process's, or *Lv 8+* for kills), and **Show on map** where its work is (a family's kills: your traced server of that
+family nearest your level). **Contracts are the best XP an hour** (WoW's quests): each pays a fixed XP set when it's posted, on
 top of what the work pays: its kind's **baseline** in kills' worth (`BASE` in mail.mjs), times its **size** (a job that
 counts something is small, medium or large by how many it asks: ×1, ×2, ×3; kills up to 5 small, 6–11 medium, 12+
 large; `SIZE`), times the **level curve** at the level it was posted (`MAIL.xp`: 3× at level 1, 8× at 5, 13× from 10 to
@@ -2851,6 +2853,7 @@ A page stays while it's true, an hour at most; the same news again replaces the 
   An unseen threat glows every 10 s until you hover it. **One click** does the page's thing (**Deliver**, **Read**, **Jack in**, **Show**…); mid-fight or on a run, anything that would start a
   fight shows you where it is instead. A page that takes on a task (an offer, a world event's fight) shows its quest
   first, in the quest window's look, with **Take** (or **Intercept**, **Hunt**…) and **Cancel**.
+  A page with a place on the map whose click does something else (an offer, a courier) has an **eye** after it: **Show on map**.
 - **On a phone, the lamp** (in the strip, with the count): dark with nothing to do, lit while pages wait, blinking while one is new, red for a threat; click it for
   **Comms** (the pages, then the news folded under **News**, then the director's **History**).
 - **Sound:** only a new page chirps; mid-fight only a breach. A breach also flashes the Integrity meter with BREACH.

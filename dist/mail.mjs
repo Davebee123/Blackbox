@@ -682,6 +682,26 @@ export function ready(s, c) {
   return c.chain ? arcReady(s, c) : false;
 }
 const locName = (s, id) => s.locations.find((l) => l.id === id)?.name || null;
+// The level of what a contract sends you against: its server's, the unknown server's it points at, the named process's,
+// or for kills the lowest that counts (plus: and up). null for a job with no one level (decode, hold…).
+export function levelOf(s, c) {
+  if (['kill', 'strain', 'grind'].includes(c.type)) return c.level > KILL_RANGE + 1 ? { level: c.level - KILL_RANGE, plus: true } : null;
+  if (c.loc) { const l = s.locations.find((x) => x.id === c.loc); return l ? { level: l.level || 1 } : null; }
+  if (c.hidden) { const n = hiddenNode(s, c.hidden); return n?.level ? { level: n.level } : null; }
+  if (c.type === 'bounty') return { level: c.spawnSet ? c.level : Math.min(c.maxLevel || Infinity, CONFIG.zone.maxLevel + 2, (c.level ?? hackerLevel(s)) + (c.plus ?? 2)) };
+  return null;
+}
+// Where a contract's work is on the map, as a goTo target (app.js): its server, an unknown one it points at, SPRAWL-00,
+// or for a family's kills the traced server of that family nearest your level. null when it has no one place.
+export function placeOf(s, c) {
+  if (c.loc) return `map:${c.loc}`;
+  if (c.hidden) return `map:${c.hidden}`;
+  if (c.type === 'bounty' || c.where === 'sprawl') return 'map:sprawl';
+  const fam = c.type === 'kill' ? c.family : c.type === 'grind' ? c.virus : null;
+  if (!fam) return null;
+  const L = hackerLevel(s), near = (s.locations || []).filter((l) => l.family === fam && !l.rogue && !l.member && !l.zone && !(l.fresh && l.detached)).sort((a, b) => Math.abs((a.level || 1) - L) - Math.abs((b.level || 1) - L))[0];
+  return near ? `map:${near.id}` : null;
+}
 export function title(s, c) {
   const own = c.chain && arcTitle(s, c); // a floor's chain: its target not located yet, or a kind of its own (arcs.mjs)
   if (own) return own;

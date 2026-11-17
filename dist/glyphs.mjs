@@ -32,6 +32,7 @@ const P = {
   integrity: '<rect x="2.5" y="3" width="11" height="4" rx="1"/><rect x="2.5" y="9" width="11" height="4" rx="1"/><path d="M5 5h.01M5 11h.01"/>',
   shield: '<path d="M8 1.8 13 3.8v4c0 3.2-2.3 5.3-5 6.4-2.7-1.1-5-3.2-5-6.4v-4z"/><path d="M8 4.5v7"/>',
   countermeasures: '<path d="M13 5H5.5a3 3 0 0 0 0 6H10"/><path d="M10.5 2.5 13 5l-2.5 2.5"/>',
+  eye: '<path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/>', // a ping's Show on map (pings.mjs)
   trace: '<circle cx="8" cy="8" r="6"/><path d="M8 8 12.2 3.8"/><path d="M8 4.5a3.5 3.5 0 0 1 3.5 3.5" opacity=".6"/>',
   // ---------- skill verbs ----------
   hit: '<path d="M8 1.5l1.3 3.7 3.9-.8-2.3 3.2 2.9 2.7-3.9.2L8 14.5l-1.9-4-3.9-.2 2.9-2.7-2.3-3.2 3.9.8z"/>',

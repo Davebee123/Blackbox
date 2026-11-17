@@ -6,7 +6,7 @@
 import { active, emit, warn } from './combat.mjs';
 import { STRAINS } from './data.mjs';
 import { commsOf, live } from './comms.mjs';
-import { MAIL, ready, heldCount, jobs, offers, offer, initMail, systemLetter, title } from './mail.mjs';
+import { MAIL, ready, heldCount, jobs, offers, offer, initMail, systemLetter, title, placeOf } from './mail.mjs';
 import { deal, CARDS } from './events.mjs';
 
 // A fight starts from a world event's card; what the tap says depends on the card.
@@ -64,6 +64,14 @@ export function actOf(s, c) {
   return open(c);
 }
 
+// Where a page is on the map, when its tap does something else (Take, Intercept, Hunt): an offer's contract (mail.mjs
+// placeOf), or the map the line points at. The ping log's eye (pings.mjs). null for a contract to deliver.
+export function whereOf(s, c) {
+  if (!c || !isPage(c) || c.kind === 'ready') return null;
+  const o = c.kind === 'offer' ? offers(s).find((x) => x.id === c.ref) : null;
+  const at = o ? placeOf(s, o) : /^map:/.test(c.go || '') ? c.go : null;
+  return at && actOf(s, c)?.go !== at ? at : null;
+}
 // A page that takes on a task (an offer's Take, a world event's fight) asks first: its quest comes up with Take and
 // Cancel (pager-view.mjs askMarkup). 'offer', 'event', or null for a page that's one tap.
 export function askOf(s, c) {

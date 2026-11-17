@@ -1399,6 +1399,8 @@ body.grain-off #crt::after, [data-form='phone'] body:not(.grain-on) #crt::after 
 .mrow.open { border-color: var(--line-strong); background: rgba(241, 185, 47, 0.06); }
 .mrow .mfrom { font: 11px var(--mono); letter-spacing: 0.5px; color: var(--dim); }
 .mrow .msubj { grid-column: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A contract's level before its name (view.mjs jobLv). */
+.mlvl { margin-right: 6px; font: 600 11px var(--mono); }
 .mrow .tag { grid-column: 2; grid-row: 1 / 3; align-self: center; }
 .mrow.unread .msubj { color: var(--bright); font-weight: 600; }
 .mrow.unread .mfrom::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); margin-right: 6px; vertical-align: middle; }
@@ -2289,11 +2291,11 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .map-ctl { margin-left: auto; }
 .map-svg.zoomed { cursor: grab; } .map-svg.zoomed:active { cursor: grabbing; }
 /* Levels first: the level big, in WoW colours; the layer a small tag; names can hide until hover. */
-.msub .mlv { font-size: calc(14px / var(--z, 1)); font-weight: 700; }
+:is(.msub, .mlabel) .mlv { font-size: calc(14px / var(--z, 1)); font-weight: 700; }
 .mlv.con-red { fill: #ff5b3d; } .mlv.con-orange { fill: #ff9a3d; } .mlv.con-yellow { fill: #f1d02f; } .mlv.con-green { fill: #7fd67a; } .mlv.con-gray { fill: #8a8174; }
 .msub .mlayer { fill: var(--you); font-weight: 600; letter-spacing: 1px; }
-.names-hover .mnode:not(.server):not(:hover):not(:focus-visible):not(.selected) .mlabel { opacity: 0; }
-.names-hover .mnode .mlabel { transition: opacity 0.15s; }
+.names-hover .mnode:not(.server):not(:hover):not(:focus-visible):not(.selected) :is(.mlabel, .msub) { opacity: 0; }
+.names-hover .mnode :is(.mlabel, .msub) { transition: opacity 0.15s; }
 .mscope .mring-range.trunk { stroke: rgba(255, 216, 92, 0.14); stroke-dasharray: 4 6; }
 .mlink.trunk { stroke: rgba(255, 216, 92, 0.55); stroke-width: 1.6; stroke-dasharray: 6 4; --flow-t: 1.5s; }
 .mnode.member rect { fill: rgba(255, 216, 92, 0.06); stroke: rgba(255, 216, 92, 0.7); stroke-width: 1.3; }
@@ -2881,8 +2883,8 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .mlabel { font-size: calc(11px / var(--z, 1)); letter-spacing: 0.6px; }
 .msub { font-size: calc(9.5px / var(--z, 1)); }
 .map-svg .mlabel, .map-svg .msub { paint-order: stroke; stroke: var(--inset); stroke-width: calc(3px / var(--z, 1)); stroke-linejoin: round; }
-.msub .mlv { font-size: calc(11px / var(--z, 1)); }
-.msub .mspecial { fill: var(--amber); font-size: calc(11px / var(--z, 1)); font-weight: 700; letter-spacing: 2px; }
+:is(.msub, .mlabel) .mlv { font-size: calc(11px / var(--z, 1)); }
+:is(.msub, .mlabel) .mspecial { fill: var(--amber); font-size: calc(11px / var(--z, 1)); font-weight: 700; letter-spacing: 2px; }
 /* A server on the map (view.mjs serverIcon): its kind's glyph and the bar of what you've cleared, amber; gray when it's
    done, teal where you are and what's yours, yellow (--next) for a contract's. A plate under the glyph hides the links. */
 .mnode.loc .sv-plate { fill: var(--inset); stroke: none; }

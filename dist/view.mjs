@@ -44,7 +44,7 @@ import { online, listed, inSprawl, whereText, simOn, peopleOn, friends, profileO
 import { pingsMarkup } from './pings.mjs';
 import { runnerRail, runnerMark, runnerCard, runnersMap, runnersList } from './runners-view.mjs';
 import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, rebooting, consortiumWall, alertsOf, tiersOf as conTiers } from './consortium.mjs';
-import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, tierIndex, standing, tierOf, nextTier, retainer, retainerWith, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn, xpOf } from './mail.mjs';
+import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, tierIndex, standing, tierOf, nextTier, retainer, retainerWith, unread, title as contractTitle, progress as contractProgress, placeOf, levelOf as contractLevel, rewardLine, ready as contractReady, nextPayIn, xpOf } from './mail.mjs';
 import { commsOf } from './comms.mjs';
 import { shopOf, chaseItem, blockOf } from './store.mjs';
 import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, connectedTo, viaName } from './hidden.mjs';
@@ -1887,21 +1887,22 @@ export const daemonGlyph = (id, cls = 'badge') => glyph(DAEMON_GLYPH[id] || id, 
 // sel: 'l<id>' a letter, 'j<id>' a contract (taken or on the board).
 const jobTag = (s, c) => (c.done ? ['Done', 'dim'] : contractReady(s, c) ? ['Ready', 'you'] : c.offBooks ? ['Off books', 'hot'] : c.story !== undefined ? ['LOWLIGHT', ''] : ['Active', '']);
 const floorTag = (c) => `<span title="A floor job: floor ${c.chain}'s own chain">Floor ${c.chain}</span>`;
-// Where a contract's work is: its server, an unknown one it points at, or SPRAWL-00 (the WoW quest tracker).
-const trackGo = (c) => (c.loc ? `map:${c.loc}` : c.hidden ? `map:${c.hidden}` : c.type === 'bounty' || c.where === 'sprawl' ? 'map:sprawl' : null);
 // A contract's icon, by its kind (the mail's contract card and the map's tracker).
 const jobIcon = (c) => ({ kill: 'kill', strain: 'kill', bounty: 'bounty', takeover: 'takeover', materials: 'materials', item: 'item', side: 'f-' + c.faction, install: 'canary', defuse: 'lock', sweep: 'trace', exfil: 'upload', heist: 'stealth', puzzle: 'cipher', lair: 'bounty', boss: 'bounty', rooms: 'trace', map: 'trace' }[c.type] || 'item');
 // Whose contract it is: its faction, Halcyon's board, or none for LOWLIGHT (the mail's rows and the map's tracker).
 const jobFaction = (c) => c.faction || (c.story !== undefined || /LOWLIGHT/.test(c.from) ? null : 'halcyon');
+// A contract's level (mail.mjs levelOf) as a tag in WoW colours before its name: Lv 12, or Lv 8+ for kills.
+const jobLv = (s, c) => { const x = contractLevel(s, c); return x ? `<span class="mlvl">${levelTag(s, x.level, `Lv ${x.level}${x.plus ? '+' : ''}`)}</span>` : ''; };
+const lvBare = (s, c, t) => (contractLevel(s, c)?.plus ? t.replace(/, Lv \d+\+$/, '') : t); // the tag says it, so the name doesn't
 function jobBox(s, c, now) {
   const isOffer = c.expiresAt != null;
   const pr = contractProgress(s, c), ok = contractReady(s, c);
-  const full = heldCount(s) >= MAIL.take;
+  const full = heldCount(s) >= MAIL.take, place = placeOf(s, c);
   const acts = c.done ? '' : isOffer
-    ? `<button type="button" class="btn primary" data-command="mail accept ${c.id}" ${full ? `disabled title="You hold ${MAIL.take} contracts. Deliver or drop one first."` : ''}>Take</button>${c.loc ? `<button type="button" class="btn" data-go="map:${esc(c.loc)}">${glyph('trace')}Show on map</button>` : ''}`
-    : `<button type="button" class="btn primary" data-command="mail deliver ${c.id}" ${ok ? '' : 'disabled'}>Deliver</button>${trackGo(c) && !ok ? `<button type="button" class="btn" data-go="${esc(trackGo(c))}">${glyph('trace')}Show on map</button>` : ''}${c.story === undefined && !c.chain ? `<button type="button" class="btn" data-command="mail drop ${c.id}">Drop</button>` : ''}`;
+    ? `<button type="button" class="btn primary" data-command="mail accept ${c.id}" ${full ? `disabled title="You hold ${MAIL.take} contracts. Deliver or drop one first."` : ''}>Take</button>${place ? `<button type="button" class="btn" data-go="${esc(place)}">${glyph('trace')}Show on map</button>` : ''}`
+    : `<button type="button" class="btn primary" data-command="mail deliver ${c.id}" ${ok ? '' : 'disabled'}>Deliver</button>${place && !ok ? `<button type="button" class="btn" data-go="${esc(place)}">${glyph('trace')}Show on map</button>` : ''}${c.story === undefined && !c.chain ? `<button type="button" class="btn" data-command="mail drop ${c.id}">Drop</button>` : ''}`;
   return `<div class="contract${ok ? ' ready' : ''}${c.done ? ' done' : ''}${isOffer ? ' offer' : ''}">
-    <div class="c-head"><b>${glyph(jobIcon(c), 'badge')}${esc(contractTitle(s, c))}</b>${c.offBooks ? '<span class="tag hot">Off the books</span>' : ''}${isOffer && c.type !== 'side' && !c.waits ? `<small class="c-exp">expires in ${fmtTime(c.expiresAt - now)}</small>` : isOffer && c.type === 'side' ? '<span class="tag you">your call</span>' : ''}</div>
+    <div class="c-head"><b>${glyph(jobIcon(c), 'badge')}${c.done ? esc(contractTitle(s, c)) : jobLv(s, c) + esc(lvBare(s, c, contractTitle(s, c)))}</b>${c.offBooks ? '<span class="tag hot">Off the books</span>' : ''}${isOffer && c.type !== 'side' && !c.waits ? `<small class="c-exp">expires in ${fmtTime(c.expiresAt - now)}</small>` : isOffer && c.type === 'side' ? '<span class="tag you">your call</span>' : ''}</div>
     ${isOffer ? '' : `<div class="lvl-row"><span class="lvl-bar"><span style="width:${Math.round(pr.part * 100)}%"></span></span><small>${esc(pr.text)}</small></div>`}
     <div class="rw-chips" title="${c.done ? 'Paid' : 'Pays'}: ${esc(rewardLine(s, c))}">${rewardChips(s, c)}</div>
     ${acts ? `<div class="row">${acts}</div>` : ''}
@@ -1922,13 +1923,13 @@ export function mailMarkup(s, sel = null, now = Date.now()) {
   const open = pickSel();
   const isOpen = (k) => (open.letter && k === 'l' + open.letter.id) || (open.job && k === 'j' + open.job.id);
   // f: whose job it is, as a mark at the row's left edge. A letter or a LOWLIGHT job keeps the column empty, so rows line up.
-  const row = (k, from, subject, tag, cls, extra = '', unreadRow = false, f = null) => `<li><button type="button" class="mrow has-f${unreadRow ? ' unread' : ''}${isOpen(k) ? ' open' : ''}" data-mail="${k}">${f && FX[f] ? fIcon(f, 'mrow-f') : '<span class="mrow-f mrow-none" aria-hidden="true"></span>'}<span class="mfrom">${esc(from)}</span><span class="msubj">${esc(subject)}</span>${tag ? `<span class="tag ${cls}">${tag}</span>` : extra}</button></li>`;
+  const row = (k, from, subject, tag, cls, extra = '', unreadRow = false, f = null, c = null) => `<li><button type="button" class="mrow has-f${unreadRow ? ' unread' : ''}${isOpen(k) ? ' open' : ''}" data-mail="${k}">${f && FX[f] ? fIcon(f, 'mrow-f') : '<span class="mrow-f mrow-none" aria-hidden="true"></span>'}<span class="mfrom">${esc(from)}</span><span class="msubj">${c && !c.done ? jobLv(s, c) + esc(lvBare(s, c, subject)) : esc(subject)}</span>${tag ? `<span class="tag ${cls}">${tag}</span>` : extra}</button></li>`;
   // A letter that came with a contract you took shows once: as that contract (Contracts or Completed).
   const taken = new Set((s.mail?.jobs || []).map((j) => j.id));
   const unreadJob = new Set(letters.filter((m) => m.job != null && taken.has(m.job) && !m.read).map((m) => m.job));
   const unreadLetters = letters.filter((m) => !m.read && !(m.job != null && taken.has(m.job))).length;
-  const heldRows = held.filter((c) => !c.chain).map((c) => { const [t, cls] = jobTag(s, c); return row('j' + c.id, c.from, contractTitle(s, c), t, cls, '', unreadJob.has(c.id), jobFaction(c)); }).join('');
-  const boardRows = board.map((c) => row('j' + c.id, c.from, c.subject, c.offBooks ? '<span title="GLASSJAW work through Halcyon\'s board: pays 1.6× the credits, costs Halcyon standing">Off books</span>' : '', c.offBooks ? 'hot' : '', `<small class="mexp">${c.type === 'side' ? '<span title="A side offer: take this one or its rival. It never expires.">pick one</span>' : c.waits ? '<span title="A room contract: it waits until you take it.">waits</span>' : fmtTime(c.expiresAt - now)}</small>`, false, c.faction || 'halcyon')).join('');
+  const heldRows = held.filter((c) => !c.chain).map((c) => { const [t, cls] = jobTag(s, c); return row('j' + c.id, c.from, contractTitle(s, c), t, cls, '', unreadJob.has(c.id), jobFaction(c), c); }).join('');
+  const boardRows = board.map((c) => row('j' + c.id, c.from, c.subject, c.offBooks ? '<span title="GLASSJAW work through Halcyon\'s board: pays 1.6× the credits, costs Halcyon standing">Off books</span>' : '', c.offBooks ? 'hot' : '', `<small class="mexp">${c.type === 'side' ? '<span title="A side offer: take this one or its rival. It never expires.">pick one</span>' : c.waits ? '<span title="A room contract: it waits until you take it.">waits</span>' : fmtTime(c.expiresAt - now)}</small>`, false, c.faction || 'halcyon', c)).join('');
   const letterRows = letters.filter((m) => m.job == null || !taken.has(m.job)).map((m) => row('l' + m.id, m.from, m.subject, '', '', '', !m.read)).join('');
   const done = doneContracts(s);
   const doneRows = done.map((c) => row('j' + c.id, c.from, contractTitle(s, c), c.chain ? floorTag(c) : c.story !== undefined ? '<span title="A job from LOWLIGHT, your crew: the storyline">LOWLIGHT</span>' : '', 'dim', '', false, jobFaction(c))).join('');
@@ -2273,16 +2274,15 @@ function labelBox(n, side, r, w, z) {
   return [n.x - w / 2, n.y - r - 2 - 29 / z, n.x + w / 2, n.y - r - 2 + 2 / z];
 }
 const label = (n, r, name, sub, cls = '') => { const p = labelAt(n, r, !sub); return `<text ${p.name} class="mlabel ${cls}">${esc(name)}</text>${sub ? `<text ${p.sub} class="msub">${esc(sub)}</text>` : ''}`; };
-// A server's label: its name, and under it the level coloured by how hard it is for you (WoW colours), its specials'
-// glyphs (each with its tooltip), then whatever else (outpost, siege…). The name can hide.
+// A server's label: its name, the level beside it coloured by how hard it is for you (WoW colours), its specials'
+// glyphs (each with its tooltip); under it whatever else (outpost, siege…). The name can hide.
 const lvLabel = (s, n, r, name, level, depth, rest = '', cls = '', specials = []) => {
   const gap = level - hackerLevel(s);
   // A server you own needs no level (its colour says it's yours).
   const lv = level != null ? `<tspan class="mlv ${conClass(gap)}">lv ${level}</tspan>` : '';
   const sp = specials.map((id, i) => { const x = SPECIALS[id]; return `<tspan class="mspecial" dx="${i ? '0.25em' : lv ? '0.5em' : 0}" title="${esc(`${x.name}: Server special.\n${x.rule}\n▸ ${x.answer}`)}">${x.glyph}\uFE0E</tspan>`; }).join('');
-  const sub = lv + sp + (rest ? `<tspan dx="${lv || sp ? '0.6em' : 0}">${esc(rest)}</tspan>` : '');
-  const p = labelAt(n, r, !sub);
-  return `<text ${p.name} class="mlabel ${cls}">${esc(name)}</text>${sub ? `<text ${p.sub} class="msub">${sub}</text>` : ''}`;
+  const p = labelAt(n, r, !rest);
+  return `<text ${p.name} class="mlabel ${cls}">${esc(name)}${lv ? `<tspan dx="0.5em">${lv}</tspan>` : ''}${sp}</text>${rest ? `<text ${p.sub} class="msub">${esc(rest)}</text>` : ''}`;
 };
 // A server on the map: its kind's glyph (floorplan.mjs KINDS), so a Mailhub reads as one before its name, with the
 // kind's rule as its tooltip; a bar under it filling as you clear it; a ring round one you haven't been into, with a
@@ -2383,7 +2383,7 @@ function threatRail(s) {
 // done one turns in at a click (mail deliver).
 export function trackedJobs(s) {
   return openContracts(s).map((c) => {
-    const pr = contractProgress(s, c), ok = contractReady(s, c), place = trackGo(c);
+    const pr = contractProgress(s, c), ok = contractReady(s, c), place = placeOf(s, c);
     // The tooltip: its name, kind and progress in a sentence ("15 of 18 rooms cleared."), its pay as icon chips, the answer.
     const said = pr.of && /^Rooms /.test(pr.text) ? `${pr.n} of ${pr.of} rooms cleared` : pr.text.replace(/^(\d+)\/(\d+)/, '$1 of $2');
     const sentence = (x) => (x ? x[0].toUpperCase() + x.slice(1) + (/[.!?]$/.test(x) ? '' : '.') : '');
@@ -2526,7 +2526,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const meets = (a, b) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1]; const pad = 4 / z; // two names keep a little apart
     spots = {};
     for (const { n } of cands) {
-      const w = Math.max(nameOf(n).length, 10, (SUB[n.kind] || 0) * 0.86) * CH, first = sideOf(n);
+      const w = Math.max(nameOf(n).length + (n.kind === 'location' ? 7 : 0), 10, (SUB[n.kind] || 0) * 0.86) * CH, first = sideOf(n);
       // Its outward side first, then the others: right, left, under, over.
       const fit = [first, ...['r', 'l', 'b', 't'].filter((x) => x !== first)].map((side) => ({ side, box: labelBox(n, side, n.kind === 'location' && !n.loc.rogue ? SV_R : 12, w, z) })).find(({ box }) => !(n.id !== sel && (box[0] < minX || box[2] > maxX)) // a name the scope's edge would cut in half (a narrow screen) waits too
         && !boxes.some((b) => meets(box, [b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad])) && !marks.some((m) => m.id !== n.id && meets(box, m.b)));
@@ -2552,7 +2552,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     }
     if (n.kind === 'zone') {
       const live = liveSpawns(s), here = s.run?.loc === CONFIG.zone.id;
-      return `<g class="mnode zone${here ? ' here' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${CONFIG.zone.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${CONFIG.zone.name}, rogue server"><circle r="18" class="mhit"/><path class="mhex" d="M0 -9 L8 -4.5 L8 4.5 L0 9 L-8 4.5 L-8 -4.5 Z"/>${live ? `<circle r="2.5" class="zdot"/>` : ''}${pick}${label(n, 10, CONFIG.zone.name, (here ? 'you are here' : live ? `rogue server · ${live} ${live === 1 ? 'virus' : 'viruses'}` : 'rogue server · quiet') + (peopleOn(s) && inSprawl(s).length ? ` · ${inSprawl(s).length} online` : ''))}</g>`;
+      return `<g class="mnode zone${here ? ' here' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${CONFIG.zone.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${CONFIG.zone.name}, rogue server"><circle r="18" class="mhit"/><path class="mhex" d="M0 -9 L8 -4.5 L8 4.5 L0 9 L-8 4.5 L-8 -4.5 Z"/>${live ? `<circle r="2.5" class="zdot"/>` : ''}${pick}${label(n, 10, CONFIG.zone.name, here ? 'you are here' : 'rogue server')}</g>`;
     }
     if (n.kind === 'roamer') {
       const r = n.roamer, ang = Math.atan2(n.ty - n.y, n.tx - n.x) * 180 / Math.PI;
@@ -2601,7 +2601,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     }
     return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${eventsAt(s, l.id).length ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(`${l.name}, ${layoutName(l)}`)}"><circle r="18" class="mhit"/>${serverIcon(l, st)}${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(s, l)}${blipSvg(s, l)}${serverMarkSvg(s, l.id, thMarks)}${pick}${lvLabel(s, n, SV_R, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest, '', specialsOf(l))}</g>`;
   }).join('');
-  const hoverNames = s.settings?.mapNames === 'hover';
+  const hoverNames = s.settings?.mapNames !== 'on'; // names on hover unless you turn them on (Aa)
   // The ground is a chart (the *Chart*): a faint crosshair every CHART units, hairlines between, drawn in the map so it
   // pans and zooms with it; it runs well past the scope, for a wide screen's sides. A small map (a phone's) takes cells
   // twice the size, so they stay about 40px on screen.
