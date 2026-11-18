@@ -1958,11 +1958,8 @@ level**; every 3 more parts **re-tune** it to your level. The parts are yours wh
 
 ### Collection log
 
-Every unique, strain trophy, set piece and faction piece has a place in the **Collection** on the Settings page, by
-level: the ones you've found by name, the rest **???** with their level and where they come from. A missing boss unique
-shows its boss's chance a kill, pity included. A bar counts the total; the card shows from your first unique. A new
-find adds a *New in collection* row to the reward card, and counts even if a full stash breaks it down. Sets show their
-pieces (*Kestrel Clearance 1/3*, ??? until found); faction pieces their parts as three pips.
+A new unique, strain trophy, set piece or faction piece adds a *New in collection* row to the reward card, and counts
+even if a full stash breaks it down.
 
 The **collection log** is the Codex's second tab, **Collection n/N** (`collection.mjs` keeps it, `collection-log.mjs`
 builds it, `collection-view.mjs` draws it: the *Ledger*). Its index: Families, Strains, Guards & ICE, Bosses, Floors and
