@@ -135,8 +135,11 @@ test('a live virus holds its room: engage or step back, and the move in is spent
   assert.equal(R.screen?.kind, 'virus');
   const other = FP.neighbours(R.graph, fightRoom.id).find((id) => id !== R.visit.back);
   if (other) { FP.go(s, other); assert.equal(R.at, fightRoom.id, 'no walking through a live virus'); }
-  FP.back(s);
-  assert.notEqual(R.at, fightRoom.id, 'stepped back');
+  const from = R.visit.back;
+  assert.equal(FP.retreat(s)?.id, from, 'the room you came from stays walkable');
+  FP.go(s, from);
+  assert.equal(R.at, from, 'clicking it steps back');
+  assert.equal(R.screen, null);
   assert.ok(R.signal < was, 'the move in stays spent');
   FP.go(s, fightRoom.id);
   FP.act(s, 'engage');
@@ -263,8 +266,9 @@ test('the key walk: beat the guard post for the key, walk it to the vault, open 
   const t = server({ seed: 9, size: 'medium', hunter: 'patrol' }), v = t.rooms.graph.rooms[t.rooms.graph.vaults[0]];
   place(t, v.id);
   const before = t.rooms.signal;
-  FP.act(t, 'force');
+  const said = FP.act(t, 'force');
   assert.equal(t.rooms.signal, before - Math.round(t.rooms.max * FP.ROOMS.force));
+  assert.deepEqual(said.find((e) => e.fx)?.fx, { kind: 'vault', room: v.id, n: 1 }, 'its Dial on the map (roomfx.mjs), a file for the piece it drops');
   assert.ok(t.rooms.opened[v.id] && FP.coreOpen(t));
   // An Archive: two vaults, each with its own key; only the spine's unseals /core.
   const a = server({ kind: 'Archive', seed: 4 }), ag = a.rooms.graph;
@@ -695,12 +699,14 @@ test('the page is the map and a pop-up: it opens on a decision and on a click, c
   pickRoom(s, g.core, ui);
   assert.equal(popOf(s, ui), null, 'a second click closes it');
   assert.equal(roomsView(s, ui).shell, shell, 'the map is the same with the card up or not: a click swaps the card alone (app.js putRooms)');
-  // Walk into a live virus: the card opens by itself, Engage and Step back.
+  // Walk into a live virus: the card opens by itself with Engage; the room you came from stays a walk.
   pickRoom(s, g.core, ui);
   FP.go(s, p.id);
   assert.equal(popOf(s, ui), p.id, 'a step drops the room you clicked; the decision opens on yours');
   html = roomsMarkup(s, ui);
-  assert.match(pop(html)[0], /you are here · live[\s\S]*data-rooms="engage"[\s\S]*data-rooms="back"/);
+  assert.match(pop(html)[0], /you are here · live[\s\S]*data-rooms="engage"/);
+  assert.doesNotMatch(pop(html)[0], /data-rooms="back"/, 'no Step back button');
+  assert.match(html, new RegExp(`data-rooms="go" data-arg="${s.rooms.visit.back}"`), 'the room you came from: one click walks back');
   assert.doesNotMatch(pop(html)[0], /heading for/, 'no hunter line unless it is about this room');
   // Closed, it stays closed through redraws and ticks; a far room can still be looked at.
   closePop(s, ui);

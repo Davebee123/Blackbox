@@ -24,15 +24,15 @@ const atGate = (s) => { const e = s.encounter; return !!((e && e.mode !== 'run' 
 // you've won a fight. A cache, the hunter and the rest room get their step the first time you meet them (SPRAWL-00,
 // where you start, has none). Got it closes a step, Skip tour ends them all, and tips off stops it. The tour is kept on the save (s.tour), so it shows
 // once a save. Each step: mark(s) is taken as it shows, done(s, mark) says you did it,
-// also is another click that does it (Step back, Leave it).
+// also is another click that does it (the room you came from, Leave it).
 const visitOf = (s) => (s.rooms?.at ? s.rooms : null);
 const hereKind = (s) => s.rooms?.at && s.rooms.graph.rooms[s.rooms.at]?.kind;
 const movesOf = (s) => s.rooms?.stats?.moves || 0;
 const TOUR_STEPS = [
   { id: 'tour-walk', at: '.fp-room.reach', when: (s) => !!visitOf(s) && !s.rooms.screen, mark: movesOf, done: (s, m) => movesOf(s) > m,
     text: 'click a room beside yours to walk there. the number on its corner is the signal it costs.' },
-  { id: 'tour-engage', at: '#fp-pop [data-rooms="engage"]', also: '#fp-pop [data-rooms="back"]', after: ['tour-walk'], when: (s) => s.rooms?.screen?.kind === 'virus', done: (s) => s.rooms?.screen?.kind !== 'virus',
-    text: 'something\'s living in there. engage, or step back the way you came.' },
+  { id: 'tour-engage', at: '#fp-pop [data-rooms="engage"]', also: '.fp-room.reach', after: ['tour-walk'], when: (s) => s.rooms?.screen?.kind === 'virus', done: (s) => s.rooms?.screen?.kind !== 'virus',
+    text: 'something\'s living in there. engage, or click the room you came from to back out.' },
   { id: 'tour-cache', at: '#fp-pop [data-rooms="pull"]', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'cache' && !s.rooms.screen,
     mark: (s) => `${s.rooms.at}:${s.rooms.taken[s.rooms.at] ?? ''}`, done: (s, m) => `${s.rooms?.at}:${s.rooms?.taken[s.rooms?.at] ?? ''}` !== m,
     text: 'that\'s a cache of credits and code. one in four is bait, and its card says which.' },

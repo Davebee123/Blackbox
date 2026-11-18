@@ -78,7 +78,7 @@ server; runners in the Online list.
   goes), a thin bar of their Signal under it. The room's tooltip adds *The runner marrow is fighting it, at 46%
   Signal.* and ▸ *Walk in to help.*
 - **The room's card:** the virus, then the runner's row (handle, faction mark, class and level, their Signal), their
-  line, the standing it pays as an icon, and **Help** / **Step back**. Win, and it shows the room cleared and their
+  line, the standing it pays as an icon, and **Help** (the room you came from is a click back). Win, and it shows the room cleared and their
   standing up a tier.
 - **Standing:** 0–100 in four tiers: Stranger, Known (leads), Friend, Close (consortium); anyone can be hired, and each
   tier makes the fee smaller (a stranger's is double). Drawn as the tier's
