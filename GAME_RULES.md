@@ -882,7 +882,7 @@ objective too (it pays its archive, not the bonus).
   two) you see only an **unknown** shape, a dashed ghost chip with a ? and its address, and always the Core's chip.
 - **A room's look.** A discovered room's outline and hue say its kind: a process a red cut-corner chip, an elite a
   red bevel with a chevron rank tag, the Core red with a point at its foot, a socket orange with pins, a cache an amber rounded chip, the
-  vault a gold square, the rest room a green chip with deeply rounded corners, the entry and the den white hexagons. A process or elite's icon is its virus family's (the codex's; a Cryptominer's a fan), or a running Lure's. Cleared or used, it goes gray. A live fight wears its level on the chip's bottom-right plate, red when it's over yours.
+  vault a gold square, the rest room a green chip with deeply rounded corners, the entry and the den white hexagons. A live process or elite shows its virus family (the codex's icon, and its name on the plate; a Cryptominer's icon is a fan), or a running Lure's; the exact virus is on its card. Cleared or used, it goes gray. A live fight wears its level on the chip's bottom-right plate, red when it's over yours.
 - **Live viruses hold their rooms:** `engage`, or `back` out (the move in is spent).
 - **Slip** (Infiltrator): twice a visit, `slip` past the hunter, or on out of a room a virus holds (not the Core or a
   surge). The virus stays; you can still engage it.

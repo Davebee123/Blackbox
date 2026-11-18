@@ -93,9 +93,9 @@ export function labelOf(s, room) {
   if (!['process', 'elite', 'guard'].includes(room.kind) || room.mirror || !known(s, room.id) || !isUp(s, room)) return room.path;
   return virusName(s, room);
 }
-// The plate is narrow: a wild virus by its stem and tag (XMRIG-1516), its ELITE and its rolled adjective left to the
-// chip, the card and the tooltip.
-const plateOf = (s, room) => { const n = labelOf(s, room); return n.match(/\S+-\d{4}$/)?.[0] || n; };
+// The plate is narrow: a live fight room by its family (CRYPTOMINER; a Lure's while one runs), anything else by its
+// stem and tag (XMRIG-1516); the exact virus is left to the card and the tooltip.
+const plateOf = (s, room) => { const n = labelOf(s, room); if (n !== room.path && ['process', 'elite'].includes(room.kind) && room.family) return familyName(familyOf(s, room)); return n.match(/\S+-\d{4}$/)?.[0] || n; };
 const pctOf = (s, x) => Math.max(1, Math.round(s.rooms.max * x));
 const restGain = (s) => Math.min(s.rooms.max - sigOf(s), Math.round(s.rooms.max * ROOMS.rest));
 // The threads' marks on this server (threads-view.mjs): { roomId: { mark: '!' | '?', text } }. None on the playtest.
