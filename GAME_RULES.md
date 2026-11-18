@@ -959,7 +959,7 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
   rooms never count.
 - **Wild servers** (SPRAWL-00, a lair, the farm) can't be taken over: each room is a fight, and kills pay straight
   into your bank. Each room fills again on its own timer (SPRAWL-00's 90 seconds, RELAY-KING's 30 minutes, a rogue
-  server's 3–5 minutes). A contract's named target holds its room until it falls.
+  server's 3–5 minutes). The story's named target holds its room until it falls.
 
 ### Visits
 
@@ -1771,7 +1771,7 @@ yellow, its epic our gold). Targets, at about 150 kills an hour of real play (`L
 | **Quests** (a contract's bonus, the storyline) | a blue, a yellow one time in ten |
 | **Small rewards** (Mapped) | a white or a blue, half and half |
 
-- **One roll each.** A guard rolls once; a contract's named target twice, keeping the best. Reading every tell adds a
+- **One roll each.** A guard rolls once; the story's named target twice, keeping the best. Reading every tell adds a
   roll; a Pit rolls again after the kill. Deeper layers add 25% a layer to blue and yellow odds.
 - **The Resident** rolls like an elite (no sure item) and for its two uniques once each.
 - **Vaults:** half hold a protocol (`kit.bin`; your first server's always), white 94 · blue 6 · yellow 0.4 · gold 0.03
@@ -2195,7 +2195,7 @@ large; `SIZE`), times the **level curve** at the level it was posted (`MAIL.xp`:
 |---:|---|
 | 1 | Materials (a code delivery) |
 | 1.5 | Kill, Grind, Decode, Interrupt |
-| 2 | Strain, Named process, Rooms, Solve, Sweep, a floor job's puzzle board |
+| 2 | Strain, Bounty, Rooms, Solve, Sweep, a floor job's puzzle board |
 | 2.5 | Recover a file, Hold, Break Encryptors, Catch an Exfil |
 | 3 | Map, Takeover, Install, Root |
 | 3.5 | Past the Tracker |
@@ -2205,7 +2205,7 @@ large; `SIZE`), times the **level curve** at the level it was posted (`MAIL.xp`:
 |---|---|---:|
 | Kill | N kills of a family anywhere (or anything in SPRAWL-00), no more than 4 levels under the level it was posted at; a protocol it pays rolls at the kills' average level | — |
 | Grind | Many kills of one family (12, +2 every 5 levels) | 3 |
-| Named process | Kill the named process put in a SPRAWL-00 room (two levels above you; only while SPRAWL is your level) | — |
+| Bounty | Kill the virus in one room on a traced server within 3 levels of yours: an elite room, or a room holding a ★ rare spawn (one comes first when standing; 60 + 9L credits, +7 rep and an item). Nothing is spawned for it: the room is marked on the map, and a taken bounty waits through a reboot. A rare one's offer goes if the rare does. The story's (claimjack, *Page nine*) are a named process in SPRAWL-00 | — |
 | Strain | N kills of one strain at your level. Every fifth strain contract in a row pays double and rolls for its trophy; dropping one resets the streak (RuneScape's Slayer) | 7 |
 | Materials | You have the code in stock (it's handed over) | — |
 | Rooms | Clear N rooms you haven't cleared before on a server | — |
@@ -2239,7 +2239,7 @@ a takeover at one, or at an **unknown server** one hop past one: you trace it to
 **The board** opens with the turf letter (the storyline's fourth), or once you've held the claimjack or turf job for an
 hour. Up to ten offers sit on it; a new one arrives every 1 to 3 minutes, and an untaken offer is gone after 15. Its kind
 is drawn from what your level opens. You hold six at a time (`mail accept <n>`, `mail drop <n>`). Pay at your level L:
-kill 30 + 5L credits, strain and named process 40 + 6L, materials, rooms and the activity kinds 35 + 6L, recovery 50 +
+kill 30 + 5L credits, strain and bounty 40 + 6L, materials, rooms and the activity kinds 35 + 6L, recovery 50 +
 8L, map and takeover 60 + 10L, plus XP and +5 rep with whoever posted it (+6 recovery, +7 map, +8 takeover). One
 engine, five givers: every faction posts every kind your level opens at the same odds (room contracts too), each in its own
 words, and aims its takeovers at its rivals' servers. A fifth of offers come off the books from GLASSJAW: 2.5× the credits, 1.5× the XP and
