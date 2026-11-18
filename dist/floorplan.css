@@ -63,6 +63,9 @@
 html:not([data-sfx-floor]) .fp-ground { display: none; }
 .fp-svg.zoomed { cursor: grab; touch-action: none; }
 .fp-zoom { position: absolute; right: var(--s5); top: var(--s5); z-index: 4; min-width: 30px; }
+/* The contract tracker (view.mjs serverTracker) in the map's top-left corner, as on the network map; this server's lit. */
+.fp-ctrack { position: absolute; left: var(--s5); top: var(--s5); z-index: 3; width: 230px; max-height: calc(100% - 120px); overflow-y: auto; scrollbar-width: none; }
+.fp-ctrack:empty, .fp-map.pz-on .fp-ctrack { display: none; }
 /* the traceroute (floorplan-view.mjs traceMarkup): the last few hops at the map's foot, older ones dimmer */
 .fp-trace { position: absolute; left: var(--s5); bottom: var(--s4); z-index: 3; display: grid; gap: 2px; font: 10px var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; cursor: help; }
 .fp-trace .hop { display: grid; grid-template-columns: 7ch 9ch 6ch; gap: var(--s3); opacity: calc(1 - var(--age) * 0.3); }

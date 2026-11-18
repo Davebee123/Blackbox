@@ -1086,8 +1086,8 @@ farm have none.
 About 1 in 6 servers you trace is **rogue** (never your first two, never more than five tame ones in a row); the first
 after those is always a **Nest** of the family that traced it. A rogue server is a hexagon on the map, never beside a
 floor's entry or on its main road. It has 8–11 fight rooms (4–8 on one traced before they grew) at the server's grade;
-its deepest rooms are at the server's level (it keeps up with you inside its floor's band), each room nearer the entry
-a level lower, at most 3 lower. It has 2–4 **quiet rooms**: an **Empty** (nothing) or a **Stash** (4 + level/2 credits into your bank
+its deepest rooms are at the server's level (it keeps up with you inside its floor's band), the fight rooms nearest the
+entry level 1, and the rooms between step up evenly. It has 2–4 **quiet rooms**: an **Empty** (nothing) or a **Stash** (4 + level/2 credits into your bank
 as you walk in, 1 code one time in five). No vault, nothing to take over, no puzzle rooms, no invasions.
 
 | Kind | Rule |
@@ -2230,7 +2230,8 @@ minutes after you take it.
 
 A contract that points at a room marks it on that server's map (its address amber, the contract's mark), and so does any
 job a room's live virus would count for. The strip shows **Contract** and its progress (its tip has each one, a row each with
-its progress; the map's tracker keeps a row to one line, the rest in its tooltip), the map's card each contract on that server. Pinned earned pieces sit under the tracker
+its progress; the map's tracker keeps a row to one line, the rest in its tooltip), the map's card each contract on that server. While you're on a server the tracker sits in its map's top-left corner
+(this server's contracts lit; a done one turns in at a click, the rest stay put). Pinned earned pieces sit under the tracker
 (*Earned pieces*). A recovery points at a server you've found (its name in the contract's, *Show on map* on the offer);
 a takeover at one, or at an **unknown server** one hop past one: you trace it to find it.
 

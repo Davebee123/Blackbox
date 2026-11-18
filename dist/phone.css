@@ -314,6 +314,7 @@
 [data-form='phone'] body.ph-rooms .fp-scroll { padding: 8px; }
 [data-form='phone'] body.ph-rooms .fp-svg.tall { width: 100%; height: 100%; max-width: calc(var(--w) * 1.2); max-height: calc(var(--h) * 1.2); }
 [data-form='phone'] body.ph-rooms .fp-zoom { display: none; } /* a double tap fits it */
+[data-form='phone'] .fp-ctrack { display: none; } /* the map is too small to share; Comms holds the tracker */
 [data-form='phone'] body.ph-rooms #page-view .fp-acts { position: fixed; right: calc(10px + var(--safe-r)); bottom: calc(var(--ph-bar) + 10px); z-index: 20; display: flex; gap: 0; background: rgba(14, 11, 7, 0.94); border: 1px solid var(--line-strong); border-radius: 23px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6); overflow: hidden; }
 [data-form='phone'] body.ph-rooms #page-view .fp-acts .btn { min-width: 64px; min-height: var(--tap); padding: 0 16px; background: none; border: 0; border-radius: 0; box-shadow: none; color: var(--bright); font: 600 var(--ph-small) var(--mono); letter-spacing: 0.4px; }
 [data-form='phone'] body.ph-rooms #page-view .fp-acts .btn + .btn { border-left: 1px solid var(--line-strong); }

@@ -2357,6 +2357,8 @@ function mapLeft(s, sel) {
   const col = threatRail(s) + contractTracker(s, sel) + pinnedTracker(s) + pingsMarkup(s);
   return col ? `<div class="map-lcol">${col}</div>` : '';
 }
+// A server's map (floorplan-view.mjs): the contract tracker in its top-left corner.
+export const serverTracker = (s, here) => contractTracker(s, null, here);
 // A phone's map (docs/phone-plan.md P3): the rail and the tracker fold into a row of chips under the floors, a red
 // count with the soonest timer, an amber count of contracts under way, a green ✓ for the ones to turn in. A tap opens
 // its list in the sheet (app.js data-phone; mapRail). A chip at zero is left out.
@@ -2404,10 +2406,15 @@ const ctProg = (j) => j.ready ? `<span class="ct-turn">Turn in</span>`
 const ctInner = (j, words = false) => { const p = ctProg(j), say = p.includes('ct-say'); return `${glyph(j.icon)}<span class="ct-txt"><b>${esc(j.name)}</b></span>${say && !words ? '' : `<span class="ct-prog${say ? '' : ' ct-side'}">${p}</span>`}`; };
 // The rows for a tooltip (floorplan-view.mjs: the strip's Contracts), one per contract, as the tracker draws them.
 export const contractTipRows = (list) => list.map((j) => `<span class="ct-row tt-ct${j.ready ? ' ready' : ''}">${ctInner(j, true)}</span>`).join('');
-function contractTracker(s, sel = null) {
+// On a server (floorplan-view.mjs, `here` its contracts' ids): the same rows, its own lit; only a done one clicks (to turn in).
+function contractTracker(s, sel = null, here = null) {
   const list = trackedJobs(s);
   if (!list.length) return '';
-  const rows = list.map((j) => `<button type="button" class="ct-row${j.ready ? ' ready' : ''}${j.locate && j.locate === sel ? ' on' : ''}" ${j.command ? `data-command="${esc(j.command)}"` : j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`} title="${esc(j.tip)}">${j.pay ? `<template class="tt-more">${j.pay}</template>` : ''}${ctInner(j)}</button>`).join('');
+  const rows = list.map((j) => {
+    const on = here ? here.includes(j.id) : j.locate && j.locate === sel, act = j.command ? `data-command="${esc(j.command)}"` : here ? '' : j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`;
+    const tip = here && !j.ready ? j.tip.replace(/\n▸.*$/, '') : j.tip, tag = act ? 'button type="button"' : 'div';
+    return `<${tag} class="ct-row${j.ready ? ' ready' : ''}${on ? ' on' : ''}${act ? '' : ' still'}" ${act} title="${esc(tip)}">${j.pay ? `<template class="tt-more">${j.pay}</template>` : ''}${ctInner(j)}</${tag.split(' ')[0]}>`;
+  }).join('');
   // The kicker counts the rows you see; how many of the board's slots they fill (story and floor jobs take none) is its tip.
   const h = heldCount(s), slots = `${h} of ${MAIL.take} contract slots in use${list.length > h ? `; story and floor jobs don’t take a slot` : ''}.`;
   return `<section class="ctrack" aria-label="Contracts"><h3 class="ct-head" title="${esc(slots)}">${glyph('contract')}Contracts<small>${list.length}</small></h3>${rows}</section>`;

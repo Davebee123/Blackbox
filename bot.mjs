@@ -216,7 +216,8 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     stats.runs++;
     // A visit that fights nothing (every room it could take is down or walked around) counts as a loss there at this
     // level, so it moves on instead of reconnecting forever (the long climb outlasts a floor's first clears).
-    if (s.run.rooms) { const lost = Object.entries(lostIn[loc.id + '@' + hackerLevel(s)] || {}).filter(([, n]) => n >= 2); if (lost.length && s.rooms?.visit) s.rooms.visit.avoid = { ...(s.rooms.visit.avoid || {}), ...Object.fromEntries(lost.map(([id]) => [id, true])) }; const f0 = stats.wins + stats.losses, key = loc.id + '@' + hackerLevel(s); visit(); leave(); if (stats.wins + stats.losses === f0) { losses[key] = (losses[key] || 0) + 1; stats.dry = (stats.dry || 0) + 1; } seen.add(loc.id); if (loc.takenOver && !loc.relay && items(s).relay) command(s, 'relay ' + loc.id); return true; }
+    // A rogue server's rooms nearest the entry are level 1: it walks past the grey ones, as a player would.
+    if (s.run.rooms) { const lost = Object.entries(lostIn[loc.id + '@' + hackerLevel(s)] || {}).filter(([, n]) => n >= 2); if (lost.length && s.rooms?.visit) s.rooms.visit.avoid = { ...(s.rooms.visit.avoid || {}), ...Object.fromEntries(lost.map(([id]) => [id, true])) }; const f0 = stats.wins + stats.losses, key = loc.id + '@' + hackerLevel(s); visit(loc.rogue ? (room) => !((loc.spawns?.[room?.path0]?.level || 99) <= hackerLevel(s) - 10) : null); leave(); if (stats.wins + stats.losses === f0) { losses[key] = (losses[key] || 0) + 1; stats.dry = (stats.dry || 0) + 1; } seen.add(loc.id); if (loc.takenOver && !loc.relay && items(s).relay) command(s, 'relay ' + loc.id); return true; }
     if (loc.rogue) {
       for (const room of Object.keys(layoutOf(loc)).filter((p) => p !== '/')) { if (!s.run) break; say(`cd ${room}`); say('attack'); fight(); if (s.run) say('cd /'); }
     } else {

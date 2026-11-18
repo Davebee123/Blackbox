@@ -37,7 +37,7 @@
 // codebase you know, what it costs here and what you hold, and Build.
 // Countdowns are empty <… data-at> slots (and rings with data-ring-*) that fillClocks writes every second (app.js), so
 // the markup only changes when the server does and a hovered chip keeps its tooltip.
-import { esc, conClass, deathMark, sickPct, sickTip, trackedJobs, contractTipRows } from './view.mjs';
+import { esc, conClass, deathMark, sickPct, sickTip, trackedJobs, contractTipRows, serverTracker } from './view.mjs';
 import { glyph } from './glyphs.mjs';
 import { groundSvg } from './ground.mjs';
 import { OBJECTIVES, OBJ, objectiveLine } from './objectives.mjs';
@@ -959,6 +959,6 @@ export function roomsView(s, ui = fpUi) {
   const pop = id ? `<div class="map-pop fp-pop" id="fp-pop" data-pop="${esc(id)}" role="dialog" aria-label="${esc(R.at || id !== R.graph.entry ? (known(s, id) ? labelOf(s, R.graph.rooms[id]) : 'Unknown room') : 'Home')}" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-fp-pop-close title="Close (Esc)" aria-label="Close">×</button>${popCard(s, id)}</div>` : '';
   return { shell: `<div class="fp${R.at ? '' : ' home'}">
     ${sprite()}${hudMarkup(s)}
-    <section class="panel fp-map${pz ? ' pz-on' : ''}" data-pane="map"><div class="fp-scroll">${mapSvg(s, false)}${mapSvg(s, true)}</div><button type="button" class="btn small fp-zoom" data-fp-zoom title="Fit the server (double-click the map too). Scroll to zoom, drag to pan." aria-label="Fit the server">⤢</button>${traceMarkup(s, ui)}${POP_MARK}${pz}</section>
+    <section class="panel fp-map${pz ? ' pz-on' : ''}" data-pane="map"><div class="fp-scroll">${mapSvg(s, false)}${mapSvg(s, true)}</div>${R.at ? `<div class="fp-ctrack">${serverTracker(s, (net(s, 'jobs') || []).map((j) => j.id))}</div>` : ''}<button type="button" class="btn small fp-zoom" data-fp-zoom title="Fit the server (double-click the map too). Scroll to zoom, drag to pan." aria-label="Fit the server">⤢</button>${traceMarkup(s, ui)}${POP_MARK}${pz}</section>
   </div>`, pop, id };
 }
