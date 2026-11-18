@@ -18,7 +18,7 @@ test('every tip has an id, a page, a selector and one or two short sentences', (
     assert.ok(t.id && !ids.has(t.id), `unique id ${t.id}`);
     ids.add(t.id);
     assert.ok(t.page && t.at && t.text, t.id);
-    assert.ok(t.text.length <= 200, `${t.id} is short`);
+    assert.ok(t.text.length <= 260, `${t.id} is short`);
   }
 });
 
@@ -90,7 +90,7 @@ test('fight tips pause the fight and wait for what they explain', () => {
   assert.ok(t.pause);
   assert.deepEqual(t.covers, ['fight-keys', 'fight-ticks', 'fight-armor', 'sync'], 'the first fight is one pause: board, keys, the interrupt\'s ticks, armor and sync together');
   assert.deepEqual(t.steps.map((x) => x.id), ['fight-timeline', 'fight-keys', 'fight-ticks', 'fight-armor', 'sync'], 'clicked through in order, each step its own tip');
-  assert.match(t.steps[2].text, /50% and 25%[\s\S]*cancelled/, 'the ticks step teaches the interrupt');
+  assert.match(t.steps[2].text, /ticks[\s\S]*canceled/, 'the ticks step teaches the interrupt');
   for (const id of [t.id, ...t.covers]) markSeen(s, id);
   assert.notEqual(nextTip(s, 'combat', onPage(html))?.id, 'fight-keys');
   assert.notEqual(nextTip(s, 'combat', onPage(html))?.id, 'fight-quiet', 'no Trace tip before you have Trace');

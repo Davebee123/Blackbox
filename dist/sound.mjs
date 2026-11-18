@@ -872,11 +872,14 @@ export function openContext(AC = globalThis.AudioContext) {
   try { const capped = new AC({ sampleRate: MAX_RATE }); first.close?.(); return capped; } catch { return first; } // a browser that can't set the rate keeps its own
 }
 
+// Whether a one-shot may go to a context in this state, ms since the last click or key, with the tab hidden or not.
+export const canPlay = (state, sinceGesture, hidden) => state === 'running' || (state === 'suspended' && sinceGesture < 1000 && !hidden);
+
 // One sound system per page (the feel layer and the prompt share it).
 let shared = null;
 export function createSound() {
   if (shared) return shared;
-  let ctx = null, ch = null, stopHum = null, wantHum = false, hum = null;
+  let ctx = null, ch = null, stopHum = null, wantHum = false, hum = null, gestureAt = -Infinity;
   const lastVoice = new Map();
   const vol = { sfx: 0.8, ambience: 0.8 };
   // Sliders: effects scale the whole game-sound chain (its own 0.55 headroom stays), ambience the room tone.
@@ -898,9 +901,14 @@ export function createSound() {
       return true;
     } catch { return false; }
   }
+  // A one-shot is only worth scheduling on a running context. A paused one (before the first click or key, or while
+  // the tab is hidden) holds its clock still, so everything sent to it would play in one burst when it wakes. The
+  // gesture that wakes it may play straight away: its resume is on the way.
+  const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  const awake = () => ready() && canPlay(ctx.state, now() - gestureAt, typeof document !== 'undefined' && document.hidden);
   if (typeof document !== 'undefined') {
     // Audio can only start from a click or a key, so the first one wakes it (if Sound is on).
-    const wake = () => { if (wantHum) ready(); };
+    const wake = () => { gestureAt = now(); if (wantHum) ready(); };
     document.addEventListener('pointerdown', wake, true);
     document.addEventListener('keydown', wake, true);
     // Quiet when the tab is hidden.
@@ -911,7 +919,7 @@ export function createSound() {
   }
   shared = {
     play(name, opts = {}, delay = 0) {
-      if (!ready()) return;
+      if (!awake()) return;
       const at = ctx.currentTime + Math.max(0, delay);
       if (Math.abs((lastVoice.get(name) ?? -1) - at) < 0.06) return; // the same voice twice at once: once is as loud and half the work
       lastVoice.set(name, at);
@@ -921,19 +929,19 @@ export function createSound() {
     // from now; none: contact at once), its hit ({ result, power, tier, gain }) and a delay (s). False if it has none
     // to play (or the samples aren't in).
     ability(style, key, plan, hit, delay = 0) {
-      if (!ready()) return false;
+      if (!awake()) return false;
       try { return abilityAt(ctx, ch, style, key, timingOf(ctx.currentTime + 0.005 + Math.max(0, delay), plan || {}, hit)); } catch { return false; }
     },
     // A virus attack's sound in a style (virussound.mjs), timed by its chip's strike (plan: chipfx.mjs STRIKE_PLAN, ms
     // from now; drawn: false when no strike is drawn, so it lands at once), its hit ({ result, power, gain }) and a
     // delay (s). False if it has none to play (or the samples aren't in).
     attack(style, key, plan, hit, drawn = true, delay = 0) {
-      if (!ready()) return false;
+      if (!awake()) return false;
       try { return attackAt(ctx, ch, style, key, attackTiming(ctx.currentTime + 0.005 + Math.max(0, delay), plan, hit, drawn)); } catch { return false; }
     },
     // A decoded one-shot (a virus family's attack or break, places.mjs) through the same chain as every voice.
     clip(buffer, gain = 1) {
-      if (!buffer || !ready()) return;
+      if (!buffer || !awake()) return;
       try {
         const src = ctx.createBufferSource(), g = ctx.createGain();
         src.buffer = buffer; g.gain.value = gain;
@@ -943,7 +951,7 @@ export function createSound() {
     },
     // A key on the prompt: 'char', 'enter', 'back', or a button 'click'.
     key(kind = 'char') {
-      if (!ready()) return;
+      if (!awake()) return;
       try {
         const t = ctx.currentTime + 0.002;
         if (!banks.get(ctx)?.ready) { noise(ctx, ch.master, t, { type: 'bandpass', f0: 2400 + Math.random() * 1200, q: 1.4, a: 0.001, peak: kind === 'enter' ? 0.12 : 0.07, d: 0.018 }); return; }

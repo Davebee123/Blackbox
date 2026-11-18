@@ -30,7 +30,7 @@ const hereKind = (s) => s.rooms?.at && s.rooms.graph.rooms[s.rooms.at]?.kind;
 const movesOf = (s) => s.rooms?.stats?.moves || 0;
 const TOUR_STEPS = [
   { id: 'tour-walk', at: '.fp-room.reach', when: (s) => !!visitOf(s) && !s.rooms.screen, mark: movesOf, done: (s, m) => movesOf(s) > m,
-    text: 'pick a room with a number on its corner. that\'s the signal it costs to walk in.' },
+    text: 'click a room beside yours to walk there. the number on its corner is the signal it costs.' },
   { id: 'tour-engage', at: '#fp-pop [data-rooms="engage"]', also: '#fp-pop [data-rooms="back"]', after: ['tour-walk'], when: (s) => s.rooms?.screen?.kind === 'virus', done: (s) => s.rooms?.screen?.kind !== 'virus',
     text: 'something\'s living in there. engage, or step back the way you came.' },
   { id: 'tour-cache', at: '#fp-pop [data-rooms="pull"]', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'cache' && !s.rooms.screen,
@@ -42,7 +42,7 @@ const TOUR_STEPS = [
     mark: (s) => s.rooms.at, done: (s, m) => !!s.rooms?.visit?.rested || s.rooms?.at !== m,
     text: 'rest here once a visit for some signal back. the hunter never comes in.' },
   { id: 'tour-jackout', at: '.fp-acts [data-rooms="jackout"]:not([disabled])', after: ['tour-engage'], when: (s) => !!visitOf(s) && !s.rooms.screen && (s.rooms.stats?.won || 0) > 0, done: (s) => !s.rooms?.at,
-    text: 'jack out and the pack\'s banked. the server lets you back in 30 seconds later.' },
+    text: 'you collect items while navigating new servers. jacking out of the server banks these items. losing all your signal before jacking out causes you to lose the items you collected.' },
 ];
 export const TOUR = TOUR_STEPS.map((t) => ({ ...t, page: 'rooms', tour: true }));
 export const tourIds = TOUR.map((t) => t.id);
@@ -124,10 +124,10 @@ export const TIPS = [
   // Your first fight: one pause, not four. The board, the keys, armor and the Sync Window are
   // clicked through as steps of one tip, each pointing at its own thing; each still shows alone
   // if it turns up later.
-  { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-ticks', 'fight-armor', 'sync'], text: 'this is the combat console halcyon installed to fight viruses. it shows their attacks: the now column is this cycle, each column right of it one later. you move first, and then the virus attacks back.' },
-  { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', text: 'type a skill and a part, then enter. or press its number and click the part. let the timer run out and key 1 hits your last target again.' },
+  { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-ticks', 'fight-armor', 'sync'], text: 'this is the combat console halcyon installed to fight viruses. it shows their structure and attacks. the "now" column shows what happens during this cycle. each column to the right is a cycle in the future. you move first, and then the virus attacks back.' },
+  { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', text: 'to attack, type a skill and then a part. you can also press its number and click the part. if the timer runs out, you will auto attack the last part you targeted.' },
   // The interrupt (interrupt.mjs): the ticks, and a tick spent for nothing.
-  { id: 'fight-ticks', page: 'combat', pause: true, at: '.board .ptick', under: '#board', when: (s) => s.encounter?.phase === 'active', text: 'two marks on each bar, at 50% and 25%. push a part past one on the cycle its attack is due and that attack\'s cancelled. each mark works once.' },
+  { id: 'fight-ticks', page: 'combat', pause: true, at: '.board .ptick', under: '#board', when: (s) => s.encounter?.phase === 'active', text: 'notice these ticks on the virus parts? push a part past one during the current cycle and the part\'s attack is canceled. each mark works once.' },
   { id: 'fight-wasted', page: 'combat', pause: true, at: '.board .ptick.spent', under: '#board', when: (s) => (s.encounter?.metrics?.wasted || 0) > 0, text: 'you crossed that tick with no attack due, so it\'s spent for nothing. save the big hits for the cycle an attack lands.' },
   { id: 'fight-armor', page: 'combat', pause: true, at: '.board .chits', under: '#board', text: 'see the ◆? that\'s armor. each hit knocks one off and does nothing else. chip it bare with the small stuff, then hit it hard.' },
   { id: 'sync', page: 'combat', at: '#sync-win', pause: true, text: 'the bar under now fills as the cycle runs. hit enter inside the bright window and you deal 10% more.', more: (s) => `as ${/^[AEIOU]/.test(ARCHETYPES[classOf(s)].name) ? 'an' : 'a'} ${ARCHETYPES[classOf(s)].name.toLowerCase()}, it also ${SYNC[classOf(s)].rule.replace(/^./, (c) => c.toLowerCase())}` },

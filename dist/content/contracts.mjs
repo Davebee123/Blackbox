@@ -953,45 +953,45 @@ export default {
   "bounty": {
     "halcyon": [
       {
-        "subject": "Flagged process: {name}",
+        "subject": "Flagged process: {addr}, {server}",
         "body": [
-          "A {family} process called {name} is using SPRAWL-00 as a staging point.",
+          "A {family} process at {addr} on {server} is using the box as a staging point.",
           "Neutralize it."
         ]
       }
     ],
     "kestrel": [
       {
-        "subject": "Eviction: {name}",
+        "subject": "Eviction: {server}",
         "body": [
-          "A {family} process called {name} has moved into SPRAWL-00 without a lease.",
+          "A {family} process has moved into {addr} on {server} without a lease.",
           "Remove it. The rack goes back on the market."
         ]
       }
     ],
     "lantern": [
       {
-        "subject": "Name: {name}",
+        "subject": "Address: {addr}",
         "body": [
-          "Five. One. A {family} process called {name} sits in SPRAWL-00, holding a Pellucid wage run open.",
+          "Five. One. A {family} process at {addr} on {server} is holding a Pellucid wage run open.",
           "End it, and we read the run out."
         ]
       }
     ],
     "nullchoir": [
       {
-        "subject": "{name} has a pension",
+        "subject": "A pension on {server}",
         "body": [
-          "A {family} process called {name} sits in SPRAWL-00, paying a dead man's premium every month.",
+          "A {family} process at {addr} on {server} pays a dead man's premium every month.",
           "Kill it. Halcyon loses a customer."
         ]
       }
     ],
     "glassjaw": [
       {
-        "subject": "A name on a list: {name}",
+        "subject": "An address on a list: {addr}",
         "body": [
-          "A {family} process called {name} sits in SPRAWL-00. Someone paid us to take its name off a list.",
+          "A {family} process sits at {addr} on {server}. Someone paid us to take it off a list.",
           "Kill it."
         ]
       }
