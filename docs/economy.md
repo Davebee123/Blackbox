@@ -4,7 +4,7 @@
 the stores as they stand (GAME_RULES.md *The economy*, *Components*, *Code*, *Sockets and programs*, *The Halcyon
 store*); Indemnity is retired (v48) and crafting is gone (v49). Left: patches, supply orders, consortium projects,
 the four-rank Root, the programs still to build, and player trade. How prices and factions' sway move, seeded and
-director-led: docs/market.md (proposed); one central exchange in place of the hubs' markets: docs/exchange.md (proposed).
+director-led: docs/market.md (proposed).
 
 Agreed with the designer: nothing here puts a button on the ability bar, and nothing in it is random. Access to content
 (a floor, a vault, a lair) is earned by playing, never bought.

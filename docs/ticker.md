@@ -2,8 +2,7 @@
 
 **Status.** Ready to build (November 2026); the look is to be picked from mock-ups. It's what stays of market.md: the
 cards, without sway or INIT's count. It replaces the wall-clock world event and the Market shock (GAME_RULES
-*Markets*, *Events*). Outposts (outposts.md) are tabled. If the exchange (exchange.md, proposed) is picked, each card
-moves one good on its book instead of a hub's price, at the sizes there.
+*Markets*, *Events*). Outposts (outposts.md) are tabled.
 
 ## 1. The rule
 

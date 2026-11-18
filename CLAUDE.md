@@ -87,8 +87,6 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
     (the top bar, the class pick, the favicon); a faint `/` between the top bar's tabs;
   - quest window: the *Transmission*;
   - level-up: the *Firmware update*;
-  - the exchange window (docs/exchange.md, proposed): the *Tape* (a strip quoting all five goods, one big candle chart
-    for the picked one with its movers as pins, Sell and Buy large);
   - wick's tips (the guided path's, tips.mjs `wick`): the *Transmission* (his face, the kicker, his lowercase line);
   - pager: the *Log* on a desktop (ping lines in the map's left column under Contracts, above the prompt elsewhere;
     pings.mjs), which replaced the *Tray*; a phone keeps its lamp and Comms;
@@ -151,7 +149,7 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **The market moves** (November 2026): prices move on logged-on time, run by the director, each mover with a reason
   in the lore. *No entropy* and no loss aversion guard the time you're away; the market moves both ways while you play.
   What's next is the ticker (docs/ticker.md): lore-voiced cards that move hub prices. Sway and INIT's count are shelved,
-  and outposts (docs/outposts.md) are tabled as too complicated for now.
+  and outposts (docs/outposts.md) and a central exchange (docs/exchange.md) are tabled as too complicated for now.
 - **Rested XP** comes only from time logged off. There is no catch-up XP.
 - **Unlocks:** cosmetic unlocks (districts, boots, prompts, desk props, mastery looks) come from achievements, not
   from server floors.

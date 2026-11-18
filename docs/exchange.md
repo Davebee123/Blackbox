@@ -1,7 +1,7 @@
 # The exchange: one book for what you farm
 
-**Status.** Proposed (the designer, November 2026) and prototyped. The look is picked: the Tape (section 6). Building
-it is next. It replaces the five hubs' markets (GAME_RULES *Markets*); the hubs keep their Shop, Work,
+**Status.** Tabled (the designer, November 2026): it over-complicates the game, and the hubs' markets stay as built.
+Kept as the record of a prototype. It would have replaced the five hubs' markets (GAME_RULES *Markets*); the hubs keep their Shop, Work,
 Commission, Receipts and Their servers. The ticker (ticker.md) moves its prices. The numbers come from a scratchpad
 simulation, 200 network seeds × 40 logged-on hours at level 12; building it re-measures them.
 
