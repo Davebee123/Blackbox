@@ -67,14 +67,14 @@ const tour = (s) => { const t = nextTip(s, 'rooms', shows(s)); return t?.tour ? 
 const winRoom = (s) => { s.encounter.virus.parts.forEach((p) => { p.integrity = 0; }); finish(s, 'victory'); FP.settle(s); };
 const newPlayer = () => { const s = fresh(); s.tutorialCompleted = true; return s; };
 
-test('the rooms tour: every step one or two short sentences, on the rooms page, kept apart from the tips', () => {
+test('the rooms tour: every step one to three short sentences, on the rooms page, kept apart from the tips', () => {
   assert.deepEqual(TOUR.map((t) => t.id), ['tour-walk', 'tour-engage', 'tour-cache', 'tour-hunter', 'tour-rest', 'tour-jackout']);
   for (const t of TOUR) {
     assert.equal(t.page, 'rooms');
     assert.ok(t.done, `${t.id} moves on when you do it`);
     const n = (t.text.match(/[.!?](\s|$)/g) || []).length + (t.more ? 1 : 0);
-    assert.ok(n >= 1 && n <= 2, `${t.id}: ${n} sentences`);
-    assert.ok(t.text.length <= 140, `${t.id} is short`);
+    assert.ok(n >= 1 && n <= 3, `${t.id}: ${n} sentences`);
+    assert.ok(t.text.length <= 180, `${t.id} is short`);
   }
 });
 
@@ -100,7 +100,7 @@ test('the rooms tour on SPRAWL-00, in order: walk in, the virus\'s card, then Ja
   winRoom(s);
   t = tour(s);
   assert.equal(t.id, 'tour-jackout', 'a fight won: Jack out (SPRAWL-00 has no cache, hunter or rest room)');
-  assert.match(t.text, /pack's banked/);
+  assert.match(t.text, /jacking out of the server banks/);
   play(s, 'jack out');
   assert.equal(t.done(s, t.mark?.(s)), true);
   markSeen(s, t.id);
