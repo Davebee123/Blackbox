@@ -29,12 +29,12 @@
 // lose your Signal while it's in your pack and it's gone, the job with it), defuse (break N Encryptors before they
 // Encrypt), sweep (one visit, every room but the Core, no rest), exfil (catch an Exfil) and heist (a vault's file past a
 // Tracker). No clock: one waits on the board at a time until you take it, outside the five.
-import { FAMILIES, ROOM_FAMILIES, CONFIG, STRAINS, along, killXp } from './data.mjs';
+import { FAMILIES, ROOM_FAMILIES, CONFIG, STRAINS, along, killXp, xpToNext } from './data.mjs';
 import { ROOT } from './root.mjs';
 import { TABLE, moveTable } from './table.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { LOOT, MATERIALS, rollItem, seeded } from './gear.mjs';
-import { emit, warn, hackerLevel, serverLevel, gainXp, deedXpFor, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem, setDeliver, fxPct } from './combat.mjs';
+import { emit, warn, hackerLevel, hackerOf, serverLevel, gainXp, deedXpFor, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem, setDeliver, fxPct } from './combat.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { hiddenNodes, hiddenNode, syncFlags, items, flagged, spawnHidden } from './hidden.mjs';
 import { hiddenNear } from './floors.mjs';
@@ -847,7 +847,10 @@ export const sizeOf = (c) => { const cut = SIZE[c.type]; return !cut ? 0 : amoun
 export const contractXp = (L, c) => Math.round(killXp(L) * (BASE[c.type] ?? 2) * SIZE.mult[sizeOf(c)] * along(MAIL.xp, L) * (c.type === 'sweep' && c.size === 'medium' ? 1.3 : 1));
 // Fixed when it was posted (reward.xp: marked xpFixed, or minutes when contracts paid minutes of farming); one from
 // before either, its kind and size at the level it was posted.
-export const xpOf = (s, c) => (c.xpFixed || c.minutes != null ? c.reward?.xp || 0 : Math.round(contractXp(c.level ?? hackerLevel(s), c) * (c.offBooks ? MAIL.offBooksXp : 1)));
+const fixedXp = (s, c) => (c.xpFixed || c.minutes != null ? c.reward?.xp || 0 : Math.round(contractXp(c.level ?? hackerLevel(s), c) * (c.offBooks ? MAIL.offBooksXp : 1)));
+// A storyline job with reward.toLevel (wick's first) pays at least what you still need to reach that level.
+const toLevel = (s, L) => { const h = hackerOf(s); let n = -h.xp; for (let l = h.level; l < L; l++) n += xpToNext(l); return Math.max(0, n); };
+export const xpOf = (s, c) => Math.max(fixedXp(s, c), c.reward?.toLevel ? toLevel(s, c.reward.toLevel) : 0);
 // Who posted it (a storyline or room job: Halcyon), and the rep it pays them (older saves called Halcyon's standing).
 export const jobGiver = (c) => (FACTIONS[c.faction] ? c.faction : c.offBooks ? 'glassjaw' : 'halcyon');
 export const repOf = (c) => Math.max(0, c.reward?.rep ?? (c.offBooks ? 5 : c.reward?.standing) ?? 0);

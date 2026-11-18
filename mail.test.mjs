@@ -80,6 +80,7 @@ test('the storyline: kills, code, a named process, a takeover, then a ledger on 
   const credits = s.server.credits;
   deliver(s);
   assert.equal(s.server.credits, credits + 60);
+  assert.ok(hackerLevel(s) >= 2, 'wick\'s first job takes you to level 2');
   assert.ok(!('indemnity' in s), 'no Indemnity: it is retired');
   assert.equal(standing(s), MAIL.startStanding + 3);
   assert.ok(!(s.stash || []).some((it) => it.unique === 'wicks-old-toolkit'), "wick's toolkit waits for claimjack");
