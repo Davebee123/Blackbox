@@ -194,7 +194,8 @@ answering one costs you on the other, and an act that only tightens a number (so
 | CORE DUMP 48 · *new* | 8 · floor job | **Ghosts**: its parts are ACTUARY's. A broken part stays as a ghost repeating its last attack at full strength every 3 cycles; each part alternates a small and a big one | **Reload**: every 6 cycles the hardest-hitting ghost returns as a part at 30% | **Full dump**: every attack the ♛ lands stays as an echo, at half |
 
 **INIT** (50, Bedrock's deepest Core) has five acts. Its health is the process table, drawn as squares, one a percent:
-97% at the start, won at 61%. Each act starts as the table crosses its mark, and keeps every rule before it.
+97% at the start, won at 61%. Each act starts as the table crosses its mark, and keeps every rule before it. Proposed
+(docs/init-table.md 6): it starts from the save's count instead, the marks moving with it.
 
 | Act | Rule |
 |---|---|
