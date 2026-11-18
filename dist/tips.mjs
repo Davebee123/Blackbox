@@ -30,7 +30,7 @@ const hereKind = (s) => s.rooms?.at && s.rooms.graph.rooms[s.rooms.at]?.kind;
 const movesOf = (s) => s.rooms?.stats?.moves || 0;
 const TOUR_STEPS = [
   { id: 'tour-walk', at: '.fp-room.reach', when: (s) => !!visitOf(s) && !s.rooms.screen, mark: movesOf, done: (s, m) => movesOf(s) > m,
-    text: 'pick a room with a number on its corner. that\'s the signal it costs to walk in.' },
+    text: 'click a room beside yours to walk there. the number on its corner is the signal it costs.' },
   { id: 'tour-engage', at: '#fp-pop [data-rooms="engage"]', also: '#fp-pop [data-rooms="back"]', after: ['tour-walk'], when: (s) => s.rooms?.screen?.kind === 'virus', done: (s) => s.rooms?.screen?.kind !== 'virus',
     text: 'something\'s living in there. engage, or step back the way you came.' },
   { id: 'tour-cache', at: '#fp-pop [data-rooms="pull"]', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'cache' && !s.rooms.screen,
