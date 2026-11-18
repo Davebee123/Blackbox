@@ -1,8 +1,8 @@
 /* Rig → House (house-view.mjs): the cutaway, dim; the furniture in the text colour; the picker's tiles. */
 .hs-page { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 420px); gap: var(--s5); align-items: start; }
 .hs-card { overflow: hidden; }
-.hs-scroll { overflow-x: auto; }
-.hs-house { --hs-lh: 1.25em; margin: 0 auto; padding: var(--s4) 0; font: 500 15px/1.25 var(--mono); user-select: none; }
+.hs-scroll { overflow-x: auto; container-type: inline-size; }
+.hs-house { --hs-lh: 1.25em; margin: 0 auto; padding: var(--s4) 0; font: 500 clamp(6px, calc(100cqi / 55), 24px)/1.25 var(--mono); user-select: none; }
 .hs-house pre { margin: 0; font: inherit; line-height: var(--hs-lh); background: none; border: 0; padding: 0; white-space: pre; }
 .hs-shell { overflow: visible; color: var(--dim); }
 .hs-floor { position: relative; }
@@ -30,5 +30,4 @@
 
 @media (max-width: 900px) {
   .hs-page { grid-template-columns: minmax(0, 1fr); }
-  .hs-house { font-size: clamp(6px, calc((100vw - 56px) / 55), 15px); }
 }
