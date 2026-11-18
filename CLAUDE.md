@@ -109,8 +109,10 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - a boss's bar: the *Segments* (one segment an act, the acts done dark, the act now draining);
   - the Backlash on the board: the *Return chip* (hatched red, pointing back at you, *↩ −12 if hit*); the beat column
     and a warning on your row were the alternatives;
-  - opening a vault: the *Dial* (its dial clicks three times, the doors part, the files fly to your Pack a note higher;
-    roomfx.mjs); *Seal* and *Count* were the alternatives;
+  - room verbs on the map (roomfx.mjs, each with its sound): a vault the *Dial* (its dial clicks three times, the doors
+    part, the files fly to your Pack a note higher; *Seal* and *Count* were the alternatives); a cache the *Lid* (the
+    lid tips up, kept inside the chip; *Spill* was the alternative); a rest *Breathe* (*Power-nap* was the alternative);
+    bait, entry files, a key and a socket's program as first shown;
   - connecting to a server: the *Carrier* (a teal line from HOME to its node, the rooms open in a circle from there;
     eased, no black screen, no readout), and jacking out plays it backwards (your room locks teal, the rooms close in
     a circle onto the node, the line runs home);

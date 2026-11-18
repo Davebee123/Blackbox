@@ -672,6 +672,8 @@ function say(s, text, type = 'rooms') {
   return emit(s, type, text);
 }
 const deny = (s, text) => { warn(s, text); return null; };
+// A room's verb played on the map (roomfx.mjs): its kind, on the last thing said since `first` (null: nothing was).
+const fxOn = (s, first, fx) => { const e = s.logs[s.logs.length - 1]; if (e && e.id > first) e.fx = fx; };
 const out = (s, first) => s.logs.filter((e) => e.id > first);
 const rnd = (R, salt = 0) => seeded((R.seed * 2654435761 + (++R.rolls) * 40503 + salt) >>> 0);
 
@@ -1269,15 +1271,15 @@ export function act(s, verb, arg = null, opts = {}) {
     return out(s, first);
   }
   if ((verb === 'pull' || verb === 'pull all') && (here.kind === 'cache' || here.kind === 'secret')) { pull(s, here, opts); return out(s, first); }
-  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'stash') { if (!cacheFull(s, here)) deny(s, `The stash is empty. It fills again in ${fmtLeft(refillAt(s, here) - nowOf())}.`); else { ask('stash', s, here); R.taken[here.id] = nowOf(); clear(s, here); } return out(s, first); }
+  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'stash') { if (!cacheFull(s, here)) deny(s, `The stash is empty. It fills again in ${fmtLeft(refillAt(s, here) - nowOf())}.`); else { const at = s.serial; ask('stash', s, here); fxOn(s, at, { kind: 'cache', room: here.id, lid: false }); R.taken[here.id] = nowOf(); clear(s, here); } return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'vault' && rivalHolds(s, here)) { deny(s, `${R.visit.rival.id} took the files.`); return out(s, first); }
-  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'vault' && R.world && opened(s, here)) { if (!ask('pull', s, here)) deny(s, 'Nothing left in the vault.'); return out(s, first); }
-  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'entry' && R.world) { if (!ask('entryPull', s)) deny(s, 'Nothing here to take.'); return out(s, first); }
+  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'vault' && R.world && opened(s, here)) { const n = ask('pull', s, here); if (!n) deny(s, 'Nothing left in the vault.'); else fxOn(s, first, { kind: 'entry', room: here.id, n }); return out(s, first); }
+  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'entry' && R.world) { const n = ask('entryPull', s); if (!n) deny(s, 'Nothing here to take.'); else fxOn(s, first, { kind: 'entry', room: here.id, n }); return out(s, first); }
   if ((verb === 'open' || verb === 'force') && here.kind === 'vault') { openVault(s, here, verb === 'force'); return out(s, first); }
   if (verb === 'rest' && here.kind === 'rest') {
     if (restUsed(R, here)) deny(s, 'You already rested here this visit.');
     else if (sigOf(s) >= R.max) deny(s, 'Your Signal is full. Your rest keeps for later this visit.');
-    else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * ROOMS.rest)); setSig(s, sigOf(s) + n); if (here.extra === 'stable') (R.visit.bays ||= {})[here.id] = true; else R.visit.rested = true; clear(s, here); say(s, `You rest: +${n} Signal.`, 'rooms-good'); }
+    else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * ROOMS.rest)); setSig(s, sigOf(s) + n); if (here.extra === 'stable') (R.visit.bays ||= {})[here.id] = true; else R.visit.rested = true; clear(s, here); say(s, `You rest: +${n} Signal.`, 'rooms-good').fx = { kind: 'rest', room: here.id }; }
     return out(s, first);
   }
   // A Defrag Bay: a rest room of your own, once a visit.
@@ -1285,7 +1287,7 @@ export function act(s, verb, arg = null, opts = {}) {
     const bays = (R.visit.bays ||= {});
     if (bays[here.id]) deny(s, 'You already used this Defrag Bay this visit.');
     else if (sigOf(s) >= R.max) deny(s, 'Your Signal is full. The bay keeps for later this visit.');
-    else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * SOCKET.rest)); setSig(s, sigOf(s) + n); bays[here.id] = true; say(s, `The Defrag Bay: +${n} Signal.`, 'rooms-good'); }
+    else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * SOCKET.rest)); setSig(s, sigOf(s) + n); bays[here.id] = true; say(s, `The Defrag Bay: +${n} Signal.`, 'rooms-good').fx = { kind: 'rest', room: here.id }; }
     return out(s, first);
   }
   // A contract's item (mail.mjs: an Install job's, in your pack on its server): install it in its room. `install` is
@@ -1329,7 +1331,7 @@ function takeCache(s, room) {
   const code = Math.round((C.code[0] + Math.floor(r() * (C.code[1] - C.code[0] + 1))) * mill * bait);
   if (R.world) ask('cache', s, room, { credits, code, material: kind }); // into the pack: banked when you jack out
   else { R.credits += credits; s.server.credits += credits; gainCode(s, { [kind]: code }, 'Cache: '); }
-  say(s, `You take the ${room.kind === 'secret' ? 'stash' : 'cache'}: ${credits} credits and ${code} ${kind} code.`, 'rooms-good');
+  say(s, `You take the ${room.kind === 'secret' ? 'stash' : 'cache'}: ${credits} credits and ${code} ${kind} code.`, 'rooms-good').fx = { kind: isBait(s, room) ? 'bait' : 'cache', room: room.id, lid: room.kind === 'cache' };
   if (room.kind === 'secret' && r() < ROOMS.secret.blue) {
     const L = (R.world ? ask('level', s) : undefined) ?? R.level, it = addItem(s, rollItem(r, { level: L, rarity: 'tuned', cls: classOf(s) }), 'Stash: ');
     if (it) { if (R.world) ask('packItem', s, it); else R.pack.push(it.id); say(s, `${itemLabel(it)} goes in your pack.`, 'rooms-good'); }
@@ -1751,7 +1753,7 @@ hooks.roomEnd = (s, result) => {
   if (!R.cleared[room.id]) clear(s, room);
   if (room.kind !== 'socket') rebootCheck(s); // after the clear: the kill that maps the server takes it offline
   // The key: beat the guard while its vault is shut and it goes in your pack, for this visit.
-  if (room.kind === 'guard' && room.key && !R.opened[room.key] && !R.visit.keys.includes(room.key)) { R.visit.keys.push(room.key); say(s, `You take the ${R.graph.rooms[room.key].path} key.`, 'rooms-good'); }
+  if (room.kind === 'guard' && room.key && !R.opened[room.key] && !R.visit.keys.includes(room.key)) { R.visit.keys.push(room.key); say(s, `You take the ${R.graph.rooms[room.key].path} key.`, 'rooms-good').fx = { kind: 'key', room: room.id }; }
   if (room.kind === 'socket' && first) say(s, `${room.path} is open: a socket. Build a program in it.`, 'rooms-good');
   drops(s, room, e, wasRare);
   if (room.kind === 'nest') nestPay(s, room);

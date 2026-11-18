@@ -231,9 +231,12 @@ short vibration on phones that have it.
   dashed ghost with a ?. Badges: a red live light, the step's Signal cost, a respawn ring with its m:ss, and tags (KEY,
   LOCKED, KEY FITS, SEALED, ★, WAKES). Links are traces, the ones out of your room flowing amber. Your step travels its
   trace as teal 1s and 0s and a scan line runs down the chip you enter (travelfx.mjs, about two thirds of a second,
-  never holding a click); the hunter's step travels in red. A vault opens on the *Dial* (roomfx.mjs, sound.mjs `vault`): its
-  icon's dial turns and clicks three times, the doors part with light behind them, and each file flies to your Pack a
-  note higher. Faint gray packets cross discovered traces (traffic.mjs,
+  never holding a click); the hunter's step travels in red. Each room verb plays over its chip with its own sound (roomfx.mjs,
+  sound.mjs): a vault the *Dial* (its dial clicks three times, the doors part, each file flies to your Pack a note
+  higher); a cache the *Lid* (the lid tips up inside the chip, the pay ticks into your Pack), a bait cache the same
+  with a red canary blinking twice first; a rest *Breathe* (two slow glows, teal light rising into your Signal); files
+  at the entry or left in a vault flying to your Pack; a guard's key flying to your Keys once the map is back; a
+  program dropping into its socket like a cartridge. Faint gray packets cross discovered traces (traffic.mjs,
   three at most, each server kind its own). The **traceroute** at the map's foot lists the last three hops with their
   milliseconds (red near the hunter; hidden on a phone). Notices pop up in the bottom-right corner for a few seconds,
   clicks going through. The pop-up card opens by itself when the room wants a decision (**Engage**; the room you came from stays a click,

@@ -83,7 +83,7 @@ import * as PI from './pings.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
-import { playVault } from './roomfx.mjs';
+import { playRoomFx } from './roomfx.mjs';
 import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, whenConnected, playHangup, stopHangup, whenHome } from './bootfx.mjs';
 let bootFor = null; // the fight the screen last booted into (go)
 import { startTraffic } from './traffic.mjs';
@@ -1167,6 +1167,20 @@ function markFx(e, mate) {
   else feel.add(sign, MINE, word, { noFlash: lvl === 'minimal' });
 }
 
+// A room's verb (roomfx.mjs, floorplan.mjs tags it): its sound and buzz, and on the rooms map its motion. One won in a
+// fight (a guard's key) waits for the map to come back.
+let roomFxLater = [];
+const ROOM_VOICE = { vault: 'vault', cache: 'cache', bait: 'bait', rest: 'rest', entry: 'files', key: 'key', socket: 'socket' };
+function roomFxOf(fx) {
+  if (module !== 'rooms') { roomFxLater.push(fx); return; }
+  feel.add(ROOM_VOICE[fx.kind], null, null, { n: fx.n });
+  if (canMove() && fxLevel() !== 'minimal') feel.add(() => playRoomFx(fx));
+}
+function roomFxBack() {
+  if (module !== 'rooms' || !roomFxLater.length || active(campaign)) return;
+  const list = roomFxLater.splice(0);
+  setTimeout(() => { if (module === 'rooms') for (const fx of list) { feel.say(ROOM_VOICE[fx.kind], { n: fx.n }); if (canMove() && fxLevel() !== 'minimal') playRoomFx(fx); } }, 450);
+}
 function react(events) {
   if (events.some((e) => e.type === 'resolved')) turnedAt = performance.now(); // a turn on the timer counts too (turnLocked)
   const won = events.find((e) => e.type === 'victory');
@@ -1205,10 +1219,10 @@ function react(events) {
   }
   for (const c of cuesOf(campaign, events)) feel.add('cue' + c, null); // routines.mjs: while your program plays, when to look back
   const famCue = familyCues(campaign, events); // a virus family's attack and break one-shots, layered on the hurt and the break
-  const vaultFx = events.find((e) => e.fx?.kind === 'vault'); // a vault opened: the Dial (roomfx.mjs), in place of the pickup
+  const roomFx = events.filter((e) => e.fx); // a room's verb (roomfx.mjs): its sound and its motion on the map, in place of the pickup
   for (const e of events) {
     feel.beat(delay(e));
-    if (e === vaultFx) { feel.add('vault', null, null, { n: e.fx.n }); if (module === 'rooms' && canMove() && fxLevel() !== 'minimal') feel.add(() => playVault(e.fx.room, e.fx.n)); }
+    if (e.fx) roomFxOf(e.fx);
     feel.mute(voiced.has(e) || incoming.voiced.has(e));
     const fc = famCue.get(e);
     if (fc) feel.add(() => feel.familyShot(fc.family, fc.kind));
@@ -1288,7 +1302,7 @@ function react(events) {
       case 'jack-in': feel.add('jackin', null); shell.glitch?.(); break;
       case 'run-start': feel.add('jackin', null); if (!dialFx()) shell.glitch?.(); break; // (the connect's own effect stands in for the glitch)
       case 'jacked-out': feel.add('hangup', null); if (e.gains?.length) { const name = e.message.match(/JACKED OUT of (.+?)\. Banked/)?.[1] || ''; setTimeout(() => whenHome(() => showGain('Banked', name, e.gains, false)), 350); } break;
-      case 'rooms-good': if (e.gains?.length) { if (!vaultFx) feel.add('pickup', null); showGain('Pulled', '', e.gains, true); } break; // a vault's files into your pack (netrooms.mjs)
+      case 'rooms-good': if (e.gains?.length) { if (!roomFx.length) feel.add('pickup', null); showGain('Pulled', '', e.gains, true); } break; // a vault's files into your pack (netrooms.mjs)
       case 'puzzle': feel.add(() => pzFx.move(e)); break; // a move on a puzzle room's board: it plays over the board once drawn
       case 'puzzle-end': { // how a puzzle room's board went: a card like a reward's, once the move has played (a lost chase is a fight instead)
         if (e.fight) { flash('CAUGHT'); break; }
@@ -1373,7 +1387,7 @@ function react(events) {
       case 'boost': feel.add('unlock', '.net-signal', `+${e.amount}`); break;
       case 'infest': feel.add('prewarn', null); break;
       case 'config': feel.add('unlock', null); notice(e.message); break;
-      case 'program': feel.add(e.off ? 'click' : 'unlock', null); if (!e.off) flash('INJECTED'); break;
+      case 'program': if (!e.fx) feel.add(e.off ? 'click' : 'unlock', null); if (!e.off) flash('INJECTED'); break;
       case 'harvester': feel.add('pickup', null); rewardCard('Compiled', e, events, true); break;
       case 'harvest': feel.add('pickup', null); break;
       case 'consortium-siege': case 'consortium-raid': case 'consortium-roam': feel.add('prewarn', null); break;
@@ -2292,6 +2306,7 @@ function render(force = false) {
     if (was.seen) fpFresh.push(...Object.keys(seen).filter((id) => seen[id] !== was.seen[id]));
     fpWas = { visit, at, hAt, hSeen, seen };
   }
+  queueMicrotask(roomFxBack); // a key won in the fight, once the map is drawn
   if (force) cache.clear();
   renderMeters();
   renderScene();
