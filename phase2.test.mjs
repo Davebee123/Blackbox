@@ -174,10 +174,10 @@ test('firsts pay once: a recipe crafted, a service installed, a trade at a hub',
   FRESH.bonus = b;
 });
 
-test('kill contracts pay at the level of the kills that filled them, and count as fights; bounties stay in SPRAWL\'s range', async () => {
+test('kill contracts pay at the level of the kills that filled them, and count as fights; bounties need a target', async () => {
   const s = at(12);
   s.mail = { offers: [], jobs: [], next: 1, boardOpen: true };
-  for (let i = 0; i < 80; i++) { s.mail.offers = []; const o = offer(s, 0); assert.notEqual(o.type, 'bounty', 'no named processes past SPRAWL\'s levels'); }
+  for (let i = 0; i < 80; i++) { s.mail.offers = []; const o = offer(s, 0); assert.notEqual(o.type, 'bounty', 'no traced server, no bounty'); }
   let o; for (let i = 0; i < 50 && (!o || o.type !== 'kill'); i++) { s.mail.offers = []; o = offer(s, 0); }
   s.mail.offers = []; s.mail.jobs.push(o);
   for (let i = 0; i < o.count; i++) contractKill(s, { family: o.family, zone: false, level: 9 });

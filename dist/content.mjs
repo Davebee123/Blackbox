@@ -9,7 +9,7 @@ export const COMMON = { handle: 'your handle (the name you logged in with)', cre
 export const JOB_VARS = {
   none: {},
   kill: { count: 'how many to kill', family: 'the family, lower case (worm), or "stray" for any', crew: 'the crew that runs that family (SWARMLINE)' },
-  bounty: { name: 'the named virus (claimjack-0412)', family: 'its family, lower case', room: 'the SPRAWL-00 folder it sits in' },
+  bounty: { name: 'the named virus (claimjack-0412)', family: 'its family, lower case', room: 'the SPRAWL-00 folder it sits in', server: 'the traced server it sits on (a board bounty)', addr: 'its room\'s address there (C4; a board bounty)' },
   materials: { amount: 'how many units', material: 'the code, lower case (worm code)' },
   takeover: { server: 'the server to take (KESSLER-RELAY-22), or "any server you have traced"', owner: 'who runs it (KESSLER)', crew: 'the crew it belongs to' },
   strain: { strain: 'the strain (Keylogger)', count: 'how many to kill' },
