@@ -13,7 +13,7 @@ import * as FP from './dist/floorplan.mjs';
 import { addrsOf, byAddr, sweepRooms } from './dist/address.mjs';
 import { roomsFor, rogueGraph, sprawlGraph, farmGraph, addRootSocket, addStash } from './dist/netrooms.mjs';
 import { ROGUE } from './dist/rogue.mjs';
-import { initMail, roomOffer, ROOM_JOBS, MAIL, offers, openContracts, ready, progress, title, tickMail, rewardLine } from './dist/mail.mjs';
+import { initMail, roomOffer, offer, ROOM_JOBS, MAIL, offers, openContracts, ready, progress, title, tickMail, rewardLine, levelOf } from './dist/mail.mjs';
 import { roomsMarkup, fpUi, labelOf, pickRoom } from './dist/floorplan-view.mjs';
 import { mailMarkup, mapMarkup } from './dist/view.mjs';
 import { sizeOf } from './dist/sockets.mjs';
@@ -397,4 +397,40 @@ test('a fight room is named by the virus in it: on its plate (its stem and tag a
   assert.ok(!FP.isUp(s, room));
   assert.equal(labelOf(s, room), room.path);
   assert.match(chip(roomsMarkup(s), room.id), new RegExp(`class="fp-name"[^>]*>${room.path.toUpperCase()}</text>`));
+});
+
+test('bounties: the board marks an elite or a ★ rare spawn already on a traced server near your level, and its kill fills it', () => {
+  const { s, loc } = setup();
+  loc.level = 12;
+  const bounty = () => { for (let i = 0; i < 200; i++) { s.mail.offers = []; const o = offer(s, clock); if (o.type === 'bounty') return o; } return null; };
+  let o = bounty();
+  assert.ok(o && o.loc === loc.id && o.addr && !o.rare, 'an elite on your server');
+  const g = roomsFor(s, loc).graph;
+  assert.equal(g.rooms[o.room].kind, 'elite');
+  assert.equal(addrsOf(g)[o.room], o.addr);
+  assert.ok(!s.zone?.spawns || !Object.values(s.zone.spawns).some((x) => x.bounty), 'nothing spawned in SPRAWL-00');
+  assert.match(title(s, o), new RegExp(`^Kill the elite at ${o.addr} on `));
+  assert.match(o.body.join(' '), new RegExp(o.addr), 'the letter names the address');
+  // A rare spawn standing comes first, two levels up; it leaves the board if the rare goes.
+  const R = loc.floorplan || roomsFor(s, loc), p = Object.keys(g.rooms).find((id) => g.rooms[id].kind === 'process');
+  loc.floorplan ||= R; R.rare = { ...(R.rare || {}), [p]: true };
+  o = bounty();
+  assert.ok(o.rare && o.room === p, 'the rare one');
+  assert.equal(levelOf(s, o).level, 14);
+  R.rare[p] = false; tickMail(s, clock);
+  assert.ok(!offers(s).includes(o), 'its rare gone, the offer goes');
+  // Out of range: no bounty at all.
+  loc.level = 3;
+  assert.equal(bounty(), null, 'no target near your level, no bounty');
+  loc.level = 12;
+  // Taken: the room is marked, and its kill fills it.
+  o = bounty(); command(s, `mail accept ${o.id}`);
+  const c = openContracts(s).find((x) => x.id === o.id);
+  play(s, 'connect ' + loc.id);
+  for (const id of Object.keys(s.rooms.graph.rooms)) s.rooms.seen[id] = 'kind';
+  assert.match(roomsMarkup(s), new RegExp(`data-room="${c.room}"[^>]*title="[^"]*Contract: Kill the`), 'its room is marked');
+  assert.ok(!ready(s, c));
+  reach(s, c.room);
+  assert.ok(ready(s, c), 'the kill fills it');
+  assert.equal(progress(s, c).text, 'Neutralized');
 });
