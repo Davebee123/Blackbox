@@ -1,7 +1,7 @@
 # The market: a seeded economy the director runs
 
 **Status.** Proposed November 2026, not built. **Mostly shelved:** only the ticker's cards (section 5) and *What pays
-what* stay, as outposts' events (docs/outposts.md); sway, need, the web, INIT's count and the Charter wait. The numbers come from a prototype (a scratchpad simulation of this
+what* stay, as outposts' events (docs/outposts.md); sway, need, the web and the Charter wait; INIT's count is redesigned without prices in docs/init-table.md. The numbers come from a prototype (a scratchpad simulation of this
 design over 200 network seeds × 40 logged-on hours, the cast's eight runners and you in it); building it re-measures
 them. Today's market (GAME_RULES *Markets*) is the floor this builds on: wares, the spread, pressure, transfers.
 
@@ -144,6 +144,8 @@ your play steers it. Its faction's line goes to the Log:
 | GLASSJAW | *Everyone's buying. I'm selling.* |
 
 ## 4. INIT's count
+
+**Superseded** by docs/init-table.md (no prices; your play moves it). Kept for the record.
 
 The process table's fill, *process table at N%*, one number a save. It's the lore's pulse: the table is filling again,
 and Halcyon pays crews like LOWLIGHT to keep it under the line. It never reaches 100%: that was the Cascade. The

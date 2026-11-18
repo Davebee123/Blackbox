@@ -1,7 +1,7 @@
 # The ticker: market cards
 
 **Status.** Ready to build (November 2026); the look is to be picked from mock-ups. It's what stays of market.md: the
-cards, without sway or INIT's count. It replaces the wall-clock world event and the Market shock (GAME_RULES
+cards, without sway or INIT's count (now docs/init-table.md). It replaces the wall-clock world event and the Market shock (GAME_RULES
 *Markets*, *Events*). Outposts (outposts.md) are tabled.
 
 ## 1. The rule
