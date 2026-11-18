@@ -2142,7 +2142,7 @@ kill's deed XP, and a held server's respawned rooms count as Building XP.
 
 ## Mail and contracts
 
-**The story.** Halcyon Mutual insures half the servers on the net. Rival crews keep hitting its clients, so Halcyon
+**The story.** Halcyon Mutual insures a large share of the servers on the net. Rival crews keep hitting its clients, so Halcyon
 pays third-party crews to fight a turf war against them, and never asks how. You're an initiate of one of those crews,
 **LOWLIGHT** (your handler is `wick`). The rival crews are named for the viruses they run: **TOLLGATE** (ransomware),
 **SWARMLINE** (worms) and **PALEMASK** (ghostroot). **GLASSJAW** is a broker that works against Halcyon.
