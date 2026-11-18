@@ -3,7 +3,8 @@
 **Status.** Proposed November 2026, not built. **Mostly shelved:** only the ticker's cards (section 5) and *What pays
 what* stay, as outposts' events (docs/outposts.md); sway, need, the web, INIT's count and the Charter wait. The numbers come from a prototype (a scratchpad simulation of this
 design over 200 network seeds × 40 logged-on hours, the cast's eight runners and you in it); building it re-measures
-them. Today's market (GAME_RULES *Markets*) is the floor this builds on: wares, the spread, pressure, transfers.
+them. Today's market (GAME_RULES *Markets*) is the floor this builds on: wares, the spread, pressure, transfers. One
+book in place of the hubs' markets is proposed in exchange.md.
 
 **Decided (the designer, November 2026).**
 - **The market moves both ways while you play.** Nothing moves while you're away, so *No entropy* and no loss aversion
