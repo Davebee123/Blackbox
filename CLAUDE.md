@@ -178,3 +178,7 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   content, its bosses finished (floors 5–8 have none of their own); then itemization on the deeper floors. Every floor
   should have content. Runners go on slice by slice (R2 built; R3 next, then R4: docs/runners.md). Other new
   systems (off-map servers, co-op, crises) wait.
+- **No invasions while logged off** (the designer, November 2026), after the health rework lands, not alongside it or
+  other pacing work. Cut the away loop and the occupation on return (invasion.mjs `AWAY`, `away()`); every minute away
+  banks rested XP; drop the consortium's away help; fix GAME_RULES (*While you're logged off*, *Away is played out*),
+  the tests, and wick's `server-wall` tip (tips.mjs, *"even while you're away"*). Migrate a save left occupied.
