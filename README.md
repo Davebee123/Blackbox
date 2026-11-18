@@ -177,7 +177,7 @@ comment saying what it does.
 | `dist/factions.mjs` | Factions: hubs, rep (1 to 100, four tiers), friends and enemies, and your commission. |
 | `dist/receipts.mjs` | Receipts: each traced server's vault receipt, stamped for a faction at the takeover or handed in at your commission's hub. |
 | `dist/market.mjs` | Hub markets: prices that move with conditions, world events and sales. |
-| `dist/table.mjs` | INIT's table: the count (`s.table`), what fills and empties it, the two bands' multipliers, the orphans' share, the Readout's tooltip. |
+| `dist/table.mjs` | INIT's table: the count (`s.table`), what fills and empties it, the two bands' multipliers, the orphans' share, the header meter's tooltip. |
 | `dist/consortium.mjs` | Consortium: simulated members who merged servers with yours. |
 
 ### Mail, story and quests

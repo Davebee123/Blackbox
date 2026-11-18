@@ -1,15 +1,14 @@
-// Rig → Casing (casing.mjs): the monitor color, the plate, the stickers, the props and the district out the window. Pure
+// Rig → Casing (casing.mjs): the monitor color, the stickers, the props and the district out the window. Pure
 // functions of state. A sticker or a prop goes on with a click here and is dragged into place on the casing itself
 // (app.js, while this page is open).
 import { glyph } from './glyphs.mjs';
 import { COLORWAYS, COLORWAY_IDS, CASING, colorwayOpen, colorwayFrom, casingLook, decalsOwned, decalMarkup, districtOf, districtOpen, districtFrom, PROPS, PROP_IDS, propOpen, propFrom, propsLook, propSvg } from './casing.mjs';
 import { DISTRICTS, DISTRICT_IDS } from './districts.mjs';
-import { titleById } from './profile.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 // The sections down the rail, each with what it holds now; the open one's options fill the pane beside it.
-export const CASING_SECS = ['color', 'plate', 'stickers', 'props', 'window'];
+export const CASING_SECS = ['color', 'stickers', 'props', 'window'];
 
 export function casingPageMarkup(s, { sec = 'color' } = {}) {
   if (!CASING_SECS.includes(sec)) sec = 'color';
@@ -17,12 +16,11 @@ export function casingPageMarkup(s, { sec = 'color' } = {}) {
   const propsOn = propsLook(s).length, n = (ids, open) => `${ids.filter((id) => open(s, id)).length} of ${ids.length}`;
   const rail = [
     ['color', 'Monitor color', COLORWAYS[cur]?.name || 'Stock', n(COLORWAY_IDS, colorwayOpen)],
-    ['plate', 'Nameplate', look.plate],
     ['stickers', 'Stickers', decalsMine ? `${decalsOn} on` : 'None yet', decalsMine ? `${decalsMine} yours` : ''],
     ['props', 'Props', `${propsOn} out`, n(PROP_IDS, propOpen)],
     ['window', 'Window', DISTRICTS[districtOf(s)]?.name || '', n(DISTRICT_IDS, districtOpen), 'The district out the window beside the monitor, on screens 1700px wide and more.'],
   ].map(([id, name, now, count, tip]) => `<button type="button" role="tab" data-cs-sec="${id}" aria-selected="${sec === id}"${tip ? ` title="${esc(tip)}"` : ''}><b>${name}</b><small>${esc(now)}${count ? ` <i>· ${count}</i>` : ''}</small></button>`).join('');
-  const pane = { color: colorPaneMarkup, plate: platePaneMarkup, stickers: stickerPaneMarkup, props: deskCardMarkup, window: districtCardMarkup }[sec](s);
+  const pane = { color: colorPaneMarkup, stickers: stickerPaneMarkup, props: deskCardMarkup, window: districtCardMarkup }[sec](s);
   return `<section class="card cs-page"><nav class="cs-rail" role="tablist" aria-label="Casing">${rail}</nav><div class="cs-pane" role="tabpanel" data-case="${cur}">${pane}</div></section>`;
 }
 
@@ -37,17 +35,6 @@ function colorPaneMarkup(s) {
       : `<span class="cs-sw locked" data-case="${id}" title="${esc(tip)}"><i class="cs-chip" aria-hidden="true"></i><span>${esc(COLORWAYS[id].name)}</span>${glyph('lock')}</span>`;
   }).join('');
   return `${off ? `<p class="cs-note">${esc('Casing off. Settings turns it on.')}</p>` : ''}<div class="cs-swatches">${sw}</div>`;
-}
-
-// Rig → Casing → Nameplate: stock, a title of yours, or your own words.
-function platePaneMarkup(s) {
-  const C = s.cosmetics || {}, look = casingLook(s);
-  const titles = (s.profile?.titles || []).map(titleById).filter(Boolean);
-  const plates = [`<button type="button" class="cs-pl" data-run="casing plate stock" aria-pressed="${!C.plate}" title="As it shipped">${esc(CASING.stock)}</button>`,
-    ...titles.map((t) => `<button type="button" class="cs-pl" data-run="casing plate title ${esc(t.id)}" aria-pressed="${C.plate?.title === t.id}" title="${esc(`Your title ${t.name}`)}">MODEL 7 · ${esc(t.name.toUpperCase())}</button>`)].join('');
-  return `<span class="cs-plate" title="The plate on the chin">${esc(look.plate)}</span>
-      <div class="cs-plates">${plates}</div>
-      <form class="cs-own" data-cs-plate><input id="cs-plate-in" maxlength="${CASING.plate}" value="${esc(C.plate?.text || '')}" placeholder="Your own, ${CASING.plate} characters" spellcheck="false" autocomplete="off" aria-label="Your own plate"><button type="submit" class="btn small primary">Use</button></form>`;
 }
 
 // Rig → Casing → Stickers: yours, the ones on the casing lit. A click puts one on or takes it off.

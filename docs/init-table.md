@@ -66,9 +66,8 @@ one costs nothing.
 
 ## 5. On screen
 
-- The *Readout* at the network map's top right (picked): *process table at 84%*, muted with the number bright, over
-  a hairline strip with the Clear band grey at its left, the Full band amber at its right and a paper-white tick at
-  the count. Its tooltip names the band and its effects.
+- *Plain* in the header (picked, replacing the map's *Readout*, too small to notice): *PROCESS TABLE 84%* between
+  Signal and Credits. Its tooltip names the band and its effects at the count.
 - ◌ on an orphan's name, its tooltip: *Orphan. A trade still waiting for its other side. Breaking it frees a slot.*
 - LANTERN's census lines and INIT's warnings on the Log.
 

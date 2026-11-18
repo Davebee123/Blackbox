@@ -94,22 +94,6 @@ test('colourways: stock, beige, matte, smoked and one a faction, each from an ac
   assert.equal(casingLook(s).color, null);
 });
 
-test('the plate: stock, MODEL 7 and a title you hold, or 16 plain characters of your own', () => {
-  const s = me();
-  play(s, 'casing plate night shift');
-  assert.equal(casingLook(s).plate, 'NIGHT SHIFT');
-  assert.ok(warned(play(s, 'casing plate ' + 'x'.repeat(CASING.plate + 1))));
-  assert.ok(warned(play(s, 'casing plate héllo')));
-  assert.equal(casingLook(s).plate, 'NIGHT SHIFT', 'a bad plate changes nothing');
-  assert.ok(warned(play(s, 'casing plate title uncrowner')), 'only a title you hold');
-  s.dex.won = { relayking: 1 };
-  tickAchievements(s);
-  play(s, 'casing plate title uncrowner');
-  assert.equal(casingLook(s).plate, 'MODEL 7 · UNCROWNER');
-  play(s, 'casing plate stock');
-  assert.equal(casingLook(s).plate, 'BLACKBOX · MODEL 7');
-});
-
 test('stickers: any you\'ve earned, as many as you like, each on a side of the casing, one place each, the last on top', () => {
   const s = me();
   assert.ok(warned(play(s, 'casing sticker f2')), 'none earned yet');
@@ -184,7 +168,7 @@ test('a sticker sits wholly on the plastic wherever it is dropped: never on the 
   }
 });
 
-test('Rig → Casing: the swatches (locked with their achievement), the plate and your stickers; a view never writes the save', () => {
+test('Rig → Casing: the swatches (locked with their achievement) and your stickers; a view never writes the save', () => {
   const s = me(), snap = JSON.stringify(s);
   const html = casingPageMarkup(s);
   assert.equal(JSON.stringify(s), snap);
@@ -193,7 +177,7 @@ test('Rig → Casing: the swatches (locked with their achievement), the plate an
   assert.match(casingPageMarkup(s, { sec: 'stickers' }), /None yet/);
   // The rail: every section with what it holds now, the open one lit; only its options in the pane.
   assert.match(html, /data-cs-sec="color" aria-selected="true"><b>Monitor color<\/b><small>Stock <i>· 1 of 9<\/i>/);
-  assert.match(html, /data-cs-sec="plate" aria-selected="false"><b>Nameplate<\/b><small>BLACKBOX · MODEL 7</);
+  assert.doesNotMatch(html, /data-cs-sec="plate"/, 'no nameplate section for now');
   assert.doesNotMatch(html, /cs-pl"|cs-prop"|cs-dist"/, 'only the open section');
   assert.match(casingPageMarkup(s, { sec: 'nope' }), /data-cs-sec="color" aria-selected="true"/, 'an unknown section opens the first');
   assert.match(rigMarkup(s), /data-rtab="casing"/, 'a tab on the Rig page');

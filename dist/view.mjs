@@ -92,7 +92,7 @@ import { housePageMarkup } from './house-view.mjs';
 import { objectiveText, objectiveTip, backupAims } from './objectives.mjs';
 import { pointsOf } from './achievements.mjs';
 import { flowSvg } from './flowfx.mjs';
-import { ORPHAN_TIP, shownCount, countOf, tableTip, TABLE } from './table.mjs';
+import { ORPHAN_TIP } from './table.mjs';
 export { toolkitMarkup, subPromptDue } from './skills-view.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
@@ -2610,7 +2610,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   const chart = `<defs><pattern id="mchart" width="${C}" height="${C}" patternUnits="userSpaceOnUse"><path class="mchart-line" d="M0 ${c2}H${C}M${c2} 0V${C}"/><path class="mchart-tick" d="M${c2 - 4} ${c2}H${c2 + 4}M${c2} ${c2 - 4}V${c2 + 4}"/></pattern></defs><rect class="mchart" x="${minX - 2 * W}" y="${minY - 2 * Hh}" width="${5 * W}" height="${5 * Hh}" fill="url(#mchart)"/>`;
   const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter.length ? ' mf' + filter.map((k) => ' mf-' + k).join('') : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${con ? 'Map of your consortium' : `Floor ${fl}, ${esc(floorName(fl))}`}">${chart}${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${con ? '' : trails}${draw}${con ? '' : runnersMap(s, fl, runner, mapPortrait, runnersAt, avoid) + runnerMark(s, runner, fl, mapPortrait, avoid, mapScale || 1)}</svg>`;
   // Top corner: which map, and the map's own controls (names on hover, zoom back out).
-  const tabs = `<div class="map-tools"><div class="map-left">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters map-mode" role="group" aria-label="View"><button type="button" data-maplist="0" aria-pressed="${!list}">Map</button><button type="button" data-maplist="1" aria-pressed="${list}">List</button></div><details class="map-pick${filter.length ? ' on' : ''}"${pickOpen ? ' open' : ''}><summary data-mapfilter-toggle aria-label="Show">${filter.length ? filter.map((k) => MAP_FILTERS.find(([x]) => x === k)[1]).join(' + ') : 'All'}</summary><div class="map-pick-menu">${MAP_FILTERS.map(([k, l]) => `<label><input type="checkbox" data-mapfilter-check="${k}"${filter.includes(k) ? ' checked' : ''}><span>${l}</span></label>`).join('')}${filter.length ? '<button type="button" data-mapfilter-clear>Show all</button>' : ''}</div></details></div><div class="map-right">${con ? '' : initReadout(s)}<div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover. Click to always show them.' : 'Show names only on hover'}">Aa</button><button type="button" data-locate="__sel" title="Zoom to the selected one">${glyph('trace')}</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div></div>`;
+  const tabs = `<div class="map-tools"><div class="map-left">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters map-mode" role="group" aria-label="View"><button type="button" data-maplist="0" aria-pressed="${!list}">Map</button><button type="button" data-maplist="1" aria-pressed="${list}">List</button></div><details class="map-pick${filter.length ? ' on' : ''}"${pickOpen ? ' open' : ''}><summary data-mapfilter-toggle aria-label="Show">${filter.length ? filter.map((k) => MAP_FILTERS.find(([x]) => x === k)[1]).join(' + ') : 'All'}</summary><div class="map-pick-menu">${MAP_FILTERS.map(([k, l]) => `<label><input type="checkbox" data-mapfilter-check="${k}"${filter.includes(k) ? ' checked' : ''}><span>${l}</span></label>`).join('')}${filter.length ? '<button type="button" data-mapfilter-clear>Show all</button>' : ''}</div></details></div><div class="map-right"><div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover. Click to always show them.' : 'Show names only on hover'}">Aa</button><button type="button" data-locate="__sel" title="Zoom to the selected one">${glyph('trace')}</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div></div>`;
   // pop: the selected node's card, popped up beside the node (app.js places it once the map is drawn).
   const card = pop ? `<div class="map-pop" id="map-pop" data-keep="${esc(sel || '')}" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-map-pop-close title="Close">×</button>${mapSide(s, sel, find(sel))}</div>` : '';
   // List mode (MOO2's planets list): every server as a row, sortable, the filters apply; the
@@ -2622,21 +2622,6 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
 }
 // The floor panel, a lift's buttons down the side of the map: the floors you've reached lit (the one on the map marked),
 // the next one dim with its band, the rest dark. A teal pip on the floor you're connected to.
-// INIT's table, the Readout (docs/init-table.md 5): *process table at N%* over a hairline strip, Clear grey at its
-// left, Full amber at its right, a paper-white tick at the count. readoutSync keeps it in place (app.js, the second's tick).
-const readoutPct = (d) => `${((d / (TABLE.max - TABLE.min)) * 100).toFixed(1)}%`, readoutAt = (n) => readoutPct(n - TABLE.min);
-export function initReadout(s) {
-  const n = shownCount(s), [c0, c1] = [TABLE.clear[1], TABLE.clear[0]], [f0, f1] = TABLE.full;
-  return `<div class="init-readout" data-n="${n}" title="${esc(tableTip(s))}"><span class="ir-text">process table at <b>${n}%</b></span><span class="ir-strip"><i class="ir-clear" style="left:${readoutAt(c0)};width:${readoutPct(c1 - c0)}"></i><i class="ir-full" style="left:${readoutAt(f0)};width:${readoutPct(f1 - f0)}"></i><i class="ir-tick" style="left:${readoutAt(countOf(s))}"></i></span></div>`;
-}
-export function readoutSync(s, el) {
-  const n = shownCount(s);
-  if (!el || +el.dataset.n === n) return;
-  el.dataset.n = n;
-  el.title = tableTip(s);
-  el.querySelector('.ir-text b').textContent = `${n}%`;
-  el.querySelector('.ir-tick').style.left = readoutAt(countOf(s));
-}
 function floorLift(s, n) {
   const F = floorsOf(s), L = hackerLevel(s), here = s.run ? (s.run.loc === CONFIG.zone.id ? 1 : s.locations.find((l) => l.id === s.run.loc)?.depth || null) : null;
   const rows = FLOORS.map((f, i) => {

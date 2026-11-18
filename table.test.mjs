@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { fresh, command, gainXp, hackerOf, rollDrop } from './dist/combat.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
 import { contractDid, ready } from './dist/mail.mjs';
-import { TABLE, countOf, moveTable, tickTable, full, clear, bandOf, orphanShare, orphanXpMult, intelXpMult, trashItemMult, clearOddsMult, rareMult, tableTip } from './dist/table.mjs';
+import { TABLE, countOf, moveTable, tickTable, full, clear, bandOf, orphanShare, orphanXpMult, intelXpMult, trashItemMult, clearOddsMult, rareMult, tableTip, tableKind } from './dist/table.mjs';
 
 const HOUR = 3600000;
 const close = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} ≈ ${b}`);
@@ -66,7 +66,10 @@ test('each band grows from its edge to its end', () => {
   // At Clear's end: Break-ins and Intel +25%, blue and yellow ×1.4, ★ rare spawns twice as often; Full's untouched.
   at(70);
   close(intelXpMult(s), 1.25); close(clearOddsMult(s), 1.4); close(rareMult(s), 2); assert.equal(orphanXpMult(s), 1); assert.equal(trashItemMult(s), 1);
-  assert.match(tableTip(at(76)), /^INIT's table\nProcess table at 76%\nClear:/);
+  assert.match(tableTip(at(76)), /^Process table: Orphans are 1 stray in \d+\.\nBreak-ins and Intel pay/);
+  assert.equal(tableKind(at(76)), 'Clear band');
+  assert.equal(tableKind(at(84)), 'Between the bands');
+  assert.equal(tableKind(at(92)), 'Full band');
 });
 
 test('the orphans’ share: 1 in 8 between, 1 in 3 at Full’s end, 1 in 20 at Clear’s', () => {

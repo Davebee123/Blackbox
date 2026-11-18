@@ -4,8 +4,7 @@
 // cosmetic only. Below the casing's own: the window's district and the desk's props (the end of this file).
 //   colourway  the casing's plastic (CSS variables on body.cased[data-case]: casing.css). Stock is today's dark grey;
 //              each other one comes with an achievement.
-//   plate      the badge on the chin: BLACKBOX · MODEL 7 (stock), MODEL 7 · <a title you've earned>, or your own text
-//              (16 plain characters at most, shown in capitals).
+//   plate      the badge on the chin: BLACKBOX · MODEL 7 (picking your own is off for now)
 //   stickers   every sticker you've earned (profile.mjs stickers, an achievement's reward), a small decal in its
 //              colour, anywhere on the plastic: the top, either side or the chin. They may overlap each other, never
 //              the glass, the knobs, the plate or the lamps. Dragged into place on Rig → Casing.
@@ -14,10 +13,10 @@
 // are read as places: stuck() and stood()). System → Casing turns it all off with the casing (app.js casing()); phones never show it.
 import { emit, warn } from './combat.mjs';
 import { earned, achievements } from './achievements.mjs';
-import { titleById, myProfile, stickerById } from './profile.mjs';
+import { stickerById } from './profile.mjs';
 import { DISTRICTS, DISTRICT_IDS } from './districts.mjs';
 
-export const CASING = { plate: 16, stock: 'BLACKBOX · MODEL 7' };
+export const CASING = { stock: 'BLACKBOX · MODEL 7' };
 // The colourways: their name and the achievement that brings each (its id). Their colours live in casing.css.
 export const COLORWAYS = {
   stock: { name: 'Stock', tip: 'Dark grey plastic, as it shipped.' },
@@ -81,8 +80,7 @@ export function decalsOwned(s) {
 export function casingLook(s) {
   const C = s.cosmetics || {}, owned = new Set(decalsOwned(s).map((x) => x.id));
   const color = COLORWAYS[C.case] && colorwayOpen(s, C.case) && C.case !== 'stock' ? C.case : null;
-  const t = C.plate?.title && (s.profile?.titles || []).includes(C.plate.title) ? titleById(C.plate.title) : null;
-  const plate = t ? `MODEL 7 · ${t.name.toUpperCase()}` : C.plate?.text ? C.plate.text.toUpperCase() : CASING.stock;
+  const plate = CASING.stock; // the nameplate option is off for now (a saved plate stays in s.cosmetics.plate)
   const decals = stuck(C).filter((x) => owned.has(x.id) && stickerById(x.id)).map((x) => ({ ...stickerById(x.id), side: x.side, u: x.u, v: x.v }));
   return { color, plate, decals };
 }
@@ -92,37 +90,21 @@ const DECAL_MARK = { faction: '##', set: '[]', floor: '\\/', lair: 'x_x', deed: 
 export const decalMarkup = (x) => `<span class="decal k-${x.kind}" style="--sc:${x.color}" data-sticker="${escHtml(x.id)}" title="${escHtml(x.tip)}"><i aria-hidden="true">${DECAL_MARK[x.kind] || '*'}</i>${escHtml(x.label)}</span>`;
 
 // ---------- commands ----------
-// casing color <name>, casing plate <text>|title <title>|stock, casing sticker <sticker> [top|left|right|chin [0-100
+// casing color <name>, casing sticker <sticker> [top|left|right|chin [0-100
 // [0-100]]]|off, casing prop <prop> [desk|top [0-100]]|off. (casing on|off is app.js's: the casing itself.)
-const USAGE = 'casing color <name>, casing plate <text>|title <title>|stock, casing sticker <sticker> [top|left|right|chin]|off, casing prop <prop> [desk|top]|off';
+const USAGE = 'casing color <name>, casing sticker <sticker> [top|left|right|chin]|off, casing prop <prop> [desk|top]|off';
 const NEW_U = [0.22, 0.74, 0.3, 0.66, 0.16, 0.8, 0.36, 0.6], NEW_PROP_U = [0.11, 0.79, 0.05, 0.9, 0.6, 0.7]; // where a new one lands
 const pct = (w, d) => (w != null && /^\d+(\.\d+)?$/.test(w) ? Number(w) / 100 : d);
-const plain = (t) => /^[\x20-\x7e]*$/.test(t);
 export function casingCommand(s, raw) {
   const words = String(raw).trim().split(/\s+/), verb = (words[1] || '').toLowerCase(), rest = words.slice(2).join(' ');
   const C = cosmeticsOf(s);
-  if (!verb) return emit(s, 'info', `Casing: ${COLORWAYS[C.case].name}, plate ${casingLook(s).plate}, ${casingLook(s).decals.length} stickers, ${propsLook(s).length} props. casing color|plate|sticker|prop`);
+  if (!verb) return emit(s, 'info', `Casing: ${COLORWAYS[C.case].name}, ${casingLook(s).decals.length} stickers, ${propsLook(s).length} props. casing color|sticker|prop`);
   if (verb === 'color' || verb === 'colour') {
     const want = rest.toLowerCase(), id = COLORWAY_IDS.find((k) => k === want || COLORWAYS[k].name.toLowerCase() === want);
     if (!id) return warn(s, `No monitor color called ${rest || 'that'}. ${COLORWAY_IDS.join(', ')}.`);
     if (!colorwayOpen(s, id)) { const a = colorwayFrom(id); return warn(s, `${COLORWAYS[id].name} comes with ${a?.hidden ? 'a hidden achievement' : a?.name || 'an achievement'}.`); }
     C.case = id;
     return emit(s, 'info', `Casing: ${COLORWAYS[id].name}.`);
-  }
-  if (verb === 'plate') {
-    const low = rest.toLowerCase();
-    if (!rest || low === 'stock' || low === 'off') { C.plate = null; return emit(s, 'info', `Plate: ${CASING.stock}.`); }
-    if (low.startsWith('title ')) {
-      const q = low.slice(6).trim(), t = (myProfile(s).titles || []).map(titleById).find((x) => x && (x.id === q || x.name.toLowerCase() === q || x.name.toLowerCase().replace(/^(the|of) /, '') === q));
-      if (!t) return warn(s, `No title of yours called ${q}. titles lists them.`);
-      C.plate = { title: t.id };
-      return emit(s, 'info', `Plate: MODEL 7 · ${t.name.toUpperCase()}.`);
-    }
-    const text = rest.replace(/^text\s+/i, '').replace(/\s+/g, ' ').trim();
-    if (!plain(text)) return warn(s, 'Plain keyboard characters only.');
-    if (text.length > CASING.plate) return warn(s, `A plate is ${CASING.plate} characters at most.`);
-    C.plate = { text };
-    return emit(s, 'info', `Plate: ${text.toUpperCase()}.`);
   }
   const w = words.slice(2).map((x) => x.toLowerCase()), off = ['off', 'none'].includes(w.at(-1));
   if (off) w.pop();

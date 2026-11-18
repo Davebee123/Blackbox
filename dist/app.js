@@ -78,6 +78,7 @@ import { wireRoutines } from './routines-ui.mjs';
 import { createCoop } from './coop-ui.mjs';
 import { humansReady } from './coop.mjs';
 import * as PG from './pager.mjs';
+import { shownCount, tableTip, tableKind } from './table.mjs';
 import * as PGV from './pager-view.mjs';
 import * as PI from './pings.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
@@ -2056,6 +2057,7 @@ function renderMeters() {
       `Integrity: ${hp}/${max}. Your health at home and on a run. It rests back at home${resting ? ` (${f < toConnect ? `${Math.ceil(max * toConnect)} to connect` : 'full'} in ${eta.textContent})` : ''}; an invasion chips it, never below 1.`);
   }
   $('vault-value').textContent = srv.credits;
+  tableMeter();
   const s = shown();
   // Fight and Run tabs appear only while there is a fight or a run.
   $('tab-combat').hidden = !active(campaign);
@@ -2743,7 +2745,7 @@ function services() {
     if (now - netSaved > 10000) { netSaved = now; save(); }
   }
   if (module === 'mail' && $('pay-left')) $('pay-left').textContent = V.fmtTime(nextPayIn(campaign, now));
-  if (module === 'map') V.readoutSync(campaign, document.querySelector('.init-readout')); // INIT's table: the Readout's count, in place
+  tableMeter(); // INIT's table: the header's count, in place
   // An event up (events.mjs): its card's ring drains and a feud's bar drifts, so the map redraws now and then.
   if (module === 'map' && campaign.events?.length && now - (services.ev || 0) > 5000) { services.ev = now; markDirty(); }
   // Offers and shelves count down: refresh those pages now and then.
@@ -3883,14 +3885,12 @@ $('profile').addEventListener('submit', (e) => {
   profileUi();
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && profileOn) { profileOn = null; profileUi(); } });
-// System → Casing: your own plate (casing.mjs). Empty puts the stock plate back.
-document.addEventListener('submit', (e) => {
-  if (!e.target.closest('[data-cs-plate]')) return;
-  e.preventDefault();
-  const t = $('cs-plate-in').value.trim();
-  run(t ? `casing plate text ${t}` : 'casing plate stock');
-});
-
+// INIT's table in the header (table.mjs): the count, its tooltip what the band does now. Written only when it moves.
+function tableMeter() {
+  const el = $('meter-table'), n = shownCount(campaign);
+  if (+el.dataset.n === n) return;
+  el.dataset.n = n; $('table-value').textContent = `${n}%`; el.title = tableTip(campaign); el.dataset.ttKind = `INIT's table · ${tableKind(campaign)}`;
+}
 function setComms(open) {
   commsOpen = open;
   if (open) { seeAll(campaign); save(); }
