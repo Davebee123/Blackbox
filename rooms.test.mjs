@@ -189,7 +189,8 @@ test('respawns: a fallen room comes back on its timer (never while you stand in 
   // A cache: taken, then full again 2 hours later.
   const c = roomOfKind(s, 'cache');
   R.screen = null; place(s, c.id);
-  FP.act(s, 'pull');
+  const took = FP.act(s, 'pull').find((e) => e.fx)?.fx;
+  assert.deepEqual(took, { kind: FP.isBait(s, c) ? 'bait' : 'cache', room: c.id, lid: true }, 'its Lid on the map (roomfx.mjs)');
   assert.equal(FP.cacheFull(s, c), false);
   tick(2 * 3600000);
   assert.equal(FP.cacheFull(s, c), true);
@@ -298,7 +299,7 @@ test('the rest room: 30% of your max, once a visit', () => {
   const s = server(), R = s.rooms, rest = roomOfKind(s, 'rest');
   place(s, rest.id);
   R.signal = 10;
-  FP.act(s, 'rest');
+  assert.deepEqual(FP.act(s, 'rest').find((e) => e.fx)?.fx, { kind: 'rest', room: rest.id }, 'its breaths on the map (roomfx.mjs)');
   assert.equal(R.signal, 10 + Math.round(R.max * FP.ROOMS.rest));
   FP.act(s, 'rest');
   assert.equal(R.signal, 10 + Math.round(R.max * FP.ROOMS.rest), 'once a visit');

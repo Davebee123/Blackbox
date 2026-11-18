@@ -256,6 +256,13 @@ export const VOICES = {
   },
   // A vault opened, until the samples load: the latch and its rising pair.
   vault(ctx, out, t) { VOICES.unlock(ctx, out, t + 0.7); },
+  // The room verbs (roomfx.mjs), until the samples load: the pickup, or the good note.
+  cache(ctx, out, t) { VOICES.pickup(ctx, out, t + 0.6); },
+  bait(ctx, out, t) { VOICES.pickup(ctx, out, t + 1.1); },
+  rest(ctx, out, t) { VOICES.good(ctx, out, t + 1.7); },
+  files(ctx, out, t) { VOICES.pickup(ctx, out, t + 0.56); },
+  key(ctx, out, t) { VOICES.unlock(ctx, out, t + 0.8); },
+  socket(ctx, out, t) { VOICES.unlock(ctx, out, t + 0.32); },
   // You took something: a quick bright pickup.
   pickup(ctx, out, t) {
     const e = echo(ctx, out, { wet: 0.25 });
@@ -541,6 +548,50 @@ export const RECIPES = {
     const k = Math.max(1, Math.min(4, n));
     for (let i = 0; i < k; i++) { const at = 1.54 + i * 0.15; S('drop', at, { gain: 0.45 }); chime(ctx, out, t + at, [84, 88, 91, 96][i], { d: 0.25, peak: 0.22 }); }
     chime(ctx, out, t + 1.64 + (k - 1) * 0.15, 96, { d: 0.7, peak: 0.16 }); S('glassui', 1.64 + (k - 1) * 0.15, { gain: 0.3, rate: 1.2 });
+  } },
+  // A cache taken (the *Lid*, roomfx.mjs): the latch and the lid, then the pay ticking into your pack, a note higher each.
+  cache: { room: 0.16, play(ctx, out, t, o, S) {
+    S('relay', 0, { gain: 0.45, rate: 1.1 }); S('plate-h', 0.02, { gain: 0.18, rate: 1.6, hp: 900 });
+    [79, 83, 86, 91].forEach((m, i) => { const at = 0.68 + i * 0.11; S('tin', at, { gain: 0.3, rate: 1 + i * 0.1 }); chime(ctx, out, t + at, m, { d: 0.18, peak: 0.16 }); });
+    S('drop', 1.1, { gain: 0.4 });
+  } },
+  // A bait cache: the lid, the canary's two chirps and your Signal draining, then the pay.
+  bait: { room: 0.12, play(ctx, out, t, o, S) {
+    S('relay', 0, { gain: 0.45, rate: 1.1 });
+    const bp = ctx.createBiquadFilter(); bp.type = 'lowpass'; bp.frequency.value = 5000; bp.connect(out);
+    for (const at of [0.16, 0.3]) osc(ctx, bp, t + at, { type: 'square', f0: 3300, a: 0.002, peak: 0.06, d: 0.06 });
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(out);
+    osc(ctx, lp, t + 0.46, { type: 'sawtooth', f0: 110, f1: 55, glide: 0.5, a: 0.004, peak: 0.18, d: 0.55 }); S('soft-m', 0.46, { gain: 0.5, rate: 0.8, lp: 900 });
+    [0, 1].forEach((i) => S('tin', 1.12 + i * 0.11, { gain: 0.25, rate: 0.9 + i * 0.1 }));
+  } },
+  // A rest (*Breathe*): two slow breaths over a warm low fifth, then a rising pair.
+  rest: { room: 0.3, play(ctx, out, t) {
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1200; lp.connect(out);
+    for (const at of [0, 0.9]) {
+      noise(ctx, out, t + at, { type: 'bandpass', f0: 500, f1: 1400, q: 0.8, glide: 0.6, a: 0.35, peak: 0.12, d: 0.45 });
+      osc(ctx, lp, t + at + 0.05, { type: 'triangle', f0: NOTE(55), a: 0.3, peak: 0.12, d: 0.7 });
+      osc(ctx, out, t + at + 0.05, { type: 'sine', f0: NOTE(62), a: 0.3, peak: 0.08, d: 0.7 });
+    }
+    chime(ctx, out, t + 1.7, 74, { d: 0.6, peak: 0.16 }); chime(ctx, out, t + 1.82, 81, { d: 0.9, peak: 0.16 });
+  } },
+  // Files into your pack (the entry's, the vault's leftovers): each lands a note higher. o.n: how many.
+  files: { room: 0.16, play(ctx, out, t, { n = 1 } = {}, S) {
+    S('relay', 0, { gain: 0.35, rate: 1.2 });
+    for (let i = 0; i < Math.max(1, Math.min(4, n)); i++) { const at = 0.56 + i * 0.15; S('drop', at, { gain: 0.45 }); chime(ctx, out, t + at, [84, 88, 91, 96][i], { d: 0.25, peak: 0.2 }); }
+  } },
+  // A vault key won: it rises with a glint, and lands with a latch and a bright ping.
+  key: { room: 0.2, play(ctx, out, t, o, S) {
+    S('metal-l', 0, { gain: 0.3, rate: 1.4 }); osc(ctx, out, t, { type: 'triangle', f0: NOTE(76), f1: NOTE(88), glide: 0.4, a: 0.004, peak: 0.1, d: 0.45 });
+    S('relay', 0.8, { gain: 0.5, rate: 1.1 }); chime(ctx, out, t + 0.82, 88, { d: 0.6, peak: 0.24 }); S('glassui', 0.82, { gain: 0.3, rate: 1.3 });
+  } },
+  // A program built in a socket: it drops in like a cartridge, its pins tick, and it boots with a modem chirp.
+  socket: { room: 0.14, play(ctx, out, t, o, S) {
+    S('whoosh', 0, { gain: 0.25, rate: 1.3 });
+    S('plate-l', 0.32, { gain: 0.4, rate: 1.2, lp: 3000 }); S('relay', 0.33, { gain: 0.45, rate: 0.85 });
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 4000; lp.connect(out);
+    for (let i = 0; i < 4; i++) osc(ctx, lp, t + 0.44 + i * 0.07, { type: 'square', f0: 1200 + i * 220, a: 0.002, peak: 0.04, d: 0.05 });
+    modem(ctx, out, t + 0.77, { dur: 0.22, peak: 0.05 });
+    chime(ctx, out, t + 1.07, 83, { d: 0.5, peak: 0.18 });
   } },
   // You took something: it drops into your pack.
   pickup: { room: 0.16, play(ctx, out, t, o, S) {

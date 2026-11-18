@@ -87,6 +87,14 @@ export const SIGNS = {
   unlock: { flash: 'fx-good', float: 'you', voice: 'unlock', buzz: [12, 30, 20] },
   // A vault opened: the Dial (roomfx.mjs draws it on the map). detail.n: its files.
   vault: { voice: 'vault', buzz: [8, 160, 8, 160, 8, 220, 30] },
+  // The other room verbs (roomfx.mjs draws them on the map): a cache, a bait cache, a rest, files into your pack, a vault
+  // key won, a program built in a socket.
+  cache: { voice: 'cache', buzz: [10, 60, 6, 60, 6] },
+  bait: { voice: 'bait', buzz: [10, 120, 40, 40, 160] },
+  rest: { voice: 'rest', buzz: [20, 700, 20] },
+  files: { voice: 'files', buzz: [8, 140, 8] },
+  key: { voice: 'key', buzz: [10, 780, 20] },
+  socket: { voice: 'socket', buzz: [6, 300, 24] },
   // You pulled a file into your pack.
   pickup: { flash: 'fx-good', float: 'you', voice: 'pickup', buzz: 12 },
   // The fight is won.
