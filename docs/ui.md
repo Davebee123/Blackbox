@@ -364,7 +364,7 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
 
 - **The monitor casing** (immersive shell, desktop): BLACKBOX · MODEL 7, two knobs (sound, speed) and labelled lamps
   (PWR, GATE, WALL, NET, INST, DMN) that glow with real state and blink at medium and bold.
-- **Rig → Casing** (`casing-view.mjs`): a rail of sections (Monitor color, Nameplate, Stickers, Props, Window), each
+- **Rig → Casing** (`casing-view.mjs`): a rail of sections (Monitor color, Stickers, Props, Window), each
   with what it holds now; the open one's options fill the pane beside it. On a phone the rail is a strip of tabs.
 - **Casing cosmetics** (`casing.mjs`, `casing.css`): only the casing changes, never the screen. A monitor color sets only
   `--case-*` variables, each read in style.css with the stock colour as its fallback, and fills the bezel's frame with

@@ -45,12 +45,14 @@ export const intelXpMult = (s) => 1 + TABLE.intelXp * clear(s);
 export const trashItemMult = (s) => 1 + TABLE.trashItems * full(s);
 export const clearOddsMult = (s) => 1 + TABLE.clearOdds * clear(s);
 export const rareMult = (s) => 1 + TABLE.rare * clear(s);
-// The Readout's tooltip (WoW's grammar): its name, its kind, what the band does now, the answer muted.
 export const ORPHAN_TIP = 'Orphan\nA trade still waiting for its other side.\nBreaking it frees a slot.';
+// The header meter's tooltip (app.js tableMeter), in WoW's grammar: the name, the band as its kind (tableKind), what
+// the band does at this count, then the answer, muted.
+export const tableKind = (s) => (full(s) > 0 ? 'Full band' : clear(s) > 0 ? 'Clear band' : 'Between the bands');
 export function tableTip(s) {
-  const n = shownCount(s), f = full(s), c = clear(s), pct = (x) => `${Math.round(x * 100)}%`;
-  const now = f > 0 ? `Full: orphans are 1 stray in ${Math.round(1 / orphanShare(s))}, orphan kills pay +${pct(TABLE.orphanXp * f)} XP, trash drops whites and blues ${(1 + TABLE.trashItems * f).toFixed(2)}× as often, and elites bring an orphan along.`
-    : c > 0 ? `Clear: orphans are 1 stray in ${Math.round(1 / orphanShare(s))}, Break-ins and Intel pay +${pct(TABLE.intelXp * c)} XP, elites, ★ rare spawns and vaults drop blues and yellows ${(1 + TABLE.clearOdds * c).toFixed(2)}× as often, and ★ rare spawns turn up ${(1 + TABLE.rare * c).toFixed(2)}× as often.`
-    : 'Between the bands: orphans are 1 stray in 8, and the net runs as it is.';
-  return `INIT's table\nProcess table at ${n}%\n${now}\nTime logged on fills it; orphans broken, servers Mapped and Orphans contracts empty it.`;
+  const f = full(s), c = clear(s), pct = (x) => `${Math.round(x * 100)}%`, x = (m) => `${m.toFixed(2)}×`;
+  const now = f > 0 ? [`Orphans are 1 stray in ${Math.round(1 / orphanShare(s))}.`, `Orphan kills pay +${pct(TABLE.orphanXp * f)} XP.`, `Trash drops whites and blues ${x(1 + TABLE.trashItems * f)} as often.`, 'Elites bring an orphan along.']
+    : c > 0 ? [`Orphans are 1 stray in ${Math.round(1 / orphanShare(s))}.`, `Break-ins and Intel pay +${pct(TABLE.intelXp * c)} XP.`, `Elites, ★ rare spawns and vaults drop blues and yellows ${x(1 + TABLE.clearOdds * c)} as often.`, `★ rare spawns turn up ${x(1 + TABLE.rare * c)} as often.`]
+    : ['Orphans are 1 stray in 8.', 'The net runs as it is.'];
+  return `Process table: ${now.join('\n')}\nThe Full band starts at ${TABLE.full[0]}%, the Clear band at ${TABLE.clear[0]}%.\nTime logged on fills it. Orphans broken, servers Mapped and Orphans contracts empty it.\n▸ Break orphans to clear it, or let it fill.`;
 }

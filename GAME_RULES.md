@@ -2422,8 +2422,7 @@ Each band grows from its edge to its end:
 | XP | Orphan kills +25% | Break-ins and Intel +25% |
 | Gear | Trash rolls a white or blue up to 1.5× as often | Blue and yellow odds up to ×1.4 on elites, ★ rare spawns and vaults |
 
-The *Readout* at the network map's top right shows the count over a strip (Clear grey, Full amber, the count a white
-tick); its tooltip says what the band does now.
+The header shows it as *Process table N%*; its tooltip says what the band does now.
 
 ## The scanner
 
@@ -3035,8 +3034,7 @@ every five minutes (`weather <…>` holds one). **Districts:** The Sprawl (alway
 Stacks (*Mapper*), Coldline (*On the Signal*) and Tar Beach (*Every Crown*), picked on Rig → **Casing** or with `district <name>`.
 
 **Casing cosmetics** (Rig → **Casing**), each an achievement's reward, only ever the casing: a **monitor color** (Stock
-and eight more; `casing color <name>`), the **nameplate** (stock, a title you hold, or 16 characters of your own;
-`casing plate …`), **stickers** and **props**. Every sticker you own can go on, anywhere on the plastic: the top, either
+and eight more; `casing color <name>`), **stickers** and **props**. Every sticker you own can go on, anywhere on the plastic: the top, either
 side or the chin. They may overlap each other, never the screen, the knobs, the plate or the lamps. Props stand on the
 desk or, when the window leaves room over it, on top of the monitor. A click on Rig → Casing puts one on or takes it
 off, and while that page is open you drag them into place on the casing itself (`casing sticker <sticker>
