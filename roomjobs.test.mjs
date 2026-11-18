@@ -8,6 +8,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, hooks, restore, selectEncounter } from './dist/combat.mjs';
 import { CONFIG } from './dist/data.mjs';
+import { familyName } from './dist/families.mjs';
 import { play } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { addrsOf, byAddr, sweepRooms } from './dist/address.mjs';
@@ -370,7 +371,7 @@ test('contract marks: the rooms you know whose live virus a kill, strain or boun
   assert.ok(!marked(roomsMarkup(s)).has(g.core), 'not once it is yours');
 });
 
-test('a fight room is named by the virus in it: on its plate (its stem and tag alone), its card and its tooltip; cleared, by its kind again', () => {
+test('a fight room is named by the virus in it: on its card and its tooltip, its family on its plate; cleared, by its kind again', () => {
   const { s, loc } = setup();
   play(s, 'connect ' + loc.id);
   const R = s.rooms;
@@ -382,12 +383,13 @@ test('a fight room is named by the virus in it: on its plate (its stem and tag a
   assert.equal(labelOf(s, room), name);
   const chip = (html, id) => html.match(new RegExp(`data-room="${id}"[\\s\\S]*?(?=<g class="fp-room|$)`))[0];
   let html = roomsMarkup(s);
-  assert.match(chip(html, room.id), new RegExp(`class="fp-name"[^>]*>${name.match(/\S+-\d{4}$/)[0]}</text>`), 'the plate: its stem and tag');
+  assert.match(chip(html, room.id), new RegExp(`class="fp-name"[^>]*>${familyName(room.family).toUpperCase()}</text>`), 'the plate: its family');
   assert.match(chip(html, room.id), new RegExp(`title="${name}: `));
   if (elite) {
     const en = FP.virusName(s, elite);
     assert.match(en, /^ELITE /);
-    assert.match(chip(html, elite.id), new RegExp(`class="fp-name"[^>]*>${en.match(/\S+-\d{4}$/)[0]}</text>`), 'the elite chip says Elite already');
+    assert.match(chip(html, elite.id), new RegExp(`class="fp-name"[^>]*>${familyName(elite.family).toUpperCase()}</text>`), 'the elite chip: its family (its rank tag says Elite)');
+    assert.match(chip(html, elite.id), /class="fp-tag elite"/);
   }
   const ui = { sel: null, selAt: null, closed: null };
   pickRoom(s, room.id, ui);
