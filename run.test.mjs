@@ -456,11 +456,11 @@ test('talent tree: six tiers of three open by level, picking and swapping is fre
   assert.match(command(s, 'talent 1 a').at(-1).message, /at home/);
 });
 
-test('the loadout page: Protocols (the board, the stash, the stats), then Skills and talents, picks locked during a fight', async () => {
+test('the loadout page: Skills and talents, then Protocols (the board, the stash, the stats), picks locked during a fight', async () => {
   const { loadoutMarkup } = await import('./dist/view.mjs');
   const s = fresh();
   let html = loadoutMarkup(s, 'breaker');
-  assert.match(html, /data-ltab="protocols" aria-selected="true">Protocols<.*data-ltab="skills"[^>]*>Skills and talents/s, 'Protocols first, then skills and talents together');
+  assert.match(html, /data-ltab="skills"[^>]*>Skills and talents.*data-ltab="protocols" aria-selected="true">Protocols<.*data-ltab="daemons".*data-ltab="program"[^>]*>Programs</s, 'Skills and talents, Protocols, Daemons, Programs');
   assert.match(html, /class="loadout-protocols silk"><section class="card silk-card"><h2>Protocols · Breaker.*class="silk-board".*<section class="card stash-card silk-stash"><h2>Stash · [^]*?<\/section><section class="card silk-statcard"><h2>Stats<\/h2>/s, 'the board, the stash, the stats: no datasheet card');
   assert.doesNotMatch(html, /silk-sheet|aria-label="Datasheet"/);
   assert.match(loadoutMarkup(s, 'operator'), /Protocols belong to the class in use/, 'another class: no protocol slots to change');
