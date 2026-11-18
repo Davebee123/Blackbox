@@ -30,7 +30,7 @@ test('each part row shows its attack in the column where it lands', () => {
 
 test('the HUD shows the virus and your health side by side', () => {
   const s = start();
-  assert.match(hudMarkup(s), /Your server/);
+  assert.match(hudMarkup(s), /Your Integrity/, 'one bar, at home too');
   assert.match(hudMarkup(s), new RegExp(`class="vname"><strong>${s.encounter.virus.name}</strong>`), 'the virus\'s name labels its bar');
 });
 

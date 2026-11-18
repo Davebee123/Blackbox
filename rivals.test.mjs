@@ -84,7 +84,7 @@ test('walking into its room starts it too', () => {
   assert.equal(R.screen?.kind, 'rival');
 });
 
-test('the lineup: 2 fights on floors 1–2, 3 from floor 3, one after another; Signal carries, a counter-pick between', () => {
+test('the lineup: 2 fights on floors 1–2, 3 from floor 3, one after another; Integrity carries, a counter-pick between', () => {
   for (const [floor, n] of [[1, 2], [2, 2], [3, 3], [5, 3]]) assert.equal(RV.RIVAL.fights(floor), n);
   const s = onServer({ floor: 2 }), R = s.rooms, v = RV.spawnRival(s, 99, E);
   assert.equal(v.fights, 2);
@@ -96,7 +96,7 @@ test('the lineup: 2 fights on floors 1–2, 3 from floor 3, one after another; S
   assert.equal(R.screen?.kind, 'rival');
   assert.ok(R.screen.between);
   assert.ok(RV.COUNTERS[v.next.counter], 'a counter-pick, shown before you engage');
-  assert.ok(FP.sigOf(s) <= 100, 'your Signal carries: what the fight left you');
+  assert.ok(FP.sigOf(s) <= 100, 'your Integrity carries: what the fight left you');
   const card = roomsMarkup(s);
   assert.match(card, /1 of 2 down/);
   assert.match(card, new RegExp(RV.COUNTERS[v.next.counter].name));

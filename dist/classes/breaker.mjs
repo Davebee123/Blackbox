@@ -71,13 +71,13 @@ function missed(s, ctx) {
   emit(s, 'miss', `${ctx.a.name} MISSES${ctx.target ? ' ' + ctx.target.name : ''}.`, { target: ctx.target?.id, ability: ctx.id });
   return true;
 }
-// Signal (Integrity at home) a skill costs. Never your last point.
+// Integrity a skill costs. Never your last point.
 const costOf = (s, id) => (hasTalent(s, 'liquid-cooling') ? 0 : scaled(s, A(id).cost)); // Liquid Cooling: free
 function pay(s, id) {
   const d = defender(s), n = Math.min(costOf(s, id), d.integrity - 1);
   if (n <= 0) return;
   d.integrity -= n;
-  emit(s, 'status', `${A(id).name} costs you ${n}. ${s.encounter.mode === 'run' ? 'Signal' : 'Server'} ${d.integrity}/${d.max}.`, { amount: n, ability: id });
+  emit(s, 'status', `${A(id).name} costs you ${n}. ${s.encounter.mode === 'run' ? 'Integrity' : 'Server'} ${d.integrity}/${d.max}.`, { amount: n, ability: id });
 }
 const afford = (s, id) => (costOf(s, id) && defender(s).integrity <= costOf(s, id) ? `${A(id).name} costs ${costOf(s, id)} and you only have ${defender(s).integrity}.` : null);
 // Break chits off a part outside a hit (Shaped Charge, Cluster Charge, Bit Rot). Lights Shatter when it's bare.
@@ -264,7 +264,7 @@ const validate = {
 };
 
 // ---------- capstones (levels 45 and 50: capValue in combat.mjs) ----------
-// Thermal Paste (Overclocker): each Momentum stack you spend heals you for a share of your max Signal.
+// Thermal Paste (Overclocker): each Momentum stack you spend heals you for a share of your max Integrity.
 function thermalPaste(s, spent) {
   const v = isOC(s) ? capValue(s, 'thermal-paste') : 0;
   if (v && spent > 0) heal(s, Math.max(1, Math.round(defender(s).max * v * spent)), 'Thermal Paste');
@@ -540,7 +540,7 @@ function planDemo(s, t) {
 
 function planOC(s, t) {
   const e = s.encounter, st = momentumStacks(s), due = dueNow(s), d = defender(s);
-  // Vent the heat: Corrupted, encryption or a scramble on you, or low with stacks to turn into Signal.
+  // Vent the heat: Corrupted, encryption or a scramble on you, or low with stacks to turn into Integrity.
   const dirty = e.corrupt || e.encrypt >= 6 || e.burst || e.scrambleUntil >= e.cycle;
   if ((dirty && st >= 1) || (dirty && !healthy(s, 0.5)) || (!healthy(s, 0.35) && st >= 2)) { if (ok(s, 'vent')) return 'vent'; }
   if (livingParts(s).some((p) => (bare(p) || p === t) && killable(s, p))) return null; // a kill first

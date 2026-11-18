@@ -4,7 +4,7 @@
 //   cache   the *Lid*: the lid on its icon tips up, light comes out, credits and code tick into your Pack. A stash or a
 //           hidden room's: the light and the flight.
 //   bait    the Lid, then a red canary blinks twice on the chip before the pay ticks in.
-//   rest    *Breathe*: the room glows in two slow breaths (its moon swelling) and teal light rises into your Signal.
+//   rest    *Breathe*: the room glows in two slow breaths (its moon swelling) and teal light rises into your Integrity.
 //   entry   the files left for you fly into your Pack.
 //   key     a guard's vault key rises off its room into your Keys.
 //   socket  the program drops into the socket like a cartridge and its light pulses as it boots.
@@ -104,7 +104,7 @@ function cache(c, { bait = false, lidded = true } = {}) {
   items.forEach((x, i) => fly(mouth(c), '.fp-packstat', BIT(x), AMBER, { delay: at + i * 110, dur: 480, lift: 36 }));
   gone(layer, at + items.length * 110 + 900);
 }
-// A rest: two breaths over 1.9 s; six motes rise into your Signal from 0.3 s, 200 ms apart.
+// A rest: two breaths over 1.9 s; six motes rise into your Integrity from 0.3 s, 200 ms apart.
 function rest(c) {
   const layer = layerOf(c), moon = c.g.classList.contains('k-rest') ? iconOver(c, layer, () => true) : null;
   glowIn(layer, null, [0, 1, 0.2, 1, 0], { duration: 1900, easing: 'ease-in-out' });

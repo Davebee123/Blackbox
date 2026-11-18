@@ -62,8 +62,8 @@ const robinShut = (s, p) => { const k = answers() && s.encounter.virus.robin; re
 export const mostThreat = (s) => livingParts(s).filter((p) => reachable(s, p)).map((p) => ({ p, k: (threatOf(p) * invested(s, p) * order(s, p) * robinShut(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
 const bare = (p) => alive(p) && !p.armor;
 // A Trojan's Package while its Loader lives (families.mjs): any damage unpacks it, so a player leaves it alone.
-// A Botnet (families.mjs): an area kit farms its Zombies while its Signal holds; any other kit, or one under half its
-// Signal, ends it at the C&C (the Zombies scatter).
+// A Botnet (families.mjs): an area kit farms its Zombies while its Integrity holds; any other kit, or one under half its
+// Integrity, ends it at the C&C (the Zombies scatter).
 const ending = (s) => (!ignores('volley') && (defender(s).integrity < defender(s).max / 2 || !usable(s).some((id) => AREA.has(id))) && livingParts(s).find((x) => x.cnc && x.zombies && reachable(s, x))) || null;
 const shunned = (s, p) => (!!p?.pkg && !p.pkg.inert && livingParts(s).some((x) => x.id === 'loader')) || (!!p?.zombie && !!ending(s));
 const shunning = (s) => livingParts(s).some((p) => shunned(s, p));
@@ -327,7 +327,7 @@ function heedBend(s, move) {
   if (!dec || !at || dec.unmaskUntil >= e.cycle || e.buffs?.sudo >= e.cycle) return move;
   const b = bendOf(s, dec), aim = part(s, at);
   if (!b?.to || !aim || !bends(s, id, b.to)) return move;
-  // What the command is worth where it lands, in Signal: what it deals there, counted in your key 1's hits, each worth a
+  // What the command is worth where it lands, in Integrity: what it deals there, counted in your key 1's hits, each worth a
   // cycle of the virus's pace (on a part with no attack, half: it can wait; on ◆, a lesser move's worth), less what
   // bounces back. A command with no hit is worth a cycle where it lands. Quiet is worth half a cycle (TELL.copy.lesser),
   // hold nothing.

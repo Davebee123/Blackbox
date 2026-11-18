@@ -35,7 +35,7 @@
 //              yours to play. The program plays the rest of the fight and never targets it; once it's gone, or you
 //              have acted on it, the program takes it too. Only excepted parts left: it holds (nothing fires). A boss,
 //              lair boss, Resident or crew boss: the whole fight is yours. One cue a fight.
-//   rails      auto jack-out at a Signal share you set (off, 10–50%), with your pack; stop-before-danger (on by
+//   rails      auto jack-out at an Integrity share you set (off, 10–50%), with your pack; stop-before-danger (on by
 //              default): a walk never steps into an elite, a boss, the Resident or a vault guard.
 //
 // Rewards: a program's fight pays exactly what the same fight pays you (nothing here touches XP or loot).
@@ -59,8 +59,8 @@ export const ROUTINES = {
   unlockLevel: 5, // the class level routines open at; below it the timer repeats your last hit
   ram: [4, 10], // RAM at class level 1 and at 50, a straight line between: every routine's base
   long: 6, // a cooldown this long or longer stays your call unless a handler names it
-  jackOut: [0, 10, 20, 30, 40, 50], // the auto jack-out line, % of your max Signal (0: off)
-  low: 0.5, // "under half": a part's Integrity, your Signal
+  jackOut: [0, 10, 20, 30, 40, 50], // the auto jack-out line, % of your max Integrity (0: off)
+  low: 0.5, // "under half": a part's Integrity, your Integrity
   fragments: 2, encrypted: 3,
   sealDear: 2, sealOut: 2, // seal dear (docs/puzzle-levers.md 7): a seal that lands within sealOut cycles on a part still wearing sealDear ◆ or more
   danger: ['elite', 'guard', 'core', 'boss'], // rooms a walk stops before
@@ -69,7 +69,7 @@ export const ROUTINES = {
   mastery: { per: 3, cap: 6, full: 1 }, // Codex mastery's RAM, per virus: +1 for every 3 of its parts mastered (at most 6), +1 more with all of them
   gearRam: 3, // the most RAM your gear adds (the RAM stat, gear.mjs)
   bench: 50, benchCycles: 80, // the benchmark: fights against a virus's builds at your level, and the cycles before one counts as lost
-  cueLow: 0.3, // the Signal cue's line (a share of your max)
+  cueLow: 0.3, // the Integrity cue's line (a share of your max)
   armorRam: 0, // what Break ◆ first costs a routine: free, since it's on by default (a cost would cut every routine's RAM, and push the last handler of a full one out)
 };
 export const LOCKED = `Routines unlock at level ${ROUTINES.unlockLevel}.`;
@@ -112,7 +112,7 @@ const chipFits = (cond, spec) => !PART_WHEN[cond]?.gene || !!(spec && GENES[PART
 const anyKey = (s, end, tier) => Object.keys(s.research || {}).some((k) => k.endsWith(':' + end) && researchAt(s, k) >= tier);
 export const GLOBAL_WHEN = {
   always: { ram: 1, icon: 'cron', label: 'every cycle', tip: 'Every cycle the timer runs out.', open: () => true },
-  hurt: { ram: 1, icon: 'signal', label: 'you under half', tip: 'Your Signal (or Integrity at home) is under half.', open: () => true },
+  hurt: { ram: 1, icon: 'integrity', label: 'you under half', tip: 'Your Integrity is under half.', open: () => true },
   fragments: { ram: 2, icon: 'worm', label: `${ROUTINES.fragments}+ fragments`, tip: `${ROUTINES.fragments} or more fragments are on the board.`, open: (s) => anyKey(s, 'replicator', TIER.decoded) },
   encrypted: { ram: 2, icon: 'lock', label: `encrypted ${ROUTINES.encrypted}+`, tip: `Your encryption is ${ROUTINES.encrypted} or more.`, open: (s) => anyKey(s, 'encryptor', TIER.decoded) },
   anytell: { ram: 2, icon: 'counter', label: 'any tell live', tip: 'A tell on any part can be answered this cycle.', open: (s) => Object.keys(s.research || {}).some((k) => researchAt(s, k) >= TIER.rule) },
@@ -662,12 +662,12 @@ export function railCheck(s) {
   run.railAt = pct;
   if (was === undefined || was < r.jackOut || pct >= r.jackOut || run.integrity <= 0) return false; // only a crossing (a run you start under it never trips)
   if (active(s) && s.encounter.mode === 'run') {
-    emit(s, 'fled', `AUTO JACK OUT: Signal under ${r.jackOut}%. You keep your pack.`, { rail: 'jackout' });
+    emit(s, 'fled', `AUTO JACK OUT: Integrity under ${r.jackOut}%. You keep your pack.`, { rail: 'jackout' });
     hooks.flee?.(s);
     return true;
   }
   if (active(s)) return false;
-  emit(s, 'rail', `AUTO JACK OUT: Signal under ${r.jackOut}%.`, { rail: 'jackout' });
+  emit(s, 'rail', `AUTO JACK OUT: Integrity under ${r.jackOut}%.`, { rail: 'jackout' });
   hooks.jackOut?.(s);
   return true;
 }
@@ -709,14 +709,14 @@ export function programCommand(s, text) {
     if (!ROUTINES.jackOut.includes(v)) return warn(s, 'program jackout off, 10, 20, 30, 40 or 50.');
     P.rails.jackOut = v;
     if (s.run) delete s.run.railAt;
-    return emit(s, 'info', v ? `Auto jack-out at ${v}% Signal.` : 'Auto jack-out off.');
+    return emit(s, 'info', v ? `Auto jack-out at ${v}% Integrity.` : 'Auto jack-out off.');
   }
   if (verb === 'cues') { if (!['on', 'off'].includes(args[0])) return warn(s, 'program cues on or off.'); P.rails.cues = args[0] === 'on'; return emit(s, 'info', `Cues ${args[0]}.`); }
   if (verb === 'bench') {
     if (!benchable(body)) return warn(s, `${name} can't be benchmarked.`);
     if (active(s)) return warn(s, 'Finish the current fight first.');
     const b = R.bench = benchmark(s, body);
-    return emit(s, 'bench', `Benchmark, ${name} ×${b.n}: won ${b.wins}, ${b.cycles} cycles to kill, ${b.lost}% Signal lost${b.asked ? `, ${b.asked} left a part to you` : ''}.`, { body, ...b });
+    return emit(s, 'bench', `Benchmark, ${name} ×${b.n}: won ${b.wins}, ${b.cycles} cycles to kill, ${b.lost}% Integrity lost${b.asked ? `, ${b.asked} left a part to you` : ''}.`, { body, ...b });
   }
   if (verb === 'danger') { if (!['on', 'off'].includes(args[0])) return warn(s, 'program danger on or off.'); P.rails.danger = args[0] === 'on'; return emit(s, 'info', `Stop before danger ${args[0]}.`); }
   if (verb === 'add') {
@@ -791,7 +791,7 @@ export function palette(s, body = focusBody(s)) {
 // ---------- the benchmark ----------
 // Your program alone against a virus's builds at your level (seeds 1 to n: its parts, mutations and part counts as a
 // fight would roll them), on a copy of your save, no rails: the fights the balance harness runs. Wins, the average
-// cycles a win takes, the Signal lost (a loss: all of it; a fight past benchCycles is a loss), and how many fights left
+// cycles a win takes, the Integrity lost (a loss: all of it; a fight past benchCycles is a loss), and how many fights left
 // a part to you (asked: the rotation plays it here, as the fight would leave it to you). The result keeps the routine it measured (sig): edit it and the
 // result shows as stale.
 const BENCH_HOOKS = ['stepped', 'runWon', 'flee', 'jackOut', 'crewEngage', 'crewTurns', 'crewMates', 'crewAll', 'crewAllies', 'crewGuests']; // stepped: the browser's cycles play out in beats; a bench run plays them at once
@@ -827,11 +827,11 @@ export const benchOf = (s, body) => { const b = routineOf(s, body).bench; return
 
 // ---------- cues ----------
 // Sounds that say when to look back, while your program plays (its move was the last one: you're away) and Cues are on:
-// a tell landing on you, your Signal crossing under ROUTINES.cueLow, an item of yellow rarity or better dropping. The
+// a tell landing on you, your Integrity crossing under ROUTINES.cueLow, an item of yellow rarity or better dropping. The
 // elite ahead and a run's end already have their own (the rails, the loss). Each is its own voice (app.js plays it).
 export const CUES = {
   tell: { voice: 'ping', name: 'A tell lands' },
-  low: { voice: 'zap', name: `Signal under ${Math.round(ROUTINES.cueLow * 100)}%` },
+  low: { voice: 'zap', name: `Integrity under ${Math.round(ROUTINES.cueLow * 100)}%` },
   drop: { voice: 'unlock', name: 'A rare drop' },
 };
 const RARE = new Set(['custom', 'zeroday', 'indemnified']);

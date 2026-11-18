@@ -30,7 +30,7 @@ const hereKind = (s) => s.rooms?.at && s.rooms.graph.rooms[s.rooms.at]?.kind;
 const movesOf = (s) => s.rooms?.stats?.moves || 0;
 const TOUR_STEPS = [
   { id: 'tour-walk', at: '.fp-room.reach', when: (s) => !!visitOf(s) && !s.rooms.screen, mark: movesOf, done: (s, m) => movesOf(s) > m,
-    text: 'click a room beside yours to walk there. the number on its corner is the signal it costs.' },
+    text: 'click a room beside yours to walk there. the number on its corner is the integrity it costs.' },
   { id: 'tour-engage', at: '#fp-pop [data-rooms="engage"]', also: '.fp-room.reach', after: ['tour-walk'], when: (s) => s.rooms?.screen?.kind === 'virus', done: (s) => s.rooms?.screen?.kind !== 'virus',
     text: 'something\'s living in there. engage, or click the room you came from to back out.' },
   { id: 'tour-cache', at: '#fp-pop [data-rooms="pull"]', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'cache' && !s.rooms.screen,
@@ -40,9 +40,9 @@ const TOUR_STEPS = [
     text: 'that\'s the hunter: it moves when you walk or wait, and this says when.', more: (s) => (classOf(s) === 'infiltrator' ? 'if it reaches you, slip past it or fight it.' : 'if it reaches you, you fight it.') },
   { id: 'tour-rest', at: '#fp-pop [data-rooms="rest"]:not([disabled])', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'rest',
     mark: (s) => s.rooms.at, done: (s, m) => !!s.rooms?.visit?.rested || s.rooms?.at !== m,
-    text: 'rest here once a visit for some signal back. the hunter never comes in.' },
+    text: 'rest here once a visit for some integrity back. the hunter never comes in.' },
   { id: 'tour-jackout', at: '.fp-acts [data-rooms="jackout"]:not([disabled])', after: ['tour-engage'], when: (s) => !!visitOf(s) && !s.rooms.screen && (s.rooms.stats?.won || 0) > 0, done: (s) => !s.rooms?.at,
-    text: 'you collect items while navigating new servers. jacking out of the server banks these items. losing all your signal before jacking out causes you to lose the items you collected.' },
+    text: 'you collect items while navigating new servers. jacking out saves the visit and banks them. lose all your integrity first and the visit is undone.' },
 ];
 export const TOUR = TOUR_STEPS.map((t) => ({ ...t, page: 'rooms', tour: true }));
 export const tourIds = TOUR.map((t) => t.id);
@@ -54,15 +54,13 @@ export function skipTour(s) { s.tour ||= {}; for (const id of tourIds) s.tour[id
 export const TIPS = [
   ...TOUR, // first, on the rooms page: the tour of your first server (above)
   // ---------- anywhere ----------
-  { id: 'degraded', page: '*', at: '#integrity-note.degraded', urgent: true, text: 'your server crashed and rebooted at half integrity. for 10 minutes the wall\'s down, your max signal and damage are lower, and any swarm at a hub you hold is paused.' },
   { id: 'code', page: '*', at: '.modules [data-module="server"]', when: (s, m) => m !== 'server' && Object.values(s.materials || {}).some((n) => n > 0), text: 'kills drop code. spend it on programs in a server\'s sockets and on your firewall\'s tiers.' },
   // Your first protocol: Loadout → the Protocols tab → Load. Three short steps, each pointing at the next click.
   { id: 'protocol', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && spare(s), text: 'you\'ve got a protocol sitting idle. open loadout to equip it. you can only equip at home, off a run and out of a fight.' },
   { id: 'protocol-tab', page: 'loadout', at: '[data-ltab="protocols"][aria-selected="false"]', when: (s) => spare(s), text: 'your protocols are on this tab.' },
   { id: 'protocol-home', page: 'loadout', at: '.inv-btn.load[disabled]', when: (s) => !!s.run || s.encounter?.phase === 'active', text: 'you can only equip at home. jack out, finish any fight, then come back and hit load.' },
   { id: 'protocol-load', page: 'loadout', at: '.inv-btn.load:not([disabled])', text: 'hit load. every protocol you load adds its stats to yours, every fight.' },
-  { id: 'top-up', page: '*', at: '#meter-signal .meter-buy', text: 'signal refills on its own at home, and the clock says how long. hit + to buy it back now with credits.' },
-  { id: 'repair', page: '*', at: '#meter-integrity .meter-buy', text: 'your server patches itself up. hit + to do it now with credits.' },
+  { id: 'top-up', page: '*', at: '#meter-integrity .meter-buy', text: 'integrity refills on its own at home, and the clock says how long. hit + to buy it back now with credits.' },
   { id: 'routines', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && hackerLevel(s) >= 5, text: 'from level 5, when the timer runs out, your program moves for you. set it up on loadout → program.' },
   { id: 'level', page: '*', at: '#whoami', when: (s) => hackerLevel(s) >= 2, text: 'that\'s you: your handle, your class and its level. each level makes you 4% stronger, and some unlock new skills.' },
 
@@ -74,11 +72,11 @@ export const TIPS = [
   // ---------- the rooms (the Run tab) ----------
   { id: 'socket', page: 'rooms', at: '.fp-room.k-socket', text: 'this is a socket room. clear its guard once and you can build here. a program in a socket changes this server\'s rules, and only this server\'s.' },
   // A server's takeover path, the first time you see each step: the vault, its key, the sealed Core.
-  { id: 'room-vault', page: 'rooms', at: '.fp-room.k-vault', text: 'this is the vault, where the server keeps its files. the elite on the guard post has the key, or you force it and pay in signal.' },
+  { id: 'room-vault', page: 'rooms', at: '.fp-room.k-vault', text: 'this is the vault, where the server keeps its files. the elite on the guard post has the key, or you force it and pay in integrity.' },
   { id: 'room-core', page: 'rooms', at: '.fp-room.k-core', text: 'this is the core, where the resident lives. it stays sealed till the vault\'s open. beat it and the server\'s yours.' },
   { id: 'room-elite', page: 'rooms', at: '.fp-room.k-elite', text: `this is an elite room. its virus is tougher and has one more tell, and it enrages from cycle ${ROOM_RULES.enrage.elite}. it drops a blue or better.` },
   { id: 'room-thread', page: 'rooms', at: '.fp-quest.m-start', text: 'someone in here has work for you. walk in and talk. threads you take are tracked in mail.' },
-  { id: 'run-signal', page: 'rooms', at: '.fp-sig.mid, .fp-sig.low', after: ['tour-walk'], text: 'your signal\'s getting thin. at 0 you\'re home and the pack stays here. find a rest room or jack out.' },
+  { id: 'run-signal', page: 'rooms', at: '.fp-sig.mid, .fp-sig.low', after: ['tour-walk'], text: 'your integrity\'s getting thin. at 0 you\'re home and this visit is undone. find a rest room or jack out.' },
   { id: 'run-rival', page: 'rooms', at: '.fp-rvstat', lead: (s) => (rivalOf(s) ? wickLine(s, rivalOf(s)) : ''), text: 'they\'re racing you to the vault. if they reach you, you fight the lot. beat them and their pack is yours.' },
   { id: 'exfil', page: 'rooms', at: '.fp-exfil', text: 'an exfil\'s uploading a stolen archive off this server, and it runs from you. corner it and break its uplink before the upload finishes.' },
   // A puzzle room's board, the first time you see each one (puzzle-view.mjs). One go a board: played to its end, it refills in two hours.
@@ -98,7 +96,7 @@ export const TIPS = [
   { id: 'mail', page: '*', at: '.modules [data-module="mail"]', when: (s, m) => m !== 'mail' && (s.mail?.list || []).some((x) => !x.read), text: 'you\'ve got mail. your crew, lowlight and halcyon mutual send you contracts here.' },
 
   // ---------- mail ----------
-  { id: 'mail-standing', page: 'mail', at: '.standing', text: 'this shows your standing with halcyon mutual. they pay you a retainer every 30 minutes, and more as it grows. contracts raise it, and a crash on your own server drops it.' },
+  { id: 'mail-standing', page: 'mail', at: '.standing', text: 'this shows your standing with halcyon mutual. they pay you a retainer every 30 minutes, and more as it grows. contracts raise it.' },
   { id: 'mail-contract', page: 'mail', at: '.contract', text: 'a contract tracks itself as you play. when it\'s done, deliver it here and get paid.' },
   { id: 'mail-board', page: 'mail', at: '.mlist.mboard', text: 'this is halcyon\'s board. offers come and go on their own, and you can hold three at a time. only the ones you take count.' },
   { id: 'hub-shop', page: 'hub', at: '.hub-win .shop-shelf .ptile', text: 'every hub has a shop with its faction\'s own goods. better rep opens more of the shelf and trims the price.' },

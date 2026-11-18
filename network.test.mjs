@@ -340,6 +340,7 @@ test('native effects: Open, locks and wards, the Tripwire, twins, reads, after-e
       let after = 0;
       for (let k = 0; k < 6; k++) {
         const g = at(36); if (sand) wear(g, 'sandman', 36);
+        g.server.max = g.server.integrity = 5000; // a bar that outlasts the 14 cycles: this counts what tells leave behind
         selectEncounter(g, 'random', 40 + k, { level: 36, mutation: null }); command(g, 'engage');
         for (let n = 0; n < 14 && active(g); n++) { command(g, 'hold'); resolveCycle(g); if (g.encounter.corrupt || g.encounter.hung || Object.keys(g.encounter.locked || {}).length) after++; }
       }

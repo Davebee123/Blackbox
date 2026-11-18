@@ -256,9 +256,6 @@ test('Rested is World of Warcraft\'s rule: 5% of a level every 8 hours safely aw
   // It banks shares of the level you're on when it banks: higher levels bank more.
   assert.ok(restedGain(40, 8 * 3600000) > restedGain(20, 8 * 3600000));
   assert.equal(Math.round(restedGain(30, 8 * 3600000)), Math.round(0.05 * xpToNext(30)));
-  // A crash away banks nothing while it lasts.
-  const d = safe(at(20)); tickNetwork(d, T); d.degraded = { until: null, ms: 1e12 }; tickNetwork(d, T + 8 * 3600000);
-  assert.ok(!(d.rested > 0), `crashed: nothing banked (${d.rested})`);
   // Spent the way it always was: a kill pays double until it runs out (the spend is payKill's; here the bank is kept whole).
   gainXp(c, 1, 'x', 'fight'); assert.equal(c.rested, restedCap(20), 'only kills spend it');
 });

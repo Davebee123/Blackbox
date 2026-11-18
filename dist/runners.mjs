@@ -11,7 +11,7 @@
 // R2: meeting, standing and hiring. A runner working a server you're on is fighting in one of its rooms (meetingOf):
 // walk in and Help, win, and their standing rises a tier. Standing 0–100 in four tiers. Anyone can be hired (hire): a fee
 // the first time (smaller the better you know them), a cut of each run's credits, their bar from their presets. Hired, they're crew
-// (crew.mjs, s.crewSim with runner: true); their Signal carries over (sig, a share of their max, refilling on logged-on
+// (crew.mjs, s.crewSim with runner: true); their Integrity carries over (sig, a share of their max, refilling on logged-on
 // time), at 0 they disconnect and are hireable again once full.
 //
 // Jobs are picked at the hub (chooseJob): what each server near their level pays them on the market now, against the
@@ -344,9 +344,9 @@ export const HIRE = {
   knownFace: 0.75, // Known face: a smaller fee
   cut: 0.1, // of the credits each run banks, while they're with you
   haggler: 0.5, // Haggler: half the cut
-  recoverMs: 10 * 60000, // logged-on time from 0 Signal back to full
+  recoverMs: 10 * 60000, // logged-on time from 0 Integrity back to full
   from: 5, // your level
-  sig: [0.35, 0.85], // a runner's Signal in a room you find them fighting in
+  sig: [0.35, 0.85], // a runner's Integrity in a room you find them fighting in
 };
 const entryOf = (s, h) => s.runners?.known?.[h] || null;
 export const standingOf = (s, h) => Math.max(0, Math.min(100, entryOf(s, h)?.standing || 0));
@@ -383,8 +383,8 @@ export function feeOf(s, r) {
 export function cutOf(r) { const hg = has(r, 'haggler'); return HIRE.cut * (hg ? (hg.star ? HIRE.haggler / 2 : HIRE.haggler) : 1); }
 export const feePaid = (s, h) => !!entryOf(s, h)?.paid;
 
-// ---------- Signal, busy ----------
-// A runner's Signal as a share of their max (0–1): what they carried out of their last fight with you, refilling to
+// ---------- Integrity, busy ----------
+// A runner's Integrity as a share of their max (0–1): what they carried out of their last fight with you, refilling to
 // full over HIRE.recoverMs of logged-on time.
 export function sigOf(s, h) {
   const k = entryOf(s, h);
@@ -405,7 +405,7 @@ export function busyOf(s, r, t = clockOf(s)) {
 }
 
 // ---------- meeting ----------
-// A runner's Signal in the room you find them fighting in, from their handle and the cycle.
+// A runner's Integrity in the room you find them fighting in, from their handle and the cycle.
 const sigFor = (r, st) => { const [lo, hi] = HIRE.sig; return Math.round((lo + hash(r.handle, st.k * 7 + 6) * (hi - lo)) * 100) / 100; };
 // The runners fighting in rooms of the place you're on: [{ r, st, room, sig }]. On a server, the one whose job it is, at
 // work, whom you haven't helped on this job and haven't hired: their room a live process or elite room, picked from
@@ -497,4 +497,4 @@ export function cantHire(s, r) {
 }
 // Their presets: their subclass's shipped bars (rotation first), or just rotation before a subclass.
 export const PRESET_PLAY = { rotation: 'One target', area: 'Many parts', swarm: 'Many parts', rules: 'Part rules', evasion: 'Dodge hits', healers: 'Heal crew' };
-export const PRESET_TIP = { rotation: 'They take one part down at a time.', area: 'They spread their hits over many parts.', swarm: 'They spread their hits over many parts.', rules: 'They go after the parts with rules first.', evasion: 'They dodge hits and pick their moments.', healers: "They keep the crew's Signal up." };
+export const PRESET_TIP = { rotation: 'They take one part down at a time.', area: 'They spread their hits over many parts.', swarm: 'They spread their hits over many parts.', rules: 'They go after the parts with rules first.', evasion: 'They dodge hits and pick their moments.', healers: "They keep the crew's Integrity up." };

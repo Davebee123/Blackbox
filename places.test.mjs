@@ -87,7 +87,7 @@ test('the attack one-shot: a real attack from a part, not chip damage; once a ba
   const a = hit(20), b = hit(20), chip = hit(1), gnaw = hit(9, { source: 'frag1' }), mate = hit(40, { who: 'm1' });
   let cues = familyCues(s, [gnaw, chip, mate, a, b]);
   assert.deepEqual([...cues.entries()], [[a, { family: 'ransomware', kind: 'attack' }]], 'the first real one only; chip, a gnaw and a hit on a crewmate have none');
-  assert.equal(familyCues(s, [hit(5)]).size, 1, 'a run measures by your Signal (5 of 80)');
+  assert.equal(familyCues(s, [hit(5)]).size, 1, 'a run measures by your Integrity (5 of 80)');
   assert.equal(familyCues(s, [hit(3)]).size, 0);
 });
 

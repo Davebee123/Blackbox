@@ -59,7 +59,7 @@ test('every subclass is viable alone at Lv 10, 18 and 30: at least 85% wins, ins
 // The Bastions alone: built for a crew, like a tank or a healer levelling solo. What they pay alone is time. Over a
 // wider sample (three gear sets, 40 wilds and 8 guard fights each) the Warden takes at least 1.4 times the cycles of
 // the damage dealers' median a fight, and the Sysop at least twice as many (docs/kits.md 11: alone its hits deal 75%,
-// SUBS.sysop.alone), while it still loses little Signal: 15% a fight at most, its heals drawn from its full hits.
+// SUBS.sysop.alone), while it still loses little Integrity: 15% a fight at most, its heals drawn from its full hits.
 // Carrying a crew: farm.test.mjs.
 const wide = (c, b, sub) => {
   const rs = [0, 1, 2].flatMap((gearSeed) => [...Array.from({ length: 40 }, (_, i) => fight(c, 'random', b, { sub, gearSeed, seed: 500 + i, mode: 'run', zone: true })), ...['watchdog', 'sentinel', 'crawler', 'shredder'].flatMap((g) => [1, 2].map((seed) => fight(c, g, b, { sub, gearSeed, seed, mode: 'run', guard: b.guard })))]);
@@ -88,12 +88,12 @@ test('the Bastions alone are the slow ones: the Warden at least 1.4 times the da
 // Solo tells (tells.mjs): a bot that plays as if it can't see them (TELL.bots.answer false) against one that reads
 // them, on the same fights. Since R1 (docs/servers.md 3.5) a charge is answered by the interrupt, and both bots cut a
 // big attack on its cycle whether or not they see the charge riding it, so the gap is what only a reader does: SIGINT
-// a cast, go quiet on a Mimic's beat, strip a seal, strip a part ahead of its charge. It measured 4.8 points of Signal
+// a cast, go quiet on a Mimic's beat, strip a seal, strip a part ahead of its charge. It measured 4.8 points of Integrity
 // at Lv 10, 1.9 at 18 and 0.9 at 30 (it was about 17 under the burst rules), with Lv 5 at 0 (no tells to level 5)
 // and Lv 8 at 3.9. The test holds that reading never costs (a point of slack a bracket), pays on average from Lv 10,
 // and that a level-5 fight brings no tells to read.
 const below = (L) => ({ ...BRACKETS.filter((b) => b.level <= L).at(-1), name: 'Lv ' + L, level: L, server: L });
-test('reading tells pays: a bot that ignores them loses more Signal on average from Lv 10, never less by more than a point at a bracket, and nothing to read at Lv 5', () => {
+test('reading tells pays: a bot that ignores them loses more Integrity on average from Lv 10, never less by more than a point at a bracket, and nothing to read at Lv 5', () => {
   TELL.bots.answer = false;
   let ignored, low, lowRead;
   const LOW = [5, 8];
@@ -128,7 +128,7 @@ test('no class drifts far out of the band: under 55% lost, and within 40 points 
 });
 
 // The friction target (friction.mjs TARGET.blues): a same-level fight costs every subclass 35–45% of its
-// Signal at Lv 10, 18 and 30, all eight within about 10 points (Lv 1: 28–55%, before subclasses). The
+// Integrity at Lv 10, 18 and 30, all eight within about 10 points (Lv 1: 28–55%, before subclasses). The
 // Sysop, from Lv 18 (its heals come at 12, 14 and 18), 45–55%, and it's left out of the spread.
 const band = () => () => {
   const off = [];
@@ -141,12 +141,12 @@ const band = () => () => {
   }
   assert.deepEqual(off, []);
 };
-test('target band: a fight at your level costs every subclass 35–45% at Lv 10, 18 and 30 (the Sysop 45–55% from Lv 18; 28–55% at Lv 1), within about 10 points', { todo: 'with the gear each subclass chases: Lv 1 Bastion, Infiltrator and Operator run 15–21%; the Phantom 29% at Lv 10, 32% at 18 and 28% at 30; the Payload 34% at Lv 10 and 49% at 30; the Warden (Signal on its gear) 29% at Lv 18 and 34% at 30, the Hijacker 34% at 18 and 46% at 30; the Demolitionist 28% at Lv 18 and 27% at 30; the Sysop 41–46% on these 24 fights' }, band());
+test('target band: a fight at your level costs every subclass 35–45% at Lv 10, 18 and 30 (the Sysop 45–55% from Lv 18; 28–55% at Lv 1), within about 10 points', { todo: 'with the gear each subclass chases: Lv 1 Bastion, Infiltrator and Operator run 15–21%; the Phantom 29% at Lv 10, 32% at 18 and 28% at 30; the Payload 34% at Lv 10 and 49% at 30; the Warden (Integrity on its gear) 29% at Lv 18 and 34% at 30, the Hijacker 34% at 18 and 46% at 30; the Demolitionist 28% at Lv 18 and 27% at 30; the Sysop 41–46% on these 24 fights' }, band());
 
 // The capstone row (levels 45 and 50, docs/progression.md 7): at Lv 50, with either capstone at rank 2, every subclass
 // still wins 85% and stays under its solo ceiling; neither pick is a trap (no more than 3 points worse than none) or a
 // must (the two within 8 points of each other). Most pairs are a pace pick against a safety pick, so one cuts cycles
-// and the other Signal. (At Lv 50 the Phantom, Herder, Sysop and Warden already sit under the solo band's floor of
+// and the other Integrity. (At Lv 50 the Phantom, Herder, Sysop and Warden already sit under the solo band's floor of
 // 15 with no capstone: the floor is held from 10 to 30.)
 test('capstones at Lv 50: either pick keeps every subclass winning and under its ceiling, neither a trap nor a must', { todo: 'since the strains\' spread (docs/variety-plan.md 1.2) re-rolled the wild fights, the Warden\'s two capstones sit 9.1 points apart (28.0% against 18.9%; 24.2% against 21.8% before): one seed is now a Limiter and Tripwire Cryptjack that costs it 88% with its first capstone and 31% with its second. Waits on the designer\'s play, not the planner' }, () => {
   const b = BRACKETS.at(-1), off = [];

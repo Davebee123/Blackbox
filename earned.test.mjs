@@ -158,7 +158,7 @@ test('the floor feats\' effects read as their rules', () => {
   assert.equal(fxText(fxList(UNIQUES['street-atlas'])), "Increases your damage by 10% when you fight in a room you haven't cleared.");
   assert.equal(fxText(fxList(UNIQUES['mixed-bag'])), "Increases your damage by 3% for each of the server's specials.");
   assert.equal(fxText(fxList(UNIQUES['ring-main'])), 'Adds 1 Block for every 5 servers you hold, up to 4.');
-  assert.equal(fxText(fxList(UNIQUES.sweetener)), 'Heals 5% of your max Signal when you take a cache.');
+  assert.equal(fxText(fxList(UNIQUES.sweetener)), 'Heals 5% of your max Integrity when you take a cache.');
 });
 
 // The event counts, table-driven: each piece counted by events pays at its n, not before, from its band.
@@ -205,7 +205,7 @@ test('the new floor goals: Honeypots mapped, Bedrock\'s islands, Root 5 anywhere
 test('the new effects read and hold: echo, delays, the first cycles, held servers, contracts', () => {
   assert.equal(fxText(fxList(UNIQUES.regular)), 'Adds 5% Echo. Makes your first echo on each part hit for full damage.');
   assert.equal(fxText(fxList(UNIQUES.honeycomb)), 'Your Block counts double for the first 3 cycles of a fight.');
-  assert.equal(fxText(fxList(UNIQUES['no-rest'])), "Increases your max Signal by 6% while you haven't rested this visit. Adds 1 Regen while you haven't rested this visit.");
+  assert.equal(fxText(fxList(UNIQUES['no-rest'])), "Increases your max Integrity by 6% while you haven't rested this visit. Adds 1 Regen while you haven't rested this visit.");
   // Switchback (3): the cycle after a delay lands.
   const s = at(30);
   for (const id of ['honeycomb', 'late-pass']) { const it = addItem(s, uniqueItem(UNIQUES[id], 30, seeded(1))); command(s, 'load ' + it.id); } // Late Pass: a proxy with Block

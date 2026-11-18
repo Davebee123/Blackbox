@@ -41,7 +41,7 @@ export const SIGNS = {
   crit: { flash: 'fx-hit', float: 'crit', voice: 'crit', buzz: [15, 25, 45] },
   // An enemy crit you: heavier than a hurt.
   hurtcrit: { flash: 'fx-hurt', float: 'hot big', edge: true, voice: 'hurtcrit', buzz: [60, 40, 140] },
-  // Something hit YOU (your server, or your Signal on a run).
+  // Something hit YOU (your server, or your Integrity on a run).
   hurt: { flash: 'fx-hurt', float: 'hot', edge: true, voice: 'hurt', buzz: 80 },
   // The Encryptor stacked more encryption on you.
   encrypt: { flash: 'fx-hurt', float: 'hot', edge: true, voice: 'encrypt', buzz: [30, 30, 60] },

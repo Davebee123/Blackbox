@@ -184,10 +184,10 @@ test('meeting: a runner at work on your server fights in one of its rooms; Help,
   assert.equal(m?.r.handle, r.handle, 'the runner whose job this server is');
   assert.ok(['process', 'elite'].includes(m.room.kind) && FP.isUp(s, m.room), 'in a live fight room');
   assert.ok(m.sig >= HIRE.sig[0] && m.sig <= HIRE.sig[1]);
-  // The room's chip: a paper-white tab with their handle and their Signal; the tooltip says so.
+  // The room's chip: a paper-white tab with their handle and their Integrity; the tooltip says so.
   const html = roomsMarkup(s);
   assert.match(html, new RegExp(`class="fp-rn-tab".*>${r.handle}</text>`));
-  assert.match(html, new RegExp(`The runner ${r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Signal\\.\\n▸ Walk in to help\\.`));
+  assert.match(html, new RegExp(`The runner ${r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Integrity\\.\\n▸ Walk in to help\\.`));
   // Walk in: the card has their row and Help in place of Engage.
   const said = walkIn(s, m).map((e) => e.message).join(' ');
   assert.match(said, new RegExp(`The runner ${r.handle} is fighting it`));
@@ -200,7 +200,7 @@ test('meeting: a runner at work on your server fights in one of its rooms; Help,
   const mate = matesOf(s).find((x) => x.who === r.handle);
   assert.ok(mate?.helper && mate.encounter, 'in the fight');
   assert.equal(s.encounter.party, 1, 'the XP stays yours'); assert.deepEqual(s.encounter.guests, []);
-  assert.equal(mate.run.integrity, Math.max(1, Math.round(mate.run.max * m.sig)), 'at the Signal they had');
+  assert.equal(mate.run.integrity, Math.max(1, Math.round(mate.run.max * m.sig)), 'at the Integrity they had');
   winFight(s);
   assert.equal(standingOf(s, r.handle), gainOf(r));
   assert.equal(runnersOf(s).known[r.handle].by, 'met');
@@ -245,7 +245,7 @@ test('hiring: anyone, a fee once (smaller the better you know them) and a cut of
   assert.equal(s.server.credits, c0, 'the fee is paid once');
 });
 
-test('a hire\'s Signal carries over; at 0 they disconnect and are busy until it refills on logged-on time', () => {
+test('a hire\'s Integrity carries over; at 0 they disconnect and are busy until it refills on logged-on time', () => {
   const { s, r } = onTheirServer();
   s.server.credits = 10_000;
   play(s, `hire ${r.handle}`);
@@ -253,7 +253,7 @@ test('a hire\'s Signal carries over; at 0 they disconnect and are busy until it 
   const m = matesOf(s)[0]; m.encounter = { cycle: 0 }; m.run.integrity = 0; // down in a fight
   hooks.crewEnd(s, 'defeat');
   assert.deepEqual(s.crewSim, [], 'at 0 they disconnect');
-  assert.match(s.logs.at(-1).message, new RegExp(`${r.handle}: Signal's going\\. I'm out\\.`));
+  assert.match(s.logs.at(-1).message, new RegExp(`${r.handle}: Integrity's going\\. I'm out\\.`));
   assert.equal(sigOf(s, r.handle), 0);
   const busy = busyOf(s, r);
   assert.equal(busy.why, 'recovering');
@@ -587,8 +587,8 @@ test('SPRAWL-00: a runner between jobs fights the stray in their room and never 
   assert.equal(m?.r.handle, r.handle, 'fighting its stray');
   assert.equal(placeOf(s, r).fighting, true);
   const html = roomsMarkup(s);
-  assert.match(html, new RegExp(`class="fp-rn-tab"><rect[^>]*/><text[^>]*>${r.handle}</text><rect class="sig"`), 'their tab and Signal on its chip');
-  assert.match(html, new RegExp(`The runner ${r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Signal\\.`));
+  assert.match(html, new RegExp(`class="fp-rn-tab"><rect[^>]*/><text[^>]*>${r.handle}</text><rect class="sig"`), 'their tab and Integrity on its chip');
+  assert.match(html, new RegExp(`The runner ${r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Integrity\\.`));
   // Never to the end: the stray holds while the clock runs on their stage.
   tickRunners(s, 30000);
   assert.equal(s.zone.spawns[spot.folder].alive, true, 'the stray holds');

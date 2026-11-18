@@ -249,7 +249,7 @@ test('Swap: its Pass Throttles you, and your next command hit moves Throttled on
   assert.ok(pulse(s).throttledUntil >= e.cycle - 1 && !(e.throttledUntil >= e.cycle));
 });
 
-test('Turncoat: below half your Signal its attack Scrambles you too', () => {
+test('Turncoat: below half your Integrity its attack Scrambles you too', () => {
   const s = fight('turncoat'), e = s.encounter, t = mech(s, 'turncoat');
   strikeWith(s, t, t.attack);
   assert.ok(!(e.scrambleUntil > e.cycle), 'above half: a plain hit');

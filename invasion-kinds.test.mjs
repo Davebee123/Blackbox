@@ -122,7 +122,7 @@ test('the bounty grows while it sits contested, up to triple, and the growth is 
   assert.equal(code(w), b * codeUnit(6), 'the base, nothing grown');
 });
 
-test('the streak: each stop in a row pays 10% more (up to 50%), leaves no capture, and a crash ends it', () => {
+test('the streak: each stop in a row pays 10% more (up to 50%), leaves no capture, and a breach that chips you to 1 leaves it be', () => {
   const s = world({ fw: 40 });
   const caps = () => s.logs.filter((e) => /capture/i.test(e.message || '')).length;
   for (let i = 0; i < 10; i++) {
@@ -134,14 +134,13 @@ test('the streak: each stop in a row pays 10% more (up to 50%), leaves no captur
   assert.equal(caps(), 0, 'stops in a row no longer leave a capture (invasions supply daemons already)');
   assert.equal(STREAK.capture, undefined);
   assert.equal(streakMult(s), 1 + STREAK.step * STREAK.max, '+50% at most');
-  // A breach that crashes you ends it.
+  // A breach chips you to 1 and no further: nothing crashes, and the streak stands.
   s.firewall.pin = 0;
   invade(s, 'raider');
   s.server.integrity = 1;
   wait(s, 2 * MIN);
-  assert.ok(s.degraded);
-  assert.equal(s.net.streak, 0);
-  assert.ok(s.logs.some((e) => /streak of 10 ended/.test(e.message)));
+  assert.equal(s.server.integrity, 1);
+  assert.equal(s.net.streak, 10);
 });
 
 test('a pack: three that count 4 levels higher at the wall until it thins; one fight each, the bounty at the end', () => {

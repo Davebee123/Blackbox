@@ -69,7 +69,7 @@ test('golden: 10,000 seeds build the same viruses with genes as without, part fo
 });
 
 // The same fight, played by the planner, on a virus from either builder: the same result, the same cycles, the same
-// Signal lost and the same commands. Each subclass's own kit, so this holds whatever the class pass changes.
+// Integrity lost and the same commands. Each subclass's own kit, so this holds whatever the class pass changes.
 const same = (label, play) => {
   const now = play();
   hooks.createVirus = legacy;

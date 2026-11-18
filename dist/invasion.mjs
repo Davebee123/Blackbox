@@ -10,9 +10,9 @@
 // Only what gets past the wall asks for you. Jack in to fight it at the wall: it's as worn down as
 // the wall left it, its armor is intact, it's worth a full kill, and its bounty (its family's code, lots of it)
 // grows the longer it's contested before you do. Invasions are the only thing that drops daemons (daemons.mjs).
-// A crash puts the server in Degraded mode (see crashServer in combat.mjs); the network waits.
+// A chip never takes your Integrity below 1, online or off: invasions wear you down and never knock you out.
 import { tickEvents } from './events.mjs';
-import { tickConsortium, consortiumOf, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
+import { tickConsortium, consortiumOf, memberHelp } from './consortium.mjs';
 import { isLive } from './memory.mjs';
 import { gainComponents } from './salvage.mjs';
 import { effLevel, tickFirewall, fragment, ratingAt, firewallRestore, baseOf } from './firewall.mjs';
@@ -21,7 +21,7 @@ import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, QUIRKS, quirkOf, createVir
 import { gainDaemon, rollDaemon } from './daemons.mjs';
 import { SERVICES, codeOf, uniqueItem, MATERIALS } from './gear.mjs';
 import { pickOrigin, hiddenNode, hiddenLead, HIDDEN, connectedTo } from './hidden.mjs';
-import { emit, warn, rand, active, holding, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, hackerLevel, syncServer, addItem, UNIQUES, listenBoost, syncRunSignal } from './combat.mjs';
+import { emit, warn, rand, active, holding, selectEncounter, endInvasion, gainXp, xpFor, command, gainCode, hackerLevel, syncServer, addItem, UNIQUES, listenBoost } from './combat.mjs';
 import { nativeStrain } from './network.mjs';
 import { sendShift, sendTravel, pickSender, hasSpecial } from './specials.mjs';
 import { tickProfile } from './profile.mjs';
@@ -60,7 +60,7 @@ export const THIEF = { take: 0.5, min: 3 }; // the share of each store it takes;
 // not on it), up to cap × base more, and that growth is yours only if you kill it. An outright block pays blocked × base.
 export const BOUNTY = { grow: 0.25, cap: 2, blocked: 0.5 };
 // Streak: invasions stopped in a row (by your wall or by you). Each one in it pays step more (up to
-// max steps); every capture-th in a row drops a capture. A crash, a theft or a scout's map ends it.
+// max steps); every capture-th in a row drops a capture. A theft or a scout's map ends it.
 export const STREAK = { step: 0.1, max: 5 }; // a streak pays more code a stop; it no longer leaves a capture (invasions supply daemons already)
 // A capture (what a champion you kill, or a streak, leaves behind): a sure daemon, and a chance at an
 // invasion-only unique on top (BOSS_LOOT's pattern: chance, plus pity for every capture without one).
@@ -76,9 +76,8 @@ export const streakMult = (s) => 1 + STREAK.step * Math.min(streakOf(s), STREAK.
 export const GRADE_LEVELS = 2;
 export const strength = (level, mutation = null, grade = 1) => 100 * line(level + GRADE_LEVELS * ((grade || 1) - 1)) * (mutation ? I().mutated : 1);
 // Your wall's rating: your firewall's effective level (firewall.mjs), set so it blocks invaders at
-// or under that level outright. Down while the server is Degraded.
+// or under that level outright.
 export function wallRating(s, family = null) {
-  if (s.degraded) return 0;
   const L = effLevel(s, undefined, family);
   return L < 1 ? 100 * I().wall : 100 * line(L) * I().block;
 }
@@ -114,7 +113,6 @@ export function wallBands(s, rating = wallRating(s)) {
 // Travel time from a server: 2 minutes from floor 1, a minute more a floor down (GAME_RULES.md "Invasions and the wall"), longer still behind a Tarpit.
 export const travelMs = (s, floor = 1) => Math.round((I().travelMs + I().perFloorMs * (Math.max(1, floor) - 1)) * (1 + filterStat(s, 'tarpit') / 100));
 export const fighting = (s, inv = s.invasion) => !!inv && active(s) && s.encounter.invader === inv.id;
-export const degradedLeft = (s, now = Date.now()) => (s.degraded ? (s.degraded.until ? Math.max(0, s.degraded.until - now) : CONFIG.degradedMs) : 0);
 // "2 min", "40s"
 export const fmtLeft = (ms) => (ms >= 60000 ? `${Math.ceil(ms / 60000)} min` : `${Math.max(1, Math.ceil(ms / 1000))}s`);
 const pct = (x) => `${Math.round(x * 10) / 10}%`;
@@ -155,10 +153,8 @@ export const labelOf = (inv) => (inv ? kindOf(inv).name + (inv.kind === 'pack' &
 
 // ---------- the network clock ----------
 // Call about once a second with the real time. Only logged-on time counts for invasions: a gap
-// (closed game, sleeping laptop) counts as a few seconds. Degraded mode runs on the real clock.
-// In a consortium, the gap is played out too (away): invaders keep coming, at AWAY.pace, and your
-// wall meets them; members sometimes stop one. A crash while away reboots for CONSORTIUM.rebootMs,
-// occupied (consortium.mjs): clear it to come back sooner.
+// (closed game, sleeping laptop) counts as a few seconds. The gap is played out too (away): invaders
+// keep coming, at AWAY.pace, and your wall meets them; in a consortium members sometimes stop one.
 // Away: a long passive clock of its own. One invasion every 2–4 hours while you're logged off
 // (no thieves or scouts: you couldn't answer them); swarms and hubs' old owners come at a quarter pace.
 export const AWAY = { everyMs: [2 * 3600000, 4 * 3600000], slow: 0.25, stepMs: 60000, maxMs: 24 * 3600000, helpMs: 3 * 60000 };
@@ -172,23 +168,11 @@ export function tickNetwork(s, now = Date.now()) {
   const gap = Math.max(0, now - prev), dt = Math.min(gap, I().maxTickMs);
   if (gap > dt) away(s, prev, now - dt); // logged off: the network plays on (firewall.mjs is the guard)
   tickFirewall(s, now); // a defrag that's done
-  tickEvents(s, dt); // the event director deals what happens on the net, degraded or not
+  tickEvents(s, dt); // the event director deals what happens on the net
   if (tickTable(s, dt)) emit(s, 'table-cancel', 'LANTERN runs a cancel round. The process table drops eight points.'); // INIT's table (table.mjs): logged-on time fills it
   tickConsortium(s, dt, now); // the dividend, sieges, raids, the travelling virus, invites (consortium.mjs)
   tickProfile(s); // deeds from the log, and a title just earned (profile.mjs)
   tickChannel(s, dt); // #net, the public channel: news, contacts and who's chatting (channel.mjs)
-  crashCheck(s);
-  if (s.degraded) {
-    const d = s.degraded;
-    if (d.until == null) { d.since = now; d.until = now + (d.ms ?? CONFIG.degradedMs); }
-    // Installs don't progress while degraded: push the job back by the time spent degraded.
-    const paused = Math.max(0, Math.min(now, d.until) - Math.max(prev, d.since));
-    if (s.install && paused) { s.install.startedAt += paused; s.install.doneAt += paused; }
-    if (now < d.until) return since(s, first); // the network waits too
-    s.degraded = null;
-    syncRunSignal(s); // reboot sickness is over
-    emit(s, 'rebooted', 'BACK ONLINE.');
-  }
   stepInvasion(s, dt);
   return since(s, first);
 }
@@ -202,27 +186,13 @@ function rest(s, ms) {
 // The time you were logged off, a minute at a time (up to a day; Rested banks for all of it).
 function away(s, from, to) {
   const start = Math.max(from, to - AWAY.maxMs);
-  if (!s.degraded) rest(s, start - from); // past a day: nothing is played out, and nothing crashed you
+  rest(s, start - from); // past a day: nothing is played out
   for (let t = start + AWAY.stepMs; t <= to; t += AWAY.stepMs) {
-    const d = s.degraded;
-    if (d) {
-      if (d.until == null) { d.since = t; d.until = t + (d.ms ?? CONFIG.degradedMs); }
-      if (t < d.until) continue;
-      s.degraded = null;
-      syncRunSignal(s);
-      emit(s, 'rebooted', 'Your server came back online while you were away.');
-    }
     stepInvasion(s, AWAY.stepMs, t);
     unsabotage(s);
-    // Rested: every safe minute away (no crash) banks its share of 5% of a level every 8 hours, up to 1.5 levels.
-    if (!s.degraded) rest(s, AWAY.stepMs);
+    // Rested: every minute away banks its share of 5% of a level every 8 hours, up to 1.5 levels.
+    rest(s, AWAY.stepMs);
   }
-}
-
-// A crash with an invasion on (a breach chipping you out, or a lost fight at the wall) ends the streak.
-function crashCheck(s) {
-  const inv = s.invasion;
-  if (s.degraded && inv && !inv.crashed) { inv.crashed = true; breakStreak(s, `${inv.name} crashed your server`); }
 }
 
 // The invader: setting out, on its way, then at the wall. at: the time, while away.
@@ -276,25 +246,13 @@ function stepInvasion(s, dt, at = null) {
     if (inv.helper === undefined) { inv.helper = memberHelp(s); inv.helpLeft = AWAY.helpMs; }
     if (inv.helper && (inv.helpLeft -= dt) <= 0) { endInvasion(s, `${inv.helper} stopped ${inv.name} at your wall while you were away.`); return unsabotage(s); }
   }
-  inv.chipAcc = (inv.chipAcc || 0) + ((s.server.max * chipRate(r)) / 100) * (1 - Math.min(0.8, filterStat(s, 'chip') / 100)) * (dt / 60000);
+  // The chip takes your Integrity where it is (a run's own bar while you're out), never below 1.
+  const bar = s.run || s.server;
+  inv.chipAcc = (inv.chipAcc || 0) + ((bar.max * chipRate(r)) / 100) * (1 - Math.min(0.8, filterStat(s, 'chip') / 100)) * (dt / 60000);
   const n = Math.floor(inv.chipAcc + 1e-9);
   if (n > 0) {
     inv.chipAcc -= n;
-    const floor = active(s) && s.encounter.mode === 'home' ? 1 : 0; // never ends a home fight you're in
-    s.server.integrity = Math.max(floor, s.server.integrity - n);
-    if (s.server.integrity <= 0) {
-      emit(s, 'crashed', `${inv.name} chipped your server to zero${at != null ? ' while you were away' : ''}. SERVER CRASHED.`, { invader: inv.id, mode: 'home' });
-      inv.crashed = true;
-      breakStreak(s, `${inv.name} crashed your server`);
-      // Online: it got what it came for and leaves, so a breach you couldn't answer costs one crash, not a loop of them.
-      if (at == null) { crashServer(s); endInvasion(s, `${inv.name} crashed your server and left your wall.`, { lost: true }); return unsabotage(s); }
-      // Away: a long reboot, occupied by the invader's processes, and the virus moves on.
-      crashServer(s, CONSORTIUM.rebootMs, at);
-      s.occupation = occupy(s, { id: 'home', name: 'HOME', family: inv.family, level: inv.level, seed: inv.seed });
-      endInvasion(s, `${inv.name} moved into your server. Connect to HOME and clear it to come back online sooner.`);
-      unsabotage(s);
-      roam(s, s.occupation, 0);
-    }
+    bar.integrity = Math.max(Math.min(1, bar.integrity), bar.integrity - n);
   }
 }
 
@@ -345,12 +303,10 @@ export const sendsAt = (loc) => (loc?.level || 1) + sendShift(loc) + GRADE_LEVEL
 export const sendTop = (s) => Math.max(0, ...tame(s).map(sendsAt));
 // The Safe readout, everywhere it shows: Safe only while your wall blocks a plain invasion from every server that
 // sends one (grade and all) and the invasion out now by its own rule (a champion's push, a pack, a quirk, its
-// grade). state: 'ok' (Safe), 'mid' (the worst would be contested), 'low' (it would break through) or 'down'
-// (Degraded). vuln: the lowest level that gets past it. at: what the invasion out now counts as.
+// grade). state: 'ok' (Safe), 'mid' (the worst would be contested) or 'low' (it would break through). vuln: the lowest level that gets past it. at: what the invasion out now counts as.
 export function wallSafety(s, bands = wallBands(s)) {
   const top = sendTop(s), inv = s.invasion && s.invasion.kind !== 'thief' ? s.invasion : null;
   const verdict = inv ? verdictOf(s, inv) : null, at = inv ? countsAt(inv) : 0;
-  if (s.degraded) return { state: 'down', top, at, verdict, vuln: null, blocks: 0, holds: 0 };
   const state = bands.blocks >= top && (!verdict || verdict === 'blocked') ? 'ok' : bands.holds >= top && verdict !== 'breach' ? 'mid' : 'low';
   return { state, top, at, verdict, vuln: state === 'ok' ? null : bands.blocks + 1, blocks: bands.blocks, holds: bands.holds };
 }
@@ -660,7 +616,7 @@ export function signatureRestore(s) {
 }
 
 // ---------- testing ----------
-// developer invade [kind]: an invasion at your wall now (a thief sets out). developer crash: crash the server.
+// developer invade [kind]: an invasion at your wall now (a thief sets out).
 export function developerNetwork(s, text) {
   const first = s.serial;
   const road = / road$/.test(text), kind = text.split(' ')[2] === 'road' ? undefined : text.split(' ')[2]; // road: it sets out on its road instead of arriving now
@@ -673,9 +629,6 @@ export function developerNetwork(s, text) {
       if (q && !from) warn(s, `None of your servers has the ${QUIRKS[q].name} quirk.`);
       else { const any = !q && !tame(s).length ? [...(s.locations || [])].filter((l) => !l.rogue && !l.member && !l.zone).sort((a, b) => (b.level || 1) - (a.level || 1))[0] : null; const inv = depart(s, q ? { kind: 'raider', quirk: q, from } : { kind, ...(any ? { from: any } : {}) }); if (inv && inv.kind !== 'thief' && !road) arrive(s); } // a developer's comes even from a server you've only found
     }
-  } else if (text === 'developer crash') {
-    if (active(s)) warn(s, 'Not mid-fight.');
-    else { emit(s, 'crashed', 'Developer: SERVER CRASHED.', { mode: 'home' }); crashServer(s); }
   }
   return since(s, first);
 }

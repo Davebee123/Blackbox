@@ -23,7 +23,7 @@ export const abilities = {
     cls: 'infiltrator', sub: 'payload', verb: 'burn', name: 'Skim', target: 'part', damage: 0, tick: 9, ticks: 4, drain: 4, cooldown: 3, icon: 'clear',
     short: 'Burn 9 ×4; heals 4 a tick',
     help: 'skim <part> — Burns the target for 9 damage every cycle for 4 cycles, healing you for 4 with each tick.',
-    desc: 'Skims a little off the top. Burns the target for 9 damage every cycle for 4 cycles, and each tick that deals damage heals you for 4 Signal, or 4 Integrity at home.',
+    desc: 'Skims a little off the top. Burns the target for 9 damage every cycle for 4 cycles, and each tick that deals damage heals you for 4 Integrity, or 4 Integrity at home.',
   },
   polymorph: {
     cls: 'infiltrator', sub: 'payload', verb: 'burn', name: 'Polymorph', target: 'part', damage: 0, tick: 14, bareTick: 14, scales: ['bareTick'], ticks: 3, cooldown: 3, icon: 'mutation',
@@ -130,7 +130,7 @@ export const subs = {
     tiers: [
       [t('heap-spray', 'Heap Spray', 'Increases the damage of your Inject by 6 every tick.'), t('long-fuse', 'Long Fuse', 'Your Inject lasts 6 cycles instead of 4.'), t('third-party-cookie', 'Third-Party Cookie', 'When you Tag a part, every burn on it ticks once.')],
       [t('shaped-charge', 'Shaped Charge', 'Increases the damage of Detonate by 25%.'), t('assassinate', 'Assassinate', 'Detonate deals double damage to a Tagged part.'), t('chain-letter', 'Chain Letter', 'When a part you are burning breaks, Detonate becomes usable again.')],
-      [t('low-profile', 'Low Profile', 'Reduces the damage attacks deal to you by 10% from a part you are burning.'), t('spillover', 'Spillover', 'Skim heals past your max Signal shield you instead, up to 20.'), t('fault-handler', 'Fault Handler', 'When an attack hits you, your burns on its part tick once. Works once per cycle.')],
+      [t('low-profile', 'Low Profile', 'Reduces the damage attacks deal to you by 10% from a part you are burning.'), t('spillover', 'Spillover', 'Skim heals past your max Integrity shield you instead, up to 20.'), t('fault-handler', 'Fault Handler', 'When an attack hits you, your burns on its part tick once. Works once per cycle.')],
       [t('virulence', 'Virulence', 'Wormable, Skim and Polymorph deal 5 more damage every tick.'), t('contagion', 'Contagion', 'Each Inject also starts a copy on the part whose attack lands soonest, or refreshes the one there.'), t('fever', 'Fever', 'Every third tick of your Inject is a critical strike.')],
       [t('persistence', 'Persistence', 'Rootkit Implant can be used twice a fight.'), t('superspreader', 'Superspreader', 'Bloom copies the burns to every other part, not just the next one.'), t('heat-sink', 'Heat Sink', 'When you gain a shield, every burn on the target ticks once. Works once per cycle.')],
       [t('thermal-load', 'Thermal Load', 'Increases the damage of your burns by 10%.'), t('index-case', 'Index Case', 'Outbreak also Tags every part for 4 cycles.'), t('irq-chain', 'IRQ Chain', 'When you answer a tell, IRQ Storm becomes usable again. IRQ Storm\'s own answers do not count.')],
@@ -159,7 +159,7 @@ export const subs = {
     tiers: [
       [t('cold-open', 'Cold Open', 'Increases the damage of your Weak Spot critical strikes by 15%.'), t('blind-spot', 'Blind Spot', 'Makes your first burn tick on each part a critical strike, as Weak Spot does for hits.'), t('web-beacon', 'Web Beacon', 'Makes Weak Spot fresh on a part again when you Tag it.')],
       [t('pivot', 'Pivot', 'Increases the damage of Backstab by 25%.'), t('fast-hands', 'Fast Hands', 'Keeps Opening usable for 2 cycles instead of 1.'), t('timing-attack', 'Timing Attack', 'Makes Opening usable when you answer a tell.')],
-      [t('onion-routing', 'Onion Routing', 'Increases your max Signal on runs by 8.'), t('ghost-route', 'Ghost Route', 'Makes Null Route also delay the attack that lands soonest by 2 cycles.'), t('kill-chain', 'Kill Chain', 'Makes Backstab and Opening usable when you break a part.')],
+      [t('onion-routing', 'Onion Routing', 'Increases your max Integrity by 8.'), t('ghost-route', 'Ghost Route', 'Makes Null Route also delay the attack that lands soonest by 2 cycles.'), t('kill-chain', 'Kill Chain', 'Makes Backstab and Opening usable when you break a part.')],
       [t('log-rotation', 'Log Rotation', 'Lowers Log Wipe\'s cooldown from 6 cycles to 4.'), t('deep-cover', 'Deep Cover', 'Makes Log Wipe also make Null Route and Shadow Copy usable again.'), t('data-leak', 'Data Leak', 'Ticks your Inject on a part once when you land a critical strike on it. Works once per cycle.')],
       [t('packet-loss', 'Packet Loss', 'Gives attacks on you a 10% chance to miss.'), t('full-disclosure', 'Full Disclosure', 'Makes Unmask last until the target breaks, but its cooldown is 8 cycles.'), t('cover-traffic', 'Cover Traffic', 'Makes Opening usable when your shield absorbs a hit.')],
       [t('clean-exploit', 'Clean Exploit', 'Increases the damage of your critical strikes by 20%.'), t('tracking-pixel', 'Tracking Pixel', 'Moves Tag to the part whose attack lands soonest when a Tagged part breaks, with the cycles it had left.'), t('zeroize', 'Zeroize', 'Makes Weak Spot fresh on every part when you cut a part\'s move. Works once per cycle.')],

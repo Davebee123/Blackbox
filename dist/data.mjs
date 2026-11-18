@@ -18,7 +18,6 @@ export const CONFIG = {
   cycleMs: 8000, // default; players pick a speed below
   speeds: { relaxed: 12000, normal: 8000, fast: 5000 },
   // Server
-  maxIntegrity: 100,
   scramble: { chance: 0.25, self: 0.5 }, // Ghostroot's Scrambler: while you're Scrambled, each attack may hit you instead, at half
   // Level gap, WoW-style, from the first level up: something above you takes 5% less from you a level (never under
   // 40%) and hits you 6% harder, on top of its own level's numbers, so +1 costs more, +3 is a coin flip and +5 a loss.
@@ -28,10 +27,9 @@ export const CONFIG = {
   enrage: 1.3, // Bricker: a part under half Integrity hits this much harder
   linked: 0.33, // Linked parts (v2+): the share of a broken part's hit its survivor takes on (a half broke Breakers on v2 Ghostroots)
   startingCredits: 0, // you start broke: caches, kills and contracts pay
-  // Topping up: Signal and server Integrity rest back slowly for free, or you pay to have them
-  // full now. The price is for a full bar at your level; less missing costs less (at least 1).
-  // Signal goes by your class level, Integrity by your server level.
-  topUp: { signal: [8, 1.5], server: [10, 2] }, // [base, per level]
+  // Topping up: Integrity rests back for free, or you pay to have it full now. The price is for a full bar at your
+  // class level; less missing costs less (at least 1).
+  topUp: [8, 1.5], // [base, per level]
   // Crits: your hits crit at baseCrit% (+ Crit from protocols) for ×1.5. Enemy damage attacks
   // crit at enemyCrit (from enemy level 3; a brand-new server never sees one).
   baseCrit: 5,
@@ -52,7 +50,7 @@ export const CONFIG = {
   // level (gear's edge: gear.mjs ITEM_CURVE) is measured on it, and lift()
   // carries it up to power().
   levelLine: 0.04,
-  // Gear carries your power (docs/scaling.md step 2): your own numbers (skill damage, base Signal, heals, shields) grow
+  // Gear carries your power (docs/scaling.md step 2): your own numbers (skill damage, base Integrity, heals, shields) grow
   // with power() to level ownFrom (the first levels play as they did), then ownPerLevel a level; mobs keep compounding.
   // Item stats that stand in for what level no longer gives (gear.mjs FILLS) are × gearFill at their item level
   // ([level, fill] points, linear between), so a fight at your level in its blues costs what it did.
@@ -78,12 +76,12 @@ export const CONFIG = {
   // Enemy hits also grow a little faster than your power, level by level: your kit and talents
   // keep up only if your gear and services do.
   enemyRamp: 0.03,
-  // The monster pass (friction.mjs): fights on your Signal (runs, SPRAWL-00, rogue servers) are
+  // The monster pass (friction.mjs): fights on your Integrity (runs, SPRAWL-00, rogue servers) are
   // tuned against the gear you're likely to have, so a level is a grind until an item lands.
   runHp: 1.4, // × part Integrity on top of partToughness
   runDamage: 2.1, // × enemy attacks
-  // Fight length (docs/scaling.md step 3): a Signal fight's Integrity × hp and its hits × dmg, by enemy level (runLate
-  // points: linear between, flat after the last), so a fight at your level in its blues runs longer for about the Signal
+  // Fight length (docs/scaling.md step 3): an Integrity fight's virus Integrity × hp and its hits × dmg, by enemy level (runLate
+  // points: linear between, flat after the last), so a fight at your level in its blues runs longer for about the Integrity
   // it cost before. Steeper late: your damage outgrows a mob's Integrity with level, and a fight bound by its ◆ is as long
   // ten levels down as at your level. boss: a solo boss's on top, unless it has its own (BOSSES long: its Integrity, hits
   // and enrage, about 15% past a geared kill). Adds keep their size (addPower). Crew bosses (raid.mjs) and breaches (their
@@ -120,7 +118,7 @@ export const CONFIG = {
   // it a same-level fight cost blues 30% at 10 and only 22–30% at 18–30. Bosses and elites keep their own
   // numbers (crew content is tuned for crews).
   // 1.32 at 30 (was 1.2 from 30 on) since gear follows one smooth curve (gear.mjs ITEM_CURVE): the tiers left 26–33 at
-  // the weak end of the 26 tier, and the curve gives those levels about 15% more Damage and Signal. Back to 1.2 by 50,
+  // the weak end of the 26 tier, and the curve gives those levels about 15% more Damage and Integrity. Back to 1.2 by 50,
   // where the curve is anchored to what the last tier rolled, so the level cap plays as it did.
   runLate: [[9, 1], [10, 0.95], [18, 1], [30, 1.32], [50, 1.2]], // lower than it was (1.1, 1.12, 1.35): a tell you let land costs more now (TELL)
   // ...and the same kind of step on their Integrity (1 up to 10, linear between the points, flat after the last), for
@@ -164,7 +162,7 @@ export const CONFIG = {
   depthThreat: 3, // guard threat added per depth below the first
   depthLoot: 0.4, // caches hold 40% more credits per old layer down (layerOf: floors 1, 2, 3–4, 5–6, 7–8)
   maxSignal: 100, // your health out in the net (it carries between connections and rests back up)
-  cdCost: 1, // Signal spent per move between directories
+  cdCost: 1, // Integrity spent per move between directories
   leadBase: 10, // lead progress every neutralized virus gives (ten kills)
   cacheCredits: 30,
   hoardBonus: 0.5, // Hoard quirk: caches pay 50% more
@@ -192,18 +190,16 @@ export const CONFIG = {
     grind: [4, 20], // % of the invader a siege wears down per minute, from the breach line to the block line
     blockedXp: 0.25, // share of a kill's XP when the wall stops one (plus one salvage)
   },
-  // Resting: between fights the server repairs itself, 2% of its max a minute (empty to full in
-  // about 50 minutes), offline too, at half that while an invasion is contested or breaching at your wall.
-  // Or pay to top up (topUp above).
-  restRegen: 0.02,
-  signalRest: 0.2, // Signal back per minute at home, out of a fight: empty to full in 5 minutes, offline too
-  booster: { restore: 0.5 }, // Signal booster (retired: no longer crafted; ones already carried still work on a run)
+  // Resting: Integrity back per minute at home, out of a fight: empty to full in 5 minutes, offline too, at half that
+  // while an invasion is contested or breaching at your wall. Or pay to top up (topUp above).
+  signalRest: 0.2,
+  booster: { restore: 0.5 }, // Integrity booster (retired: no longer crafted; ones already carried still work on a run)
   // The rogue server: where you go to fight from the start. Viruses sit in its folders at
-  // your level, up to level 3 (it's a starter area), and come back a while after you kill them. Signal carries between connections
+  // your level, up to level 3 (it's a starter area), and come back a while after you kill them. Integrity carries between connections
   // (and rests back up like the server); you need a quarter of it to connect.
   zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 5, starterKills: 2, starterHit: 0.6, firstLevel: 3, bossRespawnMs: 30 * 60000 }, // your first two kills: SPRAWL's hits land at 60% while you learn the board; firstLevel: your first server is SPRAWL's neighbour nearest it // SPRAWL follows you up to level 5 (a spawn now and then one higher); past that it's grey-ish filler
   relockMs: 30000, // any server but an outpost won't take you back for 30 seconds after you leave: no jack out, top up, return
-  // Each disconnect on a server's run (Signal 0, a lost fight) adds this to its wait, up to the cap in all; a clean jack
+  // Each disconnect on a server's run (Integrity 0, a lost fight) adds this to its wait, up to the cap in all; a clean jack
   // out clears the count (combat.mjs relockWait, loc.deaths).
   deathWait: { each: 15000, cap: 120000 },
   // The Exfil (floorplan.mjs, netrooms.mjs): a process smuggling a stolen archive off a rogue server, a loot mob. One
@@ -212,12 +208,6 @@ export const CONFIG = {
   // it lives on your save). Caught, it escapes after `escape` cycles. Beaten: one item roll (rolls: the best of two,
   // never a guaranteed blue), `credits` Stashes' worth of credits, one of the server's uniques at `unique`.
   exfil: { chance: 0.25, cooldownMs: 45 * 60000, escape: 6, credits: 10, rolls: 2, unique: 0.05 },
-  // Crash: the server reboots at half Integrity and runs degraded for 10 real minutes.
-  reboot: 0.5,
-  degradedMs: 10 * 60000,
-  // Reboot sickness: while it reboots, your max Signal and your damage are this much lower, by the deepest floor you've
-  // reached (floor 1 first). Each floor deeper costs more, by less each time, up to 95% on Bedrock.
-  rebootSick: [0.2, 0.4, 0.6, 0.75, 0.85, 0.9, 0.93, 0.95],
 };
 
 // Every ability that works in a fight. Each does ONE thing (a verb):
@@ -378,11 +368,11 @@ export const SKILLS = {
   momentumCycles: 2, // ...lasting 2 cycles after your last break (each break refreshes it)
   hardened: 1, // Bastion passive: damage hits each fight that land softer (a full block was too much)...
   hardenedCut: 0.25, // ...by this much (half kept Bastion far below the friction target)
-  siphonSignalShare: 1, // Siphon heals Signal on runs, Integrity at home
+  siphonSignalShare: 1, // Siphon heals your Integrity
   fixedCounter: 12,
 };
 
-// Attack effects: damage (Integrity or Signal), encrypt (a stack of damage every cycle until the
+// Attack effects: damage (to your Integrity), encrypt (a stack of damage every cycle until the
 // Encryptor breaks), blind (your timeline goes dark for a few cycles), replicate (spawn a fragment).
 // Damage is the threat: nothing a virus does takes credits, trace or files.
 // Every virus is its parts: a basic attacker and a signature part, each small enough
@@ -548,7 +538,7 @@ export const FAMILIES = {
     threatens: 'Integrity',
     opens: { level: 12, floor: 2 }, rules: true, art: 'ransomware',
     cap: 2.6, // its one attacker carries the whole budget: a Tick may grow to 2.6 of its own (PARTS.cap is 1.3, half a fight's)
-    summary: 'The Payload carries a fuse, and your hits on it burn it down. At 0 it detonates for 35% of your max Signal, and the Payload is gone with its loot.',
+    summary: 'The Payload carries a fuse, and your hits on it burn it down. At 0 it detonates for 35% of your max Integrity, and the Payload is gone with its loot.',
     core: ['surge', 'payload'],
     basic: [['strobe', 1], ['repeater', 1], ['accumulator', 1]],
     third: ['idletimer', 'frontend', 'backlog'], // floor 2's natives: the Idle Timer from 9, the Front End from 10, the Backlog from 12
@@ -702,7 +692,7 @@ export const STRAINS = {
   },
   laststand: {
     lineage: 'ghostroot', from: 26, depth: 2, name: 'Last Stand', genes: ['turncoat', 'exposed'], tell: { name: 'Last Rites', gene: 'overcharge' },
-    rule: 'The Prober\'s Probe Exposes you, and your next incoming hit deals 50% more. A ◆ on you blocks it. Below half your Signal, the Turncoat\'s Turn Scrambles you for 2 cycles too.',
+    rule: 'The Prober\'s Probe Exposes you, and your next incoming hit deals 50% more. A ◆ on you blocks it. Below half your Integrity, the Turncoat\'s Turn Scrambles you for 2 cycles too.',
     answer: 'Stay over half, and take the Probe on a ◆.',
     parts: [PULSE(13, 4), { id: 'turncoat', name: 'Turncoat', integrity: 26, armor: 1, veiled: true, loot: 'Turn Key', special: true, mech: 'turncoat', attack: { name: 'Turn', effect: 'damage', amount: 5, interval: 3, first: 3 } },
       { id: 'prober', name: 'Prober', integrity: 16, armor: 0, veiled: true, loot: 'Probe Tip', mech: 'exposed', attack: { name: 'Probe', effect: 'damage', amount: 3, interval: 3, first: 2 } }],
@@ -771,11 +761,11 @@ export function variantFor(family, level, depth, seed, native = null) {
   return { grade, strain };
 }
 
-// Guards found out in the net. Never picked for home intrusions. Lighter: you have 50 Signal.
+// Guards found out in the net. Never picked for home intrusions. Lighter: you have 50 Integrity.
 export const GUARDS = {
   watchdog: {
     name: 'Watchdog',
-    threatens: 'Signal',
+    threatens: 'Integrity',
     guard: true,
     art: 'watchdog',
     summary: 'A security program guarding a directory. Its Tracker lands one big hit every 5 cycles.',
@@ -787,7 +777,7 @@ export const GUARDS = {
   // Part ids match the Ghostroot art regions, so it draws as a veiled root creature.
   sentinel: {
     name: 'Sentinel',
-    threatens: 'Signal',
+    threatens: 'Integrity',
     guard: true,
     art: 'ghostroot',
     summary: 'A veiled security program. Its parts hide their timers while they wear ◆.',
@@ -796,13 +786,13 @@ export const GUARDS = {
       { id: 'scrambler', name: 'Lockout', integrity: 24, armor: 1, veiled: true, loot: 'Lockout Relay', special: true, attack: { name: 'Lockout', effect: 'damage', amount: 7, interval: 3, first: 2 } },
     ],
   },
-  // Worm-shaped guard: its Brood spawns fragments that gnaw your Signal.
+  // Worm-shaped guard: its Brood spawns fragments that gnaw your Integrity.
   crawler: {
     name: 'Crawler',
-    threatens: 'Signal',
+    threatens: 'Integrity',
     guard: true,
     art: 'worm',
-    summary: 'A nesting guard. Its Brood spawns fragments that deal damage to your Signal every cycle. If the Maw breaks first, the Brood takes over its Bite.',
+    summary: 'A nesting guard. Its Brood spawns fragments that deal damage to your Integrity every cycle. If the Maw breaks first, the Brood takes over its Bite.',
     parts: [
       { id: 'pulse', name: 'Maw', integrity: 24, armor: 0, loot: 'Crawler Maw', attack: { name: 'Bite', effect: 'damage', amount: 7, interval: 3, first: 2 } },
       { id: 'replicator', name: 'Brood', integrity: 28, armor: 1, loot: 'Brood Seed', special: true, fallback: 'pulse', attack: { name: 'Brood', effect: 'replicate', amount: 1, interval: 4, first: 3 } },
@@ -811,10 +801,10 @@ export const GUARDS = {
   // Ransomware-shaped guard: the Shredder winds up one heavy strike.
   shredder: {
     name: 'Shredder',
-    threatens: 'Signal',
+    threatens: 'Integrity',
     guard: true,
     art: 'ransomware',
-    summary: 'An archive guard. Its Shredder lands one heavy strike on your Signal every 5 cycles.',
+    summary: 'An archive guard. Its Shredder lands one heavy strike on your Integrity every 5 cycles.',
     parts: [
       { id: 'pulse', name: 'Grinder', integrity: 26, armor: 1, loot: 'Grinder Core', attack: { name: 'Grind', effect: 'damage', amount: 9, interval: 4, first: 3 } },
       { id: 'encryptor', name: 'Shredder', integrity: 26, armor: 1, loot: 'Shredder Blade', special: true, attack: { name: 'Shred', effect: 'damage', amount: 14, interval: 5, first: 4 } },
@@ -825,7 +815,7 @@ export const GUARDS = {
   // Ransomware-shaped: the Keyring re-arms the Gate to full armor every 4 cycles.
   bouncer: {
     name: 'Bouncer',
-    threatens: 'Signal',
+    threatens: 'Integrity',
     guard: true,
     ice: true,
     art: 'ransomware',
@@ -840,7 +830,7 @@ export const GUARDS = {
   // Watchdog-shaped: the longer the fight, the harder the Trace-back.
   tracer: {
     name: 'Tracer',
-    threatens: 'Signal',
+    threatens: 'Integrity',
     guard: true,
     ice: true,
     art: 'watchdog',
@@ -972,7 +962,7 @@ export function runLate(level, pts = CONFIG.runLate) {
 // Power at a level: CONFIG.powerPerLevel more per level, compounding from level 1 (players and enemies alike).
 export const power = (level) => (1 + CONFIG.powerPerLevel) ** (Math.max(1, level) - 1);
 // The level line (CONFIG.levelLine), and the lift: power over the line. A flat number tuned on the line (an item's
-// stats, a unique's +6 damage, a talent's +4 Signal) is that number × lift(its level), so it keeps its weight.
+// stats, a unique's +6 damage, a talent's +4 Integrity) is that number × lift(its level), so it keeps its weight.
 export const line = (level) => 1 + CONFIG.levelLine * (Math.max(1, level) - 1);
 export const lift = (level) => power(level) / line(level);
 // A flat number at a level: n × lift, whole, never under 1.
@@ -992,7 +982,7 @@ export const mobPower = (level, floor = floorFor(level)) => power(level) * (1 + 
 
 // ---------- crew bosses (raid.mjs) ----------
 // Each phase gives every role a job (docs/bosses.md has the review sheet). Mechanic kinds and their fields
-// are in raid.mjs MECHANICS; size is a share of the victim's max Signal (scaled down before level 16).
+// are in raid.mjs MECHANICS; size is a share of the victim's max Integrity (scaled down before level 16).
 // THE FOREMAN: the tank and interrupt check.
 const FOREMAN = {
   targets: { pulse: 'aggro' },
@@ -1061,14 +1051,14 @@ const COLDWALLET = {
 // unique chance. Only in Pit folders, never on the way to anything you need.
 // Bosses: a solo fight with phases. hp and dmg scale the whole virus; at each phase's share of its
 // total Integrity it does something (re-arm every part, call in a Sentry, attack faster), and from
-// enrageAt every attack lands every cycle, a quarter harder. long: on your Signal (fight length, CONFIG.length), its
-// Integrity and hits in place of CONFIG.length.boss's, fitted so it runs 30 to 35 cycles for about the Signal it cost
+// enrageAt every attack lands every cycle, a quarter harder. long: on your Integrity (fight length, CONFIG.length), its
+// Integrity and hits in place of CONFIG.length.boss's, fitted so it runs 30 to 35 cycles for about the Integrity it cost
 // before, and its enrage, about 15% past a geared kill (enrageAt stays a breach's). healerDmg (optional): damage that steps up by
 // level (runLate points). raid: a crew boss on the group boss framework (raid.mjs, the farm's three): its
 // phases are mechanics with target rules and telegraphs, and its own parts hit softly (dmg).
 // A strain boss (two parts, its strain's rule) is soft at 10 and hard to keep up with by 30: its hits step with level.
 const STRAIN_BOSS_LATE = [[8, 1], [10, 0.8], [18, 1.1], [30, 1.45]];
-// HASHLORD's own step, flatter and longer: its Pulse Node carried the fight (a Surge took half your Signal at 30), and a
+// HASHLORD's own step, flatter and longer: its Pulse Node carried the fight (a Surge took half your Integrity at 30), and a
 // charge on top of a plain hit that big went past the spike cap (docs/genome.md rule 5). More Integrity, smaller hits.
 const HASHLORD_LATE = [[8, 1], [10, 0.8], [18, 0.95], [30, 1.1]];
 // The Resident's act 1, named as the fight opens (combat.mjs engage, the act break's strip): name, emote, say (the log).
@@ -1108,7 +1098,7 @@ export const BOSSES = {
     phases: [{ at: 0.5, do: ['repossess'], name: 'Repossession', emote: 'Your account is past due. I am taking the armor back.', say: 'REPO MAN repossesses. A Collection that lands puts a ◆ back for each Lien.' }, { at: 0.25, do: ['interest'], name: 'Interest', emote: 'Interest compounds. Every lien counts twice now.', say: 'REPO MAN compounds the interest. Each Lien counts twice.' }] },
   // KESSLER-FARM-00 (rogue.mjs FARM), the crew dungeon: crew bosses on the group boss framework (raid.mjs).
   // Sized for a crew of four (smaller crews get a smaller boss: crewHp in raid.mjs). Their own parts hit
-  // softly (dmg) and go at whoever holds aggro; the danger is the mechanics, each a share of max Signal.
+  // softly (dmg) and go at whoever holds aggro; the danger is the mechanics, each a share of max Integrity.
   foreman: { name: 'THE FOREMAN', family: 'ransomware', hp: 13, dmg: 0.45, enrageAt: 22, phases: [], raid: FOREMAN },
   heatsink: { name: 'HEATSINK', family: 'worm', hp: 17, dmg: 0.45, enrageAt: 25, phases: [], raid: HEATSINK },
   coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 8.8, dmg: 0.45, enrageAt: 18, phases: [], raid: COLDWALLET },
@@ -1140,7 +1130,7 @@ export const BOSSES = {
     extra: [{ id: 'collector', name: 'Collector', integrity: 76, armor: 1, loot: 'Collection Plate', special: true, attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 3 } },
       { id: 'demand', name: 'Demand', integrity: 34, armor: 1, loot: 'Ransom Note', deadline: true, beat: true, attack: { name: 'Deadline', effect: 'damage', amount: 15, interval: 5, first: 4, windup: 14 } },
       { id: 'lockbox', name: 'Lockbox', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'demand' }],
-    guide: { open: [['Ransom Clock', 'Counts down from 14 each act. At 0 it leaks 35% of your max Signal and restarts at 7. Each leak in an act takes 15% more than the last, up to 65%.'],
+    guide: { open: [['Ransom Clock', 'Counts down from 14 each act. At 0 it leaks 35% of your max Integrity and restarts at 7. Each leak in an act takes 15% more than the last, up to 65%.'],
       ['Missed payment', 'A Demand broken while the Collector stands halves the time left on the clock.'],
       ['Deadline', 'The Demand winds up a hit every 5 cycles. If it lands, the clock gains 3. Called off, it buys nothing.'],
       ['Wind-up', 'Enough damage to the Demand in the 2 cycles before its Deadline calls it off.'],
@@ -1250,7 +1240,7 @@ export const BOSSES = {
       { id: 'v7', name: 'Backup v7', integrity: 26, armor: 1, loot: 'Snapshot v7', role: 'front', attack: { name: 'Surge', effect: 'damage', amount: 8, interval: 4, first: 2 } },
       { id: 'v6', name: 'Backup v6', integrity: 24, armor: 1, loot: 'Snapshot v6', role: 'backup', attack: { name: 'Surge', effect: 'damage', amount: 7, interval: 4, first: 4 } },
       { id: 'v5', name: 'Backup v5', integrity: 22, armor: 0, loot: 'Snapshot v5', role: 'backup', attack: { name: 'Surge', effect: 'damage', amount: 9, interval: 5, first: 5 } }],
-    guide: { open: [['Rollback', 'Every 6 cycles it restores its own bars to where they were 2 cycles earlier. Your Signal is never restored. A broken part stays broken.'],
+    guide: { open: [['Rollback', 'Every 6 cycles it restores its own bars to where they were 2 cycles earlier. Your Integrity is never restored. A broken part stays broken.'],
       ['Front', 'While Backup v7 stands, your one-part commands at the Core land on it. Burns, helpers and area hits reach the Core.'],
       ['Glass Cut', 'After each restore, the Core charges. It lands in the next restore\'s window when its timer allows.'],
       ['Chargeback', 'A quarter of what a restore gives back lands on you.'],
@@ -1268,7 +1258,7 @@ export const BOSSES = {
   'nb-tripmine': { long: { hp: 1.95, dmg: 0.36, enrageAt: 35 }, name: 'TRIPMINE', bar: 0.6, family: 'ransomware', third: 'tripwire', native: true, lair: 'TRIPMINE-YARD', hp: 1.6, dmg: 1, enrageAt: 18, about: 'If its Tripwire breaks first, the other parts go loud. Below level 20 it brings a Lockbox instead. At 60% Integrity, every attack comes 1 cycle sooner.', phases: [{ at: 0.5, do: ['faster'], say: 'TRIPMINE arms the yard. Every attack comes a cycle sooner.' }] },
   // Since R1 (docs/servers.md 3.5) the interrupt answers a charge for every class, and a boss's charges and casts sit off
   // its ♛ part, so HASHLORD hits harder (dmg 1.5, was 1.1) and MIRRORSHADE too (1.15, was 0.9) to stay in the boss band.
-  // Since gear follows one smooth curve (gear.mjs ITEM_CURVE) a player at their floors carries less Signal than the old
+  // Since gear follows one smooth curve (gear.mjs ITEM_CURVE) a player at their floors carries less Integrity than the old
   // tiers gave there (about 5% at 16 and 15% at 12, just after the tier at 11), so they hit a little less: 1.45 and 1.08.
   // HASHLORD, rebuilt (GAME_RULES.md "Solo bosses"): GLASSJAW's Hashrat build, from level 16. A Pool Lock wards its Miner, but only
   // against your commands: burns and helpers go through at full. Block Reward (a Self-Update on the Miner) and the Chain Fork
@@ -1842,7 +1832,7 @@ export const SERVER = {
 // bar: [level, slots] steps; equipSlots: the most you'll ever have. keys: the key each slot is on, in order.
 // kit: from level 5 (specFrom) one of a class's two first-row talents (ARCHETYPES[cls].spec) is part of its base kit, specRanks
 // free ranks: the level-5 specialty pick is gone. The Infiltrator's is Recon: two ranks of Heap Spray took a blue Payload from
-// 34% to 21% of its Signal a fight at level 10 (docs/progression.md), far past the few percent the others add.
+// 34% to 21% of its Integrity a fight at level 10 (docs/progression.md), far past the few percent the others add.
 export const LOADOUT = { equipSlots: 9, bar: [[1, 7], [22, 8], [30, 9]], keys: ['2', '3', '4', '5', '6', '7', '8', '9', '0'], maxLevel: 50, talentFrom: 10, tiers: [10, 16, 22, 28, 34, 40], capstoneAt: [45, 50], trialUntil: 5, specFrom: 5, specRanks: 2, kit: { breaker: 'overclocked', bastion: 'patch-notes', infiltrator: 'recon', operator: 'thread-pool' } }; // trialUntil: until a class reaches it, switching carries your level over
 // What unlocks at each hacker level (same shape for every class; `order` fills the skill steps).
 export const UNLOCKS = [

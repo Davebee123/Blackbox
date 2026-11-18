@@ -76,7 +76,6 @@ test('tips are paced: a calm tip once a screen visit and a while apart, an openi
   assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .ptick.spent', { told: true, quiet: true })?.id, 'fight-wasted', 'what lands mid-fight still pauses it');
   assert.equal(paceOf(TIPS.find((t) => t.id === 'fight-wasted'), 'combat'), 'mid');
   assert.equal(paceOf(TIPS.find((t) => t.id === 'tour-walk'), 'rooms'), 'free', 'the rooms tour is never held back');
-  assert.equal(paceOf(TIPS.find((t) => t.id === 'degraded'), 'map'), 'free', 'nor is a crash');
 });
 
 test('fight tips pause the fight and wait for what they explain', () => {

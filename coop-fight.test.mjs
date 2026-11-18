@@ -74,7 +74,7 @@ test('the timer turns a cycle with no command from the guest: their auto-repeat 
   assert.ok(P.host.logs.some((x) => x.id > before && x.who === 'bo' && ['damage', 'armor', 'miss'].includes(x.type)), 'the guest\'s auto-repeat fired');
 });
 
-test('the guest sees the fight as "you": their own Signal, bar and cooldowns, the host as a crewmate', () => {
+test('the guest sees the fight as "you": their own Integrity, bar and cooldowns, the host as a crewmate', () => {
   const P = pairUp();
   fight(P);
   const t = firstLive(P.host);
@@ -84,14 +84,14 @@ test('the guest sees the fight as "you": their own Signal, bar and cooldowns, th
   assert.ok(active(V), 'the guest\'s view has the fight');
   assert.equal(V.profile.handle, 'bo');
   assert.equal(classOf(V), 'bastion', 'their class');
-  assert.equal(V.run.integrity, bo.run.integrity, 'their Signal');
+  assert.equal(V.run.integrity, bo.run.integrity, 'their Integrity');
   assert.equal(V.encounter.cycle, P.host.encounter.cycle, 'the host\'s clock');
   assert.deepEqual(V.encounter.readyAt, bo.encounter.readyAt, 'their cooldowns');
   assert.deepEqual(V.encounter.virus.parts.map((p) => p.integrity), P.host.encounter.virus.parts.map((p) => p.integrity), 'the same virus');
   const mates = matesOf(V);
   assert.deepEqual(mates.map((m) => m.who), ['ana']);
   assert.equal(classOf(mates[0]), 'breaker');
-  assert.equal(mates[0].run.integrity, P.host.run.integrity, 'the host\'s Signal on their row');
+  assert.equal(mates[0].run.integrity, P.host.run.integrity, 'the host\'s Integrity on their row');
   assert.ok(V.logs.some((x) => !x.who && ['damage', 'armor', 'miss'].includes(x.type)), 'the guest\'s own hits read as theirs');
   assert.ok(V.logs.some((x) => x.who === 'ana'), 'the host\'s carry the host\'s name');
   assert.ok(!V.logs.some((x) => x.who === 'bo'), 'nothing under the guest\'s own name');

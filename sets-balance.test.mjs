@@ -8,7 +8,7 @@ import { ARCHETYPES } from './dist/data.mjs';
 // Each piece in place of the blue in its slot (balance.mjs opts.uniques), on every subclass, and the sets together with
 // their bonuses: a piece is a sidegrade (held to the natives' bounds: no subclass leaves its band, 4 points of slack
 // under its floor as natives.test.mjs has, at least 80% wins, and the average moves no more than 4.5 points), and so are
-// the two-piece bonuses. The Kestrel 3-piece (once a fight, a hit for more than 30% of your max Signal deals 30%) keeps
+// the two-piece bonuses. The Kestrel 3-piece (once a fight, a hit for more than 30% of your max Integrity deals 30%) keeps
 // every band and moves the average 3.0 points easier at Lv 10, 0.9 at 18 and 3.0 at 30 (October 2026, retuned by the
 // loot plan; the old 3-piece, a ◆ every 5 cycles you had none, measured 6.2, 3.4 and 4.0). Its bound stays the old
 // measure; whether a set's 3-piece may be that strong is the designer's call (GAME_RULES.md Sets, docs/genome.md 9.2).
@@ -55,7 +55,7 @@ test('Kestrel Clearance (3) keeps every band, and moves the average no more than
 // The loot plan's general sets (docs/loot-plan.md), each worn whole in place of the blues in its slots, at the bracket
 // that covers its last piece (10, 18, 30 for pieces up to 32, else 50), on every subclass. A full set is the payoff, and a
 // general set leans to some classes and costs others the stats they chase, so the bound is the measure (October 2026,
-// points of a fight's Signal, easier negative): Cold Storage 5.4 easier at Lv 30, Boot Disk 3.5 at 10, Patchwork 3.4 at
+// points of a fight's Integrity, easier negative): Cold Storage 5.4 easier at Lv 30, Boot Disk 3.5 at 10, Patchwork 3.4 at
 // 18; the rest 0.8 to 3.1 easier, and Lantern Route, a farming set, 2.3 harder at 18 (its Scavenge in place of a
 // Phantom's chased stats: 16% to 30%). Its subclass extreme: Burst Buffer takes the Phantom from 17% to 4% at 30. Every
 // subclass keeps 80% wins with every set; whether a set may move one that far is the designer's call (GAME_RULES.md
@@ -92,8 +92,8 @@ test('the loot plan\'s general sets, worn whole: every subclass keeps 80% wins, 
 
 // The class sets are the end-game tier sets (World of Warcraft's): every piece level 50 with the best stats for its slot
 // there, their bonuses as strong as designed, so they are not held to the general sets' bounds. Each, worn whole at Lv 50
-// on every subclass: its own class's two subclasses lose less Signal than without it, no subclass loses a fight it wins
-// without it, and every subclass stays under its ceiling (balance.mjs soloBand). What they measure (October 2026, Signal
+// on every subclass: its own class's two subclasses lose less Integrity than without it, no subclass loses a fight it wins
+// without it, and every subclass stays under its ceiling (balance.mjs soloBand). What they measure (October 2026, Integrity
 // lost a fight, without the set and with it): Wrecking Crew, the Demolitionist 13.4% to 7.8% and the Overclocker 31.0% to
 // 16.7%; Strongbox, the Warden 17.8% to 8.3% and the Sysop 4.5% to 2.8%; Palemask, the Payload 15.1% to 13.4% and the
 // Phantom 3.5% to 4.5%; Load Balanced, the Herder 9.7% to 7.1% and the Hijacker 16.1% to 11.8%. "Less for its own class"
@@ -104,7 +104,7 @@ test('the loot plan\'s general sets, worn whole: every subclass keeps 80% wins, 
 // off-class move is Strongbox on an Overclocker, 31.0% to 17.5%, and the one harder is Wrecking Crew on a Warden, 15.1%
 // to 18.4% (the set in place of the stats a Warden chases). The Overclocker loses one fight of 24 at 50 with or without a
 // set (a zone fight that ends it in 6 or 7 cycles), so the check is no fight lost that it wins without.
-// A score() result and 56 more wilds at Lv 50 (seeds 101-156): the average Signal lost over all 80.
+// A score() result and 56 more wilds at Lv 50 (seeds 101-156): the average Integrity lost over all 80.
 const wide = {};
 function wider(c, sub, r, opts) {
   const key = `${sub} ${JSON.stringify(opts)}`;

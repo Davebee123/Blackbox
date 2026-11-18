@@ -196,7 +196,7 @@ test('the Patch Injector: viruses on its server have 1 ◆ less on every part', 
   assert.deepEqual(patched, plain.map((n) => Math.max(0, n - 1)));
 });
 
-test('the Bulkhead: fights next door start behind a shield of 10% of your max Signal; not two rooms away', () => {
+test('the Bulkhead: fights next door start behind a shield of 10% of your max Integrity; not two rooms away', () => {
   const shield = (bulk, near) => {
     const { s, sock } = playtest({ seed: 4 });
     s.rooms.programs = bulk ? { [sock.id]: 'bulkhead' } : {};

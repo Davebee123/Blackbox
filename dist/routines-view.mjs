@@ -68,7 +68,7 @@ function benchMarkup(s, body) {
   const pct = Math.round((b.wins / (b.n || 1)) * 100);
   const stat = (cls, icon, v, t) => `<span class="rt-bs ${cls}" title="${esc(t)}">${glyph(icon)}<b>${v}</b></span>`;
   return `<div class="rt-bench${b.stale ? ' stale' : ''}"${b.stale ? ' title="Measured before your last change. Run it again."' : ''}>${btn}
-    ${stat('win', 'kill', `${pct}%`, `Won ${b.wins} of ${b.n}.`)}${stat('cyc', 'clock', b.cycles || '—', 'Cycles a win takes, on average.')}${stat('lost', 'signal', `−${b.lost}%`, 'Signal lost, on average. A loss loses all of it.')}${b.asked ? stat('asked', 'lock', b.asked, `${b.asked} of ${b.n} fights left a part to you (${EXCEPTION.label}). Here the rotation played it.`) : ''}</div>`;
+    ${stat('win', 'kill', `${pct}%`, `Won ${b.wins} of ${b.n}.`)}${stat('cyc', 'clock', b.cycles || '—', 'Cycles a win takes, on average.')}${stat('lost', 'signal', `−${b.lost}%`, 'Integrity lost, on average. A loss loses all of it.')}${b.asked ? stat('asked', 'lock', b.asked, `${b.asked} of ${b.n} fights left a part to you (${EXCEPTION.label}). Here the rotation played it.`) : ''}</div>`;
 }
 
 // ---------- the Program tab ----------
@@ -135,7 +135,7 @@ export function programMarkup(s) {
     <div class="rt-group"><h3 class="rt-label">TARGET</h3><div class="rt-row">${Object.keys(TARGETS).map((id) => targetChip(id)).join('')}</div></div></section>`;
   const jo = P.rails.jackOut;
   const railsCard = `<section class="card rt-rails"><h2>Rails</h2>
-    <div class="rt-rail"><span class="rt-label" title="On a run, crossing this Signal line jacks you out with your pack.">Auto jack-out</span><span class="rt-seg" role="group" aria-label="Auto jack-out">${ROUTINES.jackOut.map((v) => `<button type="button" class="btn small" data-command="program jackout ${v || 'off'}" aria-pressed="${jo === v}">${v ? v + '%' : 'Off'}</button>`).join('')}</span></div>
+    <div class="rt-rail"><span class="rt-label" title="On a run, crossing this Integrity line jacks you out with your pack.">Auto jack-out</span><span class="rt-seg" role="group" aria-label="Auto jack-out">${ROUTINES.jackOut.map((v) => `<button type="button" class="btn small" data-command="program jackout ${v || 'off'}" aria-pressed="${jo === v}">${v ? v + '%' : 'Off'}</button>`).join('')}</span></div>
     <div class="rt-rail"><span class="rt-label" title="A walk stops before an elite, a boss, the Resident or a vault guard, and waits for you.">Stop before danger</span><span class="settings-grid"><button type="button" class="btn small" data-command="program danger ${P.rails.danger ? 'off' : 'on'}" aria-pressed="${P.rails.danger}">${glyph('ids')}Elites, bosses</button></span></div>
     <div class="rt-rail"><span class="rt-label" title="${esc(`Cues: while your program plays, a sound when ${Object.values(CUES).map((c) => c.name.toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' or $1')}. Each has its own.`)}">Cues</span><span class="settings-grid"><button type="button" class="btn small" data-command="program cues ${P.rails.cues ? 'off' : 'on'}" aria-pressed="${P.rails.cues}">${glyph('signal')}Sound</button></span></div></section>`;
   return `<div class="rt-editor" data-rt-body="${esc(body)}">${virusList(s, body)}<div class="rt-main">${stack}</div><div class="rt-side">${chips}${railsCard}</div></div>`;

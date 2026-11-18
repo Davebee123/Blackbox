@@ -1279,7 +1279,7 @@ export default {
         "subject": "Install: {server}",
         "body": [
           "We need {label} running inside {server}, at {addr}. It goes in your pack when you connect there.",
-          "Install it in that room. Lose your Signal with it on you and it's gone, and so is the job."
+          "Install it in that room. Lose your Integrity with it on you and it's gone, and so is the job."
         ]
       },
       {
@@ -1295,7 +1295,7 @@ export default {
         "subject": "Fitting: {server}",
         "body": [
           "{Label} is to be fitted inside {server}, at {addr}. It goes in your pack when you connect there.",
-          "Fit it in that room. Lose your Signal with it on you and it's gone, and so is the job."
+          "Fit it in that room. Lose your Integrity with it on you and it's gone, and so is the job."
         ]
       }
     ],
@@ -1304,7 +1304,7 @@ export default {
         "subject": "Relay: {server}",
         "body": [
           "Seven. Seven. {Label} for {server}, the room at {addr}. It goes in your pack when you connect there.",
-          "Install it in that room. Lose your Signal with it on you and it's gone, and so is the job."
+          "Install it in that room. Lose your Integrity with it on you and it's gone, and so is the job."
         ]
       }
     ],
@@ -1313,7 +1313,7 @@ export default {
         "subject": "A gift for {server}",
         "body": [
           "{Label} for {server}, the room at {addr}. It goes in your pack when you connect there.",
-          "Install it in that room. Lose your Signal with it on you and it's gone, and so is the job."
+          "Install it in that room. Lose your Integrity with it on you and it's gone, and so is the job."
         ]
       }
     ],
@@ -1322,7 +1322,7 @@ export default {
         "subject": "A quiet listener",
         "body": [
           "{Label} for {server}, the room at {addr}. It goes in your pack when you connect there.",
-          "Install it in that room. Lose your Signal with it on you and it's gone, and so is the job."
+          "Install it in that room. Lose your Integrity with it on you and it's gone, and so is the job."
         ]
       }
     ]

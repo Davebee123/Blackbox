@@ -19,7 +19,7 @@ import { distances, pathTo, neighbours, WORLD } from './floorplan.mjs';
 
 export const RUNCARD = {
   surge: { waves: 3 }, // kills to fill the bar; then the guardian
-  escort: { hp: 0.6, min: 3 }, // its Integrity, of your max Signal; its route at least this many steps
+  escort: { hp: 0.6, min: 3 }, // its Integrity, of your max Integrity; its route at least this many steps
   pack: { brood: 2, min: 3 }, // its runners; it starts at least this many rooms from you
 };
 export const RUN_CARDS = {

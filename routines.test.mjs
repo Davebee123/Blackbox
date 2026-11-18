@@ -869,14 +869,14 @@ test('the benchmark runs your routine alone against the virus\'s builds at your 
   assert.match(programMarkup(s), /rt-bench stale/);
 });
 
-test('cues: while your program plays, a tell landing, Signal crossing under 30% and a rare drop each sound once; typing silences them', () => {
+test('cues: while your program plays, a tell landing, Integrity crossing under 30% and a rare drop each sound once; typing silences them', () => {
   const s = fight({ level: 14 });
   const P = R.programsOf(s);
   assert.equal(P.rails.cues, true, 'on by default');
   const prog = { type: 'resolved', auto: 'program' }, typed = { type: 'resolved' };
   const d = s.encounter.mode === 'run' ? s.run : s.server;
   R.cuesOf(s, [prog]);
-  // Signal crossing the line.
+  // Integrity crossing the line.
   d.integrity = Math.floor(d.max * 0.25);
   assert.deepEqual(R.cuesOf(s, [prog]), ['low']);
   assert.deepEqual(R.cuesOf(s, [prog]), [], 'once a crossing');

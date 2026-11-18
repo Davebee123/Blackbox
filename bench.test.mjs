@@ -190,8 +190,8 @@ test('the panel\'s commands do what their buttons say', () => {
   assert.equal(B.benchAction(s, 'event', { event: '' }), 'developer event');
   play(s, B.benchAction(s, 'lv+5'));
   assert.equal(hackerLevel(s), 15);
-  // Refill: Signal and Integrity full.
-  s.server.integrity = 3; s.signal = 1;
+  // Refill: Integrity full.
+  s.server.integrity = 1;
   play(s, B.benchAction(s, 'refill'));
   assert.equal(s.server.integrity, s.server.max); assert.equal(signalNow(s), maxSignal(s));
   const c = s.server.credits; play(s, B.benchAction(s, 'credits')); assert.equal(s.server.credits, c + 1000);

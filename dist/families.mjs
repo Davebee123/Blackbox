@@ -28,14 +28,14 @@
 //                Clear the Zombies first and the C&C falls silent, and the kill pays BODY.botnet.farm.
 //   Logic Bomb   Count your hits. The Payload's fuse burns down with hits on it: your commands' (Contact) or every hit,
 //                burns and helpers too, winding back up 1 a cycle (Timed). Its ticks take 2 more. At 0 it detonates
-//                (BODY.fuse.blast of your max Signal) and is gone with its loot; the fight goes on against the rest.
+//                (BODY.fuse.blast of your max Integrity) and is gone with its loot; the fight goes on against the rest.
 import { hooks, emit, alive, part, attackAmount, livingParts, attackers, defender, hit, usable, readyIn, strikeWith, virusIntegrity, takeDamage } from './combat.mjs';
 import { ROOM_FAMILIES, FAMILIES, ABILITIES, CONFIG } from './data.mjs';
 
 // ---------- the bodies (level 6 scale, like FAMILIES) ----------
 Object.assign(ROOM_FAMILIES, {
   trojan: {
-    name: 'Trojan', stem: 'TROJAN', threatens: 'Signal', art: 'worm', opens: 4, code: 'worm',
+    name: 'Trojan', stem: 'TROJAN', threatens: 'Integrity', art: 'worm', opens: 4, code: 'worm',
     summary: "The Courier delivers Packages, and one is already on the board. While the Loader stands, any damage to a Package unpacks it into two Droppers. An unopened Package unpacks on its own 5 cycles after delivery. While the Loader stands, a broken Courier redeploys 4 cycles later at half its Integrity. When the Loader breaks, the Courier stays down and every Package goes inert.",
     answer: 'Break the Loader, and leave the Packages alone.',
     parts: [
@@ -47,7 +47,7 @@ Object.assign(ROOM_FAMILIES, {
   // fighter: it flees room to room, and once caught its upload completes after 6 cycles. Its Uplink carries the
   // upload, its Archive what it stole. Never rolled anywhere (runner: the Codex's own row).
   exfil: {
-    name: 'Exfil', stem: 'EXFIL', threatens: 'Signal', art: 'worm', opens: 1, code: 'worm', runner: true,
+    name: 'Exfil', stem: 'EXFIL', threatens: 'Integrity', art: 'worm', opens: 1, code: 'worm', runner: true,
     summary: 'A process uploading a stolen archive off the server. It runs from you, and its Uplink carries the upload.',
     answer: 'Corner it, then break its Uplink before the upload finishes.',
     parts: [
@@ -65,7 +65,7 @@ export const BODY = {
   loader: 2, // a Loader's tick delays the Courier's next delivery this many cycles
   twin: 1, // a Twin Rig left alone climbs this many steps on top of the climb it takes from the broken one
   botnet: { end: 0.6, farm: 1.5 }, // a Botnet's kill: the C&C broken with a Zombie standing, or every Zombie first
-  fuse: { blast: 0.35, tick: 2 }, // a Payload's detonation (a share of your max Signal), and what each of its ticks takes off the fuse
+  fuse: { blast: 0.35, tick: 2 }, // a Payload's detonation (a share of your max Integrity), and what each of its ticks takes off the fuse
 };
 // Which families a server's author writes (4.5), and from what level each opens (a P3 family's, data.mjs FAMILIES).
 export const OPENS = { ransomware: 1, worm: 1, ghostroot: 1, trojan: 4, cryptominer: FAMILIES.cryptominer.opens.level, wiper: FAMILIES.wiper.opens.level, botnet: FAMILIES.botnet.opens.level, logicbomb: FAMILIES.logicbomb.opens.level };
@@ -337,7 +337,7 @@ function burnFuse(s, p, n) {
   p.fuseLeft = Math.max(0, fuseLeft(s.encounter.virus, p) - n);
   if (p.fuseLeft <= 0) detonate(s, p);
 }
-// At 0 it detonates: BODY.fuse.blast of your max Signal (never your last point), and the Payload is gone, loot and all.
+// At 0 it detonates: BODY.fuse.blast of your max Integrity (never your last point), and the Payload is gone, loot and all.
 function detonate(s, p) {
   const d = defender(s), n = Math.max(1, Math.round(d.max * BODY.fuse.blast));
   p.integrity = 0; p.loot = null; p.detonated = true; p.attack = null;
@@ -469,7 +469,7 @@ hooks.roomCycle = (s) => {
     const d = defender(s), you = Math.min(d.integrity, Math.max(1, Math.round(d.max * ROOM_RULES.overheat.you)));
     d.integrity -= you;
     for (const p of livingParts(s)) hit(s, p, Math.max(1, Math.round(p.max * ROOM_RULES.overheat.parts)), { by: 'Overheat', pierce: true, server: true });
-    emit(s, 'server-hit', `Overheat: the rack burns you for ${you}, and every part with you. Signal ${d.integrity}/${d.max}.`, { amount: you, atk: 'Overheat' });
+    emit(s, 'server-hit', `Overheat: the rack burns you for ${you}, and every part with you. Integrity ${d.integrity}/${d.max}.`, { amount: you, atk: 'Overheat' });
   }
 };
 // What a room body's part says under its name on the board (view.mjs partTags), as [text, tip, kind].
@@ -481,7 +481,7 @@ export function bodyTags(s, p) {
   if (p === hasherOf(s)) out.push([v.overheated ? 'overheated' : `heat ${v.heat || 0}/${BODY.heat.at}`, v.overheated ? 'Overheated: burns itself every cycle until it breaks. Venting it starts it hashing again.' : `Heat: at ${BODY.heat.at}, overheats, stops hashing and burns itself until it breaks. Its ticks vent its heat and climb back to nothing.`, v.overheated ? 'you heat' : 'hot heat']);
   if (p.twinrig) out.push(['twin', 'Twin Rig: shares the Rig\'s heat. When one Rig breaks while the other stands, the other takes its climb on top of its own.\n▸ Bring both down close together.', 'hot twin']);
   if (p.bin && p.binHeld && e.wiped?.[p.binHeld.id] >= e.cycle) out.push([`holds ${ABILITIES[p.binHeld.id].name}`, `Recycle Bin: holds the key the Wipe took.\n▸ Push it past a tick and ${ABILITIES[p.binHeld.id].name} comes back, ready.`, 'bin']);
-  if (p.payload) { const f = fuseOf(v), n = fuseLeft(v, p); out.push([`fuse ${n}/${f.at}`, `Fuse: ${f.counts === 'cmd' ? 'each hit of your commands on it, a hit on ◆ included,' : 'each hit on it, burns and helpers included,'} burns 1. Each of its ticks burns ${BODY.fuse.tick}.${f.wind ? ` Winds back up ${f.wind} a cycle.` : ''} At 0 it detonates for ${Math.round(BODY.fuse.blast * 100)}% of your max Signal, and its loot is gone.\n▸ ${f.counts === 'cmd' ? 'Few big hits, or burns.' : 'One big hit a cycle, and no helpers.'}`, 'hot payload']); }
+  if (p.payload) { const f = fuseOf(v), n = fuseLeft(v, p); out.push([`fuse ${n}/${f.at}`, `Fuse: ${f.counts === 'cmd' ? 'each hit of your commands on it, a hit on ◆ included,' : 'each hit on it, burns and helpers included,'} burns 1. Each of its ticks burns ${BODY.fuse.tick}.${f.wind ? ` Winds back up ${f.wind} a cycle.` : ''} At 0 it detonates for ${Math.round(BODY.fuse.blast * 100)}% of your max Integrity, and its loot is gone.\n▸ ${f.counts === 'cmd' ? 'Few big hits, or burns.' : 'One big hit a cycle, and no helpers.'}`, 'hot payload']); }
   if (p.cnc && p.zombies) { const z = zombiesOf(s).length; out.push([`${z} zombies`, `C&C: its Volley fires every Zombie at once. Break it and the rest scatter: the fight ends, and the kill pays ${BODY.botnet.end}×.\n▸ Clear the Zombies first and the kill pays ${BODY.botnet.farm}×.`, 'hot cnc']); }
   if (p.attack?.wipe) out.push([p.attack.wipe === 'last' ? 'wipes your last skill' : 'wipes your strongest', p.attack.wipe === 'last' ? `Wipe: takes the skill you used last off your bar for ${p.attack.wipeFor} cycles.` : `Wipe: takes your strongest ready skill off your bar for ${p.attack.wipeFor} cycles.`, 'hot wipe']);
   return out;

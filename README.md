@@ -142,6 +142,7 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/run.mjs` | Runs: connecting, the pack, banking at jack out, the run commands on rooms. |
+| `dist/visit.mjs` | A visit: the snap of your progress taken at connect, and the revert a disconnect plays (an allowlist of what goes back). |
 | `dist/floorplan.mjs` | A server as a graph of rooms: moving, fights, caches, the hunter, the vault and the Core; the server kinds, a Router's one-way links among them; the reboot (a traced server's fight rooms come back together once all have fallen; a Mapped one goes offline for it: offlineLeft). |
 | `dist/objectives.mjs` | A room fight's objective (`e.objective`): Priority, Uptime, Backup, Clean run and the Exfil's upload, their roll, rules, board text and bonus. |
 | `dist/netrooms.mjs` | Every server on the real save as a room graph, kept on its location; takeover and Root rooms. |
@@ -169,7 +170,7 @@ comment saying what it does.
 
 | File | What it does |
 |---|---|
-| `dist/invasion.mjs` | Invasions: servers on your network send kinds of invader home while you play. |
+| `dist/invasion.mjs` | Invasions: servers on your network send kinds of invader home while you play; their chip stops at 1. |
 | `dist/firewall.mjs` | The firewall: its base follows your network, plus the margin you buy. |
 | `dist/server-view.mjs`, `dist/server.css` | The Server page: your home server's ring, rows and detail panel. |
 | `dist/events.mjs`, `dist/event-cards.mjs` | The event director's deck, chains, blips and history; each card's panel, the blips' sparks and the history list. |

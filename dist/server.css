@@ -32,7 +32,6 @@
 .hsv-ring .blk.frag { fill: none; stroke: var(--gray); stroke-dasharray: 2.5 2.5; }
 .hsv-ring .blk.frag.mend { stroke: var(--you); }
 .hsv-ring .crack { fill: none; stroke: var(--gray); stroke-width: 1.2; }
-.hsv-ring.down .blk { fill: none; stroke: var(--gray); stroke-dasharray: 2.5 2.5; }
 .hsv-ring .shell { fill: none; stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 2 5; }
 .hsv-ring .pit { fill: var(--inset); stroke: var(--line-strong); }
 .hsv-ring .track { fill: none; stroke: var(--line); stroke-width: 6; }

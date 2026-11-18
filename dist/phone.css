@@ -21,10 +21,10 @@
 [data-form='phone'] .topbar .meter { grid-area: auto; min-height: var(--tap); padding: 0; justify-self: auto; border-left: 0 !important; font-size: var(--ph-small); }
 [data-form='phone'] .topbar #meter-level { display: none; }
 [data-form='phone'] .topbar .meter-label { font-size: var(--ph-tiny); }
-[data-form='phone'] .topbar :is(#meter-integrity, #meter-signal) .meter-label { display: none; } /* the tower and the bars say which; a tap gives the card */
+[data-form='phone'] .topbar #meter-integrity .meter-label { display: none; } /* the tower says which; a tap gives the card */
 [data-form='phone'] .topbar .meter { flex: none; gap: 6px; }
 [data-form='phone'] .topbar .meter strong { font-size: var(--ph-body); }
-[data-form='phone'] .topbar .meter-note, [data-form='phone'] .topbar .sig-eta, [data-form='phone'] .topbar .sig-sick { font-size: var(--ph-tiny); }
+[data-form='phone'] .topbar .meter-note, [data-form='phone'] .topbar .sig-eta { font-size: var(--ph-tiny); }
 [data-form='phone'] .topbar .meters > .meter:last-child { margin-left: auto; }
 [data-form='phone'] .topbar .pager { order: -1; height: 34px; min-height: 0; padding: 0 2px; }
 [data-form='phone'] .topbar .pg-lamp { gap: 6px; min-width: var(--tap); height: var(--tap); margin: -5px 0; justify-content: center; }
@@ -286,22 +286,24 @@
 [data-form='phone'] :is(.map-svg, .fp-svg) { touch-action: none; } /* pinch and double-tap are the map's (app.js) */
 [data-form='phone'] body.ph-map .map-list .mlist, [data-form='phone'] body.ph-map .map-list > :not(.map-tools) { min-height: 0; overflow: auto; }
 
-/* ---- A server's rooms: no strip; its header is one line (the designer's pick A): the server, Signal, rooms n/N, the
-   hunter's countdown. A tap on the name opens the rest. Wait and Jack out float as one capsule at the map's bottom
+/* ---- A server's rooms: no strip; its header is one line (the designer's pick A): the server, Integrity, This visit,
+   rooms n/N, the hunter's countdown. A tap on the name opens the rest. Wait and Jack out float as one capsule at the map's bottom
    right; the map fills the rest, standing up ---- */
 [data-form='phone'] body.ph-rooms .topbar { display: none; }
 [data-form='phone'] body.ph-rooms .fp { display: flex; flex-direction: column; gap: 0; height: calc(100dvh - var(--ph-bar) - var(--safe-t)); }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud { position: static; display: flex; flex: none; flex-wrap: nowrap; align-items: center; gap: 12px; height: var(--tap); padding: 0 12px; background: var(--bg); border: 0; border-bottom: 1px solid var(--line-strong); border-radius: 0; box-shadow: none; overflow: hidden; }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud::before, [data-form='phone'] body.ph-rooms #page-view .fp-hud::after { display: none; }
-[data-form='phone'] body.ph-rooms #page-view .fp-hud > :not(.fp-id, .fp-sig, .fp-prog, .fp-hunt, .fp-tools) { display: none; }
-[data-form='phone'] body.ph-rooms #page-view .fp-hud :is(.lbl, .fp-id small, .fp-id .ico, .fp-sig small, .sigbar, .pbar, .fp-mapped, .fp-rules, .sig-sick) { display: none; }
+[data-form='phone'] body.ph-rooms #page-view .fp-hud > :not(.fp-id, .fp-sig, .fp-visit, .fp-prog, .fp-hunt, .fp-tools) { display: none; }
+[data-form='phone'] body.ph-rooms #page-view .fp-hud :is(.lbl, .fp-id small, .fp-id .ico, .fp-sig small, .sigbar, .pbar, .fp-mapped, .fp-rules) { display: none; }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud .fp-tools { display: contents; }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud .fp-in { display: none; }
 [data-form='phone'] body.ph-rooms #page-view .fp-id { display: flex; flex: 1; flex-wrap: nowrap; order: 0; align-items: center; gap: 6px; min-width: 0; min-height: var(--tap); }
 [data-form='phone'] body.ph-rooms #page-view .fp-id b { overflow: hidden; font: 600 14px var(--mono); letter-spacing: 0.5px; text-overflow: ellipsis; }
 [data-form='phone'] body.ph-rooms #page-view .fp-id::after { content: '▾'; flex: none; color: var(--muted); font-size: var(--ph-tiny); }
 [data-form='phone'] body.ph-rooms #page-view .fp-sig { display: flex; flex: none; align-items: center; gap: 6px; min-width: 0; min-height: var(--tap); }
-[data-form='phone'] body.ph-rooms #page-view .fp-sig::before { content: ''; width: 16px; height: 12px; background: linear-gradient(90deg, currentColor 0 3px, transparent 3px 4.3px, currentColor 4.3px 7.3px, transparent 7.3px 8.6px, currentColor 8.6px 11.6px, transparent 11.6px 13px, currentColor 13px 16px); clip-path: polygon(0 100%, 0 72%, 100% 0, 100% 100%); color: var(--you); }
+[data-form='phone'] body.ph-rooms #page-view .fp-sig::before { content: ''; box-sizing: border-box; width: 10px; height: 14px; border: 1.5px solid currentColor; border-radius: 2px; background: linear-gradient(currentColor, currentColor) 50% 2px / 4px 1px no-repeat, linear-gradient(currentColor, currentColor) 50% 5px / 4px 1px no-repeat; color: var(--you); } /* the server tower, as on the top bar */
+[data-form='phone'] body.ph-rooms #page-view .fp-visit { display: flex; flex: none; gap: 8px; min-height: 26px; padding: 0 6px; }
+[data-form='phone'] body.ph-rooms #page-view .fp-visit b:last-child { display: none; } /* rooms and XP; the files ride in the name's sheet */
 [data-form='phone'] body.ph-rooms #page-view .fp-sig.mid::before { color: var(--next); }
 [data-form='phone'] body.ph-rooms #page-view .fp-sig.low::before { color: var(--hot); }
 [data-form='phone'] body.ph-rooms #page-view .fp-sig strong { font: 600 var(--ph-body) var(--mono); }

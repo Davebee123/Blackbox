@@ -86,7 +86,7 @@ test('a cache the host takes pays the guest a share of their own, on the guest\'
   assert.ok(P.G.view.logs.some((x) => /Your share of the cache/.test(x.message)), 'and on their screen');
 });
 
-test('a shared fight on the host\'s server: the guest\'s Signal carries to the next fight; a rest heals it; a new run starts it full', () => {
+test('a shared fight on the host\'s server: the guest\'s Integrity carries to the next fight; a rest heals it; a new run starts it full', () => {
   const P = pairUp();
   play(P.host, 'connect ' + traced(P.host).id); P.tick();
   const room = Object.values(P.host.rooms.graph.rooms).find((r) => r.kind === 'process');
@@ -99,7 +99,7 @@ test('a shared fight on the host\'s server: the guest\'s Signal carries to the n
   win(P);
   assert.equal(P.host.reports.at(-1).result, 'victory');
   const seat = bo().seat, max = maxSignal(bo());
-  assert.ok(seat.signal != null && seat.signal < max * 0.5, `their Signal carried: ${seat.signal} of ${max}`);
+  assert.ok(seat.signal != null && seat.signal < max * 0.5, `their Integrity carried: ${seat.signal} of ${max}`);
   const hurt = seat.signal;
   assert.equal(P.G.view.run.integrity, seat.signal, 'and the guest\'s screen shows it');
   const rest = roomOfKind(P.host, 'rest');

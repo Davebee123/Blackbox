@@ -56,7 +56,7 @@ function fight(s, { hp = 1000 } = {}) {
 const pulse = (s) => part(s, 'pulse');
 const enc = (s) => part(s, 'encryptor');
 const ratio = (a, b) => Math.round((a / b) * 1000) / 1000;
-// What one attack from the Pulse Node took from your Signal this cycle (more: the attack's own fields).
+// What one attack from the Pulse Node took from your Integrity this cycle (more: the attack's own fields).
 function landed(s, amount, more = {}) {
   const e = s.encounter, p = pulse(s), mark = s.serial;
   Object.assign(p.attack, { amount, due: e.cycle, interval: 999, ...more });
@@ -303,7 +303,7 @@ test('Notice Period: a tell starting takes a cycle off the cooldown nearest done
   const t = vet(); fight(t); t.encounter.readyAt = { crack: 9 }; tellStarted(t);
   assert.deepEqual(t.encounter.readyAt, { crack: 9 }, 'without it, nothing');
   const u = vet(), base = maxSignal(u); const [gt] = wear(u, 'golden-ticket');
-  assert.equal(maxSignal(u), Math.round((base + gt.stats.signal) * 1.06), 'Golden Ticket: 6% more max Signal');
+  assert.equal(maxSignal(u), Math.round((base + gt.stats.signal) * 1.06), 'Golden Ticket: 6% more max Integrity');
   const f = fight(u);
   f.shield = 30; shieldWatch(u);
   assert.equal(f.shield, 60, 'the first shield, doubled');
@@ -312,7 +312,7 @@ test('Notice Period: a tell starting takes a cycle off the cooldown nearest done
 });
 
 // ---------- the sets ----------
-test('Fine Print: +8% max Signal (2), a tell that lands shields you (3), more damage behind a shield (4)', () => {
+test('Fine Print: +8% max Integrity (2), a tell that lands shields you (3), more damage behind a shield (4)', () => {
   const s = vet(); wearSet(s, 'fineprint'); const e = fight(s);
   assert.deepEqual(activeSets(loaded(s)).find((r) => r.id === 'fineprint').open, [2, 3, 4]);
   SET_HOOKS.struck(s, { name: 'Surge' }, 50, pulse(s));

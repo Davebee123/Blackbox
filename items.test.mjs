@@ -63,7 +63,7 @@ test('stat-x2 counts a stat double while its condition holds; break refunds; Enc
   assert.ok(u.encounter.encrypt <= Math.ceil(amount / 2), 'half as fast');
 });
 
-test("Deadman's Switch: Signal at 0 jacks you out with your pack, then waits 90 minutes", async () => {
+test("Deadman's Switch: Integrity at 0 jacks you out with your pack, then waits 90 minutes", async () => {
   await import('./dist/run.mjs');
   let t = 1_000_000; hooks.now = () => t;
   try {

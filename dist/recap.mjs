@@ -1,8 +1,8 @@
-// The death recap on the Disconnected card: what took your Signal to 0, at a glance. The Signal you ended each of the
+// The death recap on the Disconnected card: what took your Integrity to 0, at a glance. The Integrity you ended each of the
 // fight's last cycles on (a strip of bars, the last one empty), the hits that did it (a row each, the same attack
 // summed, the biggest lit, the last one marked, a tell's icon on a charge you could have cut) and what you took,
 // healed and shielded over that span. Built once as the fight ends (combat.mjs disconnect; breach.mjs and
-// floorplan.mjs lose) from the fight's own log (s.logs, since its engage) and the Signal it notes each cycle
+// floorplan.mjs lose) from the fight's own log (s.logs, since its engage) and the Integrity it notes each cycle
 // (combat.mjs noteSignal, e.fxs.sig: the last 7). It rides the disconnected event or the loss record; nothing else
 // is kept. Only yours: a crewmate's events (who) don't count. Pure.
 import { floatOf } from './dmgfx.mjs';
@@ -62,7 +62,7 @@ export function deathRecap(s, n = RECAP.cycles) {
   if (rows.length > RECAP.rows) { const keep = rows.slice(0, RECAP.rows); if (!keep.some((r) => r.last)) keep[RECAP.rows - 1] = rows.find((r) => r.last); rows = keep; }
   if (rows.length > 1) rows[0].top = true;
   rows = rows.map(({ big, ...r }) => r);
-  // The strip: the Signal at the end of each cycle, noted as it closed; the last is where you ended. A cycle the
+  // The strip: the Integrity at the end of each cycle, noted as it closed; the last is where you ended. A cycle the
   // fight didn't note (a fight from an older save) is worked back from the next one.
   const was = e.fxs?.sig || {}, clamp = (x) => Math.max(0, Math.min(max, Math.round(x)));
   const bars = [];
@@ -90,7 +90,7 @@ function hitTip(r) {
   const out = [`${who} dealt you ${r.amount}${r.n > 1 ? ` over ${r.n} hits` : ''}.`];
   if (r.crits) out.push(r.crits === 1 && r.n === 1 ? 'It was a critical strike.' : `${r.crits} ${r.crits === 1 ? 'was a critical strike' : 'were critical strikes'}.`);
   if (r.tell) out.push(`${r.tell.name} is a ${r.tell.kind === 'lock' ? 'lock' : r.tell.kind}. ${(ANSWER[r.tell.kind] || ANSWER.charge)(r.part)}`);
-  if (r.last) out.push(`${r.n > 1 ? 'Its last hit' : 'It'} took your Signal to 0.`);
+  if (r.last) out.push(`${r.n > 1 ? 'Its last hit' : 'It'} took your Integrity to 0.`);
   return out.join(' ');
 }
 // The recap as a block for a card (app.js lossCard over the gain card's rows; the breach's and the rooms' loss cards).
@@ -98,15 +98,15 @@ export function recapMarkup(r) {
   if (!r?.bars?.length) return '';
   const span = cyc(r.cycles);
   const bars = r.bars.map((b, i) => {
-    const lost = Math.max(0, b.from - b.to), tip = `Cycle ${b.c}: Signal ${b.to}/${r.max}.${b.took ? ` You took ${b.took}` : ''}${b.took && b.healed ? ` and healed ${b.healed}` : b.healed ? ` You healed ${b.healed}` : ''}${b.took || b.healed ? '.' : ''}`;
+    const lost = Math.max(0, b.from - b.to), tip = `Cycle ${b.c}: Integrity ${b.to}/${r.max}.${b.took ? ` You took ${b.took}` : ''}${b.took && b.healed ? ` and healed ${b.healed}` : b.healed ? ` You healed ${b.healed}` : ''}${b.took || b.healed ? '.' : ''}`;
     return `<span class="rc-bar${i === r.bars.length - 1 ? ' end' : ''}" title="${esc(tip)}"><i class="rc-lost" style="height:${pct(lost, r.max)};bottom:${pct(b.to, r.max)}"></i><i class="rc-kept" style="height:${pct(b.to, r.max)}"></i></span>`;
   }).join('');
   const start = r.bars[0].from;
   const rows = r.rows.map((x) => `<li class="rc-hit k-${esc(x.kind)}${x.top ? ' top' : ''}${x.last ? ' last' : ''}" title="${esc(hitTip(x))}">${glyph(x.icon, 'rc-ico')}<span class="rc-name"><b>${esc(x.name)}</b>${x.part ? `<small>${esc(x.part)}</small>` : ''}</span>${x.tell ? `<span class="rc-tell t-${esc(x.tell.kind)}" ${icon(TELL_ICON[x.tell.kind] || TELL_ICON.charge)}></span>` : ''}${x.n > 1 ? `<span class="rc-n">×${x.n}</span>` : ''}${x.last ? '<span class="tag hot rc-last">Last</span>' : ''}<b class="rc-dmg">−${x.amount}</b></li>`).join('');
   const tile = (k, label, val, tip) => `<span class="rc-tot k-${k}${val ? '' : ' none'}" title="${esc(tip)}"><i>${label}</i><b>${!val ? 0 : k === 'took' ? `−${val}` : k === 'healed' ? `+${val}` : val}</b></span>`;
-  const aria = `Last ${span}: Signal ${start} to ${r.bars.at(-1).to}, took ${r.took}${r.kill ? `, last hit ${r.kill.name} for ${r.kill.amount}` : ''}`;
+  const aria = `Last ${span}: Integrity ${start} to ${r.bars.at(-1).to}, took ${r.took}${r.kill ? `, last hit ${r.kill.name} for ${r.kill.amount}` : ''}`;
   return `<div class="recap" role="group" aria-label="${esc(aria)}">
-    <div class="rc-strip" title="${esc(`Your Signal at the end of each of the last ${span}.`)}"><span class="rc-k">Last ${span}</span><span class="rc-bars" style="--n:${r.bars.length}">${bars}</span><span class="rc-ends"><b>${start}</b>→<b class="rc-zero">${r.bars.at(-1).to}</b></span></div>
+    <div class="rc-strip" title="${esc(`Your Integrity at the end of each of the last ${span}.`)}"><span class="rc-k">Last ${span}</span><span class="rc-bars" style="--n:${r.bars.length}">${bars}</span><span class="rc-ends"><b>${start}</b>→<b class="rc-zero">${r.bars.at(-1).to}</b></span></div>
     ${rows ? `<ul class="rc-hits">${rows}</ul>` : ''}
-    <div class="rc-tots">${tile('took', 'Taken', r.took, `Damage you took over the last ${span}.`)}${tile('healed', 'Healed', r.healed, `Signal you healed over the last ${span}.`)}${tile('shielded', 'Shielded', r.shielded, `Damage your shields absorbed over the last ${span}.`)}</div></div>`;
+    <div class="rc-tots">${tile('took', 'Taken', r.took, `Damage you took over the last ${span}.`)}${tile('healed', 'Healed', r.healed, `Integrity you healed over the last ${span}.`)}${tile('shielded', 'Shielded', r.shielded, `Damage your shields absorbed over the last ${span}.`)}</div></div>`;
 }

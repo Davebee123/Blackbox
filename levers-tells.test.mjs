@@ -106,7 +106,7 @@ test('the planner strips a sealing part when that saves what it would hand out, 
 });
 
 // ---------- 3.6 prices and SIGINT ----------
-test('each cast shows its price: Double Extortion and Persistence the Signal the attacks due in their cycles would add, Self-Update a quarter of what each part has left', () => {
+test('each cast shows its price: Double Extortion and Persistence the Integrity the attacks due in their cycles would add, Self-Update a quarter of what each part has left', () => {
   const s = fight();
   deal(s, ['extortion', 'fulldisk']); quiet(s);
   others(s, ['encryptor', 'pulse']);

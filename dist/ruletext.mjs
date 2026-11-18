@@ -8,7 +8,7 @@ const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
 // What a number can count, read on from the number while the words keep coming: "1 cycle sooner",
 // "20% more damage", "3% per rank", "2 more ◆", "16 damage every cycle".
-const UNIT = String.raw`(?:\s(?:more|less|fewer|additional|extra|max|damage|cycles?|◆|Signal|Integrity|stacks?|hits?|helpers?|times|strikes?|ticks?|attacks?|Momentum|daemon slots?|or more|sooner|later|longer|shorter|crit(?:ical strike)? chance|per (?:rank|stack|tick|hit|cycle|helper|part|Momentum)|every cycle|a cycle|each cycle)(?![\w-]))*`;
+const UNIT = String.raw`(?:\s(?:more|less|fewer|additional|extra|max|damage|cycles?|◆|Integrity|stacks?|hits?|helpers?|times|strikes?|ticks?|attacks?|Momentum|daemon slots?|or more|sooner|later|longer|shorter|crit(?:ical strike)? chance|per (?:rank|stack|tick|hit|cycle|helper|part|Momentum)|every cycle|a cycle|each cycle)(?![\w-]))*`;
 // A number on its own: not part of a name (C2, SH1), not a level, rank, key or tier, not "1 of 3".
 const NUM = String.raw`(?<![\w.×-])(?<!(?:[Ll]evel|[Ll]v|[Rr]ank|[Kk]ey|[Tt]ier|[Ss]lot|[Ff]loor) )(?<!\d of )[+−]?\d+(?:\.\d+)?%?(?![\w.]\d|\w)(?! of \d)`;
 const FACTS = [

@@ -118,7 +118,7 @@ test('a contract\'s protocol carries the implicit of the faction it was for; the
   }
 });
 
-// A fight with nothing due on a run of 1000 Signal; the test sets what lands, and when (deep-uniques.test.mjs's).
+// A fight with nothing due on a run of 1000 Integrity; the test sets what lands, and when (deep-uniques.test.mjs's).
 function fight(s, level = 30) {
   s.run = { loc: 'x', cwd: '/', integrity: 1000, max: 1000, pack: [], visited: ['/'] };
   selectEncounter(s, 'cryptjack', 7, { level, mutation: null, mode: 'run' });
@@ -145,7 +145,7 @@ test('each implicit does what it says: Claims, Appraisal, Glass Jaw, Clean Signa
     const n = landed(a, 300);
     assert.ok(n > 150, `a big hit: ${n}`);
     assert.equal(pendingClaims(a).length, 1); assert.equal(pendingClaims(a)[0].amount, Math.round((n * v('halcyon')) / 100));
-    assert.match(hudMarkup(a), /class="claim"/, 'pending on the Signal bar');
+    assert.match(hudMarkup(a), /class="claim"/, 'pending on the Integrity bar');
     const was = a.run.integrity; quiet(a, 2);
     assert.equal(a.run.integrity - was, Math.round((n * v('halcyon')) / 100), 'paid back');
     assert.ok(a.logs.some((x) => x.type === 'heal' && /^Claims pays out \+\d+/.test(x.message) && x.gear));

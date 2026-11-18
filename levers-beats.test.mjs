@@ -188,7 +188,7 @@ test('dear copy: the Mimic\'s chip holds when the copy of your rotation\'s move 
   else assert.ok(id === 'hold' || !dearCopy(s, copyOf(s, id, part(s, at))), 'it fires only when the copy is cheap');
 });
 
-test('the Mimic\'s beat cell says what your command would copy, and a red ghost marks your Signal or your ◆', () => {
+test('the Mimic\'s beat cell says what your command would copy, and a red ghost marks your Integrity or your ◆', () => {
   const s = fight('mimic');
   beat(s);
   const t = other(s);

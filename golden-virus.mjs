@@ -112,7 +112,7 @@ export const STRAINS = {
 const GUARDS = {
   watchdog: {
     name: 'Watchdog',
-    threatens: 'Signal',
+    threatens: 'Integrity',
     guard: true,
     art: 'watchdog',
     summary: 'Security daemon guarding a directory. The Tracker winds up one big hit.',
@@ -124,7 +124,7 @@ const GUARDS = {
   // Part ids match the Ghostroot art regions, so it draws as a veiled root creature.
   sentinel: {
     name: 'Sentinel',
-    threatens: 'Signal',
+    threatens: 'Integrity',
     guard: true,
     art: 'ghostroot',
     summary: 'Veiled security daemon: its timers stay hidden while its parts are armored.',
@@ -136,7 +136,7 @@ const GUARDS = {
   // Worm-shaped guard: its Brood spawns fragments that gnaw your Signal.
   crawler: {
     name: 'Crawler',
-    threatens: 'Signal',
+    threatens: 'Integrity',
     guard: true,
     art: 'worm',
     summary: 'Nesting guard. The Brood spawns fragments that gnaw your Signal every cycle.',
@@ -148,7 +148,7 @@ const GUARDS = {
   // Ransomware-shaped guard: the Shredder winds up one heavy strike.
   shredder: {
     name: 'Shredder',
-    threatens: 'Signal',
+    threatens: 'Integrity',
     guard: true,
     art: 'ransomware',
     summary: 'Archive guard. The Shredder winds up one heavy strike on your Signal.',
@@ -162,7 +162,7 @@ const GUARDS = {
   // Ransomware-shaped: the Keyring re-arms the Gate to full armor every 4 cycles.
   bouncer: {
     name: 'Bouncer',
-    threatens: 'Signal',
+    threatens: 'Integrity',
     guard: true,
     ice: true,
     art: 'ransomware',
@@ -176,7 +176,7 @@ const GUARDS = {
   // Watchdog-shaped: the longer the fight, the harder the Trace-back.
   tracer: {
     name: 'Tracer',
-    threatens: 'Signal',
+    threatens: 'Integrity',
     guard: true,
     ice: true,
     art: 'watchdog',

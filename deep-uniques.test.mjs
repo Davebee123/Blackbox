@@ -56,7 +56,7 @@ const ALL = [...SINK, ...BEDROCK];
 const L = 50;
 const vet = (cls = 'breaker', opts = {}) => { const s = fresh(); s.hackers = { [cls]: { level: opts.level || L, xp: 0 } }; s.loadout.archetype = cls; s.loadout.sub = { [cls]: opts.sub || defaultSub(cls) }; /* a subclass picked: the one named, else the old-edge one */ if (opts.kit) s.loadout.devKit = { talents: [] }; return s; };
 const wear = (s, id) => { const it = addItem(s, uniqueItem(UNIQUES[id], UNIQUES[id].level, seeded(1))); command(s, 'load ' + it.id); assert.ok(loaded(s).some((x) => x.id === it.id), `${id} loaded`); return it; };
-// A fight with no tells and nothing due: the test sets what lands, and when. run: on a run (your Signal, your rig's Block).
+// A fight with no tells and nothing due: the test sets what lands, and when. run: on a run (your Integrity, your rig's Block).
 function fight(s, { run = true, hp = 1000, level = L } = {}) {
   if (run) s.run = { loc: 'x', cwd: '/', integrity: hp, max: hp, pack: [], visited: ['/'] };
   selectEncounter(s, 'cryptjack', 7, { level, mutation: null, ...(run ? { mode: 'run' } : {}) });
@@ -68,7 +68,7 @@ function fight(s, { run = true, hp = 1000, level = L } = {}) {
   return e;
 }
 const pulse = (s) => part(s, 'pulse');
-// One attack from the Pulse Node this cycle, of this size: what it took from your Signal (the hit's own number, so a
+// One attack from the Pulse Node this cycle, of this size: what it took from your Integrity (the hit's own number, so a
 // Regen tick in the same cycle doesn't count).
 function landed(s, amount) {
   const e = s.encounter, p = pulse(s), mark = s.serial;
@@ -138,14 +138,14 @@ test('stat+ and stat%: Siltstone\'s Block for each ◆, Depth Gauge\'s Regen bel
   assert.equal(gearStat(s, 'regen', 'hacker'), (regen + four) * 2, 'Signal Floor: Regen doubles below 25%');
 });
 
-test('max Signal% and the plain stat rules: Bedframe, Firmware, Flotsam and Golden Image, in a fight or out of one', () => {
+test('max Integrity% and the plain stat rules: Bedframe, Firmware, Flotsam and Golden Image, in a fight or out of one', () => {
   const s = vet(), base = maxSignal(s);
   const bed = wear(s, 'bedframe');
-  assert.equal(maxSignal(s), Math.round((base + bed.stats.signal) * 1.12), 'Bedframe: 12% more max Signal, all of it');
+  assert.equal(maxSignal(s), Math.round((base + bed.stats.signal) * 1.12), 'Bedframe: 12% more max Integrity, all of it');
   const t = vet(), was = { clock: gearStat(t, 'clock'), signal: maxSignal(t) };
   const fw = wear(t, 'firmware');
   assert.equal(gearStat(t, 'clock'), was.clock + 4, 'Firmware: +4% Clock Speed');
-  assert.equal(maxSignal(t), Math.round((was.signal + fw.stats.signal) * 1.04), 'Firmware: +4% max Signal');
+  assert.equal(maxSignal(t), Math.round((was.signal + fw.stats.signal) * 1.04), 'Firmware: +4% max Integrity');
   fight(t);
   const plain = vet(); fight(plain);
   assert.equal(ratio(damageMultiplier(t, pulse(t), { mine: true }), damageMultiplier(plain, pulse(plain), { mine: true })), 1.04, 'Firmware: +4% damage');
@@ -231,7 +231,7 @@ test('Seawall stacks Block for the fight as your Block meets hits; Weir\'s helpe
   command(u, 'hold'); resolveCycle(u);
   const before = u.run.integrity, hurt = takeDamage(u, 600, null, 'test'); // about 700 to under 200
   assert.ok(hurt > 500);
-  assert.equal(u.run.integrity, before - hurt + 300, 'back toward the Signal of 3 cycles ago, at most 30% of your max');
+  assert.equal(u.run.integrity, before - hurt + 300, 'back toward the Integrity of 3 cycles ago, at most 30% of your max');
   const was = u.run.integrity;
   takeDamage(u, was - 50, null, 'test');
   assert.ok(u.run.integrity < 200, 'once a fight');

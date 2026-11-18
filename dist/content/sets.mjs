@@ -93,7 +93,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+8% max Signal.",
+          "text": "+8% max Integrity.",
           "fx": [
             {
               "when": "always",
@@ -113,7 +113,7 @@ export default {
           ]
         },
         "4": {
-          "text": "A hit for more than 15% of your max Signal marks its part, which takes 10% more from you for 3 cycles. You heal 3% of max.",
+          "text": "A hit for more than 15% of your max Integrity marks its part, which takes 10% more from you for 3 cycles. You heal 3% of max.",
           "fx": [
             {
               "when": "custom",
@@ -297,7 +297,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "Delivering a contract fills your Signal, and your next kill pays 25% more XP.",
+          "text": "Delivering a contract fills your Integrity, and your next kill pays 25% more XP.",
           "fx": [
             {
               "when": "deliver",
@@ -329,7 +329,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+10% max Signal. Regen heals 1 more every 5 cycles.",
+          "text": "+10% max Integrity. Regen heals 1 more every 5 cycles.",
           "fx": [
             {
               "when": "always",
@@ -408,7 +408,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+8% max Signal.",
+          "text": "+8% max Integrity.",
           "fx": [
             {
               "when": "always",
@@ -418,7 +418,7 @@ export default {
           ]
         },
         "3": {
-          "text": "Once a fight, a hit that would take more than 30% of your max Signal deals 30% instead.",
+          "text": "Once a fight, a hit that would take more than 30% of your max Integrity deals 30% instead.",
           "fx": [
             {
               "when": "custom",
@@ -454,7 +454,7 @@ export default {
           ]
         },
         "3": {
-          "text": "Resting at home refills Signal 50% faster.",
+          "text": "Resting at home refills Integrity 50% faster.",
           "fx": [
             {
               "when": "custom",
@@ -479,7 +479,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "Answering a tell shields you for 5% of max Signal.",
+          "text": "Answering a tell shields you for 5% of max Integrity.",
           "fx": [
             {
               "when": "answer",
@@ -515,7 +515,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+5% damage, +5% max Signal.",
+          "text": "+5% damage, +5% max Integrity.",
           "fx": [
             {
               "when": "hit",
@@ -618,7 +618,7 @@ export default {
           ]
         },
         "3": {
-          "text": "+10% damage while below half Signal.",
+          "text": "+10% damage while below half Integrity.",
           "fx": [
             {
               "when": "hit",
@@ -673,7 +673,7 @@ export default {
           ]
         },
         "3": {
-          "text": "Healing past full becomes a shield, up to 10% of max Signal.",
+          "text": "Healing past full becomes a shield, up to 10% of max Integrity.",
           "fx": [
             {
               "when": "custom",
@@ -709,7 +709,7 @@ export default {
           ]
         },
         "3": {
-          "text": "Above 75% Signal, you take 8% less damage.",
+          "text": "Above 75% Integrity, you take 8% less damage.",
           "fx": [
             {
               "when": "custom",
@@ -819,7 +819,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "The first time a fight drops you below 30% Signal, heal 20% of max and deal 10% more for 3 cycles.",
+          "text": "The first time a fight drops you below 30% Integrity, heal 20% of max and deal 10% more for 3 cycles.",
           "fx": [
             {
               "when": "custom",
@@ -884,7 +884,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+8% max Signal.",
+          "text": "+8% max Integrity.",
           "fx": [
             {
               "when": "always",
@@ -1039,7 +1039,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+6% max Signal.",
+          "text": "+6% max Integrity.",
           "fx": [
             {
               "when": "always",
@@ -1144,7 +1144,7 @@ export default {
           ]
         },
         "3": {
-          "text": "Delivering a contract fills your Signal, and kills pay 10% more XP.",
+          "text": "Delivering a contract fills your Integrity, and kills pay 10% more XP.",
           "fx": [
             {
               "when": "deliver",
@@ -1173,7 +1173,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+8% max Signal on a server you hold.",
+          "text": "+8% max Integrity on a server you hold.",
           "fx": [
             {
               "when": "always",
@@ -1210,7 +1210,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+5% damage, +5% max Signal.",
+          "text": "+5% damage, +5% max Integrity.",
           "fx": [
             {
               "when": "hit",
@@ -1267,7 +1267,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+5% damage, +5% max Signal.",
+          "text": "+5% damage, +5% max Integrity.",
           "fx": [
             {
               "when": "hit",
@@ -1282,7 +1282,7 @@ export default {
           ]
         },
         "3": {
-          "text": "Breaking a part heals you for 3% of your max Signal.",
+          "text": "Breaking a part heals you for 3% of your max Integrity.",
           "fx": [
             {
               "when": "break",
@@ -1320,7 +1320,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+8% max Signal.",
+          "text": "+8% max Integrity.",
           "fx": [
             {
               "when": "always",
@@ -1330,7 +1330,7 @@ export default {
           ]
         },
         "3": {
-          "text": "A tell that lands on you shields you for 5% of your max Signal.",
+          "text": "A tell that lands on you shields you for 5% of your max Integrity.",
           "fx": [
             {
               "when": "custom",
@@ -1439,7 +1439,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+5% damage, +5% max Signal.",
+          "text": "+5% damage, +5% max Integrity.",
           "fx": [
             {
               "when": "hit",
@@ -1571,7 +1571,7 @@ export default {
           ]
         },
         "3": {
-          "text": "When a hit takes more than 15% of your max Signal, the next hit on you within 2 cycles deals 20% less.",
+          "text": "When a hit takes more than 15% of your max Integrity, the next hit on you within 2 cycles deals 20% less.",
           "fx": [
             {
               "when": "custom",
@@ -1634,7 +1634,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+8% max Signal.",
+          "text": "+8% max Integrity.",
           "fx": [
             {
               "when": "always",
@@ -1644,7 +1644,7 @@ export default {
           ]
         },
         "3": {
-          "text": "Every 4th cycle, heals you for 4% of your max Signal.",
+          "text": "Every 4th cycle, heals you for 4% of your max Integrity.",
           "fx": [
             {
               "when": "custom",

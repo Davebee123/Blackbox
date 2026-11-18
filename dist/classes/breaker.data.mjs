@@ -10,7 +10,7 @@ import { t, c } from './kit.mjs';
 
 // New skills (ABILITIES entries, same fields as data.mjs). Give each a cls and a sub.
 // damage 0 with a number in the help: breaker.mjs deals it (it depends on armor, Momentum or a timer).
-// cost: Signal (Integrity at home) the skill spends. charge/bomb/blast/stack/rot: breaker.mjs's numbers.
+// cost: Integrity the skill spends. charge/bomb/blast/stack/rot: breaker.mjs's numbers.
 // scales: the fields breaker.mjs grows with your level, so the text on screen grows with them (view.mjs scaledText).
 export const abilities = {
   // Demolitionist: armor and area.
@@ -60,8 +60,8 @@ export const abilities = {
   overvolt: {
     cls: 'breaker', sub: 'overclocker', verb: 'hit', name: 'Overvolt', target: 'part', damage: 0, hit: 20, hits: 2, cost: 6, scales: ['cost', 'hit'], cooldown: 4, icon: 'overload',
     short: 'Strikes twice for 20',
-    help: 'overvolt <part> — Strikes the target twice for 20 damage each. Each strike counts as a hit against a tell, so one Overvolt interrupts a cast. Costs 6 Signal.',
-    desc: 'Arcs two strikes of 20 damage into the target. Each strike counts on its own, so one Overvolt interrupts a cast, calls off an elite\'s charge, or breaks 2 ◆. Costs 6 Signal, or 6 Integrity at home.',
+    help: 'overvolt <part> — Strikes the target twice for 20 damage each. Each strike counts as a hit against a tell, so one Overvolt interrupts a cast. Costs 6 Integrity.',
+    desc: 'Arcs two strikes of 20 damage into the target. Each strike counts on its own, so one Overvolt interrupts a cast, calls off an elite\'s charge, or breaks 2 ◆. Costs 6 Integrity.',
   },
   'thermal-throttle': {
     cls: 'breaker', sub: 'overclocker', verb: 'hit', name: 'Thermal Throttle', target: 'part', damage: 0, pierceAt: 2, base: 20, perStack: 20, scales: ['base', 'perStack'], cooldown: 3, icon: 'overload',
@@ -96,8 +96,8 @@ export const abilities = {
   'turbo-boost': {
     cls: 'breaker', sub: 'overclocker', verb: 'buff', name: 'Turbo Boost', target: 'none', damage: 0, cycles: 3, gain: 2, crewTick: 1, crewDealt: 1.3, crewTaken: 1.2, cost: 6, scales: ['cost'], cooldown: 15, icon: 'behavior',
     short: '+2 Momentum; crew +30% damage',
-    help: 'turbo-boost — Grants 2 Momentum for 3 cycles. Costs 6 Signal. Below half Signal, costs nothing and grants 3. In a crew, for those 3 cycles every crewmate deals 30% more damage and takes 20% more, and their cooldowns tick 1 cycle.',
-    desc: 'Runs past the safe clock, granting 2 Momentum for 3 cycles. Costs 6 Signal, or 6 Integrity at home. Below half Signal, costs nothing and grants 3. It runs your crew hot too: for those 3 cycles every crewmate deals 30% more damage and takes 20% more, and their cooldowns tick 1 cycle.',
+    help: 'turbo-boost — Grants 2 Momentum for 3 cycles. Costs 6 Integrity. Below half Integrity, costs nothing and grants 3. In a crew, for those 3 cycles every crewmate deals 30% more damage and takes 20% more, and their cooldowns tick 1 cycle.',
+    desc: 'Runs past the safe clock, granting 2 Momentum for 3 cycles. Costs 6 Integrity. Below half Integrity, costs nothing and grants 3. It runs your crew hot too: for those 3 cycles every crewmate deals 30% more damage and takes 20% more, and their cooldowns tick 1 cycle.',
   },
 };
 
@@ -148,7 +148,7 @@ export const subs = {
     tiers: [
       [t('boost-clock', 'Boost Clock', 'Increases the damage of Overload by 10.'), t('hair-trigger', 'Hair Trigger', 'Lowers Overload\'s cooldown to 2 cycles, but it deals 15% less damage.'), t('feedback-loop', 'Feedback Loop', 'Gives you a Momentum stack when you land a critical strike. Works once per cycle.')],
       [t('core-voltage', 'Core Voltage', 'Increases the damage of Segfault by 20%.'), t('burn-in', 'Burn-in', 'Makes Thermal Throttle spend only half your Momentum stacks, rounded down. The rest stay.'), t('clock-glitch', 'Clock Glitch', 'Gives you 2 Momentum stacks when you answer a tell.')],
-      [t('liquid-cooling', 'Liquid Cooling', 'Makes Overvolt and Turbo Boost cost no Signal.'), t('coolant-dump', 'Coolant Dump', 'Makes Vent also shield you for 8 for each Momentum stack it spends.'), t('back-emf', 'Back-EMF', 'Gives you a Momentum stack when an attack hits you. Works once per cycle.')],
+      [t('liquid-cooling', 'Liquid Cooling', 'Makes Overvolt and Turbo Boost cost no Integrity.'), t('coolant-dump', 'Coolant Dump', 'Makes Vent also shield you for 8 for each Momentum stack it spends.'), t('back-emf', 'Back-EMF', 'Gives you a Momentum stack when an attack hits you. Works once per cycle.')],
       [t('heat-spreader', 'Heat Spreader', 'Makes your Momentum stacks last 2 cycles longer.'), t('stack-overflow', 'Stack Overflow', 'Makes Stack Smash hit twice against any part, and three times against an Exposed one.'), t('context-switch', 'Context Switch', 'Makes Segfault usable again when you cut a part\'s move.')],
       [t('exploit-kit', 'Exploit Kit', 'Increases your chance to critically strike by 8%.'), t('fault-storm', 'Fault Storm', 'Makes Fault Injection work on every part, for 2 cycles instead of 3.'), t('cold-plate', 'Cold Plate', 'Gives you 2 Momentum stacks when you gain a shield. Works once per cycle.')],
       [t('junction-temp', 'Junction Temp', 'Increases the damage of Thermal Throttle by 25%.'), t('setuid', 'Setuid', 'Makes every hit you land during Sudo a critical strike.'), t('flashpoint', 'Flashpoint', 'Makes your next hit a critical strike when you break a part.')],
@@ -156,7 +156,7 @@ export const subs = {
     // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
     capstones: [
       c('arc-flash', 'Arc Flash', ['Thermal Throttle also deals 25% of its damage to the part whose attack lands soonest.', 'Thermal Throttle also deals 50% of its damage to the part whose attack lands soonest.'], [0.25, 0.5]),
-      c('thermal-paste', 'Thermal Paste', ['Each Momentum stack you spend heals you for 1% of your max Signal.', 'Each Momentum stack you spend heals you for 2% of your max Signal.'], [0.01, 0.02]),
+      c('thermal-paste', 'Thermal Paste', ['Each Momentum stack you spend heals you for 1% of your max Integrity.', 'Each Momentum stack you spend heals you for 2% of your max Integrity.'], [0.01, 0.02]),
     ],
   },
 };

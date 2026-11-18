@@ -60,7 +60,7 @@ test('every piece comes from an achievement (the mattress aside), and the achiev
   assert.equal(said(play(s, 'house place cat street 20')), 'The cat: Street floor.');
 });
 
-test('the new achievements: boards won, servers traced, hours played, a LOWLIGHT job, 1 Signal', () => {
+test('the new achievements: boards won, servers traced, hours played, a LOWLIGHT job, 1 Integrity', () => {
   const s = fresh();
   tickAchievements(s);
   for (let i = 0; i < 25; i++) s.logs.push({ id: ++s.serial, type: 'puzzle-end', kind: 'cascade', won: true });

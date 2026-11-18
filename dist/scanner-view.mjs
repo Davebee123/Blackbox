@@ -194,7 +194,7 @@ function lostSvg(s, A, t) {
   if (frame && A.dec) for (let i = 0; i < 8; i++) { const [sx, sy] = SC.slotXY(A.dec, i); o += `<circle class="p-slot hot" cx="${n1(ax + (sx - ax) * (1 + 1.4 * e))}" cy="${n1(ay + (sy - ay) * (1 + 1.4 * e))}" r="11" style="opacity:${(1 - e).toFixed(2)}"/>`; }
   for (const q of PTS) { const an = q.a + q.w * t, rr = q.r * (frame ? 7 : 30) + 240 * e * (0.4 + q.b); o += pt(q, ax + Math.cos(an) * rr, ay + Math.sin(an) * rr * 0.9, (1 - e) * (0.3 + 0.7 * q.b), ' dead'); }
   const why = SC.playable(s, t * 1000), note = !why ? 'on tape · play it back once' : SC.tapeOf(s)?.played ? 'played back · nothing left on tape' : 'on tape';
-  if (u > 0.6) o += `<text class="p-k hot" x="${cx}" y="${ty}" text-anchor="middle">${typed(frame ? 'FRAME LOST' : 'SIGNAL LOST', u, 0.6, 30)}</text>`;
+  if (u > 0.6) o += `<text class="p-k hot" x="${cx}" y="${ty}" text-anchor="middle">${typed(frame ? 'FRAME LOST' : 'INTEGRITY LOST', u, 0.6, 30)}</text>`;
   if (u > 0.9) o += `<text class="p-name dim" x="${cx}" y="${ty + 22}" text-anchor="middle">${typed(st.name, u, 0.9)}</text>`;
   if (u > 1.3) o += `<text class="p-note" x="${cx}" y="${ty + 44}" text-anchor="middle">${typed(note, u, 1.3, 40)}</text>`;
   if (u > 2 && !why) o += playBtn(ty, Math.min(1, (u - 2) / 0.3));

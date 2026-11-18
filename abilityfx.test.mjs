@@ -19,7 +19,7 @@ const R = (s) => { const [l, t, w, h] = s.split(',').map(Number); return rect(l,
 // and the board: a roomy two-part fight (one part showing an attack chip) and a dense three-part one with tags.
 const hud = { bar: R('63,131,478,14'), nums: R('63,99,478,26') };
 const tray = Array.from({ length: 11 }, (_, i) => R(`${47 + i * 109.5},725,103,84`));
-// The crew window under your Signal: a crewmate's line, its name and class, its bar and its numbers.
+// The crew window under your Integrity: a crewmate's line, its name and class, its bar and its numbers.
 const crewWin = { name: R('63,158,60,14'), cls: R('130,158,90,12'), bar: R('63,176,300,4'), nums: R('370,170,50,12') };
 const roomy = () => {
   const you = { row: R('47,295,786,68'), cell: R('85,296,201,67'), now: R('286,296,134,67') };

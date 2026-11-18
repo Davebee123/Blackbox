@@ -205,16 +205,16 @@ test('away: a long passive clock (one invasion every 2-4 hours); Open ports is g
   assert.ok(AWAY.everyMs[0] >= 2 * 3600000);
 });
 
-test('tier perks: +1, +3 and +5 a filter slot and +5% max Integrity each, +2 defrags faster, +4 fragments slower, +6 one more filter slot', async () => {
+test('tier perks: +1, +3 and +5 a filter slot each, +2 defrags faster, +4 fragments slower, +6 one more filter slot', async () => {
   const { defragMs, tierPerk, TIER_PERKS } = await import('./dist/firewall.mjs');
   const { slotsOf } = await import('./dist/filters.mjs');
-  assert.deepEqual(TIER_PERKS.map((p) => `${p.tier}${p.perk}`), ['1slot', '1raid', '2defrag', '3slot', '3raid', '4wear', '5slot', '5raid', '6slot']);
+  assert.deepEqual(TIER_PERKS.map((p) => `${p.tier}${p.perk}`), ['1slot', '2defrag', '3slot', '4wear', '5slot', '6slot']);
   const s = fresh();
   fwOf(s).pin = 9;
   s.server.credits = 99999; s.materials = { cipher: 999, worm: 999, kernel: 999, exploit: 0 };
   const base = s.server.max;
   command(s, 'firewall upgrade');
-  assert.equal(s.server.max, base + Math.round(base * 0.05), '+1: the RAID Array\'s +5% max Integrity lives on the wall now');
+  assert.equal(s.server.max, base, 'no tier adds max Integrity: it is your health, from power and gear');
   assert.equal(slotsOf(s), 3, '+1: a third filter slot');
   command(s, 'firewall upgrade');
   assert.equal(fwOf(s).plus, 2);
@@ -233,7 +233,6 @@ test('tier perks: +1, +3 and +5 a filter slot and +5% max Integrity each, +2 def
   assert.equal(slotsOf(s), 5);
   fwOf(s).plus = 6;
   assert.equal(slotsOf(s), 6, '+6: one more');
-  assert.equal(tierPerk(s, 'raid'), 3, '+15% max Integrity at +5 and up, what a RAID Array v3 gave');
   assert.equal(tierPerk(s, 'wear'), 1);
 });
 

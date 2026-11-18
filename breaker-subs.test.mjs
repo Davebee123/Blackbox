@@ -288,7 +288,7 @@ test('Demolitionist tier 6: Soft Target, Recursion, Critical Mass', () => {
 });
 
 // ---------- Overclocker ----------
-test('Overvolt: two hits of 20 in one command, for 6 Signal (Integrity at home); on armor each breaks a ◆; not when you can\'t pay', () => {
+test('Overvolt: two hits of 20 in one command, for 6 Integrity (Integrity at home); on armor each breaks a ◆; not when you can\'t pay', () => {
   const s = noArmor(quiet(oc()));
   big(s, 'pulse');
   act(s, 'overvolt pulse');

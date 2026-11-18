@@ -279,7 +279,7 @@ export const CARDS = {
   // you know where from and what kind (invasion.mjs scoutNext). Let it go and nothing changes.
   spotter: {
     name: 'Spotter', weight: 1, ms: SCOUT_EVENT.ms, fight: true, from: SCOUT_EVENT.from, home: true,
-    where: (s) => (hackerLevel(s) >= SCOUT_EVENT.from && invasionsLive(s) && !s.net?.scouted && !s.degraded ? [null] : []),
+    where: (s) => (hackerLevel(s) >= SCOUT_EVENT.from && invasionsLive(s) && !s.net?.scouted ? [null] : []),
     make: (s) => ({ family: fam(s), level: placeLevel(s, null), name: `SPOTTER-${1000 + Math.floor(roll(s) * 9000)}` }),
     text: (ev) => `A spotter, ${ev.name}, is watching your wall. Kill it and the next invasion comes ${SCOUTED.levels} levels weaker.`,
     reward: () => `the next invasion −${SCOUTED.levels} levels, and its kind`,

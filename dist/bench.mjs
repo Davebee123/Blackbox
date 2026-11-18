@@ -3,7 +3,7 @@
 // campaign's), has developer mode on (as ?dev), and wears a BENCH tag in the top bar (app.js).
 //   bench <subclass|class> <level>   a ready character on this bench (a class: its core, no subclass picked): build()
 //                                    below, the subclass's rotation preset on the bar, the floors down to that level's
-//                                    with you on the deepest, a few servers traced there, full Signal and Integrity
+//                                    with you on the deepest, a few servers traced there, full Integrity
 //   bench list                       the bench saves in this browser
 //   bench delete <name>              one of them gone (never the one you are on, never the real save)
 // The dev panel (PANEL, benchAction) is buttons for the common developer commands: each one only types a command.
@@ -128,7 +128,6 @@ export function benchBuild(s, name, level) {
   if (sub) { s.loadout.equipped[sub] = presetKeys(s, kit.cls, 'rotation'); (s.loadout.follow ||= {})[sub] = 'rotation'; }
   const floor = benchFloors(s, L);
   openFarm(s); // KESSLER-FARM-00, from its level (rogue.mjs): on the map now, not a notice later
-  s.signal = null; // full: whatever your max is
   syncServer(s);
   s.server.integrity = s.server.max;
   s.server.credits = Math.max(s.server.credits, 500);
@@ -187,7 +186,7 @@ export const PANEL = [
     { id: 'build', icon: '⚙', label: 'Build', title: 'Start this bench over as that class or subclass at that level: talents, Tuned gear, floors (bench <subclass|class> <level>)', fields: ['kit', 'level'] },
   ] },
   { group: 'Top up', items: [
-    { id: 'refill', icon: '♥', label: 'Refill', title: 'Signal and Integrity to full (developer refill)' },
+    { id: 'refill', icon: '♥', label: 'Refill', title: 'Integrity to full (developer refill)' },
     { id: 'credits', icon: '¤', label: '1000', title: 'A thousand credits (developer credits 1000)' },
     { id: 'code', icon: '⌗', label: 'Code', title: 'Fifty of each code and five exploits (developer code 50)' },
     { id: 'components', icon: '◫', label: 'Parts', title: 'Fifty components to build with (developer components 50)' },
@@ -198,7 +197,7 @@ export const PANEL = [
   { group: 'Arena', items: [
     { id: 'arena', icon: '⚔', label: 'Fight', title: 'Fight\nStarts a fight with the pick at home, at the level (the one it opens, or yours, if empty) and the seed set.\ndeveloper fight <kind>:<id> [level] [seed] [leaning=…] [objective=…]', fields: ['pick', 'level', 'seed', 'leaning', 'objective'] },
     { id: 'again', icon: '⟳', label: 'Again', title: 'Again\nFights the last pick again, from the start.\ndeveloper fight again' },
-    { id: 'again-refill', icon: '♥', label: 'Again', title: 'Refill and again\nFills your Signal and Integrity, then fights the last pick again.\ndeveloper fight again refill' },
+    { id: 'again-refill', icon: '♥', label: 'Again', title: 'Refill and again\nFills your Integrity, then fights the last pick again.\ndeveloper fight again refill' },
   ] },
   { group: 'Parts', items: [
     { id: 'parts-on', icon: '⇄', label: 'Roll', title: 'The parts roll on or off (developer parts on 1|0)', toggle: true },

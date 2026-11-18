@@ -141,7 +141,7 @@ function attackSize(s, atk, p) {
 const blowbackOf = (s) => Math.round(Math.min(legend(s, 'stress-test') ? Infinity : scaled(s, A('blowback').cap), s.encounter.ledger || 0) * (hasTalent(s, 'deep-buffer') ? 1.25 : 1)); // Stress Test (a legend): no cap
 // Retaliate lit (Flow Control, Retransmit): twice the last hit that reached you, or twice `size` if that is bigger.
 const lightRetaliate = (s, size = 0) => openProc(s, 'struck', { amount: Math.max(s.encounter.procs?.struck?.amount || 0, size) });
-// The player in this fight with the lowest share of their Signal (Trickle Charge).
+// The player in this fight with the lowest share of their Integrity (Trickle Charge).
 const lowest = (s) => crewOf(s).filter((x) => defender(x.st).integrity > 0).sort((x, y) => frac(x.st) - frac(y.st))[0]?.st || null;
 
 // A Sysop's heal over time on a player: one per kind (a new one replaces the old).
@@ -250,7 +250,7 @@ const use = {
     const d = defender(s), cost = Math.round(d.max * 0.1);
     d.integrity = Math.max(1, d.integrity - cost);
     e.chits = (e.chits || 0) + 1;
-    emit(s, 'status', `Write Protect: a second ◆ (${e.chits} ◆ in all) for ${cost} Signal.`, { mark: 'shield', ability: 'harden' });
+    emit(s, 'status', `Write Protect: a second ◆ (${e.chits} ◆ in all) for ${cost} Integrity.`, { mark: 'shield', ability: 'harden' });
   },
   // Sysop
   patch(s, { a, to, e }) {
@@ -315,7 +315,7 @@ const use = {
     if (all.length > 1) {
       const avg = all.reduce((n, x) => n + frac(x.st), 0) / all.length;
       for (const x of all) { const d = defender(x.st); d.integrity = Math.max(1, Math.min(d.max, Math.round(avg * d.max))); }
-      emit(s, 'status', `Rebalance puts everyone at ${Math.round(avg * 100)}% of their Signal.`, { mark: 'buff', ability: 'rebalance' });
+      emit(s, 'status', `Rebalance puts everyone at ${Math.round(avg * 100)}% of their Integrity.`, { mark: 'buff', ability: 'rebalance' });
     }
     const amount = healScaled(s, a.heal) * (all.length > 1 ? 1 : 2); // alone, it heals you twice as much
     for (const x of all) mend(s, x.st, amount, x.me ? a.name : `${a.name} from ${s.who || 'you'}`);
@@ -340,7 +340,7 @@ const validate = {
   harden(s) {
     if (!hasTalent(s, 'write-protect')) return null;
     const d = defender(s);
-    return d.integrity <= Math.round(d.max * 0.1) ? 'Write Protect needs 10% of your max Signal to spend.' : null;
+    return d.integrity <= Math.round(d.max * 0.1) ? 'Write Protect needs 10% of your max Integrity to spend.' : null;
   },
   rollback(s, intent) {
     const to = aimed(s, intent), e = to?.encounter, v = e?.virus;
@@ -430,7 +430,7 @@ function wardenPlan(s, t) {
 
 // Revoke a part that heals, patches or grows (a Patcher, a Tap, a Self-Update, armor about to patch back).
 const healerPart = (s) => livingParts(s).find((p) => !(p.revokedUntil >= s.encounter.cycle) && (p.attack?.effect === 'heal' || p.attack?.siphon || tellOn(s, p, 'cast')?.does === 'grow' || (p.maxArmor > 0 && p.armor === 0 && p.patchAt != null && p.patchAt - s.encounter.cycle <= 1)));
-// When the Sysop bot heals (shares of max Signal). Alone it keeps its heals for when it's in trouble, so a
+// When the Sysop bot heals (shares of max Integrity). Alone it keeps its heals for when it's in trouble, so a
 // Sysop solo is the weaker one on purpose; in a crew it heals ahead of the damage, most cycles.
 export const HEAL = {
   urgent: 0.3, // anyone under this: Hot Standby, then the biggest heal there is

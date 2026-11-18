@@ -28,7 +28,7 @@ export const OLD_SLOT = { offense: 'exploit', survival: 'proxy', utility: 'scrip
 // lifted: liftItem). Chances (Crit, Evasion…) stay percentages:
 // base × (1 + L/25). Then rarity and a ±15% roll.
 // side: 'hacker' (rig only), 'server', or 'both'. A defense stat on both sides counts where
-// that side is defending: a rig's on runs (your Signal), the server's at home (its Integrity).
+// that side is defending: a rig's on runs, the firewall's filters at home.
 // group: the protocol's category (its slot kind) and how the pages list stats.
 export const STATS = {
   // Offense (rig, everywhere)
@@ -44,7 +44,7 @@ export const STATS = {
   // grows on your own line (data.mjs own); gear Damage and Payload carry the rest, × each tick's size (combat.mjs gearTick).
   payload: { side: 'hacker', group: 'offense', name: 'Payload', unit: '', base: 1.2, flat: true, about: 'Adds damage to every burn tick and helper hit, on top of Damage\'s share: half this much to a typical tick. A bigger one gets more of it, a smaller one less.' },
   // Defense (health on its side; the rest on both sides)
-  signal: { side: 'hacker', group: 'survival', name: 'Signal', unit: '', base: 10, flat: true, about: 'Increases your max Signal on runs.' },
+  signal: { side: 'hacker', group: 'survival', name: 'Integrity', unit: '', base: 10, flat: true, about: 'Increases your max Integrity.' },
   integrity: { side: 'server', group: 'survival', name: 'Integrity', unit: '', base: 20, flat: true, about: 'Increases your server\'s max Integrity.' },
   // Regen is a whole number, counted over 5 (WoW's mana per 5): Regen R heals R every 5 cycles, a fifth of it each cycle
   // (combat.mjs regenRate). Its numbers are five times what they were when it healed every cycle (save v44), so an item's
@@ -54,7 +54,7 @@ export const STATS = {
   evasion: { side: 'both', group: 'survival', name: 'Evasion', unit: '%', base: 2.5, cap: 20, about: 'Gives each enemy damage attack a chance to miss you, up to 20%.' },
   sanitize: { side: 'both', group: 'survival', name: 'Sanitize', unit: '%', base: 8, cap: 50, about: 'Gives each Encrypt, Scramble or Replicate against you a chance to fail, up to 50%.' },
   restore: { side: 'hacker', group: 'survival', name: 'Restore', unit: '%', base: 6, about: 'Increases every heal you cast, on yourself or a crewmate, by this percentage.' },
-  leech: { side: 'hacker', group: 'survival', name: 'Leech', unit: '', base: 1, flat: true, about: 'Heals you this much for every skill hit that deals damage. It heals your server at home and your Signal on runs.' },
+  leech: { side: 'hacker', group: 'survival', name: 'Leech', unit: '', base: 1, flat: true, about: 'Heals you this much for every skill hit that deals damage. It heals your Integrity.' },
   shield: { side: 'server', group: 'survival', name: 'Shield', unit: '', base: 10, flat: true, about: 'Shields your server for this much at the start of every home fight.' },
   countermeasures: { side: 'server', group: 'survival', name: 'Countermeasures', unit: '', base: 6, flat: true, about: 'Deals this much damage to a part when its attack lands on your server. It counts as a hit, so against an armored part it breaks a ◆.' },
   // Utility
@@ -128,7 +128,7 @@ export const baseFor = (slot, level) => Object.entries(BASES).filter(([, b]) => 
 // from skills, talents, capstones, uniques and sets, never from a base). It follows the enemies' hits, which grow
 // with power(L) and the enemy ramp (`ramp`, CONFIG.enemyRamp's number, kept here so a test that zeroes the ramp
 // doesn't move the gear), to the power `n`: the rest of you grows only 4% a level, so plain gear has to outgrow the
-// hits to keep a same-level fight costing the same share of your Signal. Level `top` (the level cap) is the anchor:
+// hits to keep a same-level fight costing the same share of your Integrity. Level `top` (the level cap) is the anchor:
 // there each slot's last base rolls what it rolled when bases came in tiers. All of it on the level line (data.mjs
 // line): the compounding rest, the lift, comes on at the end (liftItem), so gear keeps its share at every level.
 export const ITEM_CURVE = { n: 1.4, ramp: 0.03, top: 50 };
@@ -363,7 +363,7 @@ export function statValue(stat, level, mult, rand) {
   return Math.max(1, Math.round(raw));
 }
 const round = (stat, v) => Math.round(v); // every stat is a whole number
-// The lift (data.mjs lift, docs/scaling.md): a flat number that meets power-scaled ones (damage, Signal, heals, Block)
+// The lift (data.mjs lift, docs/scaling.md): a flat number that meets power-scaled ones (damage, Integrity, heals, Block)
 // is worked out on the level line, then × lift(its item level). It stays a flat number; it never becomes a share.
 // RAM and Lead don't meet power, so they stay as they are.
 export const grows = (k) => !!STATS[k]?.flat && k !== 'ram' && k !== 'lead';

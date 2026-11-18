@@ -9,8 +9,8 @@
 // Where it comes from (originOf; the designer: "all ability effects need to come from their ability window"): from the
 // ability's key in the tray, however it was fired (a click, its number key, typed, a routine, the timer's auto-repeat,
 // a daemon). Only when that key isn't on screen (the ability isn't on your bar, or the tray is folded away on a phone)
-// does it start at your bar (your Signal; at home your server's Integrity). A crewmate's starts at their own bar in the
-// crew window under your Signal (their keys aren't on your screen), in their violet; with the crew window out of sight,
+// does it start at your bar (your Integrity). A crewmate's starts at their own bar in the
+// crew window under your Integrity (their keys aren't on your screen), in their violet; with the crew window out of sight,
 // at your bar. It travels from there to the part (TRAVEL:
 // by distance), and an effect that plays where it lands (a burn, a blast, a mark, or on your bar a heal, a shield, a
 // buff) is taken there by a short streak first. A burn's later tick plays where it burns. Its impact still lands with

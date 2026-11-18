@@ -233,7 +233,7 @@ test('Payload tier 3: Low Profile, Spillover, Fault Handler', () => {
   const sp = noArmor(quiet(start('payload', { talents: ['spillover'] })));
   big(sp, 'pulse');
   act(sp, 'skim pulse');
-  assert.ok(sp.encounter.shield > 0 && sp.encounter.shield <= 20, 'Skim at full Signal shields you instead');
+  assert.ok(sp.encounter.shield > 0 && sp.encounter.shield <= 20, 'Skim at full Integrity shields you instead');
   const f = noArmor(quiet(start('payload', { talents: ['fault-handler'] })));
   big(f, 'pulse'); inj(f, 'pulse');
   fireEvent(f, 'struck', { part: part(f, 'pulse') });

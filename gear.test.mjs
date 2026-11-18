@@ -18,7 +18,7 @@ CONFIG.gearReq = 99; // these tests hand out gear of any level (the requirement 
 CONFIG.enemyCrit = 0;
 CONFIG.partToughness = 1; // mechanics tests use the parts' base numbers
 CONFIG.enemyRamp = 0;
-CONFIG.restRegen = 0; // resting has its own test
+CONFIG.signalRest = 0; // resting has its own test
 CONFIG.salvageChance = 1;
 CONFIG.misses = false; // and no misses
 const OWN0 = CONFIG.ownPerLevel, FILL0 = CONFIG.gearFill; // your own line and gear's fill, to turn back on
@@ -106,7 +106,7 @@ test('Scavenge is magic find, and it costs stats: the Scavenger suffix rolls low
     for (const [st, v] of Object.entries(raw)) if (!extra[st]) assert.equal(it.stats[st], up(st, Math.max(1, Math.round((v * (100 - cut)) / 100))), `${it.name} (${it.stats.scavenge}% Scavenge): ${st} ${v} less ${cut}%`);
   }
   assert.ok(seen.tuned >= 300 && seen.custom >= 20, JSON.stringify(seen));
-  // A Scavenger blue at 50 against the same roll without it: its Signal 10% lower.
+  // A Scavenger blue at 50 against the same roll without it: its Integrity 10% lower.
   const blue = rollItem(seeded(7), { level: 50, rarity: 'tuned', slot: 'proxy', stat: 'scavenge' });
   const raw = primaries(blue.base, 50, RARITIES.tuned.mult, seeded(7));
   assert.equal(blue.stats.scavenge, 10);
@@ -699,7 +699,7 @@ test('the old Upgrades come back as running services and a loaded protocol; daem
   const s = restore(JSON.parse(JSON.stringify(old)));
   assert.equal(s.upgrades, undefined);
   assert.deepEqual(s.services, {}, 'the RAID Array is the wall\'s now (v34), and the Route Logger went with services (v40)');
-  assert.equal(s.server.max, Math.round(100 * power(serverLevel(s))));
+  assert.equal(s.server.max, maxSignal(s), 'max Integrity is your power and gear\'s');
   assert.equal(gearStat(s, 'signal'), 10);
   assert.equal(gearStat(s, 'routeBoost'), 0, 'no services: the Route Logger paid back what it cost');
   assert.equal(loaded(s)[0].rarity, 'stock');
@@ -728,8 +728,8 @@ test('saves from before categories: a protocol keeps its lead stat\'s category, 
   assert.ok(!rigOf(s).includes('g3'), 'a second one has no slot');
 });
 
-test('resting: between fights the server repairs 1% of its max every 10 seconds, at half that while an invader is at the wall', () => {
-  CONFIG.restRegen = 0.06;
+test('resting: between fights Integrity rests back at home (here 1% of its max every 10 seconds), at half that while an invader is at the wall', () => {
+  CONFIG.signalRest = 0.06;
   const s = fresh();
   s.server.integrity = 50;
   for (let i = 0; i < 10; i++) idleRegen(s, 1000);
@@ -741,7 +741,7 @@ test('resting: between fights the server repairs 1% of its max every 10 seconds,
   s.encounter = null;
   for (let i = 0; i < 60; i++) idleRegen(s, 1000);
   assert.equal(s.server.integrity, 60);
-  CONFIG.restRegen = 0;
+  CONFIG.signalRest = 0;
 });
 
 test('components are one count: an older save\'s pile becomes it', async () => {

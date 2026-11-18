@@ -1,6 +1,6 @@
 // Simulated crew: bot crewmates in your run fights, to try co-op before there's a server.
 // `crew sim breaker bastion` (up to 3), `crew` to list, `crew off`. Each crewmate is a full player
-// state of its own (its class at its own level, fixed when it joins, a Stock protocol in every slot unless its entry gives a rarity, its own Signal), fighting
+// state of its own (its class at its own level, fixed when it joins, a Stock protocol in every slot unless its entry gives a rarity, its own Integrity), fighting
 // the same virus object as you on the same cycle, played by the balance planner (planner.mjs).
 //
 // Rules being tried out:
@@ -8,10 +8,10 @@
 // - A damage attack lands on everyone in the fight, each taking it in full (as if they fought it
 //   alone). Encryption, scrambles and fragments stay on you.
 // - Enemies get CREW.hpPer more Integrity per extra player (CREW.dmgPer more damage, if set).
-// - A crewmate at 0 Signal is down for the rest of the fight. You going down still ends it.
+// - A crewmate at 0 Integrity is down for the rest of the fight. You going down still ends it.
 // - Only run fights (SPRAWL-00, rogue servers, guards); home intrusions stay solo.
-// - A crewmate's Signal carries from fight to fight through a run, like yours (s.run.crew[name].signal).
-//   One that went down reboots at CREW.reboot of its Signal for the next fight. A new run starts them full.
+// - A crewmate's Integrity carries from fight to fight through a run, like yours (s.run.crew[name].signal).
+//   One that went down reboots at CREW.reboot of its Integrity for the next fight. A new run starts them full.
 // - The sim crew is there from CREW.from: early levels are solo.
 // Crewmates live beside the save (not in it): s.crewSim holds who's in the crew.
 import { hooks, fresh, command, playerPhase, active, addItem, maxSignal, hackerLevel, classOf, emit, warn, livingParts, alive, part, classEach, presetKeys } from './combat.mjs';
@@ -29,7 +29,7 @@ export const CREW = {
   elitePer: 0.05, // elites are built for a crew of four: they barely grow with it (0.15 made a full crew lose 8 in 20 at level 18)
   dmgPer: 0, // enemy damage per extra player (0: each player takes each hit at its solo size)
   from: 5, // class level for crew sim
-  reboot: 0.25, // a crewmate that went down comes back at this much Signal for the next fight
+  reboot: 0.25, // a crewmate that went down comes back at this much Integrity for the next fight
   names: ['nyx', 'kilo', 'vanta', 'sable', 'wisp', 'quill'],
 };
 
@@ -54,9 +54,9 @@ export function matesOf(s) {
   return m;
 }
 const inFight = (s) => matesOf(s).filter((m) => m.encounter && active(m));
-// A crewmate's Signal between fights: what it carried out of the last one on this run, else full.
+// A crewmate's Integrity between fights: what it carried out of the last one on this run, else full.
 // A hired runner comes in with what they carried out of their last fight with you, refilled on logged-on time; a runner
-// you're helping, at the Signal they have in that room.
+// you're helping, at the Integrity they have in that room.
 export const mateSignal = (s, m) => {
   const c = m.seat || (!m.guest && s.run?.crew?.[m.who]);
   if (m.helpSig) return Math.max(1, Math.round(maxSignal(m) * m.helpSig));
@@ -146,7 +146,7 @@ hooks.crewEngage = (s) => {
     if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * kd));
   }
   for (const m of mates) {
-    // Signal carries between fights on a run; guests (consortium drop-ins) come in rested.
+    // Integrity carries between fights on a run; guests (consortium drop-ins) come in rested.
     m.run.max = maxSignal(m);
     m.run.integrity = mateSignal(s, m);
     m.encounter = { ...e, virus: e.virus, queue: null, plan: [], lastAttack: null, readyAt: {}, buffs: {}, burns: [], helpers: [], shield: 0, encrypt: 0, scrambleUntil: 0, echoes: [], once: {}, momentum: null, synced: false, keylog: 0, regenAcc: 0, leechAcc: 0, clock: 0, trace: 0, pendingTrace: 0, breaks: 0, undo: null, fxs: {},
@@ -186,7 +186,7 @@ hooks.crewAllies = (s) => {
 // Everyone still standing in the fight besides you: a damage attack lands on each of them too.
 hooks.crewAll = (s) => inFight(s).filter(mateUp).map((m) => { m.encounter.cycle = s.encounter.cycle; return m; });
 
-// After an attack on a crewmate: at 0 Signal they're down for the rest of the fight.
+// After an attack on a crewmate: at 0 Integrity they're down for the rest of the fight.
 export function checkDown(s) {
   for (const m of inFight(s)) if (m.run.integrity <= 0 && !m.encounter.down) { m.encounter.down = true; m.run.integrity = 0; emit(m, 'status', `${m.who} is down.`); }
 }
@@ -203,7 +203,7 @@ hooks.crewEnd = (s, result) => {
     if (m.helper && m.encounter && result === 'victory') { const h = runnerHelped(s, m.who); if (h && s.rooms?.visit) s.rooms.visit.metWon = { h: m.who, room: s.encounter?.rooms?.room }; if (h) emit(s, 'rooms-good', `${m.who}: standing ${h.standing}${h.tier ? `, now ${h.tier.name}` : ''}.`, { runner: m.who, standing: h.standing, tier: h.tier?.name || null }); }
     m.encounter = null;
   }
-  for (const h of out) { emit(s, 'status', `${h}: Signal's going. I'm out.`, { runner: h }); dropCrew(s, h); }
+  for (const h of out) { emit(s, 'status', `${h}: Integrity's going. I'm out.`, { runner: h }); dropCrew(s, h); }
   if (s.rooms?.visit) s.rooms.visit.helping = null;
   s.guests = []; // guests go back to what they were doing
 };

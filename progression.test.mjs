@@ -3,7 +3,7 @@
 // migration that folded server XP, ports, the specialty, eight services and greys away.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, restore, serverLevel, syncServer, gainXp, hackerOf, finish, UNIQUES, fxAnswer, patchDelay, gearStat, daemonLevel, SAVE_VERSION, DECODE_XP, effectLine, previewDamage, bossTable } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, restore, serverLevel, syncServer, gainXp, hackerOf, finish, UNIQUES, fxAnswer, patchDelay, gearStat, daemonLevel, SAVE_VERSION, DECODE_XP, effectLine, previewDamage, bossTable, maxSignal } from './dist/combat.mjs';
 import { CONFIG, CLIMB, levelMinutes, xpToNext, killXp, killsToNext, v41XpToNext, deedScale, DEED, power, LOADOUT, BOSS_LOOT, lifted, filled } from './dist/data.mjs';
 import { uniqueItem, rollItem, seeded, RULES, RARITIES, BASES, baseFor, primaries, SERVICES } from './dist/gear.mjs';
 const VERSIONS = [{ code: 12, credits: 120 }, { code: 40, credits: 600 }]; // what a service's v1 and v2 cost (the retired table)
@@ -23,7 +23,7 @@ const rule = (id, level = 20, rarity = RULES[id].tier === 'minor' ? 'tuned' : 'c
 test('one level: your server is at your highest class level, with no XP of its own; its gates read that', () => {
   const s = at({ breaker: 12, bastion: 20 });
   assert.equal(serverLevel(s), 20, 'the Bastion is the highest');
-  assert.equal(s.server.max, Math.round(100 * power(20)));
+  assert.equal(s.server.max, maxSignal(s), 'max Integrity is your class\'s power and gear, as max Integrity was');
   assert.equal(s.serverXp, undefined);
   gainXp(s, 50, 'test');
   assert.equal(s.serverXp, undefined, 'no server XP');
@@ -35,7 +35,7 @@ test('one level: your server is at your highest class level, with no XP of its o
   const f = at({ breaker: 14 });
   gainXp(f, xpToNext(14), 'test');
   assert.ok(f.logs.findLast((e) => e.type === 'level-up').gains.includes('a daemon slot'), 'a daemon slot at 15 (then 30 and 45)');
-  assert.equal(t.server.max, Math.round(100 * power(20)), 'the server grew with it');
+  assert.equal(t.server.max, maxSignal(t), 'max Integrity grew with it');
   assert.ok(up.next.level > 20 && up.next.gains.length, 'and the banner names the next level that brings something');
   // A class under your best one levels without moving the server: no server gains on its banner.
   const u = at({ breaker: 20, bastion: 12 });
@@ -44,7 +44,7 @@ test('one level: your server is at your highest class level, with no XP of its o
   const b = u.logs.findLast((e) => e.type === 'level-up');
   assert.equal(b.level, 13);
   assert.ok(b.gains.some((g) => /\(floor 3\)$/.test(g)), 'its own tracks still count: a floor');
-  assert.ok(!b.gains.includes('an outpost slot') && b.server === null, 'not the server\'s');
+  assert.ok(!b.gains.includes('an outpost slot') && b.server === u.server.max, 'not the server\'s gains; your max Integrity, as every level-up shows it');
   const sum = levelUpSummary([up]);
   assert.ok(sum.items.length >= 1 && !sum.items.some((it) => it.kind === 'power') && sum.items.at(-1).kind === 'integrity' && sum.next.level === up.next.level, 'the level-up: what it brings and the Integrity (no power line past level 6: gear carries you), then the next level');
 });

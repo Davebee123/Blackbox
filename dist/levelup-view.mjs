@@ -54,8 +54,8 @@ export function levelUpSummary(events, keys = []) {
   }
   const pct = Math.round((own(last.level) / own(evs[0].level - 1) - 1) * 100), // your own line (data.mjs own): none past level 6, gear carries you
     srv = evs.findLast((e) => e.server)?.server;
-  if (pct > 0) items.push({ kind: 'power', label: 'Power', value: `+${pct}%`, tip: `Power: Your skills deal ${pct}% more damage, and your server's Integrity grows with them.` });
-  if (srv) items.push({ kind: 'integrity', label: 'Integrity', value: String(srv), tip: `Integrity: Your server's Integrity is now ${srv}.` });
+  if (pct > 0) items.push({ kind: 'power', label: 'Power', value: `+${pct}%`, tip: `Power: Your skills deal ${pct}% more damage, and your Integrity grows with them.` });
+  if (srv) items.push({ kind: 'integrity', label: 'Integrity', value: String(srv), tip: `Integrity: Your max Integrity is now ${srv}.` });
   const nx = last.next, nItems = nx ? nx.gains.map((g) => gainItem(g, { ...last, level: nx.level })) : [];
   const short = (it) => (['skill', 'sigint', 'floor', 'kit', 'edge'].includes(it.kind) ? it.label : `${it.label} ${it.value}`);
   return {

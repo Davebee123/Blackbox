@@ -1,9 +1,9 @@
 // A server as a graph of rooms (docs/servers.md 2). Pure like the combat engine: state in, events out. Two hosts:
 //   the playtest  (R0, app.js ?playtest=rooms): one server on a fresh character that's never saved, s.rooms its own,
-//                 its Signal and pack on it (R.signal, R.pack), its clocks ten times as fast.
+//                 its Integrity and pack on it (R.signal, R.pack), its clocks ten times as fast.
 //   the network   (R1, netrooms.mjs): every server on the real save is a room graph, kept on its location
-//                 (loc.floorplan, R.world), s.rooms the one you're connected to. Signal is the run's (s.run.integrity,
-//                 resting at home as s.signal), the pack the run's files (banked by run.mjs when you jack out), and
+//                 (loc.floorplan, R.world), s.rooms the one you're connected to. Integrity is the run's (s.run.integrity,
+//                 resting at home as s.server.integrity), the pack the run's files (banked by run.mjs when you jack out), and
 //                 the world's own rules (what a room spawns, the Resident, takeover, Root, contracts) come through
 //                 the WORLD hooks netrooms.mjs fills.
 //
@@ -11,7 +11,7 @@
 //               vault ▥, rest ☰) or an empty junction (·). The marks are the terminal's; the page draws icons. A fight room's family, author and attack set are fixed by the
 //               server's seed, so a room is a place you learn. Its mutation rerolls with each respawn, and one respawn
 //               in 25 is a rare spawn (★, two levels up, better loot: LOOT.odds.rare).
-//   moving      the first time you walk into a room on a visit costs ROOMS.move of your max Signal (ROOMS.moveNew into one you've never been in); rooms you've walked
+//   moving      the first time you walk into a room on a visit costs ROOMS.move of your max Integrity (ROOMS.moveNew into one you've never been in); rooms you've walked
 //               this visit, and `wait`, are free. A live virus blocks its room: engage it, or step back.
 //   keys        the vault's key sits in a guard post on another branch, three or more rooms from the vault. A guard
 //               post is an elite to the player (named Elite n with the others, the elite's icon and a KEY badge): its
@@ -40,10 +40,10 @@
 //               first use it, a junction when you first walk it. At 50% the whole graph is drawn (the rooms you haven't
 //               been in as unknown chips); at 100% the server is Mapped (an item roll two levels over it, and a lump
 //               of XP: mappedShare). Caches and puzzle rooms refill in two hours, so they never count (counted).
-//   visits      connect at the entry, jack out from any room (the pack banks), rest at home (Signal back at
-//               CONFIG.signalRest a minute), reconnect after ROOMS.reconnect. Lose a fight and you're disconnected: the
-//               unbanked pack lost (XP and banked gear stay), and CONFIG.deathWait.each more on the wait for each
-//               disconnect since your last clean jack out, up to its cap.
+//   visits      connect at the entry, jack out from any room (the pack banks, the visit is saved), rest at home
+//               (Integrity back at CONFIG.signalRest a minute), reconnect after ROOMS.reconnect. Lose a fight and you're
+//               disconnected: on the network the visit is undone (visit.mjs), and CONFIG.deathWait.each more on the wait
+//               for each disconnect since your last clean jack out, up to its cap.
 //
 // Fights are ordinary run fights (combat.mjs selectEncounter, mode 'run') flagged e.rooms: combat.mjs finish hands the
 // end back here (hooks.roomEnd), and families.mjs and interrupt.mjs play the room rules (attack sets, the new bodies,
@@ -75,7 +75,7 @@ import { dealCard, cardLeave, surgeAt, surgeScreen, surgeFight, surgeWon, escort
 export const ROOMS = {
   sizes: { small: 8, medium: 12, large: 16 },
   spine: { small: 4, medium: 5, large: 6 }, // entry to /core, both counted
-  move: 0.03, moveDeep: 0.04, // a room's first entry on a visit, of your max Signal, a room you've been in (from floor 5: 4%)
+  move: 0.03, moveDeep: 0.04, // a room's first entry on a visit, of your max Integrity, a room you've been in (from floor 5: 4%)
   moveNew: 0.05, moveNewDeep: 0.06, // and one you never have: stepping into the unknown costs more
   force: 0.15, bait: 0.1, rest: 0.3, // forcing a vault, pulling bait, the rest room
   // Respawns, in minutes. A server you've Mapped or hold is a farm: at real play's 150 kills an hour (LOOT.killsPerHour)
@@ -97,12 +97,12 @@ export const ROOMS = {
   // hunter twice. Mapped pays 5 kills and what the server's first clears paid before they were folded into it: half of
   // each counted fight room's kill (first), in one lump.
   xp: { room: 1.25, first: 0.5, rare: 5, boss: 4, hunter: 2, mapped: 5 },
-  // Each fight's size in a room, on top of the run sizes every Signal fight has (CONFIG.runHp, runDamage): a process at
-  // your level costs 20–30% of your Signal, the Resident wins about one fight in three (2.5). An elite is data.mjs ELITE's
+  // Each fight's size in a room, on top of the run sizes every Integrity fight has (CONFIG.runHp, runDamage): a process at
+  // your level costs 20–30% of your Integrity, the Resident wins about one fight in three (2.5). An elite is data.mjs ELITE's
   // size (docs/puzzle-fights.md P3), with nothing on top.
   // stray: SPRAWL-00's strays (netrooms.mjs), the levels 1 to 5 where you learn the ticks: a plain virus's Integrity, lighter hits.
   // exfil: the Exfil (a runner, quick to break): a plain virus's Integrity, light hits.
-  // nest: a Worm server's nest, elite-lite: the Crawler and its two hatchlings cost about 40% of your Signal over the
+  // nest: a Worm server's nest, elite-lite: the Crawler and its two hatchlings cost about 40% of your Integrity over the
   // classes at levels 6, 12 and 20 (a process there about 35%, an elite 53%), and almost never lose.
   size: { process: { hp: 1.3, dmg: 0.9 }, elite: { hp: 1, dmg: 1 }, nest: { hp: 2.3, dmg: 1 }, guard: { hp: 1.2, dmg: 0.85 }, hunter: { hp: 1.6, dmg: 0.7 }, boss: { hp: 1.25, dmg: 0.9 }, stray: { hp: 1, dmg: 0.8 }, exfil: { hp: 1.5, dmg: 0.35 }, rival: { hp: 1.3, dmg: 0.9 } },
   slips: 2, // an Infiltrator's slips a visit: past the hunter, or out of a room a virus holds (not the Core)
@@ -627,14 +627,14 @@ export const addrOf = (s, id) => (s.rooms ? addrsOf(s.rooms.graph)[id] : null) |
 // ---------- the server on you ----------
 const nowOf = () => hooks.now?.() ?? Date.now();
 const mins = (s, m) => (m * 60000) / (s.rooms?.speed || ROOMS.speed);
-// Your Signal on the server: the playtest's own, or the run's on the network (and at home, what rests there).
-export const sigOf = (s) => (world(s) ? (s.run ? s.run.integrity : Math.min(maxSignal(s), s.signal ?? maxSignal(s))) : s.rooms.signal);
+// Your Integrity on the server: the playtest's own, or the run's on the network (and at home, what rests there).
+export const sigOf = (s) => (world(s) ? (s.run ? s.run.integrity : Math.min(maxSignal(s), s.server.integrity)) : s.rooms.signal);
 function setSig(s, n) { if (!world(s)) s.rooms.signal = n; else if (s.run) s.run.integrity = n; }
 const ask = (fn, ...a) => { const f = WORLD[fn]; return f ? f(...a) : undefined; }; // a WORLD hook, on the network only
 export const roomOf = (s, id) => s.rooms?.graph.rooms[id] || null;
 export const hereOf = (s) => (s.rooms?.at ? roomOf(s, s.rooms.at) : null);
 export const roomList = (s) => Object.values(s.rooms.graph.rooms).filter(onMap); // a hidden room only once it opens
-// Start the playtest's server: a fresh map, you at home with full Signal.
+// Start the playtest's server: a fresh map, you at home with full Integrity.
 //   seed, size, kind, level, floor, author: the server. hunter: 'patrol' | 'track' (overrides its kind's). boss: a | b | c.
 //   speed: the clocks' speed (the playtest 10). name: shown on the card.
 export function startRooms(s, { seed = 1, size = 'medium', kind = 'Mailhub', level = hackerLevel(s), floor = 2, author = null, hunter = null, boss = 'a', speed = ROOMS.speed, name = null } = {}) {
@@ -736,7 +736,7 @@ export const baitPays = (s, room) => (s.rooms.kind === 'Honeypot' && isBait(s, r
 export const coreOpen = (s) => { const w = world(s) ? ask('coreOpen', s) : undefined; return w !== undefined ? w : !!s.rooms.opened[s.rooms.graph.vaults[0]]; };
 // A vault opened (the farm's ledger locks again when its keeper is back: netrooms.mjs).
 export const opened = (s, room) => { const w = world(s) ? ask('vaultOpen', s, room) : undefined; return w !== undefined ? w : !!s.rooms.opened[room.id]; };
-// Your Signal at home rests back (CONFIG.signalRest of your max a minute, at the clock's speed).
+// Your Integrity at home rests back (CONFIG.signalRest of your max a minute, at the clock's speed).
 export function signalNow(s, now = nowOf()) {
   const R = s.rooms;
   if (R.world) return s.run ? (active(s) ? s.run.integrity : Math.max(1, Math.min(s.run.max, s.run.integrity, R.fightFrom ?? s.run.max))) : sigOf(s);
@@ -791,7 +791,7 @@ function clear(s, room, quiet = false) {
   const xs = R.world && FIGHTS.includes(room.kind) ? clearXp(s) : 0; // Full Coverage (3): a share of a kill's XP (sets.mjs)
   if (xs > 0) gainXp(s, Math.max(1, Math.round((xpFor(s, R.level) * xs) / 100)), 'First clear', 'breakin');
   const p = progressOf(s);
-  if (!quiet) say(s, `${room.path} cleared.`, 'rooms-good');
+  if (!quiet) { say(s, `${room.path} cleared.`, 'rooms-good'); won(R, room); }
   if (p.done * 2 >= p.total && !R.drawn) { R.drawn = true; for (const x of roomList(s)) R.seen[x.id] ||= 'shape'; say(s, 'Half cleared: the whole map is drawn.', 'rooms-good'); }
   if (p.done === p.total && !R.mapped) mapped(s);
   if (R.world) ask('cleared', s, room);
@@ -999,7 +999,7 @@ export function connect(s) {
   if (now < R.reconnectAt) { deny(s, `${R.name} won't take you back for ${fmtLeft(R.reconnectAt - now)}.`); return out(s, first); }
   if (offlineLeft(R, now)) { deny(s, `${R.name} is offline, rebooting. Back in ${fmtLeft(offlineLeft(R, now))}.`); return out(s, first); }
   const sig = signalNow(s, now);
-  if (sig < Math.ceil(R.max * CONFIG.zone.minSignal)) { deny(s, `You need ${Math.ceil(R.max * CONFIG.zone.minSignal)} Signal to connect. You have ${sig}. It rests back at home.`); return out(s, first); }
+  if (sig < Math.ceil(R.max * CONFIG.zone.minSignal)) { deny(s, `You need ${Math.ceil(R.max * CONFIG.zone.minSignal)} Integrity to connect. You have ${sig}. It rests back at home.`); return out(s, first); }
   R.max = maxSignal(s);
   R.signal = Math.min(R.max, sig);
   enter(s, now);
@@ -1011,7 +1011,7 @@ export function enter(s, now = nowOf(), { keys = [] } = {}) {
   const R = s.rooms;
   if (R.world) R.max = s.run.max;
   R.visits++;
-  R.fightFrom = null; // in with the Signal you connected with, never a fight's from an earlier visit
+  R.fightFrom = null; // in with the Integrity you connected with, never a fight's from an earlier visit
   R.at = R.graph.entry;
   R.inSince = now;
   R.visit = { n: R.visits, walked: { [R.graph.entry]: true }, keys: [...keys], rested: false, moves: 0, hunter: newHunter(s), slips: 0, back: null, xp0: xpTotal(s) };
@@ -1059,16 +1059,17 @@ function goHome(s, R = s.rooms) {
   const now = nowOf();
   rivalLeave(s); // a rival still walking finishes the job (rivals.mjs)
   if (R.at) cardLeave(s); // a run card still up ends here (runcards.mjs)
-  R.fightFrom = null; // the fight you left (or lost) is over: its Signal never caps your next visit's
+  R.fightFrom = null; // the fight you left (or lost) is over: its Integrity never caps your next visit's
   R.at = null; R.screen = null; R.homeAt = now; R.reconnectAt = now + (R.world ? ROOMS.reconnect : Math.min(CONFIG.deathWait.cap, ROOMS.reconnect + (R.deaths || 0) * CONFIG.deathWait.each)) / R.speed;
   R.visit = { ...R.visit, hunter: null, exfil: R.visit?.exfil?.state === 'loose' ? { ...R.visit.exfil, state: 'gone' } : R.visit?.exfil || null }; // an Exfil you left is gone
 }
-// Lost a fight: disconnected. The unbanked pack is lost; XP and banked gear stay.
+// Lost a fight: disconnected. On the network the visit is undone (combat.mjs disconnect); in the playtest the
+// unbanked pack is lost, XP and banked gear stay.
 function disconnected(s, why) {
   const R = s.rooms, lost = [], rc = s.encounter?.metrics ? deathRecap(s) : null, recap = rc ? { recap: rc } : {}; // the fight's last cycles (recap.mjs)
   if (R.world) {
     // The run's end is combat.mjs disconnect (the pack lost; Deadman's Switch jacks you out with it instead).
-    R.last = { result: 'lost', why, lost: (s.run?.pack || []).map((f) => f.label || f.name), xp: xpTotal(s) - (R.visit?.xp0 ?? xpTotal(s)), visit: R.visit?.n, ...recap };
+    R.last = { result: 'lost', why, lost: (s.run?.pack || []).map((f) => f.label || f.name), xp: xpTotal(s) - (R.visit?.xp0 ?? xpTotal(s)), visit: R.visit?.n, ...(s.run?.snap ? { undone: visitOf(s) } : {}), ...recap };
     if (R.at) keysBack(s);
     ask('leave', s, 'lost', why); // Deadman's Switch jacks you out instead (jackOut, home with the pack)
     if (R.at) goHome(s, R);
@@ -1130,7 +1131,7 @@ function step(s, room, opts) {
   if (R.world && s.run) { s.run.cwd = room.path; for (const c of Object.values(s.run.crew || {})) if (c.link === 'you') c.cwd = room.path; } // the run (and your crew) where you are
   R.visit.walked[room.id] = true;
   R.visit.moves++; R.stats.moves++;
-  say(s, `→ ${room.path}${cost ? ` (−${cost} Signal)` : ''}`, 'rooms-cmd');
+  say(s, `→ ${room.path}${cost ? ` (−${cost} Integrity)` : ''}`, 'rooms-cmd');
   look(s);
   const h = hunterOf(s);
   if (h && !h.down && h.at === room.id) return meet(s, room, opts);
@@ -1182,7 +1183,7 @@ function arrive(s, room, opts = {}) {
     const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts), name = f.name || v.name;
     R.screen = { kind: 'virus', room: room.id, name, pause: !!opts.pause };
     say(s, `${name} holds ${room.path}.${R.rare[room.id] ? ' A rare spawn.' : ''}`, 'intrusion');
-    if (m) say(s, `The runner ${m.r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Signal.`, 'rooms');
+    if (m) say(s, `The runner ${m.r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Integrity.`, 'rooms');
   } else stood(s, room);
 }
 // You stand in a room with nothing live in it (walked in, or what held it beaten): this visit's tally (a no-rest map
@@ -1267,7 +1268,7 @@ export function act(s, verb, arg = null, opts = {}) {
   if (sc?.kind === 'virus') { deny(s, `The ${sc.name} holds this room. Engage it, or step back.`); return out(s, first); }
   if (verb === 'cat' && here.kind === 'cache') {
     if (!cacheFull(s, here)) deny(s, `The cache is empty. It refills in ${fmtLeft(refillAt(s, here) - nowOf())}.`);
-    else { R.read = { ...(R.read || {}), [here.id]: R.spawns[here.id] || 0 }; say(s, here.mirror ? "It's a mirror. An elite waits behind it." : isBait(s, here) ? `Bait: a canary in every block. Taking it costs ${Math.round(R.max * ROOMS.bait)} Signal.` : 'Clean: credits and code.', isBait(s, here) || here.mirror ? 'rooms-bad' : 'rooms'); }
+    else { R.read = { ...(R.read || {}), [here.id]: R.spawns[here.id] || 0 }; say(s, here.mirror ? "It's a mirror. An elite waits behind it." : isBait(s, here) ? `Bait: a canary in every block. Taking it costs ${Math.round(R.max * ROOMS.bait)} Integrity.` : 'Clean: credits and code.', isBait(s, here) || here.mirror ? 'rooms-bad' : 'rooms'); }
     return out(s, first);
   }
   if ((verb === 'pull' || verb === 'pull all') && (here.kind === 'cache' || here.kind === 'secret')) { pull(s, here, opts); return out(s, first); }
@@ -1278,16 +1279,16 @@ export function act(s, verb, arg = null, opts = {}) {
   if ((verb === 'open' || verb === 'force') && here.kind === 'vault') { openVault(s, here, verb === 'force'); return out(s, first); }
   if (verb === 'rest' && here.kind === 'rest') {
     if (restUsed(R, here)) deny(s, 'You already rested here this visit.');
-    else if (sigOf(s) >= R.max) deny(s, 'Your Signal is full. Your rest keeps for later this visit.');
-    else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * ROOMS.rest)); setSig(s, sigOf(s) + n); if (here.extra === 'stable') (R.visit.bays ||= {})[here.id] = true; else R.visit.rested = true; clear(s, here); say(s, `You rest: +${n} Signal.`, 'rooms-good').fx = { kind: 'rest', room: here.id }; }
+    else if (sigOf(s) >= R.max) deny(s, 'Your Integrity is full. Your rest keeps for later this visit.');
+    else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * ROOMS.rest)); setSig(s, sigOf(s) + n); if (here.extra === 'stable') (R.visit.bays ||= {})[here.id] = true; else R.visit.rested = true; clear(s, here); say(s, `You rest: +${n} Integrity.`, 'rooms-good').fx = { kind: 'rest', room: here.id }; }
     return out(s, first);
   }
   // A Defrag Bay: a rest room of your own, once a visit.
   if (verb === 'rest' && roomRuns(s, here, 'defrag')) {
     const bays = (R.visit.bays ||= {});
     if (bays[here.id]) deny(s, 'You already used this Defrag Bay this visit.');
-    else if (sigOf(s) >= R.max) deny(s, 'Your Signal is full. The bay keeps for later this visit.');
-    else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * SOCKET.rest)); setSig(s, sigOf(s) + n); bays[here.id] = true; say(s, `The Defrag Bay: +${n} Signal.`, 'rooms-good').fx = { kind: 'rest', room: here.id }; }
+    else if (sigOf(s) >= R.max) deny(s, 'Your Integrity is full. The bay keeps for later this visit.');
+    else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * SOCKET.rest)); setSig(s, sigOf(s) + n); bays[here.id] = true; say(s, `The Defrag Bay: +${n} Integrity.`, 'rooms-good').fx = { kind: 'rest', room: here.id }; }
     return out(s, first);
   }
   // A contract's item (mail.mjs: an Install job's, in your pack on its server): install it in its room. `install` is
@@ -1323,9 +1324,9 @@ function pull(s, room, opts) {
 // A hidden room's stash (a Ghostroot server's) is a cache's pile, never bait, and a blue now and then (ROOMS.secret).
 function takeCache(s, room) {
   const R = s.rooms, r = rnd(R, 21), C = ROOMS.cache, mill = runs(s, 'mill') && room.kind === 'cache' ? 1.5 : 1, rich = ((R.world && ask('cacheMult', s, room)) || 1) * mill; // a Cache Mill: half again
-  if (isBait(s, room)) { const lost = Math.round(R.max * ROOMS.bait); setSig(s, Math.max(1, sigOf(s) - lost)); say(s, `The canary costs you ${lost} Signal.`, 'rooms-bad'); }
+  if (isBait(s, room)) { const lost = Math.round(R.max * ROOMS.bait); setSig(s, Math.max(1, sigOf(s) - lost)); say(s, `The canary costs you ${lost} Integrity.`, 'rooms-bad'); }
   const mend = Math.round((R.max * fxPct(s, 'cache-heal%')) / 100); // Sweetener (a floor feat's unique, earned.mjs)
-  if (mend > 0) { setSig(s, Math.min(R.max, sigOf(s) + mend)); say(s, `+${mend} Signal from the cache.`, 'rooms-good'); }
+  if (mend > 0) { setSig(s, Math.min(R.max, sigOf(s) + mend)); say(s, `+${mend} Integrity from the cache.`, 'rooms-good'); }
   const bait = baitPays(s, room), credits = Math.round((C.credits[0] + Math.floor(r() * (C.credits[1] - C.credits[0] + 1))) * rich * (1 + R.level / 20) * bait);
   const fam = roomList(s).find((x) => x.family)?.family, kind = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher', botnet: 'worm', logicbomb: 'cipher' }[fam] || 'cipher';
   const code = Math.round((C.code[0] + Math.floor(r() * (C.code[1] - C.code[0] + 1))) * mill * bait);
@@ -1354,10 +1355,10 @@ function openVault(s, room, force) {
   if (opened(s, room)) return deny(s, 'The vault is already open.');
   const has = R.visit.keys.indexOf(room.id), may = R.world ? ask('canOpen', s, room) : undefined;
   if (may === false) return deny(s, room.locked || 'It won\'t open yet.');
-  if (!force && has < 0 && !may) return deny(s, `No key. It's in ${roomList(s).find((x) => x.key === room.id)?.path || 'an elite'}, or force the door for ${Math.round(R.max * ROOMS.force)} Signal.`);
+  if (!force && has < 0 && !may) return deny(s, `No key. It's in ${roomList(s).find((x) => x.key === room.id)?.path || 'an elite'}, or force the door for ${Math.round(R.max * ROOMS.force)} Integrity.`);
   const packed = () => (R.world ? s.run?.pack?.length : R.pack.length) || 0, was = packed();
   let ev;
-  if (force && !may) { const lost = Math.round(R.max * ROOMS.force); setSig(s, Math.max(1, sigOf(s) - lost)); ev = say(s, `You force the door: −${lost} Signal.`, 'rooms-bad'); }
+  if (force && !may) { const lost = Math.round(R.max * ROOMS.force); setSig(s, Math.max(1, sigOf(s) - lost)); ev = say(s, `You force the door: −${lost} Integrity.`, 'rooms-bad'); }
   else if (may) ev = say(s, 'The vault opens.', 'rooms-good');
   else { R.visit.keys.splice(has, 1); ev = say(s, 'The key opens the vault.', 'rooms-good'); }
   ev.fx = { kind: 'vault', room: room.id }; // the Dial on the map (roomfx.mjs), its files counted below
@@ -1560,7 +1561,7 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   const R = s.rooms;
   s.encounter = null;
   if (R.world) {
-    // The run carries on: your Signal is its integrity (the heal cap at what you walked in with).
+    // The run carries on: your Integrity is its integrity (the heal cap at what you walked in with).
     R.max = s.run.max;
     s.run.integrity = Math.min(s.run.integrity, s.run.max);
     R.fightFrom = s.run.integrity;
@@ -1648,7 +1649,7 @@ function brood(s, e, n) {
   }
   emit(s, 'status', `The nest's brood is out: ${n} hatchlings gnaw every cycle.`, { target: 'frag1' });
 }
-// After a fight: your Signal back on the server (never over what you started it with), and the fight cleared away.
+// After a fight: your Integrity back on the server (never over what you started it with), and the fight cleared away.
 export function settle(s) {
   const R = s.rooms;
   if (!R || !s.run?.rooms || active(s)) return;
@@ -1694,7 +1695,7 @@ hooks.roomEnd = (s, result) => {
     if (!['hunter', 'exfil', 'rival'].includes(as)) (R.stats.lostAt ||= {})[room.id] = (R.stats.lostAt[room.id] || 0) + 1;
     if (R.world && as !== 'exfil') ask('lost', s, room, e, result);
     if (result === 'fled') return; // jacked out mid-fight (the emergency escape): the run ends as a jack out
-    return disconnected(s, `${e.virus.name} took your Signal to 0 in ${room.path}.`);
+    return disconnected(s, `${e.virus.name} took your Integrity to 0 in ${room.path}.`);
   }
   R.stats.won++;
   if (e.virus.boss) R.stats.boss.won++;
@@ -1741,6 +1742,7 @@ hooks.roomEnd = (s, result) => {
     return stood(s, room);
   }
   if (room.kind !== 'socket') R.down[room.id] = nowOf(); // a socket's guard never comes back
+  won(R, room);
   R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
   const wasRare = !!R.rare[room.id], first = !R.cleared[room.id];
   // One respawn in 25 is a rare spawn (ROOMS.rare): it waits until you kill it (a held server's Root 5, a Legacy server's twice).
@@ -1772,6 +1774,15 @@ function nestPay(s, room) {
 // count is the difference since you started.
 export const xpTotal = (s) => { const h = hackerOf(s); let n = h.xp; for (let l = 1; l < h.level; l++) n += xpToNext(l); return n; };
 export const xpEarned = (s) => xpTotal(s) - (s.rooms?.xpStart ?? xpTotal(s));
+// What this visit holds, unsaved until you jack out (visit.mjs): the rooms you beat or used, the XP, the files in the
+// pack. null off a network visit.
+export function visitOf(s) {
+  const R = s.rooms;
+  if (!R?.world || !R.at || !R.visit || !s.run) return null;
+  return { rooms: Object.keys(R.visit.won || {}).length, xp: Math.max(0, xpTotal(s) - (R.visit.xp0 ?? xpTotal(s))), files: (s.run.pack || []).filter((f) => f.kind !== 'payload').length };
+}
+const won = (R, room) => { if (R.visit && R.world) (R.visit.won ||= {})[room.id] = true; };
+hooks.visitOf = visitOf; // combat.mjs disconnect: the card lists what the visit lost
 // What a kill in a fight room pays besides its own drops: an elite's one more component, a Harvester's one more (each
 // once a part that drops them broke), a Code Siphon's 3 of the server's code (into the pack on the network).
 function programsPay(s, room, e) {
@@ -1859,7 +1870,7 @@ export function roomsCommand(s, text) {
     const here = hereOf(s), xs = walkable(s, R.at).map((id) => R.graph.rooms[id]);
     const who = (x) => { const p = R.world ? ask('people', s, x) || [] : []; return p.length ? `  · ${p.join(', ')}` : ''; }; // who else is in there (SPRAWL-00 is shared)
     const at = addrsOf(R.graph); // every room's grid address, unknown ones too (it says where, never what)
-    const lines = [`${at[here.id]}  ${here.path}  [${here.kind}]${who(here)}`, ...xs.map((x, i) => `${i + 1}  ${at[x.id]}  ${known(s, x.id) ? x.path : '?'}  [${tagOf(s, x)}]${moveCost(s, x) ? `  −${moveCost(s, x)} Signal` : '  walked'}${who(x)}`)]; // who's in a room next door shows, known or not (people, not what the room is)
+    const lines = [`${at[here.id]}  ${here.path}  [${here.kind}]${who(here)}`, ...xs.map((x, i) => `${i + 1}  ${at[x.id]}  ${known(s, x.id) ? x.path : '?'}  [${tagOf(s, x)}]${moveCost(s, x) ? `  −${moveCost(s, x)} Integrity` : '  walked'}${who(x)}`)]; // who's in a room next door shows, known or not (people, not what the room is)
     const h = hunterLine(s), exfil = exfilLine(s);
     say(s, [...lines, ...(h ? [h] : []), ...(exfil ? [exfil] : [])].join('\n'), 'rooms-out');
     return out(s, first);
@@ -1913,7 +1924,7 @@ export function walkToRoom(s, name) {
   if (!R?.at || !room || room.id === R.at) return [];
   return walkTo(s, room.id);
 }
-// Walk to a room you've seen, a step at a time (each step a move: its Signal, the hunter, what holds the room).
+// Walk to a room you've seen, a step at a time (each step a move: its Integrity, the hunter, what holds the room).
 function walkTo(s, id) {
   const R = s.rooms, first = s.serial, path = pathTo(R.graph, R.at, id, (x) => !!seenOf(s, x)) || [];
   if (path.length < 2) { deny(s, `cd: no way to ${R.graph.rooms[id].path} from here that you've seen.`); return out(s, first); }

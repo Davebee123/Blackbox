@@ -96,9 +96,9 @@ test('the sets are data: every set in the plan, its pieces and slots, each piece
   for (const u of ITEMS.uniques.filter((x) => x.set)) assert.ok(SETS[u.set]?.pieces.includes(u.id), `${u.id} is listed in ${u.set}`);
   assert.deepEqual(KESTREL.map((id) => UNIQUES[id].sources[0]), [{ kind: 'guard', id: 'bouncer', layer: 2 }, { kind: 'guard', id: 'tracer', layer: 2 }, { kind: 'guard', id: 'sentinel', layer: 2 }]);
   assert.deepEqual(piecesOf('lowlight'), ['wicks-old-toolkit', 'lowlight-badge']);
-  assert.equal(SETS.kestrel.bonuses[2].text, '+8% max Signal.');
-  assert.equal(SETS.kestrel.bonuses[3].text, 'Once a fight, a hit that would take more than 30% of your max Signal deals 30% instead.');
-  assert.equal(SETS.lowlight.bonuses[2].text, 'Delivering a contract fills your Signal, and your next kill pays 25% more XP.');
+  assert.equal(SETS.kestrel.bonuses[2].text, '+8% max Integrity.');
+  assert.equal(SETS.kestrel.bonuses[3].text, 'Once a fight, a hit that would take more than 30% of your max Integrity deals 30% instead.');
+  assert.equal(SETS.lowlight.bonuses[2].text, 'Delivering a contract fills your Integrity, and your next kill pays 25% more XP.');
   // The class sets: one a class, its 4-piece with a line for each of the class's two subclasses, its pieces leaning to it.
   for (const [cls, subs] of Object.entries(SUBS_OF)) {
     const set = Object.values(SETS).find((x) => x.cls === cls);
@@ -190,23 +190,23 @@ test('only one 4-piece bonus: of two sets that qualify, the one that reached fou
 });
 
 
-test('Kestrel Clearance (2): +8% max Signal', () => {
+test('Kestrel Clearance (2): +8% max Integrity', () => {
   const s = at(12), base = at(12);
   wear(s, ['kestrel-badge']);
   const one = maxSignal(s);
-  assert.ok(one > maxSignal(base), 'the Badge\'s own Signal');
+  assert.ok(one > maxSignal(base), 'the Badge\'s own Integrity');
   const [token] = wear(s, ['kestrel-token']);
   const raw = one + token.stats.signal;
   assert.equal(maxSignal(s), raw + Math.round((raw * 8) / 100), 'the whole, 8% more, rounded');
 });
 
-test('Kestrel Clearance (3): once a fight, a hit that would take more than 30% of your max Signal deals 30%', () => {
+test('Kestrel Clearance (3): once a fight, a hit that would take more than 30% of your max Integrity deals 30%', () => {
   const s = at(12);
   wear(s, KESTREL);
   guardFight(s);
   s.run.max = 100; s.run.integrity = 100;
   assert.equal(SET_HOOKS.absorb(s, 50, { name: 'Bite' }), 30);
-  assert.ok(s.logs.some((l) => /Kestrel Clearance \(3\): Bite would take more than 30% of your max Signal\. It deals 30\./.test(l.message)));
+  assert.ok(s.logs.some((l) => /Kestrel Clearance \(3\): Bite would take more than 30% of your max Integrity\. It deals 30\./.test(l.message)));
   assert.equal(SET_HOOKS.absorb(s, 50, { name: 'Bite' }), 50, 'once a fight');
   // In a real landing: a part whose attack would take half your max takes 30%, Block and the shield after it.
   const t = at(12); wear(t, KESTREL);
@@ -224,16 +224,16 @@ test('Kestrel Clearance (3): once a fight, a hit that would take more than 30% o
   assert.equal(SET_HOOKS.absorb(u, 50, { name: 'Bite' }), 50);
 });
 
-test('LOWLIGHT Kit (2): delivering a contract fills your Signal, and your next kill pays 25% more XP', () => {
+test('LOWLIGHT Kit (2): delivering a contract fills your Integrity, and your next kill pays 25% more XP', () => {
   const kill = (s) => { selectEncounter(s, 'cryptjack', 9, { level: 22, mutation: null }); command(s, 'engage'); const mark = s.serial; finish(s, 'victory'); return s.logs.filter((l) => l.id > mark); };
   const base = at(22), s = at(22);
   wear(s, ['wicks-old-toolkit', 'lowlight-badge'], 22);
   wear(base, ['wicks-old-toolkit'], 22);
   assert.deepEqual(activeSets(loaded(s))[0].open, [2]);
-  s.signal = 5; base.signal = 5;
+  s.server.integrity = 5; base.server.integrity = 5;
   setDeliver(s); setDeliver(base);
-  assert.equal(s.signal, null, 'full at home');
-  assert.equal(base.signal, 5, 'one piece: nothing');
+  assert.equal(s.server.integrity, s.server.max, 'full at home');
+  assert.equal(base.server.integrity, 5, 'one piece: nothing');
   assert.equal(s.killXp, 25);
   const xpOf = (log) => log.filter((l) => l.type === 'xp').reduce((n, l) => n + l.amount, 0);
   const a = kill(s), b = kill(base);
@@ -243,17 +243,17 @@ test('LOWLIGHT Kit (2): delivering a contract fills your Signal, and your next k
   assert.ok(Math.abs(bonus.amount / xpOf(b)) - 0.25 < 0.05, `about 25%: ${bonus.amount} of ${xpOf(b)}`);
   assert.equal(s.killXp, undefined, 'one kill only');
   assert.equal(kill(s).find((l) => l.type === 'set-xp'), undefined);
-  // On a run: your Signal fills.
+  // On a run: your Integrity fills.
   onRun(s); s.run.integrity = 3; setDeliver(s);
   assert.equal(s.run.integrity, s.run.max);
   // Mail's deliver runs it (mail.mjs): a materials job, delivered with both pieces on.
   const m = at(22);
   wear(m, ['wicks-old-toolkit', 'lowlight-badge'], 22);
   const j = { id: 77, type: 'materials', material: 'worm', amount: 1, got: 0, reward: { credits: 5 }, from: 'x', subject: 'x', body: [] };
-  m.mail.jobs.push(j); m.materials = { ...(m.materials || {}), worm: 3 }; m.signal = 4;
+  m.mail.jobs.push(j); m.materials = { ...(m.materials || {}), worm: 3 }; m.server.integrity = 4;
   command(m, 'mail deliver 77');
   assert.ok(j.done);
-  assert.equal(m.signal, null);
+  assert.equal(m.server.integrity, m.server.max);
   assert.equal(m.killXp, 25);
 });
 
@@ -369,8 +369,8 @@ test('the tooltip and the stash and slot rows: the set, its pieces and each bonu
   assert.match(tip, /<span class="sp worn"[^>]*>Kestrel Badge<\/span>/);
   assert.match(tip, /<span class="sp held"[^>]*>Kestrel Token<\/span>/);
   assert.match(tip, /<span class="sp missing"[^>]*>Kestrel Lanyard<\/span>/);
-  assert.match(tip, /<span class="sb"[^>]*>\(2\) Set: \+8% max Signal\.<\/span>/);
-  assert.match(tip, /<span class="sb"[^>]*>\(3\) Set: Once a fight, a hit that would take more than 30% of your max Signal deals 30% instead\.<\/span>/);
+  assert.match(tip, /<span class="sb"[^>]*>\(2\) Set: \+8% max Integrity\.<\/span>/);
+  assert.match(tip, /<span class="sb"[^>]*>\(3\) Set: Once a fight, a hit that would take more than 30% of your max Integrity deals 30% instead\.<\/span>/);
   assert.match(tip, /<span class="sg"[^>]*>With 2 pieces: \+5% Clock Speed<\/span>/, 'its green line, grey');
   delete s.collection['kestrel-lanyard'];
   assert.match(itemTipMarkup(s, badge.id), /<span class="sp unknown"[^>]*>\?\?\?<\/span>/, 'never found: ???');
@@ -390,7 +390,7 @@ test('the tooltip and the stash and slot rows: the set, its pieces and each bonu
   // The Loadout: the active bonuses, over the stat sheet.
   const card = protocolStatsCard(s);
   assert.match(card, /<h3>Set bonuses<\/h3>/);
-  assert.match(card, /<span class="sb on">\(2\) Set: \+8% max Signal/);
+  assert.match(card, /<span class="sb on">\(2\) Set: \+8% max Integrity/);
   // A plain unique: no set lines.
   const plain = give(s, 'lien');
   assert.doesNotMatch(itemTipMarkup(s, plain.id), /set-lines/);
@@ -451,7 +451,7 @@ test('a piece works alone: stats for its slot and level, and its own small bonus
   assert.equal(BASES[hat.base].slot, 'shell');
   assert.equal(gearStat(s, 'reduction'), (hat.stats.reduction || 0) + lifted(2, hat.level), 'Hard Hat: +2 Block, lifted at its item level');
   assert.ok(hat.stats.signal > 0 && hat.stats.regen > 0, 'a shell\'s stats');
-  // The Tumbler: +6% max Signal, on top of its own Signal.
+  // The Tumbler: +6% max Integrity, on top of its own Integrity.
   const t = at(32), plain = at(32);
   const [tum] = wear(t, ['tumbler'], 32);
   const raw = maxSignal(plain) + tum.stats.signal;
@@ -496,7 +496,7 @@ test('a green line is grey with one piece and counts once two of its set are wor
 });
 
 // ---------- set bonuses ----------
-test('Patchwork: +5% damage and Signal at 2, +5% Clock Speed at 3, +2% for each different skill at 4, up to 12%', () => {
+test('Patchwork: +5% damage and Integrity at 2, +5% Clock Speed at 3, +2% for each different skill at 4, up to 12%', () => {
   const s = at(18);
   wear(s, ['stitch', 'darn'], 18);
   const fx = setFx(loaded(s));
@@ -559,7 +559,7 @@ test('Bedrock (3) and (4): +10% Clock Speed, the first cooldowns a cycle shorter
   assert.equal(SET_HOOKS.cooldown(t, 'spike', 1), 1, 'never under 1');
 });
 
-test('Glass Ceiling (3): +10% damage below half Signal; Cold Storage (3): 8% less taken above 75%', () => {
+test('Glass Ceiling (3): +10% damage below half Integrity; Cold Storage (3): 8% less taken above 75%', () => {
   const s = at(26);
   wear(s, ['rotor', 'quorum', 'ledger'], 26);
   const p = guardFight(s).virus.parts[0];

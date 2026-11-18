@@ -65,7 +65,7 @@ test('a room out of reach you have never been in: clickable for its card, which 
   pickRoom(s, far.id, ui);
   const card = pop(roomsMarkup(s, ui));
   assert.match(card, /<h1>Unknown room<\/h1>/);
-  assert.doesNotMatch(card, /costs|Signal/);
+  assert.doesNotMatch(card, /costs|Integrity/);
   assert.equal(FP.seenOf(s, g.core), 'shape');
   assert.doesNotMatch(tile(s, g.core), /SEALED|fp-icon|CORE/);
 });
@@ -118,7 +118,7 @@ test('ls: the rooms next to you by name and tag, with their cost', () => {
   const ls = FP.roomsCommand(s, 'ls').find((e) => e.type === 'rooms-out').message;
   const lines = ls.split('\n').slice(1).filter((l) => /^\d+ /.test(l));
   assert.equal(lines.length, FP.exits(s).length);
-  for (const x of FP.exits(s)) assert.match(ls, new RegExp(`${x.path}  \\[[^\\]]+\\]  −\\d+ Signal`), `${x.path}: named, its tag, its cost`);
+  for (const x of FP.exits(s)) assert.match(ls, new RegExp(`${x.path}  \\[[^\\]]+\\]  −\\d+ Integrity`), `${x.path}: named, its tag, its cost`);
 });
 
 test('the hunter: its skull shows in a room next to you and in a discovered room; deeper in the fog it is out of sight', () => {

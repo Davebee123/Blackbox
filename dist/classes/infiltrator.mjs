@@ -494,7 +494,7 @@ function payloadPlan(s, t, living, hurt) {
   if (tellOpen(s, t) && ['charge', 'cast'].includes(tellOpen(s, t).kind)) { const c = first(s, ['fuzz ' + t.id]); if (c) return c; } // in its window
   // Polymorph is the biggest burn after Inject, so it goes on anything that will outlive it.
   if (queued(s, t) < t.integrity) { const c = first(s, ['polymorph ' + t.id]); if (c) return c; }
-  // The moments: low on Signal (Skim pays it back), a loaded target and a part with fewer burns (Propagate
+  // The moments: low on Integrity (Skim pays it back), a loaded target and a part with fewer burns (Propagate
   // evens them out), two burns on a bare part (Thrash).
   if (hurt < 0.6) { const c = first(s, ['skim ' + t.id]); if (c) return c; }
   if (allBurnsOn(s, t).length >= 2 && living.some((p) => p !== t && allBurnsOn(s, p).length < allBurnsOn(s, t).length)) { const c = first(s, ['propagate ' + t.id]); if (c) return c; }

@@ -1,10 +1,10 @@
 // Invasions (milestone 2): invaders from found locations, the wall, sieges and breaches,
-// jacking in, crashes and Degraded mode.
+// jacking in, and the chip that stops at 1.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, part, restore, syncServer, tickServices, serverLevel, active, SAVE_VERSION } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
-import { tickNetwork, wallRating, wallBands, travelMs, outcome, chipRate, grindRate, degradedLeft } from './dist/invasion.mjs';
+import { tickNetwork, wallRating, wallBands, travelMs, outcome, chipRate, grindRate } from './dist/invasion.mjs';
 import { CONFIG } from './dist/data.mjs';
 
 CONFIG.baseCrit = 0;
@@ -188,84 +188,38 @@ test('a chip never ends a home fight you are in', () => {
   s.server.integrity = 1;
   wait(s, 3 * MIN);
   assert.equal(s.server.integrity, 1);
-  assert.equal(s.degraded, null);
 });
 
-test('crash: a breach chips you to zero, the server reboots at half and runs degraded for 10 real minutes', () => {
+test('a chip stops at 1: a breach never takes the last point, online or away, and nothing crashes', () => {
   const s = world();
-  atWall(s);
-  s.server.integrity = 1;
-  const ev = wait(s, MIN);
-  assert.ok(types(ev).includes('crashed'));
-  assert.ok(types(ev).includes('degraded'));
-  assert.equal(s.server.integrity, 50);
-  assert.ok(s.degraded);
-  assert.equal(wallRating(s), 0, 'the wall is down');
-  assert.equal(s.invasion, null, 'it got what it came for and left: one crash, not a loop of them');
-  wait(s, 5 * MIN);
-  assert.equal(s.server.integrity, 50, 'nothing chips while degraded');
-  const left = degradedLeft(s, s.clock);
-  assert.ok(left > 4.5 * MIN && left < 5.5 * MIN, 'about 5 of the 10 minutes left');
-  // Your XP doesn't stop (the server has none of its own: its level is your highest class level).
-  play(s, 'developer level 3');
-  assert.equal(s.hackers.breaker.level, 3);
-  // The real clock runs out even with the game closed.
-  s.clock += 10 * MIN;
-  const back = tickNetwork(s, s.clock);
-  assert.ok(types(back).includes('rebooted'));
-  assert.equal(s.degraded, null);
-  // An invader you lost a fight to stays at the wall, and chips again once the server is back up.
-  const t = world();
-  atWall(t);
-  play(t, 'jack in');
-  t.server.integrity = 1;
-  t.encounter.cycle = t.encounter.virus.parts.find((p) => p.attack).attack.due;
-  command(t, 'hold');
-  resolveCycle(t);
-  assert.ok(t.degraded && t.invasion);
-  t.clock += 10 * MIN;
-  tickNetwork(t, t.clock);
-  const hp = t.server.integrity;
-  wait(t, 2 * MIN);
-  assert.ok(t.server.integrity < hp, 'and keeps on');
+  const inv = atWall(s);
+  s.server.integrity = 3;
+  const ev = wait(s, 10 * MIN);
+  assert.equal(s.server.integrity, 1, 'chipped down to 1 and no further');
+  assert.ok(!types(ev).includes('crashed'));
+  assert.equal(s.invasion, inv, 'it stays at the wall until you deal with it');
+  assert.ok(wallRating(s) > 0, 'the wall stays up');
+  assert.equal(s.degraded, undefined);
+  // Away: a day of breaches played out a minute at a time.
+  const a = world();
+  atWall(a);
+  a.server.integrity = 2;
+  a.clock += 24 * 60 * MIN;
+  const away = tickNetwork(a, a.clock);
+  assert.equal(a.server.integrity, 1);
+  assert.ok(!types(away).includes('crashed'));
+  assert.equal(a.occupation, undefined, 'nothing moves into your server');
+  // On a run the chip takes the run's bar, never below 1 either.
+  const r = world();
+  atWall(r);
+  play(r, 'connect ' + r.locations[0].id);
+  r.run.integrity = 2;
+  wait(r, 10 * MIN);
+  assert.equal(r.run.integrity, 1);
+  assert.ok(r.run, 'still connected');
 });
 
-test('reboot sickness: while the server reboots, max Signal and your damage are down by the deepest floor you have reached', async () => {
-  const { maxSignal, rebootSick, damageMultiplier } = await import('./dist/combat.mjs');
-  assert.deepEqual(CONFIG.rebootSick, [0.2, 0.4, 0.6, 0.75, 0.85, 0.9, 0.93, 0.95], '20/40/60/75, then less a floor, up to 95%');
-  const s = world();
-  const full = maxSignal(s);
-  assert.equal(rebootSick(s), 0, 'nothing while it runs');
-  play(s, 'connect ' + s.locations[0].id);
-  assert.equal(s.run.max, full);
-  s.floors.reached = 3;
-  play(s, 'developer crash');
-  assert.equal(rebootSick(s), 0.6, 'floor 3: 60%');
-  assert.equal(maxSignal(s), Math.round(full * 0.4));
-  assert.equal(s.run.max, maxSignal(s), 'the run\'s max drops at once');
-  assert.ok(s.run.integrity <= s.run.max, 'and Signal with it');
-  assert.match(s.logs.find((e) => e.type === 'degraded').message, /−60% max Signal and damage/);
-  const h = world();
-  h.floors.reached = 3;
-  command(h, 'encounter cryptjack');
-  const p = h.encounter.virus.parts[0], well = damageMultiplier(h, p, { mine: true });
-  h.degraded = { since: null, until: null, ms: 10 * MIN };
-  assert.ok(Math.abs(damageMultiplier(h, p, { mine: true }) / well - 0.4) < 1e-9, 'your hits deal 40% of what they would');
-  s.floors.reached = 8;
-  assert.equal(rebootSick(s), 0.95, 'Bedrock: 95%');
-  // Back online: the max comes back; Signal doesn't jump.
-  s.floors.reached = 3;
-  const sig = s.run.integrity;
-  wait(s, 5000);
-  s.clock += 10 * MIN;
-  tickNetwork(s, s.clock);
-  assert.equal(s.degraded, null);
-  assert.equal(rebootSick(s), 0);
-  assert.equal(s.run.max, full);
-  assert.equal(s.run.integrity, sig);
-});
-
-test('losing a home fight reboots into Degraded mode too; losing to an invader leaves it at the wall', () => {
+test('losing a home fight leaves you at 1; an invader you lost to stays at the wall, as worn as you left it', () => {
   const s = world();
   command(s, 'encounter cryptjack');
   command(s, 'engage');
@@ -274,8 +228,8 @@ test('losing a home fight reboots into Degraded mode too; losing to an invader l
   command(s, 'hold');
   resolveCycle(s);
   assert.equal(s.encounter.phase, 'crashed');
-  assert.equal(s.server.integrity, 50);
-  assert.ok(s.degraded);
+  assert.equal(s.server.integrity, 1);
+  assert.equal(s.degraded, undefined);
 
   const t = world();
   const inv = atWall(t);
@@ -287,19 +241,54 @@ test('losing a home fight reboots into Degraded mode too; losing to an invader l
   command(t, 'hold');
   resolveCycle(t);
   assert.equal(t.encounter.phase, 'crashed');
+  assert.equal(t.server.integrity, 1);
   assert.equal(t.invasion, inv, 'still at the wall');
   assert.ok(inv.hp < 1, 'as worn down as you left it');
-  assert.ok(t.degraded);
+});
+
+test('one bar: Integrity is your health at home and on a run, its max what max Integrity was, and it rests back at home', async () => {
+  const { maxSignal, idleRegen } = await import('./dist/combat.mjs');
+  const s = world();
+  assert.equal(s.server.max, maxSignal(s), 'power and gear, not the server curve');
+  s.server.integrity = Math.round(s.server.max / 2);
+  play(s, 'connect ' + s.locations[0].id);
+  assert.equal(s.run.integrity, Math.round(s.server.max / 2), 'a run starts from the bar as it is');
+  s.run.integrity -= 5;
+  play(s, 'jack out');
+  assert.equal(s.server.integrity, Math.round(s.server.max / 2) - 5, 'and gives it back as it is');
+  const before = s.server.integrity;
+  idleRegen(s, 30000);
+  assert.equal(s.server.integrity, Math.min(s.server.max, before + Math.floor(s.server.max * CONFIG.signalRest / 2)), 'it rests back 20% of its max a minute');
+  // One top-up: repair is the same command.
+  s.server.credits = 1e6;
+  command(s, 'repair');
+  assert.equal(s.server.integrity, s.server.max);
 });
 
 test('saves from before invasions load with a quiet network', () => {
   const old = fresh();
   old.version = 15;
-  delete old.invasion; delete old.net; delete old.degraded; delete old.gate;
+  delete old.invasion; delete old.net; delete old.gate;
   const s = restore(JSON.parse(JSON.stringify(old)));
   assert.equal(s.version, SAVE_VERSION);
   assert.equal(s.invasion, null);
   assert.deepEqual(s.net, { wall: null, next: null });
-  assert.equal(s.degraded, null);
   assert.equal(serverLevel(s), 1);
+});
+
+test('an older save: Signal becomes the one Integrity bar; Degraded mode and an occupied home go; safe to run twice', async () => {
+  const { healthRestore, maxSignal } = await import('./dist/combat.mjs');
+  const s = world();
+  const max = maxSignal(s);
+  Object.assign(s, { signal: 40, signalAcc: 0.5, degraded: { since: 0, until: 1, ms: 1 }, occupation: { id: 'home', occupied: { left: 1 } } });
+  s.server.integrity = 0; s.server.max = 900; // the old server curve, crashed
+  healthRestore(s);
+  assert.deepEqual([s.server.integrity, s.server.max], [40, max], 'Signal\'s value, Signal\'s max');
+  for (const k of ['signal', 'signalAcc', 'degraded', 'occupation']) assert.ok(!(k in s), k);
+  healthRestore(s);
+  assert.deepEqual([s.server.integrity, s.server.max], [40, max], 'twice: the same');
+  const full = world();
+  full.signal = null; // full Signal
+  healthRestore(full);
+  assert.equal(full.server.integrity, max);
 });

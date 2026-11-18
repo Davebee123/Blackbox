@@ -26,7 +26,7 @@
 // level curve (MAIL.xp) at the level it was posted (contractXp). It comes on top of what the work pays on its own.
 //
 // Room contracts (ROOM_JOBS): install (carry Halcyon's item to a room's grid address on a server and install it there;
-// lose your Signal while it's in your pack and it's gone, the job with it), defuse (break N Encryptors before they
+// lose your Integrity while it's in your pack and it's gone, the job with it), defuse (break N Encryptors before they
 // Encrypt), sweep (one visit, every room but the Core, no rest), exfil (catch an Exfil) and heist (a vault's file past a
 // Tracker). No clock: one waits on the board at a time until you take it, outside the five.
 import { FAMILIES, ROOM_FAMILIES, CONFIG, STRAINS, along, killXp } from './data.mjs';
@@ -464,7 +464,7 @@ export function contractMapped(s, loc) {
 //   install  the giver's item (content/contracts.mjs installs), for a room's grid address on a traced server (often one you
 //            haven't been in yet: the address is the point). It waits in your stash and goes in your pack when you
 //            connect to that server; install it in that room (`install`, or the room card's button). Jacking out
-//            brings it home; losing your Signal with it in the pack loses it, and the job fails.
+//            brings it home; losing your Integrity with it in the pack loses it, and the job fails.
 //   defuse   break N Encryptors (ransomware's) before they land an Encrypt, in any fight. A cut Encrypt never landed.
 //   sweep    one visit to a server at or under your level, small or medium: stand in every room but the Core (and any
 //            only the Core leads to) with nothing live in it, and never rest (no rest room, no Defrag Bay). Jack out
@@ -559,7 +559,7 @@ export function contractPackLost(s, run) {
     if (!c) continue;
     s.mail.jobs.splice(s.mail.jobs.indexOf(c), 1);
     failed.push(title(s, c));
-    emit(s, 'warning', `Contract failed: ${title(s, c)}. ${cap(c.label)} went down with your Signal.`, { contract: c.id, failed: true });
+    emit(s, 'warning', `Contract failed: ${title(s, c)}. ${cap(c.label)} went down with your Integrity.`, { contract: c.id, failed: true });
   }
   return failed;
 }
@@ -768,7 +768,7 @@ export function title(s, c) {
 // Where an unknown target stands: not heard yet, flagged (with its trace), or found.
 function hunt(s, c) {
   const n = hiddenNode(s, c.hidden);
-  if (!n) return { text: 'Signal lost', part: 0 };
+  if (!n) return { text: 'Integrity lost', part: 0 };
   if (!flagged(s, n)) return { text: 'Not flagged yet. Put a relay on a server next to it.', part: 0 };
   return { text: `Flagged past ${locName(s, n.via)} · traced ${n.lead}%`, part: 0.1 + 0.3 * (n.lead / 100) };
 }
@@ -915,7 +915,7 @@ export function mailCommand(s, text, at = now()) {
   const haul = Math.round((xp * fxPct(s, 'contract-xp%')) / 100); // Long Haul (2)
   if (xp) gainXp(s, xp + haul, 'contract', null, CONTRACT_KIND[c.type] || 'fight');
   hooks.earnEvent?.(s, { kind: 'contract' }); // Long Haul's count (earned.mjs) // no Fresh bonus: it counts as the work behind it
-  setDeliver(s); // set bonuses on a delivery (LOWLIGHT Kit: your Signal full, the next kill's XP up; sets.mjs)
+  setDeliver(s); // set bonuses on a delivery (LOWLIGHT Kit: your Integrity full, the next kill's XP up; sets.mjs)
   if (fifth) { emit(s, 'streak', `Streak ${s.slayer.streak}. ${title(s, c)} pays double.`, { streak: s.slayer.streak }); const it = rollDrop(s, { kind: 'rogue', strain: c.strain, rolls: 3, trophy: true }, paidAt); if (it) addItem(s, it, 'Streak reward: '); }
   if (repN) changeRep(s, giver, repN, 'Contract delivered');
   if (c.reward.relay) { items(s).relay += c.reward.relay; emit(s, 'drop', 'Halcyon sent a relay. Install it on a server you’ve taken over (its map card).'); }

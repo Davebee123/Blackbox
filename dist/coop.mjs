@@ -141,7 +141,7 @@ function guestLeave(G, why) {
 //   cmd {text}       guest → host: a fight command for their crewmate
 //   char {char}      guest → host: their character changed (out of a fight): re-seated before the next fight
 //   snap {…}         host → guest: the world as it is now (see snapshot), with the guest's rewards since the last one
-// A seat: { name, char, rev, signal, bot, rewards }. signal: their Signal between fights on this run (null: full).
+// A seat: { name, char, rev, signal, bot, rewards }. signal: their Integrity between fights on this run (null: full).
 // bot: they dropped mid-fight and the planner plays them out of it. rewards: owed to their game (coopEnd, cache).
 COOP.snapMs = 100;
 export const coopOf = (s) => s._coop || null;
@@ -191,7 +191,7 @@ hooks.coopEnd = (s, m, result) => {
 };
 
 // What the host sends: the run (without the host's pack), the server it is on, the fight (the host's encounter: the
-// virus and the clock), and each player: their Signal and their own encounter (their queue, cooldowns, buffs). Their
+// virus and the clock), and each player: their Integrity and their own encounter (their queue, cooldowns, buffs). Their
 // characters go once, and again when one changes. The guest's game turns it into its own view (viewOf).
 const KEEP_OUT = new Set(['xp', 'level-up', 'fresh', 'fast-kill', 'hot-kill', 'rested', 'set-xp', 'read-xp', 'drop', 'code', 'loot', 'gear',
   'jacked-out', 'contract-done', 'contract-taken', 'bought', 'world-event', 'rooms-good', 'rooms-bad', 'rooms-out', 'net-out', 'net-good', 'net-err', 'net-scan',
@@ -248,7 +248,7 @@ export function hostGame(H) {
 }
 function reseat(seat) { seat.char = seat.next; seat.next = null; seat.rev++; }
 // Rooms on the host's run that pay the party: a cache or stash the host takes pays each guest a share of their own,
-// rolled on their own dice; a rest heals each guest's Signal by the rest's share. A new run starts everyone full.
+// rolled on their own dice; a rest heals each guest's Integrity by the rest's share. A new run starts everyone full.
 function roomShares(H) {
   const s = H.s, R = s.run ? s.rooms : null, key = s.run ? `${s.run.loc}:${R?.visits ?? 0}` : null;
   if (key !== H.runKey) {
@@ -306,8 +306,8 @@ const PLAYER_TYPES = new Set(['damage', 'miss', 'server-hit', 'evaded', 'blocked
 export function remap(events, host, you) {
   return events.map((e) => {
     if (e.who === you) { const { who: _, ...x } = e; return x; }
-    // The fight's end is everyone's, but the Signal it quotes is the host's.
-    if (!e.who && (e.type === 'victory' || e.type === 'crashed')) return { ...e, message: e.message.replace(/ Signal \d+\/\d+\.$/, '') };
+    // The fight's end is everyone's, but the Integrity it quotes is the host's.
+    if (!e.who && (e.type === 'victory' || e.type === 'crashed')) return { ...e, message: e.message.replace(/ Integrity \d+\/\d+\.$/, '') };
     if (!e.who && PLAYER_TYPES.has(e.type)) return { ...e, who: host };
     return { ...e };
   }).filter((e) => !(['warning', 'warning-soft'].includes(e.type) && e.who));

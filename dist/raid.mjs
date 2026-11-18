@@ -4,7 +4,7 @@
 // A crew boss has phases by its health, and each phase lists mechanics from the library (MECHANICS below):
 // every one of them is telegraphed (the board's Boss row and a log line: "PINK SLIP → kilo in 2") and lands
 // on a target picked by a rule (TARGETS). A missed mechanic downs a player or takes a big share of their
-// Signal, so every role has a job in every phase:
+// Integrity, so every role has a job in every phase:
 //   the tank holds aggro for the busters and clears Thermal Stress, and pulls the workers;
 //   the healer heals through pulses, pre-heals the marked player and cleanses corruption;
 //   damage breaks the priority adds and the shields in time and beats the enrage;
@@ -76,13 +76,13 @@ const drawing = (st) => st.encounter?.buffs?.sinkhole >= st.encounter?.cycle;
 
 // ---------- target rules ----------
 // crew: everyone, in full. aggro: whoever is drawing fire, else whoever dealt the most over the last 3 cycles.
-// marked: a random player who isn't holding aggro, picked when it's announced. lowest: the lowest Signal
+// marked: a random player who isn't holding aggro, picked when it's announced. lowest: the lowest Integrity
 // (by share) when it lands. healer: whoever cast the most heals over the last 6 cycles, else the lowest.
 export const TARGETS = {
   crew: 'everyone, in full',
   aggro: 'the player holding aggro (drawing fire, else the most damage over the last 3 cycles)',
   marked: 'a player marked two cycles ahead (never the one holding aggro)',
-  lowest: 'the player with the lowest Signal',
+  lowest: 'the player with the lowest Integrity',
   healer: 'the healer (whoever cast the most heals lately)',
 };
 export function aggroOf(s) {
@@ -136,20 +136,20 @@ export function attackTarget(s, p) {
 
 // ---------- the mechanic library ----------
 // Every mechanic has: id, kind, name, every (cycles between), first (cycles after its phase starts), target,
-// size (a share of the victim's max Signal, before the level scale) and optionally cast (a Compiling cast:
+// size (a share of the victim's max Integrity, before the level scale) and optionally cast (a Compiling cast:
 // interrupt true or false), warn (how far ahead it's announced, default RAID.warn), from (the boss level it
 // starts at; a cast SIGINT stops starts with SIGINT, at level 10) and source (a part that has to be alive). The kinds:
 export const MECHANICS = {
   // A big hit on whoever holds aggro. stress: true adds a Thermal Stress stack to whoever takes it.
   buster: { role: 'tank', what: 'a big hit on whoever holds aggro' },
-  // A hit on everyone; grow: each one hits this much more (a share of max Signal) than the last.
+  // A hit on everyone; grow: each one hits this much more (a share of max Integrity) than the last.
   pulse: { role: 'healer', what: 'a hit on the whole crew, growing each time' },
   // A big hit on a player marked two cycles ahead.
   burst: { role: 'healer', what: 'a big hit on a marked player' },
   // Damage over time on the target(s) until cleansed (Patch, Scrub, Purge) or it runs out (lasts). spread: left
   // that many cycles, it copies itself onto another player (a worm), and again every spread cycles after.
   dot: { role: 'healer', what: 'damage every cycle until it is cleansed' },
-  // Encrypted sectors: the next heals on the target are eaten, up to size of their max Signal.
+  // Encrypted sectors: the next heals on the target are eaten, up to size of their max Integrity.
   absorb: { role: 'healer', what: 'eats the next heals on a player' },
   // Workers: count adds, each hitting a marked player every cycle unless someone draws fire.
   adds: { role: 'tank', what: 'adds that hit a marked player every cycle unless someone draws fire' },

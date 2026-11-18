@@ -39,7 +39,7 @@ export const FACTIONS = {
   lantern: {
     name: 'LANTERN', short: 'LANTERN', kind: 'crew', color: '#ffb347', start: 10,
     about: 'The voice on the numbers station. Sells what it hears, to whoever listens.',
-    tiers: ['Listener', 'Regular', 'Confidant', 'Signal'],
+    tiers: ['Listener', 'Regular', 'Confidant', 'Integrity'],
     allies: ['nullchoir'], rivals: ['glassjaw'],
     hub: { name: 'LANTERN-RELAY-88', level: 6 },
   },

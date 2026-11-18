@@ -20,7 +20,7 @@ import { placeOf, familyCues } from './places.mjs';
 import { createShell } from './shell.mjs';
 import { createScreenFx, screenState, screenFxCommand, SFX, boardFxOf, migrateEffects, levelOf } from './screenfx.mjs';
 import { play, runSuggestions, nextActions, currentLocation, signalNow, crewWander } from './run.mjs';
-import { tickNetwork, degradedLeft, fmtLeft } from './invasion.mjs';
+import { tickNetwork } from './invasion.mjs';
 import { consortiumOf, alertsOf } from './consortium.mjs';
 import { nextPayIn, boardOpen, storyAt, openContracts, ready } from './mail.mjs';
 import { hubsOf, hubFound, hubTraceOf, FACTIONS } from './factions.mjs';
@@ -211,7 +211,7 @@ function load() {
     // ?playtest=fx (abilityfx-playtest.mjs): the ability effects playtest, on a three-part fight (&family=, &seed=, &level=).
     else if (playtest === 'fx') { const L = lv >= 1 && lv <= 50 ? lv : 12; s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; if (/^[a-z ]+$/.test(params.get('crew') || '')) play(s, `crew sim ${params.get('crew')}`); selectEncounter(s, 'random', seed || 8, { level: L, family: /^[a-z]+$/.test(fam || '') ? fam : 'ransomware', mutation: null }); } // &crew=<class>: a crewmate in the crew window, to fire theirs
     // ?playtest=boss:<id> (BOSSES: resident, repoman, choir…): that boss at &level= (10 by default), &family= for the Resident,
-    // geared for it (&cls=, &sub=). The event bosses fight at home, the rest on your Signal in a Core, as in the game.
+    // geared for it (&cls=, &sub=). The event bosses fight at home, the rest on your Integrity in a Core, as in the game.
     else if (playtest.startsWith('boss:') && BOSSES[playtest.slice(5)]) {
       const id = playtest.slice(5), B = BOSSES[id], L = lv >= 1 && lv <= 50 ? lv : Math.max(10, B.floor || 0), family = /^[a-z]+$/.test(fam || '') ? fam : B.family || 'worm';
       FP.outfit(s, { cls: s.loadout.archetype, level: L, sub: params.get('sub'), gearSeed: seed || 1 }); // geared for its level, as the measurement plays it
@@ -637,7 +637,7 @@ const shell = createShell({ getState: () => campaign, isOn: shellOn, canMove: ()
 shell.mount();
 const row = (id) => `.board [data-target="${id}"]`;
 const MINE = '.hud-bar.mine';
-const BAR = MINE + ' .bigbar'; // where a number on you rises: off your bar, clear of the Signal figure
+const BAR = MINE + ' .bigbar'; // where a number on you rises: off your bar, clear of the Integrity figure
 
 // ---------- juice: how hits, broken shields and hurts land ----------
 // All fixed on the page (the board re-renders every cycle and would cut them short). Motion off: none.
@@ -740,7 +740,7 @@ const juice = {
   },
 };
 // A virus attack on you lashes at the screen (lash.mjs): from the part on the render (or its row on the
-// board) into your Signal bar. Effects minimal or Motion off: none, a soft edge instead.
+// board) into your Integrity bar. Effects minimal or Motion off: none, a soft edge instead.
 const lash = createLash();
 const chipfx = createChipFx(); // themed telegraph chips (chipTick)
 function lashFrom(id) {
@@ -1136,20 +1136,22 @@ function receiptCard(e, events) {
   const name = campaign.locations?.find((l) => l.id === e.location)?.name || '';
   showGain(`${name} · Taken over`, '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code'].includes(x.type) && x.id > e.id - 6)), false, V.receiptLead(campaign, e.receipt), false);
 }
-// Losing a run: how it went (the death recap over the last cycles: recap.mjs), what took you out, what it cost, and
-// when you can go back.
+// Losing a run: how it went (the death recap over the last cycles: recap.mjs), what took you out, what the visit lost
+// (visit.mjs: undone, struck through), and when you can go back.
 function lossCard(e) {
   const clock = (ms) => `${Math.floor(ms / 60000)}:${String(Math.ceil((ms % 60000) / 1000) % 60).padStart(2, '0')}`;
   const max = maxSignal(campaign), sig = signalNow(campaign), need = Math.ceil(max * CONFIG.zone.minSignal);
+  const v = e.reverted ? e.visit || { rooms: 0, xp: 0, files: 0 } : null, n = (k, one, many) => `${(v[k] || 0).toLocaleString('en-US')} ${v[k] === 1 ? one : many}`;
+  const undone = v ? `<p class="sp-undone" title="${V.esc('This visit: Undone by the disconnect. You are back to when you connected, Integrity and all.')}"><small>back to when you connected</small>${[n('rooms', 'room', 'rooms'), n('xp', 'XP', 'XP'), n('files', 'file', 'files')].map((x) => `<s>${V.esc(x)}</s>`).join('')}</p>` : '';
   const rows = [
-    { kind: 'lost', label: e.by ? `Taken out by ${e.by}` : (e.reason || 'Signal lost'), qty: '', text: 'Signal lost' },
+    { kind: 'lost', label: e.by ? `Taken out by ${e.by}` : (e.reason || 'Integrity lost'), qty: '', text: 'Integrity lost' },
     ...(e.lost ? [{ kind: 'lost', label: 'Unbanked files', qty: `−${e.lost}`, text: `${e.lost} files lost` }] : []),
     ...(e.failed || []).map((t) => ({ kind: 'lost', label: `Contract failed: ${t}`, qty: '', text: `Contract failed: ${t}` })), // an Install job's item went with the pack (mail.mjs)
   ];
-  // One clock: you can go back once both the reconnect wait and your Signal allow it, so the later of the two.
+  // One clock: you can go back once both the reconnect wait and your Integrity allow it, so the later of the two.
   const wait = Math.max(e.relockMs || 0, sig < need ? ((need - sig) / (CONFIG.signalRest * max)) * 60000 : 0);
   if (wait > 0) rows.push({ kind: 'time', label: 'Reconnection possible in', qty: clock(wait), text: `Reconnection possible in ${clock(wait)}` });
-  showGain('Disconnected', e.where || '', rows, false, recapMarkup(e.recap));
+  showGain(v ? 'No carrier' : 'Disconnected', e.where || '', rows, false, undone + recapMarkup(e.recap));
   $('gain').classList.add('loss');
 }
 function hideGain() { clearTimeout(gainTimer); const el = $('gain'); if (el && !el.hidden) { el.hidden = true; el.innerHTML = ''; } const next = gainQueue.shift(); if (next) setTimeout(() => showGain(...next), 120); }
@@ -1228,7 +1230,7 @@ function react(events) {
     if (fc) feel.add(() => feel.familyShot(fc.family, fc.kind));
     const f = split.of(e), src = f ? { kind: f.kind + (f.at === 'you' ? ' at-you' : '') + (f.hostile ? ' hostile' : ''), icon: f.icon, label: f.label } : null;
     if (e.who) {
-      const mate = `.pmate[data-mate="${e.who}"]`; // their line under your Signal (HUD)
+      const mate = `.pmate[data-mate="${e.who}"]`; // their line under your Integrity (HUD)
       if (e.type === 'server-hit') {
         artHit(e.source, 'attack');
         feel.add(e.crit ? 'hurtcrit' : 'hurt', mate, f?.text || `−${e.amount}`, { amount: e.amount, silent: hurtVoiced, noEdge: true, src, stack });
@@ -1314,7 +1316,6 @@ function react(events) {
       case 'world-event': lampBlink('net'); if (e.card === 'courier') feel.numbers(); break; // LANTERN on the radio (the pager carries the text)
       case 'wall-breach': feel.add('hurt', '#meter-integrity', 'BREACH'); notice(e.message, true); ledRing(); break;
       case 'invasion-cleared': if (!won && !e.quiet && !e.lost) { feel.add(e.blocked ? 'good' : 'win', MINE); notice(e.message); } break;
-      case 'degraded': flash('REBOOTED · DEGRADED'); notice(e.message, true); if (module === 'combat') setTimeout(() => { if (!active(campaign)) go('map'); }, 1800); break;
       case 'rebooted': feel.add('unlock', MINE); notice(e.message); break;
       // The Encryptor's attack: a tendril of hex, and locks over your bar; each tick of it after: the locks only.
       case 'encrypt': artHit(e.source, 'attack'); flash('ENCRYPTED'); if (lashing) { feel.add(() => lashAt(e, 'encrypt')); feel.beat(delay(e) + LASH_TRAVEL); } feel.add('encrypt', MINE, f?.text || `+${e.amount}/cycle`, { src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break;
@@ -1403,7 +1404,7 @@ function react(events) {
         ending = true; hideTip(false); ended = e.mode || 'home'; endedAt = performance.now();
         setTimeout(() => { ending = false; }, 900);
         break;
-      case 'crashed': flash(e.mode === 'run' || e.mode === 'rooms' ? 'SIGNAL LOST' : 'SERVER CRASHED'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); if (e.mode === 'breach') { hideTip(false); setTimeout(() => go('breach'), 1600); } if (e.mode === 'rooms') { hideTip(false); setTimeout(() => { if (!active(campaign) && !lossHold && !document.querySelector('.nocarrier')) go('rooms'); }, 1600); } break;
+      case 'crashed': flash(e.mode === 'run' || e.mode === 'rooms' ? 'DISCONNECTED' : 'HELD AT 1'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); if (e.mode === 'breach') { hideTip(false); setTimeout(() => go('breach'), 1600); } if (e.mode === 'rooms') { hideTip(false); setTimeout(() => { if (!active(campaign) && !lossHold && !document.querySelector('.nocarrier')) go('rooms'); }, 1600); } break;
       case 'cut': feel.add('good', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, f?.text || (e.phase ? 'PHASE' : e.vent ? 'VENTED' : e.delay ? 'DELAYED' : 'INTERRUPTED'), { src }); break;
       case 'escaped': flash('UPLOAD COMPLETE'); feel.add('nope', null); hideTip(false); setTimeout(() => { if (!active(campaign) && campaign.rooms) go('rooms', true); }, 1600); break; // a runner got away (the Exfil's upload completed): back to the rooms
       case 'floor': flash(`FLOOR ${e.floor}`); notice(e.message); break; // floors.mjs: you took an exit
@@ -1511,7 +1512,7 @@ function run(raw) {
   // A server's rooms (floorplan.mjs): ls, cd, map and the room's verbs, out of a fight. On the playtest jacking out
   // mid-fight isn't one; on the network it's the emergency escape (run.mjs play), and the verbs go through play too.
   if (campaign.rooms) {
-    FP.settle(campaign); // a fight that ended: your Signal back on the server, and gear loads again
+    FP.settle(campaign); // a fight that ended: your Integrity back on the server, and gear loads again
     if (text === 'jack out' && active(campaign) && campaign.roomsPlay) return notice('No jacking out mid-fight. Win it, or lose the pack.', true);
     if (text === 'help' && !campaign.roomsPlay) return notice('Click a room, or type go <room> (go elite 2). Also: ls, map, wait, back, engage, cat, pull, open, force, rest, slip, pack, jack out. In a fight: 1 is your plain hit, 2 to 0 your skills, - is SIGINT, jack out is the emergency escape.', false, null, true);
     if (text === 'help') return notice('Click a room, or type go <room> (go elite 2). Also: ls, map, wait, back, engage, cat, pull, open, force, rest, slip, jack out, connect, developer bossrule a|b|c. In a fight: 1 is your plain hit, 2 to 0 your skills, - is SIGINT.', false, null, true);
@@ -2021,58 +2022,41 @@ function renderMeters() {
   $('who-lv').textContent = h.level;
   $('who-fill').style.width = (h.level >= 50 ? 100 : (h.xp / V.xpNeeded(h.level)) * 100) + '%';
   $('whoami').title = h.level >= 50 ? 'max' : `${h.xp}/${V.xpNeeded(h.level)} XP`;
-  const pct = (srv.integrity / srv.max) * 100;
+  // Integrity: your one health bar (combat.mjs serverMax), the server tower. On a run, the run's own; at home it rests
+  // back, with a clock to full (to connecting, while too low for it), and the + pays for the rest now.
+  const run = campaign.run, hp = run ? run.integrity : signalNow(campaign), max = run ? run.max : maxSignal(campaign);
+  const pct = max ? (hp / max) * 100 : 0, toConnect = CONFIG.zone.minSignal;
   $('integrity-fill').style.height = pct + '%'; // the server tower drains from the top
-  $('integrity-value').textContent = srv.integrity;
+  $('integrity-value').textContent = hp;
   $('meter-integrity').classList.toggle('critical', pct <= 25);
+  $('meter-integrity').classList.toggle('weak', !run && pct < toConnect * 100);
   const inv = campaign.invasion;
   const onIt = inv && active(campaign) && campaign.encounter.invader === inv.id; // no chip while you fight it
-  const note = campaign.degraded ? `DEGRADED ${fmtLeft(degradedLeft(campaign))}` : onIt ? '' : inv?.state === 'breach' ? 'BREACH' : inv?.state === 'siege' ? 'SIEGE' : '';
+  const note = onIt ? '' : inv?.state === 'breach' ? 'BREACH' : inv?.state === 'siege' ? 'SIEGE' : '';
   $('integrity-note').hidden = !note;
   $('meter-integrity').classList.toggle('noted', !!note);
   $('integrity-note').textContent = note;
-  $('integrity-note').className = 'meter-note ' + (campaign.degraded ? 'degraded' : inv?.state || '');
-  $('integrity-note').title = campaign.degraded ? V.sickTip(campaign) : '';
-  $('meter-integrity').classList.toggle('breaching', !campaign.degraded && !onIt && inv?.state === 'breach'); // a breach: the meter itself flashes
-  // Click a meter that isn't full to pay for the rest (topUp in data.mjs); the hover says what it costs. Short of
+  $('integrity-note').className = 'meter-note ' + (inv?.state || '');
+  $('meter-integrity').classList.toggle('breaching', !onIt && inv?.state === 'breach'); // a breach: the meter itself flashes
+  // Click the meter when it isn't full to pay for the rest (topUp in combat.mjs); the hover says what it costs. Short of
   // credits it fills what you can pay for; with none there's nothing to click.
   const meterBuy = (el, cmd, cost, base) => {
     const credits = campaign.server.credits, can = !!cost && credits > 0 && !active(campaign);
     if (can) { el.dataset.command = cmd; el.setAttribute('role', 'button'); el.tabIndex = 0; } else { delete el.dataset.command; el.removeAttribute('role'); el.removeAttribute('tabindex'); }
-    el.title = base + (!can ? '' : credits >= cost ? ` Click to fill it now: ${cost} credits.` : ` Click to fill what your ${credits} credits buy (${cost} fills it).`);
+    el.title = base + (!can ? '' : credits >= cost ? `\n▸ Click to fill it now: ${cost} credits.` : `\n▸ Click to fill what your ${credits} credits buy (${cost} fills it).`);
   };
   {
-    const missing = srv.max - srv.integrity, mins = Math.ceil(missing / (CONFIG.restRegen * srv.max));
-    meterBuy($('meter-integrity'), 'repair', srv.integrity > 0 ? topUpCost(campaign, 'server') : 0,
-      `Server Integrity ${srv.integrity}/${srv.max}. At 0 the server crashes and reboots at half, degraded for 10 minutes.${missing > 0 && srv.integrity > 0 ? ` Rests back to full in about ${mins} min.` : ''}`);
+    const resting = !run && !active(campaign) && hp < max, f = max ? hp / max : 0;
+    const goal = f < toConnect ? Math.ceil(max * toConnect) : max, secs = Math.max(0, Math.ceil(((goal - hp) / (CONFIG.signalRest * max)) * 60));
+    const eta = $('integrity-eta');
+    eta.hidden = !resting;
+    if (resting) eta.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+    $('meter-integrity').classList.toggle('resting', resting);
+    meterBuy($('meter-integrity'), 'top up', run ? 0 : topUpCost(campaign),
+      `Integrity: ${hp}/${max}. Your health at home and on a run. It rests back at home${resting ? ` (${f < toConnect ? `${Math.ceil(max * toConnect)} to connect` : 'full'} in ${eta.textContent})` : ''}; an invasion chips it, never below 1.`);
   }
   $('vault-value').textContent = srv.credits;
-  // Signal: your health out on the net. At home it rests back; on a run the run's own header shows it.
-  {
-    const sig = campaign.run ? campaign.run.integrity : signalNow(campaign), max = campaign.run ? campaign.run.max : maxSignal(campaign);
-    const f = max ? sig / max : 0, need = CONFIG.zone.minSignal;
-    const m = $('meter-signal');
-    m.hidden = !!campaign.run || active(campaign) || !!campaign.rooms; // a fight has its own bars, the rooms their own page
-    $('signal-value').textContent = sig;
-    const sick = V.sickPct(campaign); // reboot sickness: your server is rebooting
-    $('signal-sick').hidden = !sick;
-    if (sick) { $('signal-sick').textContent = `−${sick}%`; $('signal-sick').title = V.sickTip(campaign); }
-    const lit = Math.ceil(f * 5 - 1e-9);
-    m.querySelectorAll('.sig-bars i').forEach((b, i) => b.classList.toggle('on', i < lit));
-    m.classList.toggle('weak', f < need);
-    m.classList.toggle('resting', !campaign.run && !active(campaign) && sig < max);
-    const mins = Math.ceil((max - sig) / (CONFIG.signalRest * max));
-    // Resting: a clock to full (to connect, while too weak for it), so a low meter says when, not just "slowly".
-    const resting = !campaign.run && !active(campaign) && sig < max;
-    const goal = f < need ? Math.ceil(max * need) : max, secs = Math.max(0, Math.ceil(((goal - sig) / (CONFIG.signalRest * max)) * 60));
-    const eta = $('signal-eta');
-    eta.hidden = !resting;
-    if (resting) { eta.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`; eta.title = f < need ? 'Time until you have enough Signal to connect' : 'Time until Signal is full'; }
-    meterBuy(m, 'top up', campaign.run ? 0 : topUpCost(campaign, 'signal'),
-      `Signal ${sig}/${max}: your health out on the net. ${sig < max ? `Rests back to full in about ${mins} min at home.${f < need ? ` You need ${Math.ceil(max * need)} to connect.` : ''}` : 'Full.'}`);
-  }
   const s = shown();
-  // On a run, Signal lives in the prompt, the net header and the combat HUD.
   // Fight and Run tabs appear only while there is a fight or a run.
   $('tab-combat').hidden = !active(campaign);
   $('tab-net').hidden = !campaign.run || !!campaign.run.rooms;
@@ -2436,7 +2420,7 @@ function render(force = false) {
   dirty = false;
 }
 
-// On a run the prompt itself carries Signal and where you are.
+// On a run the prompt itself carries Integrity and where you are.
 function renderPrompt() {
   const el = document.querySelector('.prompt');
   const r = campaign.run;
@@ -2677,7 +2661,7 @@ $('casing').addEventListener('pointerdown', (e) => {
 function screenFx() {
   const s = campaign, frac = (n, m) => (m ? n / m : null);
   const health = active(s) ? frac(defender(s).integrity, defender(s).max) : s.rooms ? frac(FP.signalNow(s), s.rooms.max) : s.run ? frac(s.run.integrity, s.run.max) : null;
-  const st = screenState(s, { module, mapFloor: module === 'map' ? V.mapFloorOf(s, mapSel, mapFloor) : null, loc: s.run ? currentLocation(s) : null, health, gate: V.gateOf(s), until: sfx.until, fmtLeft: s.degraded ? fmtLeft(degradedLeft(s)) : null });
+  const st = screenState(s, { module, mapFloor: module === 'map' ? V.mapFloorOf(s, mapSel, mapFloor) : null, loc: s.run ? currentLocation(s) : null, health, gate: V.gateOf(s), until: sfx.until });
   if (!shellOn()) Object.assign(st, { level: 'off', floor: null, low: false, on: {} });
   stageFloor = module === 'map' ? null : st.floor;
   $('virus-canvas').parentElement.classList.toggle('staged', !!stageFloor); // the place replaces the picture's grid
@@ -2745,16 +2729,16 @@ function services() {
   // host's rooms on the host's game.
   const S = own();
   if (!document.hidden && now - lastInput < 120000 && !playtest) tickPlay(S, dt);
-  const hp = S.server.integrity;
+  const chipped = S.run || S.server, hp = chipped.integrity; // the chip takes the bar where it is (invasion.mjs)
   const events = S.roomsPlay ? [] : [...tickNetwork(S, now), ...tickServices(S, now)]; // the rooms playtest has no network
   if (campaign.rooms && !realSave) { const ev = FP.tick(campaign, now); if (ev.length) react(ev); if (module === 'rooms' || ev.length) markDirty(); } // respawn timers count down on the map
   if (events.length) { react(events); save(); }
   // A siege or breach took a bite: the meter says so.
-  const bite = hp - S.server.integrity;
-  if (bite > 0 && !events.some((e) => e.type === 'degraded')) feel.add('chip', '#meter-integrity', `−${bite}`);
-  // An invader on the move, a siege or a breach, or Degraded mode: the map, the Server page and
-  // the Integrity meter change a little every second.
-  if (campaign.invasion || campaign.degraded) {
+  const bite = hp - chipped.integrity;
+  if (bite > 0) feel.add('chip', '#meter-integrity', `−${bite}`);
+  // An invader on the move, a siege or a breach: the map, the Server page and the Integrity meter change a little
+  // every second.
+  if (campaign.invasion) {
     markDirty();
     if (now - netSaved > 10000) { netSaved = now; save(); }
   }
@@ -3086,7 +3070,7 @@ function frame(now) {
     // Unanswered alerts shake the pager every 10 s; a breach pings every 15 s.
     const tickNow = Date.now();
     if (unseenAlert(campaign) && !commsOpen && tickNow - (nag.pager || 0) >= 10000) { nag.pager = tickNow; for (const p of [$('pager'), ...document.querySelectorAll('.ping.threat.unseen')]) { p.classList.remove('fx-pager'); void p.offsetWidth; p.classList.add('fx-pager'); } }
-    const inv = campaign.invasion, breached = inv?.state === 'breach' && !campaign.degraded && !(active(campaign) && campaign.encounter.invader === inv.id);
+    const inv = campaign.invasion, breached = inv?.state === 'breach' && !(active(campaign) && campaign.encounter.invader === inv.id);
     if (breached && tickNow - (nag.breach || 0) >= 15000) { nag.breach = tickNow; feel.add('prewarn', '#meter-integrity'); feel.flush(); }
     if (!breached) nag.breach = 0;
     if (module === 'consortium') markDirty(); // its timers count down
@@ -3188,7 +3172,7 @@ document.addEventListener('click', (e) => {
   const side = e.target.closest('[data-mk-side]');
   if (side && mkOrder) { setMkOrder({ ...mkOrder, side: side.dataset.mkSide, n: 1 }); return; }
   if (e.target.closest('.mk-go') && mkOrder) { const c = e.target.closest('.mk-go').dataset.command; setMkOrder({ ...mkOrder, n: 1 }); return run(c); }
-  if (e.target.closest('.fp-scanbtn[aria-disabled="true"]')) return; // SCAN short of Signal: a click on it never walks in
+  if (e.target.closest('.fp-scanbtn[aria-disabled="true"]')) return; // SCAN short of Integrity: a click on it never walks in
   const cmd = e.target.closest('[data-command]');
   if (cmd && !cmd.disabled) {
     // Irreversible buttons (scrapping good gear) ask with a second click.

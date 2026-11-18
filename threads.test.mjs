@@ -39,7 +39,7 @@ function setup(level = 6, { floors = 1, n1 = 5, n2 = 0, n3 = 0 } = {}) {
 const tame = (s, floor = 1) => s.locations.filter((l) => !l.rogue && (l.depth || 1) === floor);
 const locOf = (s, id) => s.locations.find((l) => l.id === id) || s.threads.servers.find((l) => l.id === id);
 const win = (s) => { for (let i = 0; i < 60 && active(s); i++) { for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, attack: null, integrity: Math.min(p.integrity, 1) }); const p = s.encounter.virus.parts.find((x) => x.integrity > 0); command(s, 'spike ' + p.id); resolveCycle(s); } FP.settle(s); };
-// Walk to a room through the real verbs, beating what holds each room on the way (full Signal each step).
+// Walk to a room through the real verbs, beating what holds each room on the way (full Integrity each step).
 const walk = (s, id) => {
   for (let k = 0; k < 60 && s.rooms.at !== id; k++) {
     const path = FP.pathTo(s.rooms.graph, s.rooms.at, id, (x) => x !== s.rooms.graph.core || FP.coreOpen(s));

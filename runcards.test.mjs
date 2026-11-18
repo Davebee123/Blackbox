@@ -25,7 +25,7 @@ function onServer({ floor = 2, seed = 7, level = 12 } = {}) {
   return s;
 }
 const kill = (s) => { for (let i = 0; i < 40 && active(s); i++) { for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: Math.min(p.integrity, 1) }); const p = s.encounter.virus.parts.find((x) => x.integrity > 0); if (p) command(s, 'spike ' + p.id); resolveCycle(s); } FP.settle(s); };
-// Walk to a room, clearing whatever holds the way (and full Signal for the next step).
+// Walk to a room, clearing whatever holds the way (and full Integrity for the next step).
 function walkTo(s, to) {
   const g = s.rooms.graph;
   for (let i = 0; i < 30 && s.rooms.at !== to; i++) {

@@ -10,7 +10,7 @@
 //                At the vault they open it and take its files, then walk to the entry and jack out with them (got
 //                away). Their room, their route and the vault show through the fog.
 //   aggro        when they reach your room (or you walk into theirs), they pull you into their fights. No step back.
-//   the fights   2 on floors 1–2, 3 from floor 3, one after another, one level over you. Your Signal carries; each
+//   the fights   2 on floors 1–2, 3 from floor 3, one after another, one level over you. Your Integrity carries; each
 //                fight starts your cooldowns fresh. Between fights they add one part to the next, read from how you
 //                won the last (readFight), shown before you engage.
 //   stakes       beat them and you take their pack, with the vault's files if they opened it, and you've met them:

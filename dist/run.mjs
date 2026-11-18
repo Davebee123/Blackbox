@@ -6,12 +6,12 @@
 import { vaultFilter, addFilter, filterLine } from './filters.mjs';
 import { gainComponents } from './salvage.mjs';
 import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES, layerOf, lifted } from './data.mjs';
-// A run's flat Signal cost at your level: lifted with your Signal (data.mjs lift).
+// A run's flat Integrity cost at your level: lifted with your Integrity (data.mjs lift).
 const cost = (s, n) => lifted(n, hackerLevel(s));
 import { hasSpecial, armoredAt, SPECIAL } from './specials.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
-import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
+import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, syncServer, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
 import { developerWall, developerDamage } from './firewall.mjs';
@@ -39,6 +39,7 @@ import { biasCode, netOf } from './network.mjs';
 import { showCard } from './genome.mjs';
 import { owned, procIn, procOf, rootFileInfo, rootFiles, rootOf, CACHE_FILE, STASH_DIR, STASH_FILE } from './root.mjs';
 import { enterRooms, roomsFor } from './netrooms.mjs';
+import { snapVisit } from './visit.mjs';
 import { roomsCommand, jackOut as roomsJackOut, settle as roomsSettle, hereOf, FIGHTS, roomList, neighbours, isUp, coreOpen, walkToRoom, seenOf, fightOf, offlineLeft, WORLD as ROOMS_WORLD } from './floorplan.mjs';
 import { threadCommand, developerThread, isDark } from './threads.mjs';
 export { zoneOf, zoneRooms };
@@ -411,13 +412,13 @@ export function connect(s, id) {
   const first = s.serial;
   const zone = id === CONFIG.zone.id || id === CONFIG.zone.name.toLowerCase();
   const loc = zone ? zoneOf(s) : findLocation(s, id) || [...s.locations, ...memberServers(s)].find((l) => l.name.toLowerCase() === id);
+  if (!s.run && !active(s)) syncServer(s); // max Integrity follows your level and gear
   const signal = signalNow(s);
   if (active(s)) warn(s, 'Finish the fight first.');
-  else if (!s.run && signal < Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)) warn(s, `Your Signal (${signal}/${maxSignal(s)}) is too weak to connect. Let it rest back up to ${Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)}.`);
+  else if (!s.run && signal < Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)) warn(s, `Your Integrity (${signal}/${maxSignal(s)}) is too low to connect. Let it rest back up to ${Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)}.`);
   else if (s.run) warn(s, 'Already connected. Type jack out first.');
   else if (!loc) warn(s, `No server called "${id}" on your map.`);
   else if (isDark(loc)) warn(s, `${loc.name} is dark. Nothing answers.`); // a thread's temporary server, shut down for good (threads.mjs)
-  else if (s.server.integrity <= 0) warn(s, 'Your server crashed. Reboot before running.');
   else if (loc.fresh && loc.detached && !joinCost(s, loc).fits) warn(s, `${loc.name} needs ${joinCost(s, loc).add} memory; ${memoryCap(s) - liveCount(s)} free (${liveCount(s)}/${memoryCap(s)}). Detach something first.`);
   else if (!loc.fresh && (loc.detached || (s.locations.includes(loc) && !isLive(s, loc)))) warn(s, `${loc.name} is detached from your network. Attach it first (its map card).`);
   else if (offlineLeft(loc.floorplan)) warn(s, `${loc.name} is offline, rebooting. Back in ${Math.ceil(offlineLeft(loc.floorplan) / 1000)}s.`); // Mapped and every room down (floorplan.mjs)
@@ -442,6 +443,7 @@ export function connect(s, id) {
       emit(s, 'run-start', `CONNECTED to ${loc.name}${zone ? ', a rogue server' : loc.member ? `, ${loc.member}'s server` : loc.rogue ? `, a rogue server (${ROGUE.kinds[loc.rogue.kind].name})` : ''}.${rooms}${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}`, { location: loc.id, rooms: true });
     }
     if (firstVisit) gainXp(s, deedXpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`, 'breakin');
+    snapVisit(s, loc); // jack out keeps the visit, a disconnect puts this back (visit.mjs)
     return since(s, first);
   }
   return since(s, first);
@@ -462,8 +464,8 @@ function connectFiles(s, loc, signal, zone) {
   }
 }
 
-// Signal carries between connections: what you left with, rested back up at home.
-export const signalNow = (s) => Math.min(maxSignal(s), s.signal ?? maxSignal(s));
+// Integrity at home (combat.mjs serverMax): what you left with, rested back up.
+export const signalNow = (s) => Math.min(maxSignal(s), s.server.integrity);
 
 // ls is structured so the screen can make every name clickable.
 const jobNames = (s, kill) => wantedBy(s, kill).map((c) => contractTitle(s, c));
@@ -536,7 +538,7 @@ function cd(s, arg, pulled = null) {
   // Infiltrator Light footprint: going back where you've been is free.
   const free = classOf(s) === 'infiltrator' && s.run.visited.includes(target);
   if (!free) { s.run.integrity = Math.max(0, s.run.integrity - cost(s, CONFIG.cdCost)); traceAdd(s, TRACE.cd); }
-  // Rig Regen: a little Signal back with every move (Regen R: R every 5 moves).
+  // Rig Regen: a little Integrity back with every move (Regen R: R every 5 moves).
   const rg = regenRate(gearStat(s, 'regen', 'hacker'));
   if (rg && s.run.integrity > 0) {
     s.run.regenAcc = (s.run.regenAcc || 0) + rg;
@@ -552,7 +554,7 @@ function cd(s, arg, pulled = null) {
   s.run.roomFrom = s.run.lastEcho;
   s.run.history = false;
   if (!s.run.visited.includes(target)) s.run.visited.push(target);
-  if (s.run.integrity <= 0) return disconnect(s, 'Signal ran out');
+  if (s.run.integrity <= 0) return disconnect(s, 'Integrity ran out');
   // Like a MUD room: arriving shows what's here.
   if (watching(s, loc, target) && layoutOf(loc)[target].resident) {
     emit(s, 'net-warn', `The Resident of ${loc.name} is home. Beat it and the server is yours.`);
@@ -594,7 +596,7 @@ function pullAll(s) {
   const loc = currentLocation(s), files = pullable(s, loc);
   if (!files.length) return err(s, 'Nothing here to pull.');
   for (const f of files) {
-    if (!s.run || s.run.cwd === undefined) break; // thrown out (a canary took the last of your Signal)
+    if (!s.run || s.run.cwd === undefined) break; // thrown out (a canary took the last of your Integrity)
     const before = s.run.pack.length;
     pull(s, f);
     if (s.run && s.run.pack.length === before && !loc.state.sprung?.[join(s.run.cwd, f)]) break; // stopped (a guard, a spoof's one file)
@@ -619,8 +621,8 @@ function pull(s, arg) {
     (loc.state.sprung ||= {})[full] = true;
     const lost = cost(s, CONFIG.trapSignal);
     s.run.integrity = Math.max(0, s.run.integrity - lost);
-    emit(s, 'trap', `CANARY TRIPPED. ${arg} was bait: −${lost} Signal (${s.run.integrity}/${s.run.max}).`, { amount: lost });
-    if (s.run.integrity <= 0) disconnect(s, 'Signal ran out');
+    emit(s, 'trap', `CANARY TRIPPED. ${arg} was bait: −${lost} Integrity (${s.run.integrity}/${s.run.max}).`, { amount: lost });
+    if (s.run.integrity <= 0) disconnect(s, 'Integrity ran out');
     return;
   }
   if (loc.state.taken[full]) return err(s, `${arg} is already banked.`);
@@ -660,8 +662,8 @@ function unlock(s, rest) {
   if (pass !== loc.password) {
     const lost = cost(s, 3);
     s.run.integrity = Math.max(0, s.run.integrity - lost);
-    err(s, `access denied. The failed attempt cost ${lost} Signal (${s.run.integrity}/${s.run.max}).`);
-    if (s.run.integrity <= 0) return disconnect(s, 'Signal ran out');
+    err(s, `access denied. The failed attempt cost ${lost} Integrity (${s.run.integrity}/${s.run.max}).`);
+    if (s.run.integrity <= 0) return disconnect(s, 'Integrity ran out');
     traceAdd(s, TRACE.wrong);
     return;
   }
@@ -674,15 +676,15 @@ function unlock(s, rest) {
   if (!loc.takenOver) out(s, `The vault is open. ${CORE}/ is open now too: the Resident lives there. Beat it and ${loc.name} is yours.`, 'net-good');
 }
 
-// A Signal booster: half your Signal back, on the spot.
+// An Integrity booster: half your Integrity back, on the spot.
 function boost(s) {
   const n = s.items?.booster || 0;
-  if (!n) return err(s, 'boost: no Signal boosters left. Top up with credits at home.');
-  if (s.run.integrity >= s.run.max) return out(s, 'Signal is already full.');
+  if (!n) return err(s, 'boost: no Integrity boosters left. Top up with credits at home.');
+  if (s.run.integrity >= s.run.max) return out(s, 'Integrity is already full.');
   s.items.booster = n - 1;
   const gain = Math.min(s.run.max - s.run.integrity, Math.ceil(s.run.max * CONFIG.booster.restore));
   s.run.integrity += gain;
-  emit(s, 'boost', `SIGNAL BOOST +${gain} (${s.run.integrity}/${s.run.max}). ${s.items.booster} left.`, { amount: gain });
+  emit(s, 'boost', `INTEGRITY BOOST +${gain} (${s.run.integrity}/${s.run.max}). ${s.items.booster} left.`, { amount: gain });
 }
 
 export function jackOut(s) {
@@ -717,7 +719,8 @@ export function bank(s, loc, why = '') {
   for (const [h, n] of cuts) { credits -= n; emit(s, 'info', `${h}'s cut: ${n} credits.`, { runner: h, cut: n }); }
   s.server.credits += credits;
   const items = pack.filter((f) => f.kind === 'item').map((f) => f.item);
-  s.signal = s.run.integrity;
+  s.server.integrity = Math.max(1, s.run.integrity);
+  s.server.max = s.run.max;
   s.run = null;
   if (relocks(loc)) loc.lockUntil = clock() + ROGUE.relockMs;
   delete loc.deaths; // a clean jack out: the next disconnect waits the plain 30 seconds again (combat.mjs relockWait)
@@ -850,7 +853,7 @@ export function play(s, input) {
   else if (word === 'sweep') sweepCommand(s, currentLocation(s), rest);
   else if (word === 'pack') out(s, s.run.pack.length ? s.run.pack.map((f) => `${f.name.padEnd(14)} ${f.kind === 'credits' ? f.amount + ' credits' : f.kind === 'item' ? f.item : f.kind === 'gear' ? itemLabel(f.item) : f.kind === 'code' ? `${f.amount} ${MATERIALS[f.material].name}` : f.kind === 'daemon' ? 'daemon' : 'trace record (deeper node)'}`).concat('unbanked until you jack out.') : 'pack is empty.');
   else if (word === 'help') out(s, ['ls            what is here (ls -a shows hidden files)', 'cd <dir>      move (cd .. goes up)', 'cat <file>    read',
-  'sweep <x>     answer an incident log (cat it first)', 'pull <file>   take it (banked when you jack out)', 'unlock <dir> <password>', 'tree          map of what you have seen', 'history       everything this run (the terminal shows one folder at a time)', 'pack          what you are carrying', `scan <x>      a virus's rules before you fight it (${SCAN.signal} Signal${classOf(s) === 'infiltrator' ? ', quiet for you' : ', and Trace on a break-in'})`, 'jack out      go home', ...(equipped(s, 'spoof') ? ['spoof         slip past the next guard (once per run)'] : []), ...(classOf(s) === 'infiltrator' ? [`slip          walk past a guard without a fight (${slipsLeft(s)} left this run)`] : []), ...(equipped(s, 'tap') ? ['tap           show the whole map, guards and where the key is (once per run)'] : [])]);
+  'sweep <x>     answer an incident log (cat it first)', 'pull <file>   take it (banked when you jack out)', 'unlock <dir> <password>', 'tree          map of what you have seen', 'history       everything this run (the terminal shows one folder at a time)', 'pack          what you are carrying', `scan <x>      a virus's rules before you fight it (${SCAN.signal} Integrity${classOf(s) === 'infiltrator' ? ', quiet for you' : ', and Trace on a break-in'})`, 'jack out      go home', ...(equipped(s, 'spoof') ? ['spoof         slip past the next guard (once per run)'] : []), ...(classOf(s) === 'infiltrator' ? [`slip          walk past a guard without a fight (${slipsLeft(s)} left this run)`] : []), ...(equipped(s, 'tap') ? ['tap           show the whole map, guards and where the key is (once per run)'] : [])]);
   return since(s, first);
 }
 
@@ -947,7 +950,7 @@ function attack(s, arg) {
 }
 
 // scan [virus or folder]: a virus's genome card before you fight it (genome.mjs): the virus in this folder, a folder you
-// can see that holds a virus or a guard, or the guard you just walked in on. It costs SCAN.signal Signal, and SCAN.trace
+// can see that holds a virus or a guard, or the guard you just walked in on. It costs SCAN.signal Integrity, and SCAN.trace
 // Trace on a break-in. An Infiltrator scans quietly and for free, and reads the rules of genes it hasn't decoded, for
 // that fight (inspect shows them too).
 export const SCAN = { signal: 1, trace: 4 };
@@ -971,7 +974,7 @@ function scan(s, arg) {
   if (!v) return err(s, arg ? `Nothing to scan at ${arg}. Scan a virus here, or a folder you can see that holds one.` : 'Nothing to scan in this folder. scan <folder> reads a guard or a virus next door.');
   const deep = classOf(s) === 'infiltrator';
   if (!deep) {
-    if (s.run.integrity <= cost(s, SCAN.signal)) return err(s, 'Not enough Signal to scan.');
+    if (s.run.integrity <= cost(s, SCAN.signal)) return err(s, 'Not enough Integrity to scan.');
     s.run.integrity -= cost(s, SCAN.signal);
     traceAdd(s, SCAN.trace);
   } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
@@ -1047,7 +1050,7 @@ export function nextActions(s) {
   }
   if (equipped(s, 'tap') && !onceUsed(s, 'tap')) acts.push({ label: 'tap', cmd: 'tap', note: 'map it all' });
   if (s.run.cwd !== '/') acts.push({ label: 'cd ..', cmd: 'cd ..' });
-  if (s.items?.booster && s.run.integrity < s.run.max) acts.push({ label: 'boost', cmd: 'boost', note: `+Signal · ${s.items.booster}`, hot: s.run.integrity < s.run.max * 0.3 });
+  if (s.items?.booster && s.run.integrity < s.run.max) acts.push({ label: 'boost', cmd: 'boost', note: `+Integrity · ${s.items.booster}`, hot: s.run.integrity < s.run.max * 0.3 });
   acts.push({ label: 'jack out', cmd: 'jack out', note: s.run.pack.length ? `bank ${s.run.pack.length}` : '' });
   return acts;
 }

@@ -3,7 +3,7 @@
 //   developer fight <kind>:<id> [level] [seed] [leaning=<id>] [objective=<id>]
 //   developer fight <family|random> [level] [seed]      as before (family:<id> is the same)
 //   developer fight part:<id>[.exe] [level] [seed]       a part's fight, at the level it opens by default
-//   developer fight again [refill]                       the last pick again (refill: Signal and Integrity full first)
+//   developer fight again [refill]                       the last pick again (refill: Integrity full first)
 // A fight here is a home fight, engaged at once and flagged e.arena (objectives.mjs reads it for its clock).
 import { selectEncounter, encounterVirus, command, warn, active, hackerLevel, hooks } from './combat.mjs';
 import { FAMILIES, STRAINS, GUARDS, FIXTURES, BOSSES, FLOORS, LOADOUT, partGenesFor } from './data.mjs';

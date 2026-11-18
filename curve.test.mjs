@@ -54,7 +54,7 @@ test('an older save: every item\'s flat stats lifted and filled once at its leve
   s.stash.push({ id: 'g1', kind: 'protocol', side: 'hacker', group: 'proxy', rarity: 'tuned', level: 30, stats: { signal: 100, reduction: 3, evasion: 4, ram: 1 }, affixes: [], name: 'Old Proxy', rule: 'stack-canary', ruleValue: 4 });
   s.filters = { held: [{ id: 'f1', kind: 'filter', level: 20, stats: { strength: 3, reduction: 4, frag: 20 } }], on: [] };
   const r = restore(structuredClone(s)), it = r.stash.find((x) => x.id === 'g1');
-  assert.deepEqual(it.stats, { signal: filled(100, 30), reduction: lifted(3, 30), evasion: 4, ram: 1 }, 'Signal lifted and filled, Block lifted; chances and RAM as they were');
+  assert.deepEqual(it.stats, { signal: filled(100, 30), reduction: lifted(3, 30), evasion: 4, ram: 1 }, 'Integrity lifted and filled, Block lifted; chances and RAM as they were');
   assert.equal(it.ruleValue, filled(4, 30), 'Stack Canary\'s shield is a flat number too');
   assert.deepEqual(r.filters.held[0].stats, { strength: 3, reduction: lifted(4, 20), frag: 20 });
   assert.equal(r.curve, 3);
@@ -113,7 +113,7 @@ test('floors as tiers (step 4): gear takes a bigger step, and drifts down inside
   }
 });
 
-test('gear carries your power: your own numbers stop growing at level 6; in its level\'s blues most of your Signal is gear, and old gear falls far short', () => {
+test('gear carries your power: your own numbers stop growing at level 6; in its level\'s blues most of your Integrity is gear, and old gear falls far short', () => {
   assert.equal(own(1), 1); assert.equal(own(6), power(6), 'the first levels: the curve'); assert.equal(own(30), power(6), 'then it holds');
   assert.equal(gearFill(1), 1); assert.equal(gearFill(6), 1, 'gear to level 6 is as it was');
   const sig = (L, opts) => { const s = fresh(); build(s, 'breaker', at(L), opts); return { max: maxSignal(s), k: powerOf(s) }; };
@@ -144,7 +144,7 @@ test('events take their server\'s level, never yours; SPRAWL-00\'s rooms keep th
   assert.deepEqual([benchCurve('?bench=a&curve=8'), benchCurve('?bench=a'), benchCurve('?curve=50')], [0.08, null, null]);
 });
 
-test('fight length (step 3): a Signal fight\'s Integrity × CONFIG.length.hp and its hits × dmg at its level; a solo boss its own; adds, breaches and crew bosses keep their size (breaches skip the floor step too)', async () => {
+test('fight length (step 3): a Integrity fight\'s Integrity × CONFIG.length.hp and its hits × dmg at its level; a solo boss its own; adds, breaches and crew bosses keep their size (breaches skip the floor step too)', async () => {
   const { createVirus, runLate, SERVER, BOSSES } = await import('./dist/data.mjs');
   const o = { threat: SERVER.threat(30), run: true, family: 'worm', mutation: null };
   const was = CONFIG.length;
@@ -157,7 +157,7 @@ test('fight length (step 3): a Signal fight\'s Integrity × CONFIG.length.hp and
   assert.ok(runLate(45, CONFIG.length.hp) > runLate(10, CONFIG.length.hp), 'steeper late, where your damage outgrows a mob\'s Integrity');
   assert.ok(Math.abs(hp(short) * (1 + CONFIG.floorStep.mob) ** 4 / hp(base) - 1) < 0.02, 'a breach keeps its own pace: no fight length, no floor step (floor 5 here)');
   assert.ok(Math.abs(long.addPower - base.hpPower) < 1e-9, 'its adds (fragments, Packages) keep their size');
-  // A solo boss: its own Integrity, hits and enrage on your Signal; elsewhere its old enrage. A crew boss skips it.
+  // A solo boss: its own Integrity, hits and enrage on your Integrity; elsewhere its old enrage. A crew boss skips it.
   const b = { ...o, family: 'worm', strain: 'floodgate', boss: 'nb-floodwall' };
   assert.equal(createVirus('random', 7, b).enrageAt, BOSSES['nb-floodwall'].long.enrageAt);
   assert.equal(createVirus('random', 7, { ...b, short: true }).enrageAt, BOSSES['nb-floodwall'].enrageAt);

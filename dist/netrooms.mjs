@@ -19,7 +19,7 @@
 // Root (2.8) counts respawned fight rooms you clear on a server you hold: Root 2 after 5, 3 after 15, 4 after 30, 5
 // after 50 (root.mjs ROOT.need). Root 2 adds a stash room by the Core, Root 4 one more socket room.
 // Sockets (R2, sockets.mjs): a traced server's socket rooms (by size, +1 Backbone, +1 Root 4, +1 in a Grid consortium);
-// a server you hold has its Core as its core socket. A Resident's first fall pays a protocol, and Mapped credits. A run on rooms: s.run.rooms, Signal is the
+// a server you hold has its Core as its core socket. A Resident's first fall pays a protocol, and Mapped credits. A run on rooms: s.run.rooms, Integrity is the
 // run's, the pack the run's files (run.mjs bank). The save migration (v39) builds every found server's rooms.
 import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, deedXpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand, setDrop, fxPct, guardedUnique } from './combat.mjs';
 import { setCredits } from './sets.mjs';
@@ -218,13 +218,12 @@ export function spawnOf(s, room, loc = locOf(s)) {
 }
 
 // ---------- connecting ----------
-// The run starts on a server's rooms (run.mjs connect, after its checks): the entry, the visit, the run's Signal.
+// The run starts on a server's rooms (run.mjs connect, after its checks): the entry, the visit, the run's Integrity.
 export function enterRooms(s, loc, { signal } = {}) {
   const R = roomsFor(s, loc);
   if (isWild(loc)) spawnsOf(s, loc);
   if (!isWild(loc)) { R.level = levelOf(loc); extraSockets(s, loc); }
   s.run = { loc: loc.id, rooms: true, cwd: R.graph.rooms[R.graph.entry].path, integrity: signal, max: maxSignal(s), pack: [], visited: [] };
-  if (s.occupation?.id === loc.id) { s.run.max = maxSignal(s); s.run.integrity = Math.min(s.run.max, s.signal ?? s.run.max); } // your own occupied server: no reboot sickness in it
   s.run.crew = Object.fromEntries((s.crewSim || []).map((x) => [x.name, { cwd: s.run.cwd, link: 'you' }]));
   // A key cracker on this server (hidden.mjs): you walk in holding its vault's key, this visit.
   const keys = loc.passwordKnown && R.graph.vaults[0] && !FP.opened(s, R.graph.rooms[R.graph.vaults[0]]) ? [R.graph.vaults[0]] : [];
@@ -238,7 +237,7 @@ export function enterRooms(s, loc, { signal } = {}) {
 // is a disconnect (the pack lost, combat.mjs disconnect: Deadman's Switch and all).
 WORLD_hook('leave', (s, how, why) => {
   const at = locOf(s, roomsOfRun(s));
-  if (how === 'lost') return disconnect(s, 'Signal lost');
+  if (how === 'lost') return disconnect(s, 'Integrity lost');
   const loc = at;
   const R = loc?.floorplan; // a Router's vault banked from a visit its Tracker never reached you: Quiet Hours' count (earned.mjs)
   if (R?.kind === 'Router' && R.visit?.vault && !R.visit.caught) earnEvent(s, { kind: 'router-vault', floor: loc.depth || 1 });
@@ -403,7 +402,7 @@ export function addStash(loc) {
 }
 
 // A wild room's kill: its folder goes quiet on its own timer (rogue.mjs rogueKill: a Pit's second drop, a Gauntlet's
-// bonus, the farm's regroup and trophies, an occupation cleared), and the kill pays as SPRAWL's and the rogue
+// bonus, the farm's regroup and trophies, a member's occupation cleared), and the kill pays as SPRAWL's and the rogue
 // servers' always did: straight into your bank. A named target (a contract's bounty) is done.
 function wildWon(s, loc, room, e) {
   const t = now(), sp = loc.zone ? zoneOf(s).spawns[room.path0] : loc.spawns?.[room.path0];
@@ -674,7 +673,7 @@ export function roomsRestore(s, was) {
   if (s.run && !s.run.rooms) {
     const loc = s.run.loc === CONFIG.zone.id ? zoneOf(s) : findLocation(s, s.run.loc);
     if (s.encounter?.mode === 'run') s.encounter = null;
-    try { if (loc) bank(s, loc, 'Your save moved to rooms:'); else { s.signal = s.run.integrity; s.run = null; } } catch { s.run = null; }
+    try { if (loc) bank(s, loc, 'Your save moved to rooms:'); else { s.server.integrity = Math.max(1, s.run.integrity); s.run = null; } } catch { s.run = null; }
   }
   const t = now();
   for (const loc of [zoneOf(s), ...(s.locations || [])]) {

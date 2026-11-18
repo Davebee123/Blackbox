@@ -26,7 +26,7 @@
 //   backtrace    each status you carry adds a stack each cycle; at the count it calls in a fragment
 //   swap         its attack Throttles you; while it stands, your next command hit moves Throttled, Exposed or Corrupted
 //                off you onto that part
-//   turncoat     below half your Signal its attack Scrambles you too
+//   turncoat     below half your Integrity its attack Scrambles you too
 import { ABILITIES, CONFIG, TELL } from './data.mjs';
 import { emit, alive, part, livingParts, attackers, defender, takeDamage, usable, rand, strikeWith, implanted, addBurn } from './combat.mjs';
 import { copyKind } from './tells.mjs';
@@ -304,7 +304,7 @@ export function mechRead(s, p, atk = '') {
     case 'countdown': { const left = MECH.countdown.at - (p.count || 0); return [`Has no attack of its own. It counts the commands you fire. At ${MECH.countdown.at}, every part attacks at once, and the count starts over. Holding doesn't count.`, 'Hold to stall it, or break it.', cue(live ? `big turn in ${left}` : `counts ${MECH.countdown.at} commands`, 'clock')]; }
     case 'backtrace': return [`Has no attack of its own. Each cycle, each status you carry adds a stack. At ${MECH.backtrace.at} stacks, it calls in a fragment, and the stacks start over.`, 'Cleanse, or break it.', cue(live ? `trace ${p.trace || 0}/${MECH.backtrace.at}` : 'traces your statuses', 'spider')];
     case 'swap': return [`${a}When it lands, you are Throttled for ${cyc(MECH.swap.cycles)}. While it stands, your next command hit moves your Throttled, Exposed or Corrupted onto the part it hits.`, 'Pass it to the part whose attack you want weak.', cue('passes your debuffs', 'mirror')];
-    case 'turncoat': return [`${a}Below ${pct(MECH.turncoat.below)} of your Signal, it changes stance, and its attack Scrambles you for ${cyc(MECH.turncoat.cycles)}.`, 'Heal to stay over half, or break it first.', cue(live && defender(s).integrity < defender(s).max * MECH.turncoat.below ? 'scrambles now' : 'turns below half', 'mirror')];
+    case 'turncoat': return [`${a}Below ${pct(MECH.turncoat.below)} of your Integrity, it changes stance, and its attack Scrambles you for ${cyc(MECH.turncoat.cycles)}.`, 'Heal to stay over half, or break it first.', cue(live && defender(s).integrity < defender(s).max * MECH.turncoat.below ? 'scrambles now' : 'turns below half', 'mirror')];
   }
   return [atk || 'Has no attack of its own.', '', null];
 }

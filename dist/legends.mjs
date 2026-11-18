@@ -31,7 +31,7 @@ const LIST = [
   ['detonator-cord', 'Detonator Cord', 'demolitionist', 'script', 'Logic Bomb sits on every part at once, and one going off sets off the rest.'],
   ['red-zone', 'Red Zone', 'overclocker', 'exploit', 'Segfault on a part winding up a charge readies again at once.'],
   ['rate-card', 'Rate Card', 'bastion', 'exploit', "Throttle stacks: each Rate Limit halves the part's next attack again."],
-  ['flatline', 'Flatline', 'warden', 'shell', 'Below a quarter of your Signal, Failover has no cooldown.'],
+  ['flatline', 'Flatline', 'warden', 'shell', 'Below a quarter of your Integrity, Failover has no cooldown.'],
   ['bleach', 'Bleach', 'sysop', 'shell', "Scrub also bleaches a part: clears its buffs and casts, and its ◆ can't patch for 3 cycles."],
   ['long-tail', 'Long Tail', 'infiltrator', 'script', 'Implant is once a part instead of once a fight.'],
   ['pressure-cooker', 'Pressure Cooker', 'payload', 'exploit', 'Detonate leaves the burns running.'],

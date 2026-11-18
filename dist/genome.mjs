@@ -181,7 +181,7 @@ export const scannedRead = (s, v) => !!(v && s.run?.named?.includes(v.id));
 
 // ---------- scan ----------
 // The card for the virus you're facing (a fight at the gate, or under way): free, you can see it. On a run, scanning
-// a virus or a guarded folder you can see before you engage is run.mjs's (it costs Signal and Trace).
+// a virus or a guarded folder you can see before you engage is run.mjs's (it costs Integrity and Trace).
 export function scanFight(s) {
   const v = s.encounter?.virus;
   if (!v) return warn(s, 'Nothing to scan here. On a run, scan a virus or a guarded folder you can see.');

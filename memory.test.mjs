@@ -25,7 +25,6 @@ test('memory: past the cap, a new find arrives detached; you can\'t connect to i
   assert.equal(liveCount(s), MEMORY.base);
   const last = s.locations.at(-1);
   assert.ok(last.detached);
-  s.signal = 999;
   const out = play(s, `connect ${last.id}`);
   assert.ok(!s.run && out.some((e) => /memory/i.test(e.message)));
 });

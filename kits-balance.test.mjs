@@ -178,7 +178,7 @@ test('level-10 Breakers beat the three-part solo bosses at least half the time, 
 // every fight) the burn and helper kits cut more for free (their ticks land on the cycle), so the Herder (20) and the
 // Payload (24) lose less alone than the Overclocker (32), and the Herder a point less than the Demolitionist (21): the
 // solo side holds on average, and every solo-leaning kit loses less than the crew side's worst (the Hijacker, 37).
-test('the solo-leaning subclasses lose less Signal alone than the crew-leaning damage dealers on average, and less than the worst of them, at Lv 18 and 30 together', () => {
+test('the solo-leaning subclasses lose less Integrity alone than the crew-leaning damage dealers on average, and less than the worst of them, at Lv 18 and 30 together', () => {
   const lost = Object.fromEntries(ALL.filter((sub) => SUBS[sub].cls !== 'bastion').map((sub) => [sub, [18, 30].reduce((a, L) => a + score(policyOf(sub), at(L), { sub }).lost, 0) / 2]));
   const line = Object.entries(lost).map(([sub, l]) => `${sub} ${l.toFixed(0)}`).join(' / ');
   const solo = Object.keys(lost).filter((sub) => SUBS[sub].lean === 'solo'), crew = Object.keys(lost).filter((sub) => SUBS[sub].lean === 'crew');

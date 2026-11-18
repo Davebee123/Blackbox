@@ -171,15 +171,7 @@ test('the crew strip: linked crew follow you, split crew wander, link follows th
 
 // Helpers: always / never does a member step in.
 const helping = (k, f) => { const was = CONSORTIUM.help; CONSORTIUM.help = k; try { f(); } finally { CONSORTIUM.help = was; } };
-// Clear every folder of an occupied server you're on.
-const clearOut = (s, loc) => {
-  for (const room of Object.keys(rogueSpawns(s, loc))) {
-    if (!loc.spawns[room].alive) continue;
-    play(s, 'cd ' + room); play(s, 'attack'); win(s); play(s, 'cd /');
-  }
-};
-
-test('away, in a consortium: a weak wall gets crashed; the server reboots for hours, occupied; clearing it brings it back', () => {
+test('away, in a consortium: a weak wall chips you to 1 and no lower; nothing crashes, nothing moves in', () => {
   helping(0, () => {
     const s = world();
     found(s, 'ransomware');
@@ -188,17 +180,11 @@ test('away, in a consortium: a weak wall gets crashed; the server reboots for ho
     const T0 = 1_800_000_000_000;
     tickNetwork(s, T0);
     s.server.integrity = 5;
-    // Away, a half hour at a time, until the wall falls (the reboot after it runs 2 hours).
-    for (let h = 1; h <= 24 && !s.logs.some((e) => e.type === 'crashed'); h++) tickNetwork(s, T0 + h * 1800000);
-    assert.ok(s.logs.some((e) => e.type === 'crashed' && /while you were away/.test(e.message)), 'crashed while away');
-    assert.ok(s.occupation, 'occupied');
-    // The reboot may already be over after eight hours; crash again to test clearing.
-    if (!s.degraded) { s.degraded = { since: T0, until: T0 + 100 * 3600000, ms: 1 }; }
-    s.occupation.lockUntil = 0;
-    play(s, 'connect home');
-    assert.equal(s.run?.loc, 'home');
-    clearOut(s, s.occupation);
-    assert.equal(s.degraded, null, 'cleared: back online');
+    for (let h = 1; h <= 24; h++) tickNetwork(s, T0 + h * 1800000);
+    assert.ok(s.logs.some((e) => e.type === 'invader'), 'invaders came');
+    assert.ok(s.server.integrity >= 1, 'never below 1');
+    assert.ok(!s.logs.some((e) => e.type === 'crashed'));
+    assert.equal(s.occupation, undefined);
   });
 });
 
@@ -210,7 +196,8 @@ test('away, solo too: the network plays on, and your firewall decides', () => {
   tickNetwork(weak, T0);
   tickNetwork(weak, T0 + 8 * 3600000);
   assert.ok(weak.logs.some((e) => e.type === 'invader'), 'invaders came while you were away');
-  assert.ok(weak.logs.some((e) => e.type === 'crashed'), 'nothing stopped them');
+  assert.ok(!weak.logs.some((e) => e.type === 'crashed'), 'nothing stopped them, and nothing crashes');
+  assert.ok(weak.server.integrity >= 1);
   const strong = world();
   found(strong, 'ransomware');
   strong.firewall = { pin: 30, plus: 0, frag: 0, defragUntil: 0 };

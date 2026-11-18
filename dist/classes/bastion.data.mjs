@@ -23,8 +23,8 @@ export const abilities = {
     help: 'reject <part> — Deals 28 damage to the target. If the target was the last part to hit you, also shields you for 10.',
     desc: 'Refuses the connection and throws it back, dealing 28 damage to the target. If the target was the last part to hit you (your Grudge), also shields you for 10.' },
   'circuit-breaker': { cls: 'bastion', sub: 'warden', verb: 'shield', name: 'Circuit Breaker', target: 'none', damage: 0, cycles: 3, most: 0.1, cooldown: 12, icon: 'event-lock', short: 'No hit over 10%, 3 cycles',
-    help: 'circuit-breaker — For 3 cycles, no single attack can deal more than 10% of your max Signal. The damage prevented is added to your next Blowback.',
-    desc: 'Trips the breaker before the surge. For 3 cycles, no single attack can deal more than 10% of your max Signal, however big or charged it is. The damage prevented is added to your next Blowback.' },
+    help: 'circuit-breaker — For 3 cycles, no single attack can deal more than 10% of your max Integrity. The damage prevented is added to your next Blowback.',
+    desc: 'Trips the breaker before the surge. For 3 cycles, no single attack can deal more than 10% of your max Integrity, however big or charged it is. The damage prevented is added to your next Blowback.' },
   honeypot: { cls: 'bastion', sub: 'warden', verb: 'shield', name: 'Honeypot', target: 'none', damage: 0, cycles: 2, cut: 15, scales: ['cut'], cooldown: 6, icon: 'shell-shield', short: 'Next hit −15; eats Scrambles',
     help: 'honeypot — For 2 cycles, the next hit against you deals 15 less damage, and the honeypot absorbs any Scramble, Possession or Mimic beat aimed at you.',
     desc: 'Leaves something sweet on the wire. For 2 cycles, the next hit against you deals 15 less damage, and the honeypot absorbs any Scramble, Possession or Mimic beat aimed at you.' },
@@ -57,8 +57,8 @@ export const abilities = {
     help: 'hot-standby [name] — The next attack that would reduce you to 0 leaves you at 1 instead. Usable once per fight. In a crew, can target a crewmate.',
     desc: 'Keeps a spare running. The next attack that would drop you or a crewmate to 0 leaves them at 1 instead. Usable once per fight.' },
   rebalance: { cls: 'bastion', sub: 'sysop', verb: 'heal', name: 'Rebalance', target: 'none', damage: 0, heal: 6, cooldown: 6, icon: 'mutation', short: 'Evens the crew; heals 6',
-    help: 'rebalance — Evens out Signal so everyone in the fight has the same share of their max, then heals everyone for 6. When alone, heals you for 12.',
-    desc: 'Spreads the load. Evens out Signal so everyone in the fight has the same share of their max, the crew\'s average, then heals everyone for 6. When alone, heals you for 12.' },
+    help: 'rebalance — Evens out Integrity so everyone in the fight has the same share of their max, then heals everyone for 6. When alone, heals you for 12.',
+    desc: 'Spreads the load. Evens out Integrity so everyone in the fight has the same share of their max, the crew\'s average, then heals everyone for 6. When alone, heals you for 12.' },
 };
 
 export const subs = {
@@ -79,10 +79,10 @@ export const subs = {
     tiers: [
       [t('deep-packet-inspection', 'Deep Packet Inspection', 'Makes Firewall absorb 30 instead of 16.'), t('token-bucket', 'Token Bucket', 'Makes Rate Limit Throttle the target\'s next 2 attacks instead of 1.'), t('rebound', 'Rebound', 'Makes your next Reject deal double damage when an attack hits you.')],
       [t('deep-buffer', 'Deep Buffer', 'Increases the damage of Blowback by 25%.'), t('tarpit', 'Tarpit', 'Makes Suspend also Throttle the target until its attack lands.'), t('flow-control', 'Flow Control', 'Makes Retaliate usable on a part when you answer its tell.')],
-      [t('hardened-kernel', 'Hardened Kernel', 'Increases your max Signal by 10%.'), t('write-protect', 'Write Protect', 'Makes Harden give 2 ◆, but it costs 10% of your max Signal.'), t('bounce-buffer', 'Bounce Buffer', 'Deals the damage your shield absorbs back to the part that hit you.')],
+      [t('hardened-kernel', 'Hardened Kernel', 'Increases your max Integrity by 10%.'), t('write-protect', 'Write Protect', 'Makes Harden give 2 ◆, but it costs 10% of your max Integrity.'), t('bounce-buffer', 'Bounce Buffer', 'Deals the damage your shield absorbs back to the part that hit you.')],
       [t('denylist', 'Denylist', 'Increases Grudge\'s bonus from 20% to 30%.'), t('counterflow', 'Counterflow', 'Makes Retaliate also send back everything Blowback has stored, as a second hit, and empties it.'), t('dead-letter', 'Dead Letter', 'Stores a part\'s move for your next Blowback when you cut it, as if it had hit you.')],
-      [t('uptime', 'Uptime', 'Leaves you at 1 Signal when a hit would drop you to 0. Works once per fight.'), t('honey-farm', 'Honey Farm', 'Makes Honeypot soften the next 2 hits on you instead of 1.'), t('heat-shield', 'Heat Shield', 'Shields you for 3 when one of your burns ticks.')],
-      [t('kernel-panic', 'Kernel Panic', 'Increases your damage by 30% while you are below a third of your Signal.'), t('fail-fast', 'Fail-Fast', 'Makes Failover hit only the target, for double damage.'), t('retransmit', 'Retransmit', 'Makes Retaliate usable when you land a critical strike.')],
+      [t('uptime', 'Uptime', 'Leaves you at 1 Integrity when a hit would drop you to 0. Works once per fight.'), t('honey-farm', 'Honey Farm', 'Makes Honeypot soften the next 2 hits on you instead of 1.'), t('heat-shield', 'Heat Shield', 'Shields you for 3 when one of your burns ticks.')],
+      [t('kernel-panic', 'Kernel Panic', 'Increases your damage by 30% while you are below a third of your Integrity.'), t('fail-fast', 'Fail-Fast', 'Makes Failover hit only the target, for double damage.'), t('retransmit', 'Retransmit', 'Makes Retaliate usable when you land a critical strike.')],
     ],
     // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
     capstones: [
@@ -109,14 +109,14 @@ export const subs = {
       [t('parity-bit', 'Parity Bit', 'Makes Checksum heal for half the damage it deals instead of a quarter.'), t('hot-fix', 'Hot Fix', 'Makes Firewall also heal you for 10.'), t('health-probe', 'Health Probe', 'Makes Checksum usable again when you gain a shield. Works once per cycle.')],
       [t('tick-rate', 'Tick Rate', 'Increases Heartbeat\'s heal by 3 every cycle.'), t('service-pack', 'Service Pack', 'Makes Patch heal its whole amount up front.'), t('health-check', 'Health Check', 'Ticks your Heartbeat on you once more when an attack hits you. Works once per cycle.')],
       [t('anycast', 'Anycast', 'Increases Multicast\'s heal by 8.'), t('ping-flood', 'Ping Flood', 'Makes Multicast also hit every part for what it heals each player.'), t('clean-slate', 'Clean Slate', 'Increases your next heal by 50% when you answer a tell.')],
-      [t('critical-path', 'Critical Path', 'Increases your heals by 50% on anyone below a third of their Signal.'), t('redistribute', 'Redistribute', 'Makes Reclaim also heal the lowest crewmate as much as it heals you. Alone, it heals you twice as much.'), t('change-freeze', 'Change Freeze', 'Shields you and every crewmate for 8 when you cut a part\'s move.')],
+      [t('critical-path', 'Critical Path', 'Increases your heals by 50% on anyone below a third of their Integrity.'), t('redistribute', 'Redistribute', 'Makes Reclaim also heal the lowest crewmate as much as it heals you. Alone, it heals you twice as much.'), t('change-freeze', 'Change Freeze', 'Shields you and every crewmate for 8 when you cut a part\'s move.')],
       [t('overcommit', 'Overcommit', 'Lets Overprovision hold 40 shield instead of 20.'), t('revocation-list', 'Revocation List', 'Makes Revoke hit every part for half, and revoke them all for 2 cycles.'), t('trickle-charge', 'Trickle Charge', 'Heals the lowest player for 3 when one of your burns ticks.')],
-      [t('high-availability', 'High Availability', 'Increases all your heals by 15%.'), t('graceful-restart', 'Graceful Restart', 'Makes Hot Standby also heal the player it saves to half their Signal.'), t('teardown', 'Teardown', 'Heals you and every crewmate for 10 when a part breaks.')],
+      [t('high-availability', 'High Availability', 'Increases all your heals by 15%.'), t('graceful-restart', 'Graceful Restart', 'Makes Hot Standby also heal the player it saves to half their Integrity.'), t('teardown', 'Teardown', 'Heals you and every crewmate for 10 when a part breaks.')],
     ],
     // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
     capstones: [
       c('root-cause', 'Root Cause', ['Your heals also deal 15% of their size as damage to the part that last hit you.', 'Your heals also deal 30% of their size as damage to the part that last hit you.'], [0.15, 0.3]),
-      c('warm-standby', 'Warm Standby', ['You start each fight with a shield of 10% of your max Signal.', 'You start each fight with a shield of 20% of your max Signal.'], [0.1, 0.2]),
+      c('warm-standby', 'Warm Standby', ['You start each fight with a shield of 10% of your max Integrity.', 'You start each fight with a shield of 20% of your max Integrity.'], [0.1, 0.2]),
     ],
   },
 };

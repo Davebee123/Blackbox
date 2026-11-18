@@ -8,12 +8,12 @@
 // (previewOf). On a phone the panel is in the one sheet.
 import { glyph } from './glyphs.mjs';
 import { ruleHtml } from './ruletext.mjs';
-import { esc, wallRuler, safetyTip, serverNext, fmtTime, invaderStatus, sickPct, sickTip } from './view.mjs';
+import { esc, wallRuler, safetyTip, serverNext, fmtTime, invaderStatus } from './view.mjs';
 import { serverLevel, serverClass, subOf, topUpCost, active, materialsOf, bindRooms } from './combat.mjs';
 import { CONFIG, SUBS, ARCHETYPES, FAMILIES, QUIRKS, MUTATIONS, STRAINS, daemonBand } from './data.mjs';
 import { FIREWALL, TIER_PERKS, TIERS, BASE_GAP, effLevel, upgradeCost, defragCost, defragMs, baseOf, tierOf, fragLevels, canPay, wallBonus, defragging, fwOf, tickFirewall, perksAt } from './firewall.mjs';
 import { filtersOf, equipped, slotsOf, FILTER_STATS, FILTER_CAP, filterStat } from './filters.mjs';
-import { wallBands, wallSafety, sendersOf, countsAt, verdictOf, ratioOf, chipRate, grindRate, bountyOf, tellOf, quirkLine, labelOf, KINDS, streakOf, streakMult, STREAK, SCOUT, daemonChance, degradedLeft, invasionsLive } from './invasion.mjs';
+import { wallBands, wallSafety, sendersOf, countsAt, verdictOf, ratioOf, chipRate, grindRate, bountyOf, tellOf, quirkLine, labelOf, KINDS, streakOf, streakMult, STREAK, SCOUT, daemonChance, invasionsLive } from './invasion.mjs';
 import { MATERIALS } from './gear.mjs';
 import { sigOf } from './network.mjs';
 import { PROGRAMS, programsOn, SOCKET } from './sockets.mjs';
@@ -53,7 +53,7 @@ export function readBack(s, now = Date.now()) {
   const b = wallBands(s), w = wallSafety(s, b), inv = s.invasion;
   return {
     eff: effLevel(s, now), safe: w.state, vuln: w.vuln, verdict: inv ? verdictOf(s, inv) : null,
-    chip: inv && inv.state !== 'travel' && !s.degraded ? chipRate(ratioOf(s, inv)) : 0,
+    chip: inv && inv.state !== 'travel' ? chipRate(ratioOf(s, inv)) : 0,
     integrity: s.server.integrity, max: s.server.max, credits: s.server.credits, frag: Math.floor(fwOf(s).frag || 0),
   };
 }
@@ -121,7 +121,7 @@ export function ringMarkup(s, now = Date.now()) {
     return `<path class="blk frag${mend ? ' mend' : ''}" d="${band(R0, R1, a0, a1)}"/><path class="crack" d="M${f1(x1)} ${f1(y1)}L${f1(x2)} ${f1(y2)}L${f1(x3)} ${f1(y3)}"/>`;
   }).join('');
   const inv = s.invasion, atWall = inv && inv.state !== 'travel', onRoad = inv && inv.state === 'travel';
-  const arc = atWall && !s.degraded ? `<path class="press ${inv.state}" d="${arcPath(R1 + 7, -40, 40)}"><title>${esc(`${inv.name} at your wall`)}</title></path>` : '';
+  const arc = atWall ? `<path class="press ${inv.state}" d="${arcPath(R1 + 7, -40, 40)}"><title>${esc(`${inv.name} at your wall`)}</title></path>` : '';
   let road = '';
   if (onRoad) {
     const gone = Math.max(0, Math.min(1, 1 - inv.left / Math.max(1, inv.total))), y = f1(-TOP + 8 + (TOP + C - R1 - 24) * gone);
@@ -129,7 +129,7 @@ export function ringMarkup(s, now = Date.now()) {
       + `<rect class="mark" x="${C - 6}" y="${y - 6}" width="12" height="12" transform="rotate(45 ${C} ${y})"/><text class="eta" x="${C + 14}" y="${f1(y + 7)}">${clock(inv.left)}</text></g>`;
   }
   const r = 63, c = 2 * Math.PI * r;
-  return `<svg class="hsv-ring${s.degraded ? ' down' : ''}" viewBox="0 ${-TOP} ${C * 2} ${C * 2 + TOP}" role="img" aria-label="${esc(`Firewall ${FIREWALL.blocks - frag} of ${FIREWALL.blocks} blocks whole; Integrity ${hp} of ${max}${inv ? `; ${inv.name} ${onRoad ? 'on its way' : 'at your wall'}` : ''}`)}">
+  return `<svg class="hsv-ring" viewBox="0 ${-TOP} ${C * 2} ${C * 2 + TOP}" role="img" aria-label="${esc(`Firewall ${FIREWALL.blocks - frag} of ${FIREWALL.blocks} blocks whole; Integrity ${hp} of ${max}${inv ? `; ${inv.name} ${onRoad ? 'on its way' : 'at your wall'}` : ''}`)}">
     <circle class="shell" cx="${C}" cy="${C}" r="${R1 + 10}"/>${road}
     <g class="blocks"><title>${esc(`${FIREWALL.blocks - frag}/${FIREWALL.blocks} whole${fragLevels(s) ? ` · −${fragLevels(s)} lv` : ''}${mend ? ' · defragmenting' : ''}`)}</title>${blocks}</g>${arc}
     <g class="core"><title>${esc(`Integrity ${hp}/${max}`)}</title><circle class="pit" cx="${C}" cy="${C}" r="57"/><circle class="track" cx="${C}" cy="${C}" r="${r}"/>
@@ -146,21 +146,20 @@ function model(s, now) {
 // ---------- the header ----------
 function header(s, M, ui) {
   const sv = s.server, lvl = serverLevel(s), cls = serverClass(s), sub = subOf(s, cls), share = sv.integrity / Math.max(1, sv.max);
-  const tone = share < 0.3 ? 'hot' : share < 0.6 ? 'warn' : 'you', cost = topUpCost(s, 'server');
-  const why = sv.integrity <= 0 ? 'Crashed: it reboots on its own' : !cost ? 'Integrity is full' : sv.credits <= 0 ? 'No credits' : M.busy;
-  const repair = `<button type="button" class="btn small hsv-repair" data-command="repair" data-preview="repair" data-act="repair"${why ? ` disabled title="${esc(why)}"` : ` title="Integrity full now: ${cost} credits"`}>Repair${cost ? pcost(s, { credits: cost }) : ''}</button>`;
+  const tone = share < 0.3 ? 'hot' : share < 0.6 ? 'warn' : 'you', cost = topUpCost(s);
+  const why = !cost ? 'Integrity is full' : sv.credits <= 0 ? 'No credits' : M.busy;
+  const repair = `<button type="button" class="btn small hsv-repair" data-command="repair" data-preview="repair" data-act="repair"${why ? ` disabled title="${esc(why)}"` : ` title="Integrity full now: ${cost} credits"`}>Top up${cost ? pcost(s, { credits: cost }) : ''}</button>`;
   const next = serverNext(lvl), inv = M.inv;
   const third = inv
     ? pickBtn('inv', `${esc(labelOf(inv))} <b class="${inv.state === 'travel' ? 'hot' : 'warn'}">${inv.state === 'travel' ? clock(inv.left) : inv.state === 'watch' ? clock(inv.mapLeft) : `${Math.round(inv.hp * 100)}%`}</b>`, ui, 'hsv-vital', inv.state === 'travel' ? 'Time to your wall' : 'Left of it')
-    : s.degraded ? pickBtn('core', `Rebooting <b class="hot">${fmtTime(degradedLeft(s, M.now))}</b>`, ui, 'hsv-vital')
-      : pickBtn('next', `Next <b>${invasionsLive(s) && s.net?.next > 0 ? `~${fmtTime(s.net.next)}` : '—'}</b>`, ui, 'hsv-vital', invasionsLive(s) ? 'The next invasion sets out' : 'Nothing attached sends invasions');
+    : pickBtn('next', `Next <b>${invasionsLive(s) && s.net?.next > 0 ? `~${fmtTime(s.net.next)}` : '—'}</b>`, ui, 'hsv-vital', invasionsLive(s) ? 'The next invasion sets out' : 'Nothing attached sends invasions');
   const vitals = [
     pickBtn('wall', `Wall <b class="${TONE[M.w.state]}">${esc(readout(M.w))}</b>`, ui, 'hsv-vital', safetyTip(s, M.w)),
     pickBtn('streak', `Streak <b class="${streakOf(s) ? 'you' : ''}">${streakOf(s)}</b>`, ui, 'hsv-vital'),
     third,
   ].join('');
   return `<div class="hsv-top">${pickWrap('core', ringMarkup(s, M.now), ui, 'hsv-ringbtn', 'Your server')}<div class="hsv-id"><h2>Server · ${esc(sigOf(s, 'you')?.name || 'your network')}</h2>
-    <h1>HOME <span class="tag you" title="${esc(`Your highest class level${next ? `. ${next}` : ''}`)}">Lv ${lvl}</span><span class="tag dim">${esc(sub ? SUBS[sub]?.name : ARCHETYPES[cls]?.name || '')}</span>${s.degraded ? `<span class="tag hot" title="${esc(sickTip(s, M.now))}">Degraded${sickPct(s) ? ` −${sickPct(s)}%` : ''} · ${fmtTime(degradedLeft(s, M.now))}</span>` : ''}</h1>
+    <h1>HOME <span class="tag you" title="${esc(`Your highest class level${next ? `. ${next}` : ''}`)}">Lv ${lvl}</span><span class="tag dim">${esc(sub ? SUBS[sub]?.name : ARCHETYPES[cls]?.name || '')}</span></h1>
     <div class="hsv-int">${pickBtn('core', `<span class="t">Integrity</span><span class="bar ${tone}"><i style="width:${pct(sv.integrity, sv.max)}"></i></span><b class="${tone}">${sv.integrity}</b><span class="t">/ ${sv.max}</span>`, ui, 'hsv-intbtn', `Integrity ${sv.integrity}/${sv.max}`)}${repair}</div></div>
     <nav class="hsv-vitals" aria-label="At a glance">${vitals}</nav></div>`;
 }
@@ -185,11 +184,9 @@ function threatSec(s, M, ui) {
   } else if (inv) {
     const r = ratioOf(s, inv), bo = bountyOf(s, inv), st = inv.state;
     const big = st === 'watch' ? `${clock(inv.mapLeft)}<small>mapping</small>` : `${Math.round(inv.hp * 100)}%<small>−${pct1(chipRate(r))}/min to you</small>`;
-    const word = s.degraded ? 'waiting' : st === 'watch' ? 'mapping' : st === 'siege' ? 'contested' : 'breach';
+    const word = st === 'watch' ? 'mapping' : st === 'siege' ? 'contested' : 'breach';
     row = pickBtn('inv', `${glyph('kill')}<b class="nm">${esc(inv.name)}</b><span class="big">${big}</span>
       <span class="tags"><span class="tag ${st === 'breach' ? 'hot' : 'warn'}">${word}</span><span class="hsv-pay"><span title="${esc(`${MATERIALS[bo.code]?.name || bo.code} for your kill`)}">${glyph(bo.code)}${bo.now >= bo.max ? bo.now : `${bo.now} → ${bo.max}`}</span>${bo.capture ? `<span class="dmn" title="A capture: a sure daemon">${glyph('daemon')}daemon</span>` : ''}</span></span><span class="track"><i style="width:${pct(st === 'watch' ? inv.mapLeft / SCOUT.mapMs : inv.hp, 1)}"></i></span>`, ui, `hsv-threat siege ${st}`);
-  } else if (s.degraded) {
-    row = pickBtn('core', `${glyph('clock')}<b class="nm">Rebooting</b><span class="big">${fmtTime(degradedLeft(s, M.now))}<small>wall down</small></span><span class="tags"><span class="tag hot">degraded</span></span>`, ui, 'hsv-threat calm down');
   } else {
     const live = invasionsLive(s);
     row = pickBtn('next', `${glyph('clock')}<b class="nm">Next invasion</b><span class="big">${live && s.net?.next > 0 ? `~${fmtTime(s.net.next)}` : '—'}<small>${live ? 'sets out' : 'none sent'}</small></span>
@@ -237,7 +234,7 @@ const runsOn = (s) => { const where = {}; for (const l of s.locations || []) for
 
 // ---------- the panel ----------
 // The panel's first pick for the moment: what most wants your eye.
-export const firstPick = (s) => (s.invasion ? 'inv' : s.degraded ? 'core' : fragLevels(s) ? 'blocks' : 'wall');
+export const firstPick = (s) => (s.invasion ? 'inv' : fragLevels(s) ? 'blocks' : 'wall');
 function panel(s, M, ui) {
   const key = ui.sel || firstPick(s);
   let body = detail(s, M, key, ui);
@@ -257,14 +254,13 @@ const acts = (xs) => (xs.filter(Boolean).length ? `<div class="hsv-acts">${xs.fi
 function detail(s, M, key, ui) {
   const [k, i] = String(key).split(':'), now = M.now;
   if (k === 'core') {
-    const sv = s.server, cost = topUpCost(s, 'server'), lvl = serverLevel(s), next = serverNext(lvl);
-    const rest = CONFIG.restRegen * (s.invasion && ['siege', 'breach'].includes(s.invasion.state) ? 0.5 : 1), toFull = sv.integrity >= sv.max ? 0 : Math.ceil((sv.max - sv.integrity) / (sv.max * rest)) * 60000;
+    const sv = s.server, cost = topUpCost(s), lvl = serverLevel(s), next = serverNext(lvl);
+    const rest = CONFIG.signalRest * (s.invasion && ['siege', 'breach'].includes(s.invasion.state) ? 0.5 : 1), toFull = sv.integrity >= sv.max ? 0 : Math.ceil((sv.max - sv.integrity) / (sv.max * rest)) * 60000;
     const tone = sv.integrity / sv.max < 0.3 ? 'hot' : sv.integrity / sv.max < 0.6 ? 'warn' : 'you';
-    return head('integrity', 'Your server', 'Integrity', 'you') + facts([tag(`${sv.integrity}/${sv.max}`, tone, 'Your server\'s health at home. At 0 it crashes and reboots at half.'), tag(`Lv ${lvl}`, 'you', next ? `Server ${next}` : ''),
-      s.degraded ? tag(`Degraded · ${fmtTime(degradedLeft(s, now))}`, 'hot', sickTip(s, now)) : '', sickPct(s) ? tag(`−${sickPct(s)}% Signal, damage`, 'hot', sickTip(s, now)) : '',
-      toFull ? tag(`+${Math.round(rest * 1000) / 10}%/min · full in ${fmtTime(toFull)}`, 'dim', rest < CONFIG.restRegen ? 'Rests at half while something is at the wall' : 'Rests back between fights, offline too') : ''])
+    return head('integrity', 'Your server', 'Integrity', 'you') + facts([tag(`${sv.integrity}/${sv.max}`, tone, 'Your health at home and on a run. An invasion chips it, never below 1.'), tag(`Lv ${lvl}`, 'you', next ? `Server ${next}` : ''),
+      toFull ? tag(`+${Math.round(rest * 1000) / 10}%/min · full in ${fmtTime(toFull)}`, 'dim', rest < CONFIG.signalRest ? 'Rests at half while something is at the wall' : 'Rests back between fights, offline too') : ''])
       + `<div class="hsv-bar ${tone}"><i style="width:${pct(sv.integrity, sv.max)}"></i></div>`
-      + acts([act('Repair', 'repair', { cost: cost ? { credits: cost } : null, s, primary: true, actId: 'repair', why: sv.integrity <= 0 ? 'Crashed: it reboots on its own' : !cost ? 'Integrity is full' : sv.credits <= 0 ? 'No credits' : M.busy, tip: 'Integrity full now' })]);
+      + acts([act('Top up', 'repair', { cost: cost ? { credits: cost } : null, s, primary: true, actId: 'repair', why: !cost ? 'Integrity is full' : sv.credits <= 0 ? 'No credits' : M.busy, tip: 'Integrity full now' })]);
   }
   if (k === 'wall') {
     const t = tierOf(s), fp = filterStat(s, 'strength'), bonus = wallBonus(s), fl = fragLevels(s), mend = defragging(s, now), up = upgradeCost(s);
@@ -274,8 +270,7 @@ function detail(s, M, key, ui) {
     return head('firewall', 'Firewall', `Level ${effLevel(s, now)}`) + facts([tag(`+${t}`, '', 'Tier bought over the base'), tag(readoutLong(w), TONE[w.state], safetyTip(s, w)), fl ? tag(`−${fl}`, 'warn', 'Fragmented') : ''])
       + `<div class="hsv-sum">${parts.map((x) => `<span>${esc(x)}</span>`).join('<i>·</i>')}</div>`
       + (s.invasion || Object.keys(s.net?.seen || {}).length ? wallRuler(s, false, M.b) : '')
-      + (w.state === 'down' ? para('Your wall is down while the server reboots.')
-        : para(`It blocks plain invasions up to level ${M.b.blocks} outright and holds them contested up to level ${M.b.holds}.${w.top ? ` Your strongest servers' invasions count as level ${w.top} at your wall (a v2 counts 2 levels over its server, a v3 4).` : ''}${inv && inv.kind !== 'thief' ? ` ${inv.name} counts ${w.at}: your wall ${V_WORD[w.verdict]}.` : ''}`))
+      + (para(`It blocks plain invasions up to level ${M.b.blocks} outright and holds them contested up to level ${M.b.holds}.${w.top ? ` Your strongest servers' invasions count as level ${w.top} at your wall (a v2 counts 2 levels over its server, a v3 4).` : ''}${inv && inv.kind !== 'thief' ? ` ${inv.name} counts ${w.at}: your wall ${V_WORD[w.verdict]}.` : ''}`))
       + para(`The base follows your network: your highest server's level, less ${BASE_GAP}. What you buy on top stays.`, 'quiet')
       + `<div class="hsv-perks">${TIER_PERKS.map((x) => `<span class="${x.tier <= t ? 'got' : x.tier === t + 1 ? 'next' : ''}"><b>+${x.tier}</b>${esc(x.name)}</span>`).join('')}</div>`
       + acts([up ? act(`Upgrade to +${t + 1}`, 'firewall upgrade', { cost: { credits: up.credits, cipher: up.cipher, worm: up.worm, kernel: up.kernel }, s, primary: canPay(s, up), actId: 'upgrade', why: M.busy || (!canPay(s, up) ? 'Not enough to pay for it' : ''), tip: `One level more over the base, for good${nextPerks.length ? `. ${nextPerks.join(', ')}` : ''}${fwOf(s).frag ? '. Every block whole again' : ''}` }) : '']);
@@ -296,7 +291,7 @@ function detail(s, M, key, ui) {
     const n = streakOf(s);
     return head('xp', 'Your server', `Streak ${n}`) + facts([tag(`+${Math.round((streakMult(s) - 1) * 100)}%`, 'you'), s.net?.sabotage ? tag(`${s.net.sabotage.id} off`, 'hot') : ''])
       + para(`Invasions stopped in a row, by your wall or by you. Each pays ${Math.round(STREAK.step * 100)}% more, up to ${Math.round(STREAK.step * STREAK.max * 100)}%.`)
-      + para('A crash or a scout that finishes its map ends it.', 'quiet');
+      + para('A scout that finishes its map ends it.', 'quiet');
   }
   if (k === 'filter') return filterDetail(s, M, +i);
   if (k === 'slot') {
@@ -338,8 +333,7 @@ function invDetail(s, M) {
       inv.quirk && QUIRKS[inv.quirk] ? tag(QUIRKS[inv.quirk].name, '', quirkLine(inv)) : '', inv.mutation && MUTATIONS[inv.mutation] ? tag(MUTATIONS[inv.mutation].name, '', MUTATIONS[inv.mutation].rule) : '', inv.strain && STRAINS[inv.strain] ? tag(STRAINS[inv.strain].name, '', STRAINS[inv.strain].rule || '') : '', inv.marked ? tag(`mapped +${inv.marked}`, 'hot') : ''])
     + `<div class="hsv-where ${inv.state}"><b>${esc(where)}</b><small>from ${esc(inv.fromName || '')}</small></div>`
     + (tellOf(s, inv) ? para(tellOf(s, inv)) : '')
-    + (s.degraded && inv.state !== 'travel' ? para('It waits at the gate while your server is degraded.')
-      : inv.state === 'travel' ? para(`Your wall ${V_WORD[v]} when it arrives.`, `v-${V_TONE[v]}`)
+    + (inv.state === 'travel' ? para(`Your wall ${V_WORD[v]} when it arrives.`, `v-${V_TONE[v]}`)
         : inv.state === 'watch' ? para(`Kill it in the next ${fmtTime(inv.mapLeft)}, or the next invasion counts ${SCOUT.mark} levels higher.`)
           : para(`The wall wears it down ${pct1(grindRate(r))} a minute (${Math.round(inv.hp * 100)}% left) while it chips ${pct1(chipRate(r))} of your Integrity a minute.`))
     + `<div class="hsv-pay"><span title="${esc(`${MATERIALS[bo.code]?.name || bo.code} for your kill`)}">${glyph(bo.code)}<b>${bo.now >= bo.max ? bo.now : `${bo.now} → ${bo.max}`}</b></span><span class="dmn" title="${esc(bo.capture ? `A capture: a sure daemon of band ${daemonBand(inv.level)}` : `The chance your kill leaves a daemon (band ${daemonBand(inv.level)})`)}">${glyph('daemon')}<b>${bo.capture ? 'daemon' : `${odds}%`}</b></span>${streakOf(s) ? `<span title="${esc(`A streak of ${streakOf(s)}`)}">${glyph('xp')}<b>+${Math.round((streakMult(s) - 1) * 100)}%</b></span>` : ''}</div>`

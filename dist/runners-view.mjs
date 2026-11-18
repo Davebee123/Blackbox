@@ -137,8 +137,8 @@ const CLASS_GLYPH = { breaker: 'damage', bastion: 'shield', infiltrator: 'stealt
 // What each trait does, for its chip's tooltip (docs/runners.md Traits). Only Known face and Haggler are in play yet.
 export const TRAIT_DOES = {
   spotter: 'Every few cycles, the part they hit takes more damage from everyone for a cycle.', swarm: "Everyone's helpers hit harder.",
-  bulwark: 'The crew starts each fight shielded.', decoy: 'The first attack each fight goes at them.', patch: 'The crew recovers Signal between fights.',
-  repair: "Restores your server's Integrity after a run.", routefinder: 'Your steps cost less Signal.', mapper: 'Rooms a step further out show their kind.',
+  bulwark: 'The crew starts each fight shielded.', decoy: 'The first attack each fight goes at them.', patch: 'The crew recovers Integrity between fights.',
+  repair: 'Restores your Integrity after a run.', routefinder: 'Your steps cost less Integrity.', mapper: 'Rooms a step further out show their kind.',
   reader: 'One tell a fight shows a cycle early.', archivist: 'More research on the parts you fight together.', mentor: 'More XP on runs together.',
   coordinator: "The crew's Sync windows last longer.", counterintel: "Rivals' counter-picks read you less often.", fixer: 'Contracts done together pay more faction rep.',
   haggler: 'A smaller cut: half (★ a quarter).', knownface: 'A smaller fee, and standing rises half again as fast.', moonlighter: 'Brings credits to each run in place of a cut.',
@@ -168,9 +168,9 @@ function traitChips(r) {
   return temper + r.traits.map((t) => `<span class="rc-chip${t.star ? ' star' : ''}" title="${esc(`${TRAITS[t.id]}${t.star ? ' ★' : ''}\nTrait${t.star ? ', half again as strong' : ''}\n${TRAIT_DOES[t.id]}${LIVE_TRAITS.includes(t.id) ? '' : '\n▸ Not in play yet.'}`)}">${t.star ? '★ ' : ''}${esc(TRAITS[t.id])}</span>`).join('');
 }
 const factionMark = (r) => `<i class="rc-fmark" title="${esc(FACTIONS[r.faction].name || FACTIONS[r.faction].short)}">${glyph('f-' + r.faction)}</i>`;
-// A runner's row (the room's card, and the head of their own): handle, faction mark, class and level, their Signal.
+// A runner's row (the room's card, and the head of their own): handle, faction mark, class and level, their Integrity.
 export function runnerRow(s, r, { sig = null, st = stateOf(s, r) } = {}) {
-  const bar = sig != null ? `<span class="rc-sig" title="${esc(`${r.handle}'s Signal: ${Math.round(sig * 100)}%.`)}"><i style="--f:${sig}"></i></span>` : '';
+  const bar = sig != null ? `<span class="rc-sig" title="${esc(`${r.handle}'s Integrity: ${Math.round(sig * 100)}%.`)}"><i style="--f:${sig}"></i></span>` : '';
   return `<div class="rc-row">${glyph(CLASS_GLYPH[r.cls] || 'run', 'rc-cls')}<span><b>${esc(r.handle)}</b>${factionMark(r)}<small>${esc(clsLabel(r, st.level))} · level ${st.level}</small></span>${bar}</div>`;
 }
 // The room's card: their row, their line, the standing it pays.

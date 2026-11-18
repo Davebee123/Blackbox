@@ -193,7 +193,7 @@ test('Accumulator: one big Discharge every 5 cycles, under the spike cap, and it
   const s = fight(18, 'ransomware', { basic: 'accumulator' }), p = part(s, 'accumulator');
   assert.equal(p.attack.interval, 5);
   const b = fight(18, 'ransomware', { basic: 'pulse' });
-  assert.ok(attackAmount(p) <= 1.3 * attackAmount(part(b, 'pulse')), 'its Discharge is at most 1.3 Pulse Nodes (a Surge is about 37% of a level-matched Signal, the cap 45%)');
+  assert.ok(attackAmount(p) <= 1.3 * attackAmount(part(b, 'pulse')), 'its Discharge is at most 1.3 Pulse Nodes (a Surge is about 37% of a level-matched Integrity, the cap 45%)');
   assert.ok(p.accum);
   assert.notEqual(findSource(s.encounter.virus, { kind: 'charge', part: 'basic' })?.id, 'accumulator');
 });

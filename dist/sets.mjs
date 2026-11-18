@@ -200,7 +200,7 @@ export function setsRestore(s, was) {
 // every player in every fight, and does nothing unless a set piece is loaded (e.sx, sxOf). Its state lives
 // on the encounter under e.sx, and on a shared part under the player's name (p.sx*[who]).
 // The codes (content/sets.mjs and the pieces' blocks):
-//   stat, signal%          a stat and max Signal (combat.mjs gearStat, maxSignal)
+//   stat, signal%          a stat and max Integrity (combat.mjs gearStat, maxSignal)
 //   dmg%                   all your damage, skill hits, burns and helpers (when 'hit', its condition on the part)
 //   burn+%, helper+%, dot% your burns, your helpers, both (dot%: combat.mjs damageMultiplier)
 //   first-hit%             your first skill hit on each part         opener%   your first skills each fight (n of them)
@@ -261,10 +261,10 @@ function beside(s, p) {
   for (let k = 1; k < all.length; k++) for (const j of [i + k, i - k]) if (all[j] && all[j] !== p && alive(all[j])) return all[j];
   return null;
 }
-// A stat or max Signal from set blocks (combat.mjs gearStat and maxSignal ask, with a set piece loaded).
+// A stat or max Integrity from set blocks (combat.mjs gearStat and maxSignal ask, with a set piece loaded).
 export const setStat = (s, stat) => total(custom(s, 'stat', {}, active(s) && sxOf(s) ? listOf(s) : gearFx(s)).filter((x) => x.fx.stat === stat));
 export const setSignal = (s) => total(custom(s, 'signal%', {}, active(s) && sxOf(s) ? listOf(s) : gearFx(s)));
-// What the outside-a-fight bonuses give: credits from caches or vaults (Lantern Route), how much faster Signal rests
+// What the outside-a-fight bonuses give: credits from caches or vaults (Lantern Route), how much faster Integrity rests
 // back (Night Shift), and whether a server's map card shows its rare spawn (the Antenna).
 export const setCredits = (s, of) => pct(total(custom(s, 'credits%', {}, gearFx(s)).filter((x) => (x.fx.of || []).includes(of))));
 // Full Coverage (3): a room's first clear pays this share of a kill's XP (floorplan.mjs clear).
@@ -322,7 +322,7 @@ export const SET_HOOKS = {
     if (!x || x.once.cap || !atk) return n;
     for (const f of custom(s, 'big-hit-cap')) {
       const cap = Math.floor((max(s) * f.value) / 100);
-      if (n > cap) { x.once.cap = true; emit(s, 'blocked', `${f.name}: ${atk.name} would take more than ${f.value}% of your max Signal. It deals ${cap}.`, gear(f)); return cap; }
+      if (n > cap) { x.once.cap = true; emit(s, 'blocked', `${f.name}: ${atk.name} would take more than ${f.value}% of your max Integrity. It deals ${cap}.`, gear(f)); return cap; }
     }
     return n;
   },
@@ -476,7 +476,7 @@ export const SET_HOOKS = {
     for (const f of custom(s, 'delay-open')) { p.openUntil = Math.max(p.openUntil || 0, e.cycle + (f.value || 1)); emit(s, 'read', `${f.name}: the ${p.name} is Open.`, { target: p.id, open: true, ...gear(f) }); }
   },
   // After a skill resolves (combat.mjs useAbility). before: the shield, the parts' jams and timers, the helpers and
-  // burns and the crew's Signal and shields, from before it.
+  // burns and the crew's Integrity and shields, from before it.
   used(s, { id, target, before }) {
     const e = s.encounter, x = sxOf(s);
     if (!x || !before) return;

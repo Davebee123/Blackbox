@@ -22,7 +22,7 @@
 //   top centre    YOU, and the hunter: a glitched red pixel skull on the room it's in; the Exfil: a gold archive
 //                 with an upload arrow (its badge filled gold once it's cornered). Both show in your room, next to
 //                 you and in a discovered room (floorplan.mjs inSight), never deeper in the fog.
-//   top right     a red live light (inset), and the Signal a first step costs (−5) on a room you can walk into.
+//   top right     a red live light (inset), and the Integrity a first step costs (−5) on a room you can walk into.
 //   bottom right  a respawn ring that fills back up as the room comes back, its m:ss under it.
 //   bottom left   the room's grid address (C2), a small dim plate on the edge, on every chip, an unknown one too (it says
 //                 where, never what); amber with a contract's mark when a job points at the room (an Install's room, a
@@ -37,7 +37,7 @@
 // codebase you know, what it costs here and what you hold, and Build.
 // Countdowns are empty <… data-at> slots (and rings with data-ring-*) that fillClocks writes every second (app.js), so
 // the markup only changes when the server does and a hovered chip keeps its tooltip.
-import { esc, conClass, deathMark, sickPct, sickTip, trackedJobs, contractTipRows, serverTracker } from './view.mjs';
+import { esc, conClass, deathMark, trackedJobs, contractTipRows, serverTracker } from './view.mjs';
 import { glyph } from './glyphs.mjs';
 import { groundSvg } from './ground.mjs';
 import { OBJECTIVES, OBJ, objectiveLine } from './objectives.mjs';
@@ -53,7 +53,7 @@ import { rivalP, COUNTERS, READS, rivalOf, routeOf, raceOf, lineupOf, memoryOf, 
 import { GENES } from './genes.mjs';
 import { meetingOf, meetingsOf, deadOf, runnerOf } from './runners.mjs';
 import { roomRunner, runnerRow, tierBar } from './runners-view.mjs';
-import { held, slipsLeft, slippable, ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, rebootOf, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, retreat, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, restUsed, lureFamilies, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
+import { held, slipsLeft, slippable, ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, rebootOf, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, visitOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, retreat, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, restUsed, lureFamilies, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
 import { puzzlePanel } from './puzzle-view.mjs';
 import { PROGRAMS, SOCKET, programCost, buildBlock, codebasesOf, costLine as programCostLine } from './sockets.mjs';
 import { materialsOf } from './combat.mjs';
@@ -242,7 +242,7 @@ function tileTip(s, room, marks = net(s, 'marks') || {}) {
     const cost = stepCost(s, room), th = R_th(s)[room.id];
     if (rivalOf(s)?.at === room.id) return rivalTip(s, rivalOf(s));
     if (rivalOf(s) && room.id === s.rooms.graph.vaults[0]) return `Vault\n${rivalLine(s)}`;
-    return ['Unknown room', job ? `Contract: ${job}.` : '', th ? `${th.mark} ${th.text}` : '', cost ? `A first step in costs ${cost} Signal.` : '', hunted ? `The ${huntName(h)} is here.` : '', x ? `${x.name}, an Exfil, is here.` : ''].filter(Boolean).join('\n');
+    return ['Unknown room', job ? `Contract: ${job}.` : '', th ? `${th.mark} ${th.text}` : '', cost ? `A first step in costs ${cost} Integrity.` : '', hunted ? `The ${huntName(h)} is here.` : '', x ? `${x.name}, an Exfil, is here.` : ''].filter(Boolean).join('\n');
   }
   const rv = rivalOf(s);
   if (rv?.at === room.id) return rivalTip(s, rv);
@@ -269,7 +269,7 @@ function aboutOf(s, room) {
   else if (room.nook) who = room.log ? 'A log. Read it.' : nookLive(s, room, R_th(s)) ? 'Someone, or something, waits here.' : 'Quiet now.';
   else if (room.kind === 'empty') who = 'Nothing here.';
   else if (room.kind === 'vault' && !opened(s, room)) who = room.farm ? 'Opens once the Foreman and the Heatsink are down.' : R.visit?.keys.includes(room.id) ? 'Your key fits.' : `Its key is in ${guardOf(s, room.id) ? labelOf(s, guardOf(s, room.id)) : 'an elite'}.`;
-  else if (room.kind === 'rest') who = `Restores ${Math.round(R.max * ROOMS.rest)} Signal, once a visit.`;
+  else if (room.kind === 'rest') who = `Restores ${Math.round(R.max * ROOMS.rest)} Integrity, once a visit.`;
   else if (isPuzzle(room.kind)) who = `${PUZZLES[room.kind].title}. ${PUZZLES[room.kind].rule}`;
   if (isSocket(s, room) && socketOpen(s, room)) { const p = programIn(s, room.id); who = p ? `${PROGRAMS[p].name}: ${PROGRAMS[p].rule}${socketOff(s, room) ? ' (offline)' : ''}` : room.kind === 'core' ? 'The core socket: build a program here.' : 'An open socket: build a program here.'; }
   const denEdge = g.hunter === 'track' && g.den && neighbours(g, g.den).includes(room.id) && h && !h.awake && !h.down;
@@ -524,7 +524,7 @@ function revealing(s, id) {
 // Runners standing in it, between jobs (SPRAWL-00).
 const standTip = (s, room, hs) => `${hs.join(' and ')} ${hs.length === 1 ? 'is' : 'are'} here between jobs.${s.rooms.at === room.id ? '' : `\n▸ Walk in to meet ${hs.length === 1 ? 'them' : 'them all'}.`}`;
 const deadRoomTip = (d) => `The runner ${d.r.handle} crashed here.\n▸ Win the room to pull them out.`;
-const runnerRoomTip = (s, m) => `The runner ${m.r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Signal.${s.rooms.at === m.room.id ? '' : '\n▸ Walk in to help.'}`;
+const runnerRoomTip = (s, m) => `The runner ${m.r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Integrity.${s.rooms.at === m.room.id ? '' : '\n▸ Walk in to help.'}`;
 function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, files = [], rv = null, mt = [], dd = null, pp = null }) {
   const R = s.rooms, g = R.graph, kind = known(s, room.id), h = hunterOf(s);
   const look = lookOf(s, room);
@@ -599,7 +599,7 @@ function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, fi
   if (drop) out += cardTab('DROP', 'surge', cardTip(s, cr));
   if (crHere) { const k = 18, bx = n1(x0 - 4), by = n1(y0 + G.nh - k + 4); out += `<g class="fp-courier" title="${esc(cardTip(s, cr))}"><rect x="${bx}" y="${by}" width="${k}" height="${k}" rx="2"/><use href="#fp-i-archive" x="${n1(bx + 2)}" y="${n1(by + 2)}" width="${k - 4}" height="${k - 4}"/></g>` + cardBar(cr.hp / cr.max, 'surge', `Courier: ${cr.hp}/${cr.max} Integrity.`); }
   if (rival) { const nm = rv.id, w = tagW(nm) + 4, rx = n1(Math.max(p.x - w / 2, tx + 2)); out += `<g class="fp-rv-tab"><rect x="${rx}" y="${n1(y0 - 9)}" width="${w}" height="16" rx="2"/><text x="${n1(rx + w / 2)}" y="${n1(y0 + 3)}" text-anchor="middle">${esc(nm)}</text></g>`; tx = rx + w + 4; out += lineupSvg(s, rv, p.x, y0 + G.nh + 6); }
-  // A runner fighting in it: a paper-white tab with their handle (beside YOU once you're in), their Signal under it.
+  // A runner fighting in it: a paper-white tab with their handle (beside YOU once you're in), their Integrity under it.
   if (meet) { const nm = meet.r.handle, w = tagW(nm) + 4, rx = n1(Math.max(p.x - w / 2, tx + 2)); out += `<g class="fp-rn-tab"><rect x="${rx}" y="${n1(y0 - 9)}" width="${w}" height="16" rx="2"/><text x="${n1(rx + w / 2)}" y="${n1(y0 + 3)}" text-anchor="middle">${esc(nm)}</text><rect class="sig" x="${rx}" y="${n1(y0 + 9)}" width="${w}" height="3"/><rect class="sig fill" x="${rx}" y="${n1(y0 + 9)}" width="${n1(w * meet.sig)}" height="3"/></g>`; tx = rx + w + 4; }
   // Runners standing in it (SPRAWL-00): a paper-white tab, their handle, +n for more.
   if (met.length) { const nm = met.length > 1 ? `${met[0]} +${met.length - 1}` : met[0], w = tagW(nm) + 4, rx = n1(Math.max(p.x - w / 2, tx + 2)); out += `<g class="fp-rn-tab stand"><rect x="${rx}" y="${n1(y0 - 9)}" width="${w}" height="16" rx="2"/><text x="${n1(rx + w / 2)}" y="${n1(y0 + 3)}" text-anchor="middle">${esc(nm)}</text></g>`; tx = rx + w + 4; }
@@ -642,6 +642,8 @@ function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, fi
   }
   // A thread's file in this room: its badge and Integrity on the chip's bottom edge.
   for (const f of files) if (f.at === room.id) out += fileSvg(s, p.x + G.nw * 0.2, y0 + G.nh + 8, f.t, G.nw > 100 ? 1.25 : 1.1); // under the chip, clear of its plate
+  // Won this visit and not jacked out yet (visit.mjs): UNSAVED under the chip, amber.
+  if (R.world && R.at && R.visit?.won?.[room.id]) out += `<text class="fp-unsaved" x="${p.x}" y="${n1(y0 + G.nh + 13)}" text-anchor="middle">UNSAVED</text>`;
   return out + '</g>';
 }
 
@@ -660,7 +662,10 @@ function hudMarkup(s) {
   const reboot = rb ? `<span class="fp-stat fp-reboot${rb.pending ? ' on' : ''}" title="${esc(`Reboot\nFallen fight rooms stay down until every one has fallen. Then ${R.name} reboots, and ${fmtLeft(rb.ms)} later they all come back.\n${rb.pending ? 'Rebooting now.' : `${rb.up} ${rb.up === 1 ? 'fight room is' : 'fight rooms are'} still up.`}`)}"><span class="lbl">Reboot</span><b>${rb.pending ? `<span data-at="${rb.at}"></span>` : `${rb.up} up`}</b></span>` : '';
   const keys = R.at && R.visit?.keys.length ? `<span class="fp-stat fp-keys" title="Keys: each opens its vault, this visit only. Jack out and it goes back to the elite that held it.">${ic('key')}<b>${R.visit.keys.length}</b></span>` : '';
   const packed = R.world ? (s.run?.pack || []).map((f) => net(s, 'packLine', f)) : R.pack.map((id) => itemLabel(stashItem(s, id) || { name: '?' }));
-  const pack = packed.length ? `<span class="fp-stat fp-packstat" title="${esc(`Pack: ${packed.join(', ')}.\nBanks when you jack out. Lost if your Signal hits 0.`)}"><span class="lbl">Pack</span><b>${packed.length}</b></span>` : '';
+  // This visit (visit.mjs): what you've won since you connected, unsaved until you jack out; the pack rides in it.
+  const v = visitOf(s);
+  const pack = v ? `<span class="fp-stat fp-visit fp-packstat${v.rooms || v.xp || v.files ? '' : ' empty'}" data-tt-kind="Unsaved" title="${esc(`This visit: Jack out to keep it. A disconnect undoes it.${packed.length ? `\n▸ Pack: ${packed.join(', ')}.` : ''}`)}"><span class="lbl">This visit</span><b>${v.rooms}<small>rooms</small></b><b>${v.xp.toLocaleString('en-US')}<small>XP</small></b><b>${v.files}<small>files</small></b></span>`
+    : packed.length ? `<span class="fp-stat fp-packstat" title="${esc(`Pack: ${packed.join(', ')}.\nBanks when you jack out. Lost if your Integrity hits 0.`)}"><span class="lbl">Pack</span><b>${packed.length}</b></span>` : '';
   // Contracts on this server, and how far along each is. The tip draws them as the map's tracker does, a row each.
   const jobs = net(s, 'jobs') || [], tracked = jobs.length ? trackedJobs(s).filter((t) => jobs.some((j) => j.id === t.id)) : [];
   const job = jobs.length ? `<span class="fp-stat fp-jobs${jobs.some((j) => j.ready) ? ' ready' : ''}" title="${esc(`Contract${jobs.length > 1 ? 's' : ''}: On this server.`)}"><template class="tt-more">${contractTipRows(tracked)}</template>${ic('contract')}<span class="lbl">Contract${jobs.length > 1 ? 's' : ''}</span><b>${jobs.length > 1 ? jobs.length : esc(jobs[0].ready ? 'ready' : jobs[0].text.split('.')[0].slice(0, 28))}</b></span>` : '';
@@ -669,18 +674,18 @@ function hudMarkup(s) {
   const c = connectOf(s);
   const acts = R.at
     ? btn('wait', 'Wait', { small: true, disabled: held(R) || active(s), tip: held(R) ? 'Wait: finish what is in front of you first.' : `Wait: the hunter takes its step${filesHere(s).length ? ', and the file you carry' : ''}. Costs nothing.` })
-      + btn('jackout', 'Jack out', { small: true, hot: true, disabled: active(s), tip: 'Jack out: banks your pack. Signal rests at home.' })
-    : btn('connect', 'Connect', { small: true, primary: true, disabled: !c.can, tip: c.can ? `Connect to ${R.name}.` : c.wait > 0 ? `${R.name} takes you back in ${fmtLeft(c.wait)}.` : `You need ${c.need} Signal to connect.` });
+      + btn('jackout', 'Jack out', { small: true, hot: true, disabled: active(s), tip: R.world ? 'Jack out: saves this visit and banks your pack. Integrity rests at home.' : 'Jack out: banks your pack. Integrity rests at home.' })
+    : btn('connect', 'Connect', { small: true, primary: true, disabled: !c.can, tip: c.can ? `Connect to ${R.name}.` : c.wait > 0 ? `${R.name} takes you back in ${fmtLeft(c.wait)}.` : `You need ${c.need} Integrity to connect.` });
   return `<header class="fp-hud" aria-label="The server">
     <span class="fp-id" title="${esc(net(s, 'idTip') ?? `${R.name}: ${author} ${kindName(R.kind)}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`)}"><span class="ico" ${icon('server')}></span><b>${esc(R.name)}</b><small>${esc(net(s, 'idLine') ?? `${kindName(R.kind)} · lv ${R.level} · ${K.rule}`)}</small></span>
-    <div class="fp-sig ${lvl}" title="${esc(`Signal: carries from fight to fight and rests back at home.\nA room's first step each visit costs ${step}, or ${stepNew} into one you've never been in.`)}"><span class="lbl">Signal</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small>${R.world && sickPct(s) ? `<em class="sig-sick" title="${esc(sickTip(s))}">−${sickPct(s)}%</em>` : ''}</div>
+    <div class="fp-sig ${lvl}" title="${esc(`Integrity: your health, carried from fight to fight and rested back at home.\nA room's first step each visit costs ${step}, or ${stepNew} into one you've never been in.`)}"><span class="lbl">Integrity</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small></div>
     <div class="fp-prog" title="${esc(`Rooms cleared: ${prog.done} of ${prog.total}. ${R.mapped ? 'The server is Mapped.' : `At ${Math.ceil(prog.total / 2)} the whole map is drawn. At ${prog.total} the server is Mapped.`}`)}"><span class="lbl">Rooms</span><span class="pbar"><span style="width:${(prog.done / prog.total) * 100}%"></span><i style="left:50%"></i></span><b>${prog.done}/${prog.total}</b>${R.mapped ? '<small class="fp-mapped">MAPPED</small>' : ''}</div>
     ${keys}${reboot}${hunt}${rival}${cardStat}${ml}${pack}${job}${R.world && s.threads ? threadHud(s) : ''}
     <span class="fp-tools">${R.world ? '' : `<span class="fp-rules" role="group" aria-label="Boss rule"><span class="lbl" title="${esc(`Boss rule: how ${BOSSES[RESIDENT].name}'s ticks work. It applies to your next fight with it.`)}">Boss</span>${rule}</span>`}
     <span class="fp-acts">${acts}</span></span>
   </header>`;
 }
-// Whether you can connect from home: Signal enough, and the reconnect wait over.
+// Whether you can connect from home: Integrity enough, and the reconnect wait over.
 function connectOf(s) {
   const R = s.rooms, sig = signalNow(s), wait = R.reconnectAt - now(), need = Math.ceil(R.max * 0.25);
   return { sig, wait, need, can: wait <= 0 && sig >= need };
@@ -749,7 +754,7 @@ function hunterNote(s, room) {
 }
 // A rival on you (rivals.mjs): the challenge, or the card between its fights. Engage only.
 //   challenge   its crew's byline, level and your record, its line, the lineup as numbered rows, the stakes, wick.
-//   between     the lineup rail (beaten ones struck), what you did → the part it adds, your Signal, wick.
+//   between     the lineup rail (beaten ones struck), what you did → the part it adds, your Integrity, wick.
 function rivalCard(s, room, sc) {
   const v = s.rooms.visit.rival, P = rivalP(v), m = memoryOf(s, v.id), add = sc.between && v.next ? COUNTERS[v.next.counter] : null;
   const by = `<p class="fp-rv-by"><span style="${crewColour(v) ? `color:${crewColour(v)}` : ''}">${esc(crewName(v))}</span> · lv ${v.level}${m.met > 1 || m.won || m.lost ? ` · <span title="${esc(`Meeting ${m.met}: you've beaten ${P.name} ${m.won} ${m.won === 1 ? 'time' : 'times'} and lost to them ${m.lost}.`)}">meeting ${m.met} · ${m.won}–${m.lost}</span>` : ''}</p>`;
@@ -757,7 +762,7 @@ function rivalCard(s, room, sc) {
   const addTip = (c) => { const G = GENES[c.gene]; return `${c.name}\nPart · added by ${P.name}\n${c.veil ? 'Every part of their next virus is veiled, and wears a ◆ at least.' : G?.does || ''}${G?.answer ? `\n▸ ${G.answer}` : ''}`; };
   const rows = lineupOf(s, v).map((x) => `<li class="${x.beaten ? 'beaten' : x.next ? 'next' : ''}"><b>${x.i + 1}</b><span>${esc(x.name)}</span>${x.next && add ? `<i class="fp-rv-add" title="${esc(addTip(add))}">+ ${esc(add.name)}</i>` : ''}</li>`).join('');
   const did = add ? `<p class="fp-rv-read" title="${esc(`How you won the last fight. ${P.name} answers it with one part, on their next virus.`)}"><span>${esc(v.next.read === 'slow' ? `${v.next.cycles} cycles` : READS[v.next.read])}</span> → <b title="${esc(addTip(add))}">${esc(add.name)}</b></p>` : '';
-  const sig = sc.between ? `<p class="fp-rv-sig" title="Your Signal carries from fight to fight. Your cooldowns start fresh."><b>${signalNow(s)}</b>/${s.rooms.max} Signal</p>` : '';
+  const sig = sc.between ? `<p class="fp-rv-sig" title="Your Integrity carries from fight to fight. Your cooldowns start fresh."><b>${signalNow(s)}</b>/${s.rooms.max} Integrity</p>` : '';
   const stakes = sc.between ? '' : `<p class="fp-rv-stakes" title="${esc(`Beat ${P.name} and their pack is yours${v.vault ? ', with the vault they opened' : ''}. Lose and they're gone with both.`)}">${v.vault ? `${ic('vault')}<span>Vault</span>` : ''}${ic('cache')}<span>Their pack</span></p>`;
   const wick = `<p class="fp-rv-wick"><span>wick</span>${esc(wickLine(s, v, sc.between ? 'between' : 'challenge'))}</p>`;
   const st = { word: sc.between ? `${v.fight} of ${v.fights} down` : 'challenged', cls: 'hot' };
@@ -812,8 +817,8 @@ function hereCard(s) {
     // Standing in it, you see what it is: take it or leave it.
     const full = cacheFull(s, room), bait = !room.mirror && isBait(s, room), lose = pctOf(s, ROOMS.bait);
     if (full) {
-      body = note(esc(room.mirror ? mirrorLine(s, room) : bait ? `Bait. Taking it costs ${lose} Signal.` : 'Clean: credits and code.'), bait || room.mirror ? 'hot' : '');
-      acts = btn('pull', room.mirror ? 'Break the mirror' : 'Take it', { primary: !bait && !room.mirror, hot: bait || room.mirror, note: bait ? `−${lose} Signal` : '' }) + '<button type="button" class="btn" data-fp-pop-close>Leave it</button>';
+      body = note(esc(room.mirror ? mirrorLine(s, room) : bait ? `Bait. Taking it costs ${lose} Integrity.` : 'Clean: credits and code.'), bait || room.mirror ? 'hot' : '');
+      acts = btn('pull', room.mirror ? 'Break the mirror' : 'Take it', { primary: !bait && !room.mirror, hot: bait || room.mirror, note: bait ? `−${lose} Integrity` : '' }) + '<button type="button" class="btn" data-fp-pop-close>Leave it</button>';
     } else body = note('Credits and code.', 'dim');
   } else if (room.kind === 'vault') {
     const open = opened(s, room), has = R.visit.keys.includes(room.id), main = room.id === g.vaults[0], force = pctOf(s, ROOMS.force);
@@ -823,7 +828,7 @@ function hereCard(s) {
       acts = open ? '' : btn('open', 'Open', { primary: true });
     } else {
       body = open ? (main ? note('The Core is unsealed.') : '') + (left ? note(esc(`${left} ${left === 1 ? 'file' : 'files'} still in it.`)) : '') : note(esc(has ? `Your key fits.${main ? ' Opening it unseals the Core.' : ''}` : `Its key is in ${guardOf(s, room.id) ? labelOf(s, guardOf(s, room.id)) : 'an elite'}.${main ? ' Opening it unseals the Core.' : ''}`));
-      acts = open ? (left ? btn('pull', 'Take them', { primary: true }) : '') : btn('open', 'Open', { primary: true, disabled: !has, note: has ? 'your key' : 'no key' }) + btn('force', 'Force it', { hot: true, note: `−${force} Signal` });
+      acts = open ? (left ? btn('pull', 'Take them', { primary: true }) : '') : btn('open', 'Open', { primary: true, disabled: !has, note: has ? 'your key' : 'no key' }) + btn('force', 'Force it', { hot: true, note: `−${force} Integrity` });
     }
   } else if (room.kind === 'secret') {
     const full = cacheFull(s, room);
@@ -835,7 +840,7 @@ function hereCard(s) {
   } else if (room.kind === 'rest') {
     body = note('The hunter never comes in.', 'dim');
     const used = restUsed(R, room);
-    acts = btn('rest', used ? 'Rested' : 'Rest', { primary: !used && restGain(s) > 0, disabled: used || !restGain(s), note: used ? 'once a visit' : restGain(s) ? `+${restGain(s)} Signal` : 'Signal full' });
+    acts = btn('rest', used ? 'Rested' : 'Rest', { primary: !used && restGain(s) > 0, disabled: used || !restGain(s), note: used ? 'once a visit' : restGain(s) ? `+${restGain(s)} Integrity` : 'Integrity full' });
   } else if (room.kind === 'entry') {
     const files = R.world ? net(s, 'entryFiles') || 0 : 0;
     body = files ? note(esc(`${files} ${files === 1 ? 'file' : 'files'} left here for you.`)) : note('The hunter never comes in.', 'dim');
@@ -867,7 +872,7 @@ function socketCard(s, room) {
     const used = !!R.visit?.bays?.[room.id], gain = Math.min(R.max - sigOf(s), Math.round(R.max * SOCKET.rest));
     // A Lure: the families you've met, the one it calls lit.
     const lure = p === 'lure' && !off ? `<p class="bp-lure">${lureFamilies(s).map((f) => `<button type="button" class="btn small${R.lure === f ? ' primary' : ''}" data-command="lure ${f}" aria-pressed="${R.lure === f}">${esc(familyName(f))}</button>`).join('')}</p>` : '';
-    const acts = lure + (bay ? btn('rest', used ? 'Rested' : 'Rest', { primary: !used && gain > 0, disabled: used || gain <= 0, note: used ? 'once a visit' : gain > 0 ? `+${gain} Signal` : 'Signal full' }) : '')
+    const acts = lure + (bay ? btn('rest', used ? 'Rested' : 'Rest', { primary: !used && gain > 0, disabled: used || gain <= 0, note: used ? 'once a visit' : gain > 0 ? `+${gain} Integrity` : 'Integrity full' }) : '')
       + `<button type="button" class="btn small" data-rooms="uninstall" title="Uninstall: half its components and code come back.">Uninstall</button>`;
     return { body, acts };
   }
@@ -915,23 +920,24 @@ function exfilNote(s, room) {
 // there; nothing about what it is.
 function unknownCard(s, room) {
   const h = hunterOf(s), cost = stepCost(s, room);
-  let body = cost ? note(esc(`A first step in costs ${cost} Signal.`)) : '';
+  let body = cost ? note(esc(`A first step in costs ${cost} Integrity.`)) : '';
   body += exfilNote(s, room);
   if (hunterSeen(s) && h.at === room.id) body += note(esc(`The ${huntName(h)} is here: walk in and you fight it.`), 'hot');
   if (s.rooms.world && s.threads) body += threadCard(s, room, false, holder, note, btn).body;
   if (!body) body = note("You haven't been in it.", 'dim');
   return cardOf({ word: 'unknown', cls: 'dim' }, false, 'Unknown room', jobNote(s, room) + body + hunterNote(s, room), '', false, addrOf(s, room.id));
 }
-// Home: Signal resting, the reconnect wait, what the last visit did, and Connect.
+// Home: Integrity resting, the reconnect wait, what the last visit did, and Connect.
 function homeCard(s) {
   const R = s.rooms, t = now(), { sig, wait, need, can } = connectOf(s), full = t + Math.max(0, Math.ceil(((R.max - sig) / (R.max * 0.2 * R.speed)) * 60000));
   const L = R.last;
-  const last = L ? `<ul class="fp-lines">${L.result === 'lost' ? `<li class="hot"><span class="lbl">lost</span><span>${esc(`${L.why} ${L.lost?.length ? `${L.lost.length} unbanked ${L.lost.length === 1 ? 'item' : 'items'} lost: ${L.lost.join(', ')}.` : 'Nothing unbanked was lost.'}`)}</span></li>` : `<li><span class="lbl">banked</span><span>${L.banked} ${L.banked === 1 ? 'item' : 'items'}</span></li>`}<li><span class="lbl">xp</span><span>+${(L.xp || 0).toLocaleString('en-US')}</span></li></ul>` : '';
+  const undone = L?.undone ? `<li class="hot"><span class="lbl">undone</span><span>${esc(`${L.why} Back to when you connected: ${L.undone.rooms} ${L.undone.rooms === 1 ? 'room' : 'rooms'}, ${L.undone.xp.toLocaleString('en-US')} XP, ${L.undone.files} ${L.undone.files === 1 ? 'file' : 'files'} undone.`)}</span></li>` : '';
+  const last = undone ? `<ul class="fp-lines">${undone}</ul>` : L ? `<ul class="fp-lines">${L.result === 'lost' ? `<li class="hot"><span class="lbl">lost</span><span>${esc(`${L.why} ${L.lost?.length ? `${L.lost.length} unbanked ${L.lost.length === 1 ? 'item' : 'items'} lost: ${L.lost.join(', ')}.` : 'Nothing unbanked was lost.'}`)}</span></li>` : `<li><span class="lbl">banked</span><span>${L.banked} ${L.banked === 1 ? 'item' : 'items'}</span></li>`}<li><span class="lbl">xp</span><span>+${(L.xp || 0).toLocaleString('en-US')}</span></li></ul>` : '';
   const items = R.banked.map((id) => stashItem(s, id)).filter(Boolean);
   const loot = items.length ? `<h3 class="fp-sec">Banked <small>${items.length}</small></h3><ul class="fp-items">${items.slice(-6).map((it) => `<li data-ptip="${esc(it.id)}"><b class="iname r-${shownRarity(it)}">${esc(itemLabel(it))}</b><small class="fp-stats">${Object.keys(it.stats || {}).map((k) => statLine({ [k]: it.stats[k] })).filter(Boolean).map((x) => `<span>${esc(x)}</span>`).join('')}</small></li>`).join('')}</ul>` : '';
-  const lines = [sig < R.max ? `Full in ${clock(full)}.` : '', wait > 0 ? `Reconnect in ${clock(R.reconnectAt)}. ${deathMark(R.deaths || 0)}` : '', sig < need ? esc(`You need ${need} Signal to connect.`) : ''].filter(Boolean).join(' ');
+  const lines = [sig < R.max ? `Full in ${clock(full)}.` : '', wait > 0 ? `Reconnect in ${clock(R.reconnectAt)}. ${deathMark(R.deaths || 0)}` : '', sig < need ? esc(`You need ${need} Integrity to connect.`) : ''].filter(Boolean).join(' ');
   return `<section class="card fp-screen fp-home"><h2>${R.visits ? `Home · visit ${R.visits}` : 'Home'}</h2><h1>${R.visits ? (L?.result === 'lost' ? 'Disconnected' : 'Jacked out') : 'Ready to connect'}</h1>
-    ${lines ? note(lines) : ''}${L?.result === 'lost' ? recapMarkup(L.recap) : ''}${last}<div class="row acts">${btn('connect', 'Connect', { primary: true, disabled: !can, note: can ? '' : wait > 0 ? 'wait' : `${need} Signal` })}</div>
+    ${lines ? note(lines) : ''}${L?.result === 'lost' ? recapMarkup(L.recap) : ''}${last}<div class="row acts">${btn('connect', 'Connect', { primary: true, disabled: !can, note: can ? '' : wait > 0 ? 'wait' : `${need} Integrity` })}</div>
     <p class="fp-note dim">${esc(`This session: +${xpEarned(s).toLocaleString('en-US')} XP · fights won ${R.stats.won}/${R.stats.fights} · ${BOSSES[RESIDENT].name} ${R.stats.boss.won}/${R.stats.boss.tries}`)}</p>${loot}</section>`;
 }
 function popCard(s, id) {

@@ -555,7 +555,7 @@ export const RECIPES = {
     [79, 83, 86, 91].forEach((m, i) => { const at = 0.68 + i * 0.11; S('tin', at, { gain: 0.3, rate: 1 + i * 0.1 }); chime(ctx, out, t + at, m, { d: 0.18, peak: 0.16 }); });
     S('drop', 1.1, { gain: 0.4 });
   } },
-  // A bait cache: the lid, the canary's two chirps and your Signal draining, then the pay.
+  // A bait cache: the lid, the canary's two chirps and your Integrity draining, then the pay.
   bait: { room: 0.12, play(ctx, out, t, o, S) {
     S('relay', 0, { gain: 0.45, rate: 1.1 });
     const bp = ctx.createBiquadFilter(); bp.type = 'lowpass'; bp.frequency.value = 5000; bp.connect(out);

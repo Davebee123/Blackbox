@@ -3,7 +3,7 @@
 // this module as a part breaks or takes a hit and as each cycle closes, and finish pays the bonus for one met.
 //   exfil     the Exfil's upload: still up at the end of cycle n, it gets away. Its archive is its pay (no bonus).
 //   priority  break the marked part by the end of cycle n; the rest can stand. Missed: the fight goes on, no bonus.
-//   uptime    keep your Signal up to the end of cycle n and the fight is won. The virus can't be broken, and every few
+//   uptime    keep your Integrity up to the end of cycle n and the fight is won. The virus can't be broken, and every few
 //             cycles its attacks come a cycle quicker.
 //   backup    a friendly process (o.hp of o.n) the virus's damage attacks hit instead of you on even cycles. Still up at
 //             the win, it's met; down, the fight goes on without the bonus and those attacks come back to you.
@@ -24,7 +24,7 @@ export const OBJECTIVES = {
   exfil: { name: 'Exfil', bonus: false }, // its n: CONFIG.exfil.escape (floorplan.mjs fight)
   priority: { name: 'Priority', n: 5, bonus: true },
   uptime: { name: 'Uptime', n: 8, every: 3, bonus: true },
-  backup: { name: 'Backup', hp: 0.6, bonus: true }, // its n: hp × your max Signal, as the fight starts
+  backup: { name: 'Backup', hp: 0.6, bonus: true }, // its n: hp × your max Integrity, as the fight starts
   clean: { name: 'Clean run', bonus: true },
 };
 export const ROLLED = ['priority', 'uptime', 'backup', 'clean'];
@@ -123,12 +123,12 @@ export function objectiveTip(e, partName = null) {
   if (o.kind === 'priority') return `Priority: break the ${partName || 'marked part'} by the end of cycle ${o.n} for the bonus. The rest can stand.\n▸ Focus it first. Missed, the fight goes on.`;
   if (o.kind === 'backup') return `Backup: a process of yours. The virus's damage attacks hit it instead of you on even cycles. Still up when the virus breaks, it pays the bonus.\n▸ Cut or stall the hits marked for it. Lost, the fight goes on.`;
   if (o.kind === 'clean') return `Clean run: break every part with no status on you at the end of any cycle for the bonus.\n▸ Cleanse or dodge each status before its cycle ends. Missed, the fight goes on.`;
-  return `Uptime: keep your Signal up to the end of cycle ${o.n} and the fight is won. The virus can't be broken, and every ${cyc(OBJECTIVES.uptime.every)} its attacks come a cycle quicker.\n▸ Defend: shields, cuts and heals win it.`;
+  return `Uptime: keep your Integrity up to the end of cycle ${o.n} and the fight is won. The virus can't be broken, and every ${cyc(OBJECTIVES.uptime.every)} its attacks come a cycle quicker.\n▸ Defend: shields, cuts and heals win it.`;
 }
 // The room card's line and the map's tag: what walking in brings.
 export function objectiveLine(kind) {
   const n = OBJECTIVES[kind].n;
   if (kind === 'backup') return 'Keep the Backup up. The virus hits it instead of you on even cycles.';
   if (kind === 'clean') return 'End no cycle with a status on you.';
-  return kind === 'priority' ? `Break the marked part within ${cyc(n)}.` : `Keep your Signal up for ${cyc(n)}. The virus can't be broken.`;
+  return kind === 'priority' ? `Break the marked part within ${cyc(n)}.` : `Keep your Integrity up for ${cyc(n)}. The virus can't be broken.`;
 }

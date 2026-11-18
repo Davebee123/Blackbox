@@ -12,7 +12,7 @@
 //              at the base: what invasions pay in, so the wall is where their code goes.
 // Filters and the +N chip (architecture, the consortium's Grid, a Firewall Node, Root 5) add on top.
 // Its effective level is what it blocks outright: an invader at or under it bounces.
-import { emit, warn, hooks, syncServer } from './combat.mjs';
+import { emit, warn, hooks } from './combat.mjs';
 import { CONFIG, line, codeUnit } from './data.mjs';
 import { filterStat } from './filters.mjs';
 import { FACTIONS } from './factions.mjs';
@@ -30,17 +30,12 @@ export const FIREWALL = {
 export const BASE_GAP = 2; // your home wall's base: your highest attached server's level, less this (never under 1)
 export const TIERS = 6; // +1 to +6 on top of the base
 // Perks by tier, for any firewall (home, outpost, hub). Add one here and read it with tierPerk().
-// raid: +RAID_PERK of your server's max Integrity each (home only).
-export const RAID_PERK = 0.05;
 export const TIER_PERKS = [
   { tier: 1, perk: 'slot', name: '+1 filter slot' },
-  { tier: 1, perk: 'raid', name: '+5% max Integrity' },
   { tier: 2, perk: 'defrag', name: '30% faster defrag' },
   { tier: 3, perk: 'slot', name: '+1 filter slot' },
-  { tier: 3, perk: 'raid', name: '+5% max Integrity' },
   { tier: 4, perk: 'wear', name: '25% slower fragmentation' },
   { tier: 5, perk: 'slot', name: '+1 filter slot' },
-  { tier: 5, perk: 'raid', name: '+5% max Integrity' },
   { tier: 6, perk: 'slot', name: '+1 filter slot' },
 ];
 export const perksAt = (tier) => TIER_PERKS.filter((p) => p.tier <= tier);
@@ -64,7 +59,6 @@ export function baseOf(s, loc = null) {
 export const tierOf = (s, loc = null) => Math.min(TIERS, fwAt(s, loc).plus || 0);
 export const tierPerk = (s, id, loc = null) => perksAt(tierOf(s, loc)).filter((p) => p.perk === id).length;
 export const tierSlots = (s) => tierPerk(s, 'slot'); // your home firewall's extra filter slots
-export const raidShare = (s) => RAID_PERK * tierPerk(s, 'raid'); // your server's extra max Integrity, as a share
 // Its level before filters, the +N chip and fragmentation: base + tier.
 export const fwLevel = (s, loc = null) => baseOf(s, loc) + tierOf(s, loc);
 
@@ -135,8 +129,7 @@ export function firewallCommand(s, text, at = clock()) {
     // An upgrade rebuilds it whole: fragmentation (and a defrag running) are gone with it.
     const mended = f.frag > 0 || f.defragUntil > at;
     f.frag = 0; f.wear = 0; f.defragUntil = 0;
-    const got = TIER_PERKS.filter((p) => p.tier === t && (!loc || p.perk !== 'raid')).map((p) => p.name);
-    if (!loc) syncServer(s); // a tier can add max Integrity
+    const got = TIER_PERKS.filter((p) => p.tier === t).map((p) => p.name);
     return emit(s, 'firewall', `${where}: +${t} over its base, level ${fwLevel(s, loc)}${got.length ? `. ${got.join(', ')}` : ''}${mended ? '. Every block is whole again' : ''}.`, loc ? { location: loc.id } : {});
   }
   if (verb === 'defrag') {
@@ -172,7 +165,7 @@ export function developerDamage(s, text) {
   const [, what, arg] = text.split(' '), n = Number(arg) || 0;
   if (what === 'frag') { fwOf(s).frag = Math.min(FIREWALL.blocks, n); return emit(s, 'info', `Developer: ${fwOf(s).frag} of your wall's blocks fragmented.`); }
   s.server.integrity = Math.max(1, Math.min(s.server.max, n));
-  emit(s, 'info', `Developer: your server at ${s.server.integrity}/${s.server.max} Integrity.`);
+  emit(s, 'info', `Developer: your Integrity at ${s.server.integrity}/${s.server.max}.`);
 }
 
 // ---------- old saves ----------

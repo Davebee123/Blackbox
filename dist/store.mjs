@@ -1,5 +1,5 @@
 // Every hub's Shop, one shape (docs/factions-plan.md 5, docs/economy.md Shops). Opens with the contract board (boardOpen).
-//   Tools      relays, key crackers, trace injectors, Signal patches, hot-swap kits: always in stock, at fixed prices
+//   Tools      relays, key crackers, trace injectors, Integrity patches: always in stock, at fixed prices
 //   The shelf  four protocols at your level with the hub's implicit: two blues, a yellow at the second tier and one at
 //              the third (rep tiers, factions.mjs REP_TIERS). It rerolls every 30 minutes of play (s.pace.ms, never the
 //              wall clock), and a level up rerolls it; what you buy stays sold until then
@@ -28,8 +28,7 @@ export const TOOLS = {
   relay: { name: 'Relay', about: 'Pings the unknown servers next to a server you have taken over, and flags a contract’s signal. Install it on a server you hold.', credits: (L) => 120 + 8 * L },
   cracker: { name: 'Key cracker', about: 'Reveals the vault key of a server you have found. Use it from the server’s map card.', credits: (L) => 60 + 6 * L },
   injector: { name: 'Trace injector', about: 'Adds 30% to the trace on an unknown server. Use it from the server’s map card.', credits: (L) => 80 + 6 * L },
-  signal: { name: 'Signal patch', about: 'Refills your Signal at once.', credits: (L) => 30 + 3 * L },
-  repair: { name: 'Hot-swap kit', about: 'Repairs your server’s Integrity at once.', credits: (L) => 40 + 5 * L },
+  signal: { name: 'Integrity patch', about: 'Refills your Integrity at once.', credits: (L) => 30 + 3 * L },
 };
 // Each hub's chase line: [protocol, the tier it opens at].
 export const CHASE = {
@@ -134,8 +133,7 @@ export const buy = (s, what) => buyAt(s, 'halcyon', what);
 // A tool, delivered. The cut goods (code lots, Exploits, the sealed item) still land for a transfer bought before v61.
 export function deliverGoods(s, id, L, f = 'halcyon') {
   if (['relay', 'cracker', 'injector'].includes(id)) { items(s)[id] = (items(s)[id] || 0) + 1; return; }
-  if (id === 'signal') { s.signal = maxSignal(s); if (s.run) s.run.integrity = s.run.max; return emit(s, 'heal', 'Signal patched to full.'); }
-  if (id === 'repair') { s.server.integrity = s.server.max; return emit(s, 'heal', `Server back to ${s.server.max}/${s.server.max}.`); }
+  if (id === 'signal' || id === 'repair') { s.server.integrity = s.server.max = maxSignal(s); if (s.run) s.run.integrity = s.run.max; return emit(s, 'heal', 'Integrity patched to full.'); } // repair: a hot-swap kit bought before the bars merged
   if (['cipher', 'worm', 'kernel'].includes(id)) return gainCode(s, { [id]: 3 + Math.floor(L / 5) }, 'Bought: ');
   if (id === 'exploit') return gainCode(s, { exploit: 1 }, 'Bought: ');
   if (id === 'crate') return addItem(s, rollItem(() => rand(s), { level: L, rarity: 'tuned', faction: f }), 'Unsealed: ');

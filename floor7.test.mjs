@@ -120,7 +120,7 @@ test("Smash and Grab (3): breaking a part's shield takes a third of it for 2 cyc
   assert.equal(e.shield || 0, 0, 'then it fades');
 });
 
-test('Payroll (3): every 4th cycle heals 4% of your max Signal', () => {
+test('Payroll (3): every 4th cycle heals 4% of your max Integrity', () => {
   const s = vet(); wearSet(s, 'payroll'); const e = fight(s);
   const heals = () => s.logs.filter((x) => /Payroll \(3\)/.test(x.message || '')).length;
   s.run.integrity = 500;

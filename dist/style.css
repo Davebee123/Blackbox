@@ -1084,10 +1084,6 @@ html[data-sfx-floor="7"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.spa
 .wall-bar.watch span { background: var(--hot); }
 .mnode.invader.watch .vbody { fill: rgba(255, 91, 61, 0.25); stroke: var(--hot); stroke-width: 1.2; }
 .gstash .svc.off { opacity: 0.7; border-style: dashed; }
-.degraded { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; padding: 6px 10px; border: 1px solid var(--hot); border-radius: 4px; background: rgba(255, 91, 61, 0.08); font: 600 12px var(--mono); letter-spacing: 1px; cursor: help; }
-.degraded b { color: var(--hot); }
-.degraded span { color: var(--text); }
-.degraded em { margin-left: auto; margin-right: 10px; font-style: normal; color: var(--hot); }
 /* The wall's three bands: what it blocks, holds at a siege, and what breaks through. */
 .bands { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 8px 0 4px; }
 .band { padding: 5px 8px; border: 1px solid var(--line-strong); border-radius: 3px; font: 600 12px var(--mono); text-align: center; cursor: help; }
@@ -1101,7 +1097,7 @@ html[data-sfx-floor="7"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.spa
 .intent.mine.idle { color: var(--dim); border-style: dashed; justify-content: center; }
 .meter-note { font: 600 10px var(--mono); letter-spacing: 1px; padding: 1px 5px; border-radius: 3px; border: 1px solid currentColor; white-space: nowrap; }
 .meter-note.siege { color: var(--amber); }
-.meter-note.breach, .meter-note.degraded { color: var(--hot); }
+.meter-note.breach { color: var(--hot); }
 /* Services: one row per service; the install queue's progress bar. */
 .svc { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--line-strong); border-left-width: 3px; border-left-color: var(--line-strong); border-radius: 4px; background: var(--inset); }
 .svc.on { border-left-color: var(--you); }
@@ -1670,7 +1666,6 @@ h1 .slots { font-size: 13px; } h1 .slots i { width: 13px; height: 13px; } h1 .sl
 .wr-mark.inv i { background: var(--hot); box-shadow: 0 0 6px var(--hot); } .wr-mark.inv small { color: var(--hot); top: calc(100% + 14px); }
 .wr-scale { position: absolute; left: 0; right: 0; top: 24px; height: 12px; font: 10px var(--mono); color: var(--dim); }
 .wr-scale span { position: absolute; transform: translateX(-50%); }
-.wall-ruler.down { padding: 6px 10px; border: 1px dashed var(--hot); color: var(--hot); font: 11px var(--mono); }
 .srv-card .lvl-row { margin-bottom: 10px; }
 .srv-hp { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: var(--you); }
 .srv-hp .glyph { margin: 0; width: 16px; height: 16px; }
@@ -1800,33 +1795,20 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .meter[data-command] { cursor: pointer; }
 .meter[data-command] .meter-buy { display: inline-flex; }
 .meter[data-command]:hover .meter-buy, .meter[data-command]:focus-visible .meter-buy { background: var(--amber); color: var(--bg); }
-/* Signal in the top bar: five ascending bars, like reception. */
-.meter-signal { align-items: center; }
-.meter-signal[hidden] { display: none; }
-.sig-bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 16px; }
-.sig-bars i { width: 5px; background: rgba(127, 209, 199, 0.14); border-radius: 1px; transition: background 0.3s; }
-.sig-bars i:nth-child(1) { height: 4px; } .sig-bars i:nth-child(2) { height: 7px; } .sig-bars i:nth-child(3) { height: 10px; } .sig-bars i:nth-child(4) { height: 13px; } .sig-bars i:nth-child(5) { height: 16px; }
-.sig-bars i.on { background: var(--you); box-shadow: 0 0 5px rgba(127, 209, 199, 0.5); }
-.meter-signal strong { color: var(--you); min-width: 3ch; }
-.meter-signal.weak .sig-bars i.on { background: var(--hot); box-shadow: 0 0 5px rgba(255, 91, 61, 0.5); }
-.meter-signal.weak strong { color: var(--hot); }
-/* Integrity: a server tower that drains from the top, two rack lines across it. */
-.srv-tower { position: relative; flex: none; box-sizing: border-box; width: 12px; height: 16px; padding: 1px; display: flex; align-items: flex-end; border: 1.5px solid var(--amber); border-radius: 2px; box-shadow: 0 0 5px rgba(241, 185, 47, 0.35); }
-.srv-tower b { display: block; width: 100%; background: var(--amber); border-radius: 0.5px; transition: height 0.3s; }
+/* Integrity: your health, a server tower that drains from the top, two rack lines across it (teal: yours). */
+.srv-tower { position: relative; flex: none; box-sizing: border-box; width: 12px; height: 16px; padding: 1px; display: flex; align-items: flex-end; border: 1.5px solid var(--you); border-radius: 2px; box-shadow: 0 0 5px rgba(127, 209, 199, 0.35); }
+.srv-tower b { display: block; width: 100%; background: var(--you); border-radius: 0.5px; transition: height 0.3s; }
 .srv-tower::before, .srv-tower::after { content: ''; position: absolute; left: 2px; right: 2px; height: 1px; background: var(--inset); }
 .srv-tower::before { top: 3px; } .srv-tower::after { top: 6px; }
 .meter-integrity.critical .srv-tower { border-color: var(--hot); box-shadow: 0 0 5px rgba(255, 91, 61, 0.4); }
 .meter-integrity.critical .srv-tower b { background: var(--hot); }
-.meter-integrity strong { min-width: 3ch; }
-/* Resting: the next bar up breathes while it refills. */
-.meter-signal.resting .sig-bars i.on + i:not(.on), .meter-signal.resting .sig-bars i:first-child:not(.on) { animation: sig-rest 1.2s ease-in-out infinite; }
-@keyframes sig-rest { 50% { background: rgba(127, 209, 199, 0.5); } }
-.no-motion .meter-signal .sig-bars i { animation: none; }
+.meter-integrity strong { min-width: 3ch; color: var(--you); }
+.meter-integrity.weak strong, .meter-integrity.critical strong { color: var(--hot); }
 @media (max-width: 1700px) and (min-width: 901px) { .meters { gap: 14px; } }
-@media (max-width: 1440px) and (min-width: 901px) { .meter-signal .meter-label { display: none; } .meters { gap: 10px; } }
+@media (max-width: 1440px) and (min-width: 901px) { .meters { gap: 10px; } }
 @media (max-width: 1300px) and (min-width: 901px) { .meter-level .meter-bar { display: none; } }
 @media (max-width: 1700px) and (min-width: 901px) { .meter-level { min-width: 0; } .meter-level .meter-bar { width: 40px; } .topbar { gap: 6px 14px; } }
-@media (max-width: 1560px) and (min-width: 901px) { .meter-signal .meter-label, .meter-integrity .meter-label { display: none; } }
+@media (max-width: 1560px) and (min-width: 901px) { .meter-integrity .meter-label { display: none; } }
 @media (max-width: 1320px) and (min-width: 901px) { .ctx-tabs .brand-name { display: none; } }
 /* Lists of rows (a hub's work and payloads); protocols on the Loadout page */
 .craft-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
@@ -3239,12 +3221,14 @@ details.map-pick { pointer-events: auto; }
 .tag.tag-crew { color: #1a1206; background: var(--gold, #e8b54a); border-color: var(--gold, #e8b54a); font-weight: 700; letter-spacing: 0.06em; box-shadow: 0 0 0 1px rgba(232, 181, 74, 0.35), 0 0 8px rgba(232, 181, 74, 0.25); }
 
 .sig-eta { color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; margin-left: 4px; }
-/* Reboot sickness: what's off your max Signal while your server reboots. */
-.sig-sick, .meter small.sig-sick { color: var(--hot); font: 600 11px var(--mono); font-style: normal; font-variant-numeric: tabular-nums; margin-left: 4px; }
-.meter-signal.weak .sig-eta { color: var(--amber); }
+.meter-integrity.weak .sig-eta { color: var(--amber); }
 .sp-row.k-lost { border-left-color: var(--hot); } .sp-row.k-lost .sp-ico { color: var(--hot); }
 .sp-row.k-time .sp-qty { font-variant-numeric: tabular-nums; }
 .gain.loss .sp-kicker { color: var(--hot); }
+/* What a disconnect undid (visit.mjs): the visit's rooms, XP and files, struck through. */
+.sp-undone { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; cursor: help; }
+.sp-undone small { flex-basis: 100%; font: 11px var(--mono); letter-spacing: 1px; color: var(--muted); }
+.sp-undone s { padding: 2px 8px; font: 600 12px var(--mono); color: var(--gray); border: 1px solid var(--line); border-radius: 2px; }
 
 /* Phones: three timeline columns (Now, +1, +2), slimmer chips, skill names that fit, labelled credits. */
 @media (max-width: 480px) {
@@ -3254,7 +3238,7 @@ details.map-pick { pointer-events: auto; }
   .intent .ico { display: none; }
   .intent { padding-left: 4px; padding-right: 4px; }
   .tray { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .meter:not(.meter-signal):not(.meter-integrity) .meter-label { display: inline; font-size: 10px; }
+  .meter:not(.meter-integrity) .meter-label { display: inline; font-size: 10px; }
 }
 
 /* ---------- choosing your first class (view.mjs classPickMarkup, app.js pickClass; docs/ui.md The class picker) ---------- */
@@ -3966,15 +3950,14 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 
 /* ---- Phone layout (≤900px): the top bar in two tidy rows, a map you can read, a fight HUD that stacks. ---- */
 @media (max-width: 900px) {
-  /* top bar, three rows on a grid: brand · pager · credits, then Integrity and Signal, then the tabs */
+  /* top bar, three rows on a grid: brand · pager · credits, then Integrity, then the tabs */
   .topbar { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: var(--s4) var(--s5); }
   .topbar > .meters { display: contents; }
   .topbar .brand { grid-area: 1 / 1; }
   .topbar .pager { grid-area: 1 / 2; margin: 0; justify-self: start; }
   .meters > .meter, .meters > .meter[data-command] { padding: 0; min-height: 26px; border-left: 0 !important; }
   .meters > .meter:last-child { grid-area: 1 / 4; justify-self: end; }
-  #meter-integrity { grid-area: 2 / 1 / 3 / 3; }
-  #meter-signal { grid-area: 2 / 3 / 3 / 5; justify-self: end; }
+  #meter-integrity { grid-area: 2 / 1 / 3 / 5; }
   .topbar .modules { grid-area: 3 / 1 / 4 / 5; }
   .modules { justify-content: space-between; gap: 0; }
   .modules button { padding: 6px 5px; font-size: 13px; }

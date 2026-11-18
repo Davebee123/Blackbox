@@ -93,7 +93,7 @@ test('the fight HUD: a crewmate is a thin violet line with its card; none when s
   selectEncounter(s, 'random', 2, { level: 1, family: 'ransomware', mutation: null });
   const html = crewLineMarkup(s);
   assert.equal((html.match(/class="ph-mate/g) || []).length, 1);
-  assert.match(html, /title="[^"]+: Bastion, Lv \d+\.\n(Signal \d+\/\d+\.|Down\.)"/);
+  assert.match(html, /title="[^"]+: Bastion, Lv \d+\.\n(Integrity \d+\/\d+\.|Down\.)"/);
   assert.match(html, /<i style="width:\d+(\.\d+)?%"><\/i>/);
 });
 
@@ -124,11 +124,11 @@ test('the map on a phone: chips for the rail and the tracker, each a tap path; n
   const s = fresh();
   assert.match(mapChips(s), /class="ph-chip job" data-phone="jobs"/); // a fresh save holds its first contract
   assert.ok(!mapChips(s).includes('ph-chip hot') && !mapChips(s).includes('ph-chip ok')); // a chip at zero is left out
-  s.degraded = { until: Date.now() + 60000, ms: 600000 };
+  s.invasion = { id: 'i1', name: 'WORM-77', kind: 'raider', family: 'worm', level: 3, state: 'breach', hp: 1 }; // a breach: a hot threat
   const chips = mapChips(s);
   assert.match(chips, /class="ph-chip hot" data-phone="threats"/);
   for (const b of controls(chips)) assert.match(b, /data-phone="(threats|jobs)"/, b);
-  assert.match(mapRail(s, 'threats'), /class="tr-row [^"]*" data-select="server"/); // the list a chip opens: the desktop's rows
+  assert.match(mapRail(s, 'threats'), /class="tr-row [^"]*" data-select="invader"/); // the list a chip opens: the desktop's rows
   const phone = mapMarkup(s, null, 'mine', { side: false, phone: true }), desk = mapMarkup(s, null, 'mine', { side: false });
   assert.ok(phone.includes('ph-chips') && !phone.includes('map-lcol'));
   assert.ok(desk.includes('map-lcol') && !desk.includes('ph-chip')); // the desktop keeps its rail

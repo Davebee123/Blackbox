@@ -179,7 +179,7 @@ test('a member who drops in earns by the damage they dealt; you split the rest w
   assert.ok(Math.abs(duo.xp - Math.round(solo.xp * (1 + 0.1) * (1 - share))) <= 1, `${duo.xp} vs ${solo.xp} × 1.1 × ${1 - share}`);
 });
 
-test('the sim crew: from level 5, Stock gear, and Signal that carries from fight to fight on a run', () => {
+test('the sim crew: from level 5, Stock gear, and Integrity that carries from fight to fight on a run', () => {
   const low = fresh();
   play(low, 'crew sim bastion');
   assert.ok(!(low.crewSim || []).length, 'not before level 5');

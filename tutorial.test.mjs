@@ -100,7 +100,7 @@ test('the rooms tour on SPRAWL-00, in order: walk in, the virus\'s card, then Ja
   winRoom(s);
   t = tour(s);
   assert.equal(t.id, 'tour-jackout', 'a fight won: Jack out (SPRAWL-00 has no cache, hunter or rest room)');
-  assert.match(t.text, /jacking out of the server banks/);
+  assert.match(t.text, /jacking out saves the visit/);
   play(s, 'jack out');
   assert.equal(t.done(s, t.mark?.(s)), true);
   markSeen(s, t.id);
@@ -147,7 +147,7 @@ test('the rooms tour meets a cache, the hunter and the rest room when they first
   FP.act(s, 'pull');
   assert.equal(t.done(s, c), true, 'taken');
   markSeen(s, t.id);
-  // The rest room, when there's Signal to get back.
+  // The rest room, when there's Integrity to get back.
   const rest = FP.roomList(s).find((r) => r.kind === 'rest');
   R.signal = 10;
   place(rest.id);
@@ -187,7 +187,7 @@ test('the rooms tour shows once a save: done steps stay done through a save, a n
 });
 
 // A server's takeover path and its run threats, each taught the first time it's on the map (tips.mjs room-*, run-*).
-test('a server map teaches its vault, Core, elite, a rival and low Signal, once each', async () => {
+test('a server map teaches its vault, Core, elite, a rival and low Integrity, once each', async () => {
   const RV = await import('./dist/rivals.mjs');
   const s = newPlayer();
   s.hackers = { [s.loadout.archetype]: { level: 12, xp: 0 } };
@@ -204,8 +204,8 @@ test('a server map teaches its vault, Core, elite, a rival and low Signal, once 
   if (kinds.has('core')) assert.ok(ids.includes('room-core'), ids.join());
   if (kinds.has('elite')) assert.ok(ids.includes('room-elite'), ids.join());
   assert.ok(ids.includes('run-rival'), ids.join());
-  assert.ok(!ids.includes('run-signal'), 'full Signal: no warning yet');
+  assert.ok(!ids.includes('run-signal'), 'full Integrity: no warning yet');
   s.rooms.signal = Math.floor(s.rooms.max * 0.2);
-  assert.deepEqual(tipsHere(), ['run-signal'], 'low Signal: the warning, once');
+  assert.deepEqual(tipsHere(), ['run-signal'], 'low Integrity: the warning, once');
   assert.deepEqual(tipsHere(), []);
 });

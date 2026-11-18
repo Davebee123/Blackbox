@@ -151,7 +151,7 @@ test('the floor whose colours are up: the map\'s floor, a run\'s server; home ke
   assert.equal(floorOf(s, { module: 'combat', loc: { depth: 2 } }), null, 'a fight at home');
   assert.equal(lowOf(0.24), true);
   assert.equal(lowOf(0.25), false);
-  assert.equal(lowOf(null), false, 'home: a resting Signal is no danger');
+  assert.equal(lowOf(null), false, 'home: a resting Integrity is no danger');
 });
 
 test('the casing\'s lamps show real state', () => {
@@ -160,18 +160,15 @@ test('the casing\'s lamps show real state', () => {
   assert.equal(L.pwr.cls, 'on');
   assert.equal(L.gate.cls, '');
   assert.equal(L.inst.cls, '');
-  s.degraded = { until: now + 1000 };
   s.invasion = { name: 'WORM', state: 'breach' };
   s.install = { startedAt: 0, doneAt: now * 2 };
   s.market = { transfers: [{ landsAt: now + 10 }] };
   s.daemons = ['watchman'];
   s.events = [{ card: 'feud' }];
   L = lampsOf(s, { now, gate: { phase: 'alert', virus: { name: 'CRYPTJACK' } }, until: { dmn: now + 5 } });
-  assert.deepEqual([L.pwr.cls, L.pwr.blink], ['hot', 'slow']);
+  assert.deepEqual([L.pwr.cls, L.pwr.blink], ['on', ''], 'power stays on: nothing crashes');
   assert.deepEqual([L.gate.cls, L.gate.blink], ['on', 'fast']);
   assert.match(L.gate.title, /^GATE: CRYPTJACK waiting/);
-  assert.equal(L.wall.cls, 'low', 'degraded dims the wall');
-  delete s.degraded;
   L = lampsOf(s, { now, until: {} });
   assert.deepEqual([L.wall.cls, L.wall.blink], ['hot', 'fast']);
   assert.deepEqual([L.inst.cls, L.inst.blink], ['on', 'busy']);
@@ -230,7 +227,7 @@ test('one setting: the old Effects setting folds into Screen effects (saves migr
   assert.doesNotMatch(view, /data-run="effects/, 'no separate Effects button');
 });
 
-test('your health on the screen\'s edge: warm under a half, Low Signal under a quarter, one look', () => {
+test('your health on the screen\'s edge: warm under a half, Low Integrity under a quarter, one look', () => {
   assert.deepEqual([warnOf(0.6), warnOf(0.49), warnOf(0.25), warnOf(0.2), warnOf(null)], [false, true, true, false, false]);
   const s = fresh();
   assert.deepEqual([screenState(s, { health: 0.4 }).warn, screenState(s, { health: 0.4 }).low], [true, false]);

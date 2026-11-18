@@ -1,4 +1,4 @@
-// The death recap (recap.mjs): what the Disconnected card shows of how you lost. Your Signal at the end of each of the
+// The death recap (recap.mjs): what the Disconnected card shows of how you lost. Your Integrity at the end of each of the
 // last cycles, the hits that did it (the killing blow marked, a charge's tell on it), the totals, and markup that shows
 // rather than explains: icons, numbers and short labels on the card, the sentences in its tooltips.
 import test from 'node:test';
@@ -14,7 +14,7 @@ import { deathRecap, recapMarkup, RECAP } from './dist/recap.mjs';
 CONFIG.enemyCrit = 0; CONFIG.misses = false;
 const hold = (s, n = 200) => { for (let i = 0; i < n && active(s); i++) { command(s, 'hold'); resolveCycle(s); } };
 const HURT = ['server-hit', 'encrypted', 'scrambled'];
-// A run on rooms (netrooms.test.mjs): into a process room, engaged, with Signal for a long fight.
+// A run on rooms (netrooms.test.mjs): into a process room, engaged, with Integrity for a long fight.
 function runFight() {
   const s = fresh(); s.tutorialCompleted = true;
   command(s, 'developer location ransomware');
@@ -92,7 +92,7 @@ test('the card shows it, not explains it: numbers, marks and labels; the sentenc
   assert.ok(tips.length >= r.bars.length + r.rows.length + 3, 'every bar, row and total has its tip');
   for (const t of tips) assert.match(t, /^[A-Z][^]*\.$/, `a tip is a sentence-case sentence: "${t}"`);
   // On the Disconnected card it sits over the rows that were there before.
-  const card = gainMarkup('Disconnected', 'X', [{ kind: 'lost', label: 'Taken out by X', qty: '', text: 'Signal lost' }], true, html);
+  const card = gainMarkup('Disconnected', 'X', [{ kind: 'lost', label: 'Taken out by X', qty: '', text: 'Integrity lost' }], true, html);
   assert.ok(card.indexOf('class="recap"') < card.indexOf('class="sp-rows"'));
   assert.equal(recapMarkup(null), '', 'nothing to show, nothing drawn');
 });

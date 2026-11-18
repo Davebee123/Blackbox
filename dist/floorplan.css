@@ -38,6 +38,12 @@
 .fp-hunt .fp-ic, .fp-hunt b { color: var(--hot); }
 .fp-reboot.on b { color: var(--hot); } /* the rooms are coming back */
 .fp-hunt.out .fp-ic, .fp-hunt.out b { color: var(--gray); }
+/* This visit (visit.mjs): what you've won since you connected, unsaved until you jack out. A dashed box, amber numbers. */
+.fp-visit { gap: var(--s4); padding: 2px var(--s4); border: 1px dashed var(--line-strong); border-radius: 2px; }
+.fp-visit b { color: var(--amber); }
+.fp-visit b small { margin-left: 3px; font: 600 10px var(--mono); letter-spacing: 1px; color: var(--dim); text-transform: uppercase; }
+.fp-visit.empty { opacity: 0.5; }
+.fp-unsaved { font: 600 9px var(--mono); letter-spacing: 1px; fill: var(--amber); pointer-events: none; }
 .fp-exfilstat .fp-ic, .fp-exfilstat b { color: var(--next); }
 .fp-tools { margin-left: auto; display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s4) var(--s5); min-width: 0; }
 .fp-rules { display: inline-flex; align-items: center; gap: var(--s2); }
@@ -303,7 +309,7 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 
 /* the rooms playtest: the old game's tabs and meters step aside */
 .rooms-mode .modules button[data-module="map"], .rooms-mode .modules button[data-module="mail"], .rooms-mode .modules button[data-module="server"], .rooms-mode .modules button[data-module="craft"],
-.rooms-mode #meter-integrity, .rooms-mode .meter:has(#vault-value), .rooms-mode #meter-signal { display: none; }
+.rooms-mode #meter-integrity, .rooms-mode .meter:has(#vault-value) { display: none; }
 
 /* ---- puzzle rooms (puzzle-view.mjs): the board over the map, in the map's own look. Amber structure and what you can
    use, red what bites (the worm, the Tracker, a charge about to go), steel what protects (a firewall), gold what you're

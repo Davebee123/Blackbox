@@ -1,4 +1,4 @@
-// The rooms playtest (GAME_RULES.md "Runs: servers as rooms", floorplan.mjs): the room graph and its generator, moving and its Signal cost,
+// The rooms playtest (GAME_RULES.md "Runs: servers as rooms", floorplan.mjs): the room graph and its generator, moving and its Integrity cost,
 // respawn timers, progress, the key walk and the vault, the hunters (a Patroller's loop, a Tracker's den), fog, the
 // terminal, the page, and the bot mapping a server. The interrupt: interrupt.test.mjs. The bodies and attack sets:
 // families.test.mjs.
@@ -98,7 +98,7 @@ test('every server is connected, sized by the table, and laid out as the doc ask
   assert.ok(FP.generate(3, { size: 'medium', kind: 'Lab', level: 10, floor: 1, author: 'lantern', hunter: 'patrol' }).den, '&hunter= forces one');
 });
 
-test('walking: a room\'s first entry on a visit costs 5% of your max Signal if you\'ve never been in it, 3% if you have; walked rooms and wait are free', () => {
+test('walking: a room\'s first entry on a visit costs 5% of your max Integrity if you\'ve never been in it, 3% if you have; walked rooms and wait are free', () => {
   const s = server({ hunter: null, size: 'small' }), R = s.rooms, g = R.graph;
   const max = R.max, cost = Math.round(max * FP.ROOMS.moveNew), again = Math.round(max * FP.ROOMS.move);
   const next = FP.neighbours(g, R.at).map((id) => g.rooms[id]).find((r) => !FP.FIGHTS.includes(r.kind)) || FP.neighbours(g, R.at).map((id) => g.rooms[id])[0];
@@ -263,7 +263,7 @@ test('the key walk: beat the guard post for the key, walk it to the vault, open 
   // It stays open: next visit needs no key.
   FP.jackOut(s); tick(10 * 60000); FP.connect(s);
   assert.ok(FP.coreOpen(s));
-  // Forcing a vault: 15% of your max Signal, no key.
+  // Forcing a vault: 15% of your max Integrity, no key.
   const t = server({ seed: 9, size: 'medium', hunter: 'patrol' }), v = t.rooms.graph.rooms[t.rooms.graph.vaults[0]];
   place(t, v.id);
   const before = t.rooms.signal;
@@ -280,7 +280,7 @@ test('the key walk: beat the guard post for the key, walk it to the vault, open 
   assert.equal(FP.coreOpen(a), false, 'the tape vault doesn\'t unseal /core');
 });
 
-test('caches: bait costs 10% of your max Signal to pull, cat tells you first; contents and progress', () => {
+test('caches: bait costs 10% of your max Integrity to pull, cat tells you first; contents and progress', () => {
   let found = null;
   for (let seed = 1; seed < 60 && !found; seed++) { const s = server({ seed, size: 'large' }); const c = FP.roomList(s).find((x) => x.kind === 'cache' && !x.mirror && FP.isBait(s, x)); if (c) found = { s, c }; }
   assert.ok(found, 'some cache is bait');
@@ -306,7 +306,7 @@ test('the rest room: 30% of your max, once a visit', () => {
   assert.ok(R.cleared[rest.id]);
 });
 
-test('home: Signal rests back at 20% a minute (the clock\'s speed in the playtest), and the server takes you back after 30 s', () => {
+test('home: Integrity rests back at 20% a minute (the clock\'s speed in the playtest), and the server takes you back after 30 s', () => {
   const s = server(), R = s.rooms;
   R.signal = 20;
   FP.jackOut(s);
@@ -568,7 +568,7 @@ test('the map chips: one badge language for state, countdowns and rings that tic
     assert.doesNotMatch(t, /\d+:\d\d|comes back in|refills in/i, `${room.path}: no countdown in its tooltip`);
     if (FP.seenOf(s, room.id) === 'kind') { assert.equal(head.replace(/\n.*/s, ''), room.path); assert.ok(!lines.join(' ').includes(room.path), `${room.path} says its name once`); }
   }
-  // The log: no Signal readout the strip already shows.
+  // The log: no Integrity readout the strip already shows.
   assert.ok(!R.log.some((l) => new RegExp(`${R.max}\\b`).test(l) && /\/\d+/.test(l)), R.log.join(' | '));
 });
 
@@ -722,11 +722,11 @@ test('the page is the map and a pop-up: it opens on a decision and on a click, c
   assert.equal(popOf(s, ui), c.id);
   html = pop(roomsMarkup(s, ui))[0];
   assert.match(html, /data-rooms="pull"[^>]*>Take it[\s\S]*data-fp-pop-close>Leave it</, 'standing in it: take it or leave it');
-  assert.match(html, FP.isBait(s, c) ? /Bait\. Taking it costs \d+ Signal\./ : /Clean: credits and code\./, 'and you see what it is, nothing to read first');
+  assert.match(html, FP.isBait(s, c) ? /Bait\. Taking it costs \d+ Integrity\./ : /Clean: credits and code\./, 'and you see what it is, nothing to read first');
   assert.doesNotMatch(html, /data-rooms="cat"/);
   const rest = roomOfKind(s, 'rest');
   place(s, rest.id); R.visit.moves++; R.signal = R.max;
-  assert.equal(popOf(s, ui), null, 'full Signal: nothing to decide');
+  assert.equal(popOf(s, ui), null, 'full Integrity: nothing to decide');
   R.signal = Math.round(R.max / 2);
   assert.equal(popOf(s, ui), rest.id);
   assert.match(pop(roomsMarkup(s, ui))[0], /data-rooms="rest"/);
@@ -773,7 +773,7 @@ test('a Mirror\'s mirrored cache: pulling it breaks the mirror, and the elite be
   assert.ok(R.cleared[c.id]);
 });
 
-test('after a lost fight, home shows your Signal resting from 0, and Connect waits for it', () => {
+test('after a lost fight, home shows your Integrity resting from 0, and Connect waits for it', () => {
   const s = server(), R = s.rooms, p = roomOfKind(s, 'process');
   place(s, p.id); FP.fight(s, p);
   s.run.integrity = 0; finish(s, 'crashed'); // not settled yet, as in the browser

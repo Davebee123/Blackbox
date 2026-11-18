@@ -64,10 +64,10 @@ function landsLine(s, i, p, to, c) {
     const lasts = Math.max(1, (i.does === 'overclock' ? NEW_TELLS.overclock.lasts : TELL.castLasts) - (fxOn(s, 'cast-short')?.fx.value || 0));
     const win = ` Can be interrupted ${windowWords(i, c)}.`;
     if (i.does === 'overclock') return `For ${cycles(lasts)}, every part takes double damage and every attack comes 1 cycle sooner.${win}`;
-    // Its price (tells.mjs tellPrice): the Signal the attacks due in its cycles would add, or the Integrity it grows.
+    // Its price (tells.mjs tellPrice): the Integrity the attacks due in its cycles would add, or the Integrity it grows.
     const cost = i.price != null ? ` That is ${i.price} more damage to ${you} from the attacks due then.` : '';
     const what = i.does === 'loud' ? `Every attack deals ${pct(TELL.loud - 1)} more damage for ${cycles(lasts)}.${cost}`
-      : i.does === 'grow' ? `Increases each part's Integrity by ${pct(TELLS[i.id]?.grow ?? TELL.grow)} of what it has left, ${i.grow || 0} in all. At your pace that costs you about ${i.price || 0} Signal.`
+      : i.does === 'grow' ? `Increases each part's Integrity by ${pct(TELLS[i.id]?.grow ?? TELL.grow)} of what it has left, ${i.grow || 0} in all. At your pace that costs you about ${i.price || 0} Integrity.`
       : `Every attack repeats 1 cycle faster for ${cycles(lasts)}.${cost}`;
     return what + afterOf(s) + win;
   }
@@ -86,7 +86,7 @@ function landsLine(s, i, p, to, c) {
   return `Beat, ${when(c)}. Copies the command you fire then and turns it on you.${copy}${twice}`;
 }
 // The Mimic's beat (tells.mjs copyOf): what the command you have selected (cmd: { ability, target }, none: hold) would
-// copy onto you, for the beat cell's chip, its tooltip and the red ghost on your Signal bar or ◆ (view.mjs). col: how
+// copy onto you, for the beat cell's chip, its tooltip and the red ghost on your Integrity bar or ◆ (view.mjs). col: how
 // many cycles until the beat. null with no beat on the board, or one that sees nothing of you.
 export function beatCopy(s, cmd) {
   const b = active(s) ? beatOn(s) : null;
@@ -228,7 +228,7 @@ function readOf(s, v, p) {
   if (p.bin) { const h = p.binHeld && s?.encounter?.wiped?.[p.binHeld.id] >= s.encounter.cycle ? ABILITIES[p.binHeld.id]?.name : null; return [`Holds the skill the Wipe takes${h ? `: ${h} now` : ''}. Push it past a tick while it holds one, and the skill comes back${p.binCool ? ', still cooling' : ', ready'}.`, 'After a Wipe, cross one of its ticks.', null]; }
   if (p.cnc) { const z = v.parts.filter((x) => x.zombie && alive(x)).length; return [`${p.attack && z ? `${deals(hitOf(s, p))} ${every(p.attack.interval)}, every Zombie at once, a share for each of the ${z} standing.` : 'Silent, with no Zombies left to fire.'} When it breaks, everything left scatters and the fight ends, paying ${BODY.botnet.end} of a kill.`, 'Clear the Zombies first, or break it when low.', null]; }
   if (p.zombie) return ['Fires its share of the C&C\'s Volley. Scatters when the C&C breaks.', 'Clear every Zombie for a bigger kill.', null];
-  if (p.payload) { const f = fuseOf(v); return [`${p.attack ? attackRead(s, v, p)[0] : 'Has no attack.'} Its fuse has ${fuseLeft(v, p)} left. ${f.counts === 'cmd' ? 'Each hit of your commands on it, ◆ included,' : 'Each hit on it, burns and helpers included,'} burns 1, and each of its ticks ${BODY.fuse.tick}.${f.wind ? ` It winds back up ${f.wind} a cycle.` : ''} At 0 it detonates for ${pct(BODY.fuse.blast)} of your max Signal, and its loot is gone.`, f.counts === 'cmd' ? 'Land few big hits, or use burns.' : 'Land one big hit a cycle, and no helpers.', null]; }
+  if (p.payload) { const f = fuseOf(v); return [`${p.attack ? attackRead(s, v, p)[0] : 'Has no attack.'} Its fuse has ${fuseLeft(v, p)} left. ${f.counts === 'cmd' ? 'Each hit of your commands on it, ◆ included,' : 'Each hit on it, burns and helpers included,'} burns 1, and each of its ticks ${BODY.fuse.tick}.${f.wind ? ` It winds back up ${f.wind} a cycle.` : ''} At 0 it detonates for ${pct(BODY.fuse.blast)} of your max Integrity, and its loot is gone.`, f.counts === 'cmd' ? 'Land few big hits, or use burns.' : 'Land one big hit a cycle, and no helpers.', null]; }
   // (One carrying the family's Surge, parts.mjs PARTS.steadyCarry, keeps it when the Rig breaks.)
   if (fam === 'cryptominer' && p.id === 'cooler') return [`${p.attack ? `${attackRead(s, v, p)[0]} ` : ''}Keeps the Rig cool. When broken, the Rig gains ${BODY.heat.hot} heat a cycle instead of ${BODY.heat.cooled}, and every Hash deals ${pct(BODY.heat.hard - 1)} more damage.${p.attack ? '' : ` If the Rig breaks first, the Cooler takes over its Hash, uncooled, at ${BODY.heat.hot} heat a cycle.`}`, 'Vent whichever part is left hashing, or let it cook.', { text: 'cools the Rig', icon: 'scheduler', link: 'rig' }];
   if (p.kind === 'fragment' && p.attack && !p.raidAdd) return [`${deals(hitOf(s, p))} ${every(p.attack.interval)}.`, String(p.id).startsWith('dropper') ? 'Break it, or hit every part.' : 'Hit every part to clear it.', null];

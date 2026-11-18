@@ -83,7 +83,7 @@ const FARM = ['foreman', 'heatsink', 'coldwallet'];
 const LAIR_NAMES = { 'nb-deadbolt': 'Bolt Cutter', 'nb-tripmine': 'Defused', 'nb-hashlord': 'Hash Collision', 'nb-backorifice': 'Port Closed', 'nb-patchday': 'Out of Band', 'nb-floodwall': 'Spillway', 'nb-mirrorshade': 'Seven Years', 'nb-sleepwalker': 'Wake-up Call', 'nb-echolalia': 'Last Word' };
 // The floors from 2 (their sticker floor-<n>). Floor 5 also gives Deepwalker, floor 8 the matte casing.
 const FLOOR_ACH = { 2: ['Down the Line', 5], 3: ['Stacked', 10], 4: ['Cold Open', 10], 5: ['Core Sample', 25], 6: ['Ring Zero', 25], 7: ['Sinker', 25], 8: ['Rock Bottom', 50] };
-const FACTION_ACH = { halcyon: 'Preferred Customer', glassjaw: 'Inner Circle', kestrel: 'Key Account', lantern: 'On the Signal', nullchoir: 'Cantor' };
+const FACTION_ACH = { halcyon: 'Preferred Customer', glassjaw: 'Inner Circle', kestrel: 'Key Account', lantern: 'On the Integrity', nullchoir: 'Cantor' };
 const CLASS_ACH = { breaker: 'Wrecking Ball', bastion: 'Five Nines', infiltrator: 'Ghost Protocol', operator: 'Orchestrated' };
 // Sets worth more: the deep ones (floors 6 to 8 and the crew dungeon's).
 const BIG_SETS = new Set(['deeparchive', 'bedrock', 'mesh']);
@@ -176,7 +176,7 @@ const listed = () => (LIST ||= [ // the list as written; achievements() (below, 
   A('t-solo', 'feat', 'Lone Wolf', 'Beat a ◆ CREW elite with no crew beside you.', 25, { has: flag('t-solo'), reward: { sticker: 'a-solo' } }),
   A('t-norest', 'feat', 'No Rest', 'Map a server on a visit in which you never rest.', 25, { has: (s) => (s.locations || []).some((l) => l.floorplan?.mapped && l.floorplan.mappedRest === false) }),
   A('t-thread', 'feat', 'By a Thread', 'Win a fight with under 5% of your health left.', 10, { hidden: true, hint: 'Closer than it looked.', has: flag('t-thread'), reward: { sticker: 'a-thread' } }),
-  A('t-onesignal', 'feat', 'Hang In There', 'Win a fight with 1 Signal left.', 25, { hidden: true, hint: 'Closer than a thread.', has: flag('t-onesignal') }),
+  A('t-onesignal', 'feat', 'Hang In There', 'Win a fight with 1 Integrity left.', 25, { hidden: true, hint: 'Closer than a thread.', has: flag('t-onesignal') }),
 ].map((a) => ({ ...a, has: a.has || ((s) => { const [n, N] = a.progress(s); return n >= N; }) })));
 export const achById = (id) => achievements().find((a) => a.id === id) || null;
 export const pointsOf = (s) => achievements().reduce((n, a) => n + (earned(s, a.id) ? a.pts : 0), 0);
@@ -221,7 +221,7 @@ export function shownAchievements(s, n = PIN_MAX) {
 export const DECOR_REWARDS = {
   'x-floor-2': { district: 'backhaul' }, // Down the Line: the line to the rail yards
   'x-mapper': { district: 'stacks' }, // Mapper: twenty servers mapped, and the towers they run in
-  'f-lantern': { district: 'coldline' }, // On the Signal: LANTERN's harbour and its lighthouse
+  'f-lantern': { district: 'coldline' }, // On the Integrity: LANTERN's harbour and its lighthouse
   'c-crowns': { district: 'tarbeach' }, // Every Crown: up on the roofs
   'c-patient': { prop: 'mug' }, // Long Uptime: a long night
   't-program': { prop: 'duck' }, // Zero Exceptions: rubber-duck debugging

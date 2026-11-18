@@ -62,12 +62,12 @@ import { programMarkup, progNow, progTarget, progText, progMove, progOnPart, pro
 import { unlocked as routinesOpen, LOCKED as ROUTINES_LOCKED } from './routines.mjs';
 import { bodyTags, AUTHOR_FAMILIES, familyName } from './families.mjs';
 import { heatOf } from './parts.mjs';
-import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, quirkLine, labelOf, verdictOf, strength, sendersOf, senderGrade, sendsAt, streakOf, streakMult, STREAK, SCOUT, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine, sendTop, countsAt, wallSafety } from './invasion.mjs';
+import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, fmtLeft, bountyOf, tellOf, quirkLine, labelOf, verdictOf, strength, sendersOf, senderGrade, sendsAt, streakOf, streakMult, STREAK, SCOUT, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine, sendTop, countsAt, wallSafety } from './invasion.mjs';
 import { reqLevel, meetsReq, shownRarity, RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS, rarityName, CHASE_LINE } from './gear.mjs';
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, skillOrder, barSlots, isRunSkill } from './data.mjs';
-import { XP_KINDS, rebootSick, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, turboOn, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, loaded, loadedOn, slotCount, maxSignal, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, freeSlot, rigOf, stashItem, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, capOf, asleep, frozenNow } from './combat.mjs';
+import { XP_KINDS, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, turboOn, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, loaded, loadedOn, slotCount, maxSignal, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, freeSlot, rigOf, stashItem, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, capOf, asleep, frozenNow } from './combat.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState, freeTiers, blastOf, livingParts, keptItem } from './combat.mjs';
 import { tripwireOf, zipOf, heldOf } from './order.mjs';
@@ -143,14 +143,14 @@ const icon = (name) => `style="--icon:url('ui/icons/${name}.svg')"`;
 const effectLabel = (i) => (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'fuse' ? `−${i.amount}` : i.effect === 'buffer' ? `+${i.amount}` : i.effect === 'thaw' ? 'joins' : i.effect === 'boot' ? `${i.amount} hp` : (i.hit ? `−${i.hit} · ` : '') + (i.effect === 'encrypt' ? `+${i.amount}` : i.effect === 'scramble' ? `${i.amount} cyc` : i.effect === 'heal' ? `+${i.amount} hp` : i.effect === 'mirror' ? `${i.amount}% back` : i.effect === 'reboot' || i.effect === 'redeploy' ? `${i.amount} hp` : i.effect === 'deliver' ? '+box' : i.effect === 'unpack' ? `${i.amount} drop` : '+frag'));
 const TARGETS = { damage: 'Integrity', encrypt: 'damage every cycle, stacking, until it breaks', scramble: 'your attacks may hit you', replicate: 'spawns a fragment', heal: 'to its most damaged part', mirror: 'your command at one part goes to the part it points at', reboot: 'comes back, unless its twin is broken first', deliver: 'a Package on the board', unpack: 'two Droppers', redeploy: 'the Courier comes back, unless the Loader is broken first', thaw: 'it thaws at the end of this cycle and joins the fight', boot: 'it boots with the signature\'s attack, unless you break it first' };
 let runMode = false;
-const effectTarget = new Proxy(TARGETS, { get: (t, k) => (k === 'damage' && runMode ? 'Signal' : t[k]) });
+const effectTarget = new Proxy(TARGETS, { get: (t, k) => (k === 'damage' && runMode ? 'Integrity' : t[k]) });
 
 // Armor chits on a part: filled = still there, hollow = broken.
 // breaking: chits this cycle's hits will break (the forecast); they blink, like the white slices.
 // The leaning's pay on a part, the cycle just played (leanings.mjs leanShown): a filled amber tag, its icon and number.
 function leanTag(s, p) {
   const n = leanShown(s.encounter)?.[p.id], x = n && LEANINGS[s.encounter.leaning.id];
-  return x ? `<span class="tag tag-lean" title="${esc(`${x.name}: Server leaning.\n${x.rule}\n▸ ${x.paid === 'signal' ? `It kept ${n} Signal last cycle.` : `It added ${n} damage last cycle.`}`)}">${glyph(x.glyph)}${x.paid === 'signal' ? '' : '+'}${n}</span>` : '';
+  return x ? `<span class="tag tag-lean" title="${esc(`${x.name}: Server leaning.\n${x.rule}\n▸ ${x.paid === 'signal' ? `It kept ${n} Integrity last cycle.` : `It added ${n} damage last cycle.`}`)}">${glyph(x.glyph)}${x.paid === 'signal' ? '' : '+'}${n}</span>` : '';
 }
 export function chitsMarkup(p, breaking = 0) {
   if (!p.maxArmor) return '';
@@ -307,10 +307,10 @@ export function forecast(s, preview = null) {
   return out;
 }
 // The blinking slice on a bar: from what's left after the hit up to where the bar is now.
-// Halcyon's Claims (faction-gear.mjs): each claim pending as a pip past your Signal, its payout and when on hover.
+// Halcyon's Claims (faction-gear.mjs): each claim pending as a pip past your Integrity, its payout and when on hover.
 const claimMarks = (s, d) => { let at = d.integrity; return pendingClaims(s).map((c) => { const w = Math.min(c.amount, Math.max(0, d.max - at)), x = at; at += w; const n = c.at - s.encounter.cycle; return w > 0 ? `<i class="claim" style="left:${(x / d.max) * 100}%;width:${(w / d.max) * 100}%" title="${esc(`${c.name}: +${c.amount} ${n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`}`)}"></i>` : ''; }).join(''); };
 const lossMark = (now, max, loss) => (loss > 0 && max > 0 ? `<i class="loss" style="left:${((now - loss) / max) * 100}%;width:${(loss / max) * 100}%" title="−${loss} this cycle"></i>` : '');
-// The Mimic's beat this cycle (fightread.mjs beatCopy): what the copy of your selected command takes from your Signal, a
+// The Mimic's beat this cycle (fightread.mjs beatCopy): what the copy of your selected command takes from your Integrity, a
 // red ghost past the slice this cycle's attacks take (a hit, all of it; a burn, all its ticks). The ◆ and shield it would
 // strip sit on your status (statusPanel).
 function copyGhost(d, loss, cp) {
@@ -319,10 +319,10 @@ function copyGhost(d, loss, cp) {
   return w > 0 ? `<i class="copy-ghost" style="left:${((d.integrity - loss - w) / d.max) * 100}%;width:${(w / d.max) * 100}%" title="${esc(`Mimic: Beat, this cycle. Copies your ${cp.name}: ${cp.text}.`)}"></i>` : '';
 }
 
-// In a breach, healing stops at the Signal you came into the fight with: the bar past it is fenced off.
+// In a breach, healing stops at the Integrity you came into the fight with: the bar past it is fenced off.
 // A Bad Block (the parts plan's P2): the cells your next heals would fill are cracked, as far as it eats.
 const crackMark = (s, d) => { const bb = s.encounter?.badBlock; if (!(bb?.left > 0) || d.integrity >= d.max) return ''; const w = Math.min(bb.left, d.max - d.integrity); return `<i class="cracked-cells" style="left:${(d.integrity / d.max) * 100}%;width:${(w / d.max) * 100}%" title="${esc(`${bb.name}: your next heals lose up to ${bb.left}. Purge, Scrub, Rollback or Rotate Keys clears it.`)}"></i>`; };
-const capMark = (s, d) => { const cap = healCap(s); return cap < d.max ? `<i class="heal-cap" style="left:${(cap / d.max) * 100}%;width:${((d.max - cap) / d.max) * 100}%" title="Healing cap: ${cap}. Heals in this fight can't take you past the Signal you came in with. Rest at a defrag to raise it."></i>` : ''; };
+const capMark = (s, d) => { const cap = healCap(s); return cap < d.max ? `<i class="heal-cap" style="left:${(cap / d.max) * 100}%;width:${((d.max - cap) / d.max) * 100}%" title="Healing cap: ${cap}. Heals in this fight can't take you past the Integrity you came in with. Rest at a defrag to raise it."></i>` : ''; };
 
 export function hudMarkup(s, { party = true, preview = null } = {}) {
   const e = s.encounter, v = e.virus;
@@ -331,7 +331,7 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   const vp = hp.max ? (hp.current / hp.max) * 100 : 0;
   const d = defender(s);
   const dp = (d.integrity / d.max) * 100;
-  const mine = runMode ? 'Your Signal' : 'Your server';
+  const mine = 'Your Integrity';
   const level = dp <= 30 ? 'low' : dp <= 60 ? 'mid' : 'ok';
   const m = v.mutation ? MUTATIONS[v.mutation] : null;
   const weak = v.weakKnown ? part(s, v.weakPoint) : null;
@@ -341,9 +341,9 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   // No title of its own: the virus's name labels its health bar, its tags sit under the bar with
   // its armor. Your bar and the crew's window come first; the virus's bar is at the right.
   const tags = `${v.champion ? '<span class="tag tag-crew" title="Champion: an elite-grade invader, sized for one. It is tougher, gives three times the XP, and leaves a capture when it falls: a sure daemon.">★ CHAMPION</span>' : v.elite ? '<span class="tag tag-crew" title="Elite\nA tougher virus, with a clash: two rules whose answers pull against each other.\nIt gives three times the XP and drops better loot.">◆ CREW</span>' : ''}${clashTag(v)}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invasion · ${esc(s.invasion.fromName)}</span>` : ''}${m && !geneChips(s, v) ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
-  // Yours (what you watch): your Signal with the crew under it, over the board; the virus's total over its picture.
+  // Yours (what you watch): your Integrity with the crew under it, over the board; the virus's total over its picture.
   // On a desktop the virus's side is drawn on the left (style.css, the Swap).
-  return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${crackMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}${copyGhost(d, fc.you, cp)}${claimMarks(s, d)}</div>${clockMeter(s)}</div></div>${statusPanel(s, cp)}</div>
+  return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph('integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${crackMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}${copyGhost(d, fc.you, cp)}${claimMarks(s, d)}</div>${clockMeter(s)}</div></div>${statusPanel(s, cp)}</div>
     <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${v.orphan ? `<span class="orphan-mark" title="${esc(ORPHAN_TIP)}">◌</span> ` : ''}${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div>${actSegments(s, `<div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div>`)}<p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${roomBossTag(s)}${rivalTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
 }
 // The *Segments* (act bars, acts.mjs): the boss's bar in one segment an act, the acts done dark, the act now draining
@@ -366,7 +366,7 @@ function rivalTag(s) {
   const e = s.encounter, v = e?.rooms?.as === 'rival' ? s.rooms?.visit?.rival : null;
   if (!v) return '';
   const P = rivalP(v);
-  return `<span class="tag hot" title="${esc(`${P.name}\nRival · fight ${v.fight + 1} of ${v.fights}\nYour Signal carries to their next fight. Your cooldowns start fresh.\n▸ Win all ${v.fights} to take their pack.`)}">${esc(P.name)} ${v.fight + 1}/${v.fights}</span>`;
+  return `<span class="tag hot" title="${esc(`${P.name}\nRival · fight ${v.fight + 1} of ${v.fights}\nYour Integrity carries to their next fight. Your cooldowns start fresh.\n▸ Win all ${v.fights} to take their pack.`)}">${esc(P.name)} ${v.fight + 1}/${v.fights}</span>`;
 }
 function roomBossTag(s) {
   const e = s.encounter;
@@ -406,7 +406,7 @@ function leanRow(s) {
   const L = s.encounter?.leaning, x = L && LEANINGS[L.id];
   if (!x) return '';
   const lit = !!leanShown(s.encounter), paid = L.paid || 0;
-  return `<div class="hud-gear hud-lean" aria-label="Leaning"><span class="hg-k">${glyph(x.glyph, 'hg-ico')}Leaning</span><span class="gfx-list"><span class="gfx lean${lit ? ' lit' : ''}" title="${esc(`${x.name}: Server leaning.\n${x.rule}\n▸ ${x.answer}`)}" tabindex="0"><template class="tt-more"><span class="rw" title="${x.paid === 'signal' ? 'Signal kept this fight' : 'Damage dealt this fight'}">${glyph(x.paid)}<b>+${paid}</b></span></template>${esc(x.name)}<b class="lean-n">+${paid}</b></span></span></div>`;
+  return `<div class="hud-gear hud-lean" aria-label="Leaning"><span class="hg-k">${glyph(x.glyph, 'hg-ico')}Leaning</span><span class="gfx-list"><span class="gfx lean${lit ? ' lit' : ''}" title="${esc(`${x.name}: Server leaning.\n${x.rule}\n▸ ${x.answer}`)}" tabindex="0"><template class="tt-more"><span class="rw" title="${x.paid === 'signal' ? 'Integrity kept this fight' : 'Damage dealt this fight'}">${glyph(x.paid)}<b>+${paid}</b></span></template>${esc(x.name)}<b class="lean-n">+${paid}</b></span></span></div>`;
 }
 // Your gear's conditional rules (fightread.mjs gearLive): a chip each, lit while its condition holds, dim while it
 // doesn't, struck through once a once-a-fight one is spent. Only what you have equipped; nothing when none wait on a
@@ -426,14 +426,14 @@ function gearRow(s) {
 const TELL_KICK = { charge: 'Charged', cast: 'Casting', seal: 'Sealing', mimic: 'Recording', lock: 'Locking' };
 function tellChip(s, i, c, k = '', to = null) {
   const open = i.open ?? c === 0;
-  // What it does, as short as an attack chip's number: a charge's hit, a cast's price (the Signal its attacks would add,
+  // What it does, as short as an attack chip's number: a charge's hit, a cast's price (the Integrity its attacks would add,
   // a Self-Update's Integrity), the ◆ a seal would hand out in all (tells.mjs tellPrice).
   const what = i.tell === 'charge' ? (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? `−${i.price ?? i.amount}` : i.effect === 'replicate' ? `+${i.spawn || 2} frags` : i.effect === 'scramble' ? `−${i.hit || 0} · scramble` : `+${i.amount} hp`)
     : i.tell === 'cast' ? (i.does === 'grow' ? `+${i.grow ?? 0} hp` : i.does === 'overclock' ? '×2 both ways' : `−${i.price ?? 0}`)
     : i.tell === 'seal' ? `+${i.armorOut ?? 0} ◆` : i.tell === 'lock' ? 'locks a key' : i.copy ? i.copy.short : 'copies you'; // the Mimic: what your selected command would copy
   // SIGINT stops it (a cast, or from level 17 a charge too): a small mark, no words. The answer itself is the tooltip's.
   const sig = usable(s).includes('sigint') && (i.tell === 'cast' || (i.tell === 'charge' && sigintCharges(s)));
-  // A price in your Signal reads in threat red, a seal's ◆ in steel.
+  // A price in your Integrity reads in threat red, a seal's ◆ in steel.
   const kindOf = i.tell === 'seal' ? ' tl-armor' : (i.tell === 'charge' && ['damage', 'encrypt'].includes(i.effect)) || (i.tell === 'cast' && ['loud', 'haste'].includes(i.does)) ? ' tl-price' : '';
   return `<div class="intent tell t-${esc(i.tell)}${i.effect === 'replicate' ? ' replicate' : ''} ${c === 0 ? 'now' : ''} ${open ? 'win' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tellTip(s, i, c, to))}">`
     + `<div class="tl-kick"><span class="ico" ${icon(TELL_ICON[i.tell])}></span><span class="tl-kind">${TELL_KICK[i.tell] || ''}</span>${sig ? `<span class="ico tl-sig" ${icon('interrupt')} aria-label="SIGINT stops it"></span>` : ''}${open ? '<b class="tl-win">NOW</b>' : `<span class="tl-when">${c ? `in ${c}` : 'now'}</span>`}</div>`
@@ -719,7 +719,6 @@ function partTags(s, p) {
 function youStanding(s) {
   const e = s.encounter, out = [];
   const add = (name, kind, tip) => out.push({ name, kind, tip });
-  if (rebootSick(s)) add('Reboot sickness', 'hot', `−${sickPct(s)}% max Signal and damage\nYour server is rebooting. Back online in ${fmtLeft(degradedLeft(s))}.`);
   if (e.encrypt > 0) add('Encrypted', 'hot', `−${e.encrypt} every cycle until the Encryptor breaks. Purge, Scrub or Rollback wipes it, and a ◆ stops the next Encrypt.`);
   for (const p of e.virus.parts) { const heat = alive(p) ? heatOf(p, e.cycle) : 0; if (heat) add('Ratcheted', 'hot', `−${heat} every cycle, ${p.ratchet.amount} more every ${p.ratchet.every} cycles, until you break the ${p.name}. Purge or Rollback starts it over.`); }
   if (rootkitReady(s)) add('Rootkit', 'you', 'Your first hit this fight ignores armor.');
@@ -972,7 +971,7 @@ export function boardMarkup(s, selected, preview = null) {
   const you = () => fighting
     ? `<div class="brow byou${e.steps?.order?.[e.steps.next - 1] === 'you' ? ' acting' : ''}"><div class="bcell bname"><span class="you-top"><b>You</b></span></div><div class="bcell">${nowChip}${cronCell(0)}${quietCol(0) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div><div class="bcell">${planCell(0)}${cronCell(1)}</div><div class="bcell">${planCell(1)}${cronCell(2)}</div><div class="bcell">${cronCell(3)}</div></div>`
     : `<div class="brow byou"><div class="bcell bname"><b>You</b></div><div class="bcell span4 quiet">${e.phase === 'alert' ? 'not engaged' : 'over'}</div></div>`;
-  // Simulated crewmates (crew.mjs): a row each, with Signal and what they'll do this cycle.
+  // Simulated crewmates (crew.mjs): a row each, with Integrity and what they'll do this cycle.
   const crew = fighting && e.mode === 'run' ? matesOf(s).filter((m) => m.encounter) : [];
   const sink = crew.length ? (drawingFire(s) ? 'you' : crew.find((m) => mateUp(m) && drawingFire(m))?.who || null) : null;
   // Whose turn just played in a stepped cycle (crew.mjs): their row lights up.
@@ -1529,31 +1528,19 @@ export function needChips(s, cost) {
 export const fmtTime = (ms) => (ms >= 3600000 ? `${Math.floor(Math.ceil(ms / 60000) / 60)}h ${Math.ceil(ms / 60000) % 60}m` : ms >= 60000 ? `${Math.ceil(ms / 60000)} min` : `${Math.max(0, Math.ceil(ms / 1000))}s`);
 // ---------- the wall (invasions) ----------
 export function bandsText(s) {
-  if (s.degraded) return 'Your wall is down while the server is degraded.';
   const { blocks, holds } = wallBands(s);
   if (!holds) return 'Your wall holds nothing yet. Every invasion breaches.';
   const held = holds > blocks ? ` and holds ${blocks ? `level ${blocks + 1}–${holds}` : `up to level ${holds}`} contested` : '';
   return `Your wall ${blocks ? `blocks invasions up to level ${blocks}` : 'blocks none outright'}${held}; above level ${holds}, they breach.`;
 }
-export function degradedMarkup(s, now = Date.now()) {
-  return s.degraded ? `<div class="degraded" title="${esc(sickTip(s, now))}"><b>DEGRADED</b>${sickPct(s) ? `<em>−${sickPct(s)}%</em>` : ''}<span>${fmtLeft(degradedLeft(s, now))}</span></div>` : '';
-}
-// Reboot sickness (combat.mjs rebootSick), said the same way wherever it shows: the share, and the rule on hover.
-export const sickPct = (s) => Math.round(rebootSick(s) * 100);
-export function sickTip(s, now = Date.now()) {
-  const left = `Back online in ${fmtLeft(degradedLeft(s, now))}.`;
-  return sickPct(s) ? `Reboot sickness\nDebuff\n−${sickPct(s)}% max Signal and damage while your server reboots. Deeper floors take more.\n${left}` : `Your server is rebooting. Its wall is down.\n${left}`;
-}
 // "≤12 · contested ≤22": what your wall stops outright, and what it holds.
 export function wallShort(s) {
-  if (s.degraded) return 'down';
   const { blocks, holds } = wallBands(s);
   return !holds ? 'none' : `${blocks ? `Lv ≤${blocks}` : '—'} · contested ≤${holds}`;
 }
 export function invaderShort(s) {
   const inv = s.invasion;
   if (!inv) return '';
-  if (s.degraded && inv.state !== 'travel') return 'waiting';
   const r = ratioOf(s, inv), pct1 = (x) => `${Math.round(x * 10) / 10}%`;
   if (inv.state === 'travel') return `${fmtLeft(inv.left)} out`;
   if (inv.state === 'watch') return `mapping · ${fmtLeft(inv.mapLeft)}`;
@@ -1566,7 +1553,6 @@ export function invaderStatus(s) {
   const r = ratioOf(s, inv);
   const hp = Math.round(inv.hp * 100);
   const pct1 = (x) => `${Math.round(x * 10) / 10}%`;
-  if (s.degraded && inv.state !== 'travel') return { text: `${inv.name} waits at the gate while your server is degraded.`, can: false, why: 'Your server is degraded' };
   const why = fighting(s, inv) ? 'You are fighting it' : s.run ? 'Jack out of your run first' : active(s) ? 'Finish this fight first' : '';
   if (inv.state === 'travel') {
     const verdict = { blocked: 'will stop it', siege: 'will contest it', breach: "won't hold it: a breach" }[verdictOf(s, inv)];
@@ -1607,7 +1593,6 @@ export function slotPips(icon, used, total, name) {
 export function wallRuler(s, compact = false, bands = wallBands(s)) {
   // Shown once something has come for your wall (FFXIV/WoW: UI as it starts to matter).
   if (!s.invasion && !Object.keys(s.net?.seen || {}).length) return compact ? '' : '<div class="wall-ruler quiet" title="Nothing has come for your wall yet"><span>no invasions yet</span></div>';
-  if (s.degraded) return '<div class="wall-ruler down" title="Your wall is down while the server is degraded"><span>wall down</span></div>';
   const { blocks, holds } = bands, you = threatTop(s), inv = s.invasion; // the mark: the highest level your attached servers send
   const hi = Math.max(holds + 4, you + 4, (inv ? countsAt(inv) : 0) + 2, 8), pct = (lv) => `${Math.min(100, (lv / hi) * 100)}%`;
   const seg = (cls, from, to, icon, tip) => (to > from ? `<span class="wr-seg ${cls}" style="left:${pct(from)};width:calc(${pct(to)} - ${pct(from)})" title="${esc(tip)}">${compact ? '' : glyph(icon)}</span>` : '');
@@ -1624,7 +1609,6 @@ export const threatTop = (s) => sendTop(s);
 // The Safe readout's hover (invasion.mjs wallSafety): what reaches your wall, grade and all, and the invasion out now.
 const VERDICT_WORD = { blocked: 'blocks it', siege: 'contests it', breach: 'won\'t hold it' };
 export function safetyTip(s, w = wallSafety(s), { bands = true } = {}) {
-  if (w.state === 'down') return 'Your wall is down while the server is degraded';
   const sends = w.top ? `Your servers' invasions count up to level ${w.top} at your wall, grade and all.` : 'Nothing attached sends invasions.';
   const inv = s.invasion && s.invasion.kind !== 'thief' ? s.invasion : null, now = inv ? ` ${inv.name} counts ${w.at}: your wall ${VERDICT_WORD[w.verdict]}.` : '';
   return `${bands && w.state !== 'ok' ? `Blocks up to level ${w.blocks} and contests up to ${w.holds}. ` : ''}${sends}${now}`;
@@ -1772,7 +1756,7 @@ export function lessonMarkup(t, lessons) {
 }
 
 // ---------- the net ----------
-// One column: header (where, Signal, pack), then the terminal. Everything you
+// One column: header (where, Integrity, pack), then the terminal. Everything you
 // act on is in the terminal or the buttons under the prompt.
 
 const NET_CLASS = { 'net-scan': 'scan-li', 'net-cmd': 'you', 'net-err': 'warn', 'net-good': 'good', 'net-file': 'file', 'net-ls': 'ls', 'net-sweep': 'sweep-li', 'net-out': 'note', 'run-start': 'good', intrusion: 'bad', victory: 'good', crashed: 'bad', disconnected: 'bad', 'jacked-out': 'good', trap: 'bad', 'pack-hit': 'bad', lead: 'good', located: 'good', warning: 'warn' };
@@ -1863,7 +1847,7 @@ export function netMarkup(s, { leads = false } = {}) {
   return `<section class="panel net-one" data-pane="ssh ${esc(s.profile?.handle || 'rookie')}@${esc(loc.id)}">
     <header class="net-head">
       <div class="net-where"><b>${esc(loc.name)}${loc.depth > 1 ? ` <span class="tag">layer ${loc.depth}</span>` : ''}${QUIRKS[loc.quirk] ? ` <span class="tag tag-quirk" data-quirk="${loc.quirk}" title="${esc(QUIRKS[loc.quirk].rule)}">${esc(QUIRKS[loc.quirk].name)}</span>` : ''}</b><span>${esc(s.run.cwd)}</span></div>
-      <div class="net-signal ${level}" title="Signal: your health on this run. Moving costs ${lifted(CONFIG.cdCost, hackerLevel(s))}. At 0 you go home without your pack."><span class="lbl">Signal</span><span class="sigbar"><span style="width:${pct}%"></span></span><strong>${s.run.integrity}</strong><small>/${s.run.max}</small>${sickPct(s) ? `<em class="sig-sick" title="${esc(sickTip(s))}">−${sickPct(s)}%</em>` : ''}</div>
+      <div class="net-signal ${level}" title="Integrity: your health. Moving costs ${lifted(CONFIG.cdCost, hackerLevel(s))}. At 0 the visit is undone."><span class="lbl">Integrity</span><span class="sigbar"><span style="width:${pct}%"></span></span><strong>${s.run.integrity}</strong><small>/${s.run.max}</small></div>
       ${!loc.zone && !loc.rogue ? `<div class="net-trace${(s.run.trace || 0) >= 70 ? ' hot' : (s.run.trace || 0) < TRACE.clean ? ' low' : ''}${s.run.hunter ? ' hunted' : ''}" title="Trace: how loud this break-in has been. Moves, pulls, wrong passwords and fights raise it, and Spoof lowers it. At 100 a hunter comes and you can't jack out until it's down. Under ${TRACE.clean}% with the vault open, it is a clean job worth 25% more credits."><span class="lbl">Trace</span><span class="sigbar"><span style="width:${s.run.trace || 0}%"></span></span><strong>${s.run.hunter ? 'HUNTED' : (s.run.trace || 0) + '%'}</strong></div>` : ''}
       <button type="button" class="net-pack" data-run="pack" title="What you're carrying (unbanked)">pack <b>${s.run.pack.length}</b></button>
       <button type="button" class="net-pack net-leads-btn" data-leads aria-pressed="${leads}" title="Leads">${glyph('trace')}leads</button>
@@ -2303,7 +2287,6 @@ const arc = (r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="$
 // each with its timer as a bar. Click one to select it on the map.
 export function threatsOf(s, now = Date.now()) {
   const out = [], add = (x) => out.push(x);
-  if (s.degraded) add({ cls: 'hot', icon: 'server', name: 'Rebooting', where: 'your server', left: degradedLeft(s, now), total: s.degraded.ms || 10 * 60000, sel: 'server' });
   const inv = s.invasion;
   if (inv) add(inv.state === 'travel'
     ? { cls: inv.quiet ? 'dim' : 'warn', icon: 'kill', name: inv.name, where: inv.target ? `${labelOf(inv).toLowerCase()} · to ${s.locations.find((l) => l.id === inv.target)?.name || 'outpost'}` : `${inv.kind && inv.kind !== 'raider' ? labelOf(inv).toLowerCase() : 'invasion'} · your wall`, tag: `lv ${inv.level}`, left: inv.left, total: inv.total, sel: 'invader', verb: 'arrives' }
@@ -2577,7 +2560,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     }
     if (n.kind === 'invader') {
       const inv = n.inv, kind = inv.kind && inv.kind !== 'raider' ? labelOf(inv).toLowerCase() + ' · ' : '';
-      const sub = kind + (s.degraded && inv.state !== 'travel' ? 'waiting' : inv.state === 'travel' ? `${fmtLeft(inv.left)} out` : inv.state === 'watch' ? `mapping ${fmtLeft(inv.mapLeft)}` : inv.state === 'siege' ? `contested ${Math.round(inv.hp * 100)}%` : 'breach');
+      const sub = kind + (inv.state === 'travel' ? `${fmtLeft(inv.left)} out` : inv.state === 'watch' ? `mapping ${fmtLeft(inv.mapLeft)}` : inv.state === 'siege' ? `contested ${Math.round(inv.hp * 100)}%` : 'breach');
       const ang = Math.atan2(-n.y, -n.x) * 180 / Math.PI; // it points at home
       return `<g class="mnode invader ${inv.state} f-threat${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="invader" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Invasion: ${esc(inv.name)}"><circle r="18" class="mhit"/><circle r="13" class="vring"/><path class="vbody" d="M0 -9.5 L2.3 -3.8 L8.1 -4.6 L4.3 0 L8.1 4.6 L2.3 3.8 L0 9.5 L-2.3 3.8 L-8.1 4.6 L-4.3 0 L-8.1 -4.6 L-2.3 -3.8 Z"/><circle r="2.6" class="vcore"/>${pick}${label({ ...n, angle: undefined }, 7, inv.name, sub, inv.state === 'breach' ? 'hot' : '')}</g>`;
     }
@@ -2691,8 +2674,8 @@ function serverList(s, sel, filter, sort) {
 // lets through), the rule on hover.
 const WALL_MARK = { blocked: ['you', 'blocks'], siege: ['warn', 'contests'], breach: ['hot', 'lets through'] };
 function wallMark(s, l) {
-  const g = senderGrade(l), v = s.degraded ? 'breach' : outcome(wallRating(s, l.family) / strength(l.level || 1, null, g)), [tone, word] = WALL_MARK[v];
-  const tip = `Sends invasions\n${FAMILIES[l.family]?.name || 'Viruses'} at level ${l.level || 1}${g > 1 ? `, v${g}: a plain one counts ${sendsAt(l)} at your wall` : ''}.\n${s.degraded ? 'Your wall is down while your server reboots.' : `Your wall ${word} a plain one.`}`;
+  const g = senderGrade(l), v = outcome(wallRating(s, l.family) / strength(l.level || 1, null, g)), [tone, word] = WALL_MARK[v];
+  const tip = `Sends invasions\n${FAMILIES[l.family]?.name || 'Viruses'} at level ${l.level || 1}${g > 1 ? `, v${g}: a plain one counts ${sendsAt(l)} at your wall` : ''}.\nYour wall ${word} a plain one.`;
   return `<span class="sl-wall ${tone}" title="${esc(tip)}">${glyph('firewall')}</span>`;
 }
 // Locate: back to the map, centred and zoomed on it (app.js).
@@ -2792,8 +2775,7 @@ function wallRow(s, icon, label, b, tipExtra = '') {
 }
 function awayLine(s) {
   if (!consortiumOf(s)) return '';
-  if (s.degraded) return srvLine('clock', 'Away', '<span class="tag warn">Rebooting</span>', '', 'No wall until it is back up');
-  return wallRow(s, 'clock', 'Away', wallBands(s, wallRating(s)), ` While you're logged off (consortium bonus included); a crash reboots your server for ${CONSORTIUM.rebootMs / 3600000} hours.`);
+  return wallRow(s, 'clock', 'Away', wallBands(s, wallRating(s)), ' While you\'re logged off (consortium bonus included).');
 }
 
 // The consortium (consortium.mjs) on a server card: whose it is, or shared ground.
@@ -2813,7 +2795,7 @@ export const deathMark = (n) => (n > 0 ? `<span class="tag hot death-mark" title
 // The rogue server's card: the main thing to do, so it also leads the server card.
 function zoneCard(s) {
   const here = s.run?.loc === CONFIG.zone.id, sig = signalNow(s), max = maxSignal(s), need = Math.ceil(max * CONFIG.zone.minSignal);
-  const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : relockLeft(s.zone) ? `Reconnect in ${relockLeft(s.zone)}s` : sig < need ? `Needs ${need} Signal` : '';
+  const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : relockLeft(s.zone) ? `Reconnect in ${relockLeft(s.zone)}s` : sig < need ? `Needs ${need} Integrity` : '';
   return `<section class="card zone-card"><h2>Rogue server</h2><h1>${CONFIG.zone.name}</h1>
     <div class="stats">${stat('Hostiles', `${liveSpawns(s)}/${zoneRooms().length}`)}${stat('Levels', `<b class="${hackerLevel(s) > CONFIG.zone.maxLevel + 4 ? 'con-gray' : hackerLevel(s) > CONFIG.zone.maxLevel ? 'con-orange' : 'con-yellow'}" title="${hackerLevel(s) > CONFIG.zone.maxLevel ? 'You\'re outgrowing it: its kills pay less every level' : 'Its viruses keep up with you to this level'}">Lv 1–${CONFIG.zone.maxLevel}</b>`)}</div>
     <div class="row">${here ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${CONFIG.zone.id}" ${why ? `disabled title="${esc(why)}"` : ''}>Connect</button>`}${why && !here ? `<small class="svc-line">${esc(why)}</small>` : ''}${here ? '' : deathMark(s.zone?.deaths)}</div></section>`;
@@ -2857,17 +2839,14 @@ function mapSide(s, sel, node) {
   if (!node || node.kind === 'server') {
     const r = s.reports.findLast((x) => x.mode !== 'run');
     const upkeep = [];
-    if (srv.integrity > 0 && srv.integrity < srv.max && srv.credits > 0) upkeep.push(btn('repair', `Repair (${topUpCost(s, 'server')}c)`));
-    if (!s.run && !busy && topUpCost(s, 'signal') && srv.credits > 0) upkeep.push(btn('top up', `Top up Signal (${topUpCost(s, 'signal')}c)`));
-    if (srv.integrity <= 0) upkeep.push(btn('developer reboot', 'Reboot (testing)', true));
-    const runCard = s.run ? `<section class="card lesson"><h2>On a run</h2><h1>${esc(currentLocation(s).name)}</h1><p>Signal ${s.run.integrity}/${s.run.max} · ${s.run.pack.length} unbanked.</p><div class="row">${btn('net', 'Back to the run', true)}</div></section>` : '';
-    const occ = s.occupation && !s.occupation.occupied.cleared ? mapSide(s, 'home', { kind: 'location', loc: s.occupation }) : '';
-    return `${runCard}${alertCard()}${occ}
+    if (!busy && topUpCost(s) && srv.credits > 0) upkeep.push(btn('top up', `Top up (${topUpCost(s)}c)`));
+    const runCard = s.run ? `<section class="card lesson"><h2>On a run</h2><h1>${esc(currentLocation(s).name)}</h1><p>Integrity ${s.run.integrity}/${s.run.max} · ${s.run.pack.length} unbanked.</p><div class="row">${btn('net', 'Back to the run', true)}</div></section>` : '';
+    return `${runCard}${alertCard()}
       <section class="card srv-card"><h2>Your server</h2>
         ${srvLine('integrity', 'Server', `<span class="tag dim">${esc(ARCHETYPES[serverClass(s)]?.name || '')}</span>`, `<small>Lv</small> ${serverLevel(s)}`, `Your server's level is your highest class level.${serverNext(serverLevel(s)) ? ` ${serverNext(serverLevel(s))}.` : ''}`)}
         ${srvLine('integrity', 'Integrity', `<span class="srv-bar hp ${srv.integrity / srv.max <= 0.3 ? 'low' : srv.integrity / srv.max <= 0.6 ? 'mid' : ''}"><span style="width:${(srv.integrity / srv.max) * 100}%"></span></span>`, `${srv.integrity}<small>/${srv.max}</small>`)}
-        ${s.degraded ? srvLine('firewall', 'Firewall', '<span class="tag warn">down</span>', '', 'Your wall is down while the server is degraded') : wallRow(s, 'firewall', 'Firewall', wallBands(s))}
-        ${degradedMarkup(s)}${awayLine(s)}
+        ${wallRow(s, 'firewall', 'Firewall', wallBands(s))}
+        ${awayLine(s)}
         ${!MEMORY.on ? '' : srvLine('memory', 'Memory', '', `${Math.max(0, memoryCap(s) - liveCount(s))}<small>/${memoryCap(s)} free</small>`, `${liveCount(s)} servers on your network`)}
         ${srvLine('salvage', 'Components', '', `${componentsOf(s)}`, 'Components: what broken parts leave behind. Sell them at a hub\'s market.')}
 
@@ -2899,9 +2878,9 @@ function mapSide(s, sel, node) {
   if (node.kind === 'intrusion') return alertCard();
   if (false) {
     const here = s.run?.loc === CONFIG.zone.id, sig = signalNow(s), max = maxSignal(s), need = Math.ceil(max * CONFIG.zone.minSignal);
-    const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : sig < need ? `Needs ${need} Signal` : '';
+    const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : sig < need ? `Needs ${need} Integrity` : '';
     return `${alertCard()}<section class="card"><h2>Rogue server</h2><h1>${CONFIG.zone.name}</h1>
-      <div class="stats">${stat('Hostiles', `${liveSpawns(s)}/${zoneRooms().length}`)}${stat('Signal', `${here ? s.run.integrity : sig}/${max}`)}</div>
+      <div class="stats">${stat('Hostiles', `${liveSpawns(s)}/${zoneRooms().length}`)}${stat('Integrity', `${here ? s.run.integrity : sig}/${max}`)}</div>
       <div class="row">${here ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${CONFIG.zone.id}" ${why ? `disabled title="${esc(why)}"` : ''}>Connect</button>`}</div></section>`;
   }
   if (node.kind === 'intrusion') return alertCard();
@@ -2944,7 +2923,7 @@ function mapSide(s, sel, node) {
     const live = Object.values(rogueSpawns(s, l)).filter((x) => x.alive).length;
     return `<section class="card alert"><h2>${l.member ? `${esc(l.member)}'s server` : 'Your server'} · rebooting</h2><h1>${esc(l.name)}</h1>
       <p class="tagline">${levelTag(s, l.level || 1)} ${esc(FAMILIES[l.family].name)} · occupied</p>
-      <div class="stats">${stat('Viruses', `${live}/${rogueRooms(l).length}`)}${stat('Back up in', fmtTime(l.member ? l.occupied.left : degradedLeft(s)))}</div>
+      <div class="stats">${stat('Viruses', `${live}/${rogueRooms(l).length}`)}${stat('Back up in', fmtTime(l.occupied.left))}</div>
       <p class="svc-line"><span class="tag warn" title="Clear every folder to bring it back up${l.member ? ' (a bounty)' : ''}">Crashed</span></p>
       <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? 'disabled title="Still tracing your last connection"' : ''}>Connect</button>`}</div></section>`;
   }
@@ -3066,7 +3045,7 @@ function graphicsCard(s, phone) {
   const presetTip = { auto: `Auto: your device's preset, ${GX.PRESET_NAMES[GX.autoPreset(phone)]} on this one.\n▸ A phone plays Balanced, a desktop Quality.`, quality: 'Quality: every row at its full look.', balanced: 'Balanced: the virus drawn slower, a part breaking into fewer bits, a steady tether.\n▸ A phone runs smoother with it.', performance: 'Performance: the virus still, nothing ambient moving, a part fading out, chip effects in Now only, subtle screen effects.\n▸ For a slow phone.' };
   const presets = ['auto', 'quality', 'balanced', 'performance'].map((k) => `<button type="button" class="${on === k ? 'on' : ''}" data-run="graphics ${k}" aria-pressed="${on === k}"${tipAttrs(presetTip[k], 'Graphics preset')}>${GX.PRESET_NAMES[k]}${k === 'auto' ? ` <small>${GX.PRESET_NAMES[GX.autoPreset(phone)]}</small>` : ''}</button>`).join('');
   const fxOff = (id) => !!s.settings.screenFxOff?.[id];
-  const fxTip = { signal: 'Low Signal: the screen\'s edges warm as your Signal falls under a half, and pulse under a quarter.', hits: 'Hits: a big hit on you tears the backdrop.', crits: 'Crits: a crit tears the virus picture.', floor: 'Floor colour: each floor paints the screen in its own palette.', lamps: 'Status lights: the casing\'s lamps show the gate, the wall, the net and your daemons.' };
+  const fxTip = { signal: 'Low Integrity: the screen\'s edges warm as your Integrity falls under a half, and pulse under a quarter.', hits: 'Hits: a big hit on you tears the backdrop.', crits: 'Crits: a crit tears the virus picture.', floor: 'Floor colour: each floor paints the screen in its own palette.', lamps: 'Status lights: the casing\'s lamps show the gate, the wall, the net and your daemons.' };
   return `<section class="card gx-card"><h2>Graphics${on === 'custom' ? ' <small>Custom</small>' : ''}</h2>
     <div class="gx-seg" role="group" aria-label="Graphics preset">${presets}</div>
     <h3 class="gx-sub">Costs looks</h3>
@@ -3267,14 +3246,14 @@ function runMate(s, name) {
   return `<div class="pm-run"><span class="pm-where">${state}<code title="Where ${esc(name)} is">${esc(c.cwd)}</code></span><span class="pm-acts">${acts}</span></div><button type="button" class="pm-kick" data-run="crew kick ${esc(name)}" title="Take ${esc(name)} out of your crew" aria-label="Remove ${esc(name)}">×</button>`;
 }
 // The phone's fight HUD (docs/phone-plan.md P2): each crewmate's bar as a thin violet line under yours, the name and
-// Signal in its card.
+// Integrity in its card.
 export function crewLineMarkup(s) {
   const e = s.encounter, live = active(s) && e?.mode === 'run';
   const mates = matesOf(s);
   if (!mates.length) return '';
   return `<div class="ph-crew">${mates.map((m) => {
     const up = !live || !m.encounter || mateUp(m), sig = live && m.encounter ? m.run.integrity : mateSignal(s, m), pct = up ? Math.max(0, Math.min(100, (sig / m.run.max) * 100)) : 0;
-    return `<span class="ph-mate${up ? '' : ' down'}" title="${esc(`${m.who}: ${ARCHETYPES[m.loadout.archetype].name}, Lv ${hackerLevel(m)}.\n${up ? `Signal ${sig}/${m.run.max}.` : 'Down.'}`)}"><i style="width:${pct}%"></i></span>`;
+    return `<span class="ph-mate${up ? '' : ' down'}" title="${esc(`${m.who}: ${ARCHETYPES[m.loadout.archetype].name}, Lv ${hackerLevel(m)}.\n${up ? `Integrity ${sig}/${m.run.max}.` : 'Down.'}`)}"><i style="width:${pct}%"></i></span>`;
   }).join('')}</div>`;
 }
 const CREW_PARTY = (s, mates, inFight, fc, actedWho) => `<div class="party">${mates.map((m) => {
@@ -3320,7 +3299,7 @@ export function sidebarMarkup(s, { module = 'map', mapSel = 'server', mapView = 
     const al = commsOf(s).filter((c) => !c.done && c.go).slice(0, 4);
     ctx = al.length ? `<section class="sb-block sb-alerts"><div class="sb-head"><b>Needs you</b><small>${al.length}</small></div><ul>${al.map((c) => `<li><button type="button" class="act" data-go="${esc(c.go)}" data-cid="${c.id}" title="${esc(c.text)}"><span class="k ${c.kind}">${c.card && EVENT_ICON[c.card] ? glyph(EVENT_ICON[c.card]) : ''}${esc(c.label)}${chainMk(c)}</span>${esc(c.text.length > 60 ? c.text.slice(0, 58) + '…' : c.text)}</button></li>`).join('')}</ul></section>` : '';
   }
-  // No health block: Integrity and Signal live on the top bar (and the HUD in a fight).
+  // No health block: Integrity lives on the top bar (and the HUD in a fight).
   return fighting && module === 'combat' ? crew : `${crew}${ctx}`;
 }
 
@@ -3346,7 +3325,7 @@ const VOICE = {
   halcyon: { who: 'concierge@halcyon', low: 'Welcome back, contractor. Keep your claim number ready.', mid: 'Good to see you, contractor. Your file is in order.', high: 'Preferred client. The clearing house is at your disposal.' },
   glassjaw: { who: '—@glassjaw', low: "Don't know you. Don't need to.", mid: 'You again. Good. Quiet work pays.', high: 'Inner circle. Whatever you need, it never happened.' },
   kestrel: { who: 'helpdesk@kestrel', low: 'Ticket opened. Estimated wait: forever.', mid: 'Ticket opened. Priority: client.', high: 'Key account. Routing you to a human. Kidding.' },
-  lantern: { who: 'ops@lantern', low: "You're on the frequency. Listen first.", mid: 'Regular on the dial. What do you need?', high: "Signal's strong. You're one of us." },
+  lantern: { who: 'ops@lantern', low: "You're on the frequency. Listen first.", mid: 'Regular on the dial. What do you need?', high: "Integrity's strong. You're one of us." },
   nullchoir: { who: 'vesper@nullchoir', low: 'Outsider. Corporate smell on you. Make it quick.', mid: "Fellow. The choir's listening.", high: 'Cantor. Sing and we follow.' },
 };
 const MARK = {

@@ -145,7 +145,7 @@ export function createShell({ getState, isOn, canMove, tick, sound, tear }) {
     const s = getState();
     const on = isOn();
     document.body.classList.toggle('shell-on', on);
-    // How much danger you're in shows on the screen's edge (screenfx.mjs, Low Signal).
+    // How much danger you're in shows on the screen's edge (screenfx.mjs, Low Integrity).
     document.body.classList.toggle('in-fight', on && s.encounter?.phase === 'active');
     $('statusline').hidden = !on;
     if (on) status(module);

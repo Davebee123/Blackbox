@@ -50,7 +50,7 @@ import { tellAct, actOf } from './acts.mjs';
 import { nativeCharge, NATIVE } from './nativeacts.mjs';
 
 // What a fight's tells did, on its metrics (the gap test reads them): said, answered, read (answered by a command
-// of yours, not by breaking the part), landed, and the Signal (or Integrity) they cost you, by tell.
+// of yours, not by breaking the part), landed, and the Integrity they cost you, by tell.
 const tally = (s, t, k, n = 1) => { if (k === 'answered') daemonsOn(s, 'answered', { part: t.part }); const m = (s.host || s).encounter?.metrics; if (!m) return; const x = ((m.tells ||= {})[t.id] ||= { said: 0, answered: 0, read: 0, landed: 0, cost: 0 }); x[k] += n; if (k === 'read') m.reads = (m.reads || 0) + n; };
 export const tierOf = (level) => TELL.tiers.find((t) => level <= t.to) || TELL.tiers.at(-1);
 export const tellsOf = (s) => s.encounter?.virus?.tells || null;
@@ -576,7 +576,7 @@ function castsEnd(s, quiet = false) {
 //   hang    a stun, SIGINT or a utility: you're Hung, and your next command doesn't fire
 //   hold    nothing, but the cycle is gone
 // No copy is free, so which one is cheap depends on the board. copyOf says what a command would copy and what that
-// costs you in Signal: the planner, the dear copy chip (routines.mjs) and the board's beat cell all read it.
+// costs you in Integrity: the planner, the dear copy chip (routines.mjs) and the board's beat cell all read it.
 export function copyKind(id) {
   const a = ABILITIES[id];
   if (!a || id === 'hold') return 'hold';
@@ -619,7 +619,7 @@ const hitShare = (s) => {
 const CLEANSE = ['purge', 'scrub', 'rollback'];
 const mimicOf = (s) => livingParts(s).find((x) => x.mimic) || null;
 // What firing `id` (at `target`) on the Mimic's beat would copy onto you, or null with no Mimic:
-//   { kind, id, name, cost, text, short, ... }: cost is the Signal it takes from you, now or by the cycles it costs (a
+//   { kind, id, name, cost, text, short, ... }: cost is the Integrity it takes from you, now or by the cycles it costs (a
 //   lost cycle costs the virus's pace); text says what it does, after "Copies your Crack: " ("strips 2 ◆ from
 //   you"), short the board's chip ("−2◆").
 export function copyOf(s, id, target = null) {
@@ -854,7 +854,7 @@ function landingsIn(a, from, to, every = a.interval) {
   for (; c <= to; c += Math.max(1, every)) n++;
   return n;
 }
-// Integrity the virus gains, as your Signal: the cycles it takes you to deal it at your pace so far (Spike's at the
+// Integrity the virus gains, as your Integrity: the cycles it takes you to deal it at your pace so far (Spike's at the
 // least), times what the virus deals you a cycle.
 export function hpAsSignal(s, hp, p = null) {
   const e = s.encounter, v = e.virus;
@@ -867,7 +867,7 @@ export function hpAsSignal(s, hp, p = null) {
 const lastsOf = (s, t) => Math.max(1, (t.lasts ?? TELL.castLasts) - (fxOn(s, 'cast-short')?.fx.value || 0));
 // A tell's price: { signal } for a charge or a cast (a Self-Update adds hp, the Integrity it grows), { armor } for a
 // seal (the ◆ it hands out in all), or null. A charge: its whole landing (SIGINT or a cut cancels the attack). Double
-// Extortion and Persistence: the Signal they'd add from the attacks due in their cycles. The after-effects are the same
+// Extortion and Persistence: the Integrity they'd add from the attacks due in their cycles. The after-effects are the same
 // for every tell, so they're left out.
 export function tellPrice(s, t) {
   const p = t && sourceOf(s, t);
@@ -942,7 +942,7 @@ export function tellIntents(s, columns = 4) {
       if (t.spawn) x.spawn = t.spawn + 1;
       x.plain = p.attack.name;
     }
-    // Its price (tellPrice): the Signal a charge or a cast would cost you, a Self-Update's Integrity, a seal's ◆ a part.
+    // Its price (tellPrice): the Integrity a charge or a cast would cost you, a Self-Update's Integrity, a seal's ◆ a part.
     const price = tellPrice(s, t);
     if (price?.signal != null) x.price = price.signal;
     if (price?.hp != null) x.grow = price.hp;

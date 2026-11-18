@@ -158,21 +158,20 @@ test('Install: the item waits in your stash, goes in your pack on its server, in
   assert.ok(c.done && s.server.credits > credits, 'delivered, paid');
 });
 
-test('Install: losing your Signal with the item in your pack loses it, and the contract fails (it can come round again)', () => {
+test('Install: a disconnect with the item in your pack puts it back in your stash, and the contract stays', () => {
   const { s, loc } = setup();
   const c = take(s, 'install');
   play(s, 'connect ' + loc.id);
+  assert.equal(c.carry, 'pack', 'in your pack on its server');
   const fight = FP.roomList(s).find((x) => x.kind === 'process' && FP.isUp(s, x));
   const R = s.rooms, nb = FP.neighbours(R.graph, fight.id)[0];
   R.at = nb; R.screen = null; FP.go(s, fight.id);
   play(s, 'engage');
   lose(s);
   assert.equal(s.run, null, 'disconnected');
-  assert.ok(!openContracts(s).includes(c), 'the job is gone');
-  assert.ok(s.logs.some((e) => e.type === 'warning' && /Contract failed: Install .* went down with your Signal/.test(e.message)));
-  assert.deepEqual(s.logs.findLast((e) => e.type === 'disconnected').failed, [title(s, c)], 'the Disconnected card lists it');
-  s.mail.offers = [];
-  assert.equal(roomOffer(s, clock, 'install')?.type, 'install', 'offered again');
+  assert.ok(openContracts(s).includes(c), 'the job stays');
+  assert.equal(c.carry, 'stash', 'its item back in your stash');
+  assert.deepEqual(s.logs.findLast((e) => e.type === 'disconnected').failed, [], 'nothing failed');
 });
 
 test('Install and build share the verb: `install <program>` still builds in a socket; `plant` is only ever the item', () => {
@@ -221,7 +220,7 @@ test('Map without resting: one visit, every room but the Core stood in with noth
   else R.visit.rested = true;
   for (const id of need) reach(s, id);
   assert.ok(!ready(s, c), 'a rest spoils the visit');
-  play(s, 'jack out'); clock += 60000; s.signal = null; // (rested back up at home)
+  play(s, 'jack out'); clock += 60000; s.server.integrity = s.server.max; // (rested back up at home)
   play(s, 'connect ' + loc.id);
   assert.match(progress(s, c).text, new RegExp(`1/${need.length} rooms this visit`), 'a new visit starts again');
   for (const id of need) { if (s.run) { s.run.integrity = s.run.max; reach(s, id); } }

@@ -202,7 +202,7 @@ test('the Code Siphon: every fight room you clear on its server pays 3 more of i
   assert.ok(s.logs.some((e) => /Code Siphon: \+3/.test(e.message)));
 });
 
-test('the Defrag Bay: a rest room in its socket, 25% of your max Signal, once a visit', () => {
+test('the Defrag Bay: a rest room in its socket, 25% of your max Integrity, once a visit', () => {
   const { s, sock } = playtest();
   build(s, sock, 'defrag');
   const R = s.rooms;

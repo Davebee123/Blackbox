@@ -16,7 +16,7 @@ import { FACTIONS, hubOf } from './factions.mjs';
 // ---------- implicits in a fight ----------
 // The implicits' own kinds (gear.mjs IMPLICITS), a class-hook module combat.mjs runs after the sets' (CLASS_HOOKS):
 //   claim         Halcyon's Claims: a hit over its share of your max is a claim, a share of it healed two cycles later
-//                 (e.fxs.imp.claims; the HUD's Signal bar shows each one pending)
+//                 (e.fxs.imp.claims; the HUD's Integrity bar shows each one pending)
 //   appraise      Kestrel's Appraisal: a break appraises the next part to attack: its timer shows (seenUntil), its next
 //                 hit shows on its row (view.mjs partTags), and it takes more from you until it breaks
 //   glass-taken%  GLASSJAW's Glass Jaw, its down side (its up side is a damage% block the engine runs)

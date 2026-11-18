@@ -166,7 +166,7 @@ export function rogueKill(s, loc, room, now, extraDrop) {
 // a crew. Elite packs guard the way; three bosses (BOSSES.foreman, heatsink, coldwallet) are built for
 // a crew (elite, crew-sized). The ledger is locked: the Foreman's shift log holds the password's word,
 // the Heatsink's temps log its digits. After each of the first two bosses the crew regroups: everyone
-// back up to FARM.regroup of their Signal. A boss comes back FARM.bossMs after you beat it, a pack
+// back up to FARM.regroup of their Integrity. A boss comes back FARM.bossMs after you beat it, a pack
 // FARM.packMs. Every pack kill has a 1 in FARM.deadPool chance at Dead Pool; the nest's, at Hashboard.
 export const FARM = {
   id: 'kessler', name: 'KESSLER-FARM-00', from: 7, regroup: 0.6,
@@ -232,7 +232,7 @@ function farmKill(s, loc, sp) {
   const up = (cur, max) => Math.max(cur, Math.round(max * FARM.regroup));
   s.run.integrity = up(s.run.integrity, s.run.max);
   for (const m of hooks.crewMates?.(s) || []) { const c = s.run.crew?.[m.who]; if (c) c.signal = up(c.signal ?? m.run.max, m.run.max); }
-  emit(s, 'net-good', `Regroup brings everyone back up to at least ${Math.round(FARM.regroup * 100)}% Signal.`);
+  emit(s, 'net-good', `Regroup brings everyone back up to at least ${Math.round(FARM.regroup * 100)}% Integrity.`);
 }
 // Its files: the password's word with the Foreman, its digits with the Heatsink, readable once each falls.
 export function farmFile(loc, path, name) {

@@ -11,6 +11,7 @@ import INFILTRATOR_FX from './classes/infiltrator.mjs';
 import OPERATOR_FX from './classes/operator.mjs';
 
 import { contractKill, contractTakeover, mailCommand, tickMail, initMail, openContracts, systemLetter, contractPackLost, contractDefuse, contractLocated, itemRestore } from './mail.mjs';
+import { revertVisit } from './visit.mjs';
 import { buy, indemnityRestore, hubsRestore, shopRestore } from './store.mjs';
 import { buyFrom, claimServer, reclaimCheck, clearedFor, strikeServer, setCommission, repRestore } from './factions.mjs';
 import { receiptCommand } from './receipts.mjs';
@@ -34,7 +35,7 @@ import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
 import { tickRoot, processWon, rootRoll } from './root.mjs';
-import { firewallCommand, wear, raidShare, hardenRestore } from './firewall.mjs';
+import { firewallCommand, wear, hardenRestore } from './firewall.mjs';
 import { tiersRestore, LEGACY_TREES } from './talents.mjs';
 import { rollSpecials, specialsRestore, hasSpecial, SPECIAL, leaningOf } from './specials.mjs';
 import { leanDealt, leanTaken, leanPaid } from './leanings.mjs';
@@ -94,7 +95,7 @@ export function fresh() {
   const s = {
     version: SAVE_VERSION,
     curve: 3, // items rolled on the compounding curve and filled, on the floor tiers (gear.mjs curveRestore)
-    server: { integrity: CONFIG.maxIntegrity, max: CONFIG.maxIntegrity, credits: CONFIG.startingCredits },
+    server: { integrity: 1, max: 1, credits: CONFIG.startingCredits },
     encounter: null,
     leadProgress: { ransomware: 0, worm: 0, ghostroot: 0 },
     locations: [],
@@ -109,10 +110,9 @@ export function fresh() {
     install: null,
     materials: { cipher: 0, worm: 0, kernel: 0, exploit: 0 },
     // Invasions: the one invader on its way or at the wall; the network's logged-on clock;
-    // Degraded mode after a crash; a gate intrusion parked while you fight an invader.
+    // a gate intrusion parked while you fight an invader.
     invasion: null,
     net: { wall: null, next: null },
-    degraded: null,
     gate: null,
     nextItem: 0,
     rng: 0x2545f491,
@@ -134,6 +134,7 @@ export function fresh() {
   dexOf(s); // the Codex tab's record: kills, bosses fought, tells and sets met (genome.mjs)
   researchOf(s); // part research (research.mjs): empty
   initMail(s); // the first LOWLIGHT mail is waiting
+  s.server.integrity = s.server.max = CONFIG.maxSignal; // Integrity full: a level-1 bar with nothing loaded (serverMax)
   return bindRooms(s);
 }
 // s.rooms: the server's rooms you're on (floorplan.mjs). On the real save it's the run's server's (netrooms.mjs keeps
@@ -278,7 +279,7 @@ export const keyOf = (s, id) => barKeys(s).find(([, v]) => v === id)?.[0] || '';
 // Abilities you can use in a fight right now (run-only skills like Spoof are not fight abilities).
 export const usable = (s) => barKeys(s).map(([, id]) => id).filter((id) => ABILITIES[id]);
 
-// What the current fight damages: your server at home, your Signal on a run.
+// What the current fight damages: your server at home, your Integrity on a run.
 export function defender(s) {
   return s.encounter?.mode === 'run' ? s.run : s.server;
 }
@@ -353,7 +354,7 @@ export function damageMultiplier(s, p, opts = {}) {
   // Burns or helpers alone, on a part that meets the condition (Brackish, Riptide). A helper's hit carries src 'helper'.
   if (opts.dot && !opts.server) for (const x of fxFire(s, 'hit', { target: p, do: opts.src === 'helper' ? 'helper%' : 'burn%' })) m *= 1 + x.value / 100;
   if (opts.src === 'helper' && p.kind === 'fragment') { const x = fxHas(s, 'helper-frags%'); if (x) m *= 1 + (Number(x.fx.value) || 0) / 100; } // Changed Default: your helpers deal more to fragments
-  if (!opts.server) m *= classMult('dealt', s, p, opts) * (1 - rebootSick(s)); // reboot sickness: your server is rebooting
+  if (!opts.server) m *= classMult('dealt', s, p, opts);
   m *= masteryDmg(s, e.virus, p); // a part you've mastered takes 3% more from all of yours (research.mjs; never a crewmate's)
   return m;
 }
@@ -504,7 +505,6 @@ export function loadedOn(s, id) {
 // ---------- the server ----------
 // (Services retired with outposts in save v40, GAME_RULES.md "Saves": a save that ran one got what it cost back, sockets.mjs
 // retireOutposts. The server runs no rules of its own; the firewall, its filters and the daemons are its kit.)
-const baseMax = (s) => Math.round(CONFIG.maxIntegrity * power(serverLevel(s)));
 
 // A stat's total. side 'hacker': your protocols; 'server': the firewall's filters at home; none: both.
 // (Survival stats exist on both sides and count where that side is defending.)
@@ -535,7 +535,7 @@ export function gearStat(s, stat, side = null) {
 export const guarding = (s) => (s.encounter && (active(s) || s.encounter.phase === 'alert') ? (s.encounter.mode === 'run' ? 'hacker' : 'server') : s.run ? 'hacker' : 'server');
 export const defense = (s, stat) => gearStat(s, stat, guarding(s));
 export const critMultiplier = () => CRIT.multiplier;
-// Your power: your own numbers (damage, heals, shields, Signal) grow on your slow line (data.mjs own); gear carries the rest.
+// Your power: your own numbers (damage, heals, shields, Integrity) grow on your slow line (data.mjs own); gear carries the rest.
 export const powerOf = (s) => own(hackerLevel(s));
 export const scaled = (s, n) => Math.max(1, Math.round(n * powerOf(s)));
 // Sustain's potency in a fight with fight length (data.mjs CONFIG.length.heal, by the virus's level): heals you take and
@@ -569,44 +569,35 @@ export const missChance = (s) => (CONFIG.misses ? Math.max(0, gapMiss(levelGap(s
 export const controls = (a, id) => !!(a?.status || a?.delay || a?.verb === 'stun' || id === 'jam');
 export const resistChance = (s) => (CONFIG.misses ? Math.min(CONFIG.maxResist, CONFIG.resist * Math.max(0, levelGap(s))) : 0);
 export const enemyMissChance = (s) => (CONFIG.misses ? Math.min(75, gapMiss(-levelGap(s)) + defense(s, 'evasion')) : defense(s, 'evasion'));
-// Server Regen between fights: very slow (its number every 5 real minutes, as in a fight it is every 5 cycles).
-// Between fights: resting (see CONFIG.restRegen) plus any Self-healing filter's Regen.
-const maxSignalOf = (s) => maxSignal(s);
+// Integrity rests back at home, out of a fight (CONFIG.signalRest of your max a minute, offline too; half that while
+// an invasion is contested or breaching), plus any Self-healing filter's Regen. On a run it's the run's (s.run).
 export function idleRegen(s, ms) {
-  // Signal rests back up while you're not connected.
-  let changed = false;
-  if (!s.run && s.signal != null && !active(s)) {
-    const max = maxSignalOf(s);
-    if (s.signal < max) {
-      s.signalAcc = (s.signalAcc || 0) + ((CONFIG.signalRest * max * ms) / 60000) * (piecesOn(s) ? restFast(s) : 1); // Night Shift (3): faster (sets.mjs)
-      const n = Math.floor(s.signalAcc + 1e-9);
-      if (n) { s.signalAcc -= n; s.signal = Math.min(max, s.signal + n); changed = true; }
-    }
-    if (s.signal >= max) s.signal = null; // full again: back to "whatever your max is"
-  }
-  if (active(s) || s.server.integrity <= 0 || s.server.integrity >= s.server.max) return changed;
+  if (s.run || active(s)) return false;
+  syncServer(s);
+  if (s.server.integrity >= s.server.max) { s.server.regenAcc = 0; return false; }
   const besieged = s.invasion && ['siege', 'breach'].includes(s.invasion.state);
-  const rate = regenRate(gearStat(s, 'regen', 'server')) + CONFIG.restRegen * s.server.max * (besieged ? 0.5 : 1); // half rate while an invasion is at the wall
-  if (!rate) return changed;
+  const rate = regenRate(gearStat(s, 'regen', 'server')) + CONFIG.signalRest * s.server.max * (piecesOn(s) ? restFast(s) : 1) * (besieged ? 0.5 : 1); // Night Shift (3): faster (sets.mjs)
   s.server.regenAcc = (s.server.regenAcc || 0) + (rate * ms) / 60000;
-  if (s.server.regenAcc < 1 - 1e-9) return changed;
   const n = Math.floor(s.server.regenAcc + 1e-9);
+  if (!n) return false;
   s.server.regenAcc -= n;
   s.server.integrity = Math.min(s.server.max, s.server.integrity + n);
   return true;
 }
 export const zeroDay = (s, id) => loaded(s).find((it) => it.zeroDay === id) || null;
 export const critChance = (s) => CONFIG.baseCrit + gearStat(s, 'crit', 'hacker');
-export const serverMax = (s) => baseMax(s) + Math.round(baseMax(s) * raidShare(s)); // firewall tiers +1, +3, +5: +5% each
+// Integrity: your one health bar (GAME_RULES.md "Home"), your server's and yours on a run. Its max is maxSignal (power,
+// gear, talents, sets). At home s.server holds it; a run carries its own copy (s.run.integrity), written back when you
+// jack out (run.mjs bank) and put back as it was at connect on a disconnect (visit.mjs).
+export const serverMax = (s) => maxSignal(s);
 // Rootkit: your first hit each fight goes through armor.
 export const rootkitReady = (s) => !!zeroDay(s, 'rootkit') && active(s) && !s.encounter.once?.rootkit;
-// Keep the server's max Integrity in step with its level (your highest class level) and its firewall tier.
+// Keep max Integrity in step with your power and gear: full stays full, anything less keeps its number.
 export function syncServer(s) {
-  const max = serverMax(s);
-  const delta = max - s.server.max;
+  if (active(s) && s.encounter.mode !== 'run') return; // a home fight keeps the bar it started with
+  const max = serverMax(s), full = s.server.integrity >= s.server.max;
   s.server.max = max;
-  if (delta > 0 && s.server.integrity > 0) s.server.integrity += delta;
-  s.server.integrity = Math.min(s.server.integrity, max);
+  s.server.integrity = full ? max : Math.min(s.server.integrity, max);
 }
 // A new protocol into the stash. A full stash breaks it down for components instead.
 export function addItem(s, item, why = 'Loot: ') {
@@ -946,14 +937,14 @@ export function giveUnique(s, id, why = 'Reward: ') {
   if (!u) return null;
   return addItem(s, uniqueItem(u, hackerLevel(s), () => rand(s)), why);
 }
-// A contract delivered (mail.mjs): what your set bonuses do then (LOWLIGHT Kit: your Signal full, and the next kill's
+// A contract delivered (mail.mjs): what your set bonuses do then (LOWLIGHT Kit: your Integrity full, and the next kill's
 // XP up by its value, kept in s.killXp until a kill spends it).
 export function setDeliver(s) {
   for (const x of fxFire(s, 'deliver')) {
     if (x.fx.do === 'fill-signal') {
       if (s.run) s.run.integrity = Math.max(s.run.integrity, s.run.max || maxSignal(s));
-      else s.signal = null; // full: whatever your max is
-      emit(s, 'net-good', `${x.name}: your Signal is full.`, firedOf([x]));
+      else s.server.integrity = s.server.max = maxSignal(s);
+      emit(s, 'net-good', `${x.name}: your Integrity is full.`, firedOf([x]));
     }
     if (x.fx.do === 'kill-xp') { s.killXp = Math.max(s.killXp || 0, x.value); s.killXpFrom = x.name; emit(s, 'status', `${x.name}: your next kill pays ${x.value}% more XP.`, firedOf([x])); }
   }
@@ -1029,7 +1020,7 @@ function fxCond(s, fx, ctx = {}) {
     case 'no-helper': return !!e && !e.helpers?.length;
     case 'blocked': return blockOf(s) > 0;
     case 'big-hit': return ctx.amount > (d().max * (fx.over || 0)) / 100; // the attack's size as it reaches you, before Block
-    case 'to-below-half': return ctx.lands != null && d().integrity >= d().max / 2 && d().integrity - ctx.lands < d().max / 2; // what would get through to your Signal
+    case 'to-below-half': return ctx.lands != null && d().integrity >= d().max / 2 && d().integrity - ctx.lands < d().max / 2; // what would get through to your Integrity
     case 'first-use': return !!ctx.cmd && !!e && (e.metrics?.actions?.[ctx.cmd] || 0) <= 1;
     case 'above-75': return d().integrity > d().max * 0.75;
     case 'late': return !!e && e.cycle >= 6;
@@ -1368,7 +1359,6 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   const mode = opts.mode || 'home';
   if (active(s)) return warn(s, 'Finish the current fight first.');
   if (mode === 'home' && s.run) return warn(s, 'You are out on a run. Type jack out first.');
-  if (mode === 'home' && s.server.integrity <= 0) return warn(s, 'Server crashed. Type developer reboot to restore the test server.');
   const virus = encounterVirus(s, key, seed, opts);
   if (mode === 'home') { s.seed = seed; s.gate = null; }
   (s.met ||= {})[virus.strain || virus.family] = true; // the Codex names what you've met
@@ -1429,7 +1419,7 @@ export function encounterVirus(s, key, seed, opts = {}) {
   if (opts.basic) over.basic = opts.basic; // a forced basic (parts.mjs: genesim.mjs probes, the playtest page)
   if (Array.isArray(opts.exe)) over.exe = opts.exe; // forced .exe builds (exe.mjs: the playtest page, the tests)
   if (opts.classic) over.classic = true; // the shape from before the parts roll (a Pulse Node, the signature, one third): balance.mjs's designed fight sets
-  if (mode === 'run') over.run = true; // tuned for Signal fights (CONFIG.runHp, runDamage)
+  if (mode === 'run') over.run = true; // tuned for Integrity fights (CONFIG.runHp, runDamage)
   if (opts.short) over.short = true; // a breach's fights keep their own pace (CONFIG.length skipped)
   if (opts.tag) over.tag = opts.tag; // a file's four digits: the fight carries its file's tag (WARDED CRYPTJACK-4821)
   // Its floor (parts.mjs PARTS.floor, natives): the server's, or with no server (home, SPRAWL-00, a sim) your floor at
@@ -1485,7 +1475,7 @@ export function addLead(s, family, amount, why = '', at = null) {
 }
 
 // A server by id: one you've traced, or a consortium member's (consortium.mjs).
-export const findLocation = (s, id) => s.locations.find((l) => l.id === id) || s.consortium?.servers?.find((l) => l.id === id) || (s.occupation?.id === id ? s.occupation : null) || s.threads?.servers?.find((l) => l.id === id) || null; // a thread's temporary server is no server of your network (threads.mjs)
+export const findLocation = (s, id) => s.locations.find((l) => l.id === id) || s.consortium?.servers?.find((l) => l.id === id) || s.threads?.servers?.find((l) => l.id === id) || null; // a thread's temporary server is no server of your network (threads.mjs)
 
 // A server located on a floor (floors.mjs): at a slot (a ? traced to 100%, a floor's landing server), or, when no slot
 // is named (a developer find, a story's server), the next free slot on that floor (pickSlot: a ? of its family first).
@@ -1629,7 +1619,7 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
     h.xp -= xpToNext(h.level);
     const top = serverLevel(s); // your highest class level before this one (the server's level)
     h.level++;
-    if (h.level > top) syncServer(s); // the server's level is your highest class level
+    syncServer(s); // max Integrity grows with your power
     breadcrumb(s, h.level);
     // Rogue servers keep up with you inside their floor's band (rogue.mjs does it on a visit too).
     for (const l of s.locations || []) if (l.rogue && !l.member) l.level = Math.max(l.level || 1, SERVER.keepUp(h.level, l.depth || 1));
@@ -1651,7 +1641,7 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
     const pickSub = h.level === SUBCLASS.from && !subPicked(s, arch) ? ` Choose a subclass: ${Object.values(ARCHETYPES[arch].subs).map((x) => `${x.name} (subclass ${x.id})`).join(' or ')}. Until you do, you play the ${ARCHETYPES[arch].name} core.` : '';
     const talent = (gainsTalent(h.level) ? ` Talent tier ${LOADOUT.tiers.indexOf(h.level) + 1} opens.` : '') + (h.level === LOADOUT.capstoneAt[0] ? ' +1 capstone point: pick a capstone (talent capstone a|b).' : h.level === LOADOUT.capstoneAt[1] ? ' Your capstone reaches rank 2.' : '') + pickSub;
     const { gains, next } = levelUpGains(arch, sub, h.level, top);
-    emit(s, 'level-up', `LEVEL ${h.level} ${ARCHETYPES[arch].name.toUpperCase()}.${names.length ? ' New: ' + names.join(', ') + '.' : ''}${shelf ? ' ' + shelf : ''}${talent} Power +4%.`, { level: h.level, arch, sub: sub || null, unlocked: got, gains, next, server: h.level > top ? s.server.max : null });
+    emit(s, 'level-up', `LEVEL ${h.level} ${ARCHETYPES[arch].name.toUpperCase()}.${names.length ? ' New: ' + names.join(', ') + '.' : ''}${shelf ? ' ' + shelf : ''}${talent} Power +4%.`, { level: h.level, arch, sub: sub || null, unlocked: got, gains, next, server: s.server.max });
   }
   if (h.level >= LOADOUT.maxLevel) h.xp = 0;
 }
@@ -1663,11 +1653,14 @@ export function levelUpGains(arch, sub, L, top = L - 1) {
   return { gains: [...skillsAt(L), ...levelGains(arch, L, top)], next: nextGains(arch, L, Math.max(top, L), skillsAt) };
 }
 // A level-up as gainXp would log it, for the level-up prototypes' preview (developer levelup preview): nothing on
-// the save changes. The Integrity is what the server would have at that level.
+// the save changes. The Integrity is your max at that level (worked out on a copy).
 export function levelUpPreview(s, L) {
   const arch = classOf(s), sub = L >= SUBCLASS.from ? subOf(s, arch) : null;
   const { gains, next } = levelUpGains(arch, sub, L, L - 1);
-  return { type: 'level-up', preview: true, level: L, arch, sub: sub || null, unlocked: newAtLevel(arch, L, sub), gains, next, server: Math.round(100 * power(L)), message: `LEVEL ${L} ${ARCHETYPES[arch].name.toUpperCase()}.` };
+  const c = JSON.parse(JSON.stringify(s));
+  hackerOf(c).level = L;
+  const server = serverMax(c);
+  return { type: 'level-up', preview: true, level: L, arch, sub: sub || null, unlocked: newAtLevel(arch, L, sub), gains, next, server, message: `LEVEL ${L} ${ARCHETYPES[arch].name.toUpperCase()}.` };
 }
 // Skills and cantrips a class gains exactly at a level.
 export function newAtLevel(arch, lvl, sub = null) {
@@ -2095,24 +2088,12 @@ function loadoutCommand(s, text) {
 }
 
 // ---------- upgrades ----------
-// Max Signal%: set pieces and bonuses (sets.mjs) and Bedframe, Firmware (max-signal%) raise the whole of it.
-const signalOf = (s) => { const t = (hasTalent(s, 'onion-routing') ? 8 : 0) + 3 * rank(s, 'extra-memory'); return Math.round((Math.round(CONFIG.maxSignal * powerOf(s)) + gearStat(s, 'signal') + (t ? scaled(s, t) : 0)) * (hasTalent(s, 'hardened-kernel') ? 1.1 : 1)); }; // talents' Signal, on your own line (Hardened Kernel, Warden: +10%)
+// Max Integrity%: set pieces and bonuses (sets.mjs) and Bedframe, Firmware (max-signal%) raise the whole of it.
+const signalOf = (s) => { const t = (hasTalent(s, 'onion-routing') ? 8 : 0) + 3 * rank(s, 'extra-memory'); return Math.round((Math.round(CONFIG.maxSignal * powerOf(s)) + gearStat(s, 'signal') + (t ? scaled(s, t) : 0)) * (hasTalent(s, 'hardened-kernel') ? 1.1 : 1)); }; // talents' Integrity, on your own line (Hardened Kernel, Warden: +10%)
 export const maxSignal = (s) => {
-  const n = signalOf(s), pct = (piecesOn(s) ? setSignal(s) : 0) + fxSum(s, 'always', 'max-signal%'), sick = rebootSick(s), m = pct ? n + Math.round((n * pct) / 100) : n;
-  return sick ? Math.max(1, Math.round(m * (1 - sick))) : m;
+  const n = signalOf(s), pct = (piecesOn(s) ? setSignal(s) : 0) + fxSum(s, 'always', 'max-signal%');
+  return pct ? n + Math.round((n * pct) / 100) : n;
 };
-// Reboot sickness (CONFIG.rebootSick): while your server reboots (Degraded), your max Signal and the damage you deal are
-// down by a share that grows with the deepest floor you've reached. Clearing your own occupied server (a crash while
-// away) is how you bring it back sooner, so it doesn't count there.
-export const rebootSick = (s) => (!s.degraded || (s.occupation && s.run?.loc === s.occupation.id) ? 0 : CONFIG.rebootSick[Math.min(CONFIG.rebootSick.length, s.floors?.reached || 1) - 1]);
-// A run's Signal follows reboot sickness as it comes and goes: its max drops at a crash (Signal with it) and comes
-// back when the server is back online (Signal doesn't).
-export function syncRunSignal(s) {
-  if (!s.run) return;
-  s.run.max = maxSignal(s);
-  s.run.integrity = Math.min(s.run.integrity, s.run.max);
-}
-
 // Protocols at home: protocols · load <protocol> · unload <protocol|slot> · deconstruct <protocol>.
 function protocolCommand(s, text) {
   const [word, ...restWords] = text.split(' ');
@@ -2170,32 +2151,35 @@ function serviceCommand(s) {
 // How long a server makes you wait to reconnect after a disconnect: CONFIG.relockMs, and CONFIG.deathWait.each more for
 // each disconnect on its run (loc.deaths), up to CONFIG.deathWait.cap.
 export const relockWait = (deaths = 0) => Math.min(CONFIG.deathWait.cap, CONFIG.relockMs + deaths * CONFIG.deathWait.each);
-// Losing all Signal on a run: back home, pack lost, server untouched. The server waits a little longer for each
-// disconnect on its run (relockWait).
+// Integrity 0 on a run: back home as you were when you connected (visit.mjs: the visit undone, Integrity and all).
+// The server waits a little longer for each disconnect on its run (relockWait).
 export function disconnect(s, reason) {
   const run = s.run;
   if (!run) return;
   // Deadman's Switch: jack out with the pack instead (then it rearms on a real-time cooldown).
   const dead = hooks.jackOut && fxFire(s, 'disconnect', { do: 'jackout' })[0];
   if (dead) {
-    emit(s, 'net-good', `Your Signal is gone, but ${dead.it.name} trips. You jack out with your pack.`);
+    emit(s, 'net-good', `Your Integrity is gone, but ${dead.it.name} trips. You jack out with your pack.`);
     run.integrity = 0;
     if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
     return hooks.jackOut(s);
   }
   const loc = run.loc === CONFIG.zone.id ? s.zone : findLocation(s, run.loc);
-  const failed = s.mail?.jobs ? contractPackLost(s, run) : []; // a contract's item in the pack goes with it, and its contract fails (mail.mjs)
-  const lost = run.pack.length;
+  const visit = hooks.visitOf?.(s) || null; // what the visit held, for the card: undone below
+  // A save from before the snap (visit.mjs): the old rule, the pack lost and an Install job's item with it.
+  const failed = !run.snap && s.mail?.jobs ? contractPackLost(s, run) : [];
+  const lost = run.snap ? 0 : run.pack.length;
   const by = s.encounter?.mode === 'run' ? s.encounter.virus?.name : null; // what took you out, for the card
-  const recap = s.encounter?.mode === 'run' ? deathRecap(s) : null; // how: the last cycles' Signal and hits (recap.mjs)
-  s.signal = Math.max(0, run.integrity);
+  const recap = s.encounter?.mode === 'run' ? deathRecap(s) : null; // how: the last cycles' Integrity and hits (recap.mjs)
+  const reverted = revertVisit(s, run.snap, loc);
+  if (!reverted) s.server.integrity = 1;
   s.run = null;
   const wait = loc ? relockWait((loc.deaths = (loc.deaths || 0) + 1)) : 0;
   if (loc) loc.lockUntil = (hooks.now?.() ?? Date.now()) + wait; // every server: see rogue.mjs relocks/relockLeft
   if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
-  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}. ${lost ? `${lost} unbanked ${lost === 1 ? 'file' : 'files'} lost.` : ''} Your server is untouched.`, { by, reason: reason || '', lost, where: loc?.name || '', relockMs: wait, deaths: loc?.deaths || 0, failed, ...(recap ? { recap } : {}) });
+  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}. ${reverted ? 'Back to when you connected.' : lost ? `${lost} unbanked ${lost === 1 ? 'file' : 'files'} lost.` : ''}`, { by, reason: reason || '', lost, visit, reverted, where: loc?.name || '', relockMs: wait, deaths: loc?.deaths || 0, failed, ...(recap ? { recap } : {}) });
 }
 
 function newMetrics(s) {
@@ -2237,7 +2221,7 @@ function engage(s) {
   // A filter of the Scrubber starts every home fight shielded.
   if (e.mode === 'home' && gearStat(s, 'shield', 'server')) e.shield = (e.shield || 0) + gearStat(s, 'shield', 'server');
   daemonsOn(s, 'start'); // the Airbag, and the Leash on an Exfil (daemons.mjs)
-  noteSignal(s, e.cycle - 1); // the Signal you came in with, as the cycle before the first (Last Known Good, the death recap)
+  noteSignal(s, e.cycle - 1); // the Integrity you came in with, as the cycle before the first (Last Known Good, the death recap)
   // Stealth: each part's first attack may come a cycle later (a delay like any, delayAttack).
   const st = gearStat(s, 'stealth');
   if (st) {
@@ -2379,8 +2363,8 @@ export function finish(s, result) {
   // A server room (floorplan.mjs, the rooms playtest): the kill's XP here. Progress, loot and the pack are the room's.
   if (e.rooms) {
     if (result === 'escaped') emit(s, 'escaped', 'Upload complete. The archive is gone.', { mode: 'rooms', cycles: e.cycle }); // a runner got away (the Exfil: its upload completed)
-    else if (result === 'victory' && e.objective?.kind === 'uptime') emit(s, 'victory', `Uptime held for ${e.cycle} cycles. Signal ${d.integrity}/${d.max}.`, { mode: 'rooms' });
-    else emit(s, result === 'victory' ? 'victory' : 'crashed', result === 'victory' ? `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.` : `${e.virus.name} burned your Signal to zero.`, { mode: 'rooms' });
+    else if (result === 'victory' && e.objective?.kind === 'uptime') emit(s, 'victory', `Uptime held for ${e.cycle} cycles. Integrity ${d.integrity}/${d.max}.`, { mode: 'rooms' });
+    else emit(s, result === 'victory' ? 'victory' : 'crashed', result === 'victory' ? `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Integrity ${d.integrity}/${d.max}.` : `${e.virus.name} burned your Integrity to zero.`, { mode: 'rooms' });
     if (result === 'victory') { objectiveBonus(s, e); payKill(s, e, e.roomsXp || 1, `${e.virus.name} neutralized`); } // a met objective's components (objectives.mjs)
     hooks.roomEnd?.(s, result);
     return;
@@ -2402,7 +2386,7 @@ export function finish(s, result) {
     const named = spawn?.bounty && !keep ? spawn.name : null;
     if (named) delete spawn.bounty;
     if (result === 'victory') {
-      emit(s, 'victory', `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
+      emit(s, 'victory', `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Integrity ${d.integrity}/${d.max}.`, { mode: 'run' });
       contractKill(s, { family: e.virus.family, zone: true, bounty: named, level: e.virus.level, strain: e.virus.strain });
       eventKill(s, e.virus.family); // an outbreak's source (events.mjs chains)
       huntKill(s, e.virus.family);
@@ -2418,8 +2402,8 @@ export function finish(s, result) {
       if (e.process) processWon(s, e); // root access grows (root.mjs)
       hooks.runWon?.(s);
     } else {
-      emit(s, 'crashed', `${e.virus.name} burned your Signal to zero.`, { mode: 'run' });
-      disconnect(s, 'Signal lost');
+      emit(s, 'crashed', `${e.virus.name} burned your Integrity to zero.`, { mode: 'run' });
+      disconnect(s, 'Integrity lost');
     }
     return;
   }
@@ -2429,7 +2413,7 @@ export function finish(s, result) {
       if (loc) { loc.state.cleared[e.room] = true; clearedFor(s, loc); } // a faction's server: they like that (factions.mjs)
       // The Resident (run.mjs /core): beat it and the server is yours.
       if (loc && e.virus.boss === 'resident' && !loc.takenOver) { loc.resident = null; strikeServer(s, loc, 'takeover'); contractTakeover(s, loc); }
-      emit(s, 'victory', `${e.virus.name} down. ${e.room} is open. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
+      emit(s, 'victory', `${e.virus.name} down. ${e.room} is open. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Integrity ${d.integrity}/${d.max}.`, { mode: 'run' });
       contractKill(s, { family: e.virus.family, zone: false, level: e.virus.level, strain: e.virus.strain });
       eventKill(s, e.virus.family); // an outbreak's source (events.mjs chains)
       payKill(s, e, XP.guard, `${e.virus.name} down`);
@@ -2448,16 +2432,16 @@ export function finish(s, result) {
       if (gains && Object.keys(gains).length) emit(s, 'code', `${e.virus.name} dropped ${Object.entries(gains).map(([m, n]) => `${n} ${MATERIALS[m].name}`).join(' and ')}. In your pack until you jack out.`, { gains, pack: true });
       hooks.runWon?.(s);
     } else {
-      emit(s, 'crashed', `${e.virus.name} burned your Signal to zero.`, { mode: 'run' });
+      emit(s, 'crashed', `${e.virus.name} burned your Integrity to zero.`, { mode: 'run' });
       // A Resident that beats you grows: a level more for 6 hours, up to three.
       const home = e.virus.boss === 'resident' && findLocation(s, s.run?.loc);
       if (home) { const now = hooks.now?.() ?? Date.now(), had = home.resident && now - home.resident.at < 6 * 3600000 ? home.resident.bonus : 0; home.resident = { bonus: Math.min(3, had + 1), at: now }; emit(s, 'warning', `The Resident of ${home.name} beat you. It's a level stronger for the next 6 hours.`, { location: home.id }); }
-      disconnect(s, 'Signal lost');
+      disconnect(s, 'Integrity lost');
     }
     return;
   }
   const clean = !e.metrics.attackDamage;
-  emit(s, result, result === 'victory' ? `${e.virus.name} neutralized in ${e.cycle} cycles. ${clean ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Server ${s.server.integrity}/${s.server.max}.` : 'SERVER CRASHED. The fight is over.', { invader: !!e.invader });
+  emit(s, result, result === 'victory' ? `${e.virus.name} neutralized in ${e.cycle} cycles. ${clean ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Integrity ${s.server.integrity}/${s.server.max}.` : `${e.virus.name} wore you down to 1.${e.invader ? ' It holds the wall.' : ''}`, { invader: !!e.invader });
   const inv = e.invader && s.invasion?.id === e.invader ? s.invasion : null;
   const hid = inv?.hidden ? hiddenNode(s, inv.hidden) : null; // an invader from a server you haven't found
   if (result === 'victory') {
@@ -2476,24 +2460,14 @@ export function finish(s, result) {
   } else {
     // The invader stays at the wall, as worn down as you left it.
     if (inv) { const v = virusIntegrity(s); inv.hp = Math.max(0.05, v.max ? v.current / v.max : 1); }
-    crashServer(s);
+    s.server.integrity = 1; // home never takes the last point (GAME_RULES.md "Home")
   }
   // Beating an invader from an unknown server traces most of the way back to it.
   if (lead && hid) hiddenLead(s, hid, HIDDEN.winLead + (lead - CONFIG.leadBase));
   else if (lead && inv) addLead(s, e.virus.family, lead, 'Its route: ', findLocation(s, inv.from)); // the road back: a ? next to the server it came from
 }
 
-// ---------- crashes and invasions (engine side; the network lives in invasion.mjs) ----------
-// A crash reboots the server at half Integrity and puts it in Degraded mode for 10 real
-// minutes: the wall is down (invaders wait, none set out), installs pause, and the server earns
-// no XP. You can still fight, explore and level. The clock starts at the next network tick.
-// ms, since: a longer reboot that started at a known time (a crash while you were away).
-export function crashServer(s, ms = CONFIG.degradedMs, since = null) {
-  s.server.integrity = Math.max(1, Math.round(s.server.max * CONFIG.reboot));
-  s.degraded = { since, until: since == null ? null : since + ms, ms };
-  syncRunSignal(s);
-  emit(s, 'degraded', `REBOOTED at ${s.server.integrity}/${s.server.max}. Degraded for ${ms >= 3600000 ? `${ms / 3600000} hours` : `${ms / 60000} minutes`}: −${Math.round(rebootSick(s) * 100)}% max Signal and damage.`);
-}
+// ---------- invasions (engine side; the network lives in invasion.mjs) ----------
 // When the next invader sets out: some logged-on minutes from now.
 export function scheduleInvasion(s) {
   const [lo, hi] = CONFIG.invasion.everyMs;
@@ -2634,7 +2608,7 @@ export function validate(s, intent) {
   if (intent.ability === 'patch') {
     const to = intent.ally ? allyOf(s, intent.ally) : s;
     if (!to) return `${intent.ally} isn't standing.`;
-    if (defender(to).integrity >= defender(to).max) return intent.ally ? `${intent.ally} is at full Signal.` : 'Already at full health.';
+    if (defender(to).integrity >= defender(to).max) return intent.ally ? `${intent.ally} is at full Integrity.` : 'Already at full health.';
   }
   if (intent.ability === 'failover' && defender(s).integrity >= defender(s).max) return 'Failover needs missing health.';
   return null;
@@ -2653,24 +2627,19 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   tickServices(s, now);
 
   if (text === 'status') {
-    emit(s, 'info', `Server ${s.server.integrity}/${s.server.max}, ${s.server.credits} credits. ${active(s) ? `Cycle ${e.cycle}; queued: ${e.queue?.text || 'auto'}.` : 'No active fight.'}`);
+    emit(s, 'info', `Integrity ${s.run ? s.run.integrity : s.server.integrity}/${s.run ? s.run.max : s.server.max}, ${s.server.credits} credits. ${active(s) ? `Cycle ${e.cycle}; queued: ${e.queue?.text || 'auto'}.` : 'No active fight.'}`);
   } else if (text === 'developer reboot') {
     if (active(s)) warn(s, 'Developer reboot works outside combat only.');
     else {
       if (s.run) disconnect(s, 'developer reboot');
-      s.server.integrity = s.server.max;
+      s.server.integrity = s.server.max = maxSignal(s);
       s.server.credits = Math.max(s.server.credits, 160);
-      s.degraded = null;
-      syncRunSignal(s);
       emit(s, 'info', 'Developer reboot: Integrity and test credits restored.');
     }
-  } else if (text === 'developer refill') { // Signal and Integrity to full, in a fight or out (the test bench's panel)
+  } else if (text === 'developer refill') { // Integrity to full, in a fight or out (the test bench's panel)
     s.server.integrity = s.server.max;
-    s.signal = null; // full: whatever your max is
-    if (s.run) s.run.integrity = s.run.max;
-    s.degraded = null;
     if (s.run) s.run.integrity = s.run.max = maxSignal(s);
-    emit(s, 'info', 'Developer: Signal and Integrity full.');
+    emit(s, 'info', 'Developer: Integrity full.');
   } else if (/^developer credits \d+$/.test(text)) {
     const n = Math.min(1e6, Number(text.split(' ')[2]));
     s.server.credits += n;
@@ -2699,11 +2668,9 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     const had = new Set(s.locations.map((l) => l.id));
     addLocation(s, text.split(' ')[2], Math.min(reached(s), SERVER.floorFor(hackerLevel(s)))); // the next ? of that family on your floor (floors.mjs pickSlot)
     for (const l of s.locations) if (!had.has(l.id) && l.fresh && joinCost(s, l).fits) memoryCommand(s, 'attach', l.id); // developer finds join your network
-  } else if (/^repair( \d+)?$/.test(text)) {
-    topUp(s, 'server', text.split(' ')[1] ? Number(text.split(' ')[1]) : null);
-  } else if (/^top ?up( signal)?( \d+)?$/.test(text)) {
+  } else if (/^(repair|top ?up( signal| integrity)?)( \d+)?$/.test(text)) { // repair: the same top-up
     const n = text.match(/(\d+)$/);
-    topUp(s, 'signal', n ? Number(n[1]) : null);
+    topUp(s, n ? Number(n[1]) : null);
   } else if (/^encounter [a-z]+( \d+)?$/.test(text) && (FIXTURES[text.split(' ')[1]] || STRAINS[text.split(' ')[1]] || text.split(' ')[1] === 'random')) {
     const [, key, seed] = text.split(' ');
     selectEncounter(s, key, seed ? Number(seed) >>> 0 : (s.seed + 1) >>> 0);
@@ -2792,7 +2759,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (text.startsWith('outpost ') || /^build( |$)/.test(text)) {
     warn(s, 'Outposts are gone. Build in a server\'s socket rooms: connect, clear a socket, and build there.');
   } else if (/^craft( booster)?$/.test(text)) {
-    warn(s, 'Signal boosters are gone. Top up your Signal with credits at home.');
+    warn(s, 'Integrity boosters are gone. Top up your Integrity with credits at home.');
   } else if (/^relay \S+$/.test(text)) {
     installRelay(s, text.split(' ')[1]);
   } else if (/^use /.test(text)) {
@@ -2892,35 +2859,43 @@ function actorTurn(s, who) {
   return active(s);
 }
 
-const signalNow = (s) => Math.min(maxSignal(s), s.signal ?? maxSignal(s)); // as run.mjs
-// Topping up: pay to have Signal or server Integrity full now (CONFIG.topUp), instead of resting.
-export function topUpPrice(s, what) {
-  const [base, per] = CONFIG.topUp[what];
-  return Math.round(base + per * (what === 'signal' ? hackerLevel(s) : serverLevel(s)));
+// Topping up: pay to have Integrity full now (CONFIG.topUp), instead of resting. `repair` is the same command.
+export function topUpPrice(s) {
+  const [base, per] = CONFIG.topUp;
+  return Math.round(base + per * hackerLevel(s));
 }
 // What it costs to fill `points` of the bar (all that's missing by default).
-export function topUpCost(s, what, points = null) {
-  const max = what === 'signal' ? maxSignal(s) : s.server.max;
-  const missing = what === 'signal' ? max - signalNow(s) : s.server.max - s.server.integrity;
+export function topUpCost(s, points = null) {
+  const max = maxSignal(s), missing = max - Math.min(max, s.server.integrity);
   const n = Math.min(missing, points ?? missing);
-  return n > 0 ? Math.max(1, Math.ceil((topUpPrice(s, what) * n) / max)) : 0;
+  return n > 0 ? Math.max(1, Math.ceil((topUpPrice(s) * n) / max)) : 0;
 }
-function topUp(s, what, wanted = null) {
+function topUp(s, wanted = null) {
   if (active(s)) return warn(s, 'Finish the fight first.');
-  const signal = what === 'signal';
-  if (signal && s.run) return warn(s, 'Top up at home. On a run, use a Signal patch from the store.');
-  if (!signal && s.server.integrity <= 0) return warn(s, 'The server crashed. Type developer reboot.');
-  const max = signal ? maxSignal(s) : s.server.max;
-  const now = signal ? signalNow(s) : s.server.integrity;
+  if (s.run) return warn(s, 'Top up at home. On a run, use an Integrity patch from the store.');
+  syncServer(s);
+  const max = s.server.max, now = s.server.integrity;
   let n = Math.min(max - now, wanted ?? max);
-  if (n <= 0) return warn(s, signal ? 'Signal is already full.' : 'Server is already at full Integrity.');
-  while (n > 0 && topUpCost(s, what, n) > s.server.credits) n--; // as much as you can afford
-  if (n <= 0) return warn(s, `Not enough credits (${topUpCost(s, what)} to fill it).`);
-  const cost = topUpCost(s, what, n);
+  if (n <= 0) return warn(s, 'Integrity is already full.');
+  while (n > 0 && topUpCost(s, n) > s.server.credits) n--; // as much as you can afford
+  if (n <= 0) return warn(s, `Not enough credits (${topUpCost(s)} to fill it).`);
+  const cost = topUpCost(s, n);
   s.server.credits -= cost;
-  if (signal) { s.signal = now + n >= max ? null : now + n; s.signalAcc = 0; }
-  else s.server.integrity += n;
-  emit(s, 'repair', signal ? `Signal topped up: +${n} for ${cost} credits. Signal ${now + n}/${max}.` : `Repaired ${n} Integrity for ${cost} credits. Server ${s.server.integrity}/${s.server.max}.`, { what, credits: cost });
+  s.server.integrity += n;
+  s.server.regenAcc = 0;
+  emit(s, 'repair', `Integrity topped up: +${n} for ${cost} credits. Integrity ${s.server.integrity}/${max}.`, { credits: cost });
+}
+// v65 (the landing session sets the number): Signal and the server's Integrity become one bar, and crashes go
+// (GAME_RULES.md "Saves"). Keyed on the fields it converts, so it's safe to run twice: s.signal (null: full) becomes
+// the bar's value; Degraded mode and an occupied home server go. Its max follows your power and gear (syncServer).
+export function healthRestore(s) {
+  if (!s.server) return;
+  if ('signal' in s) { const max = maxSignal(s); s.server.max = max; s.server.integrity = Math.min(max, s.signal ?? max); delete s.signal; }
+  delete s.signalAcc;
+  delete s.degraded;
+  if (s.occupation) { if (s.run?.loc === s.occupation.id) s.run = null; delete s.occupation; }
+  if (!(s.server.integrity >= 1)) s.server.integrity = 1;
+  if (!s.run) syncServer(s); // max Integrity is your power and gear's (a full bar stays full)
 }
 
 // ---------- resolution ----------
@@ -3685,7 +3660,7 @@ function useAbility(s, intent, auto = false) {
   const target = part(s, intent.target);
   fbBid(s, target, a); // CENTRIFUGE: a command at the Gavel is a bid (floorbosses.mjs)
   // What a set bonus compares after the skill (sets.mjs SET_HOOKS.used): your shield, the parts' jams and timers, the
-  // helpers and burns already out, and the crew's Signal and shields. Only with a set piece loaded.
+  // helpers and burns already out, and the crew's Integrity and shields. Only with a set piece loaded.
   const before = sxOf(s) ? { shield: e.shield || 0, parts: Object.fromEntries(livingParts(s).map((p) => [p.id, { jam: p.jammedUntil || 0, due: p.attack?.due }])), burns: new Set(e.burns), helpers: new Set(e.helpers), allies: alliesOf(s).map((a) => ({ who: a.who, st: a.st, integrity: defender(a.st)?.integrity || 0, shield: a.st.encounter?.shield || 0 })) } : null;
   e.metrics.actions[id] = (e.metrics.actions[id] || 0) + 1;
   noteUse(s, id, auto, classOf(s)); // ability mastery (mastery.mjs): yours, not a daemon's or a crewmate's
@@ -3918,7 +3893,7 @@ export function stretchBurns(s, t, cycles, label) {
 
 // Who else is standing in this fight, by name ('you' for the player, to a crewmate): crew.mjs.
 const allyOf = (s, who) => hooks.crewAllies?.(s)?.find((x) => x.who === who)?.st || null;
-// How high healing can take you. In a server room, never past the Signal you brought into the fight (floorplan.mjs
+// How high healing can take you. In a server room, never past the Integrity you brought into the fight (floorplan.mjs
 // fightFrom): heals and shields count inside a fight, rests between them. The bar marks it (healCap).
 const fightFromOf = (s) => (s.run?.rooms ? s.rooms?.fightFrom : null);
 export const healCap = (s) => { const d = defender(s), from = fightFromOf(s); return from != null ? Math.min(d.max, from) : d.max; };
@@ -3937,7 +3912,7 @@ export function heal(s, amount, label, { lift = false, gear = null, drawn = fals
   if (healed < amount && d.integrity >= d.max) classEach('overheal', s, amount - healed); // healing past full (On-Call: sets.mjs)
   if (s.encounter?.commanding && healed) fxState(s.encounter).healed = (fxState(s.encounter).healed || 0) + healed; // what your command healed (Anchor Chain's next heal)
   if (lift && s.run?.rooms && s.rooms?.fightFrom != null) s.rooms.fightFrom = Math.max(s.rooms.fightFrom, d.integrity);
-  emit(s, 'heal', `${label} +${healed}${healed < amount && cap < d.max ? ` (capped at ${cap}, the Signal you came in with)` : ''}. ${s.encounter.mode === 'run' ? 'Signal' : 'Server'} ${d.integrity}/${d.max}.`, { amount: healed, ...(gear ? { gear } : {}) });
+  emit(s, 'heal', `${label} +${healed}${healed < amount && cap < d.max ? ` (capped at ${cap}, the Integrity you came in with)` : ''}. ${s.encounter.mode === 'run' ? 'Integrity' : 'Server'} ${d.integrity}/${d.max}.`, { amount: healed, ...(gear ? { gear } : {}) });
 }
 
 // Bastion Uptime: once per fight, a blow that would drop you to 0 leaves you at 1.
@@ -4014,7 +3989,7 @@ export function takeDamage(s, amount, source, label, { dot = false } = {}) {
   if (dealt && e.readyAt?.failover > e.cycle && d.integrity < d.max / 4 && legend(s, 'flatline')) delete e.readyAt.failover; // Flatline (a legend)
   return dealt;
 }
-// Last Known Good (rewind): once a fight, below 20% your Signal goes back to what it was `value` cycles ago (the end of
+// Last Known Good (rewind): once a fight, below 20% your Integrity goes back to what it was `value` cycles ago (the end of
 // that cycle: cycleClose keeps the last few), healing at most `cap`% of your max. Never down, and never past the heal cap.
 function rewind(s) {
   const e = s.encounter, d = defender(s), x = fxFire(s, 'struck', { do: 'rewind' }, false)[0];
@@ -4025,9 +4000,9 @@ function rewind(s) {
   if (!got) return; // nothing to go back to: it waits for a fall that it can undo
   fxSpend(s, x.fx, x.id);
   d.integrity += got;
-  emit(s, 'heal', `${x.name || x.it.name}: your Signal goes back to where it was ${Number(x.fx.value) || 3} cycles ago, +${got}. Signal ${d.integrity}/${d.max}.`, { amount: got, ...firedOf([x]) });
+  emit(s, 'heal', `${x.name || x.it.name}: your Integrity goes back to where it was ${Number(x.fx.value) || 3} cycles ago, +${got}. Integrity ${d.integrity}/${d.max}.`, { amount: got, ...firedOf([x]) });
 }
-// The Signal you held at the end of each recent cycle (and as the fight started, as the cycle before its first), for
+// The Integrity you held at the end of each recent cycle (and as the fight started, as the cycle before its first), for
 // rewind and the death recap's strip (recap.mjs).
 function noteSignal(s, at = s.encounter.cycle) {
   const st = fxState(s.encounter);
@@ -4232,7 +4207,7 @@ function landAttack(s, p) {
       e.helpers.splice(e.helpers.indexOf(h), 1);
       return emit(s, 'blocked', `${soak.name || soak.it.name}: a helper takes ${atk.name} for you, and expires.`, { source: p.id, ...firedOf([soak]) });
     }
-    // Its size as it reaches you, before any cut (Drain Plug's big hit), and what would get through to your Signal (Read-Only).
+    // Its size as it reaches you, before any cut (Drain Plug's big hit), and what would get through to your Integrity (Read-Only).
     const sap = sapOf(s, p), took = classMult('taken', s, atk, p);
     const pre = Math.round(hitPower * sap * (crit ? CRIT.multiplier : 1) * took * (e.virus.raid ? raidTaken(s) : 1));
     const lands = Math.max(0, blocked(s, pre) - (e.shield || 0));
@@ -4286,7 +4261,7 @@ function landAttack(s, p) {
       if (id && ABILITIES[id] && e.readyAt[id] > e.cycle) { e.readyAt[id] += p.backlog; (e.backlogged ||= {})[id] = e.readyAt[id]; emit(s, 'locked', `${atk.name} lands on your queue. ${ABILITIES[id].name} cools ${p.backlog} cycles longer.`, { source: p.id, ability: id, cycles: p.backlog, backlog: true }); }
     }
     const verb = crit ? 'CRITS' : 'hits';
-    if (dealt) emit(s, 'server-hit', e.mode === 'run' ? `${atk.name} ${verb} your Signal: −${dealt}.` : `${atk.name} ${verb} the server: −${dealt} Integrity.`, { source: p.id, amount: dealt, crit, atk: atk.name, ...(atk.tell ? { tell: atk.tell } : {}) });
+    if (dealt) emit(s, 'server-hit', e.mode === 'run' ? `${atk.name} ${verb} your Integrity: −${dealt}.` : `${atk.name} ${verb} the server: −${dealt} Integrity.`, { source: p.id, amount: dealt, crit, atk: atk.name, ...(atk.tell ? { tell: atk.tell } : {}) });
     // Countermeasures (server gear): whatever hits your server takes a hit back.
     const cm = e.mode === 'home' && gearStat(s, 'countermeasures', 'server');
     if (cm && dealt && alive(p)) hit(s, p, cm, { by: 'Countermeasures', server: true, src: 'reflect' });
@@ -4296,7 +4271,7 @@ function landAttack(s, p) {
     const add = Math.max(1, Math.round(power * (fxHas(s, 'encrypt-half') ? 0.5 : 1)));
     e.encrypt = (e.encrypt || 0) + add;
     p.encrypted = true;
-    emit(s, 'encrypt', `${atk.name} lands, and your ${e.mode === 'run' ? 'Signal' : 'server'} is encrypted. You take ${e.encrypt} damage every cycle until you break the ${p.name}.`, { source: p.id, amount: add, total: e.encrypt });
+    emit(s, 'encrypt', `${atk.name} lands, and your ${e.mode === 'run' ? 'Integrity' : 'server'} is encrypted. You take ${e.encrypt} damage every cycle until you break the ${p.name}.`, { source: p.id, amount: add, total: e.encrypt });
   }
   // A basic carrying its Ghostroot's burst (parts.mjs PARTS.profile): its hit Scrambles you too, on the Scrambler's clock.
   if (atk.scrambles && atk.effect === 'damage' && !(e.scrambleUntil > e.cycle) && e.cycle - (atk.scrambledAt ?? -99) >= (atk.scrambleEvery || 1)) {
@@ -4598,7 +4573,7 @@ function cycleStart(s) {
     const src = livingParts(s).find((x) => x.attack?.effect === 'encrypt');
     const dealt = takeDamage(s, e.encrypt, src?.id, 'the encryption', { dot: true });
     e.metrics.encrypted += dealt;
-    if (dealt) emit(s, 'encrypted', `Encrypted: −${dealt}. ${e.mode === 'run' ? 'Signal' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: src?.id, amount: dealt });
+    if (dealt) emit(s, 'encrypted', `Encrypted: −${dealt}. ${e.mode === 'run' ? 'Integrity' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: src?.id, amount: dealt });
     if (defender(s).integrity <= 0) {
       finish(s, 'crashed');
       return true;
@@ -4614,7 +4589,7 @@ function cycleStart(s) {
     if (!heat) continue;
     const dealt = takeDamage(s, heat, p.id, p.ratchet.name, { dot: true });
     e.metrics.encrypted += dealt;
-    if (dealt) emit(s, 'encrypted', `${p.ratchet.name} (${p.name}): −${dealt}. ${e.mode === 'run' ? 'Signal' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: p.id, amount: dealt, ratchet: true });
+    if (dealt) emit(s, 'encrypted', `${p.ratchet.name} (${p.name}): −${dealt}. ${e.mode === 'run' ? 'Integrity' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: p.id, amount: dealt, ratchet: true });
     if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
   }
 
@@ -4623,7 +4598,7 @@ function cycleStart(s) {
     const burst = e.burst, dealt = takeDamage(s, burst.amount, burst.source, burst.name, { dot: true }); // (what reacts to the hit can clear it: a breach's Reflective ACL breaking the Encryptor)
     burst.left--;
     e.metrics.encrypted += dealt;
-    if (dealt) emit(s, 'encrypted', `${burst.name}: −${dealt}. ${e.mode === 'run' ? 'Signal' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: burst.source, amount: dealt });
+    if (dealt) emit(s, 'encrypted', `${burst.name}: −${dealt}. ${e.mode === 'run' ? 'Integrity' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: burst.source, amount: dealt });
     if (!burst.left && e.burst === burst) e.burst = null;
     if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
   }
@@ -4633,7 +4608,7 @@ function cycleStart(s) {
   if (e.corrupt?.left > 0) {
     const dealt = takeDamage(s, e.corrupt.amount, e.corrupt.source, 'Corrupted', { dot: true });
     e.corrupt.left--;
-    if (dealt) emit(s, 'encrypted', `Corrupted (${e.corrupt.name}): −${dealt}. ${e.mode === 'run' ? 'Signal' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: e.corrupt.source, amount: dealt, corrupt: true });
+    if (dealt) emit(s, 'encrypted', `Corrupted (${e.corrupt.name}): −${dealt}. ${e.mode === 'run' ? 'Integrity' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: e.corrupt.source, amount: dealt, corrupt: true });
     if (!e.corrupt.left) e.corrupt = null;
     if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
   }
@@ -4742,7 +4717,7 @@ function fadingChit(s, x) {
 // Your gear at the end of a cycle, on its beat (value: every that many cycles). Bitrot Ward (chit-fade): its ◆, if you
 // still hold it, fades after its cycles. Init Vector (repeat): your next damaging skill is armed to hit
 // again. Watchdog Timer (free-helper): with no helper of yours out, one joins for a few cycles, a Deploy helper's size.
-// Then the Signal you end it on (Last Known Good, the death recap).
+// Then the Integrity you end it on (Last Known Good, the death recap).
 function cycleFx(s) {
   const e = s.encounter, st = fxState(e), beat = (x) => e.cycle % Math.max(1, Number(x.fx.value) || 1) === 0;
   if (st.chitFade && !(e.chits > 0)) delete st.chitFade; // the ◆ was spent
@@ -5076,7 +5051,7 @@ function renameIds(s) {
 }
 
 // v12: the old Upgrades list retires. Hardening and Amplifier come back as running services;
-// the Signal booster as a loaded protocol.
+// the Integrity booster as a loaded protocol.
 function migrateUpgrades(s) {
   s.stash ||= [];
   s.gear = { rigs: {} };
@@ -5219,8 +5194,8 @@ export function restore(raw) {
     // v23: the Sysadmin is the Bastion now. Its level, tree and bar come along.
     // Smash is Flood now: on the bar and anything keyed by it.
     for (const bar of Object.values(s.loadout?.equipped || {})) if (Array.isArray(bar)) bar.forEach((id, i) => { if (id === 'smash') bar[i] = 'flood'; if (id === 'kill-process') bar[i] = 'rate-limit'; });
-    // v29: items are weaker (gear.mjs ITEM_SCALE, the Damage and Signal affixes, uniques). Protocols you
-    // already own come down the same ~30% on Damage, Signal and Regen.
+    // v29: items are weaker (gear.mjs ITEM_SCALE, the Damage and Integrity affixes, uniques). Protocols you
+    // already own come down the same ~30% on Damage, Integrity and Regen.
     if (was < 29) for (const it of s.stash || []) if (it.kind === 'protocol') for (const k of ['damage', 'signal', 'regen']) if (it.stats?.[k] > 0) it.stats[k] = Math.max(k === 'regen' ? 0.1 : 1, k === 'regen' ? Math.round(it.stats[k] * 0.7 * 10) / 10 : Math.round(it.stats[k] * 0.7));
     // v28: hubs are found by tracing them. An earlier load step wrongly marked every hub found;
     // keep only the ones traced to 100% (or held).
@@ -5285,7 +5260,6 @@ export function restore(raw) {
     // v16: invasions. Nothing to convert; the network starts fresh.
     s.invasion ||= null;
     s.net ||= { wall: null, next: null };
-    s.degraded ||= null;
     s.gate ||= null;
     // v17: services and recipes are blueprints you find. You keep a blueprint for every service
     // you already run or are installing.
@@ -5373,6 +5347,7 @@ export function restore(raw) {
     tiersRestore(s); // the talent tiers: old ranks and picks become tier picks where the talent survives (talents.mjs); keyed on the old fields
     repRestore(s); // one rep scale: nothing under 1 (factions.mjs); keyed on the value
     hardenRestore(s); // harden.sh is gone: scripts you held come back as credits (firewall.mjs)
+    healthRestore(s); // one Integrity bar, and no crashes; keyed on s.signal, s.degraded, s.occupation
     componentsRestore(s); // v47: a pile of named components becomes its count (salvage.mjs); keyed on the field
     { const l = craftRestore(s); if (l) systemLetter(s, l); } // v49: crafting goes (progression.mjs): keyed on what the save holds
     { const w = (h) => (h === 'moth' ? 'wisp' : h); for (const x of s.crewSim || []) x.name = w(x.name); if (s.friends) s.friends = s.friends.map(w); const c = s.consortium; if (c) { c.members = (c.members || []).map(w); c.founder = w(c.founder); } } // moth is the story's (docs/lore.md): the handle is wisp now; keyed on the name

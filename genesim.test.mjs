@@ -17,7 +17,7 @@ const SEEDS12 = Array.from({ length: 12 }, (_, i) => i + 1);
 // MIRRORSHADE (dmg 1.15) read 91%, blind 65%, its worst three cycles 86% (a Scramble crit after a mimicked hit). The
 // band is held at read 55–92%, the blind bot 8 points under the reader, and the worst three cycles under 90%, until
 // the boss pass the interrupt asks for (3.4). Since gear follows one smooth curve (gear.mjs ITEM_CURVE) a player at
-// 12 and 16 carries less Signal than the tiers gave there, so HASHLORD is dmg 1.45 and MIRRORSHADE 1.08: read 89% and
+// 12 and 16 carries less Integrity than the tiers gave there, so HASHLORD is dmg 1.45 and MIRRORSHADE 1.08: read 89% and
 // blind 80%, read 88% and blind 66% with its worst three cycles 89%. (On 48 seeds HASHLORD's reader is only about 5
 // points ahead of the blind bot, before the curve and after it: the 12 seeds here sit at the top of that.)
 // Since the compounding curve (docs/scaling.md 1: every number ×lift, rounded anew) MIRRORSHADE's reader wins 93% (89%
@@ -130,8 +130,8 @@ test('every gene in play has its cost measured: a probe for each one a virus rol
 });
 
 // Bounds that hold today and guard what comes next: a gene a wild virus rolls (a third part, a mutation) or a tell
-// never costs more than 25 points of Signal a fight on average over its levels, and ignoring one never costs more than 25.
-// A trade is exempt from the second: ignoring the Volley farms every Zombie, which costs Signal (32 points) but pays 1.5
+// never costs more than 25 points of Integrity a fight on average over its levels, and ignoring one never costs more than 25.
+// A trade is exempt from the second: ignoring the Volley farms every Zombie, which costs Integrity (32 points) but pays 1.5
 // kills. The designer's play decides it.
 const TRADES = ['volley'];
 // Since fight length (docs/scaling.md step 3) ignoring the Mimic costs 32 points: a longer fight plays more of its beats,
@@ -148,7 +148,7 @@ test('no rolled gene or tell runs away: at most 25 points a fight with it, and a
   assert.deepEqual(off, []);
 });
 
-// The calibration targets (genesim.mjs): about 3 to 4 points of Signal a fight per cost point (2 to 6
+// The calibration targets (genesim.mjs): about 3 to 4 points of Integrity a fight per cost point (2 to 6
 // here, over noise), answering a gene worth at least 3 points, ignoring one costing no more than 20, and every
 // subclass owning an answer that wins at least as often as ignoring (rule 4). Named builds are measured against their
 // family's body, which they replace a part of, so they're reported in genesim.mjs and left out of the point target.

@@ -14,7 +14,7 @@
 // - Size: each merged server makes the network bigger and the consortium better (CONSORTIUM.tiers).
 // - Leaving (or being kicked) cuts the trunk line. You lose nothing of your own.
 // Pure: state in, events out. run.mjs routes the `consortium` command (and `guild`, the old name).
-import { emit, warn, rand, hooks, hackerLevel, selectEncounter, command, gainCode, gainXp, xpFor, active, holding, syncRunSignal } from './combat.mjs';
+import { emit, warn, rand, hooks, hackerLevel, selectEncounter, command, gainCode, gainXp, xpFor, active, holding } from './combat.mjs';
 import { createLocation, SERVER, FAMILIES, variantFor, BOSSES } from './data.mjs';
 import { seeded, codeOf, MATERIALS } from './gear.mjs';
 import { profileOf, PRESENCE, online, simOn } from './presence.mjs';
@@ -32,7 +32,7 @@ export const CONSORTIUM = {
   bounty: (L) => ({ credits: 30 + 8 * L, code: 2 + Math.floor(L / 6) }),
   raidEveryMs: [15 * 60000, 25 * 60000], // simulated: an invader at an away member's wall
   raidMs: 8 * 60000, // how long you have to stop it
-  rebootMs: 2 * 3600000, // a crashed server (yours while away: real time) reboots this long, unless cleared
+  rebootMs: 2 * 3600000, // a member's crashed server reboots this long, unless cleared
   help: 0.5, // chance a member deals with a siege or invader nobody defended
   roam: { travelMs: 10 * 60000, hops: 3, bounty: 0.5 }, // the travelling virus: +50% bounty a hop
   homeRooms: ['services', 'daemons', 'vault', 'logs', 'cache', 'wall'], // a crashed home server's folders
@@ -43,7 +43,7 @@ export const CONSORTIUM = {
     { at: 8, name: 'Backbone', rule: 'A trunk rogue server opens on the network', trunk: true },
     { at: 12, name: 'Grid', rule: '+1 socket room on every server and firewall +2 levels', sockets: 1, wall: 2 },
   ],
-  names: ['Halyard', 'Null Choir', 'Black Lattice', 'Copperline', 'Saltmarsh Ring', 'Dead Channel', 'Quiet Meridian', 'Glasshouse', 'Low Signal', 'Tinroof'],
+  names: ['Halyard', 'Null Choir', 'Black Lattice', 'Copperline', 'Saltmarsh Ring', 'Dead Channel', 'Quiet Meridian', 'Glasshouse', 'Low Integrity', 'Tinroof'],
 };
 
 // A number from a string: the same handle always makes the same network.
@@ -146,7 +146,7 @@ export function arrive(s, loc, fileInfo, now = hooks.now?.() ?? Date.now()) {
   loc.lastRun = now;
 }
 
-// Occupation: a crashed home server, rebooting. It stays open: the invader's processes sit in its
+// Occupation: a member's crashed home server, rebooting. It stays open: the invader's processes sit in its
 // folders (no respawns, like a rogue server's), and clearing them all ends the reboot early.
 export function occupy(s, { id, name, member = null, family, level, seed }) {
   const loc = createLocation(family, seed % 100000, 1);
@@ -160,17 +160,11 @@ export function occupationCleared(s, loc) {
   if (loc.occupied.cleared) return;
   loc.occupied.cleared = true;
   gainXp(s, xpFor(s, loc.level || 1, 2), `${loc.name} cleared`, 'fight');
-  if (!loc.member) {
-    s.degraded = null;
-    syncRunSignal(s);
-    return emit(s, 'rebooted', 'OCCUPATION CLEARED: your server is back online.');
-  }
   pay(s, loc.level || 1, 1, loc.family, `${loc.member}'s server is back online thanks to you.`);
 }
 // Occupations that are over (cleared or rebooted), once you're not standing in them.
 function tidy(s) {
   const here = s.run?.loc;
-  if (s.occupation && (s.occupation.occupied.cleared || !s.degraded) && here !== s.occupation.id) s.occupation = null;
   const c = consortiumOf(s);
   if (c) c.servers = c.servers.filter((l) => !l.home || here === l.id || (!l.occupied.cleared && l.occupied.left > 0));
   if (c) { c.roamer = null; c.raid = null; } // trunk hops and raids at members' walls are cut (threat merge)
@@ -249,8 +243,6 @@ export function invite(s, from) {
 export function alertsOf(s) {
   const c = consortiumOf(s), out = [];
   if (!c) return out;
-  const own = s.occupation && !s.occupation.occupied.cleared ? s.occupation : null;
-  if (own) out.push({ kind: 'crash', title: 'Your server crashed', detail: `Rebooting. Clear its ${CONSORTIUM.homeRooms.length} folders to bring it back now.`, left: s.degraded?.until ? Math.max(0, s.degraded.until - (hooks.now?.() ?? Date.now())) : CONSORTIUM.rebootMs, total: CONSORTIUM.rebootMs, level: own.level, family: own.family, cmd: 'connect home', label: 'Connect', mine: true });
   if (c.raid) out.push({ kind: 'raid', title: `Invasion at ${c.raid.member}'s wall`, detail: `${c.raid.name}. They're away: stop it or their server crashes.`, left: c.raid.left, total: CONSORTIUM.raidMs, level: c.raid.level, family: c.raid.family, cmd: `consortium defend ${c.raid.member}`, label: 'Defend', bounty: bountyOf(s, c.raid.level) });
   if (c.roamer) { const r = c.roamer; out.push({ kind: 'roam', title: `Invasion on the trunk line: ${r.name}`, detail: `Hop ${r.hop} of ${CONSORTIUM.roam.hops}, from ${r.fromName}. It arrives as an invasion.`, left: r.left, total: r.total, level: r.level, family: r.family, cmd: 'consortium intercept', label: 'Intercept', bounty: bountyOf(s, r.level, 1 + CONSORTIUM.roam.bounty * r.hop) }); }
   for (const l of memberServers(s)) {

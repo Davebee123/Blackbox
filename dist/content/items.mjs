@@ -610,7 +610,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -673,13 +673,13 @@ export default {
         "when": "break",
         "do": "break-heal%",
         "value": 2,
-        "text": "Breaking a part heals 2% of max Signal"
+        "text": "Breaking a part heals 2% of max Integrity"
       },
       "green": {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -786,7 +786,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -886,7 +886,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "hit",
@@ -1001,7 +1001,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -1100,7 +1100,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -1178,7 +1178,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -1207,7 +1207,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -1353,7 +1353,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -1376,7 +1376,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "hit",
@@ -1413,7 +1413,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -1439,7 +1439,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "hit",
@@ -1513,7 +1513,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -1645,7 +1645,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -1713,7 +1713,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -1742,7 +1742,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -1860,7 +1860,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -1922,7 +1922,7 @@ export default {
         "do": "low-heal",
         "value": 5,
         "at": 25,
-        "text": "Once a fight, below 25% Signal, heal 5% of max"
+        "text": "Once a fight, below 25% Integrity, heal 5% of max"
       },
       "green": {
         "when": "always",
@@ -1994,7 +1994,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -2057,7 +2057,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -2079,7 +2079,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "hit",
@@ -2109,7 +2109,7 @@ export default {
         "stat": "reduction",
         "value": 1,
         "if": "above-75",
-        "text": "+1 Block while above 75% Signal"
+        "text": "+1 Block while above 75% Integrity"
       },
       "green": {
         "when": "always",
@@ -2169,7 +2169,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -2238,7 +2238,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -2330,7 +2330,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -2353,7 +2353,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -2411,7 +2411,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -2447,7 +2447,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -2540,7 +2540,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -2601,7 +2601,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -2642,7 +2642,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -2665,7 +2665,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -6049,7 +6049,7 @@ export default {
         "value": 3,
         "cap": 30,
         "limit": "fight",
-        "text": "Resets your Signal to what it was 3 cycles earlier when you fall below 20% health, healing up to 30% of your max health. Works once per fight."
+        "text": "Resets your Integrity to what it was 3 cycles earlier when you fall below 20% health, healing up to 30% of your max health. Works once per fight."
       },
       "sources": [
         {
@@ -7117,7 +7117,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -7155,7 +7155,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -7267,7 +7267,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -7297,7 +7297,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -7368,7 +7368,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -7391,7 +7391,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -7505,7 +7505,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -7607,7 +7607,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 8,
-        "text": "+8% max Signal"
+        "text": "+8% max Integrity"
       },
       "sources": [
         {
@@ -7661,7 +7661,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 8,
-        "text": "+8% max Signal"
+        "text": "+8% max Integrity"
       },
       "green": {
         "when": "always",
@@ -7699,7 +7699,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 8,
-        "text": "+8% max Signal"
+        "text": "+8% max Integrity"
       },
       "sources": [
         {
@@ -7721,7 +7721,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 8,
-        "text": "+8% max Signal"
+        "text": "+8% max Integrity"
       },
       "green": {
         "when": "always",
@@ -7780,7 +7780,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 8,
-        "text": "+8% max Signal"
+        "text": "+8% max Integrity"
       },
       "green": {
         "when": "always",
@@ -7839,7 +7839,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 8,
-        "text": "+8% max Signal"
+        "text": "+8% max Integrity"
       },
       "green": {
         "when": "always",
@@ -8313,7 +8313,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -8337,7 +8337,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -8404,7 +8404,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -8493,7 +8493,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -8564,7 +8564,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -8694,7 +8694,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -8718,7 +8718,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "hit",
@@ -8878,7 +8878,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -8917,7 +8917,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -9013,7 +9013,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -9044,7 +9044,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -9069,7 +9069,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -9334,7 +9334,7 @@ export default {
         "value": 30,
         "cycles": 2,
         "limit": "fight",
-        "text": "The first time each fight a hit takes more than 30% of your max Signal, the excess comes back as a shield over 2 cycles."
+        "text": "The first time each fight a hit takes more than 30% of your max Integrity, the excess comes back as a shield over 2 cycles."
       },
       "sources": [
         {
@@ -9449,7 +9449,7 @@ export default {
         "do": "cap-every",
         "value": 15,
         "every": 6,
-        "text": "Below half Signal, every 6 cycles the next hit on you is capped at 15% of your max Signal."
+        "text": "Below half Integrity, every 6 cycles the next hit on you is capped at 15% of your max Integrity."
       },
       "sources": [
         {
@@ -9613,7 +9613,7 @@ export default {
           "when": "always",
           "do": "max-signal%",
           "value": 6,
-          "text": "Increases your max Signal by 6%."
+          "text": "Increases your max Integrity by 6%."
         },
         {
           "when": "custom",
@@ -9739,7 +9739,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -9778,7 +9778,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {
@@ -9804,7 +9804,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "green": {
         "when": "always",
@@ -9911,7 +9911,7 @@ export default {
         "when": "always",
         "do": "signal%",
         "value": 6,
-        "text": "+6% max Signal"
+        "text": "+6% max Integrity"
       },
       "sources": [
         {

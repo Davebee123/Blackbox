@@ -4,7 +4,7 @@
 //   venting, windup  combat.mjs damageMultiplier (the size), hit (paid)
 //   brownout         combat.mjs landAttack; e.aim, your command's part this cycle (combat.mjs playerPhase)
 export const LEANING = { venting: 1.5, windup: 1.25, brownout: 0.7 };
-// glyph: the tag's icon. paid: the chip that counts what it has paid this fight (damage dealt, or Signal kept).
+// glyph: the tag's icon. paid: the chip that counts what it has paid this fight (damage dealt, or Integrity kept).
 export const LEANINGS = {
   venting: { name: 'Venting', glyph: 'burn', paid: 'damage', rule: 'A part takes 50% more damage on the cycle after it attacks.', answer: 'Hit the part that just attacked.' },
   windup: { name: 'Wind-up', glyph: 'clock', paid: 'damage', rule: 'A part takes 25% more damage on the cycle its attack lands.', answer: 'Hit the part whose attack lands this cycle.' },

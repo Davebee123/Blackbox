@@ -167,7 +167,7 @@ test('Warden talents: Tarpit, Counterflow, Write Protect, Kernel Panic, Denylist
   act(c, 'retaliate pulse');
   assert.equal(lost(c, 'pulse'), 40 + 20, 'twice the hit, plus the 20 stored');
   assert.equal(c.encounter.ledger, 0);
-  // Write Protect: Harden gives two chits for 10% of your max Signal.
+  // Write Protect: Harden gives two chits for 10% of your max Integrity.
   const w = start('warden', ['harden'], ['write-protect']);
   const max = defender(w).max;
   act(w, 'harden');
@@ -538,7 +538,7 @@ test('Flow Control: answering a tell lights Retaliate, at twice the attack you a
   assert.equal(lost(s, 'pulse'), 40);
 });
 
-test('Hardened Kernel: max Signal +10%', () => {
+test('Hardened Kernel: max Integrity +10%', () => {
   assert.equal(maxSignal(start('warden', [], ['hardened-kernel'])), Math.round(maxSignal(start('warden')) * 1.1));
 });
 
@@ -642,7 +642,7 @@ test('Revocation List: Revoke hits every part for half, and revokes them all for
   for (const id of ['pulse', 'encryptor']) assert.equal(part(s, id).revokedUntil, c + 1, id);
 });
 
-test('Graceful Restart: Hot Standby saves you at half your Signal', () => {
+test('Graceful Restart: Hot Standby saves you at half your Integrity', () => {
   const s = start('sysop', ['hot-standby'], ['graceful-restart']);
   quiet(s);
   act(s, 'hot-standby');

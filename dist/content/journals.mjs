@@ -622,7 +622,7 @@ export default [
       "Billing traced the drive in rack 40 to an account opened by Kessler's night desk in 2058. The bill went to the filing cabinet that is Kessler's estate, which Kestrel keeps on Coldline, so we have billed ourselves.",
       "I read the job's log before they wiped it. One line, every second since before I was born: *night desk. awaiting counterparty.*",
       "Rack 4 closes at the end of the cycle. The notice by the lift says *Please collect your belongings*. Nobody keeps belongings on rack 4. Danny has been moved up to Kernel Space to help with something he won't talk about, and he took his biscuit tin.",
-      "At three a session opened on rack 40, a runner's, quick and quiet. Then it stopped moving and stayed open, its Signal low and steady on the meter. The card says to report an idle session for disconnection. I put the card back in my pocket and turned the meter to the wall."
+      "At three a session opened on rack 40, a runner's, quick and quiet. Then it stopped moving and stayed open, its Integrity low and steady on the meter. The card says to report an idle session for disconnection. I put the card back in my pocket and turned the meter to the wall."
     ]
   },
   {
@@ -760,7 +760,7 @@ export default [
     "cy": 30,
     "floor": 2,
     "text": [
-      "I jacked in at nine from the laundromat on Vey Street, because the signal's good there and nobody asks. First rule of the Backhaul: watch your own Signal. KUDZU says watch the board, but KUDZU has never come out of a server with a nosebleed.",
+      "I jacked in at nine from the laundromat on Vey Street, because the signal's good there and nobody asks. First rule of the Backhaul: watch your own Integrity. KUDZU says watch the board, but KUDZU has never come out of a server with a nosebleed.",
       "At night the Backhaul is trunk noise and carrier hum, and under that the strays. You hear them before you see them, little handshakes going out into the dark like someone knocking on every door in a building. If you're careless, you knock back.",
       "We rent our nets by the hour now. SWARMLINE takes the margin, the client takes the server, and I take what's in the vault before either of them notices. Tonight it was a cold wallet with nothing in it, and a letter thirty years old addressed to a Mrs. Oduya. I almost kept the letter.",
       "I came out at two with my hands shaking. The machines were still going. A woman was folding a child's clothes very carefully, smoothing each one flat, as if she were paid by the crease."

@@ -31,7 +31,7 @@ const traced = (family, { seed = 1, template = null, depth = null } = {}) => {
   return { s, loc, R: roomsFor(s, loc) };
 };
 const quirkRooms = (g) => Object.values(g.rooms).filter((x) => x.optional);
-// Stand beside a room and walk in (the run's Signal topped up).
+// Stand beside a room and walk in (the run's Integrity topped up).
 const walkIn = (s, id) => { const R = s.rooms, by = FP.neighbours(R.graph, id)[0]; R.at = by; R.screen = null; s.run.integrity = s.run.max; return FP.go(s, id); };
 
 test('the nest room: only on Worm servers, from the seed, a dead end off a branch room, optional (out of Rooms n/N and Mapped)', () => {

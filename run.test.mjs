@@ -57,7 +57,7 @@ test('a home victory traces nothing: leads come from rooms (SPRAWL-00\'s strays,
   assert.ok(hiddenNodes(s).every((n) => n.lead === 0));
 });
 
-test('connect starts a run with full Signal and parks the home intrusion', () => {
+test('connect starts a run with full Integrity and parks the home intrusion', () => {
   const s = located();
   command(s, 'encounter splinter');
   connect(s, s.locations[0].id);
@@ -67,7 +67,7 @@ test('connect starts a run with full Signal and parks the home intrusion', () =>
   assert.equal(s.encounter.virus.name, 'SPLINTER');
 });
 
-test('ls lists, cd moves and costs Signal, cat reads', () => {
+test('ls lists, cd moves and costs Integrity, cat reads', () => {
   const s = onRun();
   const listing = say(s, 'ls').find((e) => e.type === 'net-ls').message;
   assert.match(listing, /relay\/\s+\[guarded\]/);
@@ -87,7 +87,7 @@ test('look and go work as aliases', () => {
   assert.equal(s.run.cwd, '/logs');
 });
 
-test('a guarded directory starts a fight on your Signal, not the server', () => {
+test('a guarded directory starts a fight on your Integrity, not the server', () => {
   const s = onRun();
   say(s, 'cd relay');
   assert.equal(s.encounter.mode, 'run');
@@ -119,7 +119,7 @@ test('beating the guard opens the directory for good', () => {
   assert.ok(say(s, 'pull cache.dat').some((e) => e.type === 'net-good'));
 });
 
-test('the vault needs the password from the log; wrong guesses cost Signal', () => {
+test('the vault needs the password from the log; wrong guesses cost Integrity', () => {
   const s = onRun();
   say(s, 'cd relay');
   winFight(s);
@@ -157,7 +157,7 @@ test('jack out banks the pack; a pulled signal file leads deeper', () => {
   assert.ok(loc.state.taken['/relay/cache.dat']);
 });
 
-test('losing all Signal disconnects you, loses the pack and spares the server', () => {
+test('losing all Integrity disconnects you, loses the pack and spares the server', () => {
   const s = onRun();
   say(s, 'cd relay');
   command(s, 'engage');
@@ -238,20 +238,21 @@ test('SPRAWL-00 rooms keep their own timers: a named target or a live RELAY-KING
   assert.ok(z.spawns[strays[0]].bounty, 'the target still holds its room');
 });
 
-test('Signal carries between connections and rests back up; too weak and you cannot connect', async () => {
+test('Integrity carries between connections and rests back up; too low and you cannot connect', async () => {
   const { idleRegen, maxSignal } = await import('./dist/combat.mjs');
   const s = fresh();
-  s.signal = 10;
-  assert.match(say(s, 'connect sprawl').at(-1).message, /too weak/);
+  s.server.integrity = 10;
+  assert.match(say(s, 'connect sprawl').at(-1).message, /too low/);
   for (let i = 0; i < 30; i++) idleRegen(s, 1000);
-  assert.ok(s.signal - 10 >= Math.floor(maxSignal(s) * CONFIG.signalRest / 2) - 1, 'rests back at home');
+  assert.ok(s.server.integrity - 10 >= Math.floor(maxSignal(s) * CONFIG.signalRest / 2) - 1, 'rests back at home');
   idleRegen(s, 2 * 60000);
-  assert.ok(s.signal >= Math.ceil(maxSignal(s) * CONFIG.zone.minSignal));
+  assert.ok(s.server.integrity >= Math.ceil(maxSignal(s) * CONFIG.zone.minSignal));
+  const hp = s.server.integrity;
   say(s, 'connect sprawl');
-  assert.equal(s.run.integrity, s.signal ?? maxSignal(s));
+  assert.equal(s.run.integrity, hp);
   s.run.integrity = 40;
   say(s, 'jack out');
-  assert.equal(s.signal, 40);
+  assert.equal(s.server.integrity, 40);
 });
 
 test('arriving in a directory lists it automatically', () => {
@@ -280,12 +281,12 @@ test('tree and pack print into the terminal', () => {
   assert.match(say(s, 'pack').at(-1).message, /empty/);
 });
 
-test('guard fights show your Signal in the HUD', async () => {
+test('guard fights show your Integrity in the HUD', async () => {
   const { hudMarkup } = await import('./dist/view.mjs');
   const s = onRun();
   say(s, 'cd relay');
   command(s, 'engage');
-  assert.match(hudMarkup(s), /Your Signal/);
+  assert.match(hudMarkup(s), /Your Integrity/);
   assert.match(hudMarkup(s), new RegExp(`${s.run.integrity}<small>/${s.run.max}`));
 });
 
@@ -365,7 +366,7 @@ test('deeper layers have tougher guards and bigger caches', async () => {
   assert.ok(fileInfo(currentLocation(s3), '/relay', 'cache.dat').amount > fileInfo(currentLocation(s1), '/relay', 'cache.dat').amount);
 });
 
-test('archive: three month logs, only the latest key works; the Shredder hits your Signal hard', () => {
+test('archive: three month logs, only the latest key works; the Shredder hits your Integrity hard', () => {
   const s = withTemplate('archive', 1, { month: 'feb' });
   const loc = currentLocation(s);
   assert.match(say(s, 'cat readme.md').at(-1).message, /last rotation: feb/);
@@ -387,7 +388,7 @@ test('archive: three month logs, only the latest key works; the Shredder hits yo
   assert.equal(s.run.pack.length, 1, 'your pack is safe: only damage threatens you');
 });
 
-test('lab: pulling the honeypot costs Signal; reading it first warns you', () => {
+test('lab: pulling the honeypot costs Integrity; reading it first warns you', () => {
   const s = withTemplate('lab');
   say(s, 'cd tmp');
   const before = s.run.integrity;
@@ -581,7 +582,7 @@ test('saves from before the skill rework start each class on the new kit, and ol
   assert.deepEqual(r.daemonLv, {});
 });
 
-test('Signal boosters are retired: no crafting (top up instead); one you still carry works on a run', () => {
+test('Integrity boosters are retired: no crafting (top up instead); one you still carry works on a run', () => {
   const s = fresh();
   s.components = 4;
   say(s, 'craft booster');
@@ -595,35 +596,35 @@ test('Signal boosters are retired: no crafting (top up instead); one you still c
   assert.equal(s.items.booster, 0);
 });
 
-test('top up: pay to fill Signal or the server now; less missing costs less; not on a run', async () => {
+test('top up: pay to fill Integrity now (repair is the same); less missing costs less; not on a run', async () => {
   const { topUpCost, topUpPrice, maxSignal } = await import('./dist/combat.mjs');
   const s = fresh();
   s.server.credits = 200; // you start with none
-  s.signal = Math.floor(maxSignal(s) / 2);
-  const half = topUpCost(s, 'signal');
-  assert.ok(half >= 1 && half <= topUpPrice(s, 'signal'));
-  s.signal = 0;
-  assert.equal(topUpCost(s, 'signal'), topUpPrice(s, 'signal'));
-  const credits = s.server.credits;
+  s.server.integrity = Math.floor(maxSignal(s) / 2);
+  const half = topUpCost(s);
+  assert.ok(half >= 1 && half <= topUpPrice(s));
+  s.server.integrity = 1;
+  assert.ok(topUpCost(s) <= topUpPrice(s) && topUpCost(s) >= topUpPrice(s) - 1);
+  const credits = s.server.credits, cost = topUpCost(s);
   say(s, 'top up');
-  assert.equal(s.signal, null, 'full again');
-  assert.equal(s.server.credits, credits - topUpPrice(s, 'signal'));
+  assert.equal(s.server.integrity, s.server.max, 'full again');
+  assert.equal(s.server.credits, credits - cost);
   s.server.integrity = s.server.max - 10;
   const c2 = s.server.credits;
   say(s, 'repair');
-  assert.equal(s.server.integrity, s.server.max);
-  assert.ok(c2 - s.server.credits >= 1 && c2 - s.server.credits < topUpPrice(s, 'server'));
+  assert.equal(s.server.integrity, s.server.max, 'repair tops up the same bar');
+  assert.ok(c2 - s.server.credits >= 1 && c2 - s.server.credits < topUpPrice(s));
   // Can't afford it all: you get what you can pay for.
-  s.signal = 0; s.server.credits = 2;
+  s.server.integrity = 1; s.server.credits = 2;
   say(s, 'top up');
-  assert.ok(s.signal > 0 && s.signal < maxSignal(s) && s.server.credits <= 2);
+  assert.ok(s.server.integrity > 1 && s.server.integrity < maxSignal(s) && s.server.credits <= 2);
   // Credits only: code never pays for it.
-  s.signal = 0; s.server.credits = 0; s.materials = { cipher: 50, worm: 50, kernel: 50, exploit: 0 };
+  s.server.integrity = 1; s.server.credits = 0; s.materials = { cipher: 50, worm: 50, kernel: 50, exploit: 0 };
   say(s, 'top up');
-  assert.equal(s.signal, 0, 'no credits, no Signal');
+  assert.equal(s.server.integrity, 1, 'no credits, no Integrity');
   assert.deepEqual(s.materials, { cipher: 50, worm: 50, kernel: 50, exploit: 0 }, 'and no code taken');
-  // On a run it's a booster or a store patch instead.
-  s.signal = null;
+  // On a run it's a store patch instead.
+  s.server.integrity = s.server.max;
   say(s, 'connect sprawl');
   s.run.integrity = 10;
   assert.match(say(s, 'top up').at(-1).message, /Top up at home/);

@@ -1,7 +1,7 @@
 import { restartClass } from './restart.mjs';
 // A virus attack lashing at your screen, in place of a plain red flash (the designer: "1s and 0s and the
 // virus lashing out at the screen"). The attacking part throws a tendril of its own characters (the ones
-// the render panel draws it in, or its row on the board) across the screen into your Signal bar; where it
+// the render panel draws it in, or its row on the board) across the screen into your Integrity bar; where it
 // lands, 1s and 0s burst and fall. Bigger hits throw more and last longer; a crit or a charge (a tell
 // landing) whips harder: more strands, white-hot. The full-screen glitch it used to throw is gone: a big hit
 // tears the backdrop instead (screenfx.mjs), so nothing crosses the interface but the whip itself. Encryption is lighter and different: hex scrambles over your
@@ -134,7 +134,7 @@ export function createLash() {
   }
 
   // from: { x, y, chars } on the page (the part on the render, or its row), or null (encryption ticking);
-  // bar: your Signal bar's element; onImpact(): when the tip lands (the screen shake, app.js).
+  // bar: your Integrity bar's element; onImpact(): when the tip lands (the screen shake, app.js).
   function lash({ from = null, bar, power = 0.3, heavy = false, mode = 'hit', full = false, onImpact = null }) {
     if (!bar) return 0;
     const r = bar.getBoundingClientRect();

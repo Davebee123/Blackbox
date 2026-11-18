@@ -4,7 +4,7 @@ import { restartClass } from './restart.mjs';
 // monitor casing's lamps, or across the virus picture (#virus-canvas). Text, numbers, bars, chips and the board are
 // never touched, moved or dimmed. The one thing that reaches the interface is a floor's palette: its colour tokens
 // (style.css :root), set on <html data-sfx-floor>, each checked for contrast (docs/ui.md).
-//   Low Signal   your health under a quarter, in a fight or out on a run: the screen's edge burns a thin red into a
+//   Low Integrity   your health under a quarter, in a fight or out on a run: the screen's edge burns a thin red into a
 //                grey haze, light static runs in the backdrop and a slow vignette breathes in it. Under a half, a
 //                faint warm edge (medium and bold).
 //   Big hits     a hit on you of an eighth of your bar or more (a crit always): a brief tear across the backdrop.
@@ -19,8 +19,8 @@ import { restartClass } from './restart.mjs';
 
 export const SFX = {
   levels: ['off', 'subtle', 'medium', 'bold'],
-  effects: { signal: 'Low Signal', hits: 'Hits', crits: 'Crits', floor: 'Floor colour', lamps: 'Status lights' },
-  low: 0.25, // Signal (your health) under a quarter: Low Signal
+  effects: { signal: 'Low Integrity', hits: 'Hits', crits: 'Crits', floor: 'Floor colour', lamps: 'Status lights' },
+  low: 0.25, // Integrity (your health) under a quarter: Low Integrity
   warn: 0.5, // under a half: a faint warm edge (medium and bold)
   panelTint: { subtle: 0, medium: 0.035, bold: 0.06 }, // how far a floor's accent tints its panels (0: the palette's own)
   board: { off: 'minimal', subtle: 'calm', medium: 'calm', bold: 'full' }, // how much moves on the fight board (app.js fxLevel)
@@ -101,26 +101,26 @@ export function floorOf(s, { module, mapFloor = null, loc = null } = {}) {
   if (s.run) return Math.max(1, Math.min(PALETTES.length, loc?.depth || s.rooms?.floor || 1)); // the rooms playtest has no location: its own floor
   return null;
 }
-// Low Signal: your health under a quarter, while it matters. health: your bar's share (0..1) in a fight, on a run, in
-// a breach or a server's rooms; null at home, where a resting Signal is no danger.
+// Low Integrity: your health under a quarter, while it matters. health: your bar's share (0..1) in a fight, on a run, in
+// a breach or a server's rooms; null at home, where a resting Integrity is no danger.
 export const lowOf = (health) => health != null && health < SFX.low;
 export const warnOf = (health) => health != null && health < SFX.warn && health >= SFX.low;
 
 // The casing's lamps, from real state. ctx: { gate (view.mjs gateOf), now, until: { net, dmn } (a blink's end) }.
 // Each lamp: { cls (on, low, hot, you, dmn or ''), blink ('' steady, slow, fast, busy, once), title }.
-export function lampsOf(s, { gate = null, now = Date.now(), until = {}, fmtLeft = null } = {}) {
-  const e = s.encounter, inv = s.invasion, deg = !!s.degraded;
+export function lampsOf(s, { gate = null, now = Date.now(), until = {} } = {}) {
+  const e = s.encounter, inv = s.invasion;
   const L = {};
-  L.pwr = { cls: deg ? 'hot' : 'on', blink: deg ? 'slow' : '', title: deg ? `PWR: degraded${fmtLeft ? ` · ${fmtLeft}` : ''}` : 'PWR: power' };
+  L.pwr = { cls: 'on', blink: '', title: 'PWR: power' };
   const waiting = gate && gate.phase !== 'active', fighting = gate?.phase === 'active' || e?.phase === 'active';
   L.gate = { cls: fighting ? 'hot' : waiting ? 'on' : '', blink: waiting ? 'fast' : '', title: waiting ? `GATE: ${gate.virus?.name || 'an intrusion'} waiting at the gate` : fighting ? `GATE: fighting ${e?.virus?.name || gate?.virus?.name || 'an intrusion'}` : 'GATE: intrusions at your gate (clear)' };
   const st = inv?.state;
   L.wall = !inv ? { cls: '', blink: '', title: 'WALL: invasions on your wall (quiet)' }
-    : { cls: deg ? 'low' : st === 'breach' ? 'hot' : st === 'siege' ? 'on' : 'low', blink: deg ? '' : st === 'breach' ? 'fast' : st === 'siege' ? 'slow' : '', title: `WALL: ${inv.name}${st === 'travel' ? ' on its way' : st === 'breach' ? ' breaching' : st === 'siege' ? ' contesting the wall' : `: ${st}`}` };
+    : { cls: st === 'breach' ? 'hot' : st === 'siege' ? 'on' : 'low', blink: st === 'breach' ? 'fast' : st === 'siege' ? 'slow' : '', title: `WALL: ${inv.name}${st === 'travel' ? ' on its way' : st === 'breach' ? ' breaching' : st === 'siege' ? ' contesting the wall' : `: ${st}`}` };
   const events = (s.events || []).length, news = (until.net || 0) > now;
   L.net = { cls: s.run ? 'you' : events || news ? 'on' : '', blink: news ? 'once' : '', title: `NET: ${s.run ? 'connected' : 'the network'}${events ? ` · ${events} event${events === 1 ? '' : 's'} up` : ''}${news ? ' · news on #net' : ''}` };
   const moving = (s.market?.transfers || []).filter((t) => t.landsAt > now).length;
-  L.inst = { cls: s.install ? (deg ? 'low' : 'on') : moving ? 'on' : '', blink: (s.install && !deg) || moving ? 'busy' : '', title: `INST: ${s.install ? 'installing' : moving ? `${moving} transfer${moving === 1 ? '' : 's'} on the way` : 'installs and transfers (idle)'}` };
+  L.inst = { cls: s.install ? 'on' : moving ? 'on' : '', blink: s.install || moving ? 'busy' : '', title: `INST: ${s.install ? 'installing' : moving ? `${moving} transfer${moving === 1 ? '' : 's'} on the way` : 'installs and transfers (idle)'}` };
   const slotted = (s.daemons || []).length, firing = (until.dmn || 0) > now;
   L.dmn = { cls: firing ? 'dmn' : slotted ? 'low dmn' : '', blink: firing ? 'once' : '', title: `DMN: daemons (${slotted} slotted${firing ? ', one firing' : ''})` };
   return L;

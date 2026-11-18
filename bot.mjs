@@ -51,7 +51,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   s.tutorialCompleted = true;
   s.loadout.archetype = cls;
   const policy = POLICIES[cls[0].toUpperCase() + cls.slice(1)];
-  const stats = { fights: {}, wins: 0, losses: 0, xp: {}, levelAt: { 1: 0 }, realAt: { 1: 0 }, fightsAt: { 1: 0 }, puzzles: 0, runs: 0, vaults: 0, events: {}, crashes: 0, mins: 0, drops: {}, firstAt: {}, bountyLosses: 0, did: { run: 0, rogue: 0, sprawl: 0, sprawlOverLevel: 0 } };
+  const stats = { fights: {}, wins: 0, losses: 0, xp: {}, levelAt: { 1: 0 }, realAt: { 1: 0 }, fightsAt: { 1: 0 }, puzzles: 0, runs: 0, vaults: 0, events: {}, mins: 0, drops: {}, firstAt: {}, bountyLosses: 0, did: { run: 0, rogue: 0, sprawl: 0, sprawlOverLevel: 0 } };
   let real = 0; // real play so far, ms (REAL)
   const seen = new Set(), losses = {}, lostIn = {}, fruitless = {}; // lostIn: fights lost in each room, by server and your level: a room that beat it twice is walked around until it levels
   BUILD.log = (x, id) => { (stats.built ||= []).push(`${id}@lv${hackerLevel(x)}`); }; // what it builds in the sockets it clears (sockets.mjs)
@@ -125,17 +125,15 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     if (s.encounter && !active(s)) command(s, '');
     lvlCheck();
   };
-  const restUp = () => { // rest until Signal is full and the server mostly repaired (or pay for it)
+  const restUp = () => { // rest until Integrity is full (or pay for it): one bar, home and runs
     if (spend !== 'none' && !s.run && !active(s)) {
       const before = s.server.credits;
-      if (topUpCost(s, 'signal') && s.server.credits >= topUpCost(s, 'signal') + 50) command(s, 'top up');
-      if (s.server.integrity > 0 && s.server.integrity < s.server.max * 0.8 && s.server.credits >= topUpCost(s, 'server') + 50) command(s, 'repair');
+      if (topUpCost(s) && s.server.credits >= topUpCost(s) + 50) command(s, 'top up');
       (stats.spent ||= {}).topup = (stats.spent.topup || 0) + before - s.server.credits;
     }
-    let n = 0; const t0 = t; while ((signalNow(s) < maxSignal(s) * (REST.to ?? 1) || s.server.integrity < s.server.max * 0.3) && n++ < 400) wait(10);
+    let n = 0; const t0 = t; while (signalNow(s) < maxSignal(s) * (REST.to ?? 1) && n++ < 400) wait(10);
     stats.restMins = (stats.restMins || 0) + (t - t0) / 60000;
     if (trace) here().rest += (t - t0) / 60000;
-    if (s.server.integrity <= 0) { stats.crashes++; command(s, 'reboot'); }
   };
   // Gear like a player: the best item in each slot (rarity, then level); deconstruct the rest.
   const effectOf = (it) => !!(it.unique || it.zeroDay || it.rule);

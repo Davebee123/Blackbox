@@ -31,7 +31,7 @@ export function characterOf(s) {
 }
 
 // A full player state from a character: what the host fights beside, and what the guest's screen draws for each
-// other player. Its own log and Signal are set by whoever seats it.
+// other player. Its own log and Integrity are set by whoever seats it.
 export function playerFrom(char) {
   const m = fresh();
   m.profile = { handle: char.name };

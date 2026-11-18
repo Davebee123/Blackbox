@@ -132,7 +132,7 @@ export const FX_WHEN = {
   start: 'When a fight starts',
   struck: 'When an attack lands on you',
   always: 'Always (a stat bonus)',
-  disconnect: 'When your Signal hits 0 on a run',
+  disconnect: 'When your Integrity hits 0 on a run',
   answer: 'When you answer a tell',
   cycle: 'At the end of a cycle',
   helper: 'When you call a helper',
@@ -251,7 +251,7 @@ export const FX_DO = {
   'break-burns': { when: ['custom'], label: 'makes your burns on the other parts tick once right away when you break a part' },
   'break-guard': { when: ['custom'], label: 'makes the next attack on you within 2 cycles of a part breaking deal X% less', value: true },
   // The floor 4 bosses' uniques (floorbosses.mjs).
-  overdraft: { when: ['custom'], label: 'leaves you at X% of your max Signal when a hit would take you lower, and the rest lands over the next 3 cycles', value: true },
+  overdraft: { when: ['custom'], label: 'leaves you at X% of your max Integrity when a hit would take you lower, and the rest lands over the next 3 cycles', value: true },
   'shield-hit': { when: ['custom'], label: 'increases the damage of your next hit by X% when you raise a shield', value: true },
   'helpers-safe': { when: ['custom'], label: 'stops a virus from playing your helpers back at you' },
   'helper-frags%': { when: ['custom'], label: 'makes your helpers deal X% more to fragments', value: true },
@@ -262,13 +262,13 @@ export const FX_DO = {
   // The deep uniques (levels 39-50, docs/loot-plan.md Batch 1). Stats first: what they add, and to what.
   'stat+': { when: ['always'], label: 'adds X to your stat', value: true, stat: true },
   'stat%': { when: ['always'], label: 'increases your stat by X%', value: true, stat: true },
-  'max-signal%': { when: ['always'], label: 'increases your max Signal by X%', value: true },
+  'max-signal%': { when: ['always'], label: 'increases your max Integrity by X%', value: true },
   'heal%': { when: ['always'], label: 'increases the healing you receive by X%', value: true },
   stack: { when: ['struck'], label: 'adds X to your stat for the rest of the fight', value: true, stat: true },
   buff: { when: ['break', 'crit', 'shielded', 'cut'], label: 'increases your damage by X% for N cycles', value: true },
   // The hits you take.
   'taken%': { when: ['always', 'struck'], label: 'reduces the damage you take by X%', value: true },
-  rewind: { when: ['struck'], label: 'resets your Signal to what it was X cycles earlier', value: true },
+  rewind: { when: ['struck'], label: 'resets your Integrity to what it was X cycles earlier', value: true },
   'hit-cap': { when: ['struck'], label: 'stops any single attack from taking more than X% of your max health', value: true, own: true },
   'helper-soak': { when: ['struck'], label: 'turns an attack on you onto one of your helpers, which takes it and expires', own: true },
   'next-boost': { when: ['struck'], label: 'makes your next heal or shield X% larger', value: true },
@@ -307,11 +307,11 @@ export const FX_DO = {
   'explore-xp%': { when: ['custom'], label: 'increases the XP from Mapped servers by X%', value: true },
   'cache%': { when: ['custom'], label: 'increases the credits caches pay by X%', value: true },
   'echo-first': { when: ['custom'], label: 'makes your first echo on each part hit for full damage' },
-  'cache-heal%': { when: ['custom'], label: 'heals X% of your max Signal when you take a cache', value: true, own: true },
+  'cache-heal%': { when: ['custom'], label: 'heals X% of your max Integrity when you take a cache', value: true, own: true },
   // Set pieces (sets.mjs runs them): a piece's own bonus and its green line, the line that counts with two or more of
   // its set worn. Each piece writes its own text, in the plan's words.
   stat: { when: ['always'], label: 'adds X to one of your stats', value: true, stat: true },
-  'signal%': { when: ['always'], label: 'increases your max Signal by X%', value: true },
+  'signal%': { when: ['always'], label: 'increases your max Integrity by X%', value: true },
   'dmg%': { when: ['hit'], label: 'increases all your damage (skill hits, burns and helpers) by X%', value: true },
   'burn+%': { when: ['custom'], label: 'increases the damage of your burns by X%', value: true },
   'helper+%': { when: ['custom'], label: 'increases the damage of your helpers by X%', value: true },
@@ -372,7 +372,7 @@ export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a str
 // "Increases your damage by 25% when you fire in a Sync Window." "Heals you for 6 when you land a critical strike."
 // A unique with several effects (effect: [...]) reads as one sentence each, unless one is quiet (its line is part of
 // the text the one before it carries).
-const FX_TRIGGER = { crit: 'when you land a critical strike', break: 'when you break a part', start: 'at the start of each fight', struck: 'when an attack lands on you', disconnect: 'when your Signal hits 0 on a run', answer: 'when you answer a tell', helper: 'when you call a helper', expire: 'when one of your helpers expires' };
+const FX_TRIGGER = { crit: 'when you land a critical strike', break: 'when you break a part', start: 'at the start of each fight', struck: 'when an attack lands on you', disconnect: 'when your Integrity hits 0 on a run', answer: 'when you answer a tell', helper: 'when you call a helper', expire: 'when one of your helpers expires' };
 // The effect blocks a unique carries: its effect, or each of its effects.
 export const fxList = (u) => (Array.isArray(u?.effect) ? u.effect : u?.effect ? [u.effect] : []);
 const STAT_NAME = (k) => STATS[k]?.name || k;
