@@ -70,12 +70,14 @@ function abilityTip(p, x, { at, own, cantrip }) {
   return tip(cantrip ? cantripsOf(p.id).find((c) => c.id === x).name : skillName(x), `${text}${ml ? '\n' + ml : ''}`, kindOf(p, x), state);
 }
 // A tile on the page: the icon, the name, the key it's on (teal), the level it opens at while locked.
+// The class pick's border effect (style.css .pk-fx), played on an ability or root you have while it's hovered.
+const FX = `<span class="pk-fx" aria-hidden="true">${'<i></i>'.repeat(14)}</span>`;
 function tile(p, x, sub, mineLine) {
   const at = unlockLevel(p.id, x, sub), own = mineLine && p.known.includes(x), k = own ? p.equipped.indexOf(x) : -1;
   const cls = own ? 'on' : mineLine ? 'lock' : 'peek';
   const badge = k >= 0 ? `<span class="cls-k">${LOADOUT.keys[k]}</span>` : '';
   const lv = !own && at > p.lvl ? `<span class="cls-at">${at}</span>` : '';
-  const inner = `<span class="cls-fr">${skIco(x)}${lv}</span>${badge}<b>${esc(skillName(x))}</b>`;
+  const inner = `<span class="cls-fr"${own ? ` data-pick-class="${p.id}"` : ''}>${skIco(x)}${lv}${own ? FX : ''}</span>${badge}<b>${esc(skillName(x))}</b>`;
   return own ? `<button type="button" class="cls-ab ${cls}" data-toolkit="${p.id}"${abilityTip(p, x, { at, own })}>${inner}</button>`
     : `<span class="cls-ab ${cls}" tabindex="0"${abilityTip(p, x, { at, own })}>${inner}</span>`;
 }
@@ -146,7 +148,7 @@ function foldCol(p, k) {
 }
 function midCol(p) {
   const { id, a, s, lvl } = p, st = STATUSES[a.status], kit = kitTalent(id), kitOpen = lvl >= LOADOUT.specFrom;
-  const root = (icon, label, name, body, kind, locked) => `<div class="cls-root${locked ? ' locked' : ''}" tabindex="0"${tip(name, body, kind, [locked && ['muted', `Unlocks at level ${LOADOUT.specFrom}.`]])}>${glyph(icon)}<div><small>${label}${locked ? ` · Lv ${LOADOUT.specFrom}` : ''}</small><b>${esc(name)}</b></div></div>`;
+  const root = (icon, label, name, body, kind, locked) => `<div class="cls-root${locked ? ' locked' : ''}"${locked ? '' : ` data-pick-class="${id}"`} tabindex="0"${tip(name, body, kind, [locked && ['muted', `Unlocks at level ${LOADOUT.specFrom}.`]])}>${glyph(icon)}<div><small>${label}${locked ? ` · Lv ${LOADOUT.specFrom}` : ''}</small><b>${esc(name)}</b></div>${locked ? '' : FX}</div>`;
   return `<section class="cls-col cls-mid">
     <div class="cls-id"><pre class="sk-emblem" aria-hidden="true">${esc(EMBLEMS[id].join('\n'))}</pre><h2>${esc(a.name)}</h2>
       <span class="cls-roles">${a.role.map((r) => `<span class="cls-role">${esc(r)}</span>`).join('')}<span class="tag stag status sk-status" title="${esc(`${st.name}: ${st.rule}`)}">${esc(st.name)}</span></span></div>
