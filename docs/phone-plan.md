@@ -83,7 +83,7 @@ Budget: on 375 × 667 the whole fight fits with no scroll, and the board gets at
   tracker fold into a chip row over the map (a red count, an amber count, a green ✓) that opens them in a sheet. The
   floor picker is a compact segmented row. A server's card is a sheet whose peek is its name, level and **Connect**.
 - **Rooms map:** a one-line header (server, Signal, rooms n/N, the hunter's countdown); the map fills the rest
-  standing up (as now); one tap walks; the room's decision (**Engage**/**Step back**, **Open**/**Force it**…) comes up
+  standing up (as now); one tap walks; the room's decision (**Engage**, **Open**/**Force it**…) comes up
   as a peek sheet with both buttons in thumb reach.
 - **Pages** are one column of rows; a row opens a sheet or pushes a sub-page with a back chevron.
   - **Loadout:** its tabs as a segmented row. Skills and talents shows your subclass's tree; the others sit behind

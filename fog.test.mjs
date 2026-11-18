@@ -70,7 +70,7 @@ test('a room out of reach you have never been in: clickable for its card, which 
   assert.doesNotMatch(tile(s, g.core), /SEALED|fp-icon|CORE/);
 });
 
-test('walking into a room that holds a virus stops you at the door: Engage or Step back, never a fight by itself', () => {
+test('walking into a room that holds a virus stops you at the door: Engage, or walk back the way you came, never a fight by itself', () => {
   const s = server(), R = s.rooms;
   const fight = FP.exits(s).find((x) => FP.FIGHTS.includes(x.kind) && FP.isUp(s, x));
   const ui = { sel: null, selAt: null, closed: null };
@@ -79,7 +79,8 @@ test('walking into a room that holds a virus stops you at the door: Engage or St
   assert.equal(R.screen?.kind, 'virus');
   assert.equal(active(s), false, 'no fight yet');
   const card = pop(roomsMarkup(s, ui));
-  assert.match(card, /data-rooms="engage"[\s\S]*data-rooms="back"/);
+  assert.match(card, /data-rooms="engage"/);
+  assert.match(roomsMarkup(s, ui), new RegExp(`data-rooms="go" data-arg="${R.visit.back}"`), 'the room you came from: one click back');
   assert.match(card, new RegExp(`<h1>${FP.virusName(s, fight)}</h1>`), 'its card is titled by the virus in it');
 });
 

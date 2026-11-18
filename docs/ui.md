@@ -231,10 +231,12 @@ short vibration on phones that have it.
   dashed ghost with a ?. Badges: a red live light, the step's Signal cost, a respawn ring with its m:ss, and tags (KEY,
   LOCKED, KEY FITS, SEALED, ★, WAKES). Links are traces, the ones out of your room flowing amber. Your step travels its
   trace as teal 1s and 0s and a scan line runs down the chip you enter (travelfx.mjs, about two thirds of a second,
-  never holding a click); the hunter's step travels in red. Faint gray packets cross discovered traces (traffic.mjs,
+  never holding a click); the hunter's step travels in red. A vault opens on the *Dial* (roomfx.mjs, sound.mjs `vault`): its
+  icon's dial turns and clicks three times, the doors part with light behind them, and each file flies to your Pack a
+  note higher. Faint gray packets cross discovered traces (traffic.mjs,
   three at most, each server kind its own). The **traceroute** at the map's foot lists the last three hops with their
   milliseconds (red near the hunter; hidden on a phone). Notices pop up in the bottom-right corner for a few seconds,
-  clicks going through. The pop-up card opens by itself when the room wants a decision (**Engage**/**Step back**,
+  clicks going through. The pop-up card opens by itself when the room wants a decision (**Engage**; the room you came from stays a click,
   **Fight it**/**Slip past**, **Take it**/**Leave it**, **Open**/**Force it**, **Rest**), never covers its room and
   stays on screen at phone width. On a phone the map stands up, the spine top to bottom. With Screen effects off, Motion
   off or reduced motion nothing on it moves.

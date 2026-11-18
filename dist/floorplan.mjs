@@ -1085,6 +1085,8 @@ function disconnected(s, why) {
 // The rooms you can walk to from here: linked ones (a Relay's hops too), /core once the vault is open.
 // Something in front of you that keeps you in the room (a room you slipped into doesn't).
 export const held = (R) => !!R?.screen && !R.screen.slipped;
+// The room you came from, while a virus you walked in on holds you: one click on it steps back out.
+export const retreat = (s) => { const R = s.rooms; return R?.at && R.screen?.kind === 'virus' && !R.screen.slipped && R.visit?.back && !active(s) ? R.graph.rooms[R.visit.back] : null; };
 export function exits(s) {
   const R = s.rooms;
   if (!R?.at || held(R) || active(s)) return [];
@@ -1106,7 +1108,8 @@ export function go(s, id, opts = {}) {
   const named = R.graph.rooms[id] || roomList(s).find((x) => x.dir === id || x.path === id) || R.graph.rooms[byAddr(R.graph, id)], room = named && onMap(named) ? named : null;
   if (!R.at) deny(s, 'You are not on the server. Connect first.');
   else if (active(s)) deny(s, 'Finish the fight first.');
-  else if (R.screen?.kind === 'virus' && !R.screen.slipped) deny(s, `The ${R.screen.name} holds ${hereOf(s).path}. Engage it, or step back.`);
+  else if (R.screen?.kind === 'virus' && !R.screen.slipped && room && room.id === retreat(s)?.id) return back(s, opts); // the room you came from: step back
+  else if (R.screen?.kind === 'virus' && !R.screen.slipped) deny(s, `The ${R.screen.name} holds ${hereOf(s).path}. Engage it, or walk back the way you came.`);
   else if (R.screen?.kind === 'hunter') deny(s, 'The hunter is on you.');
   else if (R.screen?.kind === 'rival') deny(s, `${rivalOf(s).id} has you. No stepping back.`);
   else if (!room || !walkable(s, R.at).includes(room.id)) deny(s, room ? `${room.path} is not next to ${hereOf(s).path}.` : `No room ${id}.`);
@@ -1349,13 +1352,17 @@ function openVault(s, room, force) {
   const has = R.visit.keys.indexOf(room.id), may = R.world ? ask('canOpen', s, room) : undefined;
   if (may === false) return deny(s, room.locked || 'It won\'t open yet.');
   if (!force && has < 0 && !may) return deny(s, `No key. It's in ${roomList(s).find((x) => x.key === room.id)?.path || 'an elite'}, or force the door for ${Math.round(R.max * ROOMS.force)} Signal.`);
-  if (force && !may) { const lost = Math.round(R.max * ROOMS.force); setSig(s, Math.max(1, sigOf(s) - lost)); say(s, `You force the door: −${lost} Signal.`, 'rooms-bad'); }
-  else if (may) say(s, 'The vault opens.', 'rooms-good');
-  else { R.visit.keys.splice(has, 1); say(s, 'The key opens the vault.', 'rooms-good'); }
+  const packed = () => (R.world ? s.run?.pack?.length : R.pack.length) || 0, was = packed();
+  let ev;
+  if (force && !may) { const lost = Math.round(R.max * ROOMS.force); setSig(s, Math.max(1, sigOf(s) - lost)); ev = say(s, `You force the door: −${lost} Signal.`, 'rooms-bad'); }
+  else if (may) ev = say(s, 'The vault opens.', 'rooms-good');
+  else { R.visit.keys.splice(has, 1); ev = say(s, 'The key opens the vault.', 'rooms-good'); }
+  ev.fx = { kind: 'vault', room: room.id }; // the Dial on the map (roomfx.mjs), its files counted below
   R.opened[room.id] = nowOf();
   const v = room.loot || { kind: 'gear', rarity: 'tuned' };
   if (R.world && ask('vault', s, room)) { /* the server's own vault: its files go in the pack (netrooms.mjs) */ }
   else { const it = addItem(s, rollItem(rnd(R, 5), { level: R.level, rarity: v.rarity, cls: classOf(s) }), 'Vault: '); if (it) { if (R.world) ask('packItem', s, it); else R.pack.push(it.id); say(s, `${itemLabel(it)} goes in your pack.`, 'rooms-good'); } }
+  ev.fx.n = packed() - was;
   clear(s, room);
   if (room.id === R.graph.vaults[0]) say(s, 'The Core unseals.', 'rooms-bad');
 }
