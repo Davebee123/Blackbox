@@ -87,6 +87,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
     (the top bar, the class pick, the favicon); a faint `/` between the top bar's tabs;
   - quest window: the *Transmission*;
   - level-up: the *Firmware update*;
+  - the exchange window (docs/exchange.md, proposed): the *Tape* (a strip quoting all five goods, one big candle chart
+    for the picked one with its movers as pins, Sell and Buy large);
   - wick's tips (the guided path's, tips.mjs `wick`): the *Transmission* (his face, the kicker, his lowercase line);
   - pager: the *Log* on a desktop (ping lines in the map's left column under Contracts, above the prompt elsewhere;
     pings.mjs), which replaced the *Tray*; a phone keeps its lamp and Comms;

@@ -1,7 +1,7 @@
 # The exchange: one book for what you farm
 
-**Status.** Proposed (the designer, November 2026) and prototyped. Nothing is built until the designer picks a look
-(section 6). It replaces the five hubs' markets (GAME_RULES *Markets*); the hubs keep their Shop, Work,
+**Status.** Proposed (the designer, November 2026) and prototyped. The look is picked: the Tape (section 6). Building
+it is next. It replaces the five hubs' markets (GAME_RULES *Markets*); the hubs keep their Shop, Work,
 Commission, Receipts and Their servers. The ticker (ticker.md) moves its prices. The numbers come from a scratchpad
 simulation, 200 network seeds × 40 logged-on hours at level 12; building it re-measures them.
 
@@ -116,19 +116,24 @@ posted cards 18, a glut's dip 18, cards it caught live 11. Each good's share run
   the bid.
 - **Unchanged:** code deliveries, programs' costs, shop deliveries' transfer times.
 
-## 6. On the screen (pick one)
+## 6. On the screen: the Tape (picked)
 
-Mock-ups from one scene (the Listening Post's terminal, the exchange open beside it), shown in the session. In each: the **Position**
-bar at the top (teal, *410 / 420*), In transfer below, a card's line on the Log. A card is amber with its owner's mark,
-a crew's run red, your own move teal, a posted one dashed with *in 6m*. An order is a chip, *31 wanted*.
+Picked by the designer (November 2026) from the Board, the Tape and the Wire; *Focus* over a five-row board. In the
+Listening Post's window, top to bottom:
 
-- **A, the Board:** the market table grown. A row a good: held (what you made on it under it, teal), sell, buy, ▲▼
-  against par, the last two hours as a sparkline, and what's moving it as chips. A row opens the order ticket, with
-  *Paid* where *vs elsewhere* was.
-- **B, the Tape:** a chart a good, two hours back and 30 minutes ahead: what moved it as bands, a posted card as a
-  dashed mark ahead at its size, what you paid as a teal dashed line; the price and ▲▼ at the right.
-- **C, the Wire:** the movers as a column of cards (posted first, then by minutes left), each with a bar; the book
-  beside it, a column for what you made. Hovering a card lights its good.
+- **Position:** a teal bar, *410 / 420*.
+- **The strip:** five cells, one a good: its symbol (CPH, WRM, KRN, XPL, CMP), last price, ▲▼ against par, the last
+  two hours as a line in the up or down colour, a dot for each mover (amber a card, red a crew's run, teal yours,
+  hollow one posted ahead). A cell picks the good.
+- **The good:** its name and par small, its symbol and last price large, ▲▼ beside it; your holding in a teal box
+  (held, paid, what you've made).
+- **The chart:** 5-minute candles two hours back and 30 minutes ahead, a price axis on the right with the last price
+  tagged, par dotted, what you paid as a dashed teal line. Each mover is a pin where it started (*Taken over ×1.3 ·
+  28m*), coloured as in the strip, and a posted card a dashed box ahead at its size (*Rent day ×1.3 · in 14m*). The
+  pins are the only list of movers.
+- **Sell and Buy:** two large buttons with the bid and the ask, what you hold and the room your cap leaves. Each opens
+  the order ticket (*Paid* where *vs elsewhere* was). An order shows as *31 wanted* on Sell.
+- **In transfer** below, and a card's line on the Log.
 
 ## 7. Building it
 
