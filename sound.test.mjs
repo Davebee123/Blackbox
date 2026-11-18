@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { BANK, CLIPS, RECIPES, VOICES, MAX_RATE, openContext } from './dist/sound.mjs';
+import { BANK, CLIPS, RECIPES, VOICES, MAX_RATE, openContext, canPlay } from './dist/sound.mjs';
 
 test('every sample the sound bank lists ships in dist/sfx, and nothing extra', () => {
   const want = Object.entries(BANK).flatMap(([n, k]) => Array.from({ length: k }, (_, i) => `${n}-${i}.wav`)).sort();
@@ -49,4 +49,12 @@ test("the audio context keeps an output's own rate up to the cap, and renders at
   made.length = 0;
   const kept = openContext(device(192000, false)); // a browser that can't set the rate
   assert.equal(kept.sampleRate, 192000); assert.equal(kept.closed, false); assert.equal(made.length, 1);
+});
+
+test('a paused context takes no one-shots, so none pile up for the first click', () => {
+  assert.equal(canPlay('running', Infinity, false), true);
+  assert.equal(canPlay('suspended', Infinity, false), false); // before any click, or long after
+  assert.equal(canPlay('suspended', 50, false), true); // the click that wakes it
+  assert.equal(canPlay('suspended', 50, true), false); // hidden tab
+  assert.equal(canPlay('closed', 50, false), false);
 });
