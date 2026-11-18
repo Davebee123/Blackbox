@@ -718,3 +718,7 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 .rfx-dial { position: absolute; will-change: transform, opacity; }
 .rfx-file { position: fixed; left: 0; top: 0; margin: -8px 0 0 -7px; color: var(--amber); pointer-events: none; z-index: 41; opacity: 0; will-change: transform, opacity; }
 .fp-packstat { transform-origin: 50% 50%; }
+
+/* INIT's table (table.mjs): an orphan, paper-white */
+.fp-tag.orphan rect { stroke: var(--bright); } .fp-tag.orphan text { fill: var(--bright); font-size: 11px; }
+.fp-tag-inline.orphan { color: var(--bright); }

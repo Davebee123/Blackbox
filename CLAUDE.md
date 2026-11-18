@@ -153,8 +153,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - Firewall plays on your bar.
 - **The market moves** (November 2026): prices move on logged-on time, run by the director, each mover with a reason
   in the lore. *No entropy* and no loss aversion guard the time you're away; the market moves both ways while you play.
-  What's next is the ticker (docs/ticker.md): lore-voiced cards that move hub prices. Sway and INIT's count are shelved,
-  and outposts (docs/outposts.md) and a central exchange (docs/exchange.md) are tabled as too complicated for now.
+  What's next is the ticker (docs/ticker.md): lore-voiced cards that move hub prices. Sway is shelved. INIT's count is kept
+  as INIT's table (docs/init-table.md): play moves it, and it moves no prices. Outposts (docs/outposts.md) and a central exchange (docs/exchange.md) are tabled as too complicated for now.
 - **Rested XP** comes only from time logged off. There is no catch-up XP.
 - **Unlocks:** cosmetic unlocks (districts, boots, prompts, desk props, mastery looks) come from achievements, not
   from server floors.

@@ -42,10 +42,11 @@ import { earnEvent } from './earned.mjs';
 import { journalFor, findJournal } from './journals.mjs';
 import { contractTakeover, contractBounty, contractRooms, contractMapped, contractConnect, contractInstall, contractStood, contractExfil, payloadFor, roomMarks, jobsOn } from './mail.mjs';
 import { arcChallenge, jobBossAt } from './arcs.mjs';
+import { TABLE, moveTable, clearOddsMult } from './table.mjs';
 import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
 import { traceNear, openNext, HIDDEN } from './hidden.mjs';
-import { zoneSpawns, kingOpen, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn } from './run.mjs';
+import { vaultItem, zoneSpawns, kingOpen, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn } from './run.mjs';
 import { blipStood, blipRooms, runCardRoll, runCardUp, runCardEnd } from './events.mjs';
 import { RUN_CARDS } from './runcards.mjs';
 import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
@@ -526,6 +527,7 @@ function takeVault(s, loc) {
   for (const { dir, name } of vaultFiles(loc)) {
     const full = `${dir}/${name}`, info = fileInfo(loc, dir, name);
     if (!info || ['text', 'trap', 'sweep'].includes(info.kind) || loc.state?.taken?.[full] || s.run.pack.some((f) => f.path === full)) continue;
+    if (info.kind === 'gear' && !info.item?.unique && /^kit2?\.bin$/.test(name) && clearOddsMult(s) > 1) info.item = vaultItem(loc, name === 'kit2.bin' ? 2 : 1, clearOddsMult(s)); // INIT's table, Clear: blues and yellows ×1.4 at its end
     got.push(packFile(s, { path: full, name, ...info, ...(info.amount ? { amount: Math.round(info.amount * vaultMult(s, loc, info.kind)) } : {}), loc: loc.id }));
   }
   // Guarded (specials.mjs): one of its floor's uniques, once.
@@ -630,6 +632,7 @@ WORLD_hook('mapped', (s) => {
   const loc = locOf(s);
   if (!loc) return;
   contractMapped(s, loc);
+  if (!loc.zone && !loc.member) moveTable(s, -TABLE.mapped); // INIT's table: a Mapped server frees a slot
   if (!s.rooms.mappedRest) earnEvent(s, { kind: 'map-norest', floor: loc.depth || 1 }); // No Rest's count (earned.mjs)
   // Mapped: one ? linked to it is traced the rest of the way (floors.mjs), so a floor opens outward one server at a time.
   if (!loc.zone && !loc.member && HIDDEN.opens) openNext(s, loc, 'Mapped: ');

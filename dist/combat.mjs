@@ -47,6 +47,7 @@ import { LEG, legendFired } from './legends.mjs';
 import { filterCommand, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, traceNear, leadOf, firstRank } from './hidden.mjs';
 import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, floorLairBosses, reached, floorCommand, floorsRestore, floorsLetter } from './floors.mjs';
+import { orphanXpMult, intelXpMult, trashItemMult, clearOddsMult } from './table.mjs';
 import { reqLevel, meetsReq, STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, liftFx, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, IMPLICITS, implicitFx, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore, curveRestore } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
@@ -899,9 +900,11 @@ function eliteUnique(s, level, more = []) {
 function rollOnce(s, ctx, level, tier) {
   const lu = listened(s), heard = lu && lu.level <= level + 2 && dropsHere(lu, ctx) ? listenBoost(s) : 1; // a Listening Post's unique drops here
   const odds = lootOdds(tier), mf = magicFind(gearStat(s, 'scavenge')), deep = 1 + LOOT.depthBonus * Math.max(0, (ctx.layer || 1) - 1);
-  const gold = odds.zeroday * heard * mf, yellow = gold + odds.custom * deep * mf, blue = yellow + odds.tuned * deep * mf;
+  // INIT's table (table.mjs): Full, trash rolls a white or blue more often; Clear, elites and ★ rare spawns roll blues and yellows more often.
+  const full = tier === 'trash' ? trashItemMult(s) : 1, good = tier !== 'trash' ? clearOddsMult(s) : 1;
+  const gold = odds.zeroday * heard * mf, yellow = gold + odds.custom * deep * mf * good, blue = yellow + odds.tuned * deep * mf * good * full;
   const r = rand(s);
-  let rarity = r < gold ? 'zeroday' : r < yellow ? 'custom' : r < blue ? 'tuned' : r < blue + odds.stock ? 'stock' : null;
+  let rarity = r < gold ? 'zeroday' : r < yellow ? 'custom' : r < blue ? 'tuned' : r < blue + odds.stock * full ? 'stock' : null;
   if (!rarity) return null;
   if (rarity === 'zeroday') {
     const u = uniqueFrom(s, ctx, level) || (tier !== 'trash' ? eliteUnique(s, level) : null);
@@ -1609,6 +1612,7 @@ function freshBonus(s, amount, kind) {
 // (a contract's activity), when there's no bonus.
 export function gainXp(s, amount, why, kind = null, tally = kind) {
   if (amount <= 0) return;
+  if (kind === 'breakin' || kind === 'intel') amount = Math.round(amount * intelXpMult(s)); // INIT's table, Clear (table.mjs)
   const bonus = freshBonus(s, amount, kind);
   if (bonus) { emit(s, 'fresh', `Fresh bonus +${bonus} XP (${XP_KINDS[kind]}).`, { amount: bonus, kind }); amount += bonus; }
   if (tally) (s.xpMix ||= {})[tally] = (s.xpMix[tally] || 0) + amount;
@@ -2285,6 +2289,8 @@ function payKill(s, e, base, why) {
   if (bonus) emit(s, 'fast-kill', `Fast kill: ${e.cycle} cycles. +${bonus} XP.`, { amount: bonus, cycles: e.cycle });
   const hot = e.virus.strain && e.virus.strain === hotStrain(s) ? Math.max(1, Math.round(xp * HOT.bonus)) : 0;
   if (hot) emit(s, 'hot-kill', `Hot strain: +${hot} XP.`, { amount: hot });
+  const orphan = e.orphan ? Math.round(xp * (orphanXpMult(s) - 1)) : 0; // INIT's table, Full: an orphan's kill (table.mjs)
+  if (orphan) emit(s, 'orphan-xp', `Orphan: +${orphan} XP.`, { amount: orphan });
   // Rested (WoW): XP banked while you were safely away doubles a kill until it runs out.
   // Reading tells (tells.mjs): each one answered by a command adds to the kill.
   const reads = e.metrics?.reads || 0, read = reads ? Math.max(1, Math.round(xp * Math.min(TELL.read.xpMax, TELL.read.xp * reads))) : 0;
@@ -2298,7 +2304,7 @@ function payKill(s, e, base, why) {
   if (haul) emit(s, 'set-xp', `Long Haul: +${haul} XP.`, { amount: haul });
   const obj = bonusXp(e, xp); // a met objective (objectives.mjs)
   if (obj) emit(s, 'objective-xp', `Objective: +${obj} XP.`, { amount: obj });
-  gainXp(s, xp + bonus + hot + read + rested + kit + haul + obj, why, 'fight', e.xpKind || 'fight'); // xpKind: what it tallies as (a held server's respawns: build, netrooms.mjs)
+  gainXp(s, xp + bonus + hot + orphan + read + rested + kit + haul + obj, why, 'fight', e.xpKind || 'fight'); // xpKind: what it tallies as (a held server's respawns: build, netrooms.mjs)
 }
 
 // A room fight won on the network (netrooms.mjs, GAME_RULES.md "Runs: servers as rooms"): what the kill pays besides its XP. wild: SPRAWL-00

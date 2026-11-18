@@ -63,6 +63,7 @@ import { roomSpark } from './event-cards.mjs';
 import { TH_ICONS, roomMarksOf, nookIcon, nookLive, questSvg, fileSvg, filesHere, threadHud, threadCard, threadAsks, threadPanel, thUi } from './threads-view.mjs';
 import { sweepBlock } from './view.mjs';
 import { flowSvg, quadPts } from './flowfx.mjs';
+import { ORPHAN_TIP } from './table.mjs';
 
 // The pop-up's state, a view (never saved): the room you clicked, and where you stood when you clicked it (a step
 // or a wait drops it), and the decision you closed (it stays closed until a new one comes up).
@@ -579,6 +580,7 @@ function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, fi
     if (room.kind === 'vault' && !opened(s, room)) tags.push(R.visit?.keys.includes(room.id) ? ['KEY FITS', 'key'] : ['LOCKED', 'lock']);
     if (sealed) tags.push(['SEALED', 'hot']);
     if (up && R.rare[room.id]) tags.push(['★', 'rare']);
+    if (up && R.orphan?.[room.id]) tags.push(['◌', 'orphan', null, ORPHAN_TIP]);
     const gap = up && !room.mirror ? (fightOf(s, room).level || 0) - hackerLevel(s) : 0; // its virus above your level: ▲n
     if (gap > 0) tags.push([`▲${gap}`, `lvup ${upCon(gap)}`, null, `Level ${fightOf(s, room).level}: ${gap} ${gap === 1 ? 'level' : 'levels'} above you.`]);
     const ob = objOf(s, room);
@@ -791,6 +793,7 @@ function hereCard(s) {
       : holder(iconOf(s, room), sc.name, fightKind(room) && !['guard', 'core', 'boss'].includes(room.kind) && !room.wild ? `${k.short} · ${k.sub}` : k.sub, tip, 'hot', hackerLevel(s));
     const notes = [];
     if (R.rare[room.id]) notes.push(`<span class="fp-tag-inline next">★ rare</span> ${ROOMS.rareLevel} levels up, better loot.`);
+    if (R.orphan?.[room.id]) notes.push(`<span class="fp-tag-inline orphan" title="${esc(ORPHAN_TIP)}">◌ orphan</span> Breaking it frees a slot.`);
     if (room.queue && R.kind === 'Mailhub') notes.push('A Spam Flood joins the fight.');
     const ob = objOf(s, room); // its objective (objectives.mjs), and what it pays met
     if (ob) notes.push(`<span class="fp-tag-inline next fp-obj">${ic(OBJ_ICON[ob])}${OBJECTIVES[ob].name}</span> ${esc(objectiveLine(ob))}<span class="fp-obj-pay">${objBonus()}</span>`);
