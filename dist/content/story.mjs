@@ -26,7 +26,7 @@ export default {
       "reward": {
         "credits": 60,
         "standing": 3,
-        "toLevel": 2
+        "levelXp": 1
       }
     },
     {

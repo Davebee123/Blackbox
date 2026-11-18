@@ -2249,7 +2249,7 @@ Delivered contracts move to **Completed**, greyed, newest first.
 ### The initiate storyline
 
 LOWLIGHT's jobs, in order (they can't be dropped and don't count toward your six; each pays XP by its kind): kill three
-processes in SPRAWL-00 (60 credits, and XP enough to reach level 2); hand over two Worm code (80); kill the named process `claimjack`, an elite (one
+processes in SPRAWL-00 (60 credits and a whole level's XP, level 1 to 2: 690); hand over two Worm code (80); kill the named process `claimjack`, an elite (one
 level above you, never above 4; after two losses it's worn down to v1) (100, wick's Old Toolkit); take over any server
 you've traced (250 and your first **relay**); recover Halcyon's stolen `claims.db` from an unknown server next to the
 one you took (150, a protocol, Tuned or better). Each pays Halcyon rep (+3, +3, +3, +4, +4), so you finish at Contractor.
