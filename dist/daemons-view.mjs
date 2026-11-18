@@ -1,15 +1,15 @@
 // The Loadout's Daemons tab (view.mjs re-exports daemonsMarkup): the party. Your class at the top, with how many
 // daemons you run and how many of the forty you've found. Party: you first, then each slotted daemon, each with a bar
 // of the fight's first 12 cycles saying when it acts (daemons.mjs daemonCycles, runDaemons' own rule); a triggered one
-// gets a dashed lane with its trigger, and the next locked slot shows the level it opens at. Pick a cycle and the
-// order of play for it reads across under the bar (daemons.mjs playOrder). Bench: what you hold but haven't slotted.
+// gets a dashed lane with its trigger, and the next locked slot shows the level it opens at. Bench: what you hold but
+// haven't slotted.
 // Roster: all forty by the levels that drop them, the unfound as silhouettes. Each daemon wears its sprite
 // (daemon-sprites.mjs). Nothing on the cards is a rule: a sticky panel says what the picked one does (the one sheet
 // on a phone), and it alone carries the rule's highlights (ruletext.mjs) and the Slot, Unslot and Swap buttons.
 // Styles: daemons.css. Clicks: app.js (data-dmn-sel, data-dmn-cycle, data-dmn-view; the buttons are data-command).
 import { DAEMONS, DAEMON_BANDS, DAEMON_DROP, bandDaemons, daemonBand, daemonN, codeUnit, SERVER, FLOORS, ARCHETYPES, SUBS } from './data.mjs';
 import { active, serverLevel, classOf, hackerLevel, subOf } from './combat.mjs';
-import { daemonLevel, daemonSlots, slottedDaemons, daemonText, daemonCycles, playOrder } from './daemons.mjs';
+import { daemonLevel, daemonSlots, slottedDaemons, daemonText, daemonCycles } from './daemons.mjs';
 import { ruleHtml } from './ruletext.mjs';
 import { spriteHtml, roleOf, ROLE_WORD } from './daemon-sprites.mjs';
 
@@ -114,31 +114,15 @@ function partyRow(s, id, sel, cyc) {
   }).join('');
 }
 
-// The order of play in the picked cycle: you ▸ daemons in party order ▸ burns and helpers ▸ the virus, and beside
-// it the triggered daemons, armed.
-export function orderMarkup(s, cyc) {
-  const o = playOrder(s, cyc), gt = '<span class="dm-gt" aria-hidden="true">▸</span>';
-  const chip = (cls, text, tip) => `<span class="dm-st ${cls}" title="${esc(tip)}">${esc(text)}</span>`;
-  const steps = [
-    ...o.start.map((id) => chip('dm', DAEMONS[id].name, `${DAEMONS[id].name}: as the fight starts, before your first command`)),
-    chip('you', 'You', 'Your command goes first: a part you break now never fires'),
-    ...o.daemons.map((id) => chip('dm', DAEMONS[id].name, `${DAEMONS[id].name}: ${daemonText(id, daemonLevel(s, id))}${DAEMONS[id].exfil ? ' (in an Exfil fight)' : ''}`)),
-    chip('burns', 'Burns and helpers', 'Your burns tick and your helpers hit'),
-    chip('them', 'The virus', "The virus's attacks due this cycle land"),
-  ];
-  const armed = o.armed.map((id) => chip('armed', `${DAEMONS[id].name} · ${actsLine(id).toLowerCase()}`, `${DAEMONS[id].name} is armed: it acts whenever this happens, in any step`)).join('');
-  return `<div class="dm-order" role="group" aria-label="Order of play in cycle ${cyc}"><span class="dm-k">Cycle ${cyc}</span><span class="dm-steps">${steps.join(gt)}</span>${armed ? `<span class="dm-armed">${armed}</span>` : ''}</div>`;
-}
-
 function partySec(s, sel) {
   const cyc = Math.min(CYCLES, Math.max(1, daemonUi.cycle || 1)), party = slottedDaemons(s), n = daemonSlots(s), lvl = serverLevel(s);
   const next = SERVER.daemonSlotsAt.find((l) => lvl < l);
-  const heads = `<span class="dm-corner">Cycle</span>${Array.from({ length: CYCLES }, (_, i) => `<button type="button" class="dm-ch" data-dmn-cycle="${i + 1}" aria-pressed="${i + 1 === cyc}" title="Cycle ${i + 1}: the order of play">${i + 1}</button>`).join('')}`;
+  const heads = `<span class="dm-corner">Cycle</span>${Array.from({ length: CYCLES }, (_, i) => `<button type="button" class="dm-ch" data-dmn-cycle="${i + 1}" aria-pressed="${i + 1 === cyc}" title="Cycle ${i + 1}">${i + 1}</button>`).join('')}`;
   const cls = classOf(s), sub = SUBS[subOf(s, cls)];
   const you = `<div class="dm-who you"><span class="dm-face">YOU</span><span class="dm-nm"><b>You</b><small>${esc(sub ? sub.name : ARCHETYPES[cls].name)} · Lv ${hackerLevel(s, cls)}</small></span></div>${Array.from({ length: CYCLES }, (_, i) => `<span class="dm-cell me${i + 1 === cyc ? ' sel' : ''}" data-dmn-cycle="${i + 1}" title="Cycle ${i + 1}: your command"><i></i></span>`).join('')}`;
   const rows = Array.from({ length: n }, (_, i) => party[i]).map((id) => (id ? partyRow(s, id, sel, cyc) : '<div class="dm-who empty">Empty slot</div><span class="dm-lane none"></span>')).join('');
   const locked = next ? `<div class="dm-who locked" title="${esc(`Another slot when your server reaches level ${next} (your highest class level)`)}">Slot ${n + 1} · level ${next}</div><span class="dm-lane none"></span>` : '';
-  return `<section class="dm-sec daemon-slots" aria-label="Party"><h3 class="dm-h">Party<small>${party.length}/${n}</small></h3><div class="dm-body"><div class="dm-turns">${heads}${you}${rows}${locked}</div>${orderMarkup(s, cyc)}</div></section>`;
+  return `<section class="dm-sec daemon-slots" aria-label="Party"><h3 class="dm-h">Party<small>${party.length}/${n}</small></h3><div class="dm-body"><div class="dm-turns">${heads}${you}${rows}${locked}</div></div></section>`;
 }
 
 function benchSec(s, sel) {
