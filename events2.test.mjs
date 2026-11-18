@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { fresh, command, active, resolveCycle, addLocation } from './dist/combat.mjs';
 import { deal, eventsOf, tickEvents, CARDS, FEUD, HUNT, SHOCK, huntPay, feuds, feudShare, feudPay } from './dist/events.mjs';
 import { filtersOf } from './dist/filters.mjs';
+import { LOOT } from './dist/gear.mjs';
 import { rep, FACTIONS } from './dist/factions.mjs';
 import { FACTION_FAMILY } from './dist/factions.mjs';
 import { priceOf, WARE_IDS } from './dist/market.mjs';
@@ -128,6 +129,7 @@ test('a feud drifts on the director\'s dice, never the game\'s, and never past i
 
 test('taking the bar to 100% wins the feud: the bonus, once', () => {
   const { s, ev } = glassLantern();
+  const odds = LOOT.odds; LOOT.odds = { trash: {}, elite: {}, rare: {} }; // a runner's own chance drop left out: the count is the feud's
   ev.bar = ev.sides[0] === 'glassjaw' ? 0.5 : 0.5; // even
   const was = reps(s), stash = s.stash.length, credits = s.server.credits, mine = 'glassjaw';
   command(s, `event fight ${ev.id} ${mine}`); win(s);
@@ -140,6 +142,7 @@ test('taking the bar to 100% wins the feud: the bonus, once', () => {
   assert.equal(rep(s, mine), was[mine] + 2 * FEUD.rep + FEUD.bonusRep);
   for (const f of Object.keys(FACTIONS)) if (f !== mine) assert.ok(rep(s, f) >= was[f], `${f}: never a loss`);
   assert.ok(s.server.credits - credits >= 2 * feudPay(ev.level));
+  LOOT.odds = odds;
   assert.ok(s.logs.some((e) => e.id > first && e.type === 'world-event-won'));
   command(s, `event fight ${ev.id}`);
   assert.ok(!active(s), 'nothing more to fight');

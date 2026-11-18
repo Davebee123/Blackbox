@@ -108,7 +108,7 @@ power 0.4). The runners and you sell where a faction is short, and that brings i
 |---|---|
 | **Need pays credits** | A faction's contracts pay its need over 1 as a credits premium, up to +40%, never XP and never under par. It's set when the offer posts and kept until you deliver, like the XP. |
 | **A short-handed board** | A faction's share of the offers on the board weighs by its need squared, so the factions that need work post more of it. |
-| **Halcyon's line** | Its kill work (Kill, Grind, Strain, Named process) pays up to +40% more credits as the count climbs from 88% to 95%: it needs the table under the line. |
+| **Halcyon's line** | Its kill work (Kill, Grind, Strain, Bounty) pays up to +40% more credits as the count climbs from 88% to 95%: it needs the table under the line. |
 | **The patron's share** | Your commission's retainer rises with your patron's lead: +1.5 × its sway over its baseline (as a share of the baseline), up to +30%. Backing a side pays when it rises, and your work is what raises it. |
 | **Siding, as built** | Rep tiers (shops, chase lines), receipts and set pieces, defence calls at ×1.5, the stance. A mercenary spreads that rep thin. |
 
