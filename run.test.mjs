@@ -295,7 +295,8 @@ test('jack out mid-fight is an emergency escape that keeps the pack', () => {
   say(s, 'cd relay');
   command(s, 'engage');
   say(s, 'jack out');
-  resolveCycle(s);
+  s.run.integrity = s.run.max = 10000; // it takes 2 cycles under fire
+  for (let i = 0; i < 3 && s.run; i++) resolveCycle(s);
   assert.equal(s.run, null);
   assert.equal(s.server.credits, CONFIG.startingCredits + 7);
   assert.equal(s.locations[0].state.cleared['/relay'], undefined);
