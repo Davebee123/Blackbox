@@ -1041,7 +1041,8 @@ export function jackOut(s, why = '') {
   }
   const banked = R.pack.length;
   R.banked.push(...R.pack); R.pack = [];
-  R.deaths = 0; // a clean jack out: the next disconnect waits the plain ROOMS.reconnect again
+  if (s.run?.fled) R.deaths = (R.deaths || 0) + 1; // out mid-fight: a disconnect's wait
+  else R.deaths = 0; // a clean jack out: the next disconnect waits the plain ROOMS.reconnect again
   R.last = { result: 'out', xp: xpTotal(s) - R.visit.xp0, banked, visit: R.visit.n };
   goHome(s);
   say(s, `${why ? `${why} ` : ''}JACKED OUT of ${R.name}.${banked ? ` ${banked} ${banked === 1 ? 'item' : 'items'} banked.` : ''}`, 'jacked-out');

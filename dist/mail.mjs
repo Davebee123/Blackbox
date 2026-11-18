@@ -29,7 +29,7 @@
 // lose your Integrity while it's in your pack and it's gone, the job with it), defuse (break N Encryptors before they
 // Encrypt), sweep (one visit, every room but the Core, no rest), exfil (catch an Exfil) and heist (a vault's file past a
 // Tracker). No clock: one waits on the board at a time until you take it, outside the five.
-import { FAMILIES, ROOM_FAMILIES, CONFIG, STRAINS, along, killXp } from './data.mjs';
+import { FAMILIES, ROOM_FAMILIES, CONFIG, STRAINS, along, killXp, xpToNext } from './data.mjs';
 import { ROOT } from './root.mjs';
 import { TABLE, moveTable } from './table.mjs';
 import { PUZZLES } from './puzzles.mjs';
@@ -201,7 +201,9 @@ function postStory(s, at = now(), force = false) {
   const l = letter(s, msg, at);
   if (job) {
     const j = { id: l.id, from: msg.from, subject: msg.subject, body: msg.body, got: 0, at, ...job };
-    j.xpFixed = true; j.reward.xp = contractXp(hackerLevel(s), j); // like the board's: its kind and size, at your level
+    // like the board's: its kind and size, at your level; reward.levelXp pays a whole level's XP instead (wick's first: 1 to 2)
+    const L = hackerLevel(s); // read first: it seats your class's level on a new save
+    j.xpFixed = true; j.reward.xp = j.reward.levelXp ? xpToNext(j.reward.levelXp) : contractXp(L, j);
     m.jobs.push(j);
     l.job = j.id;
     arm(s, j);

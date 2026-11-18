@@ -410,7 +410,7 @@ test('the rails: auto jack-out at your line, with your pack, in a fight or out o
   s.run.integrity = Math.floor((s.run.max || 100) * 0.25);
   const n = s.serial;
   for (const p of attackers(s)) p.attack.due = 999;
-  resolveCycle(s);
+  for (let i = 0; i < 4 && s.run; i++) resolveCycle(s); // it starts the 2-cycle jack out
   const ev = since(s, n);
   assert.ok(ev.some((e) => /AUTO JACK OUT/.test(e.message)), 'it jacks you out');
   assert.equal(s.run, null, 'home');

@@ -11,7 +11,7 @@ const cost = (s, n) => lifted(n, hackerLevel(s));
 import { hasSpecial, armoredAt, SPECIAL } from './specials.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
-import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, syncServer, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
+import { relockWait, findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, syncServer, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
 import { developerWall, developerDamage } from './firewall.mjs';
@@ -722,8 +722,11 @@ export function bank(s, loc, why = '') {
   s.server.integrity = Math.max(1, s.run.integrity);
   s.server.max = s.run.max;
   s.run = null;
-  if (relocks(loc)) loc.lockUntil = clock() + ROGUE.relockMs;
-  delete loc.deaths; // a clean jack out: the next disconnect waits the plain 30 seconds again (combat.mjs relockWait)
+  if (r0.fled) loc.lockUntil = clock() + relockWait((loc.deaths = (loc.deaths || 0) + 1)); // out mid-fight: a disconnect's wait
+  else {
+    if (relocks(loc)) loc.lockUntil = clock() + ROGUE.relockMs;
+    delete loc.deaths; // a clean jack out: the next disconnect waits the plain 30 seconds again (combat.mjs relockWait)
+  }
   if (s.encounter?.mode === 'run') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
@@ -1092,8 +1095,9 @@ hooks.foldersOf = (l) => Object.keys(layoutOf(l)).filter((p) => p !== '/' && !la
 hooks.jackOut = (s) => jackOut(s); // Deadman's Switch (combat.mjs)
 hooks.flee = (s) => {
   if (!s.run) return;
+  s.run.fled = true; // the reconnect wait counts it as a disconnect (bank, floorplan.mjs jackOut)
   if (s.run.rooms) { s.encounter.phase = 'fled'; return jackOut(s); }
-  if (s.encounter?.hunter) return warn(s, 'The hunter has your trace. You cannot jack out until it is down.');
+  if (s.encounter?.hunter) { s.run.fled = false; return warn(s, 'The hunter has your trace. You cannot jack out until it is down.'); }
   s.encounter.phase = 'fled';
   jackOut(s);
 };

@@ -84,8 +84,11 @@ factor (`length.drawn`). Adds (fragments, Packages, Droppers), breaches and crew
 | Encryption | Each Encrypt adds to a stack that hits you every cycle. Breaking the Encryptor clears it. A ◆ on you stops an Encrypt; shields soak the stack's damage; Purge and Rollback wipe it. |
 | Scramble | For a couple of cycles, each of your attacks has a 25% chance to hit you instead, at half. A ◆ stops it. |
 
-`jack out` mid-fight (or the red **Jack out** key at the tray's end, two clicks) is the emergency escape: it resolves on
-your turn, you keep your pack, and the virus stays. Not on a breach, or while a hunter has your trace.
+`jack out` mid-fight (or the red **Jack out** key, two clicks) takes **2 cycles** (`CONFIG.jackOut`, combat.mjs
+`startLeave`). The virus keeps attacking and only defence fires (shields, heals, delays, buffs); attacks, auto-repeat
+and your program hold. A teal **↑ out** chip on your row marks the cycle you leave. `jack out` again, or **Stay**, calls
+it off. You leave with your pack, the virus stays, and the reconnect wait counts it as a disconnect. The auto jack-out
+rail starts the same count. Not on a breach, or while a hunter has your trace.
 Leaving the fight screen pauses a live fight.
 
 ### The interrupt
@@ -976,8 +979,9 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
   servers and leads found, and a Resident that beat you stays a level up. The **NO CARRIER** card strikes through what the
   visit lost.
 - **Reconnect wait.** A server you leave takes you back after 30 s (`CONFIG.relockMs`), +15 s for each disconnect on
-  its run, 2 min at most (`CONFIG.deathWait`). A clean jack out resets the count. Connect counts it down,
-  with ☠ and the count. Deadman's Switch counts as a jack out, so it saves the visit.
+  its run, 2 min at most (`CONFIG.deathWait`). A jack out mid-fight waits like a disconnect but still saves the visit;
+  any other jack out resets the count. Connect counts it down, with ☠ and the count. Deadman's Switch counts as a jack
+  out, so it saves the visit.
 - **Home while out:** an invasion that wants you waits until you're back.
 - **Contracts ready:** a yellow ✓ by Mail on the top bar.
 
@@ -1092,8 +1096,8 @@ farm have none.
 About 1 in 6 servers you trace is **rogue** (never your first two, never more than five tame ones in a row); the first
 after those is always a **Nest** of the family that traced it. A rogue server is a hexagon on the map, never beside a
 floor's entry or on its main road. It has 8–11 fight rooms (4–8 on one traced before they grew) at the server's grade;
-its deepest rooms are at the server's level (it keeps up with you inside its floor's band), the fight rooms nearest the
-entry level 1, and the rooms between step up evenly. It has 2–4 **quiet rooms**: an **Empty** (nothing) or a **Stash** (4 + level/2 credits into your bank
+its deepest rooms are at the server's level (it keeps up with you inside its floor's band), the three fight rooms nearest
+the entry (and any as near) level 1, and the rooms between step up evenly. It has 2–4 **quiet rooms**: an **Empty** (nothing) or a **Stash** (4 + level/2 credits into your bank
 as you walk in, 1 code one time in five). No vault, nothing to take over, no puzzle rooms, no invasions.
 
 | Kind | Rule |
@@ -2146,7 +2150,7 @@ kill's deed XP, and a held server's respawned rooms count as Building XP.
 
 ## Mail and contracts
 
-**The story.** Halcyon Mutual insures half the servers on the net. Rival crews keep hitting its clients, so Halcyon
+**The story.** Halcyon Mutual insures a large share of the servers on the net. Rival crews keep hitting its clients, so Halcyon
 pays third-party crews to fight a turf war against them, and never asks how. You're an initiate of one of those crews,
 **LOWLIGHT** (your handler is `wick`). The rival crews are named for the viruses they run: **TOLLGATE** (ransomware),
 **SWARMLINE** (worms) and **PALEMASK** (ghostroot). **GLASSJAW** is a broker that works against Halcyon.
@@ -2253,7 +2257,7 @@ Delivered contracts move to **Completed**, greyed, newest first.
 ### The initiate storyline
 
 LOWLIGHT's jobs, in order (they can't be dropped and don't count toward your six; each pays XP by its kind): kill three
-processes in SPRAWL-00 (60 credits); hand over two Worm code (80); kill the named process `claimjack`, an elite (one
+processes in SPRAWL-00 (60 credits and a whole level's XP, level 1 to 2: 690); hand over two Worm code (80); kill the named process `claimjack`, an elite (one
 level above you, never above 4; after two losses it's worn down to v1) (100, wick's Old Toolkit); take over any server
 you've traced (250 and your first **relay**); recover Halcyon's stolen `claims.db` from an unknown server next to the
 one you took (150, a protocol, Tuned or better). Each pays Halcyon rep (+3, +3, +3, +4, +4), so you finish at Contractor.
@@ -3105,10 +3109,10 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 64 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 65 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
-- **One bar** (its version is the landing's): `s.signal` (null: full) becomes `s.server.integrity`, its max your power
+- **v65** one bar: `s.signal` (null: full) becomes `s.server.integrity`, its max your power
   and gear's; `s.degraded` and an occupied home (`s.occupation`) go (`combat.mjs healthRestore`, keyed on the fields). A
   run carries its connect snap (`s.run.snap`, visit.mjs); a run saved before it disconnects the old way.
 - **Earned pieces** (no version of their own): `s.earned` (each count) and `s.pins`, made on first use (`earned.mjs`). A

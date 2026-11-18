@@ -67,7 +67,7 @@ import { noteUse } from './mastery.mjs';
 import { nativeVerb, NATIVE_VERBS, nativeCycle, nativeTaken, remHit, hotfixBroke, nativeLand } from './nativeacts.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 64; // v64: a board recovery aimed at an unknown server moves to a found one (mail.mjs itemRestore, keyed on the field); v63: the Graphics settings, s.settings.graphics (graphics.mjs migrateGraphics, keyed on the field); v62: runners, s.runners (runners.mjs runnersOf: made on first use, keyed on the field); v61: every hub's Shop has one shape: the agency stock, premium shelves and hub stock go (store.mjs shopRestore, keyed on the fields); v60: payloads, held hubs and swarms are cut: a held hub is paid out once (store.mjs hubsRestore, keyed on the fields); v59: journals, s.journals (journals.mjs findJournal: made on first use, keyed on the field); v58: one rep scale: rep under 1 comes back as 1 (factions.mjs repRestore, keyed on the value); s.commission and s.receipts are new; v57: the talent tiers: old ranks and two-way picks become tier picks where the talent survives (talents.mjs tiersRestore, keyed on the old fields); v56: floors as tiers: items refilled on the tiers (gear.mjs curveRestore, keyed on s.curve 3); v55: gear carries your power: items filled at their level (gear.mjs curveRestore, keyed on s.curve 2); v54: the compounding curve: items lifted at their level (gear.mjs curveRestore, keyed on s.curve); v53: the cryptogram's key, s.cipher (puzzles.mjs cipherOf: made on first use, keyed on the field); v52: rivals' memory, s.rivals (rivals.mjs rivalsRestore: made on first use, keyed on the field); v51: the scanner's log, s.scanner (scanner.mjs scannerOf: made on first use, keyed on the field); v50: site traits become server specials (specials.mjs specialsRestore); v49: crafting is gone: recipes, plans and their files become credits, Zero-day source the Zero-day (progression.mjs craftRestore); v48: Indemnity retires: an older save's unspent Indemnity becomes credits once, with a letter from Halcyon (store.mjs indemnityRestore); v47: one kind of component: an older save's pile of named pieces (s.salvage) becomes its count, s.components (salvage.mjs componentsRestore); v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, GAME_RULES.md "Saves"); v39: every server is a room graph (netrooms.mjs roomsRestore, GAME_RULES.md "Runs: servers as rooms"); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 65; // v65: one Integrity bar: s.signal, Degraded and your own occupation fold into s.server.integrity (combat.mjs healthRestore, keyed on the fields); v64: a board recovery aimed at an unknown server moves to a found one (mail.mjs itemRestore, keyed on the field); v63: the Graphics settings, s.settings.graphics (graphics.mjs migrateGraphics, keyed on the field); v62: runners, s.runners (runners.mjs runnersOf: made on first use, keyed on the field); v61: every hub's Shop has one shape: the agency stock, premium shelves and hub stock go (store.mjs shopRestore, keyed on the fields); v60: payloads, held hubs and swarms are cut: a held hub is paid out once (store.mjs hubsRestore, keyed on the fields); v59: journals, s.journals (journals.mjs findJournal: made on first use, keyed on the field); v58: one rep scale: rep under 1 comes back as 1 (factions.mjs repRestore, keyed on the value); s.commission and s.receipts are new; v57: the talent tiers: old ranks and two-way picks become tier picks where the talent survives (talents.mjs tiersRestore, keyed on the old fields); v56: floors as tiers: items refilled on the tiers (gear.mjs curveRestore, keyed on s.curve 3); v55: gear carries your power: items filled at their level (gear.mjs curveRestore, keyed on s.curve 2); v54: the compounding curve: items lifted at their level (gear.mjs curveRestore, keyed on s.curve); v53: the cryptogram's key, s.cipher (puzzles.mjs cipherOf: made on first use, keyed on the field); v52: rivals' memory, s.rivals (rivals.mjs rivalsRestore: made on first use, keyed on the field); v51: the scanner's log, s.scanner (scanner.mjs scannerOf: made on first use, keyed on the field); v50: site traits become server specials (specials.mjs specialsRestore); v49: crafting is gone: recipes, plans and their files become credits, Zero-day source the Zero-day (progression.mjs craftRestore); v48: Indemnity retires: an older save's unspent Indemnity becomes credits once, with a letter from Halcyon (store.mjs indemnityRestore); v47: one kind of component: an older save's pile of named pieces (s.salvage) becomes its count, s.components (salvage.mjs componentsRestore); v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, GAME_RULES.md "Saves"); v39: every server is a room graph (netrooms.mjs roomsRestore, GAME_RULES.md "Runs: servers as rooms"); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -2795,6 +2795,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     emit(s, 'info', 'Resumed.');
     command(s, input, now);
     return since(s, first);
+  } else if (e.leaving && (text === 'jack out' || text === 'stay')) {
+    stayLeave(s);
   } else if (text === 'cancel') {
     e.queue = null;
     e.plan = [];
@@ -3643,11 +3645,7 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'hold', 'Held. No command fired.');
     return;
   }
-  if (intent.ability === 'flee') {
-    emit(s, 'fled', `${auto === 'daemon' ? 'Wimpy daemon: ' : ''}EMERGENCY JACK OUT. The guard stays, and you keep your pack.`);
-    hooks.flee?.(s);
-    return;
-  }
+  if (intent.ability === 'flee') { e.lastCmd = { id: 'flee', cycle: e.cycle }; startLeave(s); return; }
   const error = validate(s, intent);
   if (error) {
     emit(s, 'warning', `${auto === 'program' ? '⟳ Your program' : auto ? 'Auto-repeat' : 'Command'} failed: ${error}`);
@@ -4350,6 +4348,51 @@ function helperGone(s) {
 }
 // Your program's turn (routines.mjs): a move it picked, fired like auto-repeat (never in a Sync Window, never a read of
 // a tell), or a hold when all that's left is yours to play.
+// ---------- jacking out mid-fight ----------
+// `jack out` in a fight takes CONFIG.jackOut.cycles: the virus keeps attacking, only defence fires (shields, heals,
+// delays, buffs: defends), and `jack out` again (or `stay`) calls it off. It ends on your turn once the count runs
+// out: you keep your pack, the virus stays, and the server counts it as a disconnect (run.mjs bank, floorplan.mjs).
+export const defends = (id) => { const a = ABILITIES[id]; return !!a && ['shield', 'heal', 'buff', 'stun'].includes(a.verb) && !a.damage; };
+export const leavingIn = (s) => { const e = s.encounter; return e?.leaving ? Math.max(1, e.leaving.done - e.cycle) : 0; };
+export function startLeave(s, why = '') {
+  const e = s.encounter;
+  if (!active(s) || e.mode !== 'run' || e.leaving) return false;
+  if (e.hunter && !s.run?.rooms) { warn(s, 'The hunter has your trace. You cannot jack out until it is down.'); return false; }
+  const n = CONFIG.jackOut.cycles;
+  e.leaving = { done: e.cycle + n }; // typed: this cycle's virus turn and the next; the rail (between turns): the next n
+  e.queue = null; e.plan = [];
+  emit(s, 'leaving', `${why ? why + ' ' : ''}JACKING OUT in ${n} cycles. Only defence fires. Jack out again to stay.`, { cycles: n });
+  return true;
+}
+export function stayLeave(s) {
+  const e = s.encounter;
+  if (!e?.leaving) return;
+  e.leaving = null;
+  emit(s, 'leaving', 'You stay in the fight.', { stay: true });
+}
+function leaveNow(s) {
+  const e = s.encounter;
+  e.leaving = null;
+  emit(s, 'fled', 'JACKED OUT mid-fight. The virus stays, and you keep your pack.');
+  hooks.flee?.(s);
+}
+// A turn while jacking out: a queued defence fires; anything else, auto-repeat and your program wait.
+function leavingTurn(s, phase) {
+  const e = s.encounter, q = e.queue;
+  if (q && defends(q.ability)) {
+    e.leaving.firing = true;
+    try { playerPhase(s, 'command'); } finally { if (e.leaving) e.leaving.firing = false; }
+    if (!active(s)) return false;
+  } else {
+    if (q) emit(s, 'hold', `Jacking out: ${ABILITIES[q.ability]?.name || q.ability} doesn't fire. Only defence does.`);
+    e.metrics.holds++;
+    e.lastCmd = { id: 'hold', cycle: e.cycle };
+    e.queue = null;
+  }
+  if (phase === 'command') return active(s);
+  return playerPhase(s, 'after');
+}
+
 function programTurn(s, prog) {
   const e = s.encounter;
   if (prog.hold) {
@@ -4369,6 +4412,8 @@ function programTurn(s, prog) {
 }
 export function playerPhase(s, phase = 'all') {
   const e = s.encounter;
+  if (phase !== 'after' && e.leaving && e.cycle >= e.leaving.done) { leaveNow(s); return false; }
+  if (phase !== 'after' && e.leaving && !e.leaving.firing) return leavingTurn(s, phase);
   if (phase !== 'after') {
   // Your target broke before your turn (a crewmate got it): the same command goes at the next threat.
   if (e.queue?.target && !alive(part(s, e.queue.target))) {

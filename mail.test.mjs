@@ -4,7 +4,7 @@ import { fresh, command, resolveCycle, active, hooks, restore, tickServices, add
 import { graphOf, locAt, neighbours, hiddenNear } from './dist/floors.mjs';
 import { play, layoutOf } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
-import { CONFIG } from './dist/data.mjs';
+import { CONFIG, xpToNext } from './dist/data.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
 import { boardOpen, MAIL, STORY_LENGTH, standing, tierOf, openContracts, offers, heldCount, ready, tickMail, retainer, offer } from './dist/mail.mjs';
 import { HIDDEN, hiddenNodes, flagged, items } from './dist/hidden.mjs';
@@ -77,9 +77,11 @@ test('the storyline: kills, code, a named process, a takeover, then a ledger on 
   const s = fresh();
   for (const room of ['/tmp', '/srv', '/net']) killInSprawl(s, room);
   assert.ok(ready(s, job(s)));
+  assert.equal(job(s).reward.xp, xpToNext(1));
   const credits = s.server.credits;
   deliver(s);
   assert.equal(s.server.credits, credits + 60);
+  assert.ok(hackerLevel(s) >= 2, 'wick\'s first job pays a whole level: 1 to 2');
   assert.ok(!('indemnity' in s), 'no Indemnity: it is retired');
   assert.equal(standing(s), MAIL.startStanding + 3);
   assert.ok(!(s.stash || []).some((it) => it.unique === 'wicks-old-toolkit'), "wick's toolkit waits for claimjack");

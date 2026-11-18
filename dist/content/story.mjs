@@ -12,10 +12,12 @@ export default {
       "subject": "you're in. mostly.",
       "body": [
         "Welcome to LOWLIGHT, initiate.",
-        "Halcyon Mutual insures half the servers on this net. Rival crews keep hitting its clients, and every hit is a claim Halcyon has to pay.",
-        "So Halcyon pays crews like us to hit back. It calls that risk reduction, and it never asks how we do it.",
-        "Keep your own box standing and the retainer keeps coming. Get breached and they start asking questions.",
-        "First job: SPRAWL-00 is crawling with stray processes. Kill three of them."
+        "Halcyon Mutual insures a large share of servers on this net. Rival crews keep hitting its clients, and every hit is a claim Halcyon has to pay.",
+        "So Halcyon pays crews like us to hit back. It calls that \"risk reduction.\" I call it money for my weekly ramen down the street.",
+        "Keep Halcyon happy and you get paid. It's really that simple.",
+        "Speaking of simple, your first job shouldn't take long:",
+        "SPRAWL-00 is a rogue server crawling with stray processes. Delete three of them.",
+        "Don't mind the other runners, but sometimes sharing is caring."
       ],
       "job": {
         "type": "kill",
@@ -25,7 +27,8 @@ export default {
       },
       "reward": {
         "credits": 60,
-        "standing": 3
+        "standing": 3,
+        "levelXp": 1
       }
     },
     {

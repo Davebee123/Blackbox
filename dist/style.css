@@ -4685,6 +4685,9 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .intent.lash .lash-ar { flex: none; font-weight: 700; }
 .intent.lash b { color: var(--hot); font-weight: 700; }
 .intent.lash.now { background-color: var(--hot-soft); }
+/* The jack out's count on your row (view.mjs leaveChip): teal, pointing up and out. */
+.intent.leave { gap: 4px; border: 1px dashed var(--you); color: var(--you); background: transparent; }
+.intent.leave .leave-ar { font-weight: 700; }
 /* A boss's act break (actbreak.mjs): its card over the board's strip, the emote under its bar, the bits off its ♛'s tick. */
 .phase-strip.act-on { position: relative; }
 .phase-strip.act-on > :not(.act-card) { visibility: hidden; }

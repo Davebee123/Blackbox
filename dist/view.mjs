@@ -969,7 +969,7 @@ export function boardMarkup(s, selected, preview = null) {
   const daemonCell = (c) => dmn.filter((id) => daemonNext(s, id) === e.cycle + c).map((id) => `<div class="intent daemon" data-k="daemon:${id}@${e.cycle + c}" title="${esc(DAEMONS[id].name)} lv ${daemonLevel(s, id)}: ${esc(daemonText(id, daemonLevel(s, id)))}">${esc(DAEMONS[id].name.toLowerCase())}</div>`).join('');
   const cronCell = (c) => daemonCell(c);
   const you = () => fighting
-    ? `<div class="brow byou${e.steps?.order?.[e.steps.next - 1] === 'you' ? ' acting' : ''}"><div class="bcell bname"><span class="you-top"><b>You</b></span></div><div class="bcell">${nowChip}${cronCell(0)}${quietCol(0) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div><div class="bcell">${planCell(0)}${cronCell(1)}</div><div class="bcell">${planCell(1)}${cronCell(2)}</div><div class="bcell">${cronCell(3)}</div></div>`
+    ? `<div class="brow byou${e.steps?.order?.[e.steps.next - 1] === 'you' ? ' acting' : ''}${e.leaving ? ' leaving' : ''}"><div class="bcell bname"><span class="you-top"><b>You</b></span></div><div class="bcell">${nowChip}${cronCell(0)}${quietCol(0) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div><div class="bcell">${planCell(0)}${cronCell(1)}${leaveChip(s, 1)}</div><div class="bcell">${planCell(1)}${cronCell(2)}${leaveChip(s, 2)}</div><div class="bcell">${cronCell(3)}${leaveChip(s, 3)}</div></div>`
     : `<div class="brow byou"><div class="bcell bname"><b>You</b></div><div class="bcell span4 quiet">${e.phase === 'alert' ? 'not engaged' : 'over'}</div></div>`;
   // Simulated crewmates (crew.mjs): a row each, with Integrity and what they'll do this cycle.
   const crew = fighting && e.mode === 'run' ? matesOf(s).filter((m) => m.encounter) : [];
@@ -1230,12 +1230,20 @@ export function trayMarkup(s, selected = null) {
   cards.push(`<button type="button" class="tk-open" data-toolkit="${classOf(s)}" title="Toolkit: Your abilities and your bar. Keys change between fights." data-tt-kind="Key T" aria-label="Toolkit"><span class="ico" ${icon('command')}></span></button>`);
   return cards.join('');
 }
-// The emergency jack out (combat.mjs flee, run.mjs hooks.flee): a red key at the tray's end, wherever the typed
-// command works. Not on a breach, the rooms playtest, or while a hunter has your trace.
+// The jack out (combat.mjs startLeave, run.mjs hooks.flee): a red key at the tray's end, wherever the typed command
+// works. Not on a breach, the rooms playtest, or while a hunter has your trace. While you're going it calls it off.
 export function fleeKey(s) {
   const e = s.encounter;
   if (!active(s) || e.mode !== 'run' || !s.run || s.roomsPlay || (e.hunter && !s.run.rooms)) return '';
-  return `<button type="button" class="ability flee" data-command="jack out" data-confirm="Sure?" title="${esc('Jack out: leave the fight on your turn. You keep your pack, and the virus stays.')}">${keyFace('cancel', 'Jack out')}</button>`;
+  if (e.leaving) return `<button type="button" class="ability flee stay" data-command="stay" title="${esc('Stay: call off the jack out and fight on.')}" data-tt-kind="Command">${keyFace('cancel', 'Stay')}</button>`;
+  const n = CONFIG.jackOut.cycles;
+  return `<button type="button" class="ability flee" data-command="jack out" data-confirm="Sure?" title="${esc(`Jack out: you leave the fight in ${n} cycles, with your pack. Until then the virus keeps attacking and only shields, heals, delays and buffs fire. The server makes you wait as if you had lost.`)}" data-tt-kind="Command">${keyFace('cancel', 'Jack out')}</button>`;
+}
+// The jack out's count on your row: a teal chip on the cycle you leave.
+function leaveChip(s, c) {
+  const e = s.encounter;
+  if (!e?.leaving || e.leaving.done - e.cycle !== c) return '';
+  return `<div class="intent leave" title="${esc(`Jacking out: you leave at the start of cycle ${e.leaving.done}, with your pack. Only defence fires until then. Jack out again to stay.`)}" data-tt-kind="Jack out"><span class="leave-ar" aria-hidden="true">↑</span><b>out</b></div>`;
 }
 
 // ---------- pages ----------
