@@ -1557,6 +1557,48 @@ export default {
       }
     ]
   },
+  "orphans": {
+    "halcyon": [
+      {
+        "subject": "Unsettled claims",
+        "body": [
+          "Our clients' ledgers are full of trades nobody finished. Break {count} orphans, the ◌ processes holding them open, wherever they turn up."
+        ]
+      }
+    ],
+    "kestrel": [
+      {
+        "subject": "Rack cleanup",
+        "body": [
+          "Orphaned processes are holding slots on our racks. Break {count} of them, the ones tagged ◌, wherever they turn up."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Count: orphans",
+        "body": [
+          "Seven. Seven. {count} orphans, ◌, each one a trade still waiting for its other side. Close them."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "The unanswered",
+        "body": [
+          "They opened trades and died before the other side answered. Break {count} orphans, the ◌ ones, and let the slots go."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Dead weight",
+        "body": [
+          "Orphans clog the table and slow every trade we run. Break {count} of them, the ◌ processes, and we pay for each slot freed."
+        ]
+      }
+    ]
+  },
   "solve": {
     "halcyon": [
       {

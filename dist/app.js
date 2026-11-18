@@ -2741,6 +2741,7 @@ function services() {
     if (now - netSaved > 10000) { netSaved = now; save(); }
   }
   if (module === 'mail' && $('pay-left')) $('pay-left').textContent = V.fmtTime(nextPayIn(campaign, now));
+  if (module === 'map') V.readoutSync(campaign, document.querySelector('.init-readout')); // INIT's table: the Readout's count, in place
   // An event up (events.mjs): its card's ring drains and a feud's bar drifts, so the map redraws now and then.
   if (module === 'map' && campaign.events?.length && now - (services.ev || 0) > 5000) { services.ev = now; markDirty(); }
   // Offers and shelves count down: refresh those pages now and then.

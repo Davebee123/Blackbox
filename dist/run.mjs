@@ -200,9 +200,10 @@ function hunt(s) {
 }
 // A vault always holds one item, white or better (LOOT.vault), fixed by its seed. A gold is a
 // unique that drops from vaults this deep (a source's floor: that floor's vaults only, The Sink's or Bedrock's).
-export function vaultItem(loc, n = 1) {
+// lift: blue and yellow weigh this much more (INIT's table, Clear: netrooms.mjs takeVault).
+export function vaultItem(loc, n = 1, lift = 1) {
   const r = seeded(loc.seed * 7 + 3 + (n - 1) * 104729), level = levelOf(loc), depth = loc.depth || 1;
-  const w = LOOT.vault, total = Object.values(w).reduce((a, b) => a + b, 0);
+  const w = lift === 1 ? LOOT.vault : { ...LOOT.vault, tuned: LOOT.vault.tuned * lift, custom: LOOT.vault.custom * lift }, total = Object.values(w).reduce((a, b) => a + b, 0);
   let x = r() * total, rarity = 'stock';
   for (const [k, v] of Object.entries(w)) if ((x -= v) < 0) { rarity = k; break; }
   if (rarity === 'zeroday') {

@@ -2218,6 +2218,7 @@ large; `SIZE`), times the **level curve** at the level it was posted (`MAIL.xp`:
 | Hold | Stop an invasion, at your wall or by hand (once you've traced a server) | 5 |
 | Root | Reach the next Root level on a server you hold | 5 |
 | Interrupt | Answer N attacks (6, +1 every 10 levels): a cast stopped, a charge or a seal blocked | 10 |
+| Orphans | Break N orphans (6, +1 every 10 levels; INIT's table); delivered, the table frees 2 | 6 |
 
 **Room contracts** have no clock: one waits on the board at a time, outside the ten, each kind once, the next 8 to 20
 minutes after you take it.
@@ -2405,6 +2406,26 @@ The history (below) lists each, ending *won*, *taken* (a surge you fought in, le
 
 The director's last 20 (events, follow-ups and blips) and how each ended (*up*, *won*, *gone*, *taken*, *missed*,
 *came true*) sit under **History** in Comms, a follow-up with its chain mark and cause on hover.
+
+## INIT's table (table.mjs)
+
+One count a save, *process table at N%*, 70 to 95, starting at 84 (docs/init-table.md). Time logged on fills it, 2 an
+hour; nothing moves while you're logged off. Your play empties it: an orphan broken 0.08, a server Mapped 1, an Orphans
+contract delivered 2. At 95 LANTERN runs a cancel round: 8 off, a Log line. It never moves a price.
+
+**Orphans** (◌ on the name and the room): a plain fight room's respawn on any server, 1 in 8 between the bands, toward
+1 in 3 across Full and 1 in 20 across Clear. **Orphans contracts** (from level 6): break N of them.
+
+Each band grows from its edge to its end:
+
+| | **Full** (88 → 95) | **Clear** (80 → 70) |
+|---|---|---|
+| Fights | Orphans up to 1 stray in 3; elites bring an orphan add (a weak part, every other cycle) | Orphans down to 1 in 20; ★ rare spawns up to twice as often |
+| XP | Orphan kills +25% | Break-ins and Intel +25% |
+| Gear | Trash rolls a white or blue up to 1.5× as often | Blue and yellow odds up to ×1.4 on elites, ★ rare spawns and vaults |
+
+The *Readout* at the network map's top right shows the count over a strip (Clear grey, Full amber, the count a white
+tick); its tooltip says what the band does now.
 
 ## The scanner
 

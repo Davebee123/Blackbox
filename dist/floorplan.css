@@ -708,3 +708,7 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 #tray .ability.flee { border-color: var(--hot); }
 #tray .ability.flee .ico { background: var(--hot); }
 #tray .ability.flee .name { color: var(--hot); }
+
+/* INIT's table (table.mjs): an orphan, paper-white */
+.fp-tag.orphan rect { stroke: var(--bright); } .fp-tag.orphan text { fill: var(--bright); font-size: 11px; }
+.fp-tag-inline.orphan { color: var(--bright); }
