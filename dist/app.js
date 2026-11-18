@@ -146,7 +146,7 @@ function markDirty() { dirty = true; wakeTick(); return true; }
 let archView = null; // archetype shown on the Loadout page (defaults to the equipped one)
 let tk = null; // the Toolkit while it's open: { arch, pick: { id, from } } (skills-view.mjs toolkitMarkup)
 let tkDrag = null; // what's being dragged in it: { id, from: a key's index or null, dropped }
-let loadoutTab = 'protocols'; // Loadout page: 'protocols' or 'skills' (skills and talents)
+let loadoutTab = 'skills'; // Loadout page: 'skills' (skills and talents, first), 'protocols', 'daemons' or 'program'
 let systemTab = 'settings'; // Settings page (nav id 'system'): 'settings', or 'dev' with ?dev
 let rigTab = 'achievements'; // Rig page: a view.mjs RIG_TABS key
 let houseUi = { held: null, hover: null }; // Rig → House (house-view.mjs): the piece in hand, and where it would go
@@ -1526,7 +1526,7 @@ function run(raw) {
   const page = ALIAS[text] || text;
   // Daemons live on the Loadout page now (a tab beside Protocols).
   if (page === 'daemons' && !(fighting && ABILITIES[text])) { loadoutTab = 'daemons'; return go('loadout'); }
-  if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; if (page === 'system') systemTab = text === 'logs' && DEV ? 'dev' : 'settings'; if (page === 'rig') rigTab = ['casing', 'terminal', 'house'].includes(text) ? text : 'achievements'; return go(page); }
+  if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = ['protocols', 'gear'].includes(text) ? 'protocols' : text === 'program' || text === 'programs' ? 'program' : 'skills'; if (page === 'system') systemTab = text === 'logs' && DEV ? 'dev' : 'settings'; if (page === 'rig') rigTab = ['casing', 'terminal', 'house'].includes(text) ? text : 'achievements'; return go(page); }
   if (text === 'achievements') return goTo('achieve'); // the page; achieve pin <name> and the rest go to the engine
   if (text === 'house') return goTo('house'); // the page; house place and store go to the engine (house.mjs)
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
@@ -1610,7 +1610,7 @@ function benchRun(text) {
   const built = events.find((e) => e.type === 'bench'), w = events.findLast((e) => e.type === 'warning');
   if (built) {
     lu.reset();
-    ended = null; archView = null; selected = null; mapSel = null; mapFloor = built.bench.floor; mapPop = false; loadoutTab = 'protocols'; // the map opens on your floor
+    ended = null; archView = null; selected = null; mapSel = null; mapFloor = built.bench.floor; mapPop = false; loadoutTab = 'skills'; // the map opens on your floor
     cache.clear();
     if ($('bench-body')) $('bench-body').innerHTML = BN.panelMarkup(campaign); // its pickers start on the new character
     save();

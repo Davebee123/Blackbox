@@ -1089,8 +1089,8 @@ farm have none.
 About 1 in 6 servers you trace is **rogue** (never your first two, never more than five tame ones in a row); the first
 after those is always a **Nest** of the family that traced it. A rogue server is a hexagon on the map, never beside a
 floor's entry or on its main road. It has 8–11 fight rooms (4–8 on one traced before they grew) at the server's grade;
-its deepest rooms are at the server's level (it keeps up with you inside its floor's band), the fight rooms nearest the
-entry level 1, and the rooms between step up evenly. It has 2–4 **quiet rooms**: an **Empty** (nothing) or a **Stash** (4 + level/2 credits into your bank
+its deepest rooms are at the server's level (it keeps up with you inside its floor's band), the three fight rooms nearest
+the entry (and any as near) level 1, and the rooms between step up evenly. It has 2–4 **quiet rooms**: an **Empty** (nothing) or a **Stash** (4 + level/2 credits into your bank
 as you walk in, 1 code one time in five). No vault, nothing to take over, no puzzle rooms, no invasions.
 
 | Kind | Rule |
