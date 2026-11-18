@@ -27,7 +27,8 @@ export default {
       },
       "reward": {
         "credits": 60,
-        "standing": 3
+        "standing": 3,
+        "levelXp": 1
       }
     },
     {
