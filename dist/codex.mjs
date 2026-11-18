@@ -13,7 +13,7 @@
 // in a room (s.dex.sets, and each server's floorplan codex); a tell once one was said in your fight (s.dex.tells); a
 // boss's phases once you've fought it.
 import { FAMILIES, ROOM_FAMILIES, STRAINS, GUARDS, BOSSES, MUTATIONS, ROLLED_MUTATIONS, TELLS, TELL, CONFIG, SERVER, createVirus, spreadFrom } from './data.mjs';
-import { ATTACK_SETS, AUTHOR_FAMILIES, OPENS, applySet } from './families.mjs';
+import { ATTACK_SETS, AUTHOR_FAMILIES, OPENS, applySet, FAMILY_ICON } from './families.mjs';
 import { GENES, AXES } from './genes.mjs';
 import { AUTHORS, crewOf, buildAuthor, bossAuthor } from './authors.mjs';
 import { geneState } from './genome.mjs';
@@ -30,7 +30,6 @@ export const GROUPS = [
   { id: 'boss', name: 'Bosses' },
   { id: 'mutation', name: 'Mutations' },
 ];
-const FAMILY_ICON = { ransomware: 'lock', worm: 'worm', ghostroot: 'stealth', trojan: 'crate', cryptominer: 'kernel', wiper: 'scrubber', botnet: 'spider', logicbomb: 'clock' };
 const GUARD_ICON = { watchdog: 'watchman', sentinel: 'ids', crawler: 'spider', shredder: 'claw', bouncer: 'firewall', tracer: 'tracer' };
 const familyIds = () => [...Object.keys(FAMILIES), ...Object.keys(ROOM_FAMILIES).filter((id) => !ROOM_FAMILIES[id].runner)];
 const runnerIds = () => Object.keys(ROOM_FAMILIES).filter((id) => ROOM_FAMILIES[id].runner);

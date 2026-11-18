@@ -1501,7 +1501,7 @@ export function fightOf(s, room, as = null) {
   if (room.kind === 'core') return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: BOSSES[RESIDENT].family, boss: RESIDENT, mutation: null, name: BOSSES[RESIDENT].name, author: R.author }, size: 'boss', name: BOSSES[RESIDENT].name, level, family: BOSSES[RESIDENT].family, author: R.author };
   // A wild virus: its room's family, author, third part and set, and a mutation fresh with each respawn (one at most).
   // A Lure (sockets.mjs) makes it the family you named; a Honeytoken a grade higher, and one in four an elite.
-  const fam = (runs(s, 'lure') && R.lure) || room.family, lured = fam !== room.family, third = lured ? null : room.third;
+  const fam = familyOf(s, room), lured = fam !== room.family, third = lured ? null : room.third;
   const honey = runs(s, 'honeytoken') && as !== 'mirror', elite = room.kind === 'elite' || as === 'mirror' || (honey && seeded((seed * 13 + 7) >>> 0)() < SOCKET.honey.elite);
   const r = seeded((seed * 31 + 5) >>> 0), mut = level >= 4 && r() < SERVER.mutationChance(level) ? ROLLED_MUTATIONS[Math.floor(r() * ROLLED_MUTATIONS.length)] : null;
   // An elite or a ★ rare spawn brings one of its floor's natives (parts.mjs PARTS.native) in place of the room's third.
@@ -1528,6 +1528,8 @@ function exfilFight(s, room) {
 // Each spawn rolls its own attack set (4.1: "every virus rolls one when it spawns"), weighted by its author, so the same
 // room can open with its Encryptor one visit and its Pulse Node the next. Seeded by the spawn: the card and the fight agree.
 // room.pin holds one set for every spawn (tests).
+// The family a fight room spawns: its own, or the one a running Lure calls (sockets.mjs).
+export const familyOf = (s, room) => (runs(s, 'lure') && s.rooms.lure) || room.family || null;
 export const spawnSet = (family, author, seed) => (setsOf(family) ? rollSet(family, author, seeded((seed ^ 0x5e75) >>> 0)) : null);
 // A virus's name before you fight it (the room card): the same build the fight makes, built and thrown away.
 // The build is the same for the same fight, place and parts met, so its name is kept (the map names every room on
