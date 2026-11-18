@@ -7,12 +7,11 @@ simulation, 200 network seeds × 40 logged-on hours at level 12; building it re-
 
 ## 1. The rule
 
-- **One exchange, at LANTERN's Listening Post** (the scanner's post beside HOME on every floor, instant to connect):
-  **[4] exchange** in its menu opens one book for Cipher, Worm and Kernel code, Exploits and components, which LANTERN
-  reads out over the post's carrier. The hubs have no market. It opens when the post shows on the map (Nine Days Deaf);
-  until then what you farm waits in your pack. `exchange sell|buy <good> <n>`.
-- **Hosting gives LANTERN nothing on the book.** Rep never touches the spread, and LANTERN's cards move prices like
-  anyone's.
+- **One exchange, on its own server:** CORVID-XC, Corvid Exchange's (lore.md: the commodities exchange in the Stacks,
+  proud of trading only insured lots). On the map from the start, a hub-style node beside HOME on every floor, owned by
+  no faction; instant to connect. Its terminal's **[1] exchange** opens one book for Cipher, Worm and Kernel code,
+  Exploits and components. The hubs have no market. `exchange sell|buy <good> <n>`.
+- **No faction gains from it.** Rep never touches the spread, and every faction's cards move prices alike.
 - **Par:** a code 10 credits, an Exploit 100, a component 5. The price is par times what's moving it (section 2),
   between ×0.5 and ×2. You sell at the bid, 4% under the price, and buy at the ask, 4% over. Components can be bought
   now too.
@@ -118,8 +117,7 @@ posted cards 18, a glut's dip 18, cards it caught live 11. Each good's share run
 
 ## 6. On the screen: the Tape (picked)
 
-Picked by the designer (November 2026) from the Board, the Tape and the Wire; *Focus* over a five-row board. In the
-Listening Post's window, top to bottom:
+Picked by the designer (November 2026) from the Board, the Tape and the Wire; *Focus* over a five-row board. In CORVID-XC's window, top to bottom:
 
 - **Position:** a teal bar, *410 / 420*.
 - **The strip:** five cells, one a good: its symbol (CPH, WRM, KRN, XPL, CMP), last price, ▲▼ against par, the last
@@ -139,7 +137,7 @@ Listening Post's window, top to bottom:
 
 One slice in the economy's lane (nothing else on the economy or the save beside it), after the pick: the book (par,
 spread, push, cap, settlement), the ticker aimed at it (ticker.md's slice folded in), your moves' hooks, orders, the
-picked look, the post's menu and a phone layout, GAME_RULES *Markets* rewritten. Saved: one push a good in place of the hubs' pressure,
+picked look, CORVID-XC on the map and a phone layout, GAME_RULES *Markets* rewritten. Saved: one push a good in place of the hubs' pressure,
 positions (units and what they cost), the live movers. The migration keys on the hub-keyed `s.market.pressure` and
 drops it; transfers in flight still land. A unit test on fixed seeds: a round trip never profits, the cap holds, only
 your biggest move counts, an order takes no push, prices stay within ×0.5–×2.
