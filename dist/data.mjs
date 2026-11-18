@@ -206,6 +206,9 @@ export const CONFIG = {
   // Each disconnect on a server's run (Signal 0, a lost fight) adds this to its wait, up to the cap in all; a clean jack
   // out clears the count (combat.mjs relockWait, loc.deaths).
   deathWait: { each: 15000, cap: 120000 },
+  // Jacking out mid-fight takes this many cycles: the virus keeps attacking and only defence fires (combat.mjs
+  // startLeave). It counts as a disconnect on the reconnect wait, never a clean jack out.
+  jackOut: { cycles: 2 },
   // The Exfil (floorplan.mjs, netrooms.mjs): a process smuggling a stolen archive off a rogue server, a loot mob. One
   // roll a run (rogue.mjs: a run lasts until the server reboots), chance of an Exfil; after one turns up, none on any of
   // your rogue servers for cooldownMs (yours:

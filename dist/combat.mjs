@@ -2828,6 +2828,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     emit(s, 'info', 'Resumed.');
     command(s, input, now);
     return since(s, first);
+  } else if (e.leaving && (text === 'jack out' || text === 'stay')) {
+    stayLeave(s);
   } else if (text === 'cancel') {
     e.queue = null;
     e.plan = [];
@@ -3668,11 +3670,7 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'hold', 'Held. No command fired.');
     return;
   }
-  if (intent.ability === 'flee') {
-    emit(s, 'fled', `${auto === 'daemon' ? 'Wimpy daemon: ' : ''}EMERGENCY JACK OUT. The guard stays, and you keep your pack.`);
-    hooks.flee?.(s);
-    return;
-  }
+  if (intent.ability === 'flee') { e.lastCmd = { id: 'flee', cycle: e.cycle }; startLeave(s); return; }
   const error = validate(s, intent);
   if (error) {
     emit(s, 'warning', `${auto === 'program' ? '⟳ Your program' : auto ? 'Auto-repeat' : 'Command'} failed: ${error}`);
@@ -4375,6 +4373,51 @@ function helperGone(s) {
 }
 // Your program's turn (routines.mjs): a move it picked, fired like auto-repeat (never in a Sync Window, never a read of
 // a tell), or a hold when all that's left is yours to play.
+// ---------- jacking out mid-fight ----------
+// `jack out` in a fight takes CONFIG.jackOut.cycles: the virus keeps attacking, only defence fires (shields, heals,
+// delays, buffs: defends), and `jack out` again (or `stay`) calls it off. It ends on your turn once the count runs
+// out: you keep your pack, the virus stays, and the server counts it as a disconnect (run.mjs bank, floorplan.mjs).
+export const defends = (id) => { const a = ABILITIES[id]; return !!a && ['shield', 'heal', 'buff', 'stun'].includes(a.verb) && !a.damage; };
+export const leavingIn = (s) => { const e = s.encounter; return e?.leaving ? Math.max(1, e.leaving.done - e.cycle) : 0; };
+export function startLeave(s, why = '') {
+  const e = s.encounter;
+  if (!active(s) || e.mode !== 'run' || e.leaving) return false;
+  if (e.hunter && !s.run?.rooms) { warn(s, 'The hunter has your trace. You cannot jack out until it is down.'); return false; }
+  const n = CONFIG.jackOut.cycles;
+  e.leaving = { done: e.cycle + n }; // typed: this cycle's virus turn and the next; the rail (between turns): the next n
+  e.queue = null; e.plan = [];
+  emit(s, 'leaving', `${why ? why + ' ' : ''}JACKING OUT in ${n} cycles. Only defence fires. Jack out again to stay.`, { cycles: n });
+  return true;
+}
+export function stayLeave(s) {
+  const e = s.encounter;
+  if (!e?.leaving) return;
+  e.leaving = null;
+  emit(s, 'leaving', 'You stay in the fight.', { stay: true });
+}
+function leaveNow(s) {
+  const e = s.encounter;
+  e.leaving = null;
+  emit(s, 'fled', 'JACKED OUT mid-fight. The virus stays, and you keep your pack.');
+  hooks.flee?.(s);
+}
+// A turn while jacking out: a queued defence fires; anything else, auto-repeat and your program wait.
+function leavingTurn(s, phase) {
+  const e = s.encounter, q = e.queue;
+  if (q && defends(q.ability)) {
+    e.leaving.firing = true;
+    try { playerPhase(s, 'command'); } finally { if (e.leaving) e.leaving.firing = false; }
+    if (!active(s)) return false;
+  } else {
+    if (q) emit(s, 'hold', `Jacking out: ${ABILITIES[q.ability]?.name || q.ability} doesn't fire. Only defence does.`);
+    e.metrics.holds++;
+    e.lastCmd = { id: 'hold', cycle: e.cycle };
+    e.queue = null;
+  }
+  if (phase === 'command') return active(s);
+  return playerPhase(s, 'after');
+}
+
 function programTurn(s, prog) {
   const e = s.encounter;
   if (prog.hold) {
@@ -4394,6 +4437,8 @@ function programTurn(s, prog) {
 }
 export function playerPhase(s, phase = 'all') {
   const e = s.encounter;
+  if (phase !== 'after' && e.leaving && e.cycle >= e.leaving.done) { leaveNow(s); return false; }
+  if (phase !== 'after' && e.leaving && !e.leaving.firing) return leavingTurn(s, phase);
   if (phase !== 'after') {
   // Your target broke before your turn (a crewmate got it): the same command goes at the next threat.
   if (e.queue?.target && !alive(part(s, e.queue.target))) {
