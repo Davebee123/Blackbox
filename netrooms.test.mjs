@@ -380,7 +380,8 @@ test('you go back in with the Signal you topped up to, never the Signal you star
   const next = FP.roomList(s).find((r) => FP.isUp(s, r) && r.kind === 'process');
   enterRoom(s, next.id); play(s, 'engage');
   s.run.integrity = 40;
-  command(s, 'jack out'); resolveCycle(s); FP.settle(s);
+  for (const p of s.encounter.virus.parts) if (p.attack) p.attack.due = 999;
+  command(s, 'jack out'); for (let i = 0; i < 3 && s.run; i++) resolveCycle(s); FP.settle(s); // it takes 2 cycles
   assert.equal(s.run, null);
   play(s, 'top up');
   clock += 5 * 60000;

@@ -84,8 +84,11 @@ factor (`length.drawn`). Adds (fragments, Packages, Droppers), breaches and crew
 | Encryption | Each Encrypt adds to a stack that hits you every cycle. Breaking the Encryptor clears it. A ◆ on you stops an Encrypt; shields soak the stack's damage; Purge and Rollback wipe it. |
 | Scramble | For a couple of cycles, each of your attacks has a 25% chance to hit you instead, at half. A ◆ stops it. |
 
-`jack out` mid-fight (or the red **Jack out** key at the tray's end, two clicks) is the emergency escape: it resolves on
-your turn, you keep your pack, and the virus stays. Not on a breach, or while a hunter has your trace.
+`jack out` mid-fight (or the red **Jack out** key, two clicks) takes **2 cycles** (`CONFIG.jackOut`, combat.mjs
+`startLeave`). The virus keeps attacking and only defence fires (shields, heals, delays, buffs); attacks, auto-repeat
+and your program hold. A teal **↑ out** chip on your row marks the cycle you leave. `jack out` again, or **Stay**, calls
+it off. You leave with your pack, the virus stays, and the reconnect wait counts it as a disconnect. The auto jack-out
+rail starts the same count. Not on a breach, or while a hunter has your trace.
 Leaving the fight screen pauses a live fight.
 
 ### The interrupt
@@ -970,7 +973,7 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
 - **Jack out** (`jack out`, or the strip's button) from any room banks your **pack** (cache credits and code, the
   vault's files, kill drops; a **Banked** card) and sends you home.
 - **Reconnect wait.** A server you leave takes you back after 30 s (`CONFIG.relockMs`), +15 s for each disconnect on
-  its run, 2 min at most (`CONFIG.deathWait`). A clean jack out resets the count. Connect counts it down,
+  its run, 2 min at most (`CONFIG.deathWait`). A jack out mid-fight counts as a disconnect; any other jack out resets the count. Connect counts it down,
   with ☠ and the count. Deadman's Switch counts as a jack out.
 - **Home while out:** an invasion that wants you waits until you're back.
 - **Contracts ready:** a yellow ✓ by Mail on the top bar.

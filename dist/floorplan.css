@@ -711,6 +711,9 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 #tray .ability.flee { border-color: var(--hot); }
 #tray .ability.flee .ico { background: var(--hot); }
 #tray .ability.flee .name { color: var(--hot); }
+#tray .ability.flee.stay { border-color: var(--you); }
+#tray .ability.flee.stay .ico { background: var(--you); }
+#tray .ability.flee.stay .name { color: var(--you); }
 /* a room's verb played over its chip (roomfx.mjs): the vault's Dial, a cache's Lid, a rest's breaths… */
 .rfx { position: fixed; pointer-events: none; z-index: 40; }
 .rfx-door { position: absolute; top: 0; bottom: 0; width: 50%; border: var(--rfx-w, 3px) solid currentColor; will-change: transform, opacity; }
