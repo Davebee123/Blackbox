@@ -44,7 +44,7 @@
 // { handlers: [], confirmed, undo, armor } } } } } (armor: false when Break ◆ first is off; missing is on), made on
 // first use (an older save gets the defaults: no SAVE_VERSION change; an R1 save's single stack moves into its viruses'
 // routines, migrate). A fight's exceptions live on e.program.
-import { hooks, emit, warn, gearStat, selectEncounter, command as runCommand, resolveCycle, active, alive, part, livingParts, intents, toIntent, said, classOf, subOf, hackerLevel, barKeys, cooldownOf, codexKey, defender, maxSignal, timersHidden, armorTakes, frontOf, buffed, frozenNow, packed, mirrorOn, bendOf } from './combat.mjs';
+import { startLeave, hooks, emit, warn, gearStat, selectEncounter, command as runCommand, resolveCycle, active, alive, part, livingParts, intents, toIntent, said, classOf, subOf, hackerLevel, barKeys, cooldownOf, codexKey, defender, maxSignal, timersHidden, armorTakes, frontOf, buffed, frozenNow, packed, mirrorOn, bendOf } from './combat.mjs';
 import { copyOf, dearCopy, beatOn, beatBlind } from './tells.mjs';
 import { ABILITIES, MUTATIONS, FAMILIES, ROOM_FAMILIES, GUARDS, STRAINS, BOSSES, ARCHETYPES, SUBS, TELL, TELLS, TELL_SETS } from './data.mjs';
 import { researchAt, TIER } from './research.mjs';
@@ -662,9 +662,7 @@ export function railCheck(s) {
   run.railAt = pct;
   if (was === undefined || was < r.jackOut || pct >= r.jackOut || run.integrity <= 0) return false; // only a crossing (a run you start under it never trips)
   if (active(s) && s.encounter.mode === 'run') {
-    emit(s, 'fled', `AUTO JACK OUT: Signal under ${r.jackOut}%. You keep your pack.`, { rail: 'jackout' });
-    hooks.flee?.(s);
-    return true;
+    return startLeave(s, `AUTO JACK OUT: Signal under ${r.jackOut}%.`);
   }
   if (active(s)) return false;
   emit(s, 'rail', `AUTO JACK OUT: Signal under ${r.jackOut}%.`, { rail: 'jackout' });
