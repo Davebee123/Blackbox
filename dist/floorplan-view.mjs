@@ -184,6 +184,8 @@ const MARK_ICONS = {
   backup: '<path d="M3 3h11.5L17 5.5V17H3z"/><path d="M6.5 3v5h7V3M6.5 17v-5.5h7V17"/>',
   clean: '<circle cx="10" cy="10" r="7"/><path d="M7 10.2l2.2 2.2 4-4.6"/>',
   uptime: '<path d="M5 2.5h10M5 17.5h10M6.5 2.5c0 4.5 7 4.5 7 7.5s-7 3-7 7.5M13.5 2.5c0 4.5-7 4.5-7 7.5s7 3 7 7.5"/>',
+  // An elite's rank: two chevrons.
+  rank: '<path d="M4 10.5 10 5.5l6 5M4 15.5l6-5 6 5"/>',
   // A contract's mark (the mail's): a page with a tick, on a room a job points at.
   contract: '<path d="M4.5 2.5h7.5l3.5 3.5v11.5h-11Z"/><path d="M12 2.5V6h3.5"/><path d="M7 11.8l2 2 4-4.3"/>',
 };
@@ -572,6 +574,7 @@ function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, fi
   // Top left: the tags.
   const tags = [];
   if (kind) {
+    if (look === 'elite') tags.push(['', 'elite', 'rank', 'Elite. A tougher virus, worth more for the kill.']);
     if (room.kind === 'guard' && room.key && !R.opened[room.key] && !R.visit?.keys.includes(room.key)) tags.push(['KEY', 'key']);
     if (room.kind === 'vault' && !opened(s, room)) tags.push(R.visit?.keys.includes(room.id) ? ['KEY FITS', 'key'] : ['LOCKED', 'lock']);
     if (sealed) tags.push(['SEALED', 'hot']);
@@ -588,8 +591,8 @@ function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, fi
   if (race) tags.push([`YOU ${race.you ?? '?'}`, 'race-you'], [`${rv.id} ${race.it}`, 'race-it']);
   let tx = x0 - 6;
   for (const [t, c, icon, tip] of tags) { // a tag with an icon (an objective's): the icon, then its number
-    const w = t ? tagW(t) + (icon ? 10 : 0) : 18; // an icon alone (a Backup's, a Clean run's)
-    out += `<g class="fp-tag ${c}"${tip ? ` title="${esc(tip)}"` : ''}><rect x="${n1(tx)}" y="${n1(y0 - 8)}" width="${w}" height="16" rx="2"/>${icon ? `<use href="#fp-i-${icon}" x="${n1(tx + 4)}" y="${n1(y0 - 5)}" width="10" height="10"/>` : ''}<text x="${n1(tx + w / 2 + (icon ? 5 : 0))}" y="${n1(y0 + 3.5)}" text-anchor="middle">${t}</text></g>`;
+    const big = c === 'elite', w = t ? tagW(t) + (icon ? 10 : 0) : big ? 24 : 18, h = big ? 22 : 16, is = big ? 18 : 10; // an icon alone (a Backup's, a Clean run's); an elite's rank larger
+    out += `<g class="fp-tag ${c}"${tip ? ` title="${esc(tip)}"` : ''}><rect x="${n1(tx)}" y="${n1(y0 - h / 2)}" width="${w}" height="${h}" rx="2"/>${icon ? `<use href="#fp-i-${icon}" x="${n1(tx + (t ? 4 : (w - is) / 2))}" y="${n1(y0 - is / 2)}" width="${is}" height="${is}"/>` : ''}<text x="${n1(tx + w / 2 + (icon ? 5 : 0))}" y="${n1(y0 + 3.5)}" text-anchor="middle">${t}</text></g>`;
     tx += w + 4;
   }
   // Top centre: YOU, and the hunter's skull (beside YOU when it's on you).
