@@ -209,7 +209,7 @@ export function codexPageMarkup(s, sel = null, idx = false, shut = false) { // s
   const key = validKey(sel) ? sel : firstKey(s);
   const groups = entries(s), cur = groups.flatMap((g) => g.rows).find((r) => r.key === key);
   const html = `<div class="cx-page${idx ? ' idx-open' : ''}${shut ? ' side-shut' : ''}">
-    <nav class="cx-index card" aria-label="Codex index">${codexTabs('codex', 0, 0, shut)}<button type="button" class="cx-fold" data-codex-fold aria-expanded="${idx}"><span class="cx-label">Index</span><b>${esc(cur?.name || UNKNOWN)}</b><span class="cx-caret" aria-hidden="true">${idx ? '▴' : '▾'}</span></button><div class="cx-groups">${indexMarkup(groups, key)}</div></nav>
+    <nav class="cx-index card" aria-label="Codex index" data-keep="cx-index-codex">${codexTabs('codex', 0, 0, shut)}<button type="button" class="cx-fold" data-codex-fold aria-expanded="${idx}"><span class="cx-label">Index</span><b>${esc(cur?.name || UNKNOWN)}</b><span class="cx-caret" aria-hidden="true">${idx ? '▴' : '▾'}</span></button><div class="cx-groups">${indexMarkup(groups, key)}</div></nav>
     <article class="cx-entry card" aria-label="Codex entry" data-entry="${esc(key)}">${entryMarkup(s, key)}</article></div>`;
   return html;
 }
