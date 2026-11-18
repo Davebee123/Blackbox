@@ -68,16 +68,6 @@ button.dm-who:hover:not(:disabled) { border-color: var(--line-strong); }
 .dm-lane.once { border-style: dotted; }
 .dm-lane.none { border-color: var(--line); }
 
-/* the order of play in the picked cycle */
-.dm-order { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3) var(--s5); margin-top: var(--s5); padding-top: var(--s5); border-top: 1px dashed var(--line); }
-.dm-k { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
-.dm-steps, .dm-armed { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); min-width: 0; max-width: 100%; }
-.dm-st { display: inline-flex; align-items: center; max-width: 100%; height: var(--h-chip); padding: 0 var(--s4); border: 1px solid var(--line); border-radius: var(--r-tag); font: 500 12px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dm-st.you { color: var(--you); border-color: rgba(127, 209, 199, 0.55); }
-.dm-st.dm { color: var(--daemon); border-color: rgba(195, 166, 255, 0.55); }
-.dm-st.them { color: var(--hot); border-color: rgba(255, 91, 61, 0.5); }
-.dm-st.armed { color: var(--daemon); border: 1px dashed rgba(195, 166, 255, 0.4); }
-.dm-gt { font: 12px var(--mono); color: var(--dim); }
 
 /* ---------- the bench ---------- */
 .dm-bench { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 5px; }
@@ -150,7 +140,6 @@ button.dm-who:hover:not(:disabled) { border-color: var(--line-strong); }
   .dm-who[data-shown] { border-color: var(--line); background: var(--inset); box-shadow: none; }
   .dm-row[data-shown] { background: none; box-shadow: none; }
   .dm-turns > .dm-lane .dm-lt { white-space: normal; text-align: center; font-size: 10px; line-height: 1.25; }
-  .dm-st { height: auto; min-height: var(--h-chip); padding: 2px var(--s4); white-space: normal; }
   .dm-panel { display: none; position: static; padding: 14px 16px 18px; }
   .dm-panel.open { display: grid; }
   .dm-close { display: block; position: absolute; top: 6px; right: 8px; width: 36px; height: 36px; padding: 0; font-size: 20px; line-height: 1; color: var(--muted); }
