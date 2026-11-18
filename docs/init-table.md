@@ -66,8 +66,9 @@ one costs nothing.
 
 ## 5. On screen
 
-- A small bar at the network map's top right: the count, its two bands marked, the number and the band's effects in
-  its tooltip (decided for market.md).
+- The *Readout* at the network map's top right (picked): *process table at 84%*, muted with the number bright, over
+  a hairline strip with the Clear band grey at its left, the Full band amber at its right and a paper-white tick at
+  the count. Its tooltip names the band and its effects.
 - ◌ on an orphan's name, its tooltip: *Orphan. A trade still waiting for its other side. Breaking it frees a slot.*
 - LANTERN's census lines and INIT's warnings on the Log.
 
@@ -92,7 +93,7 @@ one hard thing for one easy one, so no start is a handicap:
 
 ## 8. Build order
 
-1. A scratchpad prototype (done): the count over a session (section 2), and three looks for the bar (Gauge,
-   Squares, Readout), to pick.
+1. A scratchpad prototype (done): the count over a session (section 2); the *Readout* picked over the Gauge and
+   the Squares.
 2. The count, orphans, the bands and the bar (one slice), with a unit test and GAME_RULES.
 3. The events, then the four pieces.
