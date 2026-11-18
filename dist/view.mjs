@@ -2065,7 +2065,7 @@ export const className = (id) => ARCHETYPES[id]?.name || id;
 export const xpNeeded = (level) => xpToNext(level);
 
 // ui: the Skills and talents page's own (skills-view.mjs): the item picked for its detail panel, and the phone's sheet.
-export function loadoutMarkup(s, view, tab = 'protocols', ui = {}) {
+export function loadoutMarkup(s, view, tab = 'skills', ui = {}) {
   const equippedArch = s.loadout?.archetype || 'breaker';
   const [vc] = String(view || '').split('/');
   const id = ARCHETYPES[vc] ? vc : equippedArch;
