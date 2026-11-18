@@ -708,6 +708,15 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 #tray .ability.flee { border-color: var(--hot); }
 #tray .ability.flee .ico { background: var(--hot); }
 #tray .ability.flee .name { color: var(--hot); }
+/* a room's verb played over its chip (roomfx.mjs): the vault's Dial */
+.rfx { position: fixed; pointer-events: none; z-index: 40; }
+.rfx-door { position: absolute; top: 0; bottom: 0; width: 50%; border: var(--rfx-w, 3px) solid currentColor; will-change: transform, opacity; }
+.rfx-door.l { left: 0; border-right: 0; }
+.rfx-door.r { right: 0; border-left: 0; }
+.rfx-glow { position: absolute; inset: 0; background: radial-gradient(closest-side, rgba(255, 224, 102, 0.5), rgba(255, 224, 102, 0)); opacity: 0; will-change: opacity; }
+.rfx-dial { position: absolute; will-change: transform, opacity; }
+.rfx-file { position: fixed; left: 0; top: 0; margin: -8px 0 0 -7px; color: var(--amber); pointer-events: none; z-index: 41; opacity: 0; will-change: transform, opacity; }
+.fp-packstat { transform-origin: 50% 50%; }
 
 /* INIT's table (table.mjs): an orphan, paper-white */
 .fp-tag.orphan rect { stroke: var(--bright); } .fp-tag.orphan text { fill: var(--bright); font-size: 11px; }
