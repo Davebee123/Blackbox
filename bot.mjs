@@ -28,6 +28,7 @@ import { offers, openContracts, heldCount, ready, MAIL, ACTIVITY } from './dist/
 import { POLICIES } from './balance.mjs';
 import { botStep, BUILD } from './roomsim.mjs';
 import * as FP from './dist/floorplan.mjs';
+import { tickTable } from './dist/table.mjs';
 import { CONFIG, STRAINS, FAMILIES, GUARDS, ROOM_FAMILIES, BOSSES, power, bandOf, defaultSub } from './dist/data.mjs';
 import { canDescend, floorsOf, hiddenNear } from './dist/floors.mjs';
 
@@ -314,12 +315,15 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     stats.drops2 = (stats.drops2 || 0) + 1;
     return true;
   };
-  let guard = 0, tickAt = t;
+  let guard = 0, tickAt = t, tableAt = null;
   while (hackerLevel(s) < target && guard++ < 1_000_000 && t - 1_700_000_000_000 < capHours * 3600000 && real < capRealHours * 3600000) {
     book('home', homeFight);
     // The world's clock catches up after each thing it did, in 30-second steps (a logged-on player's
     // ticks: one big jump would play out as time away, with rested XP and away-pace invasions).
+    // INIT's table fills on real play (a player's logged-on hour holds ~150 kills; the bot's own clock is far slower).
+    const table = s.table;
     for (let at = Math.max(tickAt, t - 6 * 3600000) + 30000; at <= t; at += 30000) for (const e of [...tickNetwork(s, at), ...tickServices(s, at)]) note(e);
+    s.table = table; tickTable(s, real - (tableAt ?? real)); tableAt = real;
     tickAt = t;
     if (book('invasion', invasion)) continue;
     if (book('runs', deadDrop)) continue;

@@ -92,8 +92,8 @@ test('the rooms tour on SPRAWL-00, in order: walk in, the virus\'s card, then Ja
   assert.equal(t.done(s, base), true, 'walking in is the step done');
   markSeen(s, t.id);
   t = tour(s);
-  assert.equal(t.id, 'tour-engage', 'then the virus\'s card: Engage or Step back');
-  assert.equal(t.also, '#fp-pop [data-rooms="back"]', 'Step back counts too');
+  assert.equal(t.id, 'tour-engage', 'then the virus\'s card: Engage, or walk back');
+  assert.equal(t.also, '.fp-room.reach', 'walking back counts too');
   FP.act(s, 'engage');
   assert.equal(t.done(s, t.mark?.(s)), true, 'engaged');
   markSeen(s, t.id);

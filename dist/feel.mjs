@@ -85,6 +85,8 @@ export const SIGNS = {
   good: { flash: 'fx-good', float: 'you', voice: 'good', buzz: 12 },
   // A vault, a locked folder or an upgrade opened; loot recovered; encryption broken.
   unlock: { flash: 'fx-good', float: 'you', voice: 'unlock', buzz: [12, 30, 20] },
+  // A vault opened: the Dial (roomfx.mjs draws it on the map). detail.n: its files.
+  vault: { voice: 'vault', buzz: [8, 160, 8, 160, 8, 220, 30] },
   // You pulled a file into your pack.
   pickup: { flash: 'fx-good', float: 'you', voice: 'pickup', buzz: 12 },
   // The fight is won.

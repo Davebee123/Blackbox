@@ -83,6 +83,7 @@ import * as PI from './pings.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
+import { playVault } from './roomfx.mjs';
 import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, whenConnected, playHangup, stopHangup, whenHome } from './bootfx.mjs';
 let bootFor = null; // the fight the screen last booted into (go)
 import { startTraffic } from './traffic.mjs';
@@ -1204,8 +1205,10 @@ function react(events) {
   }
   for (const c of cuesOf(campaign, events)) feel.add('cue' + c, null); // routines.mjs: while your program plays, when to look back
   const famCue = familyCues(campaign, events); // a virus family's attack and break one-shots, layered on the hurt and the break
+  const vaultFx = events.find((e) => e.fx?.kind === 'vault'); // a vault opened: the Dial (roomfx.mjs), in place of the pickup
   for (const e of events) {
     feel.beat(delay(e));
+    if (e === vaultFx) { feel.add('vault', null, null, { n: e.fx.n }); if (module === 'rooms' && canMove() && fxLevel() !== 'minimal') feel.add(() => playVault(e.fx.room, e.fx.n)); }
     feel.mute(voiced.has(e) || incoming.voiced.has(e));
     const fc = famCue.get(e);
     if (fc) feel.add(() => feel.familyShot(fc.family, fc.kind));
@@ -1285,7 +1288,7 @@ function react(events) {
       case 'jack-in': feel.add('jackin', null); shell.glitch?.(); break;
       case 'run-start': feel.add('jackin', null); if (!dialFx()) shell.glitch?.(); break; // (the connect's own effect stands in for the glitch)
       case 'jacked-out': feel.add('hangup', null); if (e.gains?.length) { const name = e.message.match(/JACKED OUT of (.+?)\. Banked/)?.[1] || ''; setTimeout(() => whenHome(() => showGain('Banked', name, e.gains, false)), 350); } break;
-      case 'rooms-good': if (e.gains?.length) { feel.add('pickup', null); showGain('Pulled', '', e.gains, true); } break; // a vault's files into your pack (netrooms.mjs)
+      case 'rooms-good': if (e.gains?.length) { if (!vaultFx) feel.add('pickup', null); showGain('Pulled', '', e.gains, true); } break; // a vault's files into your pack (netrooms.mjs)
       case 'puzzle': feel.add(() => pzFx.move(e)); break; // a move on a puzzle room's board: it plays over the board once drawn
       case 'puzzle-end': { // how a puzzle room's board went: a card like a reward's, once the move has played (a lost chase is a fight instead)
         if (e.fight) { flash('CAUGHT'); break; }
@@ -2741,6 +2744,7 @@ function services() {
     if (now - netSaved > 10000) { netSaved = now; save(); }
   }
   if (module === 'mail' && $('pay-left')) $('pay-left').textContent = V.fmtTime(nextPayIn(campaign, now));
+  if (module === 'map') V.readoutSync(campaign, document.querySelector('.init-readout')); // INIT's table: the Readout's count, in place
   // An event up (events.mjs): its card's ring drains and a feud's bar drifts, so the map redraws now and then.
   if (module === 'map' && campaign.events?.length && now - (services.ev || 0) > 5000) { services.ev = now; markDirty(); }
   // Offers and shelves count down: refresh those pages now and then.

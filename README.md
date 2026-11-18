@@ -160,6 +160,7 @@ comment saying what it does.
 | `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: eight boards that aren't fights (deeper chase and Cascade boards from floor 3), and the cryptogram's key (`s.cipher`). |
 | `dist/forensics.mjs`, `dist/logsweep.mjs` | Log sweep: a short detective puzzle in an incident file (logsweep.mjs builds the logs: a thread's process log, the Terminal room). |
 | `dist/traffic.mjs`, `dist/travelfx.mjs` | Ambient packets on the room map; the step between rooms as a train of code. |
+| `dist/roomfx.mjs` | A room's verb played over its chip: the vault's *Dial*. |
 | `dist/flowfx.mjs`, `dist/mapmotion.mjs` | Map motion the graphics card runs: flowing dashes (clipped pieces slid by a transform), the files moving on the Map, runners gliding along its roads. `.no-ambient` on a container stills them. |
 | `dist/network.mjs` | Your network's signature, rolled from its seed. |
 | `dist/memory.mjs` | Server memory: how many servers your network holds. Switched off (`MEMORY.on`). |
@@ -175,6 +176,7 @@ comment saying what it does.
 | `dist/factions.mjs` | Factions: hubs, rep (1 to 100, four tiers), friends and enemies, and your commission. |
 | `dist/receipts.mjs` | Receipts: each traced server's vault receipt, stamped for a faction at the takeover or handed in at your commission's hub. |
 | `dist/market.mjs` | Hub markets: prices that move with conditions, world events and sales. |
+| `dist/table.mjs` | INIT's table: the count (`s.table`), what fills and empties it, the two bands' multipliers, the orphans' share, the Readout's tooltip. |
 | `dist/consortium.mjs` | Consortium: simulated members who merged servers with yours. |
 
 ### Mail, story and quests

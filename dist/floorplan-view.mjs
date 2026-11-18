@@ -53,7 +53,7 @@ import { rivalP, COUNTERS, READS, rivalOf, routeOf, raceOf, lineupOf, memoryOf, 
 import { GENES } from './genes.mjs';
 import { meetingOf, meetingsOf, deadOf, runnerOf } from './runners.mjs';
 import { roomRunner, runnerRow, tierBar } from './runners-view.mjs';
-import { held, slipsLeft, slippable, ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, rebootOf, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, restUsed, lureFamilies, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
+import { held, slipsLeft, slippable, ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, rebootOf, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, retreat, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, restUsed, lureFamilies, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
 import { puzzlePanel } from './puzzle-view.mjs';
 import { PROGRAMS, SOCKET, programCost, buildBlock, codebasesOf, costLine as programCostLine } from './sockets.mjs';
 import { materialsOf } from './combat.mjs';
@@ -62,6 +62,7 @@ import { roomSpark } from './event-cards.mjs';
 import { TH_ICONS, roomMarksOf, nookIcon, nookLive, questSvg, fileSvg, filesHere, threadHud, threadCard, threadAsks, threadPanel, thUi } from './threads-view.mjs';
 import { sweepBlock } from './view.mjs';
 import { flowSvg, quadPts } from './flowfx.mjs';
+import { ORPHAN_TIP } from './table.mjs';
 
 // The pop-up's state, a view (never saved): the room you clicked, and where you stood when you clicked it (a step
 // or a wait drops it), and the decision you closed (it stays closed until a new one comes up).
@@ -395,7 +396,7 @@ export function stepPath(s, from, to, tall) {
 }
 function mapSvg(s, tall) {
   const R = s.rooms, g = R.graph, { at, G, width, height } = frame(s, tall), here = R.at, h = hunterOf(s);
-  const reach = new Set(exits(s).map((x) => x.id)), walked = R.visit?.walked || {};
+  const reach = new Set([...exits(s), retreat(s)].filter(Boolean).map((x) => x.id)), walked = R.visit?.walked || {};
   const shown = (id) => !!seenOf(s, id), found = (id) => known(s, id);
   // A Patroller's beat, once you've seen any room of it (an Infiltrator sees all of it): its traces' beds run red.
   const beat = new Set();
@@ -572,6 +573,7 @@ function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, fi
     if (room.kind === 'vault' && !opened(s, room)) tags.push(R.visit?.keys.includes(room.id) ? ['KEY FITS', 'key'] : ['LOCKED', 'lock']);
     if (sealed) tags.push(['SEALED', 'hot']);
     if (up && R.rare[room.id]) tags.push(['★', 'rare']);
+    if (up && R.orphan?.[room.id]) tags.push(['◌', 'orphan', null, ORPHAN_TIP]);
     const gap = up && !room.mirror ? (fightOf(s, room).level || 0) - hackerLevel(s) : 0; // its virus above your level: ▲n
     if (gap > 0) tags.push([`▲${gap}`, `lvup ${upCon(gap)}`, null, `Level ${fightOf(s, room).level}: ${gap} ${gap === 1 ? 'level' : 'levels'} above you.`]);
     const ob = objOf(s, room);
@@ -658,7 +660,7 @@ function hudMarkup(s) {
   const reboot = rb ? `<span class="fp-stat fp-reboot${rb.pending ? ' on' : ''}" title="${esc(`Reboot\nFallen fight rooms stay down until every one has fallen. Then ${R.name} reboots, and ${fmtLeft(rb.ms)} later they all come back.\n${rb.pending ? 'Rebooting now.' : `${rb.up} ${rb.up === 1 ? 'fight room is' : 'fight rooms are'} still up.`}`)}"><span class="lbl">Reboot</span><b>${rb.pending ? `<span data-at="${rb.at}"></span>` : `${rb.up} up`}</b></span>` : '';
   const keys = R.at && R.visit?.keys.length ? `<span class="fp-stat fp-keys" title="Keys: each opens its vault, this visit only. Jack out and it goes back to the elite that held it.">${ic('key')}<b>${R.visit.keys.length}</b></span>` : '';
   const packed = R.world ? (s.run?.pack || []).map((f) => net(s, 'packLine', f)) : R.pack.map((id) => itemLabel(stashItem(s, id) || { name: '?' }));
-  const pack = packed.length ? `<span class="fp-stat" title="${esc(`Pack: ${packed.join(', ')}.\nBanks when you jack out. Lost if your Signal hits 0.`)}"><span class="lbl">Pack</span><b>${packed.length}</b></span>` : '';
+  const pack = packed.length ? `<span class="fp-stat fp-packstat" title="${esc(`Pack: ${packed.join(', ')}.\nBanks when you jack out. Lost if your Signal hits 0.`)}"><span class="lbl">Pack</span><b>${packed.length}</b></span>` : '';
   // Contracts on this server, and how far along each is. The tip draws them as the map's tracker does, a row each.
   const jobs = net(s, 'jobs') || [], tracked = jobs.length ? trackedJobs(s).filter((t) => jobs.some((j) => j.id === t.id)) : [];
   const job = jobs.length ? `<span class="fp-stat fp-jobs${jobs.some((j) => j.ready) ? ' ready' : ''}" title="${esc(`Contract${jobs.length > 1 ? 's' : ''}: On this server.`)}"><template class="tt-more">${contractTipRows(tracked)}</template>${ic('contract')}<span class="lbl">Contract${jobs.length > 1 ? 's' : ''}</span><b>${jobs.length > 1 ? jobs.length : esc(jobs[0].ready ? 'ready' : jobs[0].text.split('.')[0].slice(0, 28))}</b></span>` : '';
@@ -775,7 +777,7 @@ function hereCard(s) {
   } else if (sc?.kind === 'virus' && sc.as === 'surge') {
     const c = surgeAt(s, room.id);
     body = holder(iconOf(s, room), sc.name, c?.guardian ? 'Guardian · elite' : `Wave ${(c?.kills || 0) + 1} of ${RUNCARD.surge.waves}`, c ? cardTip(s, c) : '') + note(`<i class="fp-cardbar" style="--f:${c ? surgeFill(c) : 0}"></i> ${c?.guardian ? 'Beat it and the surge ends.' : 'Each kill drops a cache into your pack.'}`);
-    acts = btn('engage', 'Engage', { primary: true }) + (R.visit.back ? btn('back', 'Step back', { tip: `Step back: to ${g.rooms[R.visit.back].path}. What you've earned stays in your pack.` }) : '');
+    acts = btn('engage', 'Engage', { primary: true });
   } else if (sc?.kind === 'virus') {
     const k = whoOf(s, room), G = room.kind === 'guard' ? GUARDS[room.guard] : null;
     const tip = G ? `${G.name}: ${G.summary.split('. ').slice(1).join('. ') || G.summary}` : room.kind === 'core' && !R.world ? `${BOSSES[RESIDENT].name}: ${BOSSES[RESIDENT].about}` : '';
@@ -784,6 +786,7 @@ function hereCard(s) {
       : holder(iconOf(s, room), sc.name, fightKind(room) && !['guard', 'core', 'boss'].includes(room.kind) && !room.wild ? `${k.short} · ${k.sub}` : k.sub, tip, 'hot', hackerLevel(s));
     const notes = [];
     if (R.rare[room.id]) notes.push(`<span class="fp-tag-inline next">★ rare</span> ${ROOMS.rareLevel} levels up, better loot.`);
+    if (R.orphan?.[room.id]) notes.push(`<span class="fp-tag-inline orphan" title="${esc(ORPHAN_TIP)}">◌ orphan</span> Breaking it frees a slot.`);
     if (room.queue && R.kind === 'Mailhub') notes.push('A Spam Flood joins the fight.');
     const ob = objOf(s, room); // its objective (objectives.mjs), and what it pays met
     if (ob) notes.push(`<span class="fp-tag-inline next fp-obj">${ic(OBJ_ICON[ob])}${OBJECTIVES[ob].name}</span> ${esc(objectiveLine(ob))}<span class="fp-obj-pay">${objBonus()}</span>`);
@@ -795,7 +798,7 @@ function hereCard(s) {
     body += notes.map((n) => note(n)).join('');
     const meet = R.world ? meetingOf(s, isUp, room.id) : null, helping = !!meet; // a runner fighting it (runners.mjs)
     if (helping) body += roomRunner(s, meet);
-    acts = (helping ? btn('assist', 'Help', { primary: true, tip: `Help ${meet.r.handle}: they fight beside you, and take no XP.` }) : btn('engage', 'Engage', { primary: true })) + (R.visit.back ? btn('back', 'Step back', { tip: `Step back: to ${g.rooms[R.visit.back].path}. The move in stays spent.` }) : '')
+    acts = (helping ? btn('assist', 'Help', { primary: true, tip: `Help ${meet.r.handle}: they fight beside you, and take no XP.` }) : btn('engage', 'Engage', { primary: true }))
       + (slippable(s, room) && slipsLeft(s) ? btn('slip', 'Slip past', { tip: slipTip(s) }) : '');
     if (sc.slipped) body += note('Slipped past. Walk on, or engage.', 'dim');
   } else if (isSocket(s, room) && socketOpen(s, room)) {

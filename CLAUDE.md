@@ -109,6 +109,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - a boss's bar: the *Segments* (one segment an act, the acts done dark, the act now draining);
   - the Backlash on the board: the *Return chip* (hatched red, pointing back at you, *↩ −12 if hit*); the beat column
     and a warning on your row were the alternatives;
+  - opening a vault: the *Dial* (its dial clicks three times, the doors part, the files fly to your Pack a note higher;
+    roomfx.mjs); *Seal* and *Count* were the alternatives;
   - connecting to a server: the *Carrier* (a teal line from HOME to its node, the rooms open in a circle from there;
     eased, no black screen, no readout), and jacking out plays it backwards (your room locks teal, the rooms close in
     a circle onto the node, the line runs home);
@@ -150,8 +152,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - Firewall plays on your bar.
 - **The market moves** (November 2026): prices move on logged-on time, run by the director, each mover with a reason
   in the lore. *No entropy* and no loss aversion guard the time you're away; the market moves both ways while you play.
-  What's next is the ticker (docs/ticker.md): lore-voiced cards that move hub prices. Sway and INIT's count are shelved,
-  and outposts (docs/outposts.md) and a central exchange (docs/exchange.md) are tabled as too complicated for now.
+  What's next is the ticker (docs/ticker.md): lore-voiced cards that move hub prices. Sway is shelved. INIT's count is kept
+  as INIT's table (docs/init-table.md): play moves it, and it moves no prices. Outposts (docs/outposts.md) and a central exchange (docs/exchange.md) are tabled as too complicated for now.
 - **Rested XP** comes only from time logged off. There is no catch-up XP.
 - **Unlocks:** cosmetic unlocks (districts, boots, prompts, desk props, mastery looks) come from achievements, not
   from server floors.

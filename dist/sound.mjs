@@ -254,6 +254,8 @@ export const VOICES = {
     chime(ctx, e, t + 0.04, 76, { d: 0.35, peak: 0.42 });
     chime(ctx, e, t + 0.13, 83, { d: 0.6, peak: 0.46 });
   },
+  // A vault opened, until the samples load: the latch and its rising pair.
+  vault(ctx, out, t) { VOICES.unlock(ctx, out, t + 0.7); },
   // You took something: a quick bright pickup.
   pickup(ctx, out, t) {
     const e = echo(ctx, out, { wet: 0.25 });
@@ -528,6 +530,17 @@ export const RECIPES = {
     S('bong', 0.02, { gain: 0.35 });
     chime(ctx, out, t + 0.04, 76, { d: 0.35, peak: 0.3 });
     chime(ctx, out, t + 0.13, 83, { d: 0.6, peak: 0.32 });
+  } },
+  // A vault opened (the *Dial*, roomfx.mjs VAULT has the same beats): the dial clicks three times, the latch gives with a
+  // thump, then each file lands in your pack a note higher. o.n: how many files.
+  vault: { room: 0.2, play(ctx, out, t, { n = 1 } = {}, S) {
+    for (let i = 0; i < 3; i++) S('relay', 0.17 + i * 0.24, { gain: 0.6, rate: 0.75 + i * 0.12 });
+    S('plate-l', 0.72, { gain: 0.45, rate: 0.85, lp: 2500 }); S('bong', 0.75, { gain: 0.35, rate: 0.9 });
+    osc(ctx, out, t + 0.72, { type: 'sine', f0: 70, f1: 45, glide: 0.3, a: 0.004, peak: 0.35, d: 0.35 });
+    chime(ctx, out, t + 0.78, 76, { d: 0.35, peak: 0.25 }); chime(ctx, out, t + 0.87, 83, { d: 0.6, peak: 0.27 });
+    const k = Math.max(1, Math.min(4, n));
+    for (let i = 0; i < k; i++) { const at = 1.54 + i * 0.15; S('drop', at, { gain: 0.45 }); chime(ctx, out, t + at, [84, 88, 91, 96][i], { d: 0.25, peak: 0.22 }); }
+    chime(ctx, out, t + 1.64 + (k - 1) * 0.15, 96, { d: 0.7, peak: 0.16 }); S('glassui', 1.64 + (k - 1) * 0.15, { gain: 0.3, rate: 1.2 });
   } },
   // You took something: it drops into your pack.
   pickup: { room: 0.16, play(ctx, out, t, o, S) {
