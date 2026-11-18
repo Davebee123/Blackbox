@@ -44,6 +44,7 @@ const MAP = {
   'fleet-broken': (e) => ({ kind: 'net', label: 'Broken', from: 'Swarm', text: e.message.replace(/^SWARM BROKEN\. /, ''), go: e.location ? `map:${e.location}` : 'map', beep: false }),
   infest: (e) => ({ kind: 'net', label: 'Infested', from: 'Outpost', text: e.message.replace(/^INFESTED: /, ''), go: e.location ? `map:${e.location}` : 'map', beep: true }),
   harvest: (e) => ({ kind: 'paid', label: 'Harvest', from: 'Outpost', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: false }),
+  'table-cancel': (e) => ({ kind: 'net', label: 'Cancel', from: 'LANTERN', text: e.message, go: 'map', beep: false }),
   'hot-strain': (e) => ({ kind: 'net', label: 'Hot', from: 'Network', text: e.message, go: 'map', beep: true }),
   // Threads (threads.mjs): found, each step on, a temporary server raised, the end. A step's line replaces the last.
   'thread-start': (e) => ({ kind: 'thread', label: 'Thread', from: 'Thread', text: e.message.replace(/^THREAD: /, ''), go: e.thread ? `mail:${e.thread}` : 'mail', beep: true }),

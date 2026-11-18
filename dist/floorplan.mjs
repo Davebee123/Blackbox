@@ -60,6 +60,7 @@ import { logSet } from './genome.mjs';
 import { weightOf, nativeFloor, PARTS, mechRolls } from './parts.mjs';
 import { deathRecap } from './recap.mjs';
 import { contractDid } from './mail.mjs';
+import { TABLE, moveTable, orphanShare, full as tableFull, rareMult } from './table.mjs';
 import { addrsOf, byAddr } from './address.mjs';
 import { gainComponents } from './salvage.mjs';
 import { rollObjective, armObjective } from './objectives.mjs';
@@ -1516,11 +1517,14 @@ export function fightOf(s, room, as = null) {
   // An elite or a ★ rare spawn brings one of its floor's natives (parts.mjs PARTS.native) in place of the room's third.
   // One plain fight room in two carries an objective (objectives.mjs), and it takes the lever's place: a third that's a lever stays out.
   const objective = !as && room.kind === 'process' && !elite ? rollObjective(seed, level) : null;
+  // An orphan (INIT's table, table.mjs): a plain room's respawn tagged ◌ (R.orphan). In the Full band an elite brings one along.
+  const orphan = !as && !rare && !elite && room.kind === 'process' && !!R.orphan?.[room.id];
+  const orphanAdd = elite && !as && !!R.world && seeded((seed * 17 + 11) >>> 0)() < tableFull(s);
   // An elite from PARTS.lever is the parts roll's (parts.mjs): its native and its clash, two levers that pull against each other.
   const rolled = elite && level >= PARTS.lever;
   const genes = rolled ? null : ((elite && PARTS.native.elite) || (rare && PARTS.native.rare) ? [nativeThird(fam, level, R.floor || 1, seed) || third] : [third]).filter((g) => g && !(objective && GENES[g]?.lever));
   const opts = { mode: 'run', room: room.path, level, family: fam, author: room.author, mutation: mut, ...(genes ? { genes } : { floor: R.floor || 1 }), ...(elite ? { elite: true } : {}), ...(rare ? { rare: true } : {}), ...(honey ? { grade: 1 + SOCKET.honey.grade } : {}) };
-  return { key: 'random', seed, opts, size: elite ? 'elite' : 'process', name: null, level, family: fam, author: room.author, set: (!lured && room.pin) || spawnSet(fam, room.author, seed), mutation: mut, elite, rare, objective };
+  return { key: 'random', seed, opts, size: elite ? 'elite' : 'process', name: null, level, family: fam, author: room.author, set: (!lured && room.pin) || spawnSet(fam, room.author, seed), mutation: mut, elite, rare, objective, orphan, orphanAdd };
 }
 // The native an elite or a ★ rare spawn brings in a server room (its floor's, open at its level; none there: the nearest
 // floor above's), by its own hash of the seed. null: its family has none open yet.
@@ -1574,6 +1578,7 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   if (!e) return;
   const v = e.virus;
   e.rooms = { room: room.id, kind: R.kind, as, size: f.size, rare: !!f.rare };
+  if (f.orphan) e.orphan = v.orphan = true; // ◌ on its name; its kill frees the table (won) and pays Full's XP (combat.mjs payKill)
   if (as === 'rival') rivalArm(s, e); // the part it adds between fights (rivals.mjs), sized with the rest
   // Its size in a room, its attack set, Spam on a Mailhub's queue. Its tells come by level (tells.mjs, 3.5).
   // A server's special (netrooms.mjs tune: Hostile's hits and XP) and its programs (sockets.mjs): a Patch Injector strips
@@ -1599,6 +1604,7 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   else if (fresh) jitterFirst(v, seeded((f.seed ^ 0x5e7) >>> 0));
   if (room.queue && R.kind === 'Mailhub' && !['hunter', 'exfil', 'rival', 'pack'].includes(as)) spamFlood(s, e);
   if (f.brood) brood(s, e, f.brood);
+  if (f.orphanAdd) orphanAdd(s, e);
   if (f.objective) armObjective(s, e, f.objective);
   if (as !== 'exfil') escortArm(s, e, room, armObjective); // the courier beside you takes the even cycles' hits (runcards.mjs)
   if (as === 'exfil') { armObjective(s, e, 'exfil', CONFIG.exfil.escape); for (const p of v.parts) { p.armor = p.maxArmor = Math.min(p.maxArmor, 1); p.patchAt = null; } } // still up after its cycles: it gets away (objectives.mjs); a runner wears 1 ◆ at most
@@ -1628,6 +1634,12 @@ function spamFlood(s, e) {
   emit(s, 'status', `A Spam Flood joins the fight: ${hp} Integrity, ${dmg} damage every 3 cycles.`, { target: 'spam' });
 }
 // A nest's brood, out before the fight starts: fragments as its Brood spawns them (combat.mjs), gnawing every cycle.
+// INIT's table, Full: an elite brings an orphan along, a weak part that hits every other cycle (a hatchling's size).
+function orphanAdd(s, e) {
+  const pw = e.virus.power || 1, k = e.nextFragment++, amount = Math.max(1, Math.round(CONFIG.fragmentDamage * pw)), hp = Math.max(1, Math.round(CONFIG.fragmentIntegrity * (e.virus.addPower ?? e.virus.hpPower ?? pw)));
+  e.virus.parts.push({ id: 'frag' + k, name: '◌ Orphan', kind: 'fragment', orphan: true, integrity: hp, max: hp, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, attack: { name: 'Hold', effect: 'damage', amount, interval: 2, due: 2 }, exposedUntil: 0, lastDamaged: 0, boosted: false });
+  emit(s, 'status', 'The table is full: an orphan rides with the elite.', { target: 'frag' + k });
+}
 function brood(s, e, n) {
   const pw = e.virus.power || 1;
   for (let i = 0; i < n; i++) {
@@ -1732,7 +1744,10 @@ hooks.roomEnd = (s, result) => {
   R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
   const wasRare = !!R.rare[room.id], first = !R.cleared[room.id];
   // One respawn in 25 is a rare spawn (ROOMS.rare): it waits until you kill it (a held server's Root 5, a Legacy server's twice).
-  R.rare[room.id] = FIGHTS.includes(room.kind) && !['core', 'boss', 'socket', 'nest'].includes(room.kind) && !room.wild && rnd(R, 31)() < ROOMS.rare * ((R.world && ask('rare', s)) || 1);
+  R.rare[room.id] = FIGHTS.includes(room.kind) && !['core', 'boss', 'socket', 'nest'].includes(room.kind) && !room.wild && rnd(R, 31)() < ROOMS.rare * ((R.world && ask('rare', s)) || 1) * (R.world ? rareMult(s) : 1); // INIT's table, Clear: twice as often at its end
+  // An orphan (INIT's table): a plain room's respawn, at the table's share (its own seed, so the room's dice stay as they were).
+  if (R.world && room.kind === 'process' && !room.wild) (R.orphan ||= {})[room.id] = !R.rare[room.id] && seeded(((room.seed ^ 0x0f0f0f) + R.spawns[room.id] * 7919) >>> 0)() < orphanShare(s);
+  if (R.world && e.orphan) { moveTable(s, -TABLE.orphan); contractDid(s, 'orphans'); } // it frees a slot, and counts for an Orphans contract
   programsPay(s, room, e);
   // First clear: progress toward Mapped (its XP comes in Mapped's lump).
   if (!R.cleared[room.id]) clear(s, room);

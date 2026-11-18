@@ -4961,3 +4961,18 @@ button.tk-b:hover, button.tk-b:focus-visible { border-color: var(--line); }
    error) still select. */
 body { -webkit-user-select: none; user-select: none; }
 input, textarea, [contenteditable], .mbody, .ch-lines, .page-error pre { -webkit-user-select: text; user-select: text; }
+
+/* INIT's table, the Readout (view.mjs initReadout): muted words, the number bright, a hairline strip under them. */
+.map-right { display: flex; align-items: center; gap: var(--s5); }
+.init-readout { display: grid; gap: 3px; width: 150px; font: 11px/1.2 var(--mono); color: var(--muted); letter-spacing: 0.3px; white-space: nowrap; cursor: default; pointer-events: auto; }
+.init-readout b { color: var(--bright); font-weight: 600; }
+.ir-strip { position: relative; height: 5px; }
+.ir-strip::before { content: ''; position: absolute; left: 0; right: 0; top: 2px; height: 1px; background: var(--line); }
+.ir-strip i { position: absolute; top: 2px; height: 1px; }
+.ir-clear { background: #9a9184; }
+.ir-full { background: var(--amber); }
+.ir-tick { top: 0 !important; width: 1px; height: 5px !important; margin-left: -0.5px; background: #f2ecdc; }
+@media (max-width: 900px) {
+  .map-right { flex-wrap: wrap; justify-content: flex-end; row-gap: var(--s3); }
+  .map-right .init-readout { order: 2; flex-basis: 100%; width: auto; max-width: 170px; margin-left: auto; }
+}

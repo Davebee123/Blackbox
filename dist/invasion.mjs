@@ -27,6 +27,7 @@ import { sendShift, sendTravel, pickSender, hasSpecial } from './specials.mjs';
 import { tickProfile } from './profile.mjs';
 import { tickChannel } from './channel.mjs';
 import { contractDid } from './mail.mjs';
+import { tickTable } from './table.mjs';
 
 const I = () => CONFIG.invasion;
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -172,6 +173,7 @@ export function tickNetwork(s, now = Date.now()) {
   if (gap > dt) away(s, prev, now - dt); // logged off: the network plays on (firewall.mjs is the guard)
   tickFirewall(s, now); // a defrag that's done
   tickEvents(s, dt); // the event director deals what happens on the net, degraded or not
+  if (tickTable(s, dt)) emit(s, 'table-cancel', 'LANTERN runs a cancel round. The process table drops eight points.'); // INIT's table (table.mjs): logged-on time fills it
   tickConsortium(s, dt, now); // the dividend, sieges, raids, the travelling virus, invites (consortium.mjs)
   tickProfile(s); // deeds from the log, and a title just earned (profile.mjs)
   tickChannel(s, dt); // #net, the public channel: news, contacts and who's chatting (channel.mjs)

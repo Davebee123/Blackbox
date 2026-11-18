@@ -1,6 +1,6 @@
 # INIT's table: the net's pressure, felt in fights, gear and XP
 
-**Status.** Kept (the designer, November 2026), not built. Replaces INIT's count in market.md 4, which moved prices. No prices
+**Status.** Kept (the designer, November 2026). Slice 1 built: the count, orphans, the bands' Fights, XP and Gear rows, the Readout (GAME_RULES.md "INIT's table"). Replaces INIT's count in market.md 4, which moved prices. No prices
 here: the count changes what you fight, what drops and what the director deals.
 
 ## 1. The rule

@@ -31,6 +31,7 @@
 // Tracker). No clock: one waits on the board at a time until you take it, outside the five.
 import { FAMILIES, ROOM_FAMILIES, CONFIG, STRAINS, along, killXp } from './data.mjs';
 import { ROOT } from './root.mjs';
+import { TABLE, moveTable } from './table.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { LOOT, MATERIALS, rollItem, seeded } from './gear.mjs';
 import { emit, warn, hackerLevel, serverLevel, gainXp, deedXpFor, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem, setDeliver, fxPct } from './combat.mjs';
@@ -307,7 +308,7 @@ export function offer(s, at = now()) {
   const bountyAt = bountyTarget(s); // a live elite or ★ rare spawn on a traced server near your level
   const roomsAt = roomsTarget(s), mapAt = mapTarget(s);
   const rootAt = rootTarget(s), logs = unswept(s);
-  const acts = Object.keys(ACTIVITY).filter((k) => L >= ACTIVITY[k].from && (k !== 'root' || rootAt) && (k !== 'sweeps' || logs.length) && (k !== 'hold' || tracedOf(s).length));
+  const acts = Object.keys(ACTIVITY).filter((k) => L >= ACTIVITY[k].from && (k !== 'root' || rootAt) && (k !== 'sweeps' || logs.length) && (k !== 'hold' || tracedOf(s).length) && (k !== 'orphans' || tracedOf(s).length));
   const kinds = (['kill', 'kill', 'bounty', 'bounty', 'materials', 'takeover', 'item', 'item', 'rooms', 'rooms', 'map', ...acts]).filter((k) => (k !== 'takeover' || target) && (k !== 'item' || vaultFound) && (k !== 'bounty' || bountyAt) && (k !== 'rooms' || roomsAt) && (k !== 'map' || mapAt));
   // Strain contracts (RuneScape Slayer): once strains are open at your level, a quarter of the board.
   const strainsOpen = Object.keys(STRAINS).filter((k) => STRAINS[k].from <= L && L >= CONFIG.zone.maxLevel + 2);
@@ -411,6 +412,7 @@ function mapTarget(s) { const busy = busyLoc(s), pool = (s.locations || []).filt
 //   interrupt  N attacks answered: a cast stopped, a charge or a seal blocked (tells.mjs)
 //   root       the next Root level on a server you hold (root.mjs ROOT.need)
 //   hold       an invasion stopped, at your wall or by you (invasion.mjs)
+//   orphans    N orphans broken (◌ strays: INIT's table, table.mjs); delivered, the table frees two slots
 // (Rooms n/N and the families open at a level come through hooks: floorplan.mjs, which imports this module.)
 const counted = (x) => (hooks.counted ? hooks.counted(x) : !x.nook && !x.optional), familyName = (id) => (FAMILIES[id] || ROOM_FAMILIES[id])?.name || id;
 const puzzleKindsHeld = (s) => [...new Set(tracedOf(s).flatMap((l) => Object.values(roomsOfLoc(s, l)?.graph?.rooms || {}).map((x) => x.kind)).filter((k) => PUZZLES[k]))];
@@ -422,6 +424,7 @@ export const ACTIVITY = {
   hold: { from: 5, job: () => ({ count: 1 }) },
   root: { from: 5, job: (s, L, { rootAt: l }) => { const r = l.root || { level: 1, cleared: 0 }; return { loc: l.id, root: r.level + 1, fights: Math.max(1, ROOT.need[r.level + 1] - (r.cleared || 0)) }; } },
   interrupt: { from: 10, job: (s, L) => ({ count: 6 + Math.floor(L / 10) }) },
+  orphans: { from: 6, job: (s, L) => ({ count: 6 + Math.floor(L / 10) }) },
 };
 // A server you hold with a Root level still to reach (and no root job on it), and the logs waiting to be swept: a
 // thread's temporary server's process log (threads.mjs; the old file system's incident files count too, forensics.mjs).
@@ -625,7 +628,7 @@ const cap = (x) => (x ? x[0].toUpperCase() + x.slice(1) : '');
 // Strain contracts: every fifth one in a row pays double and rolls for the strain's trophy; dropping one resets it.
 export const SLAYER = { every: 5 };
 // What a contract's XP counts as in the XP mix (combat.mjs gainXp): the activity behind it.
-const CONTRACT_KIND = { puzzle: 'intel', lair: 'fight', boss: 'fight', strain: 'fight', kill: 'fight', bounty: 'fight', materials: 'fight', takeover: 'breakin', item: 'breakin', rooms: 'fight', map: 'breakin', install: 'breakin', defuse: 'fight', sweep: 'breakin', exfil: 'fight', heist: 'breakin', grind: 'fight', solve: 'intel', decode: 'intel', sweeps: 'intel', interrupt: 'fight', root: 'build', hold: 'fight' };
+const CONTRACT_KIND = { puzzle: 'intel', lair: 'fight', boss: 'fight', strain: 'fight', kill: 'fight', bounty: 'fight', materials: 'fight', takeover: 'breakin', item: 'breakin', rooms: 'fight', map: 'breakin', install: 'breakin', defuse: 'fight', sweep: 'breakin', exfil: 'fight', heist: 'breakin', grind: 'fight', solve: 'intel', decode: 'intel', sweeps: 'intel', interrupt: 'fight', root: 'build', hold: 'fight', orphans: 'fight' };
 // A kill contract counts kills no more than 4 levels under the level it was posted at.
 export const KILL_RANGE = 4;
 const inRange = (c, level) => level == null || c.level == null || level >= c.level - KILL_RANGE;
@@ -759,6 +762,7 @@ export function title(s, c) {
   if (c.type === 'interrupt') return `Answer ${c.count} attacks`;
   if (c.type === 'root') return `Reach Root ${c.root} on ${locName(s, c.loc) || 'a server you hold'}`;
   if (c.type === 'hold') return 'Stop an invasion';
+  if (c.type === 'orphans') return `Break ${c.count} orphans`;
   return 'Contract';
 }
 // Where an unknown target stands: not heard yet, flagged (with its trace), or found.
@@ -812,7 +816,7 @@ export function progress(s, c) {
     return (r.level || 1) >= c.root ? { text: `Root ${c.root}`, part: 1 } : { text: `${r.cleared || 0}/${need} fight rooms cleared again`, part: Math.min(1, (r.cleared || 0) / Math.max(1, need)) };
   }
   if (ACTIVITY[c.type]) {
-    const what = { grind: 'viruses killed', solve: c.kind ? 'solved' : 'boards solved', decode: 'parts decoded', sweeps: 'logs swept', interrupt: 'attacks answered', hold: 'invasions stopped' }[c.type];
+    const what = { grind: 'viruses killed', solve: c.kind ? 'solved' : 'boards solved', decode: 'parts decoded', sweeps: 'logs swept', interrupt: 'attacks answered', hold: 'invasions stopped', orphans: 'orphans broken' }[c.type];
     return { text: `${c.got}/${c.count} ${what}`, part: c.got / c.count };
   }
   if (c.type === 'heist') {
@@ -828,13 +832,13 @@ export function progress(s, c) {
 export const BASE = {
   kill: 1.5, strain: 2, bounty: 2, materials: 1, rooms: 2, map: 3, takeover: 3, item: 2.5,
   install: 3, defuse: 2.5, sweep: 4, exfil: 2.5, heist: 3.5,
-  grind: 1.5, solve: 2, decode: 1.5, sweeps: 2, interrupt: 1.5, root: 3, hold: 2.5,
+  grind: 1.5, solve: 2, decode: 1.5, sweeps: 2, interrupt: 1.5, root: 3, hold: 2.5, orphans: 1.5,
   puzzle: 2, lair: 4, boss: 4, // a floor job's own steps (arcs.mjs): a board won on its server, the floor's lair boss or a named boss beaten
 };
 export const SIZE = {
   mult: [1, 2, 3],
   kill: [6, 12], strain: [6, 12], grind: [6, 12], rooms: [6, 10], materials: [4, 7], defuse: [4, 6],
-  solve: [3, 5], decode: [3, 5], sweeps: [2, 3], interrupt: [8, 12], root: [6, 15],
+  solve: [3, 5], decode: [3, 5], sweeps: [2, 3], interrupt: [8, 12], root: [6, 15], orphans: [6, 9],
 };
 const amountOf = (c) => (c.type === 'materials' ? c.amount : c.type === 'root' ? c.fights : c.count) || 0;
 // 0 small, 1 medium, 2 large.
@@ -885,6 +889,7 @@ export function mailCommand(s, text, at = now()) {
   if (!ready(s, c)) return warn(s, `Not done yet: ${progress(s, c).text}.`);
   if (c.type === 'materials') materialsOf(s)[c.material] -= c.amount;
   if (c.type === 'item' || c.type === 'heist') { cargo(s).splice(cargo(s).findIndex((x) => x.contract === c.id), 1); disarm(s, c); }
+  if (c.type === 'orphans') moveTable(s, -TABLE.contract); // INIT's table: an Orphans contract delivered frees two slots
   c.done = true;
   c.doneAt = at;
   // Delivered ones stay for the Completed list: every LOWLIGHT job, and the last 15 others.
