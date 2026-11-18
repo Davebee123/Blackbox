@@ -121,7 +121,7 @@ export function buildProgram(s, R, room, id) {
   m.exploit = (m.exploit || 0) - c.exploit;
   (R.programs ||= {})[room.id] = id;
   (R.paid ||= {})[room.id] = { credits: c.credits, code: c.code };
-  emit(s, 'program', `${PROGRAMS[id].name} injected into ${room.path}. ${PROGRAMS[id].rule}`, { program: id, room: room.id });
+  emit(s, 'program', `${PROGRAMS[id].name} injected into ${room.path}. ${PROGRAMS[id].rule}`, { program: id, room: room.id, fx: { kind: 'socket', room: room.id } }); // roomfx.mjs: it drops in
   return true;
 }
 // Uninstall: free, half of its credits and code back (one built before credits: half its components).
