@@ -3378,6 +3378,19 @@ details.map-pick { pointer-events: auto; }
 /* Operator, Threads: three processes circle the border, evenly spaced. */
 [data-pick-class='operator'] .pk-fx i:nth-child(-n + 3) { display: block; left: -2.5px; top: -2.5px; width: 5px; height: 5px; transform: translateX(var(--r-card)); background: #ffd86e; box-shadow: 0 0 6px 1px rgba(241, 185, 47, 0.8); }
 
+/* The same effects on the Skills page (skills-view.mjs): an ability or root you have plays its class's while hovered.
+   The box is twice the target's size, scaled by half, so every piece draws at half the picker's size. Trace and
+   Threads run as a conic light turning under a ring mask: CSS only, on the compositor. */
+.cls-root { position: relative; }
+:is(.cls-fr, .cls-root) > .pk-fx { --r: calc(2 * var(--r-btn)); inset: auto; left: 50%; top: 50%; width: calc(200% + 4px); height: calc(200% + 4px); border-radius: var(--r); transform: translate(-50%, -50%) scale(0.5); }
+:is(button.cls-ab:is(:hover, :focus-visible) .cls-fr, .cls-root:is(:hover, :focus-visible)) > .pk-fx { display: block; }
+:is(.cls-fr, .cls-root):is([data-pick-class='infiltrator'], [data-pick-class='operator']) > .pk-fx { overflow: hidden; padding: 4px; -webkit-mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+:is(.cls-fr, .cls-root):is([data-pick-class='infiltrator'], [data-pick-class='operator']) .pk-fx i:nth-child(1) { display: block; inset: auto; left: 50%; top: 50%; width: 400%; height: 400%; margin: -200% 0 0 -200%; transform: none; filter: none; background: conic-gradient(transparent 0 70%, rgba(241, 185, 47, 0.85) 92%, #fff3c4 97%, transparent); animation: fx-turn 3.6s linear infinite; }
+:is(.cls-fr, .cls-root)[data-pick-class='operator'] .pk-fx i:nth-child(1) { background: repeating-conic-gradient(transparent 0 108deg, #ffd86e 113deg 117deg, transparent 120deg); animation-duration: 7.5s; }
+:is(.cls-fr, .cls-root)[data-pick-class='operator'] .pk-fx i:nth-child(n + 2) { display: none; }
+@keyframes fx-turn { to { transform: rotate(1turn); } }
+.no-motion :is(.cls-fr, .cls-root) > .pk-fx { display: none !important; }
+
 /* A narrow screen: the squares stack as rows; the picked one opens downward, its drawer a single column. */
 @media (max-width: 900px) {
   .pk-scene { padding: 24px 16px; gap: 16px; align-content: start; }

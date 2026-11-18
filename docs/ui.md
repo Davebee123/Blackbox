@@ -91,7 +91,7 @@ teal, violet or a threat's red.
 - **Achievements** (`achievements-view.mjs`): categories down a fixed left column, rows with the points on a medal, the
   reward shown as itself, earned rows lit amber (loot), the rest muted. No teal.
 - **Loadout** (`view.mjs` loadoutMarkup): the same left column: the classes (level, a teal XP bar, a teal lamp on the one
-  in use), and under the one you're looking at, its sections (Protocols, Daemons, Program, Skills and talents) as
+  in use), and under the one you're looking at, its sections (Skills and talents, Protocols, Daemons, Programs) as
   sub-folders on a tree line.
 
 ## The fight board
