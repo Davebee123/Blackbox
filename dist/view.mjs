@@ -3088,7 +3088,7 @@ export function systemMarkup(s, { coop = false, dev = false, tab = 'settings', p
   const head = systemTabs(tab, dev);
   if (tab === 'dev') return head + devMarkup(s, coop);
   return `${head}<div class="page-grid settings-page"><div style="display:grid;gap:12px;align-content:start">${volumeCard(s)}${optionsCard(s)}</div>
-    <div style="display:grid;gap:12px;align-content:start">${graphicsCard(s, phone)}${collectionMarkup(s)}
+    <div style="display:grid;gap:12px;align-content:start">${graphicsCard(s, phone)}
     <section class="card"><h2>New game</h2><div class="row"><button type="button" class="btn" data-run="reset game">Reset game</button></div></section></div></div>`;
 }
 
