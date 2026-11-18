@@ -202,7 +202,8 @@ function postStory(s, at = now(), force = false) {
   if (job) {
     const j = { id: l.id, from: msg.from, subject: msg.subject, body: msg.body, got: 0, at, ...job };
     // like the board's: its kind and size, at your level; reward.levelXp pays a whole level's XP instead (wick's first: 1 to 2)
-    j.xpFixed = true; j.reward.xp = j.reward.levelXp ? xpToNext(j.reward.levelXp) : contractXp(hackerLevel(s), j);
+    const L = hackerLevel(s); // read first: it seats your class's level on a new save
+    j.xpFixed = true; j.reward.xp = j.reward.levelXp ? xpToNext(j.reward.levelXp) : contractXp(L, j);
     m.jobs.push(j);
     l.job = j.id;
     arm(s, j);
