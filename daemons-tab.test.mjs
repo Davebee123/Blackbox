@@ -8,7 +8,7 @@ import { fresh, command, resolveCycle, selectEncounter, gainDaemon, daemonSlots 
 import { DAEMONS, CONFIG, daemonN } from './dist/data.mjs';
 import { daemonCycles, playOrder, daemonText } from './dist/daemons.mjs';
 import { daemonsMarkup, daemonUi, loadoutMarkup } from './dist/view.mjs';
-import { panelMarkup, orderMarkup, actsLine, TRIGGER, unitOf, dropLevels, CYCLES } from './dist/daemons-view.mjs';
+import { panelMarkup, actsLine, TRIGGER, unitOf, dropLevels, CYCLES } from './dist/daemons-view.mjs';
 import { sprite } from './dist/daemon-sprites.mjs';
 
 CONFIG.baseCrit = 0;
@@ -75,20 +75,15 @@ test('the timeline is the real one: in a fight, each cooldown daemon acts in exa
   assert.deepEqual([...new Set(seven)], ['overseer', 'cron']);
 });
 
-test('the order of play for a picked cycle: you, the daemons in party order, burns and helpers, the virus; triggers armed beside it', () => {
+test('the order of play for a cycle: the daemons in party order, triggers armed', () => {
   const s = herder(['airbag', 'overseer', 'cron', 'lookout', 'canary']);
   assert.deepEqual(playOrder(s, 7), { start: [], daemons: ['overseer', 'cron'], armed: ['lookout', 'canary'] });
   assert.deepEqual(playOrder(s, 1).start, ['airbag'], 'an Airbag goes as the fight starts');
   assert.deepEqual(playOrder(s, 2).daemons, []);
-  const strip = orderMarkup(s, 7).replace(/ title="[^"]*"/g, '');
-  const steps = strip.match(/<span class="dm-steps">(.*?)<\/span><span class="dm-armed">/)[1].replace(/<span class="dm-gt" aria-hidden="true">▸<\/span>/g, ' ▸ ').replace(/<[^>]+>/g, '');
-  assert.equal(steps, 'You ▸ Overseer ▸ Cron Job ▸ Burns and helpers ▸ The virus');
-  assert.match(strip, /dm-armed"><span class="dm-st armed">Lookout · when a part starts winding up a tell<\/span><span class="dm-st armed">Canary · when you drop below half health, once a fight<\/span>/);
-  assert.match(orderMarkup(s, 1).replace(/ title="[^"]*"/g, ''), /dm-steps"><span class="dm-st dm">Airbag<\/span><span class="dm-gt"[^>]*>▸<\/span><span class="dm-st you">You/);
-  // The tab shows the picked cycle's strip, and the cycle buttons pick it.
+  // The cycle buttons pick a cycle.
   reset({ cycle: 4 });
   const html = daemonsMarkup(s);
-  assert.match(html, /aria-label="Order of play in cycle 4"/);
+  assert.doesNotMatch(html, /dm-order/);
   assert.match(html, /<button type="button" class="dm-ch" data-dmn-cycle="4" aria-pressed="true"/);
   assert.equal((html.match(/class="dm-ch" data-dmn-cycle="\d+"/g) || []).length, 12);
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
