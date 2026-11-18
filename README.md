@@ -145,7 +145,7 @@ comment saying what it does.
 | `dist/floorplan.mjs` | A server as a graph of rooms: moving, fights, caches, the hunter, the vault and the Core; the server kinds, a Router's one-way links among them; the reboot (a traced server's fight rooms come back together once all have fallen; a Mapped one goes offline for it: offlineLeft). |
 | `dist/objectives.mjs` | A room fight's objective (`e.objective`): Priority, Uptime, Backup, Clean run and the Exfil's upload, their roll, rules, board text and bonus. |
 | `dist/netrooms.mjs` | Every server on the real save as a room graph, kept on its location; takeover and Root rooms. |
-| `dist/floorplan-view.mjs`, `dist/floorplan.css` | The rooms page: the server strip and the room map with its pop-up card. |
+| `dist/floorplan-view.mjs`, `dist/floorplan.css` | The rooms page: the server strip and the room map with its pop-up card and the contract tracker (view.mjs `serverTracker`). |
 | `dist/floors.mjs` | The eight floors: each one's diagram of server slots, generated from your network's seed; each floor's lair boss (`lairBossFor`), holder (`holdersOf`) and signature kind (`FLOOR.signature`). |
 | `dist/hidden.mjs` | Unknown servers along your floors' links, and tracing them. |
 | `dist/address.mjs` | Every room's grid address (C2). |

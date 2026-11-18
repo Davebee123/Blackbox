@@ -53,7 +53,7 @@ test('a rogue server is wild: folders of viruses, no vault, nothing to take, no 
   for (const sp of Object.values(spawns)) assert.ok(sp.grade === 2, 'layer 2: v2');
 });
 
-test('kinds: a Nest is one family, a Pit runs 2 levels hot at its deepest, a level lower a room nearer the entry', () => {
+test('kinds: a Nest is one family, a Pit runs 2 levels hot at its deepest, the rooms beside the entry 3 lower', () => {
   const s = world();
   addLocation(s, 'worm', 1); addLocation(s, 'worm', 1);
   const nest = rogueOf(s, 'nest');
@@ -62,7 +62,7 @@ test('kinds: a Nest is one family, a Pit runs 2 levels hot at its deepest, a lev
   const ramp = rampOf(pit), top = pit.level + ROGUE.pitLevels;
   assert.ok(Object.values(ramp).includes(0) && Object.values(ramp).some((n) => n > 0), 'deepest rooms at the top, nearer ones lower');
   for (const [room, sp] of Object.entries(rogueSpawns(s, pit))) assert.equal(sp.level, Math.max(1, top - ramp[room]));
-  assert.ok(Math.max(...Object.values(ramp)) <= ROGUE.ramp);
+  assert.equal(Math.max(...Object.values(ramp)), ROGUE.ramp, 'the lowest levels sit beside the entry');
 });
 
 test('an older rogue server (no size) keeps its 4 to 8 rooms', () => {
