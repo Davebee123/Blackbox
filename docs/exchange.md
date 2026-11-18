@@ -7,9 +7,12 @@ simulation, 200 network seeds × 40 logged-on hours at level 12; building it re-
 
 ## 1. The rule
 
-- **Corvid Exchange** (lore.md: the commodities exchange in the Stacks, proud of trading only insured lots) keeps one
-  book for Cipher, Worm and Kernel code, Exploits and components. Every hub's menu opens it as **Exchange**, where
-  Market was. `exchange sell|buy <good> <n>`.
+- **One exchange, at LANTERN's Listening Post** (the scanner's post beside HOME on every floor, instant to connect):
+  **[4] exchange** in its menu opens one book for Cipher, Worm and Kernel code, Exploits and components, which LANTERN
+  reads out over the post's carrier. The hubs have no market. It opens when the post shows on the map (Nine Days Deaf);
+  until then what you farm waits in your pack. `exchange sell|buy <good> <n>`.
+- **Hosting gives LANTERN nothing on the book.** Rep never touches the spread, and LANTERN's cards move prices like
+  anyone's.
 - **Par:** a code 10 credits, an Exploit 100, a component 5. The price is par times what's moving it (section 2),
   between ×0.5 and ×2. You sell at the bid, 4% under the price, and buy at the ask, 4% over. Components can be bought
   now too.
@@ -115,7 +118,7 @@ posted cards 18, a glut's dip 18, cards it caught live 11. Each good's share run
 
 ## 6. On the screen (pick one)
 
-Mock-ups from one scene (Kestrel's hub, the exchange open beside it), shown in the session. In each: the **Position**
+Mock-ups from one scene (the Listening Post's terminal, the exchange open beside it), shown in the session. In each: the **Position**
 bar at the top (teal, *410 / 420*), In transfer below, a card's line on the Log. A card is amber with its owner's mark,
 a crew's run red, your own move teal, a posted one dashed with *in 6m*. An order is a chip, *31 wanted*.
 
@@ -131,7 +134,7 @@ a crew's run red, your own move teal, a posted one dashed with *in 6m*. An order
 
 One slice in the economy's lane (nothing else on the economy or the save beside it), after the pick: the book (par,
 spread, push, cap, settlement), the ticker aimed at it (ticker.md's slice folded in), your moves' hooks, orders, the
-picked look and a phone layout, GAME_RULES *Markets* rewritten. Saved: one push a good in place of the hubs' pressure,
+picked look, the post's menu and a phone layout, GAME_RULES *Markets* rewritten. Saved: one push a good in place of the hubs' pressure,
 positions (units and what they cost), the live movers. The migration keys on the hub-keyed `s.market.pressure` and
 drops it; transfers in flight still land. A unit test on fixed seeds: a round trip never profits, the cap holds, only
 your biggest move counts, an order takes no push, prices stay within ×0.5–×2.
