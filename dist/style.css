@@ -2445,6 +2445,18 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .craft-list li > span.mk-btns { display: flex; gap: 0.3em; flex-wrap: nowrap; align-items: center; }
 .mnode.fleet[data-faction] path { fill: var(--fc); stroke: var(--fc); }
 .craft-list .btn { white-space: nowrap; }
+/* A supply order (supply.mjs): the menu line's ware and count (lit once you hold enough), the order's row in its window. */
+.sup-meta { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font: 13px var(--mono); }
+.sup-meta .glyph { width: 13px; height: 13px; margin: 0; }
+.sup-meta.ready { color: var(--ready); }
+.sup-list li > span b { display: inline-flex; align-items: center; gap: 6px; }
+.sup-list li > span b .glyph { width: 15px; height: 15px; margin: 0; color: var(--amber); }
+.sup-list small.cost { display: inline-flex; align-items: center; gap: 12px; }
+.sup-list .sup-rep { color: var(--fc); }
+.sup-list .sup-have { margin-left: auto; color: var(--muted); font: 600 13px var(--mono); }
+.sup-list .sup-have.ok { color: var(--ready); }
+.sup-list li.ready { border-color: color-mix(in srgb, var(--ready) 45%, transparent); }
+.sup-wait { display: flex; align-items: center; gap: 6px; } .sup-wait .glyph { width: 14px; height: 14px; margin: 0; }
 .craft-list li.mk-row, .craft-list li.mk-xfer { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; }
 .craft-list li > span.mk-ware { display: flex; align-items: center; gap: 8px; }
 .mk-have { font: 12px var(--mono); color: var(--dim, #8a8170); }

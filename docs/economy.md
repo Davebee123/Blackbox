@@ -2,7 +2,7 @@
 
 **Status.** The plan for what code, credits and components are for. Built: the currencies, programs, codebases and
 the stores as they stand (GAME_RULES.md *The economy*, *Components*, *Code*, *Sockets and programs*, *The Halcyon
-store*); Indemnity is retired (v48) and crafting is gone (v49). Left: patches, supply orders, consortium projects,
+store*, *Supply orders*); Indemnity is retired (v48) and crafting is gone (v49). Left: patches, consortium projects,
 the four-rank Root, the programs still to build, and player trade. How prices and factions' sway move, seeded and
 director-led: docs/market.md (proposed).
 
@@ -81,6 +81,8 @@ code after the last patch. The server's own programs (Harvester, Code Siphon, De
 
 ## 3. Supply orders: the factions
 
+**Built** (GAME_RULES.md *Supply orders*): the amount at your level now, the rep with its ripples.
+
 Each faction keeps a **standing order**, one at a time, never on a clock:
 
 | Faction | Wants |
@@ -91,7 +93,7 @@ Each faction keeps a **standing order**, one at a time, never on a clock:
 | NULL CHOIR | Components |
 | GLASSJAW | Exploits |
 
-An order asks for 10 + level/2 (an Exploit order 1 + level/15) and pays its market value ×1.25 in credits and +4
+An order asks for 10 + level/2 (an Exploit order 1 + level/15) and pays its market value ×1.5 in credits and +4
 standing. The next arrives an hour after you deliver. Supply orders are how you climb a faction you don't do contracts
 for. They are the main sink for code, components and Exploits (docs/pays.md).
 

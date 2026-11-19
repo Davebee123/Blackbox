@@ -973,11 +973,11 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
   counts what you'd keep (rooms won, XP, files), and a room won this visit reads **UNSAVED** on the map until you do.
 - **A disconnect undoes it** (Integrity 0 on a run, `visit.mjs`): you're back exactly as you were when you connected,
   Integrity included. Your XP and levels, items, credits, code, components, the Codex, research and mastery, drop luck,
-  rep, floor jobs, contract counts (an Install job's item back in your stash) and the server's rooms (cleared, opened,
-  its spawns and Root) go back to the connect. What keeps moving: the market and the director, mail and contracts
-  received, invasions and the wall, runners, the consortium, achievements, your profile, INIT's table, settings, clocks,
-  servers and leads found, and a Resident that beat you stays a level up. The **NO CARRIER** card strikes through what the
-  visit lost.
+  rep, supply orders, floor jobs, contract counts (an Install job's item back in your stash) and the server's rooms
+  (cleared, opened, its spawns and Root) go back to the connect. What keeps moving: the market and the director, mail
+  and contracts received, invasions and the wall, runners, the consortium, achievements, your profile, INIT's table,
+  settings, clocks, servers and leads found, and a Resident that beat you stays a level up. The **NO CARRIER** card
+  strikes through what the visit lost.
 - **Reconnect wait.** A server you leave takes you back after 30 s (`CONFIG.relockMs`), +15 s for each disconnect on
   its run, 2 min at most (`CONFIG.deathWait`). A jack out mid-fight waits like a disconnect but still saves the visit;
   any other jack out resets the count. Connect counts it down, with ☠ and the count. Deadman's Switch counts as a jack
@@ -2096,6 +2096,18 @@ hubs.
 - **File transfers:** a sale leaves now and pays on arrival; a purchase is paid now and arrives later. Halcyon 5 min,
   Kestrel 8, LANTERN 10, GLASSJAW 12, NULL CHOIR 15; each relay cuts 10% (up to 40%).
 - **Tips.** A pirate broadcast logged on the scanner moves one ware's price at one hub for a while ("The scanner").
+
+### Supply orders (supply.mjs)
+
+Each faction keeps one standing order for one ware, never on a clock: Halcyon Cipher code, Kestrel Kernel, LANTERN
+Worm, NULL CHOIR components, GLASSJAW Exploits. It opens with the hubs, once that hub is found. The main sink for code,
+components and Exploits (docs/pays.md).
+
+- **It asks** 10 + level/2 of its ware (Exploits 1 + level/15), at your level now.
+- **It pays at once:** the hub's price for it ×1.5 in credits, and +4 rep (with its ripples).
+- **The next** opens an hour of play after you deliver; nothing turns over while you're away.
+- **At the hub:** the menu's **Supply order** line shows the ware and how much of it you hold (lit once you hold
+  enough), or the clock to the next. Its window has **Deliver**. `deliver <faction>`.
 
 ### Sockets and programs
 

@@ -17,6 +17,7 @@ import { buyFrom, claimServer, reclaimCheck, clearedFor, strikeServer, setCommis
 import { receiptCommand } from './receipts.mjs';
 import { tickMarket, marketCommand } from './market.mjs';
 import { IMPLICIT_HOOKS, assemble } from './faction-gear.mjs';
+import { deliver } from './supply.mjs';
 import { CHASE_HOOKS } from './chase.mjs';
 import { gainComponents, componentsRestore } from './salvage.mjs';
 // Configs are gone (service side-grades; Triage was the last). A save that owned any is refunded.
@@ -2733,6 +2734,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     firewallCommand(s, text, now);
   } else if (/^hub (assemble|retune) \S+$/.test(text)) {
     assemble(s, text.split(' ')[2]); // a faction piece (faction-gear.mjs)
+  } else if (/^(hub )?deliver \S+$/.test(text)) {
+    deliver(s, text.split(' ').at(-1)); // a faction's supply order (supply.mjs)
   } else if (/^commission \S+$/.test(text)) {
     setCommission(s, text.split(' ')[1]);
   } else if (/^receipt (later|\S+ \S+)$/.test(text)) {

@@ -71,7 +71,7 @@ refilled, the farm's bosses, a supply order waiting), each with its locate butto
 | Activity | Source | Pays | Floors |
 |---|---|---|---|
 | Patches (v2, v3 for every copy of a program) | docs/economy.md 2 | A program network-wide | All |
-| Supply orders (one standing order per faction) | docs/economy.md 3 | Credits ×1.25 market value, +4 standing | All |
+| Supply orders (one standing order per faction) | docs/economy.md 3, built | Credits ×1.5 market value, +4 standing | All |
 | Consortium projects | docs/economy.md 4 | Trunk Relay to Grid, for every member | All |
 | The programs still to build | docs/economy.md 1 | That server's rules | All |
 | Seven more families | docs/servers.md 4.2 | Their code | 2–4 |

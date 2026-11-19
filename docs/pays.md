@@ -54,7 +54,7 @@ rack is Kessler's hardware, and its trades are older than the floor.
 ## Sinks
 
 **Supply orders are the main sink** (economy.md 3). Each faction keeps one standing order, never on a clock, and the
-next arrives an hour after you deliver, so every ware is always wanted somewhere. An order pays its market value ×1.25
+next arrives an hour after you deliver, so every ware is always wanted somewhere. An order pays its market value ×1.5
 in credits and +4 standing. Patches (economy.md 2) are the long goal on top, spent once.
 
 | Currency | Spent on | Its supply order |
@@ -79,7 +79,8 @@ changes.
 
 ## Build order
 
-1. **P1: supply orders** (economy.md 3), so code, components and Exploits always have a buyer.
+1. **P1: supply orders** (economy.md 3), so code, components and Exploits always have a buyer. Built (GAME_RULES.md
+   *Supply orders*).
 2. **P2: the pay changes** (the map's last column) and each card leading with its own thing. Nothing saved.
 3. **P3: reacting**, after the ticker.
 4. **P4: patches** (economy.md 2), the long goal.

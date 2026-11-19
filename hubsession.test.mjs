@@ -9,7 +9,7 @@ const keys = (s, f) => hubOptions(s, f).map((o) => o.key);
 test('a hub session offers a short menu that fits the situation', () => {
   const s = open();
   assert.deepEqual(keys(fresh(), 'kestrel'), [], 'no hubs before the board');
-  assert.deepEqual(keys(s, 'kestrel').slice(0, 5), ['market', 'shop', 'work', 'commission', 'servers'], 'every hub has a Shop, its Work and a Commission');
+  assert.deepEqual(keys(s, 'kestrel').slice(0, 6), ['market', 'shop', 'work', 'order', 'commission', 'servers'], 'every hub has a Shop, its Work, its supply order and a Commission');
   assert.ok(keys(s, 'halcyon').includes('shop'), 'Halcyon’s Shop is its store');
   assert.ok(!keys(s, 'halcyon').includes('donate'));
   s.standing.nullchoir = 1;

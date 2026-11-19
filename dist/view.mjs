@@ -18,6 +18,7 @@ let order = null;
 export const setOrder = (o) => { order = o; };
 import { PIECES, PARTS, pieceState, isFactionPiece, pendingClaims, appraisedOf, cleanStacks } from './faction-gear.mjs';
 import { keptReceipts, receiptLine, STAMPS, STAMP_ORDER, RECEIPT, tallyOf, sumText } from './receipts.mjs';
+import { SUPPLY, supplyOf } from './supply.mjs';
 import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, hubFound, hubTraceOf, commissionOf, stanceLine, STANCE } from './factions.mjs';
 import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
@@ -3345,6 +3346,7 @@ export function hubOptions(s, f, now = Date.now()) {
     { key: 'market', label: 'Market', meta: `⇄ ${Math.round(travelMs(s, f) / 60000)}m` },
     { key: 'shop', label: 'Shop', meta: f === 'halcyon' ? 'instant' : `${shopOf(s, f).shelf.filter((x) => !x.locked && !x.sold).length}` },
     { key: 'work', label: 'Work', meta: `${offers}` },
+    ...supplyOption(s, f),
     ...comm,
     ...piece,
     servers,
@@ -3392,6 +3394,23 @@ export function shopMarkup(s, f) {
     ${head('Tools')}<ul class="shop-tools">${tools}</ul>
     ${codebases ? `${head('Codebases')}<ul class="shop-tools shop-cbs">${codebases}</ul>` : ''}</div>`;
 }
+// A supply order (supply.mjs): its menu line shows the ware and what you hold of it, lit once you hold enough, or the
+// clock to the next one. Its window: the order as a row, what it pays as icons, Deliver.
+function supplyOption(s, f) {
+  const o = supplyOf(s, f);
+  if (!o) return [];
+  const meta = o.leftMs ? `<span class="sup-meta" title="${esc(`The next order comes in ${Math.ceil(o.leftMs / 60000)} min of play.`)}">${glyph('clock')}${Math.ceil(o.leftMs / 60000)}m</span>`
+    : `<span class="sup-meta${o.ready ? ' ready' : ''}" title="${esc(`${FX[f].short} wants ${o.n} ${o.name}. You hold ${o.have}.`)}">${glyph(GLYPH_OF_GOOD[o.ware])}${Math.min(o.have, o.n)}/${o.n}</span>`;
+  return [{ key: 'order', label: 'Supply order', meta }];
+}
+function supplyMarkup(s, f) {
+  const o = supplyOf(s, f);
+  if (!o) return '';
+  if (o.leftMs) return `<p class="quiet sup-wait" title="${esc(`The next order comes in ${Math.ceil(o.leftMs / 60000)} min of play.`)}">${glyph('clock')}Next order · ${Math.ceil(o.leftMs / 60000)}m</p>`;
+  const why = o.have < o.n ? `You hold ${o.have} of ${o.n}.` : "";
+  const rep = `<span class="fmark-i sup-rep" style="--fc:${FX[f].color}" title="${esc(`${FX[f].short} +${o.rep} rep`)}">${glyph('f-' + f)}+${o.rep}</span>`;
+  return `<ul class="craft-list sup-list"><li class="${o.ready ? 'ready' : ''}"><span><b>${glyph(GLYPH_OF_GOOD[o.ware])}${o.n} ${esc(o.name)}</b><small class="cost"><span title="${esc(`${o.credits} credits: the price here ×${SUPPLY.pay}`)}">${credits(o.credits)}</span>${rep}</small></span><span class="sup-have${o.ready ? ' ok' : ''}" title="${esc(`You hold ${o.have}.`)}">${Math.min(o.have, o.n)}/${o.n}</span><button type="button" class="btn small${o.ready && !why ? ' primary' : ''}" data-command="deliver ${f}" ${o.ready && !why ? '' : `disabled title="${esc(why)}"`}>Deliver</button></li></ul>`;
+}
 function workMarkup(s, f) {
   const offers = mailOffers(s).filter((o) => (o.faction || 'halcyon') === f);
   const held = (s.mail?.jobs || []).filter((j) => !j.done && (j.faction || 'halcyon') === f && j.story === undefined);
@@ -3406,6 +3425,7 @@ const WINDOWS = {
   market: { title: 'Market', body: (s, f, now) => marketMarkup(s, f, now) },
   shop: { title: 'Shop', body: (s, f) => shopMarkup(s, f) },
   work: { title: 'Work', body: (s, f) => workMarkup(s, f) },
+  order: { title: 'Supply order', body: (s, f) => supplyMarkup(s, f), tip: (f) => `${FX[f].short} buys this here at its price ×${SUPPLY.pay}, and +${SUPPLY.rep} rep. One order at a time, never on a clock; the next comes an hour of play after you deliver` },
   commission: { title: 'Commission', body: (s, f) => commissionMarkup(s, f), tip: () => 'Your commission pays your retainer, set by your rep with it, and is your stance. Switch at any hub you have found.' },
   receipts: { title: 'Receipts', body: (s, f) => receiptsMarkup(s, f), tip: (f) => `Kept receipts, handed in for ${FX[f].short}: +${RECEIPT.rep} rep each, and ${RECEIPT.perPart} make a part of its piece` },
   piece: { title: 'Assemble', body: (s, f) => pieceMarkup(s, f), tip: (f) => `${PARTS.need} parts from feuds won and receipts stamped for ${FX[f].short}: the piece at your level, then a re-tune to your level` },
