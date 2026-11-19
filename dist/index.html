@@ -11,7 +11,6 @@
   <link rel="stylesheet" href="floorplan.css">
   <link rel="stylesheet" href="codex.css">
   <link rel="stylesheet" href="routines.css">
-  <link rel="stylesheet" href="server.css">
   <link rel="stylesheet" href="daemons.css">
   <link rel="stylesheet" href="screenfx.css">
   <link rel="stylesheet" href="coop.css">
@@ -43,7 +42,6 @@
       <button data-module="rooms" id="tab-rooms" data-tt="Server: The rooms of the server you're connected to." class="ctx" hidden>Server</button>
       <button data-module="store" id="tab-store" data-tt="Store: Halcyon's shop." hidden>Store</button>
       <button data-module="consortium" id="tab-consortium" data-tt="Consortium: The hackers you've merged servers with, and their networks." hidden>Consortium<span id="con-count" class="count" hidden></span></button>
-      <button data-module="server" data-tt="Server: Your home server. Its firewall, filters, code and the threats on it.">Server</button>
       <button data-module="loadout" data-tt="Loadout: Your class, protocols, daemons, program, skills and talents.">Loadout<span id="new-loadout" class="count new" hidden></span></button>
       <button data-module="codex" data-tt="Codex: What you've learned about viruses, and your collection log.">Codex</button>
       <button data-module="rig" data-tt="Rig: Your achievements, casing, terminal and house.">Rig</button>
@@ -70,10 +68,14 @@
         <span class="meter-label">Process table</span>
         <strong id="table-value">84%</strong>
       </div>
-      <div class="meter" title="Credits: for compiling, topping up, the wall and hub shops.">
+      <div class="meter" title="Credits: for compiling, topping up and hub shops.">
         <span class="meter-label">Credits</span>
         <strong id="vault-value">0</strong>
       </div>
+      <button type="button" class="meter meter-stores" id="meter-stores" aria-expanded="false" aria-controls="stores-panel" title="Materials: your Code and Components">
+        <span class="meter-label">Materials</span>
+        <strong aria-hidden="true">▾</strong>
+      </button>
     </section>
     <div class="toggles">
       <button id="speed" title="Seconds per cycle. Rules count cycles, so speed never changes balance.">Speed</button>
@@ -84,6 +86,7 @@
   </header>
   <div class="comms" id="comms" hidden></div>
   <div class="comms people" id="people-panel" hidden></div>
+  <div class="stores-pop" id="stores-panel" hidden></div>
 
   <main id="workspace" class="workspace">
     <aside id="sidebar" class="sidebar" aria-label="You, your crew, and what this page is about" hidden></aside>

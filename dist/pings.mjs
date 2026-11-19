@@ -30,7 +30,7 @@ export function pingsOf(s, now = Date.now(), { only } = {}) {
 // with its version (v2).
 const NAME = /\b[A-Z][A-Z0-9]+(?:[- ][A-Z0-9]+)*(?: v\d+)?\b|\b[a-z]+-\d{3,}(?: v\d+)?\b/g;
 const SERVER = /\b[A-Z]+(?:-[A-Z0-9]+)+\b/;
-const marks = (t) => t.replace(NAME, (m) => `<b>${m}</b>`).replace(/\b([Yy]our (?:wall|server|outpost|(?:[A-Z]\w* )?hub))\b/g, '<span class="you">$1</span>');
+const marks = (t) => t.replace(NAME, (m) => (m === 'HOME' ? m : `<b>${m}</b>`)).replace(/\b([Yy]our (?:server|outpost|(?:[A-Z]\w* )?hub)|HOME)\b/g, '<span class="you">$1</span>');
 const first = (t) => { const m = /^.*?[.!?](?=\s|$)/.exec(t); return (m ? m[0] : t).trim(); };
 const sentence = (t) => { const x = t.trim(); return x ? x[0].toUpperCase() + x.slice(1) + (/[.!?]$/.test(x) ? '' : '.') : ''; };
 
@@ -41,7 +41,7 @@ export function lineOf(s, c) {
   if (c.kind === 'mail' && c.label === 'Mail') return `Letter from ${b(String(c.from).split(' · ')[0])}.`;
   if (c.kind === 'ready') return `Contract ready: ${b(shortOf(s, c))}.`;
   if (c.kind === 'offer') return `Offer on the board: ${b(shortOf(s, c))}.`;
-  if (c.label === 'Invasion' && c.from === 'Wall' && /^Invasion: /.test(c.text)) return marks(esc(first(c.text.replace(/ \(level \d+\)/, ''))));
+  if (c.label === 'Invasion' && c.from === 'HOME' && /^Invasion: /.test(c.text)) return marks(esc(first(c.text.replace(/ \(level \d+\)/, ''))));
   // A director's event: its runner and where, from the event itself (its message is a paragraph).
   const ev = c.card && (s.events || []).find((e) => e.id === c.event);
   const at = ev && (s.locations?.find((l) => l.id === ev.loc)?.name || SERVER.exec(c.text.replace(ev.name || '', ''))?.[0]);

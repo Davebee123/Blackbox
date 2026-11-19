@@ -137,7 +137,7 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - class picker: the *Drawer* (four squares; the picked one slides its traits, starting skills and subclasses out of
     its side, the rest narrow to strips) with a class border each (Breaker *Fracture*, Bastion *Deflect*, Infiltrator
     *Trace*, Operator *Threads*) and Start as a lit command, `> start --as <class>` (docs/ui.md);
-  - phone shell (docs/phone-plan.md): five tabs at the bottom (Map, Mail, Loadout, Server, More); in a fight no top
+  - phone shell (docs/phone-plan.md): four tabs at the bottom (Map, Mail, Loadout, More; the Server tab went with the wall); in a fight no top
     strip, the HUD as one line (*C*: your bar left, the virus's right with its ◆, its window at the end; the rest in
     the bars' cards; it slides out beside the board in its half, covering no chip),
     two rows of four keys with the menu key at the row's end; on its side, the same shell with a wider board.
@@ -160,6 +160,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   in the lore. *No entropy* and no loss aversion guard the time you're away; the market moves both ways while you play.
   What's next is the ticker (docs/ticker.md): lore-voiced cards that move hub prices. Sway is shelved. INIT's count is kept
   as INIT's table (docs/init-table.md): play moves it, and it moves no prices. Outposts (docs/outposts.md) and a central exchange (docs/exchange.md) are tabled as too complicated for now.
+- **HOME is lean** (November 2026): it is its Integrity, nothing more. Invasions chip it until you intercept them; the
+  firewall, its tiers, filters and the Server page are gone. The designer will decide what makes servers dynamic next.
 - **Rested XP** comes only from time logged off. There is no catch-up XP.
 - **Unlocks:** cosmetic unlocks (districts, boots, prompts, desk props, mastery looks) come from achievements, not
   from server floors.
@@ -185,4 +187,4 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **No invasions while logged off** (the designer, November 2026), after the health rework lands, not alongside it or
   other pacing work. Cut the away loop and the occupation on return (invasion.mjs `AWAY`, `away()`); every minute away
   banks rested XP; drop the consortium's away help; fix GAME_RULES (*While you're logged off*, *Away is played out*),
-  the tests, and wick's `server-wall` tip (tips.mjs, *"even while you're away"*). Migrate a save left occupied.
+  and the tests (wick's `server-wall` tip went with the wall). Migrate a save left occupied.

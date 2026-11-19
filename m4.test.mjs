@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, hooks, restore, SAVE_VERSION } from './dist/combat.mjs';
 import { play, layoutOf } from './dist/run.mjs';
 import { CONFIG } from './dist/data.mjs';
-import { tickNetwork, ratioOf, travelMs } from './dist/invasion.mjs';
+import { tickNetwork, travelMs } from './dist/invasion.mjs';
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false;
@@ -32,12 +32,12 @@ const takeOver = (s, loc) => {
 const withFirewall = () => { const s = fresh(); s.services = { firewall: 1, tarpit: 1, honeypot: 1, hotpatch: 1 }; return s; };
 const FILTER_BAY = 120; // a v1 service's credits (the retired VERSIONS table)
 
-test('configs are gone (a save that owned one gets its credits back), and the wall is three knobs', async () => {
+test('configs are gone (a save that owned one gets its credits back), and retired services end up as components', async () => {
   const { restore, SAVE_VERSION } = await import('./dist/combat.mjs');
   const s = withFirewall();
   Object.assign(s, { version: 29, configsOwned: ['stateful', 'triage'], configsKnown: ['stateful', 'triage', 'beacon'], configs: { firewall: 'stateful' } });
   s.services = { ...s.services, tarpit: 2, honeypot: 1 };
-  const credits = s.server.credits;
+  const credits = s.server.credits, comps = s.components || 0;
   const t = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(t.version, SAVE_VERSION);
   assert.deepEqual(t.configsOwned, []); assert.deepEqual(t.configsKnown, [], 'configs are gone, Triage too');
@@ -45,8 +45,8 @@ test('configs are gone (a save that owned one gets its credits back), and the wa
   assert.ok(!t.services.tarpit && !t.services.honeypot);
   const { CRAFT_REFUND } = await import('./dist/progression.mjs');
   assert.equal(t.server.credits, credits + 2 * 250 + 2 * FILTER_BAY + CRAFT_REFUND.filter(1), 'stateful and triage refunded, and (v34) the Filter Bay and the Hot-patcher come back as what they cost, the filter recipe one taught as credits (v47)');
-  const stats = t.filters.held.map((f) => Object.keys(f.stats));
-  assert.ok(stats.some((k) => k.includes('tarpit')) && stats.some((k) => k.includes('evasion')), 'each retired service comes back as a filter');
+  assert.equal(t.filters, undefined, 'the filters they once became are gone too');
+  assert.ok(t.components > comps, 'scrapped for components');
 });
 
 // Payloads, held hubs and swarms are cut (docs/factions-plan.md 10): a held hub is paid out once, with wick's letter.

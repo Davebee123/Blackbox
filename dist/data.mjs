@@ -181,17 +181,11 @@ export const CONFIG = {
     travelMs: 2 * 60000, // from a floor-1 server; +1 minute per floor down (perFloorMs)
     perFloorMs: 60000,
     maxTickMs: 5000, // a long gap (closed tab, sleep) counts as this much
-    // The wall: your Firewall rating vs the invader's strength (both 100 × line(level), the level line: data.mjs).
-    wall: 0.75, // rating with no Firewall service (the Firewall's versions set 1, 1.2, 1.45)
-    block: 1.2, // rating/strength at or above: blocked at the wall
-    breach: 0.8, // at or below: breach. In between: siege.
-    mutated: 1.1, // a mutated invader is this much stronger
-    chip: 1, // % of max Integrity a breach takes per minute (a siege less, down to 0 at the block line)
-    grind: [4, 20], // % of the invader a siege wears down per minute, from the breach line to the block line
-    blockedXp: 0.25, // share of a kill's XP when the wall stops one (plus one salvage)
+    mutated: 1.1, // a mutated invader is built this much stronger (invasion.mjs strength)
+    chip: 1, // % of max Integrity an invasion at HOME takes per minute
   },
   // Resting: Integrity back per minute at home, out of a fight: empty to full in 5 minutes, offline too, at half that
-  // while an invasion is contested or breaching at your wall. Or pay to top up (topUp above).
+  // while an invasion is at HOME. Or pay to top up (topUp above).
   signalRest: 0.2,
   booster: { restore: 0.5 }, // Integrity booster (retired: no longer crafted; ones already carried still work on a run)
   // The rogue server: where you go to fight from the start. Viruses sit in its folders at
@@ -346,7 +340,7 @@ export const DAEMONS = {
 // What a kill's old daemon drop became (a daemon from a vault became a code cache, run.mjs backup.bin): an Exploit,
 // at the same odds, from a kill and from a guard.
 export const SPARE_EXPLOIT = { home: 0.0025, guard: 0.01 };
-export const DAEMON_DROP = { you: 0.35, intercept: 0.5, wall: 0.15, capture: 1, pity: 0.05, earlier: 0.25, volatile: 0.5 }; // volatile: a Volatile server's invader you kill (specials.mjs)
+export const DAEMON_DROP = { you: 0.35, intercept: 0.5, capture: 1, pity: 0.05, earlier: 0.25, volatile: 0.5 }; // volatile: a Volatile server's invader you kill (specials.mjs)
 // A unit of code at a level: what a point of invasion bounty pays (invasion.mjs), what a scrapped daemon gives,
 // and what the wall's prices count in (firewall.mjs: its tiers from +3).
 export const codeUnit = (level) => 4 + Math.floor(Math.max(1, level) / 3);

@@ -1,13 +1,12 @@
 // Daemons (daemons.mjs, data.mjs DAEMONS): many and weaker, five bands of eight, an item level each and no versions;
-// only invasions drop them (35% your kill, 50% an intercept, 15% the wall, a capture always, with pity); slots 2,
-// +1 at 15, 30 and 45, Operators +1; the wall priced in code; and old saves.
+// only invasions drop them (35% your kill, 50% an intercept, a capture always, with pity); slots 2,
+// +1 at 15, 30 and 45, Operators +1; and old saves.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, restore, selectEncounter, part, syncServer, daemonSlots, gainDaemon, daemonLevel } from './dist/combat.mjs';
 import { DAEMONS, DAEMON_DROP, DAEMON_BANDS as BANDS, bandDaemons, daemonN, daemonBand, codeUnit, CONFIG, power } from './dist/data.mjs';
 import { rollDaemon, daemonText } from './dist/daemons.mjs';
 import { tickNetwork, daemonChance, daemonDrop, bountyOf } from './dist/invasion.mjs';
-import { tierCost, fwOf, TIERS } from './dist/firewall.mjs';
 import { layoutOf, fileInfo } from './dist/run.mjs';
 import { TOOLS, CHASE } from './dist/store.mjs';
 import { FACTIONS } from './dist/factions.mjs';
@@ -23,15 +22,14 @@ const MIN = 60000;
 const code = (s) => ['cipher', 'worm', 'kernel'].reduce((n, k) => n + (s.materials?.[k] || 0), 0);
 const owned = (s) => Object.keys(s.daemonLv || {}).filter((id) => s.daemonLv[id] > 0);
 
-// Two servers at a level, a wall pinned at fw, the clock at 0 (invasion-kinds.test.mjs's world).
-function world({ level = 8, fw = 0 } = {}) {
+// Two servers at a level, the clock at 0 (invasion-kinds.test.mjs's world).
+function world({ level = 8 } = {}) {
   const s = fresh();
   command(s, 'developer location worm');
   command(s, 'developer location ransomware');
   command(s, 'developer level ' + level); // after the finds, so the level-4 breadcrumb doesn't add a third
   for (const l of s.locations) Object.assign(l, { level, depth: 1, runs: 1 }); // connected: they send invasions
   s.hidden = []; // just the two: no unknown servers behind them (floors.mjs links each to its ?s)
-  s.firewall = { pin: fw, plus: 0, frag: 0, defragUntil: 0 };
   syncServer(s);
   s.server.integrity = s.server.max;
   s.clock = 0;
@@ -126,36 +124,28 @@ test('band pools: an invasion drops its band\'s daemons, now and then an earlier
   assert.ok(mid.every((b) => b <= 3) && mid.filter((b) => b === 3).length > 300);
 });
 
-test('drop odds by how it was stopped: your kill 35%, an intercept 50%, the wall 15%, a capture always; each miss raises the next', () => {
+test('drop odds by how it was stopped: your kill 35%, an intercept 50%, a capture always; each miss raises the next', () => {
   const s = fresh();
   assert.equal(daemonChance(s, 'you'), 0.35);
   assert.equal(daemonChance(s, 'intercept'), 0.5);
-  assert.equal(daemonChance(s, 'wall'), 0.15);
   assert.equal(daemonChance(s, 'capture'), 1);
   // Bad-luck protection: a miss raises the next chance, a drop resets it.
   s.rng = 7;
   const inv = { level: 12, family: 'worm' };
   let misses = 0;
-  while (!daemonDrop(s, inv, 'wall')) { misses++; assert.equal(s.pity.daemon, misses); assert.ok(daemonChance(s, 'wall') > 0.15); }
+  while (!daemonDrop(s, inv, 'you')) { misses++; assert.equal(s.pity.daemon, misses); assert.ok(daemonChance(s, 'you') > 0.35); }
   assert.equal(s.pity.daemon, 0, 'reset by a drop');
   assert.equal(owned(s).length, 1);
   assert.equal(daemonLevel(s, owned(s)[0]), 12, 'at the invasion\'s level');
-  // Over many stops at the wall, about one in five leaves one (15% and the pity); never a long dry run.
+  // Over many kills, about two in five leave one (35% and the pity); never a long dry run.
   const t = fresh(); t.rng = 99;
   let got = 0, dry = 0, worst = 0;
-  for (let i = 0; i < 600; i++) { if (daemonDrop(t, inv, 'wall')) { got++; worst = Math.max(worst, dry); dry = 0; } else dry++; }
-  assert.ok(got / 600 > 0.18 && got / 600 < 0.3, `${got} in 600`);
-  assert.ok(worst <= 17, `at most ${worst} misses in a row: 15% + 5% a miss reaches 100% by 17`);
+  for (let i = 0; i < 600; i++) { if (daemonDrop(t, inv, 'you')) { got++; worst = Math.max(worst, dry); dry = 0; } else dry++; }
+  assert.ok(got / 600 > 0.35 && got / 600 < 0.55, `${got} in 600`);
+  assert.ok(worst <= 13, `at most ${worst} misses in a row: 35% + 5% a miss reaches 100% by 13`);
 });
 
-test('the wall: a block rolls 15% for a daemon; your kill 35%; a champion always leaves one, at its level', () => {
-  const s = world({ fw: 40 });
-  s.pity = { daemon: 99 }; // a sure roll, to see where it lands
-  s.net.next = 0;
-  wait(s, 5000 + 5 * MIN);
-  assert.equal(s.invasion, null, 'stopped at the wall');
-  assert.equal(owned(s).length, 1, 'a block can leave a daemon');
-  assert.equal(daemonLevel(s, owned(s)[0]), 8);
+test('a champion always leaves a daemon, at its level', () => {
   const c = world();
   invade(c, 'champion');
   assert.ok(bountyOf(c).capture);
@@ -197,19 +187,6 @@ test('only invasions drop daemons: no vault daemon.exe, no kill or guard drops, 
   for (const f of Object.keys(FACTIONS)) assert.ok(!CHASE[f].some(([id]) => id === 'daemon'), `${f} sells none`);
   assert.ok(!('daemon' in REWARDS), 'a contract cannot pay one');
   assert.ok(!JSON.stringify(STORY).includes('"daemon"'), 'nor can the storyline');
-});
-
-test('the wall is priced in code: tiers from +3, in units of what invasions pay; no signatures anywhere', () => {
-  const B = 12, u = codeUnit(B);
-  for (let t = 1; t <= TIERS; t++) assert.equal(tierCost(t, B).sigs, undefined);
-  assert.equal(tierCost(4, B).worm - Math.ceil(4 * (1 + B / 10)), 2 * u, '+4: two units more of each code');
-  const all = Array.from({ length: TIERS }, (_, i) => tierCost(i + 1, B)).reduce((n, c) => n + c.cipher + c.worm + c.kernel, 0);
-  const raider = { kind: 'raider', bounty: 2, level: B + 2, family: 'worm' };
-  const per = bountyOf(fresh(), raider).now;
-  assert.ok(all / per > 25, `a full wall is a long code goal: ${all} code, ${Math.round(all / per)} raiders' bounties`);
-  const s = fresh();
-  fwOf(s).pin = B;
-  assert.equal(s.sigs, undefined, 'a new save has none');
 });
 
 test('the Daemons tab: your party and its slots, the bench, and every daemon on the roster with ??? for the unfound', () => {
@@ -276,7 +253,7 @@ test('old saves: versioned daemons become levels from their version and yours; s
   old.sigs = 10;
   old.materials = { cipher: 0, worm: 0, kernel: 0, exploit: 0 };
   command(old, 'developer location worm');
-  Object.assign(old.locations[0], { level: 14, runs: 1 }); // connected: the wall's base follows it
+  Object.assign(old.locations[0], { level: 14, runs: 1 }); // connected: the old wall's base followed it
   const r = restore(JSON.parse(JSON.stringify(old)));
   assert.equal(r.daemonsOwned, undefined, 'the old field is gone');
   assert.deepEqual(r.daemonLv, { sweeper: 16, cron: 20, watchman: 18, stall: 16 }, 'v3 your level, v2 two under, v1 four under (the Tracer was the Stall)');
