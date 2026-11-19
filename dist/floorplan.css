@@ -15,6 +15,12 @@
 
 /* ---- the strip: the server | Signal | Rooms | keys, hunter, pack | boss rule, scripts ---- */
 .fp-hud { grid-column: 1 / -1; position: relative; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s4) var(--s5); padding: var(--s4) var(--s6); background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-card); }
+/* Desktop: wider gaps, a hairline between the strip's groups (not before the tools, which sit at the right). */
+@media (min-width: 901px) {
+  :root:not([data-form='phone']) .fp-hud { column-gap: var(--s7); }
+  :root:not([data-form='phone']) .fp-hud > :not(.fp-id, .fp-tools, template, script) { position: relative; }
+  :root:not([data-form='phone']) .fp-hud > :not(.fp-id, .fp-tools, template, script)::before { content: ''; position: absolute; left: calc(var(--s7) / -2); top: 2px; bottom: 2px; width: 1px; background: var(--line-strong); pointer-events: none; }
+}
 .fp-id { display: inline-flex; align-items: baseline; gap: var(--s3); color: var(--amber-soft); cursor: help; min-width: 0; }
 .fp-id .ico { align-self: center; }
 .fp-id b { font: 600 13px var(--mono); letter-spacing: 1.5px; color: var(--bright); white-space: nowrap; }
@@ -26,9 +32,6 @@
 .fp-sig.mid .sigbar { border-color: var(--next); } .fp-sig.mid .sigbar span { background: var(--next); } .fp-sig.mid strong { color: var(--next); }
 .fp-sig.low .sigbar { border-color: var(--hot); } .fp-sig.low .sigbar span { background: var(--hot); } .fp-sig.low strong { color: var(--hot); }
 .fp-prog { display: inline-flex; align-items: center; gap: var(--s3); font-variant-numeric: tabular-nums; cursor: help; }
-.fp-prog .pbar { position: relative; width: 80px; height: 7px; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--inset); overflow: hidden; }
-.fp-prog .pbar span { position: absolute; inset: 0 auto 0 0; background: var(--you); }
-.fp-prog .pbar i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--muted); }
 .fp-prog b { font: 600 15px var(--mono); color: var(--bright); }
 .fp-mapped { font: 700 10px var(--mono); letter-spacing: 1px; color: var(--you); border: 1px solid var(--you); padding: 0 4px; border-radius: var(--r-tag); }
 .fp-stat { display: inline-flex; align-items: center; gap: var(--s3); font-variant-numeric: tabular-nums; cursor: help; min-width: 0; }
