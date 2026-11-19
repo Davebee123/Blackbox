@@ -43,7 +43,7 @@ import { PICKED as SOUND_STYLE, hasSound } from './abilitysound.mjs';
 import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, idOfName, winningBreak, slowAt, SLOW, levelOf as afxLevel } from './abilityfx.mjs';
 import { tierOf as masteryTier } from './mastery.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
-import { recapMarkup } from './recap.mjs';
+import { restoreMarkup, foldMarkup } from './recap.mjs';
 import { createLash, shakeOf, SHAKE } from './lash.mjs';
 import { createChipFx, chipStrike, chipTheme, STRIKES, STRIKE_PLAN } from './chipfx.mjs';
 import { ATTACKS, OWN_PLAN } from './virussound.mjs';
@@ -85,7 +85,7 @@ import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
 import { playRoomFx } from './roomfx.mjs';
-import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, whenConnected, playHangup, stopHangup, whenHome } from './bootfx.mjs';
+import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, whenConnected, playHangup, stopHangup, whenHome, playReboot, REBOOT } from './bootfx.mjs';
 let bootFor = null; // the fight the screen last booted into (go)
 import { startTraffic } from './traffic.mjs';
 import { watchPackets, shipOf } from './mapmotion.mjs';
@@ -1136,22 +1136,21 @@ function receiptCard(e, events) {
   const name = campaign.locations?.find((l) => l.id === e.location)?.name || '';
   showGain(`${name} · Taken over`, '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code'].includes(x.type) && x.id > e.id - 6)), false, V.receiptLead(campaign, e.receipt), false);
 }
-// Losing a run: how it went (the death recap over the last cycles: recap.mjs), what took you out, what the visit lost
-// (visit.mjs: undone, struck through), and when you can go back.
+// Losing a run, folded (recap.mjs): the image you're back to (visit.mjs: the visit undone, struck through) and how long
+// the net ran on; what took you out as one row that opens on the death recap; and when you can go back.
 function lossCard(e) {
   const clock = (ms) => `${Math.floor(ms / 60000)}:${String(Math.ceil((ms % 60000) / 1000) % 60).padStart(2, '0')}`;
   const max = maxSignal(campaign), sig = signalNow(campaign), need = Math.ceil(max * CONFIG.zone.minSignal);
-  const v = e.reverted ? e.visit || { rooms: 0, xp: 0, files: 0 } : null, n = (k, one, many) => `${(v[k] || 0).toLocaleString('en-US')} ${v[k] === 1 ? one : many}`;
-  const undone = v ? `<p class="sp-undone" title="${V.esc('This visit: Undone by the disconnect. You are back to when you connected, Integrity and all.')}"><small>back to when you connected</small>${[n('rooms', 'room', 'rooms'), n('xp', 'XP', 'XP'), n('files', 'file', 'files')].map((x) => `<s>${V.esc(x)}</s>`).join('')}</p>` : '';
+  const fold = foldMarkup(e.recap, e.by);
   const rows = [
-    { kind: 'lost', label: e.by ? `Taken out by ${e.by}` : (e.reason || 'Integrity lost'), qty: '', text: 'Integrity lost' },
+    ...(fold ? [] : [{ kind: 'lost', label: e.by ? `Taken out by ${e.by}` : (e.reason || 'Integrity lost'), qty: '', text: 'Integrity lost' }]),
     ...(e.lost ? [{ kind: 'lost', label: 'Unbanked files', qty: `−${e.lost}`, text: `${e.lost} files lost` }] : []),
     ...(e.failed || []).map((t) => ({ kind: 'lost', label: `Contract failed: ${t}`, qty: '', text: `Contract failed: ${t}` })), // an Install job's item went with the pack (mail.mjs)
   ];
   // One clock: you can go back once both the reconnect wait and your Integrity allow it, so the later of the two.
   const wait = Math.max(e.relockMs || 0, sig < need ? ((need - sig) / (CONFIG.signalRest * max)) * 60000 : 0);
   if (wait > 0) rows.push({ kind: 'time', label: 'Reconnection possible in', qty: clock(wait), text: `Reconnection possible in ${clock(wait)}` });
-  showGain(v ? 'No carrier' : 'Disconnected', e.where || '', rows, false, undone + recapMarkup(e.recap));
+  showGain(e.reverted ? 'No carrier' : 'Disconnected', e.where || '', rows, false, restoreMarkup(e, max, hooks.now?.() ?? Date.now()) + fold);
   $('gain').classList.add('loss');
 }
 function hideGain() { clearTimeout(gainTimer); const el = $('gain'); if (el && !el.hidden) { el.hidden = true; el.innerHTML = ''; } const next = gainQueue.shift(); if (next) setTimeout(() => showGain(...next), 120); }
@@ -1406,10 +1405,10 @@ function react(events) {
       case 'escaped': flash('UPLOAD COMPLETE'); feel.add('nope', null); hideTip(false); setTimeout(() => { if (!active(campaign) && campaign.rooms) go('rooms', true); }, 1600); break; // a runner got away (the Exfil's upload completed): back to the rooms
       case 'floor': flash(`FLOOR ${e.floor}`); notice(e.message); break; // floors.mjs: you took an exit
       case 'tick-wasted': feel.add('chip', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, '−tick'); break;
-      case 'disconnected': // the board holds on the hit, the screen drops to NO CARRIER, the map comes up under it, then the card (no tip over it)
-        feel.add('lose', null); hideTip(false); tipWait = performance.now() + NC.done + 3400;
+      case 'disconnected': // the board holds on the hit, the screen drops to NO CARRIER, the map comes up under it, your server reboots, then the card (no tip over it)
+        feel.add('lose', null); hideTip(false); tipWait = performance.now() + NC.done + REBOOT.done + 3400;
         lossHold = true;
-        noCarrier($('app'), { where: e.where || '', motion: campaign.settings.motion !== false, onSwap: () => { lossHold = false; go('map'); }, onDone: () => lossCard(e) });
+        noCarrier($('app'), { where: e.where || '', motion: campaign.settings.motion !== false, onSwap: () => { lossHold = false; go('map'); }, onDone: () => reboot(e) });
         break;
     }
     if (e.type === 'located') { notice(e.message); mapSel = e.location; }
@@ -1714,6 +1713,14 @@ function connectTo(e) {
 // Jacking out (bootfx.mjs, the Carrier backwards): from the rooms page your room locks teal and the rooms close in a
 // circle onto the server's node on the map; your signal runs home along a teal line. Screen effects off or Motion off:
 // straight to the map.
+// A disconnect, after NO CARRIER (bootfx.mjs playReboot): your server reboots from its image on the map, then the
+// card. Screen effects off or Motion off, or not on the map: the card at once.
+function reboot(e) {
+  if (!dialFx() || module !== 'map' || !e.reverted) return lossCard(e);
+  const sel = e.out && `[data-select="${CSS.escape(e.out)}"]`, shown = (q) => [...$('page-view').querySelectorAll(q)].find((g) => g.getBoundingClientRect().width);
+  const when = e.image?.at ? new Date(e.image.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '';
+  playReboot($('app'), () => (sel ? shown(`${sel} .core`) || shown(sel) : null), when, (e.image?.integrity || 0) / Math.max(1, maxSignal(campaign)), () => lossCard(e));
+}
 function hangUp(events) {
   const e = events.findLast((x) => x.type === 'jacked-out'), shown = (q) => [...$('page-view').querySelectorAll(q)].find((g) => g.getBoundingClientRect().width);
   const fx = dialFx(), here = fx && module === 'rooms' ? shown('.fp-room.here') : null;

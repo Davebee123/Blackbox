@@ -56,7 +56,9 @@ test('a click or a key during the static skips to the card, once', async (t) => 
 test('app.js: a disconnect plays NO CARRIER, holds the screen on the board, and nothing else jumps to the map first', () => {
   const app = readFileSync('dist/app.js', 'utf8');
   assert.match(app, /case 'disconnected':[\s\S]{0,400}lossHold = true;\s*noCarrier\(/);
-  assert.match(app, /onSwap: \(\) => \{ lossHold = false; go\('map'\); \}, onDone: \(\) => lossCard\(e\)/);
+  assert.match(app, /onSwap: \(\) => \{ lossHold = false; go\('map'\); \}, onDone: \(\) => reboot\(e\)/);
+  assert.match(app, /function reboot\(e\) \{\n  if \(!dialFx\(\) \|\| module !== 'map' \|\| !e\.reverted\) return lossCard\(e\);/, 'your server reboots on the map, then the card; no effects: the card at once');
+  assert.match(app, /playReboot\([^\n]*\(\) => lossCard\(e\)\);/);
   assert.match(app, /function render\(force = false\) \{\n  if \(lossHold\) return;/);
   assert.doesNotMatch(app, /e\.type === 'disconnected'\) && !campaign\.roomsPlay\) go\('map'/, 'roomsDone must not jump to the map on a disconnect');
   assert.match(readFileSync('dist/index.html', 'utf8'), /href="nocarrier\.css"/);

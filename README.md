@@ -223,7 +223,7 @@ comment saying what it does.
 | `dist/casing.mjs`, `dist/casing-view.mjs`, `dist/casing.css` | Casing cosmetics: the monitor color and plate, stickers anywhere on its plastic, props on the desk or on top. Rig → Casing is a rail of sections beside the open one's pane. |
 | `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on Rig → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |
 | `dist/house.mjs`, `dist/house-view.mjs`, `dist/house.css`, `dist/content/furniture.mjs` | Your house on Rig → **House**: floors opened by achievement points, furniture from achievements, placed by click. |
-| `dist/recap.mjs` | The death recap on the Disconnected card. |
+| `dist/recap.mjs` | The No carrier card's restore line and the death recap folded under it. |
 | `dist/uiscale.mjs` | UI scale: the whole screen drawn larger or smaller. |
 | `dist/form.mjs`, `dist/phone-shell.mjs`, `dist/sheet.mjs`, `dist/phone.css` | The phone: the one "is this a phone" answer (`<html data-form>`), its tab bar and More, the one bottom sheet (every pop-up on a phone: app.js `phPops` lifts each into it), every phone rule, the fight on one screen, the maps full bleed (docs/phone-plan.md). |
 
@@ -247,7 +247,7 @@ comment saying what it does.
 | `dist/warm.mjs` | The loading screen's warm-ups (docs/performance-plan.md batch 6), run under the power-up's Trace: the samples (`sound.mjs` warmBank), the hall, noises and fight music's reverb (warmTextures), the chip effects' defs. |
 | `dist/screenfx.mjs`, `dist/screenfx.css` | Screen effects: light on the glass around the game, never on it. |
 | `dist/graphics.mjs` | The Graphics settings: presets (Auto by device), the rows that cost looks, `settings.graphics` and its migration. |
-| `dist/bootfx.mjs`, `dist/bootfx.css` | A new fight: the screen boots into it, the virus first; leaving a won one, a channel cut; connecting to a server, the carrier; jacking out, the carrier backwards. |
+| `dist/bootfx.mjs`, `dist/bootfx.css` | A new fight: the screen boots into it, the virus first; leaving a won one, a channel cut; connecting to a server, the carrier; jacking out, the carrier backwards; a disconnect, your server rebooting on the map. |
 | `dist/window.mjs`, `dist/districts.mjs` | The slum outside the window behind the monitor, and its weather (loaded only on a desktop); its districts as data. |
 | `dist/abilityfx.mjs`, `dist/abilityfx-table.mjs`, `dist/abilityfx-playtest.mjs` | Ability effects on the board, the table of every ability's effect, and its playtest. |
 | `dist/abilitylight.mjs` | What an ability effect does where it lands, drawn in light: flashes, shock rings, cracks, sparks, flames, the comet, a status cashing in. |
@@ -258,7 +258,7 @@ comment saying what it does.
 | `dist/boardfx.mjs` | The board's floor motion: a new chip's name typed in or flipped in, a moving chip flapping once; the spoils card arriving the floor's way. |
 | `dist/ground.mjs` | The floor's material under the rooms map: a texture in the map's SVG, clear of rooms and links. |
 | `dist/boss-art.mjs` | Each boss's own body for it (`BOSS_SHAPE`, the Resident's by family): its parts are the model's regions, the ones that join mid-fight modelled from the start. A boss faces you (`BOSS_SWING`) and is fitted to the window. |
-| `dist/nocarrier.mjs`, `dist/nocarrier.css` | Losing a fight: static and NO CARRIER, then the Disconnected card. |
+| `dist/nocarrier.mjs`, `dist/nocarrier.css` | Losing a fight: static and NO CARRIER, then the reboot and the No carrier card. |
 | `dist/class-emblems.mjs` | The class picker's ASCII emblems. |
 | `dist/pickfx.mjs` | The class picker's border lights (Infiltrator's, Operator's) run round the picked square as transform keyframes, rebuilt when it changes size. |
 | `dist/feel.mjs` | The feedback language: each kind of event's one signature in motion and sound, its look put up in one batch a frame. |

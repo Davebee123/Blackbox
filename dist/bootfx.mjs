@@ -380,3 +380,106 @@ export function playHangup(app, held, node) {
     addEventListener('keydown', end, true); addEventListener('pointerdown', end, true);
   }
 }
+
+// A disconnect (app.js, after NO CARRIER clears onto the map): your server reboots from its image. The map dims round
+// HOME and HOME goes dark; your signal runs home from the server you were on (the Carrier backwards); HOME's outline
+// draws itself round, side by side (the power-on's Trace), REBOOT under it; then HOME lights, its bar fills to the
+// Integrity you're back to and the light leaks round the outline, the image's time under it. Transform and opacity
+// only; any key or click ends it. HOME not on the map: nothing plays, the card comes at once.
+// When each beat comes, in ms; without the line everything comes `trace` sooner.
+export const REBOOT = { dim: 0, dimFor: 220, wire: 160, runFor: 420, trace: 600, side: 110, lit: 1080, litFor: 220, fillFor: 480, done: 1900 };
+let rebooting = null;
+export const rebootingNow = () => !!rebooting;
+export function stopReboot() { rebooting?.(); }
+
+// Play it. app: #app, with the map drawn in #page-view; node: finds the node of the server you were on, or null;
+// image: the image's time as the card says it ('' for none); frac: the Integrity you're back to, of your max;
+// onDone: runs once it's over (or at once, with no HOME). Nothing on the map itself is touched (it may redraw under
+// it): HOME's dark and its bar filling are layers over it.
+export function playReboot(app, node, image = '', frac = 1, onDone = () => {}) {
+  stopReboot();
+  const T = REBOOT, $ = (q) => app.querySelector(q), anims = [], nodes = [];
+  const shown = (root, q) => [...(root?.querySelectorAll(q) || [])].find((g) => g.getBoundingClientRect().width);
+  const page = $('#page-view'), hit = shown(page, '[data-select="server"] .mhit'), home = hit?.closest('[data-select="server"]');
+  if (!home) return onDone();
+  const play = (el, frames, delay, duration, easing = 'linear') => { if (el) anims.push(el.animate(frames, { delay, duration, easing, fill: 'both' })); };
+  const add = (parent, cls, text = '') => { const d = document.createElement('div'); d.className = cls; d.setAttribute('aria-hidden', 'true'); if (text) d.textContent = text; parent.append(d); nodes.push(d); return d; };
+  const mid = (r) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+  const top = add(app, 'bootfx'), lr = top.getBoundingClientRect(), lk = lr.width / (top.offsetWidth || lr.width) || 1;
+  const pr = page.getBoundingClientRect();
+  const pane = add(top, 'bootfx-page');
+  Object.assign(pane.style, { left: `${(pr.left - lr.left) / lk}px`, top: `${(pr.top - lr.top) / lk}px`, width: `${pr.width / lk}px`, height: `${pr.height / lk}px` });
+  const local = (p) => ({ x: (p.x - pr.left) / lk, y: (p.y - pr.top) / lk });
+  const hm = hit.getBoundingClientRect(), hc = local(mid(hm)), hr = hm.width / 2 / lk;
+  const sub = home.querySelector('.msub')?.getBoundingClientRect(), capY = sub?.height ? (sub.bottom - pr.top) / lk + 6 : hc.y + hr * 3;
+
+  // The map dims round HOME (a still gradient, faded in and out), HOME goes dark and its bar empties.
+  const dim = add(pane, 'bootfx-dim');
+  dim.style.background = `radial-gradient(circle at ${hc.x}px ${hc.y}px, transparent ${hr * 2.2}px, rgba(9, 6, 3, 0.72) ${hr * 5}px)`;
+  play(dim, [{ opacity: 0 }, { opacity: 1, offset: T.dimFor / T.done }, { opacity: 1, offset: 0.85 }, { opacity: 0 }], T.dim, T.done);
+  const n = node?.(), nr = n?.getBoundingClientRect(), line = nr?.width && carrierLine(mid(hm), mid(nr), hm.width / 2, Math.min(nr.width, nr.height) * 0.35);
+  const at = (ms) => Math.max(0, ms - (line ? 0 : T.trace - T.wire));
+  // HOME dark under a cover until it lights; its bar empty under another, a teal bar filling over it once lit.
+  const rect = (r, pad = 0) => ({ left: `${(r.left - pr.left) / lk - pad}px`, top: `${(r.top - pr.top) / lk - pad}px`, width: `${r.width / lk + pad * 2}px`, height: `${r.height / lk + pad * 2}px` });
+  const label = home.querySelector('.msub')?.getBoundingClientRect() || home.querySelector('.mlabel')?.getBoundingClientRect(), track = home.querySelector('.hb-track')?.getBoundingClientRect();
+  const top0 = Math.min(hm.top, label?.top ?? hm.top), bottom0 = Math.max(hm.bottom, label?.bottom ?? hm.bottom), left0 = Math.min(hm.left, label?.left ?? hm.left), right0 = Math.max(hm.right, label?.right ?? hm.right);
+  const cover = add(pane, 'bootfx-cover');
+  Object.assign(cover.style, rect({ left: left0, top: top0, width: right0 - left0, height: bottom0 - top0 }, 4));
+  play(cover, [{ opacity: 0.8 }, { opacity: 0.8, offset: at(T.lit) / (at(T.lit) + T.litFor) }, { opacity: 0 }], 0, at(T.lit) + T.litFor, 'ease-out');
+  if (track?.width) {
+    const empty = add(pane, 'bootfx-cover'), bar = add(pane, 'bootfx-bar');
+    Object.assign(empty.style, rect(track, 1)); Object.assign(bar.style, rect({ left: track.left, top: track.top, width: track.width * Math.max(0, Math.min(1, frac)), height: track.height }));
+    play(empty, [{ opacity: 1 }, { opacity: 1 }], 0, at(T.done));
+    play(bar, [{ transform: 'scaleX(0)', opacity: 1 }, { transform: 'scaleX(1)', opacity: 1 }], at(T.lit), T.fillFor, 'cubic-bezier(.3,0,.2,1)');
+  }
+
+  // Your signal runs home from the server you were on.
+  if (line) {
+    const len = line.len / lk, a = line.angle + Math.PI, s = local({ x: line.x + Math.cos(line.angle) * line.len, y: line.y + Math.sin(line.angle) * line.len });
+    const w = add(pane, 'bootfx-wire'), d = add(pane, 'bootfx-dot'), turn = `rotate(${a}rad)`;
+    Object.assign(w.style, { left: `${s.x}px`, top: `${s.y - 1}px`, width: `${len}px` });
+    play(w, [{ transform: `${turn} scaleX(0)` }, { transform: `${turn} scaleX(1)` }], T.wire, T.runFor, RUN);
+    play(w, [{ opacity: 1 }, { opacity: 1, offset: 0.6 }, { opacity: 0 }], T.wire, T.runFor + 300);
+    Object.assign(d.style, { left: `${s.x - 4}px`, top: `${s.y - 4}px` });
+    play(d, [{ transform: 'translate(0, 0)' }, { transform: `translate(${Math.cos(a) * len}px, ${Math.sin(a) * len}px)` }], T.wire, T.runFor, RUN);
+    play(d, [{ opacity: 1 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }], T.wire, T.runFor + 100);
+  }
+  // The Trace: the outline draws itself round HOME, top, right, bottom, left, each side growing from the last corner.
+  const b = hr * 0.95, x0 = hc.x - b, y0 = hc.y - b, size = b * 2;
+  const sides = [
+    { left: x0, top: y0 - 1, width: size, height: 2, o: '0 50%', f: 'scaleX' },
+    { left: x0 + size - 1, top: y0, width: 2, height: size, o: '50% 0', f: 'scaleY' },
+    { left: x0, top: y0 + size - 1, width: size, height: 2, o: '100% 50%', f: 'scaleX' },
+    { left: x0 - 1, top: y0, width: 2, height: size, o: '50% 100%', f: 'scaleY' },
+  ];
+  sides.forEach((q, i) => {
+    const e = add(pane, 'bootfx-edge');
+    Object.assign(e.style, { left: `${q.left}px`, top: `${q.top}px`, width: `${q.width}px`, height: `${q.height}px`, transformOrigin: q.o });
+    play(e, [{ transform: `${q.f}(0)` }, { transform: `${q.f}(1)` }], at(T.trace + i * T.side), T.side, 'linear');
+    play(e, [{ opacity: 1 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }], at(T.trace + i * T.side), T.done - T.trace - i * T.side);
+  });
+  // Lit: the light leaks round the outline.
+  const glow = add(pane, 'bootfx-leak');
+  Object.assign(glow.style, { left: `${x0 - 4}px`, top: `${y0 - 4}px`, width: `${size + 8}px`, height: `${size + 8}px` });
+  play(glow, [{ opacity: 0 }, { opacity: 1, offset: 0.3 }, { opacity: 0 }], at(T.lit), T.done - T.lit);
+  // Under HOME: REBOOT while it draws, then the image's time.
+  const cap = (text, from, to, cls = '') => {
+    const c = add(pane, `bootfx-cap${cls}`, text);
+    Object.assign(c.style, { left: `${hc.x - 80}px`, top: `${capY}px` });
+    play(c, [{ opacity: 0 }, { opacity: 1, offset: 0.12 }, { opacity: 1, offset: 0.85 }, { opacity: 0 }], from, to - from);
+  };
+  cap('reboot', at(T.trace), at(T.lit), ' you');
+  if (image) cap(`image ${image}`, at(T.lit), at(T.done));
+
+  let timer = 0;
+  const end = () => {
+    if (rebooting !== end) return;
+    rebooting = null; clearTimeout(timer);
+    removeEventListener('keydown', end, true); removeEventListener('pointerdown', end, true);
+    anims.forEach((x) => x.cancel()); nodes.forEach((x) => x.remove());
+    onDone();
+  };
+  rebooting = end;
+  timer = setTimeout(end, at(T.done));
+  addEventListener('keydown', end, true); addEventListener('pointerdown', end, true);
+}
