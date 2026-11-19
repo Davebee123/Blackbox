@@ -147,8 +147,29 @@ export function treeGraph(paths, { core = null, vaults = [], kinds = {}, labels 
   for (let p = core; p; p = p === '/' ? null : p.slice(0, p.lastIndexOf('/')) || '/') spine.unshift(idOf[p]);
   return graphOf(list, links, { core: core ? idOf[core] : null, vaults: vaults.map((v) => idOf[v]).filter(Boolean), spine: core ? spine : ['r0'] });
 }
-// SPRAWL-00: its eleven folders, RELAY-KING's /net/relay the Core.
-export const sprawlGraph = () => treeGraph(zoneRooms(), { core: KING_ROOM });
+// SPRAWL-00: a plus, an arm each way from the entry, its rooms in rings (ZONE_RING: ring 1 next to the entry, level 1,
+// a level more each ring out); RELAY-KING's Core at the tip of the top arm.
+export const SPRAWL_ARMS = [
+  [0, -1, ['/net', '/net/hub', '/net/gate', '/net/relay']], // the Core last (run.mjs KING_ROOM; a literal, as run.mjs loads after this)
+  [1, 0, ['/var', '/var/log', '/var/spool']],
+  [0, 1, ['/home', '/home/guest', '/var/cache']],
+  [-1, 0, ['/dev', '/tmp', '/srv']],
+];
+export function sprawlGraph() {
+  const list = [{ id: 'r0', kind: 'entry', x: 0, y: 0, path0: '/' }], links = [], idOf = { '/': 'r0' };
+  const deepest = Math.max(...SPRAWL_ARMS.map(([, , p]) => p.length));
+  for (let ring = 0; ring < deepest; ring++) for (const [dx, dy, paths] of SPRAWL_ARMS) {
+    const path = paths[ring];
+    if (!path) continue;
+    const id = `r${list.length}`, kind = path === KING_ROOM ? 'core' : 'process';
+    idOf[path] = id;
+    list.push({ id, kind, x: dx * (ring + 1), y: dy * (ring + 1), path0: path, seed: 1, label: null, wild: true });
+    links.push([ring ? idOf[paths[ring - 1]] : 'r0', id]);
+  }
+  const g = graphOf(list, links, { core: idOf[KING_ROOM], spine: ['r0', ...SPRAWL_ARMS[0][2].map((p) => idOf[p])] });
+  g.plus = 1; // laid out as the plus (the save migration looks for it)
+  return g;
+}
 // A SPRAWL-00 folder's room by its name, for words about where someone is (presence.mjs).
 let sprawlNames = null;
 hooks.sprawlRoomName = (folder) => (sprawlNames ||= Object.fromEntries(Object.values(sprawlGraph().rooms).map((r) => [r.path0, r.path])))[folder];
@@ -670,9 +691,10 @@ export function roomsRestore(s, was) {
     if (s.run?.rooms && s.run.loc === loc.id) { const here = g.rooms[loc.floorplan.at]; if (here) { s.run.cwd = here.path; for (const c of Object.values(s.run.crew || {})) c.cwd = here.path; } }
   }
   rogueRestore(s);
-  // SPRAWL-00 grew from six rooms to eleven: an older save's rooms are laid out again (not while you stand in them).
+  // SPRAWL-00 grew from six rooms to eleven, then became the plus: an older save's rooms are laid out again (not while
+  // you stand in them).
   const z = s.zone;
-  if (z?.floorplan && s.run?.loc !== z.id && !zoneRooms().every((p) => Object.values(z.floorplan.graph.rooms).some((r) => r.path0 === p))) delete z.floorplan;
+  if (z?.floorplan && s.run?.loc !== z.id && (!z.floorplan.graph?.plus || !zoneRooms().every((p) => Object.values(z.floorplan.graph.rooms).some((r) => r.path0 === p)))) delete z.floorplan;
   if (was >= 39) return socketRoomsRestore(s);
   if (s.run && !s.run.rooms) {
     const loc = s.run.loc === CONFIG.zone.id ? zoneOf(s) : findLocation(s, s.run.loc);

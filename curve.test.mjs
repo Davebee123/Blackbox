@@ -8,6 +8,7 @@ import { CONFIG, power, line, lift, lifted, filled, gearFill, gearTier, own, mob
 import { rollItem, uniqueItem, seeded, liftFx, curveRestore, STATS } from './dist/gear.mjs';
 import { deal } from './dist/events.mjs';
 import { zoneSpawns, ZONE_BAND, KING_ROOM } from './dist/run.mjs';
+import { SPRAWL_ARMS } from './dist/netrooms.mjs';
 import { zoneOf } from './dist/zone.mjs';
 import { benchCurve, build } from './dist/bench.mjs';
 import { at } from './balance.mjs';
@@ -140,7 +141,10 @@ test('events take their server\'s level, never yours; SPRAWL-00\'s rooms keep th
       else assert.ok(x.level >= ZONE_BAND[room][0] && x.level <= ZONE_BAND[room][1], `${room} in its band at level ${L}`);
     }
     assert.ok(zoneOf(t));
+    assert.deepEqual(SPRAWL_ARMS.map(([, , p]) => p.slice(0, 3).map((r) => sp[r].level)), SPRAWL_ARMS.map(() => [1, 2, 3]), 'a level a ring');
   }
+  const old = fresh(); zoneSpawns(old); old.zone.spawns['/net'].level = 2; // a stray rolled before the band dropped
+  assert.equal(zoneSpawns(old)['/net'].level, 1);
   assert.deepEqual([benchCurve('?bench=a&curve=8'), benchCurve('?bench=a'), benchCurve('?curve=50')], [0.08, null, null]);
 });
 

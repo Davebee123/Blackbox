@@ -33,9 +33,12 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   play(s, 'connect sprawl');
   assert.ok(s.run?.rooms && s.rooms?.world, 'a run on rooms');
   const g = s.rooms.graph;
-  assert.deepEqual(Object.values(g.rooms).filter((r) => r.path0 !== '/').map((r) => r.path0).sort(), ['/dev', '/home', '/home/guest', '/net', '/net/relay', '/srv', '/tmp', '/var', '/var/cache', '/var/log', '/var/spool']);
+  assert.deepEqual(Object.values(g.rooms).filter((r) => r.path0 !== '/').map((r) => r.path0).sort(), ['/dev', '/home', '/home/guest', '/net', '/net/gate', '/net/hub', '/net/relay', '/srv', '/tmp', '/var', '/var/cache', '/var/log', '/var/spool']);
   assert.equal(g.rooms[g.core].path0, KING_ROOM);
-  for (const [a, b] of g.links) { const pa = g.rooms[a].path0, pb = g.rooms[b].path0; assert.ok(pb.startsWith(pa === '/' ? '/' : pa + '/'), `${pa} → ${pb}: a folder next to its parent`); }
+  // A plus: every room on an arm, each a step further out than the room it hangs off, the Core at the top arm's tip.
+  for (const r of Object.values(g.rooms)) assert.ok(r.x === 0 || r.y === 0, `${r.path0} on an arm`);
+  for (const [a, b] of g.links) assert.equal(Math.abs(g.rooms[b].x) + Math.abs(g.rooms[b].y), Math.abs(g.rooms[a].x) + Math.abs(g.rooms[a].y) + 1, `${g.rooms[a].path0} → ${g.rooms[b].path0}: a ring out`);
+  assert.deepEqual([g.rooms[g.core].x, g.rooms[g.core].y], [0, -4]);
   assert.deepEqual(sprawlGraph(), g, 'the same graph every time');
   const ls = play(s, 'ls').find((e) => e.type === 'rooms-out').message;
   const net = Object.values(g.rooms).find((r) => r.path0 === '/net');
@@ -46,15 +49,16 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   const next = new Set(FP.neighbours(g, g.entry));
   assert.ok(Object.values(g.rooms).every((r) => (r.id === g.entry || next.has(r.id)) === FP.known(s, r.id)), 'the entry and its neighbours');
   assert.match(ls, /\n1  [A-Z]+\d+  Process \d  \[fight · \w+ lv \d+\]  −\d+ Integrity/); // what it is, its level, its cost
+  for (const id of Object.keys(g.rooms)) s.rooms.seen[id] ||= 'kind'; // the top arm mapped, as a walk up it would
   assert.match(play(s, 'cd net/relay').map((e) => e.message).join(' '), new RegExp(`\\w+-\\d+ holds ${net.path}`), 'what holds it stops the walk; cd still takes the folder');
   assert.equal(s.rooms.screen?.kind, 'virus', 'a virus still asks: Engage or Step back');
   play(s, 'back');
   assert.match(play(s, 'ls').find((e) => e.type === 'rooms-out').message, new RegExp(`${net.path}  \\[fight · \\w+ lv ${s.zone.spawns['/net'].level}\\]`), 'been in: discovered, at its room\'s level');
-  Object.assign(s.zone.spawns['/net'], { alive: false, respawnAt: clock + 3600000 });
+  for (const f of ['/net', '/net/hub', '/net/gate']) Object.assign(s.zone.spawns[f], { alive: false, respawnAt: clock + 3600000 });
   assert.match(play(s, 'cd /net/relay').map((e) => e.message).join(' '), /The Core is sealed\. RELAY-KING holds it from level 3/);
   // A stray: a fight, its first clear, back on its timer once you've left.
-  play(s, 'cd /'); play(s, 'cd tmp');
-  assert.equal(s.run.cwd, Object.values(g.rooms).find((r) => r.path0 === '/tmp').path);
+  play(s, 'cd /'); play(s, 'cd dev');
+  assert.equal(s.run.cwd, Object.values(g.rooms).find((r) => r.path0 === '/dev').path);
   play(s, 'attack');
   assert.ok(active(s) && s.encounter.rooms && s.encounter.ticked, 'a room fight, ticks and all');
   assert.equal(s.encounter.virus.author, null, 'SPRAWL-00\'s strays sign nothing');
@@ -69,8 +73,9 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   assert.equal(FP.isUp(s, room), true, 'back once you have left');
   // Level 3: RELAY-KING in the Core, a boss under boss rule a.
   s.hackers[s.loadout.archetype].level = 3; s.zone.spawns = {};
-  play(s, 'cd /'); play(s, 'cd net'); if (s.rooms.screen) { play(s, 'attack'); win(s); }
-  play(s, 'cd relay');
+  play(s, 'cd /');
+  for (const f of ['/net', '/net/hub', '/net/gate']) { play(s, `cd ${f}`); if (s.rooms.screen) { play(s, 'attack'); win(s); } }
+  play(s, 'cd /net/relay');
   assert.equal(s.rooms.screen?.kind, 'virus');
   play(s, 'attack');
   assert.equal(s.encounter.virus.boss, 'relayking');
@@ -286,7 +291,8 @@ test('developer bossrule a|b|c switches the rule for every boss fight on the net
   play(s, 'developer bossrule b');
   assert.equal(s.bossRule, 'b');
   s.hackers[s.loadout.archetype].level = 3;
-  play(s, 'connect sprawl'); s.zone.spawns['/net'] = { alive: false, respawnAt: clock + 1e9 };
+  play(s, 'connect sprawl'); for (const f of ['/net', '/net/hub', '/net/gate']) s.zone.spawns[f] = { alive: false, respawnAt: clock + 1e9 };
+  for (const id of Object.keys(s.rooms.graph.rooms)) s.rooms.seen[id] ||= 'kind';
   play(s, 'cd net/relay'); play(s, 'attack');
   assert.equal(s.encounter.bossRule, 'b');
 });
