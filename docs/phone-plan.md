@@ -52,7 +52,7 @@ Measured 2026-11-09 in a fight (`?playtest=random&level=12`), Playwright device 
 | Component | Desktop now | Phone |
 |---|---|---|
 | **Top strip** | three-row top bar | one 44 px row: Integrity, Signal, credits, the pager's lamp with its count. Handle, class and level move to the player card |
-| **Tab bar** | tabs in one or two rows at the top | five slots at the bottom, in thumb reach: Map (the live context in its place while there is one: a fight, a visit, a run, a breach), Mail, Loadout, Server, **More** (Codex, Rig, Settings). A tab hidden on desktop stays hidden |
+| **Tab bar** | tabs in one or two rows at the top | four slots at the bottom, in thumb reach: Map (the live context in its place while there is one: a fight, a visit, a run, an invasion at HOME), Mail, Loadout, **More** (Codex, Rig, Settings). A tab hidden on desktop stays hidden |
 | **Sheet** | four sheets and many pop-up cards | one component: peek (a line and the main action), half, full; drag down or tap outside to close. Map cards, the room pop-up, the Server panel, Comms, hub windows, the quest window |
 | **Tap for info** | hover tooltips | a tap on anything with a rule (a `title` or `data-tt` that isn't a button) shows its card in a peek sheet; a long press on a button (a key, a talent) shows its card without firing. WoW grammar, as on desktop |
 | **Prompt** | always under every page | behind a `>_` key (in a fight's tray, in More); opens with the keyboard and the suggestions |
@@ -142,8 +142,8 @@ Jack out afloat as one capsule).
 - **One sheet for every pop-up:** each is still drawn where the desktop draws it; app.js `phPops` (the `PH_POPS`
   list) lifts the element into the sheet whole, so its buttons and handlers are the desktop's, and sends it home when
   the sheet lets go. A rule's card or More takes the sheet and the pop-up comes back after. `sheet.mjs` gained
-  `through` (no scrim, above the tab bar, the page still takes taps): map cards, a room's card, the Server and
-  Daemons panels, the level-up. Modal: Comms, the datasheet, a journal, the quest's dialogue and reward.
+  `through` (no scrim, above the tab bar, the page still takes taps): map cards, a room's card, the
+  Daemons panel, the level-up. Modal: Comms, the datasheet, a journal, the quest's dialogue and reward.
 - **Map:** `view.mjs` `mapChips` and `mapRail` (the chips, and the list each opens); a card's peek is built from the
   card itself (app.js `phPeek`). The names-on-hover key is left out.
 - **Rooms:** the header is the desktop's strip restyled (`body.ph-rooms`); the top strip is away there, so More
@@ -154,5 +154,5 @@ Jack out afloat as one capsule).
 
 ## Picked (P0)
 
-Tray: two rows of four. Virus: its window top right, stepping out in its half. Tab bar: Map, Mail, Loadout, Server,
+Tray: two rows of four. Virus: its window top right, stepping out in its half. Tab bar: Map, Mail, Loadout,
 More. On its side: the phone shell, board wider. No top strip in a fight.

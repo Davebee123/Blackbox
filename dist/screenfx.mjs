@@ -115,8 +115,8 @@ export function lampsOf(s, { gate = null, now = Date.now(), until = {} } = {}) {
   const waiting = gate && gate.phase !== 'active', fighting = gate?.phase === 'active' || e?.phase === 'active';
   L.gate = { cls: fighting ? 'hot' : waiting ? 'on' : '', blink: waiting ? 'fast' : '', title: waiting ? `GATE: ${gate.virus?.name || 'an intrusion'} waiting at the gate` : fighting ? `GATE: fighting ${e?.virus?.name || gate?.virus?.name || 'an intrusion'}` : 'GATE: intrusions at your gate (clear)' };
   const st = inv?.state;
-  L.wall = !inv ? { cls: '', blink: '', title: 'WALL: invasions on your wall (quiet)' }
-    : { cls: st === 'breach' ? 'hot' : st === 'siege' ? 'on' : 'low', blink: st === 'breach' ? 'fast' : st === 'siege' ? 'slow' : '', title: `WALL: ${inv.name}${st === 'travel' ? ' on its way' : st === 'breach' ? ' breaching' : st === 'siege' ? ' contesting the wall' : `: ${st}`}` };
+  L.wall = !inv ? { cls: '', blink: '', title: 'WALL: invasions on HOME (quiet)' }
+    : { cls: st === 'travel' ? 'low' : 'hot', blink: st === 'travel' ? '' : 'fast', title: `WALL: ${inv.name}${st === 'travel' ? ' on its way' : ' at HOME'}` };
   const events = (s.events || []).length, news = (until.net || 0) > now;
   L.net = { cls: s.run ? 'you' : events || news ? 'on' : '', blink: news ? 'once' : '', title: `NET: ${s.run ? 'connected' : 'the network'}${events ? ` · ${events} event${events === 1 ? '' : 's'} up` : ''}${news ? ' · news on #net' : ''}` };
   const moving = (s.market?.transfers || []).filter((t) => t.landsAt > now).length;

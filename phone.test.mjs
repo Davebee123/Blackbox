@@ -26,7 +26,7 @@ test('every control in the tab bar and More carries a data- command', () => {
 test('every page is reachable in two taps: one on the bar, or More and one row', () => {
   const ids = (html) => [...html.matchAll(/data-module="([a-z]+)"/g)].map((m) => m[1]);
   const reach = new Set([...ids(tabBarMarkup(home)), ...ids(moreMarkup(home, { who, consortium: true }))]);
-  for (const page of ['map', 'mail', 'loadout', 'server', 'codex', 'rig', 'system', 'consortium']) assert.ok(reach.has(page), page);
+  for (const page of ['map', 'mail', 'loadout', 'codex', 'rig', 'system', 'consortium']) assert.ok(reach.has(page), page);
   assert.match(moreMarkup(home, { who }), /data-phone="prompt"/); // the command line, behind >_
   assert.match(moreMarkup(home, { who }), /data-finger="tester"/); // the player card
 });
@@ -147,12 +147,11 @@ test('the sheet: a see-through one has no scrim; closed() says when another took
 test('every pop-up is the one sheet, and the four old sheets are gone', () => {
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8'), css = readFileSync(new URL('./dist/phone.css', import.meta.url), 'utf8');
   const pops = app.slice(app.indexOf('const PH_POPS = ['), app.indexOf('let phPop = null'));
-  for (const id of ['journal', 'offer', 'quest', 'comms', 'item', 'map', 'room', 'server', 'daemon', 'levelup']) assert.match(pops, new RegExp(`\\{ id: '${id}', (host|page): `), id);
+  for (const id of ['journal', 'offer', 'quest', 'comms', 'item', 'map', 'room', 'daemon', 'levelup']) assert.match(pops, new RegExp(`\\{ id: '${id}', (host|page): `), id);
   for (const row of pops.split('\n').filter((l) => /\{ id: /.test(l))) assert.match(row, /shut: \(\) =>/, row); // each closes by hand
-  assert.match(css, /#page-view :is\(#map-pop, #fp-pop, #hsv-panel, \.dm-panel, #th-panel\)/); // at home none shows on a phone
+  assert.match(css, /#page-view :is\(#map-pop, #fp-pop, \.dm-panel, #th-panel\)/); // at home none shows on a phone
   const read = (f) => readFileSync(new URL(`./dist/${f}`, import.meta.url), 'utf8');
   assert.ok(!/\.pg-pop\.sheet/.test(read('style.css')));
-  assert.ok(!/\.hsv-panel \{[^}]*position: sticky; top: auto; bottom/.test(read('server.css')));
   assert.ok(!/\.dm-panel \{[^}]*position: fixed/.test(read('daemons.css')));
   assert.ok(!/\.gain\.jr-wrap \{[^}]*place-items: end/.test(read('codex.css')));
   assert.ok(!/pd\.sheet/.test(app));

@@ -41,7 +41,7 @@ export const CONSORTIUM = {
     { at: 3, name: 'Linked', rule: '+10% components on members\' servers', components: true },
     { at: 5, name: 'Mesh', rule: 'Invasion bounties doubled', bounty: 2 },
     { at: 8, name: 'Backbone', rule: 'A trunk rogue server opens on the network', trunk: true },
-    { at: 12, name: 'Grid', rule: '+1 socket room on every server and firewall +2 levels', sockets: 1, wall: 2 },
+    { at: 12, name: 'Grid', rule: '+1 socket room on every server', sockets: 1 },
   ],
   names: ['Halyard', 'Null Choir', 'Black Lattice', 'Copperline', 'Saltmarsh Ring', 'Dead Channel', 'Quiet Meridian', 'Glasshouse', 'Low Integrity', 'Tinroof'],
 };
@@ -67,7 +67,6 @@ const perk = (s, key, none) => tiersOf(s).reduce((v, t) => t[key] ?? v, none);
 // The ladder's perks for the rest of the game: Linked's components (sockets.mjs), Grid's socket room (netrooms.mjs).
 export const consortiumLinked = (s) => !!perk(s, 'components', false);
 export const consortiumSockets = (s) => perk(s, 'sockets', 0);
-export const consortiumWall = (s) => perk(s, 'wall', 0); // firewall levels (firewall.mjs wallBonus)
 // Nobody defended it: maybe a member dealt with it anyway (simulated). A handle, or null.
 export function memberHelp(s) {
   const c = consortiumOf(s);

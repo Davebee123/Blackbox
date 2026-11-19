@@ -71,7 +71,7 @@ teal, violet or a threat's red.
 - **Tiles** (`.ptile`): daemons, protocols, shop wares; the action row sits on the tile's floor.
 - **Hover tips** (`.tt`): every `title` shows in the game's own card (amber top rule, mono title line); never the
   browser's default.
-- **Card and detail panel** (the Server page): a card of picks (names and state only) beside one sticky panel that
+- **Card and detail panel** (the Daemons tab): a card of picks (names and state only) beside one sticky panel that
   explains the picked, hovered or focused item, the only place its facts are lit. On a phone the panel is in the one
   sheet. Skills and talents is a card alone (`.cls`, docs/class-page.md): its rules are tooltips.
 - **Tethers** (`.tether`, `view.mjs` `tethers`, `fightread.mjs` `partLinks`): one look for every rule that reaches from
@@ -222,8 +222,7 @@ short vibration on phones that have it.
   typed in. A phone stacks rows that open downward. No slogans.
 - **The threat rail** (down the map's left): everything coming for you, hottest first, then soonest; red for what's
   hitting you, amber for what's on its way. Under it the contract tracker.
-- **Map cards** pop up beside the node you click (never over it): the server card (level, Integrity, the wall as one
-  line each), a hub, an invasion. `×`, Esc or a click on empty map closes them. **Traffic:** your market orders run as
+- **Map cards** pop up beside the node you click (never over it): the server card (level, Integrity, one line each), a hub, an invasion. `×`, Esc or a click on empty map closes them. **Traffic:** your market orders run as
   teal files between home and the hub, hub trade in the sender's colour; hover any moving file for its card.
 - **The room map** (*Schematic HD*, floorplan-view.mjs, floorplan.css): each room a **chip** (cut corners, a depth
   gradient, its line icon over a name plate, its address in a dim plate on its bottom edge); teal only for your chip
@@ -246,13 +245,8 @@ short vibration on phones that have it.
 - **Puzzle boards** are drawn like the room map (chips and traces): the worm and the Tracker red, firewalls steel, data
   nodes and caches gold, you teal. A board boots in with a line, each action has its own small animation and sound, and
   the end is a card like a reward's. Motion off: the board just changes.
-- **The Server page** (`server-view.mjs`, `server.css`): one card and a detail panel (in the one sheet on a phone). The
-  card's header draws your firewall as a ring of sixteen blocks round your server's core (whole blocks solid teal,
-  fragmented ones hollow, an amber arc while an invasion is at the wall, a red marker coming down its road), the
-  Integrity ring inside. Then quiet rows: Threat, Wall (level, tier pips, the readout), Filters, Code. Pointing at a
-  button that changes the wall shows before and after, run on a copy of the save.
-- **The wall's ruler:** each level a cell, teal for what it blocks, amber contested, red hatching what breaks through,
-  your server and the incoming invasion marked.
+- **HOME's card** (the map's server card, view.mjs `mapSide`): level, Integrity, Code, Components, the invasion with
+  **Intercept**, and **Top up**. There's no Server page.
 - **The quest window** (the *Transmission*, quest-view.mjs): a thread or floor job read as an intercepted message,
   the speaker's backlit ASCII portrait beside their lines (portraits.mjs, scanning in a row at a time, once), its opening line resolving out of noise once, its steps as a job (`job 0003`, ✓, ▸, the rest dim hex). The reward
   card is a signed receipt. Calm: lines arrive once, Mail's page never animates.

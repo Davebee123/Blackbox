@@ -48,28 +48,24 @@ test('a unique\'s flat effect is lifted at its item level, its text with it; a s
   assert.equal(liftFx({ do: 'stat', stat: 'crit', value: 5, text: '+5% crit' }, 50).value, 5, 'Crit is a chance');
 });
 
-test('an older save: every item\'s flat stats lifted and filled once at its level (filters lifted), keyed on s.curve; a fresh save is already on the curve', () => {
+test('an older save: every item\'s flat stats lifted and filled once at its level, keyed on s.curve; a fresh save is already on the curve', () => {
   assert.equal(fresh().curve, 3);
   const s = fresh(); delete s.curve;
   s.stash.push({ id: 'g1', kind: 'protocol', side: 'hacker', group: 'proxy', rarity: 'tuned', level: 30, stats: { signal: 100, reduction: 3, evasion: 4, ram: 1 }, affixes: [], name: 'Old Proxy', rule: 'stack-canary', ruleValue: 4 });
-  s.filters = { held: [{ id: 'f1', kind: 'filter', level: 20, stats: { strength: 3, reduction: 4, frag: 20 } }], on: [] };
   const r = restore(structuredClone(s)), it = r.stash.find((x) => x.id === 'g1');
   assert.deepEqual(it.stats, { signal: filled(100, 30), reduction: lifted(3, 30), evasion: 4, ram: 1 }, 'Integrity lifted and filled, Block lifted; chances and RAM as they were');
   assert.equal(it.ruleValue, filled(4, 30), 'Stack Canary\'s shield is a flat number too');
-  assert.deepEqual(r.filters.held[0].stats, { strength: 3, reduction: lifted(4, 20), frag: 20 });
   assert.equal(r.curve, 3);
   const twice = structuredClone(r); curveRestore(twice);
   assert.deepEqual(twice.stash.find((x) => x.id === 'g1').stats, it.stats, 'safe to run twice');
 });
 
-test('a v54 save (already lifted): its items\' filling stats × the fill once, the rest and filters as they were', () => {
+test('a v54 save (already lifted): its items\' filling stats × the fill once, the rest as they were', () => {
   const s = fresh(); s.curve = 1;
   s.stash.push({ id: 'g1', kind: 'protocol', side: 'hacker', group: 'proxy', rarity: 'tuned', level: 30, stats: { signal: 400, damage: 50, reduction: 9, evasion: 4 }, affixes: [], name: 'Proxy', rule: 'stack-canary', ruleValue: 20 });
-  s.filters = { held: [{ id: 'f1', kind: 'filter', level: 20, stats: { reduction: 9 } }], on: [] };
   const r = restore(structuredClone(s)), it = r.stash.find((x) => x.id === 'g1'), f = gearFill(30);
   assert.deepEqual(it.stats, { signal: Math.round(400 * f), damage: Math.round(50 * f), reduction: 9, evasion: 4 });
   assert.equal(it.ruleValue, Math.round(20 * f));
-  assert.deepEqual(r.filters.held[0].stats, { reduction: 9 });
   const twice = structuredClone(r); curveRestore(twice);
   assert.deepEqual(twice.stash.find((x) => x.id === 'g1').stats, it.stats, 'safe to run twice');
 });

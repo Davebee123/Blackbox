@@ -2816,6 +2816,12 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 /* Every server-card row: the same label column, the same bar length, the same number column. */
 .srv-line { grid-template-columns: 104px minmax(0, 1fr) 96px; }
 .srv-line .srv-n { text-align: right; white-space: nowrap; }
+/* HOME's Code: the four counts, right-aligned across the bar and number columns. */
+.srv-line:has(.srv-codes) .srv-v { grid-column: 2 / 4; }
+.srv-line:has(.srv-codes) .srv-n { display: none; }
+.srv-codes { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 4px 12px; }
+.srv-codes > span { display: inline-flex; align-items: center; gap: 4px; }
+.srv-codes b { font: 600 14px var(--mono); color: var(--bright); font-variant-numeric: tabular-nums; }
 .srv-line .srv-v:empty { display: block; }
 /* The market: read-only rows you pick (ware · held · sell here · buy here), and one order ticket under the picked row. */
 .mk-wares .mk-tr { grid-template-columns: minmax(110px, 1fr) 56px 110px 84px; }

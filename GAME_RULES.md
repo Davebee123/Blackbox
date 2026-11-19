@@ -38,7 +38,7 @@ first transmission comes in over the map (Transmissions).
 
 ### Found or bought
 
-Nothing is made at home. Every protocol, filter and relay is **found** (drops, vaults, contracts, events) or
+Nothing is made at home. Every protocol and relay is **found** (drops, vaults, contracts, events) or
 **bought** (the hubs' Shops).
 
 ## Fights
@@ -476,8 +476,7 @@ does: the Bodyguard onto worms from 13, the Jitter onto ghostroots from 14, the 
 The Leaking Keylogger and the Feeding Leech carry two punishments on one axis by design (two leaks, two healers).
 
 **Grades.** Deeper servers send bigger versions: **v1** (SPRAWL-00 and floor 1) as normal, **v2** (floors 2–3) ×1.15
-Integrity and ×1.1 damage, **v3** (floor 4 and deeper) ×1.35 and ×1.25. At your wall a v2 invader counts 2 levels
-higher and a v3 4.
+Integrity and ×1.1 damage, **v3** (floor 4 and deeper) ×1.35 and ×1.25. 
 
 ### Guards and ICE
 
@@ -975,7 +974,7 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
   Integrity included. Your XP and levels, items, credits, code, components, the Codex, research and mastery, drop luck,
   rep, floor jobs, contract counts (an Install job's item back in your stash) and the server's rooms (cleared, opened,
   its spawns and Root) go back to the connect. What keeps moving: the market and the director, mail and contracts
-  received, invasions and the wall, runners, the consortium, achievements, your profile, INIT's table, settings, clocks,
+  received, invasions, runners, the consortium, achievements, your profile, INIT's table, settings, clocks,
   servers and leads found, and a Resident that beat you stays a level up. The **NO CARRIER** card strikes through what the
   visit lost.
 - **Reconnect wait.** A server you leave takes you back after 30 s (`CONFIG.relockMs`), +15 s for each disconnect on
@@ -1218,7 +1217,7 @@ until a relay pings it or it sends an invader at you).
 | A first clear of a fight room on a server linked to it | +20% to one ? (the most traced first) |
 | A vault's trace record (`signal.trc`), banked | +50% on one ? (a flagged one first) |
 | Mapping the server it hangs off, or a rogue server's full clear | the rest of the way, for one ? (the most traced, then the lowest level) |
-| An invader from a ? beaten by you / stopped by your wall | +40% / +10% |
+| An invader from a ? beaten by you | +40% |
 | An invader from a found server, beaten | +10% to one ? linked to it |
 | A trace injector (store, Kestrel, LANTERN) | +30% |
 | A relay's family kill / its route file banked | +12% / +50% |
@@ -1651,7 +1650,7 @@ within the same 15%. Uniques and set pieces that carry either keep their stats.
 | Zero-day | Gold | A **unique**, or a found Zero-day (Rootkit, Race Condition, Buffer Overflow) |
 | Indemnified | Orange | The hubs' chase protocols (Shops); each faction names its own line |
 
-There are no grey protocols (filters still come in Scrap). A **Zero-day** is found ready-made: a quarter of the vaults
+There are no grey protocols. A **Zero-day** is found ready-made: a quarter of the vaults
 on floor 2 and deeper hold one (`.src`), at the server's level.
 
 ### Uniques
@@ -2025,7 +2024,6 @@ kills. `node econ.mjs` measures it.
 | A codebase, light / medium | 200 + 10L / 400 + 15L credits |
 | A shelf protocol: a blue / a yellow at L | 3 / 6 hours of income at L |
 | A chase protocol at the second / third / fourth tier | 8 / 12 / 20 hours of income at L |
-| Firewall tiers, defrag | Home |
 
 ### Code and components
 
@@ -2037,8 +2035,8 @@ of home kills and 8% of guard kills. Scavenge adds to all of it.
 **Components** (salvage.mjs) are one currency, a count: what broken parts leave behind. Breaking a part drops them **60%
 of the time in a room fight**, always from an elite's parts with **one more** at the kill, and **35% anywhere else**
 (home, invasions). A mastered part drops them 25% more often, and an .exe part always one more; a Harvester adds one a kill on its server; a network rich
-in them more. Deconstructing, a stopped invasion and a scrapped filter give them too. Every hub's market buys them;
-none sells them. Nothing is built from them. Your count shows on the Server page.
+in them more. Deconstructing and a stopped invasion give them too. Every hub's market buys them;
+none sells them. Nothing is built from them. Your count shows on HOME's card.
 
 ### Shops
 
@@ -2220,7 +2218,7 @@ large; `SIZE`), times the **level curve** at the level it was posted (`MAIL.xp`:
 | Decode | Research N parts a tier (2, +1 every 15 levels) | 2 |
 | Solve | Win N puzzle boards (2, 3 from 20), or one of a named kind | 4 |
 | Sweep | Sweep a temporary server's process log, or two | 4 |
-| Hold | Stop an invasion, at your wall or by hand (once you've traced a server) | 5 |
+| Hold | Stop an invasion (once you've traced a server) | 5 |
 | Root | Reach the next Root level on a server you hold | 5 |
 | Interrupt | Answer N attacks (6, +1 every 10 levels): a cast stopped, a charge or a seal blocked | 10 |
 | Orphans | Break N orphans (6, +1 every 10 levels; INIT's table); delivered, the table frees 2 | 6 |
@@ -2352,7 +2350,7 @@ Each goes to the pager and to #net; missing one costs nothing. The director roll
 | **Feud** (1) | a traced server, from 8, with two rival hubs located | 20 min | A tug-of-war between two rival factions (the bar drifts 2–5% a minute, never past 20/80 alone). *Pick a side* (`event fight <id> <faction>`): fight the other side's runner (one of the net's runners who works for it, by handle: an elite of its family at your level); each win pushes your side +25% and brings a fresh runner. Your side wins at 100%, or ahead when time runs out | Each win: 40 + 7.5L credits, a protocol with your side's implicit. Your side +4 rep. The feud: a **part** of your side's faction piece, one of its goods and your side +6, its allies a quarter of a win and the win (+3). No ripple: a feud never costs rep with anyone |
 | **Bounty hunt** (1.5) | a traced server, from 6, two or more traced | 20 min | A named elite that hops to another of your servers every 5 minutes, 3 hops, a level each | 80 + 15L credits ×1, ×1.3, ×1.6, ×2 by hops made, +2 Kestrel rep |
 | **Market shock** (1) | a hub you can trade at, from 5 | 15 min | One ware's price ×2.5 there, or one time in three ×0.4 | No fight |
-| **Spotter** (1) | your wall, from 6 | 10 min | A spotter watching your wall: *Fight* it | The next invasion comes 2 levels weaker, and you know where from and what kind |
+| **Spotter** (1) | HOME, from 6 | 10 min | A spotter watching HOME: *Fight* it | The next invasion comes 2 levels weaker, and you know where from and what kind |
 | **Defence call** (1) | a faction server you've found, from 6, at your level + 2 or under | 10 min | Its owner's rival hits it (an elite of the rival's family at the server's level). Ignoring it costs nothing. *Defend* (`event fight <id>`) answers it: beat the invader at its wall before the clock runs out | Held: +6 rep with the owner (the ripples too). Answered and rebooted: −4 with the owner, no ripple. Your commission's calls ×1.5 (+9, −6) |
 
 **An event takes its place's level, never yours.** Your level picks the floor: a fight event lands on a traced server
@@ -2493,18 +2491,16 @@ pad in a window beside it), **[2] recordings** (the tape), **[3] log**, **[0] di
 
 **Integrity** is your one health bar: your server's and yours on a run. Its max is your power and gear (`maxSignal`,
 `serverMax`). Runs spend it, fights at home spend it, invasions chip it, and it rests back at home, 20% of its max a
-minute (half that while an invasion is contested or breaching), offline too. Home never takes the last point: a chip
-stops at 1, and losing a home fight leaves you at 1 with the invader still at the wall, as worn as you left it. The top
-bar's meter (the server tower) shows it, with a clock to full; its **+** (`top up`, or `repair`) pays for the rest. The
-**Server** page (`server-view.mjs`) is one card (your firewall drawn as a ring of sixteen blocks round the core, the
-Integrity ring, **Top up**, Wall, Streak and Next) and a detail panel; its buttons are the real commands, and pointing
-at one shows before and after, worked out on a copy of your save.
+minute (half that while an invasion is at HOME), offline too. Home never takes the last point: a chip stops at 1, and
+losing a home fight leaves you at 1 with the invader still at HOME, as worn as you left it. The top bar's meter (the
+server tower) shows it, with a clock to full; its **+** (`top up`, or `repair`) pays for the rest. HOME has no page of
+its own: its card on the map shows its level, Integrity, Code, Components, the invasion and **Top up**.
 
-### Invasions and the wall
+### Invasions
 
-The servers you've connected to send **invasions** at your wall, **one at a time**, online or off (`invasion.mjs`;
-docs/invasions.md). On the map an invasion moves in from its server; its card, the Server page and the top bar say what
-it is, what it does and what it pays (`invasions` in the terminal).
+The servers you've connected to send **invasions** at HOME, **one at a time**, online or off (`invasion.mjs`;
+docs/invasions.md). Nothing stops one but you. On the map it moves in from its server; its card and the top bar say what
+it is and what it pays (`invasions` in the terminal).
 
 - **When.** The first sets out 3 minutes after you first connect to a server; the next 20–30 minutes after the last is
   dealt with. Logged off, one every 2–4 hours.
@@ -2512,72 +2508,35 @@ it is, what it does and what it pays (`invasions` in the terminal).
   one half. A virus of that server's family **at its level** (Volatile and an Amplifier +2, a Lockdown −2) and floor
   grade, maybe a strain, maybe mutated (from level 4). The very first is a plain raider.
 - **Travel:** 2 minutes from a floor-1 server, a minute more a floor down, times its kind's; half that from Backbone.
+- **At HOME** it chips 1% of your max Integrity a minute, never below 1, until you kill it.
 - **Quirks:** a raider, pack or champion carries its server's quirk three times in ten: from a **Hoard** it's Armored
-  and pays half again; from a **Nest** it brings a brood (one more virus, two levels under; +1 bounty); a **Hidden** one
-  counts 2 levels higher at your wall.
+  and pays half again; from a **Nest** it brings a brood (one more virus, two levels under; +1 bounty).
 
 | Kind | Weight | From server lv | What it is | Bounty (points) |
 |---|---|---|---|---|
 | **Raider** | 30 | 1 | One virus | 2 |
-| **Pack** | 16 | 3 | Three of the server's viruses; counts 2 levels higher at the wall for each one waiting behind the front | 1 a virus |
-| **Pair** | 12 | 4 (two servers) | Two viruses from two of your servers together; +2 levels while both stand | 3 |
-| **Champion** | 12 | 8 | An elite-grade virus a level over its server, 1.5× a normal one's size, travelling half again as long; counts 2 levels higher. Kill it for a **capture** | 5 |
-| **Scout** | 10 | 2, online only | Small and quick; it doesn't chip but maps your wall for 5 minutes (unless your wall clears its level by 3). Kill it in time or the next invasion counts 3 levels higher | 2 |
-
-### The firewall (firewall.mjs)
-
-Your wall **follows your network**: its base is the level of the highest server you've connected to, less 2 (never
-under 1), moving for free.
-
-- **Tiers** (`firewall upgrade`): a margin of **+1 to +6** on top of the base, kept as the base moves. Tier *t* on a base
-  *B* costs (25 + 6B) × t credits, (2 + B/3) × t Cipher code and ⌈t × (1 + B/10)⌉ each of Worm and Kernel code; from +3,
-  t − 2 more **units** of each (a unit is 4 + B/3 code, what a point of bounty pays). Perks: **+1** a filter slot,
-  **+2** defrag 30% faster, **+3** a slot, **+4** fragments 25% slower, **+5** a slot, **+6** a slot. At +0 a raider from your strongest server is contested, at +2 blocked, +4 blocks a v2 raider, +5 a
-  champion and +6 a full pack.
-- **Fragmentation:** an invasion that gets past it cracks it, one block of 16 when contested, two on a breach; every 4
-  fragmented blocks cost a level. Buying a tier leaves every block whole. **Defrag** (`defrag`): (3 + level) credits a
-  block; 3 minutes running 2 levels weaker, then whole.
-- **Effective level** (base + tier + filters + the **+N** chip − fragmentation − a running defrag) is what it blocks
-  outright. The +N chip holds a Grid consortium's +2. The card reads **Vulnerable to lv N+** (amber if the worst would be
-  contested, red if it would break through) or **Safe** only while it blocks everything that can reach it, grade and
-  all. The Wall panel's ruler shows it in levels: teal blocked, amber contested, red through.
-
-| Your wall against the invasion's strength | Result |
-|---|---|
-| 20% or more stronger | **Blocked**, quietly (a log line and a silent pager entry): half its bounty, 25% of a kill's XP, 1 component |
-| Within ±20% | **Contested**: the wall wears the front virus down (4–20% a minute) while it chips you (0–1% of max Integrity a minute, never below 1) |
-| 20% or more weaker | **Breach**: it chips 1% of your max Integrity a minute, never below 1, until you deal with it |
-
-**Filters** (`filters.mjs`): firewall gear rolled like protocols (Scrap, Stock, Tuned, Custom; an item level). Two
-slots, plus one at tiers +1, +3, +5 and +6. Every filter adds levels (about 1 + item level / 10, more on better bases:
-Packet, Stateful from 10, Deep from 25, Neural from 40). Tuned ones carry 1–2 more stats, Custom 3: +2–4 levels against
-one family (Wormguard, Lockbreak, Exorcism), 15–40% less fragmentation, 20–50% faster defrag, 15–35% more grind or less
-chip, and for home fights 2–5% Evasion, 10–25% Sanitize, 2–6 Block, a 4–10% opening shield, 2–5 Regen, 2–6 back on
-every hit; Custom only: 2–5 of a family's code from every invader it stops (of Reflection), 15–30% slower invasions (of
-Tar), invasions arriving 10–25% worn (of the Hive). About one vault in seven holds a `filter.flt` (Custom one time in
-twelve, the only Custom source). **Put in**, **Take out**, **Scrap** (1–3 components) at home
-(`filter equip|unequip|scrap <n>`). You hold 12 at most.
+| **Pack** | 16 | 3 | Three of the server's viruses, one fight each | 1 a virus |
+| **Pair** | 12 | 4 (two servers) | Two viruses from two of your servers together | 3 |
+| **Champion** | 12 | 8 | An elite-grade virus a level over its server, 1.5× a normal one's size, travelling half again as long. Kill it for a **capture** | 5 |
 
 ### Bounties, daemons and the streak
 
-- **The bounty** is code of the invader's family, lots of it: each point pays a **unit** at the invasion's level (4 +
-  level/3). It grows by a quarter of its base every minute it sits contested or breaching with you not on it, up to three
-  times the base, and the growth is yours only if you kill it yourself; the wall wearing it down pays the base, a block
-  half. The card shows the bounty now and the most it can grow to (*13 → 34*), and the chance of a daemon.
-- **Jack in** (`jack in`, or the button): fight the invasion at the wall yourself, worn down as the wall left it, a full
-  home kill, one fight a virus (a champion is a ★ CHAMPION fight: elite-grade, triple XP). Not from a run. A chip never
-  ends a home fight (it stops at 1), and nothing chips while you fight.
-- **Daemons** drop only from invasions, one roll per invasion stopped (`DAEMON_DROP`): **35%** your kill, **15%** the
-  wall, a **capture** always; each stop without one adds 5%.
-- **Streak:** invasions stopped in a row pay 10% more each, up to +50%. A scout's finished map ends it.
+- **The bounty** is code of the invader's family: each point pays a **unit** at the invasion's level (4 + level/3). It
+  grows by a quarter of its base every minute it sits at HOME, up to three times the base. The card shows it now and the
+  most it can grow to (*13 → 34*), and the chance of a daemon.
+- **Intercept** (`intercept`, or the button): fight it yourself, on its road or at HOME, a full home kill, one fight a
+  virus (a champion is a ★ CHAMPION fight: elite-grade, triple XP). Not from a run. A chip never ends a home fight, and
+  nothing chips while you fight.
+- **Daemons** drop only from invasions, one roll per invasion stopped (`DAEMON_DROP`): **35%** your kill at HOME,
+  **50%** on its road, a **capture** always; each stop without one adds 5%.
+- **Streak:** invasions stopped in a row pay 10% more each, up to +50%.
 - **Captures** (a champion you kill): a sure daemon, and 10% (+5% a capture without one) at one of the
   **invasion-only uniques** (Tripwire, Honeynet, Sinkhole), one you lack first; a Listening Post works on them.
 
 ### While you're logged off
 
-Played out a minute at a time when you come back, up to a day: invasions come every 2–4 hours (no scouts) and meet your
-wall as usual, chipping you to 1 at worst; in a consortium a member sometimes stops one. *Vulnerable to lv N+* is the
-check before you go.
+Played out a minute at a time when you come back, up to a day: invasions come every 2–4 hours and chip you to 1 at
+worst; in a consortium a member sometimes stops one.
 
 ### Daemons (daemons.mjs)
 
@@ -2621,8 +2580,8 @@ scraps for a unit of its family's code.
   Lifeline (a killing blow, once): leaves you at 1 and heals *n* (25–30). Tandem (every 3): *n* to the soonest attacker
   and *n* to your last target (10–12). Guillotine (on an interrupt): every other part takes *n* (12–15).
 
-**Testing** (`?dev`): `developer invade [raider|pack|pair|champion|scout|hoard|nest|hidden] [road]`, `developer frag
-<n>`, `developer integrity <n>`, `developer daemon <id|all> [level]`, `developer wall <n>|off`,
+**Testing** (`?dev`): `developer invade [raider|pack|pair|champion|hoard|nest] [road]`,
+`developer integrity <n>`, `developer daemon <id|all> [level]`,
 `developer reboot`.
 
 **Switched off:** server memory (`MEMORY.on` false in memory.mjs): every server you find is on your network at once, with
@@ -2781,7 +2740,7 @@ Hackers who merged their servers (simulated members for now). Everyone keeps the
   alongside you, counting your crew), each with their own loot. **A drop-in's XP is by damage:** a member takes the
   share of the kill's XP matching the share of its health they took off.
 - **The Consortium page** (a top tab while you're in one): **Needs you** (a card per alert, one button each), the
-  members, the size ladder, and how your wall fares while you're away.
+  members and the size ladder.
 - Raids on members' walls stay off until real players share a network.
 
 | Servers merged | Tier | Bonus |
@@ -2789,7 +2748,7 @@ Hackers who merged their servers (simulated members for now). Everyone keeps the
 | 3 | Linked | +10% components on members' servers |
 | 5 | Mesh | Invasion bounties doubled |
 | 8 | Backbone | A trunk rogue server (a Pit at your level) opens |
-| 12 | Grid | +1 socket room on every server, firewall +2 levels |
+| 12 | Grid | +1 socket room on every server |
 
 ### Co-op, simulated (crew.mjs)
 
@@ -2927,8 +2886,7 @@ test, the wire, fight reports and the log (`logs` opens it).
   the header is one line (its name, Integrity, rooms cleared, the hunter's countdown; a tap on the name shows the rest),
   one tap walks, and a room's choice comes up with both buttons by your thumb. Wait and Jack out float at the map's
   bottom right. With no strip there, the pager is in More.
-- **Pop-ups on a phone** all come up as one sheet from the bottom: a server's card, a room's, the Server page's
-  panel, Comms, a daemon's panel, an item's datasheet, a journal, a quest's dialogue and its reward, the level-up.
+- **Pop-ups on a phone** all come up as one sheet from the bottom: a server's card, a room's, Comms, a daemon's panel, an item's datasheet, a journal, a quest's dialogue and its reward, the level-up.
   Drag it down or tap outside it to close.
 - **A fight on a phone** fits one screen: the HUD is one line, your bar and its number on the left (a crewmate as a
   thin violet line under it), the virus's with its ◆ on the right, its window at the end. A tap on a bar shows its card:
@@ -3018,7 +2976,7 @@ straight in and out.
 
 With the immersive shell on a desktop-sized window, the screen sits in a dark monitor (BLACKBOX · MODEL 7) whose bottom
 bezel has two knobs (sound, speed) and lamps that show real state: **PWR**, **GATE** (an invader
-at your wall), **WALL** (contested, a breach), **NET** (teal on a run; amber while a world event is up), **INST** (a
+at the gate), **WALL** (an invasion on its way, or at HOME), **NET** (teal on a run; amber while a world event is up), **INST** (a
 market transfer on its way), **DMN** (a daemon slotted; bright when one fires). Settings → Casing turns it off;
 phones never show it.
 
@@ -3098,9 +3056,8 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 - **A paused fight holds no clock.** Timers on invasions wait while you fight them, but only while the fight runs; a
   paused fight, or one left open over a reload (it comes back paused), holds nothing.
-- **Away is played out**, a minute at a time, up to a day: invasions every 2–4 hours, each meeting your firewall. What
-  protects you is your network's base, the margin you bought and your filters. Programs make nothing on their own, so
-  nothing raids them.
+- **Away is played out**, a minute at a time, up to a day: invasions every 2–4 hours, each chipping HOME down to 1 at
+  worst. Programs make nothing on their own, so nothing raids them.
 - **No shop-to-market loop.** Code, Exploits and components are only market wares; a round trip at one hub never
   profits.
 - **The game saves when the tab closes**, and every roll comes from the save's seed: reloading replays the same result.
@@ -3110,6 +3067,10 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 The save is `SAVE_VERSION` 65 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **The wall goes** (no version of its own): the firewall's tiers come back as what they cost at your base now (an
+  older climbed wall, its climb), held and carried filters as the components they scrapped for, and an invasion of a
+  kind that's gone (a scout, a thief) is a raider at HOME (`firewall.mjs wallRestore`, `invasion.mjs wallgoneRestore`,
+  keyed on the fields).
 - **v65** one bar: `s.signal` (null: full) becomes `s.server.integrity`, its max your power
   and gear's; `s.degraded` and an occupied home (`s.occupation`) go (`combat.mjs healthRestore`, keyed on the fields). A
   run carries its connect snap (`s.run.snap`, visit.mjs); a run saved before it disconnects the old way.
@@ -3129,7 +3090,7 @@ so it is safe to run twice; nothing a save held is lost.
 - **v57** the talent tiers: a subclass's old ranks and two-way picks become tier picks where the same talent survives (Polymorphic is Long Fuse, the Hijacker's Kill Chain is Handoff); the rest of its tiers wait (`tiersRestore`, keyed on `loadout.ranks` and `loadout.picks`).
 - **v56** floors as tiers: every protocol's filling stats and flat rule × its new fill over the one it was filled with, once (`curveRestore`, keyed on `s.curve` 3).
 - **v55** gear carries your power: every protocol's filling stats (Damage, Crit Damage, Integrity, Regen, Leech) and flat damage, heal or shield rule × the fill at its item level, once (`curveRestore`, keyed on `s.curve` 2).
-- **v54** the compounding curve: every protocol's flat stats and flat rule, and each filter's Block, Regen and barbs,
+- **v54** the compounding curve: every protocol's flat stats and flat rule,
   lifted once at its item level (`curveRestore`, keyed on `s.curve`).
 - **v53** the cryptogram's key, `s.cipher`, made on first use (`cipherOf`).
 - **v52** rivals' memory, `s.rivals`, made on first use (`rivalsRestore`).

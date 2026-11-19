@@ -510,7 +510,7 @@ export function statsRestore(s, was) {
 }
 
 // The compounding curve (docs/scaling.md): an older save's items carry stats rolled on the level line. Each protocol's
-// flat stats and flat rule value, and each filter's growing stats, are lifted at its item level once. Keyed on the
+// flat stats and flat rule value are lifted at its item level once. Keyed on the
 // field: s.curve marks a save whose items are on the curve (fresh saves start with it).
 // The fill before the floor tiers (save v56: s.curve 3 refills an item filled on it, × the new fill over this).
 const FILL_V55 = [[6, 1], [10, 1.46], [15, 1.67], [25, 1.77], [30, 1.66], [40, 1.6], [50, 1.52]];
@@ -523,11 +523,6 @@ export function curveRestore(s) {
     if (!x || typeof x !== 'object' || seen.has(x)) return;
     seen.add(x);
     if (x.kind === 'protocol' && x.stats && typeof x.stats === 'object') return void (was >= 2 ? fillItem(x, refill) : was ? fillItem(x) : liftItem(x)); // filled already (v55): refilled on the tiers; lifted (v54): filled
-    if (x.kind === 'filter' && x.stats && typeof x.stats === 'object') {
-      if (was) return;
-      for (const k of ['reduction', 'regen', 'countermeasures']) if (x.stats[k] > 0) x.stats[k] = lifted(x.stats[k], Math.max(1, x.level || 1));
-      return;
-    }
     for (const v of Array.isArray(x) ? x : Object.values(x)) walk(v);
   };
   walk(s);
