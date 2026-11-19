@@ -30,6 +30,7 @@ session's scratchpad, never in the repo), shown as screenshots, before any of it
 | **What pays what** | Each activity pays in one thing, a lot of it and hardly anything else: Exfils, elites and guards in Exploits, surges in components, couriers and escorts in gear (docs/market.md, *What pays what*). A card that wants a ware deals its activities twice as often | Which activity pays what, against how each plays; whether stock filling orders leaves enough reason to go out |
 | **INIT's table** | The process table's count, filled by logged-on time and emptied by breaking orphans; its bands change fights, drops, XP and events (docs/init-table.md) | A prototype of the count over a session, and the bar's look |
 | **The ticker** | Market cards that move hub prices, each with a reason in its owner's voice (docs/ticker.md) | Mock-ups of three looks in the market window; pick one |
+| **Quest sites** | **Picked** (docs/sites.md): the director mounts a temporary server on your floor: a Rack pull, a Settlement run, a runner's trade. Each pays its own thing on top of gear | Build order; sizing each one's pay |
 | **Off-map servers** | Small handmade servers found only from clues (the scanner, a dead runner's log, a cryptogram, wick), never by tracing. The Museum (retired viruses from old builds), a LOWLIGHT safehouse, a dev box (debug viruses with every number shown), the Graveyard (dead runners' sessions), a pirate station (the scanner's broadcasts). | How many; how a clue puts one on the floor map |
 
 ## Virus roster (prototyped and kept)
