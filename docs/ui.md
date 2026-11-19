@@ -245,8 +245,11 @@ short vibration on phones that have it.
 - **Puzzle boards** are drawn like the room map (chips and traces): the worm and the Tracker red, firewalls steel, data
   nodes and caches gold, you teal. A board boots in with a line, each action has its own small animation and sound, and
   the end is a card like a reward's. Motion off: the board just changes.
-- **HOME's card** (the map's server card, view.mjs `mapSide`): level, Integrity, Code, Components, the invasion with
-  **Intercept**, and **Top up**. There's no Server page.
+- **HOME's card** (the map's server card, view.mjs `mapSide`): the Integrity ring is the card (`homeRing`: teal, amber
+  under 60%, red under 30%, a red arc over the top while an invasion is at HOME), then the invasion with **Intercept**,
+  and **Top up**. There's no Server page; Code and Components sit behind the top bar's **Materials** (`storesMarkup`).
+- **The invasion's card:** its name and tags, then rows like HOME's (From, Arrives or At HOME, Bounty, Daemon), then
+  **Intercept**.
 - **The quest window** (the *Transmission*, quest-view.mjs): a thread or floor job read as an intercepted message,
   the speaker's backlit ASCII portrait beside their lines (portraits.mjs, scanning in a row at a time, once), its opening line resolving out of noise once, its steps as a job (`job 0003`, ✓, ▸, the rest dim hex). The reward
   card is a signed receipt. Calm: lines arrive once, Mail's page never animates.

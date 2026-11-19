@@ -2036,7 +2036,7 @@ of home kills and 8% of guard kills. Scavenge adds to all of it.
 of the time in a room fight**, always from an elite's parts with **one more** at the kill, and **35% anywhere else**
 (home, invasions). A mastered part drops them 25% more often, and an .exe part always one more; a Harvester adds one a kill on its server; a network rich
 in them more. Deconstructing and a stopped invasion give them too. Every hub's market buys them;
-none sells them. Nothing is built from them. Your count shows on HOME's card.
+none sells them. Nothing is built from them. Your count is under the top bar's Materials.
 
 ### Shops
 
@@ -2494,7 +2494,8 @@ pad in a window beside it), **[2] recordings** (the tape), **[3] log**, **[0] di
 minute (half that while an invasion is at HOME), offline too. Home never takes the last point: a chip stops at 1, and
 losing a home fight leaves you at 1 with the invader still at HOME, as worn as you left it. The top bar's meter (the
 server tower) shows it, with a clock to full; its **+** (`top up`, or `repair`) pays for the rest. HOME has no page of
-its own: its card on the map shows its level, Integrity, Code, Components, the invasion and **Top up**.
+its own: its card on the map is its Integrity ring (a red arc while an invasion is at HOME), the invasion with
+**Intercept**, and **Top up**. The top bar's **Materials** button opens your Code and Components.
 
 ### Invasions
 

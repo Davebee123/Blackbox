@@ -2053,6 +2053,9 @@ function renderMeters() {
       `Integrity: ${hp}/${max}. Your health at home and on a run. It rests back at home${resting ? ` (${f < toConnect ? `${Math.ceil(max * toConnect)} to connect` : 'full'} in ${eta.textContent})` : ''}; an invasion chips it, never below 1.`);
   }
   $('vault-value').textContent = srv.credits;
+  $('meter-stores').setAttribute('aria-expanded', String(storesOpen));
+  $('stores-panel').hidden = !storesOpen;
+  if (storesOpen) put('stores-panel', V.storesMarkup(campaign));
   tableMeter();
   const s = shown();
   // Fight and Run tabs appear only while there is a fight or a run.
@@ -3752,6 +3755,11 @@ addEventListener('contextmenu', (e) => { if (F.isPhone() && e.target.closest?.(P
 
 // People (presence.mjs): a button on the top bar with how many are online, and its panel.
 let peopleOpen = false, peopleTab = 'friends';
+// The top bar's Materials button: Code and Components in a small panel under it (view.mjs storesMarkup).
+let storesOpen = false;
+$('meter-stores').addEventListener('click', (e) => { e.stopPropagation(); storesOpen = !storesOpen; markDirty(); });
+document.addEventListener('click', (e) => { if (storesOpen && !e.target.closest('#stores-panel, #meter-stores')) { storesOpen = false; markDirty(); } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && storesOpen) { storesOpen = false; markDirty(); } });
 function peopleUi() {
   const on = peopleOn(campaign);
   $('people').hidden = !on;

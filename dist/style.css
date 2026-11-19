@@ -2816,12 +2816,6 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 /* Every server-card row: the same label column, the same bar length, the same number column. */
 .srv-line { grid-template-columns: 104px minmax(0, 1fr) 96px; }
 .srv-line .srv-n { text-align: right; white-space: nowrap; }
-/* HOME's Code: the four counts, right-aligned across the bar and number columns. */
-.srv-line:has(.srv-codes) .srv-v { grid-column: 2 / 4; }
-.srv-line:has(.srv-codes) .srv-n { display: none; }
-.srv-codes { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 4px 12px; }
-.srv-codes > span { display: inline-flex; align-items: center; gap: 4px; }
-.srv-codes b { font: 600 14px var(--mono); color: var(--bright); font-variant-numeric: tabular-nums; }
 .srv-line .srv-v:empty { display: block; }
 /* The market: read-only rows you pick (ware · held · sell here · buy here), and one order ticket under the picked row. */
 .mk-wares .mk-tr { grid-template-columns: minmax(110px, 1fr) 56px 110px 84px; }
@@ -4973,3 +4967,28 @@ input, textarea, [contenteditable], .mbody, .ch-lines, .page-error pre { -webkit
 @media (max-width: 900px) {
   .map-right { flex-wrap: wrap; justify-content: flex-end; row-gap: var(--s3); }
 }
+
+/* HOME's ring (view.mjs homeRing): Integrity round a track, the number inside; a red arc while an invasion is at HOME. */
+.home-ring { width: min(220px, 80%); margin: 8px auto 18px; }
+.home-ring svg { display: block; width: 100%; height: auto; overflow: visible; }
+.home-ring text { font-family: var(--mono); }
+.home-ring .num { font-size: 26px; font-weight: 600; fill: var(--you); }
+.home-ring .num.warn { fill: var(--amber); } .home-ring .num.hot { fill: var(--hot); }
+.home-ring .of { font-size: 10px; fill: var(--dim); }
+.home-ring .pit { fill: var(--inset); stroke: var(--line-strong); }
+.home-ring .track { fill: none; stroke: var(--line); stroke-width: 6; }
+.home-ring .integ { fill: none; stroke: var(--you); stroke-width: 6; }
+.home-ring .integ.warn { stroke: var(--amber); } .home-ring .integ.hot { stroke: var(--hot); }
+.home-ring .press { fill: none; stroke: var(--hot); stroke-width: 4; stroke-linecap: round; }
+/* The invasion card's rows: the road a red bar filling, the source in plain text. */
+.inv-card .srv-bar.inv-road > span { background: var(--hot); opacity: 0.7; }
+.inv-card .srv-bar.hp.low > span { background: var(--hot); }
+.inv-card .inv-from { font-weight: 500; color: var(--text); }
+.inv-card .row.acts .btn { width: 100%; }
+/* The top bar's Materials button and its panel. */
+.meter-stores { cursor: pointer; background: none; border: 1px solid transparent; border-radius: 4px; font: inherit; color: inherit; }
+.meter-stores:hover, .meter-stores[aria-expanded='true'] { border-color: var(--amber-soft); }
+.stores-pop { position: absolute; top: 52px; right: 160px; z-index: 60; width: 260px; }
+.stores-pop[hidden] { display: none; }
+.stores-pop .card { margin: 0; }
+@media (max-width: 900px) { .stores-pop { top: 96px; right: 12px; } }

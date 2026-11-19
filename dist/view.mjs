@@ -1554,14 +1554,6 @@ function invTags(s, inv) {
   const q = inv.quirk && QUIRKS[inv.quirk] ? `<span class="tag tag-strain" title="${esc(quirkLine(inv))}">${esc(QUIRKS[inv.quirk].name)}</span>` : ''; // what the quirk does to the invasion (its server's rule is about its rooms)
   return [kind, q].filter(Boolean).map((t) => ' ' + t).join(''); // a space before each, so they never butt up against the level
 }
-// What it pays, before the fight: its family's code for your kill (now, then the most it can grow to), the
-// odds of a daemon (sure with a capture), and your streak's bonus.
-function bountyChips(s, inv) {
-  const b = bountyOf(s, inv), n = streakOf(s), name = MATERIALS[b.code]?.name || b.code;
-  const chip = (ic, v, tip, cls = '') => `<span class="rw ${cls}" title="${esc(tip)}">${glyph(ic)}<b>${esc(String(v))}</b></span>`;
-  const sure = b.capture, odds = Math.round(daemonChance(s, inv.state === 'travel' ? 'intercept' : 'you') * 100);
-  return `<div class="rw-chips inv-pay">${chip(b.code, b.now >= b.max ? b.now : `${b.now} → ${b.max}`, `${name} for your kill: ${b.now} now, up to ${b.max} the longer it sits at HOME.`)}${chip('daemon', sure ? 'daemon' : `${odds}%`, sure ? `Your kill leaves a capture: a daemon of band ${daemonBand(inv.level)}, at level ${inv.level}, and a chance at a unique only invasions carry` : `The chance your kill leaves a daemon (band ${daemonBand(inv.level)}, level ${inv.level}). Every stop without one raises it.`, sure ? 'you' : '')}${n ? chip('xp', `+${Math.round((streakMult(s) - 1) * 100)}%`, `A streak of ${n}: each stop pays more`) : ''}</div>`;
-}
 // Finish a timed build now (credit buyout): the price on the button, off if you can't pay.
 // Slots as pips: filled for used, hollow for free, with an icon and the name on hover.
 export function slotPips(icon, used, total, name) {
@@ -1607,20 +1599,25 @@ function traceWays(s, h, via, kit) {
   ].filter(Boolean).join('');
   return `${main}<ul class="trace-ways">${ways}</ul>`;
 }
-// The invasion's own card on the map: the virus, where it's from, how far along its road (full once it's at HOME),
-// its bounty and Intercept.
+// The invasion's own card on the map: its name and tags, then rows (label | value) like HOME's card: where it's from,
+// where it is (a bar on its road, the chip at HOME), its bounty and its daemon chance; Intercept under them.
 function invaderCard(s) {
   const inv = s.invasion;
   if (!inv) return '';
-  const st = invaderStatus(s), home = inv.state !== 'travel';
+  const st = invaderStatus(s), home = inv.state !== 'travel', b = bountyOf(s, inv), name = MATERIALS[b.code]?.name || b.code;
   const pct = home ? 100 : (1 - inv.left / Math.max(1, inv.total)) * 100;
-  const tags = `${levelTag(s, inv.level)}${invTags(s, inv)}${inv.mutation ? `<span class="tag tag-mut" title="${esc(MUTATIONS[inv.mutation].rule)}">${esc(MUTATIONS[inv.mutation].name)}</span>` : ''}${inv.strain && STRAINS[inv.strain] ? `<span class="tag tag-strain" title="${esc(STRAINS[inv.strain].rule || '')}">${esc(STRAINS[inv.strain].name)}</span>` : ''}`;
-  return `<section class="card inv-card ${home ? 'breach' : 'travel'}"><h2>Invasion</h2><h1>${esc(inv.name)}</h1><p class="svc-line tagline">${tags}</p><p class="svc-line quiet">from ${esc(inv.fromName)}</p>
-    <div class="inv-state"><span class="tag ${home ? 'hot' : ''}">${home ? 'at HOME' : 'on its way'}</span><b>${esc(home ? `−${chipRate()}%/min` : invaderShort(s))}</b></div>
-    <div class="wall-bar ${home ? 'breach' : 'travel'}"><span style="width:${Math.max(0, Math.min(100, Math.round(pct)))}%"></span></div>
+  const odds = b.capture ? 'sure' : `${Math.round(daemonChance(s, home ? 'you' : 'intercept') * 100)}%`;
+  const tags = `${levelTag(s, inv.level)}${invTags(s, inv)}${inv.mutation ? ` <span class="tag tag-mut" title="${esc(MUTATIONS[inv.mutation].rule)}">${esc(MUTATIONS[inv.mutation].name)}</span>` : ''}${inv.strain && STRAINS[inv.strain] ? ` <span class="tag tag-strain" title="${esc(STRAINS[inv.strain].rule || '')}">${esc(STRAINS[inv.strain].name)}</span>` : ''}`;
+  const where = home
+    ? srvLine('kill', 'At HOME', '<span class="srv-bar hp low"><span style="width:100%"></span></span>', `−${chipRate()}<small>%/min</small>`, `It chips ${chipRate()}% of your max Integrity a minute until you intercept it.`)
+    : srvLine('clock', 'Arrives', `<span class="srv-bar inv-road"><span style="width:${Math.round(pct)}%"></span></span>`, fmtLeft(inv.left), 'Intercept it on its road for a better daemon chance.');
+  return `<section class="card inv-card ${home ? 'breach' : 'travel'}"><h2>Invasion</h2><h1>${esc(inv.name)}</h1><p class="svc-line tagline">${tags}</p>
+    ${srvLine('router', 'From', '', `<span class="inv-from">${esc(inv.fromName)}</span>`)}
+    ${where}
+    ${srvLine(b.code, 'Bounty', '', b.now >= b.max ? `${b.now}` : `${b.now}<small> → ${b.max}</small>`, `${name} for your kill: ${b.now} now, up to ${b.max} the longer it sits at HOME.`)}
+    ${srvLine('daemon', 'Daemon', '', odds, b.capture ? 'Your kill leaves a capture: a sure daemon, and a chance at a unique only invasions carry.' : `The chance your kill leaves a daemon (band ${daemonBand(inv.level)}, level ${inv.level}). Every stop without one raises it.`)}
     ${tellOf(s, inv) ? `<p class="inv-tell">${esc(tellOf(s, inv))}</p>` : ''}
-    ${bountyChips(s, inv)}
-    <div class="row">${jackInButton(st)}</div></section>`;
+    <div class="row acts">${jackInButton(st)}</div></section>`;
 }
 // Server architecture: picked at server level 20, a trade each way.
 // ---------- networks (network.mjs) ----------
@@ -2718,6 +2715,27 @@ function ownerLine(f) {
   const F = FX[f], tip = `${F.short}\nOwner\nBeat its Resident and the server is yours, with its vault's receipt to stamp.`;
   return `<p class="svc-line fline" style="--fc:${F.color}" title="${esc(tip)}">${fIcon(f)}<b>${esc(F.short)}</b></p>`;
 }
+// HOME's health as a ring (the old Server page's core): Integrity round the track, the number inside, teal, amber
+// under 60%, red under 30%; a red arc over the top while an invasion is at HOME.
+export function homeRing(s) {
+  const max = s.server.max, hp = Math.max(0, s.server.integrity), share = hp / Math.max(1, max), tone = share < 0.3 ? 'hot' : share < 0.6 ? 'warn' : '';
+  const C = 60, r = 46, c = 2 * Math.PI * r, f1 = (n) => Math.round(n * 10) / 10, inv = s.invasion && s.invasion.state !== 'travel' ? s.invasion : null;
+  const P = (a) => [f1(C + 55 * Math.sin((a * Math.PI) / 180)), f1(C - 55 * Math.cos((a * Math.PI) / 180))];
+  const [x1, y1] = P(-38), [x2, y2] = P(38);
+  return `<div class="home-ring" title="${esc(`Integrity ${hp}/${max}${inv ? `. ${inv.name} is at HOME` : ''}`)}"><svg viewBox="0 0 120 120" role="img" aria-label="${esc(`Integrity ${hp} of ${max}`)}">
+    <circle class="pit" cx="${C}" cy="${C}" r="40"/><circle class="track" cx="${C}" cy="${C}" r="${r}"/>
+    <circle class="integ ${tone}" cx="${C}" cy="${C}" r="${r}" stroke-dasharray="${f1(c * share)} ${f1(c)}" transform="rotate(-90 ${C} ${C})"/>
+    ${inv ? `<path class="press" d="M${x1} ${y1}A55 55 0 0 1 ${x2} ${y2}"/>` : ''}
+    <text class="num ${tone}" x="${C}" y="${C + 7}" text-anchor="middle">${hp}</text><text class="of" x="${C}" y="${C + 22}" text-anchor="middle">/ ${max}</text></svg></div>`;
+}
+// The top bar's Materials panel (app.js): Code and Components, one row each, what each is for on hover.
+const MAT_USE = { cipher: 'Ransomware kills and their invasions pay it.', worm: 'Worm kills and their invasions pay it.', kernel: 'Ghostroot kills and their invasions pay it.', exploit: 'Rare: bosses, vaults and deep servers pay it.' };
+export function storesMarkup(s) {
+  const row = (icon, name, kind, n, what) => srvLine(icon, name, '', `${n}`, `${name}\n${kind}\n${what}`);
+  return `<section class="card stores-card"><h2>Materials</h2>
+    ${['cipher', 'worm', 'kernel', 'exploit'].map((k) => row(k, MATERIALS[k].short, 'Code', s.materials?.[k] || 0, `${MAT_USE[k]} It goes into programs on a server's sockets, and a hub's market buys it.`)).join('')}
+    ${row('salvage', 'Components', 'Salvage', componentsOf(s), 'What broken parts leave behind. A hub\'s market buys them.')}</section>`;
+}
 function mapSide(s, sel, node) {
   const e = gateOf(s), srv = s.server;
   const busy = active(s) || s.run;
@@ -2735,11 +2753,8 @@ function mapSide(s, sel, node) {
     const runCard = s.run ? `<section class="card lesson"><h2>On a run</h2><h1>${esc(currentLocation(s).name)}</h1><p>Integrity ${s.run.integrity}/${s.run.max} · ${s.run.pack.length} unbanked.</p><div class="row">${btn('net', 'Back to the run', true)}</div></section>` : '';
     return `${runCard}${alertCard()}
       <section class="card srv-card"><h2>Your server</h2>
-        ${srvLine('integrity', 'Server', `<span class="tag dim">${esc(ARCHETYPES[serverClass(s)]?.name || '')}</span>`, `<small>Lv</small> ${serverLevel(s)}`, `Your server's level is your highest class level.${serverNext(serverLevel(s)) ? ` ${serverNext(serverLevel(s))}.` : ''}`)}
-        ${srvLine('integrity', 'Integrity', `<span class="srv-bar hp ${srv.integrity / srv.max <= 0.3 ? 'low' : srv.integrity / srv.max <= 0.6 ? 'mid' : ''}"><span style="width:${(srv.integrity / srv.max) * 100}%"></span></span>`, `${srv.integrity}<small>/${srv.max}</small>`)}
+        ${homeRing(s)}
         ${!MEMORY.on ? '' : srvLine('memory', 'Memory', '', `${Math.max(0, memoryCap(s) - liveCount(s))}<small>/${memoryCap(s)} free</small>`, `${liveCount(s)} servers on your network`)}
-        ${srvLine('cipher', 'Code', `<span class="srv-codes">${['cipher', 'worm', 'kernel', 'exploit'].map((k) => `<span title="${esc(MATERIALS[k].name)}">${glyph(k)}<b>${s.materials?.[k] || 0}</b></span>`).join('')}</span>`, '', 'Code: what kills and invasion bounties pay. It goes into programs on a server\'s sockets.')}
-        ${srvLine('salvage', 'Components', '', `${componentsOf(s)}`, 'Components: what broken parts leave behind. Sell them at a hub\'s market.')}
 
         ${s.invasion ? `<div class="invader-line ${s.invasion.state}"><b>${esc(s.invasion.name)}</b>${levelTag(s, s.invasion.level)}<span>${esc(invaderShort(s))}</span></div><div class="row acts">${jackInButton(invaderStatus(s))}</div>` : ''}
         ${homeEvents(s)}
