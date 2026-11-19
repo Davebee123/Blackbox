@@ -92,8 +92,8 @@ test('the bounty grows while it sits at HOME, up to triple', () => {
   assert.equal(bountyOf(s).max, base * (1 + BOUNTY.cap) * u, 'visible before the fight: what it can grow to');
   wait(s, 4 * MIN);
   assert.equal(bountyOf(s).now, (base + Math.floor(base * BOUNTY.grow * 4)) * u, 'a quarter of the base a minute');
-  wait(s, 20 * MIN);
-  assert.equal(bountyOf(s).now, base * (1 + BOUNTY.cap) * u, 'capped');
+  wait(s, 6 * MIN);
+  assert.equal(bountyOf(s).now, base * (1 + BOUNTY.cap) * u, 'capped at 8 minutes');
   play(s, 'jack in');
   win(s);
   assert.equal(bountyPaid(s), base * (1 + BOUNTY.cap) * u, 'paid on your kill');

@@ -60,7 +60,7 @@ import { programMarkup, progNow, progTarget, progText, progMove, progOnPart, pro
 import { unlocked as routinesOpen, LOCKED as ROUTINES_LOCKED } from './routines.mjs';
 import { bodyTags, AUTHOR_FAMILIES, familyName } from './families.mjs';
 import { heatOf } from './parts.mjs';
-import { chipRate, fighting, fmtLeft, bountyOf, tellOf, quirkLine, labelOf, sendersOf, senderGrade, sendsAt, streakOf, streakMult, STREAK, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine, sendTop } from './invasion.mjs';
+import { chipRate, leavesIn, LEAVE_MS, fighting, fmtLeft, bountyOf, tellOf, quirkLine, labelOf, sendersOf, senderGrade, sendsAt, streakOf, streakMult, STREAK, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine, sendTop } from './invasion.mjs';
 import { reqLevel, meetsReq, shownRarity, RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS, rarityName, CHASE_LINE } from './gear.mjs';
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
@@ -1609,7 +1609,7 @@ function invaderCard(s) {
   const odds = b.capture ? 'sure' : `${Math.round(daemonChance(s, home ? 'you' : 'intercept') * 100)}%`;
   const tags = `${levelTag(s, inv.level)}${invTags(s, inv)}${inv.mutation ? ` <span class="tag tag-mut" title="${esc(MUTATIONS[inv.mutation].rule)}">${esc(MUTATIONS[inv.mutation].name)}</span>` : ''}${inv.strain && STRAINS[inv.strain] ? ` <span class="tag tag-strain" title="${esc(STRAINS[inv.strain].rule || '')}">${esc(STRAINS[inv.strain].name)}</span>` : ''}`;
   const where = home
-    ? srvLine('kill', 'At HOME', '<span class="srv-bar hp low"><span style="width:100%"></span></span>', `−${chipRate()}<small>%/min</small>`, `It chips ${chipRate()}% of your max Integrity a minute until you intercept it.`)
+    ? srvLine('kill', 'At HOME', `<span class="srv-bar hp low"><span style="width:${Math.round((100 * leavesIn(inv)) / LEAVE_MS)}%"></span></span>`, `−${chipRate()}<small>%/min</small>`, `It chips ${chipRate()}% of your max Integrity a minute. Left alone, it leaves in ${fmtLeft(leavesIn(inv))}, its bounty unpaid.`)
     : srvLine('clock', 'Arrives', `<span class="srv-bar inv-road"><span style="width:${Math.round(pct)}%"></span></span>`, fmtLeft(inv.left), 'Intercept it on its road for a better daemon chance.');
   return `<section class="card inv-card ${home ? 'breach' : 'travel'}"><h2>Invasion</h2><h1>${esc(inv.name)}</h1><p class="svc-line tagline">${tags}</p>
     ${srvLine('router', 'From', '', `<span class="inv-from">${esc(inv.fromName)}</span>`)}

@@ -3,7 +3,7 @@
 // minute more a floor down, and a deeper floor's servers send bigger grades and strains. Each one is a kind (KINDS): a
 // raider, a pack, a pair, a champion or a saboteur, sometimes carrying its server's quirk. Nothing stops it but you:
 // once it reaches HOME it chips your Integrity (1% of max a minute, never below 1) until you intercept it, and its
-// bounty (its family's code) grows while it sits there. Invasions are the only thing that drops daemons (daemons.mjs).
+// bounty (its family's code) grows while it sits there. Left alone 15 minutes, it leaves, unpaid. Invasions are the only thing that drops daemons (daemons.mjs).
 import { tickEvents } from './events.mjs';
 import { tickConsortium, consortiumOf, memberHelp } from './consortium.mjs';
 import { isLive } from './memory.mjs';
@@ -44,6 +44,9 @@ export const CHAMPION = { hp: 1.5 }; // elite-grade (elite armor and hits, tripl
 export const SCOUTED = { levels: 2 };
 // Bounty: code. It grows by grow × base a minute while it sits at HOME, up to cap × base more.
 export const BOUNTY = { grow: 0.25, cap: 2 };
+// Left alone at HOME, it leaves after this long (its bounty capped at 8 minutes), unpaid; the next one is scheduled.
+export const LEAVE_MS = 15 * 60000;
+export const leavesIn = (inv) => Math.max(0, LEAVE_MS - (inv?.homeFor || 0));
 // Streak: invasions you stopped in a row. Each one in it pays step more (up to max steps).
 export const STREAK = { step: 0.1, max: 5 }; // a streak pays more code a stop; it no longer leaves a capture (invasions supply daemons already)
 // A capture (what a champion you kill, or a streak, leaves behind): a sure daemon, and a chance at an
@@ -165,6 +168,9 @@ function stepInvasion(s, dt, at = null) {
     return;
   }
   if (holding(s, 'invader', inv.id)) return; // you're on it
+  // Left alone long enough, it leaves, unpaid (LEAVE_MS).
+  inv.homeFor = (inv.homeFor || 0) + dt;
+  if (inv.homeFor >= LEAVE_MS) { endInvasion(s, `${inv.name} left HOME. Its bounty went with it.`, { lost: true }); return unsabotage(s); }
   // The bounty grows while it sits at HOME.
   const base = inv.bounty ?? kindOf(inv).bounty;
   inv.grown = Math.min(base * BOUNTY.cap, (inv.grown || 0) + base * BOUNTY.grow * (dt / 60000));
@@ -429,7 +435,7 @@ export function invasionsCommand(s) {
     const where = inv.state === 'travel' ? `on its way, ${fmtLeft(inv.left)} out` : 'at HOME';
     lines.push(`${labelOf(inv)}: ${inv.name}, level ${inv.level}, from ${inv.fromName}. It is ${where}.`);
     if (tellOf(s, inv)) lines.push(tellOf(s, inv));
-    lines.push(`Kill it for ${codeText(b.now, b.code)} (up to ${b.max} if it sits at HOME).${b.capture ? ' A daemon comes with your kill.' : ''}`);
+    lines.push(`Kill it for ${codeText(b.now, b.code)} (up to ${b.max} if it sits at HOME).${b.capture ? ' A daemon comes with your kill.' : ''}${inv.state !== 'travel' ? ` Left alone, it leaves in ${fmtLeft(leavesIn(inv))}, unpaid.` : ''}`);
   } else if (s.net?.next > 0) lines.push(`The next invasion sets out in about ${fmtLeft(s.net.next)}.${scoutedLine(s)}`);
   lines.push(`Streak ${streakOf(s)}. The next stop pays ${Math.round((streakMult(s) - 1) * 100)}% more.`);
   for (const l of lines) emit(s, 'info', l);

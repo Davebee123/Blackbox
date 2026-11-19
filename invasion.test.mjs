@@ -82,6 +82,21 @@ test('nothing stops an invasion but you: every one reaches HOME and chips 1% a m
   }
 });
 
+test('left alone at HOME 15 minutes, it leaves unpaid, the streak stands, and the next one is scheduled', () => {
+  const s = world();
+  const inv = atWall(s);
+  s.net.streak = 3;
+  const had = { ...s.materials };
+  wait(s, 14 * MIN);
+  assert.equal(s.invasion, inv, 'still there at 14 minutes');
+  const ev = wait(s, MIN + 5000);
+  assert.equal(s.invasion, null, 'gone at 15');
+  assert.ok(ev.some((e) => e.type === 'invasion-cleared' && e.lost && /left HOME/.test(e.message)));
+  assert.deepEqual(s.materials, had, 'its bounty went with it');
+  assert.equal(s.net.streak, 3, 'no loss: the streak stands');
+  assert.ok(s.net.next >= I.everyMs[0] - 5000 && s.net.next <= I.everyMs[1], 'the next one sets out 20-30 minutes later');
+});
+
 test('intercept: catch it on its road, before it chips anything', () => {
   const s = world();
   s.net.next = 0;

@@ -2510,7 +2510,8 @@ it is and what it pays (`invasions` in the terminal).
   one half. A virus of that server's family **at its level** (Volatile and an Amplifier +2, a Lockdown −2) and floor
   grade, maybe a strain, maybe mutated (from level 4). The very first is a plain raider.
 - **Travel:** 2 minutes from a floor-1 server, a minute more a floor down, times its kind's; half that from Backbone.
-- **At HOME** it chips 1% of your max Integrity a minute, never below 1, until you kill it.
+- **At HOME** it chips 1% of your max Integrity a minute, never below 1. Left alone 15 minutes it leaves, its bounty
+  unpaid (your streak stands), and the next one is scheduled. The card's At HOME bar drains toward that.
 - **Quirks:** a raider, pack or champion carries its server's quirk three times in ten: from a **Hoard** it's Armored
   and pays half again; from a **Nest** it brings a brood (one more virus, two levels under; +1 bounty).
 
