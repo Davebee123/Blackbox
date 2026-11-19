@@ -1,0 +1,211 @@
+<!doctype html>
+<!-- The Steam capsules: the black box on the Horizon line over an ASCII city and its reflection. Open it to see every
+     size; `node press/render.mjs` saves them as the PNGs beside it. ?seed=N draws another skyline (21 is the kept one). -->
+<meta charset="utf-8">
+<title>BLACKBOX capsules</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=Inter+Tight:wght@400&display=block">
+<style>
+  body { margin: 0; background: #222; padding: 20px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 20px; font-family: 'Inter Tight'; }
+  .cap { position: relative; overflow: hidden; background: #020101; flex: none; }
+  .cap::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 9; background: radial-gradient(ellipse 75% 85% at 50% 50%, transparent 62%, rgba(0,0,0,.55)); }
+  /* the character grid: 14px Plex Mono, 8.4px advance + 0.6px spacing = 9px cells, 16px rows. Only glyphs Plex Mono
+     has: a fallback glyph has another width and shifts the rest of its row off the grid. */
+  .ascii { position: absolute; margin: 0; z-index: 1; font: 400 14px/16px 'IBM Plex Mono'; letter-spacing: .6px; white-space: pre; color: transparent; font-kerning: none; font-variant-ligatures: none; }
+  .hz { position: absolute; left: 0; right: 0; height: 1px; z-index: 3;
+    background: linear-gradient(90deg, transparent, rgba(241,185,47,.2) 12%, rgba(255,214,120,.8) 36%, #fff1cc 50%, rgba(255,214,120,.8) 64%, rgba(241,185,47,.2) 88%, transparent);
+    box-shadow: 0 0 10px rgba(255,210,110,.5); }
+  .haze { position: absolute; left: 0; right: 0; z-index: 2; background: radial-gradient(ellipse 46% 50% at 50% 50%, rgba(241,185,47,.2), transparent); }
+  .box { position: absolute; z-index: 4; }
+  .box::before { content: ''; position: absolute; inset: -3%; background: #ffe6a6; filter: blur(var(--blur, 7px)); opacity: .85; }
+  .box::after { content: ''; position: absolute; inset: -45%; background: radial-gradient(closest-side, rgba(241,185,47,.34), transparent); }
+  .box b { position: absolute; inset: 0; z-index: 1; background: #030201; outline: 1px solid rgba(255,242,210,.7); }
+  .word { position: absolute; left: 0; right: 0; text-align: center; z-index: 5; color: #fff2c8; white-space: nowrap; font-weight: 400; }
+</style>
+<body>
+<script>
+const CW = 9, RH = 16; // the cell
+const SIZES = { header: [920, 430], main: [1232, 706], small: [462, 174], vertical: [748, 896], library: [600, 900] };
+// Per size: the horizon's row (from the top), the box's width in cells, the name's size, tracking and gap under the box
+// (a share of the box's height), and the clearing house's column rows, place (its tower from the box) and width.
+const PLAN = {
+  header:   { hr: 13, bank: 3, gap: 0.5, box: 12, word: 40, track: 0.5 },
+  main:     { hr: 22, bank: 5, box: 16, word: 60, track: 0.5 },
+  small:    { hr: 4,  gap: 0.52, box: 6,  word: 23, track: 0.42 },
+  vertical: { hr: 31, bank: 7, bankAt: 0, box: 18, word: 58, track: 0.4 },
+  library:  { hr: 31, bank: 7, bankAt: 0, bankW: 13, box: 16, word: 48, track: 0.4 },
+};
+function rng(seed) { let x = seed >>> 0 || 1; return () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296); }
+const AMBER = '241,185,47', GOLD = '255,216,92', PAPER = '255,242,200';
+
+function cityCap(w, h, P, seed) {
+  const C = Math.floor(w / CW) - (Math.floor(w / CW) % 2), left = (w - C * CW) / 2; // an even count, so the centre is a cell edge
+  const R = Math.ceil(h / RH) + 1, mid = C / 2, hr = P.hr, Y = hr * RH; // the horizon: the top edge of row hr
+  const g = Array.from({ length: R }, () => Array.from({ length: C }, () => null));
+  const put = (x, y, ch, a, col = AMBER) => { if (x < 0 || y < 0 || x >= C || y >= R) return; g[y][x] = { ch, a, col }; };
+  const at = (x, y) => (x >= 0 && y >= 0 && x < C && y < R ? g[y][x] : null);
+  const r = rng(seed);
+  // The box: P.box cells wide, square, centred on the line. Its clear zone: the box and two cells round it.
+  const bw = P.box * CW, bx0 = mid - P.box / 2, clear = (x) => x >= bx0 - 2 && x < bx0 + P.box + 2;
+  // The name: its capitals' top a share of the box's height under the box (Inter's cap top sits 0.25em into its line)
+  const wordY = (Y + bw / 2 + (P.gap ?? 0.38) * bw + 0.35 * P.word) / h;
+
+  // ---- the back row: low, dim blocks, shown in the gaps and over the front roofs
+  for (let x = 0; x < C;) {
+    const bw2 = 4 + Math.floor(r() * 5), hgt = Math.max(2, Math.round(hr * (0.3 + r() * 0.3)));
+    for (let y = hr - hgt; y < hr; y++) for (let xx = x; xx < x + bw2 && xx < C; xx++) {
+      if (clear(xx)) continue;
+      if (y === hr - hgt) put(xx, y, '_', 0.1);
+      else if ((xx - x) % 2 === 1 && y % 2 === 0) put(xx, y, '.', 0.07);
+    }
+    x += bw2 + 1;
+  }
+
+  // ---- the front row: towers rising from the box out to the edges, each drawn whole
+  const towers = [];
+  const side = (dir) => {
+    const x = dir < 0 ? bx0 - 3 : bx0 + P.box + 2; // start beside the clear zone
+    const room = dir < 0 ? x : C - x;
+    let used = 0, i = 0;
+    while (used < room - 3) {
+      const bank = P.bank && dir < 0 && i === (P.bankAt ?? 1); // the clearing house: on the left, second from the box (beside it where the frame is narrow)
+      const tw = bank ? P.bankW || 19 : [7, 9, 7, 11, 9, 7][(i + (dir > 0 ? 2 : 0)) % 6]; // odd widths: a symmetric window grid
+      const k = (used + tw / 2) / room; // 0 at the box, 1 at the edge
+      let th = Math.round(hr * (0.32 + 0.6 * Math.pow(k, 0.8)) + (r() - 0.5) * 2);
+      th = bank ? ((P.bankW || 19) - 1) / 6 + 3 + P.bank + 1 : Math.max(2, Math.min(hr - 1, th));
+      const gap = r() < 0.35 ? 2 : 1;
+      const x0 = dir < 0 ? x - used - tw : x + used;
+      if ((dir < 0 && x0 < -2) || (dir > 0 && x0 + tw > C + 2)) break;
+      towers.push({ x0, tw, th, i, dir, bank });
+      used += tw + gap; i++;
+    }
+  };
+  side(-1); side(1);
+  // Kessler's clearing house (the cold open's building): a pediment stepping three cells a row (.-'-.) with the cold
+  // open's $ in it, a blank frieze between cornices, columns wall to wall, a step. 19 cells (five columns a cell
+  // apart) or 13 (three, two apart): widths both the pediment's slopes and the columns fit exactly.
+  const drawBank = (t) => {
+    const half = (t.tw - 1) / 2, ped = half / 3, top = hr - t.th, m = t.x0 + half, x1 = t.x0 + t.tw - 1;
+    const [cols, pitch] = t.tw === 13 ? [3, 5] : [5, 4];
+    for (let y = top; y < hr; y++) for (let x = t.x0; x <= x1; x++) put(x, y, ' ', 0); // solid: hides the back row
+    for (let j = 0; j < ped; j++) {
+      const y = top + j, hw = 2 + 3 * j;
+      put(m - hw, y, '.', 0.34); put(m - hw + 1, y, '-', 0.34); put(m - hw + 2, y, "'", 0.34);
+      put(m + hw - 2, y, "'", 0.34); put(m + hw - 1, y, '-', 0.34); put(m + hw, y, '.', 0.34);
+    }
+    put(m, top + ped - 2, '$', 0.6, GOLD);
+    const f = top + ped; // the frieze: a cornice, a blank row, a cornice
+    for (let x = t.x0; x <= x1; x++) { put(x, f, '=', 0.26); put(x, f + 2, '=', 0.22); }
+    put(t.x0, f + 1, '|', 0.3); put(x1, f + 1, '|', 0.3);
+    for (let y = f + 3; y < hr - 1; y++) for (let c = 0; c < cols; c++) {
+      const cx = t.x0 + c * pitch; put(cx, y, '|', 0.28); put(cx + 1, y, ':', 0.16); put(cx + 2, y, '|', 0.28);
+    }
+    for (let x = t.x0; x <= x1; x++) put(x, hr - 1, '_', 0.3);
+  };
+  for (const t of towers) {
+    if (t.bank) { drawBank(t); continue; }
+    const top = hr - t.th, x1 = t.x0 + t.tw - 1;
+    for (let y = top; y < hr; y++) for (let x = t.x0; x <= x1; x++) {
+      if (y === top) put(x, y, x === t.x0 || x === x1 ? '.' : '-', 0.34);
+      else if (x === t.x0 || x === x1) put(x, y, '|', 0.26);
+      else if ((x - t.x0) % 2 === 0) {
+        const lit = r() < 0.17; put(x, y, lit ? '=' : '.', lit ? 0.6 : 0.15, lit ? GOLD : AMBER);
+      } else put(x, y, ' ', 0); // the tower is solid: it hides the back row
+    }
+    // a setback on some: a narrower crown
+    let crown = 0;
+    if (t.tw >= 9 && t.th >= hr * 0.5 && t.th <= hr - 4 && r() < 0.7) {
+      const c0 = t.x0 + 2, c1 = x1 - 2; crown = 2;
+      for (let x = c0; x <= c1; x++) put(x, top - 2, x === c0 || x === c1 ? '.' : '-', 0.3);
+      put(c0, top - 1, '|', 0.24); put(c1, top - 1, '|', 0.24);
+      for (let x = c0 + 2; x < c1; x += 2) put(x, top - 1, '.', 0.15);
+    }
+    // an antenna on the tall ones, its light on top
+    const a0 = top - crown - 1; // the antenna's foot
+    if (t.th >= hr * 0.6 && t.i % 2 === 1 && a0 - 2 >= 1) { const ax = t.x0 + Math.floor(t.tw / 2); put(ax, a0, '|', 0.24); put(ax, a0 - 1, '|', 0.24); put(ax, a0 - 2, '*', 0.75, GOLD); }
+  }
+
+  // ---- the sky: a few stars, on the grid, never near the box
+  for (let k = 0; k < C * 0.12; k++) { const x = Math.floor(r() * C), y = Math.floor(r() * (hr * 0.5)); if (!at(x, y) && !clear(x)) put(x, y, '.', 0.12 + r() * 0.12, PAPER); }
+
+  // ---- the reflection: the city upside down under the line, stretched to the bottom edge, broken by the water, and
+  // trailing off into faint 1s and 0s
+  const below = Math.ceil((h - Y) / RH), k = Math.max(1, below / (hr * 0.85));
+  const depth = Math.min(below, Math.floor(hr * k));
+  const wTop = (h * wordY - P.word * 0.6) / RH, wBot = (h * wordY + P.word * 0.75) / RH; // the name's rows: the water dims behind it
+  const dim = (y) => (y + 1 > wTop && y < wBot ? 0.4 : 1);
+  for (let d = 0; d < depth; d++) {
+    const src = hr - 1 - Math.floor(d / k), y = hr + d, f = d / depth, fade = (0.95 - 0.6 * f ** 0.9) * (y + 1 > wTop && y < wBot ? 0.45 : 1), shift = [0, 1, 0, -1][d % 4];
+    for (let x = 0; x < C; x++) {
+      const c = at(x, src); if (!c || !c.a || clear(x + shift)) continue;
+      if (r() < 0.03 + 0.18 * f ** 2) continue; // the water breaks it, more the further down
+      let ch = c.col === GOLD && c.ch !== '=' ? '¦' : c.ch === '|' ? '¦' : c.ch === '-' ? '~' : c.ch;
+      const bits = Math.min(1, Math.max(0, (f - 0.42) / 0.5)); // from below the middle it turns to bits, all bits near the bottom
+      let a = c.a * fade;
+      if (r() < bits * bits * (3 - 2 * bits)) {
+        if (r() < 0.45 || at(x + shift - 1, y)?.ch?.match(/[01]/)) continue; // scattered: never two side by side
+        ch = r() < 0.5 ? '0' : '1'; a = Math.min(a * 0.5, 0.1); // half as bright as what they replace
+      }
+      put(x + shift, y, ch, a, ch === '0' || ch === '1' ? AMBER : c.col);
+    }
+  }
+  // ripples: short runs of ~ and - on the open water, thicker near the line
+  for (let y = hr + 1; y < R; y++) {
+    const f = (y - hr) / (R - hr);
+    for (let x = 0; x < C; x++) {
+      if (r() > 0.03 * (1 - 0.5 * f)) continue;
+      const n = 2 + Math.floor(r() * 3), ch = (y - hr) % 2 ? '~' : '-', a = (0.16 - 0.06 * f) * dim(y);
+      for (let k = 0; k < n; k++) if (!at(x + k, y)?.a && !(x + k >= bx0 && x + k < bx0 + P.box && y * RH < Y + bw / 2)) put(x + k, y, ch, a);
+      x += n;
+    }
+  }
+  // the box's light on the water: a broken column from under it to the bottom, narrowing as it goes
+  const hb = Math.ceil((Y + bw / 2) / RH);
+  for (let y = hb; y < R; y++) {
+    const f = (y - hb) / Math.max(1, R - hb), half = (P.box / 2 - 1) * (1 - 0.5 * f);
+    for (let x = Math.floor(mid - half); x < Math.ceil(mid + half); x++) {
+      const edge = Math.abs(x + 0.5 - mid) / Math.max(1, half); // 0 at the centre, 1 at its edge
+      if (r() > 0.55 * (1 - f) * (1 - 0.6 * edge)) continue;
+      put(x, y, (x + y) % 3 ? '¦' : ':', 0.5 * (1 - f) ** 1.1 * (1 - 0.5 * edge) * dim(y), GOLD);
+    }
+  }
+
+  // ---- out to HTML: one span per run of the same colour and alpha
+  const html = g.map((row) => {
+    let out = '', cur = '', buf = '';
+    const flush = () => { if (buf) out += cur ? `<span style="color:${cur}">${buf}</span>` : buf; buf = ''; };
+    for (const c of row) {
+      const key = c && c.a > 0.02 ? `rgba(${c.col},${Math.round(c.a * 100) / 100})` : '';
+      if (key !== cur) { flush(); cur = key; }
+      buf += c && c.a > 0.02 ? c.ch : ' ';
+    }
+    flush(); return out;
+  }).join('\n');
+
+  return `<pre class="ascii" style="left:${left}px;top:0">${html}</pre>`
+    + `<div class="haze" style="top:${Y - h * 0.3}px;height:${h * 0.6}px"></div>`
+    + `<div class="hz" style="top:${Y}px"></div>`
+    + `<div class="box" style="left:${left + bx0 * CW}px;top:${Y - bw / 2}px;width:${bw}px;height:${bw}px;--blur:${Math.max(3, bw / 16)}px"><b></b></div>`
+    + `<div class="word" style="top:${Math.round(h * wordY - P.word * 0.6)}px;font-size:${P.word}px;letter-spacing:${P.track}em;margin-right:-${P.track}em">BLACKBOX</div>`;
+}
+
+const seed = +(new URLSearchParams(location.search).get('seed') || 21);
+for (const [n, [w, h]] of Object.entries(SIZES)) {
+  const d = document.createElement('div');
+  d.className = 'cap'; d.dataset.size = n; d.style.width = w + 'px'; d.style.height = h + 'px';
+  d.innerHTML = cityCap(w, h, PLAN[n], seed);
+  document.body.append(d);
+}
+
+// The logo: the box and the name alone, on transparent ground, at Steam's library logo size. The capsules'
+// proportions: the name 0.37 of the box, half the box under it, the two centred together.
+{
+  const [w, h] = [1280, 720], B = 260, size = Math.round(B * 40 / 108), track = 0.5, capTop = B * 1.5;
+  const top = Math.round((h - (capTop + size * 0.727)) / 2);
+  const d = document.createElement('div');
+  d.className = 'logo'; d.dataset.size = 'logo'; d.style.cssText = `position:relative;width:${w}px;height:${h}px;flex:none`;
+  d.innerHTML = `<div class="box" style="left:${(w - B) / 2}px;top:${top}px;width:${B}px;height:${B}px;--blur:${B / 16}px"><b></b></div>`
+    + `<div class="word" style="top:${Math.round(top + capTop - size * 0.25)}px;font-size:${size}px;letter-spacing:${track}em;margin-right:-${track}em">BLACKBOX</div>`;
+  document.body.append(d);
+}
+</script>
+</body>
