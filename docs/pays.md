@@ -40,7 +40,7 @@ odds; the activity only changes what it pays on top.
 | **Components** | Nothing yet: hubs buy them | Surge room, Cascade, Deadlock, a Nest, scrapping, a Harvester | A surge's waves pay components in place of credits; Deadlock pays as Cascade does |
 | **Filters** | Your wall's slots | Rack pulls; vaults, 1 in 7 | New with quest sites |
 | **Daemons** | Your party | Invasions only | — |
-| **One faction's standing** | Shop tiers, codebases, chase lines, your commission | Defence calls, Feuds, Settlement runs, the faction's contracts | A feud's wins pay standing in place of credits and protocols; its faction piece stays |
+| **One faction's standing** | Shop tiers, codebases, chase lines, your commission | Defence calls, Feuds, Settlement runs, the faction's contracts and supply order | A feud's wins pay standing in place of credits and protocols; its faction piece stays |
 | **Receipts** | Faction pieces, standing where you stamp them | Takeovers, Rack pulls | New with quest sites |
 | **A crewmate** | Hires, leads, a codebase without the rep | Helping a runner in a room, a runner's trade, beating a rival | New with quest sites |
 | **New servers** | The climb | Kills and first clears, vault trace records, relays, invaders from a **?** | — |
@@ -53,13 +53,17 @@ rack is Kessler's hardware, and its trades are older than the floor.
 
 ## Sinks
 
-| Currency | Spent on | Gap |
+**Supply orders are the main sink** (economy.md 3). Each faction keeps one standing order, never on a clock, and the
+next arrives an hour after you deliver, so every ware is always wanted somewhere. An order pays its market value ×1.25
+in credits and +4 standing. Patches (economy.md 2) are the long goal on top, spent once.
+
+| Currency | Spent on | Its supply order |
 |---|---|---|
-| Credits | Top-ups, programs, codebases, the Shops, tools, the wall | — |
-| Code | Programs, the wall's tiers | Patches take more |
-| Exploits | Medium programs (1), darknet listings (2) | Thin until patches |
-| Components | Nothing: hubs buy them | Patches: 30–80 a patch (economy.md 2) |
-| Standing, receipts | Shop tiers, codebases, chase lines; faction pieces | — |
+| Credits | Top-ups, programs, codebases, the Shops, tools, the wall | — (orders pay it) |
+| Code | Programs, the wall's tiers; patches | Halcyon (Cipher), Kestrel (Kernel), LANTERN (Worm) |
+| Exploits | Medium programs, darknet listings; patches | GLASSJAW |
+| Components | Patches; hubs buy them | NULL CHOIR |
+| Standing, receipts | Shop tiers, codebases, chase lines; faction pieces | — (orders pay +4) |
 | Gear, filters, daemons | Slots | — |
 
 ## Reacting
@@ -75,8 +79,9 @@ changes.
 
 ## Build order
 
-1. **P1: the pay changes** (the map's last column) and each card leading with its own thing. Nothing saved.
-2. **P2: reacting**, after the ticker.
-3. **P3: patches** (economy.md 2), so components and Exploits are spent.
+1. **P1: supply orders** (economy.md 3), so code, components and Exploits always have a buyer.
+2. **P2: the pay changes** (the map's last column) and each card leading with its own thing. Nothing saved.
+3. **P3: reacting**, after the ticker.
+4. **P4: patches** (economy.md 2), the long goal.
 
-Quest sites build after P1.
+Quest sites build after P2. Supply orders and the pay changes are economy work: one session after the other.

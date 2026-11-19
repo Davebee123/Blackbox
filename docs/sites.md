@@ -48,6 +48,6 @@ when it's built, so none is a trap or a must.
 
 ## Open
 
-- **Sinks.** A thing is only worth chasing if it's spent: components buy nothing yet and Exploits only medium programs.
-  Patches (economy.md 2) spend both.
+- **Sinks.** A thing is only worth chasing if it's spent: supply orders (economy.md 3) are the main buyer, NULL
+  CHOIR's for components and GLASSJAW's for Exploits (docs/pays.md).
 - **How often.** About one an hour is a start; set it once the designer has played them.
