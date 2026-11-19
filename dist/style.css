@@ -4382,6 +4382,14 @@ body.no-motion .recap { animation: none; }
 .mnode.site.done .sframe { fill: rgba(125, 115, 98, 0.08); stroke: var(--gray); stroke-dasharray: none; }
 .mnode.site.done .sico { stroke: var(--gray); }
 .mlink.saim { stroke: var(--hot); stroke-dasharray: 5 4; opacity: 0.8; }
+.mnode.site-rack .sframe { fill: color-mix(in srgb, var(--daemon) 8%, rgba(9, 6, 3, 0.9)); stroke: var(--daemon); }
+.mnode.site-rack .sico { stroke: var(--daemon); }
+.mnode.site-rack .sr-bg { stroke: color-mix(in srgb, var(--daemon) 20%, transparent); } .mnode.site-rack .sr-fg { stroke: var(--daemon); }
+.mnode.site .mlabel.site { fill: var(--daemon); }
+.mlink.slink { stroke: color-mix(in srgb, var(--daemon) 50%, transparent); stroke-dasharray: 3 4; }
+.site-card .tag-era { color: var(--muted); border-color: var(--line-strong); }
+.site-card .site-tile { cursor: default; }
+.site-pay .evc-rw.sp-flt .glyph { color: #6fb6ff; }
 /* Its card: the run as a track from the lock to the server it passes, then what it pays as icons. */
 .site-card .hot-t { color: var(--hot); }
 .site-run { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 8px; font: 600 12px var(--mono); }

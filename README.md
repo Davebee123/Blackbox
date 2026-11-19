@@ -158,7 +158,7 @@ comment saying what it does.
 | `dist/leanings.mjs` | Leanings: a server's one positive rule (Venting, Wind-up, Brownout), its multipliers in the fight and what it has paid. |
 | `dist/rivals.mjs` | Rivals: runners from the cast who race you to a server's vault and fight you two or three in a row; lineup by faction, counter-picks by temperament; `huntsYou` (runners.mjs) marks one red. |
 | `dist/runcards.mjs` | Run cards: the director's Surge room, Escort and Hunter pack inside a run. |
-| `dist/sites.mjs`, `dist/sites-view.mjs` | Quest sites: the Settlement run, a crew's rig the director mounts on your floor (its clock, lock, pay and the lock landing); its map node, card and threat-rail row. |
+| `dist/sites.mjs`, `dist/sites-view.mjs` | Quest sites the director mounts on your floor, in turn: the Settlement run (a crew's rig: its lock, pay and the lock landing) and the Rack pull (Kestrel's rack: its cage's filters and receipts); their map nodes, cards and threat-rail rows. |
 | `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: eight boards that aren't fights (deeper chase and Cascade boards from floor 3), and the cryptogram's key (`s.cipher`). |
 | `dist/forensics.mjs`, `dist/logsweep.mjs` | Log sweep: a short detective puzzle in an incident file (logsweep.mjs builds the logs: a thread's process log, the Terminal room). |
 | `dist/traffic.mjs`, `dist/travelfx.mjs` | Ambient packets on the room map; the step between rooms as a train of code. |

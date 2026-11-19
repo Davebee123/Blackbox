@@ -128,8 +128,13 @@ const NEWS = {
   'world-event-hop': (s, e) => { const ev = (s.events || []).find((x) => x.id === e.event); return ev ? wire(s, `${ev.name} hopped to ${placeName(s, e.location)}. Level ${ev.level} now.`) : null; },
   'world-event-end': (s, e) => ended(s, e, false),
   'world-event-won': (s, e) => ended(s, e, true),
-  // A quest site (sites.mjs): LANTERN reads a Settlement run's count out as numbers; the institution's faction thanks you.
+  // A quest site (sites.mjs): LANTERN reads a Settlement run's count out as numbers; Kestrel's facilities desk announces a
+  // rack; the faction behind it thanks you.
   site: (s, e) => {
+    if (e.kind === 'rack') {
+      if (e.phase === 'up') return known(s, 'kestrel') ? contact(s, 'kestrel', `Rack ${e.rack} will close at the end of this cycle. Please collect your belongings.`) : wire(s, `Kestrel has a rack up out of cold storage.`);
+      return e.phase === 'won' && known(s, 'kestrel') ? contact(s, 'kestrel', CONTACTS.kestrel.thanks({ you: you(s) })) : null;
+    }
     const crew = (e.crew || '').toUpperCase(), short = e.short || 'a settlement run';
     if (e.phase === 'up') return known(s, 'lantern') ? contact(s, 'lantern', `${digits(e.trades)}. ${short[0].toUpperCase()}${short.slice(1)} settles in ${WORDS[e.mins] || `${e.mins}`} minutes. ${crew} on the line.`) : wire(s, `${crew} is locking ${short}'s settlement run.`);
     if (e.phase === 'won') return known(s, e.faction) ? contact(s, e.faction, CONTACTS[e.faction].thanks({ you: you(s) })) : null;

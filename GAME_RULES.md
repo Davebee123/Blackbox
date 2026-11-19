@@ -2424,7 +2424,8 @@ The history (below) lists each, ending *won*, *taken* (a surge you fought in, le
 
 Short-lived servers the director mounts on your floor (docs/sites.md): one up at a time, the first 20–40 minutes of
 logged-on time after level 5, the next 50–70 minutes after one ends, on dice of their own. A site lives off your
-network: no invasions, no tracing, no takeover. Gear drops on it as anywhere. Built: the Settlement run.
+network: no invasions, no tracing, no takeover. Gear drops on it as anywhere. Built: the Settlement run and the Rack
+pull, which come in turn.
 
 - **The Settlement run.** A crew (TOLLGATE, SWARMLINE or PALEMASK; the floor's holder when it's one) bolts a rig
   (`TOLLGATE-RIG-31`) beside a server you've located on your floor, at your level + 2 or under and among the three
@@ -2437,7 +2438,17 @@ network: no invasions, no tracing, no takeover. Gear drops on it as anywhere. Bu
 - **The lock lands** when the clock runs out: its trades orphan and the process table goes up 1. Nothing else.
 - **Either way the rig unmounts.** On it, you're sent home with your pack banked, as at a jack out.
 - **On the map:** threads' hexagon in red with the lock in it and a ring of the time left, a red dashed aim at its
-  target; its row on the threat rail. LANTERN reads its trades out on #net. `developer site`.
+  target; its row on the threat rail. LANTERN reads its trades out on #net. `developer site rig`.
+- **The Rack pull.** Kestrel mounts one of Kessler's racks (`KESSLER-RACK-04`) beside a server you've located on your
+  floor, chosen as a rig's, for one cycle before it pulls it back to cold storage: 30–35 minutes of logged-on time,
+  waiting while you fight on it. Its trades froze two or three layers below the floor (a *C+n* tag on its card).
+- **The cage** is its vault, keyed by its guard post as any vault. Open it (or force it): its usual files, then 2
+  filters (the first Tuned or better, Custom one time in four), 3 receipts from its era kept for your commission, and
+  Kestrel +6 (with its ripples). Its Core stays sealed: nothing to take over.
+- **The clock runs out:** Kestrel pulls it back. Nothing lost. Either way it unmounts as a rig does.
+- **On the map:** the hexagon in violet with the cold mark and a ring of the time left, a dashed link to the server
+  it's mounted beside; its row on the threat rail. Kestrel's desk posts *Rack 4 will close at the end of this cycle.
+  Please collect your belongings.* on #net once you've found its hub. `developer site rack`.
 
 ### History
 
@@ -2586,7 +2597,7 @@ one family (Wormguard, Lockbreak, Exorcism), 15–40% less fragmentation, 20–5
 chip, and for home fights 2–5% Evasion, 10–25% Sanitize, 2–6 Block, a 4–10% opening shield, 2–5 Regen, 2–6 back on
 every hit; Custom only: 2–5 of a family's code from every invader it stops (of Reflection), 15–30% slower invasions (of
 Tar), invasions arriving 10–25% worn (of the Hive). About one vault in seven holds a `filter.flt` (Custom one time in
-twelve, the only Custom source). **Put in**, **Take out**, **Scrap** (1–3 components) at home
+twelve; a Rack pull's cage is the other Custom source, *Quest sites*). **Put in**, **Take out**, **Scrap** (1–3 components) at home
 (`filter equip|unequip|scrap <n>`). You hold 12 at most.
 
 ### Bounties, daemons and the streak

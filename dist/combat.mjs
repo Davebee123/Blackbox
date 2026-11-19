@@ -2734,8 +2734,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     firewallCommand(s, text, now);
   } else if (/^hub (assemble|retune) \S+$/.test(text)) {
     assemble(s, text.split(' ')[2]); // a faction piece (faction-gear.mjs)
-  } else if (text === 'developer site') {
-    hooks.developerSite?.(s); // a Settlement run, now (sites.mjs)
+  } else if (/^developer site( rig| rack)?$/.test(text)) {
+    hooks.developerSite?.(s, text.split(' ')[2] || null); // a quest site, now (sites.mjs)
   } else if (/^(hub )?deliver \S+$/.test(text)) {
     deliver(s, text.split(' ').at(-1)); // a faction's supply order (supply.mjs)
   } else if (/^commission \S+$/.test(text)) {

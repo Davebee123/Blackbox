@@ -4,9 +4,9 @@
 // more grind and less chip while contested, and for the fights at home decoys, a sandbox, Block, a
 // shield, Regen and barbs, and on rarer ones a tar pit, a sting or a reflection. The home-fight stats
 // were services once (the Hardened Kernel, the Scrubber, the Hot-patcher, Counter-intrusion).
-// Getting one: filter.flt in some vaults (pull it, jack out to bank it; now and then Custom, the only
-// place Custom filters and the rare tar, sting and reflection come from), events, and hub shops' bootleg
-// filters. Equip at home.
+// Getting one: filter.flt in some vaults (pull it, jack out to bank it; now and then Custom, where the rare tar,
+// sting and reflection come from), a Rack pull's cage (sites.mjs), events, and hub shops' bootleg filters. Equip at
+// home.
 import { emit, warn, active } from './combat.mjs';
 import { gainComponents } from './salvage.mjs';
 import { RARITIES, seeded } from './gear.mjs';
@@ -71,8 +71,8 @@ export function rollFilter(r, { level = 1, rarity = null, stat = null } = {}) {
   const pre = taken.map((k) => FILTER_STATS[k]).find((x) => x.kind === 'prefix'), suf = taken.map((k) => FILTER_STATS[k]).find((x) => x.kind === 'suffix');
   return { kind: 'filter', rarity, level: L, stats, name: [pre?.label, base.name, suf?.label].filter(Boolean).join(' ') };
 }
-// What a vault's filter.flt holds, if it has one (fixed by the server's seed): Custom one time in twelve, the only
-// place Custom filters come from.
+// What a vault's filter.flt holds, if it has one (fixed by the server's seed): Custom one time in twelve. A Rack pull's
+// cage (sites.mjs) is the other place Custom filters come from.
 export function vaultFilter(loc) {
   if (!loc || loc.zone || loc.rogue) return null;
   const r = seeded(loc.seed * 31 + 7);
