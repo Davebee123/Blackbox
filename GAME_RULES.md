@@ -2257,8 +2257,8 @@ Delivered contracts move to **Completed**, greyed, newest first.
 ### The initiate storyline
 
 LOWLIGHT's jobs, in order (they can't be dropped and don't count toward your six; each pays XP by its kind): kill three
-processes in SPRAWL-00 (60 credits and a whole level's XP, level 1 to 2: 690); hand over two Worm code (80); kill the named process `claimjack`, an elite (one
-level above you, never above 4; after two losses it's worn down to v1) (100, wick's Old Toolkit); take over any server
+processes in SPRAWL-00 (60 credits and a whole level's XP, level 1 to 2: 690); hand over two Worm code (80 and a quarter of level 2's XP: 620); kill the named process `claimjack`, an elite (one
+level above you, never above 4; after two losses it's worn down to v1) (100, level 2's whole XP: 2,480, wick's Old Toolkit); take over any server
 you've traced (250 and your first **relay**); recover Halcyon's stolen `claims.db` from an unknown server next to the
 one you took (150, a protocol, Tuned or better). Each pays Halcyon rep (+3, +3, +3, +4, +4), so you finish at Contractor.
 The board and the Shops open with the turf letter. At level 22 wick writes once more (*crew colours*): take over one
@@ -2864,8 +2864,8 @@ threat, a world event, a contract ready, an offer, a letter, a thread, wick's le
 A page stays while it's true, an hour at most; the same news again replaces the old line.
 
 - **The ping log** (desktop): frameless lines, an icon and one short sentence each, newest at the bottom, five at most,
-  the older fading in steps; names amber, red on a threat, yours teal. In the map's left column under Contracts; on
-  other pages above the prompt (in a fight, threats only). A plain line fades after 30 s; a threat, a contract to turn
+  the older fading in steps; names amber, red on a threat, yours teal. In the map's left column under Contracts; on a
+  server's rooms map over its lower-left corner; on other pages above the prompt (in a fight, threats only). A plain line fades after 30 s; a threat, a contract to turn
   in, an unread letter and an invite stay until dealt with. Its tooltip: the name, the line, ▸ what a click does.
   An unseen threat glows every 10 s until you hover it. **One click** does the page's thing (**Deliver**, **Read**, **Jack in**, **Show**…); mid-fight or on a run, anything that would start a
   fight shows you where it is instead. A page that takes on a task (an offer, a world event's fight) shows its quest

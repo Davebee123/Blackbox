@@ -201,9 +201,9 @@ function postStory(s, at = now(), force = false) {
   const l = letter(s, msg, at);
   if (job) {
     const j = { id: l.id, from: msg.from, subject: msg.subject, body: msg.body, got: 0, at, ...job };
-    // like the board's: its kind and size, at your level; reward.levelXp pays a whole level's XP instead (wick's first: 1 to 2)
+    // like the board's: its kind and size, at your level; reward.levelXp pays that level's XP instead (wick's first: 1 to 2), or levelPart of it
     const L = hackerLevel(s); // read first: it seats your class's level on a new save
-    j.xpFixed = true; j.reward.xp = j.reward.levelXp ? xpToNext(j.reward.levelXp) : contractXp(L, j);
+    j.xpFixed = true; j.reward.xp = j.reward.levelXp ? Math.round(xpToNext(j.reward.levelXp) * (j.reward.levelPart ?? 1)) : contractXp(L, j);
     m.jobs.push(j);
     l.job = j.id;
     arm(s, j);
@@ -276,7 +276,7 @@ function plant(s, j) {
   const loc = s.locations.find((l) => l.id === j.loc);
   if (loc && !(loc.extraFiles || []).some((f) => f.name === j.file)) (loc.extraFiles ||= []).push({ name: j.file, label: j.label, text: j.text });
 }
-function disarm(s, j) {
+export function disarm(s, j) {
   const loc = s.locations.find((l) => l.id === j.loc);
   if (loc?.extraFiles && (j.type === 'item' || j.type === 'heist')) loc.extraFiles = loc.extraFiles.filter((f) => f.name !== j.file);
   if (j.type === 'install' && s.run?.pack) s.run.pack = s.run.pack.filter((f) => !(f.kind === 'payload' && f.contract === j.id)); // dropped: its item goes with it
