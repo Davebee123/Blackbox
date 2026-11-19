@@ -41,7 +41,7 @@ const MAP = {
   'transfer-in': (e) => ({ kind: 'paid', label: 'Transfer', from: 'Market', text: e.message, go: e.faction ? `hub:${e.faction}` : 'map', beep: false }),
   supply: (e) => ({ kind: 'paid', label: 'Order', from: 'Market', text: e.message, go: e.faction ? `hub:${e.faction}` : 'map', beep: false }),
   // A quest site (sites.mjs): mounted (a beep), settled, landed; gone quietly.
-  site: (e) => ({ kind: 'net', label: e.phase === 'won' ? 'Settled' : e.phase === 'landed' ? 'Landed' : 'Rig', from: 'Network', text: e.message, go: e.location && e.phase === 'up' ? `map:${e.location}` : 'map', beep: e.phase === 'up' }),
+  site: (e) => ({ kind: 'net', label: e.phase === 'won' ? (e.kind === 'rack' ? 'Cage' : e.kind === 'runner' ? e.stamp || 'Settled' : 'Settled') : e.phase === 'landed' ? 'Landed' : e.phase === 'closed' ? 'Closed' : e.phase === 'gone' ? 'Gone' : e.kind === 'rack' ? 'Rack' : e.kind === 'runner' ? 'Trade' : 'Rig', from: 'Network', text: e.message, go: e.location && e.phase === 'up' ? `map:${e.location}` : 'map', beep: e.phase === 'up' }),
   'site-gone': (e) => ({ kind: 'net', label: 'Gone', from: 'Network', text: e.message, go: null, beep: false }),
   fleet: (e) => ({ kind: 'alert', label: 'Swarm', from: 'Network', text: e.message.replace(/^SWARM: /, ''), go: 'map:fleet', beep: true, alert: true }),
   'fleet-siege': (e) => ({ kind: 'alert', label: 'Swarm', from: 'Outpost', text: e.message, go: 'map:fleet', beep: true, alert: true }),

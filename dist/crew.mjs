@@ -79,12 +79,13 @@ function seatMate(host, { name, char, seat }, i) {
   m.run = { loc: 'crew', cwd: '/', integrity: maxSignal(m), max: maxSignal(m), pack: [], visited: [] };
   return m;
 }
-function makeMate(host, { cls, sub, name, guest, level: own, rarity = 'stock', char, seat, runner, helper, helpSig, preset }, i) {
+function makeMate(host, { cls, sub, name, guest, level: own, rarity = 'stock', char, seat, runner, helper, helpSig, preset, trade }, i) {
   if (char) return seatMate(host, { name, char, seat }, i);
   const m = fresh();
   if (guest) m.guest = true;
   if (runner) m.runner = true; // a hired runner (runners.mjs)
   if (helper) { m.helper = true; m.helpSig = helpSig; } // a runner you walked in on and helped: takes no XP
+  if (trade) m.trade = true; // a runner on their trade's server (sites.mjs): standing comes with the trade, not each room
   m.who = name;
   Object.defineProperty(m, 'host', { value: host, enumerable: false, configurable: true });
   m.loadout.archetype = cls;
@@ -128,6 +129,9 @@ hooks.crewEngage = (s) => {
   // A runner you chose to Help in their room (floorplan.mjs assist): they fight beside you, as they are.
   const h = s.rooms?.visit?.helping, r = h && e.rooms?.room === h.room && runnerOf(s, h.h);
   if (r && !s.guests.some((g) => g.name === r.handle)) s.guests.push({ cls: r.cls, sub: runnerLevel(s, r) >= SUBCLASS.from ? r.sub : null, name: r.handle, level: runnerLevel(s, r), guest: true, helper: true, helpSig: h.sig });
+  // A runner's trade (sites.mjs): its runner fights beside you on every fight on its server, as one you help.
+  const tr = hooks.siteRunner?.(s);
+  if (tr && !s.guests.some((g) => g.name === tr.handle) && !(s.crewSim || []).some((x) => x.name === tr.handle)) s.guests.push({ cls: tr.cls, sub: runnerLevel(s, tr) >= SUBCLASS.from ? tr.sub : null, name: tr.handle, level: runnerLevel(s, tr), guest: true, helper: true, trade: true });
   // Only the crew in the fight's folder fights it; the rest are elsewhere on the server.
   const all = matesOf(s);
   for (const m of all) m.encounter = null;
@@ -200,7 +204,7 @@ hooks.crewEnd = (s, result) => {
     if (m.seat && m.encounter) { m.ended = m.encounter; hooks.coopEnd?.(s, m, result); } // a co-op player's share of the fight (coop.mjs)
     // A hired runner keeps what they carried out (and at 0 they disconnect, to recover); a runner you helped win: standing.
     if (m.runner && m.encounter) { setRunnerSig(s, m.who, m.run.integrity / Math.max(1, maxSignal(m))); if (m.run.integrity <= 0) out.push(m.who); }
-    if (m.helper && m.encounter && result === 'victory') { const h = runnerHelped(s, m.who); if (h && s.rooms?.visit) s.rooms.visit.metWon = { h: m.who, room: s.encounter?.rooms?.room }; if (h) emit(s, 'rooms-good', `${m.who}: standing ${h.standing}${h.tier ? `, now ${h.tier.name}` : ''}.`, { runner: m.who, standing: h.standing, tier: h.tier?.name || null }); }
+    if (m.helper && !m.trade && m.encounter && result === 'victory') { const h = runnerHelped(s, m.who); if (h && s.rooms?.visit) s.rooms.visit.metWon = { h: m.who, room: s.encounter?.rooms?.room }; if (h) emit(s, 'rooms-good', `${m.who}: standing ${h.standing}${h.tier ? `, now ${h.tier.name}` : ''}.`, { runner: m.who, standing: h.standing, tier: h.tier?.name || null }); }
     m.encounter = null;
   }
   for (const h of out) { emit(s, 'status', `${h}: Integrity's going. I'm out.`, { runner: h }); dropCrew(s, h); }

@@ -1,8 +1,8 @@
 # Quest sites: places the director mounts
 
-**Status.** Picked with the designer (November 2026). The Settlement run is built (GAME_RULES.md *Quest sites*); the
-Rack pull and a runner's trade are not. RimWorld's quest sites and Starsector's derelicts: the floor keeps its fixed
-servers, and short-lived places turn up at their edges.
+**Status.** Picked with the designer (November 2026). All three are built (GAME_RULES.md *Quest sites*). RimWorld's
+quest sites and Starsector's derelicts: the floor keeps its fixed servers, and short-lived places turn up at their
+edges.
 
 ## The rule
 

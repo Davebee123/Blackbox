@@ -1369,7 +1369,7 @@ function openVault(s, room, force) {
   else { const it = addItem(s, rollItem(rnd(R, 5), { level: R.level, rarity: v.rarity, cls: classOf(s) }), 'Vault: '); if (it) { if (R.world) ask('packItem', s, it); else R.pack.push(it.id); say(s, `${itemLabel(it)} goes in your pack.`, 'rooms-good'); } }
   ev.fx.n = packed() - was;
   clear(s, room);
-  if (room.id === R.graph.vaults[0]) say(s, 'The Core unseals.', 'rooms-bad');
+  if (room.id === R.graph.vaults[0] && coreOpen(s)) say(s, 'The Core unseals.', 'rooms-bad'); // not a rack's: it stays sealed (sites.mjs)
 }
 
 // ---------- puzzle rooms (9.11, puzzles.mjs) ----------

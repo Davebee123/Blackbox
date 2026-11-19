@@ -2151,8 +2151,8 @@ export function mapLayout(s, floor = null, portrait = mapPortrait) {
   }
   // A thread's temporary servers on this floor (threads.mjs): beside the server they grew from, a dashed link to it.
   for (const t of tempNodes(s, n)) { const node = put(portrait ? { ...t, x: t.y, y: t.x } : t); const host = byId[t.host]; if (host) links.push({ from: host.id, to: node.id, ghost: true, temp: true }); }
-  // A quest site's rig (sites.mjs): beside the server its run passes, a red dashed aim at it.
-  for (const t of siteNodes(s, n)) { const node = put(portrait ? { ...t, x: t.y, y: t.x } : t), aim = byId[t.target]; if (aim && t.loc.site.state === 'up') links.push({ from: node.id, to: aim.id, aim: true }); }
+  // A quest site (sites.mjs): a rig's red dashed aim at the server its run passes; a rack's dashed link to its host.
+  for (const t of siteNodes(s, n)) { const node = put(portrait ? { ...t, x: t.y, y: t.x } : t), aim = byId[t.target], host = byId[t.host]; if (aim && t.loc.site.state === 'up') links.push({ from: node.id, to: aim.id, aim: true }); if (host) links.push({ from: host.id, to: node.id, ghost: true, slink: true }); }
   // Links between what's drawn: solid between found places, a ghost line to a ? or an exit you can't take yet.
   for (const [a, b] of g.links) {
     const A = byId[idOf[a]], B = byId[idOf[b]];
@@ -2511,7 +2511,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   const lines = links.map((k) => {
     const a2 = find(k.from), b2 = find(k.to);
     const flow = k.hot || k.trunk ? flowSvg([a2, b2], `mlink ${k.hot ? 'hot' : 'trunk'}`, k.hot ? 8 : 10, { id: 'm' }) : ''; // its dashes, flowing (flowfx.mjs)
-    return `<line x1="${a2.x}" y1="${a2.y}" x2="${b2.x}" y2="${b2.y}" class="mlink ${k.hot ? 'hot' : ''} ${k.ghost ? 'ghost' : ''} ${k.trunk ? 'trunk' : ''} ${k.temp ? 'tlink' : ''}${k.aim ? ' saim' : ''}${flow ? ' flowed' : ''}"/>${flow}`;
+    return `<line x1="${a2.x}" y1="${a2.y}" x2="${b2.x}" y2="${b2.y}" class="mlink ${k.hot ? 'hot' : ''} ${k.ghost ? 'ghost' : ''} ${k.trunk ? 'trunk' : ''} ${k.temp ? 'tlink' : ''}${k.aim ? ' saim' : ''}${k.slink ? ' slink' : ''}${flow ? ' flowed' : ''}"/>${flow}`;
   }).join('');
   // Labels that would overlap: the more important one keeps its label, the other's comes back on
   // hover, selection or zoom. Importance: selected, under threat, a contract or fresh find, an

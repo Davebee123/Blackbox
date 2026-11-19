@@ -4382,6 +4382,23 @@ body.no-motion .recap { animation: none; }
 .mnode.site.done .sframe { fill: rgba(125, 115, 98, 0.08); stroke: var(--gray); stroke-dasharray: none; }
 .mnode.site.done .sico { stroke: var(--gray); }
 .mlink.saim { stroke: var(--hot); stroke-dasharray: 5 4; opacity: 0.8; }
+.mnode.site-rack .sframe { fill: color-mix(in srgb, var(--daemon) 8%, rgba(9, 6, 3, 0.9)); stroke: var(--daemon); }
+.mnode.site-rack .sico { stroke: var(--daemon); }
+.mnode.site-rack .sr-bg { stroke: color-mix(in srgb, var(--daemon) 20%, transparent); } .mnode.site-rack .sr-fg { stroke: var(--daemon); }
+.mnode.site .mlabel.site { fill: var(--daemon); }
+.mlink.slink { stroke: color-mix(in srgb, var(--daemon) 50%, transparent); stroke-dasharray: 3 4; }
+.site-card .tag-era { color: var(--muted); border-color: var(--line-strong); }
+.site-card .site-tile { cursor: default; }
+.site-pay .evc-rw.sp-flt .glyph { color: #6fb6ff; }
+.mnode.site-runner .sframe { fill: rgba(255, 242, 200, 0.06); stroke: var(--bright); }
+.mnode.site-runner .sico { stroke: var(--bright); }
+.mnode.site .rdiamond { fill: var(--bright); }
+.mnode.site .mlabel.bright, .mnode.site .msub.bright { fill: var(--bright); }
+.site-card .tag-runner { color: var(--bright); border-color: rgba(255, 242, 200, 0.5); }
+.site-rcpt { display: flex; align-items: center; gap: 10px; padding: 7px 9px; border: 1px dashed rgba(255, 242, 200, 0.35); border-radius: 3px; background: rgba(255, 242, 200, 0.03); }
+.site-rcpt code { font: 11px/1.4 var(--mono); color: var(--text); white-space: normal; }
+.site-rcpt .stamp { flex: none; padding: 2px 7px; border: 1.5px solid var(--fc); color: var(--fc); font: 700 11px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; transform: rotate(-6deg); border-radius: 2px; }
+.site-pay .evc-rw.sp-tier, .site-pay .evc-rw.sp-tier b { color: var(--bright); }
 /* Its card: the run as a track from the lock to the server it passes, then what it pays as icons. */
 .site-card .hot-t { color: var(--hot); }
 .site-run { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 8px; font: 600 12px var(--mono); }

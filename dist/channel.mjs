@@ -128,8 +128,15 @@ const NEWS = {
   'world-event-hop': (s, e) => { const ev = (s.events || []).find((x) => x.id === e.event); return ev ? wire(s, `${ev.name} hopped to ${placeName(s, e.location)}. Level ${ev.level} now.`) : null; },
   'world-event-end': (s, e) => ended(s, e, false),
   'world-event-won': (s, e) => ended(s, e, true),
-  // A quest site (sites.mjs): LANTERN reads a Settlement run's count out as numbers; the institution's faction thanks you.
+  // A quest site (sites.mjs): LANTERN reads a Settlement run's count out as numbers; Kestrel's facilities desk announces a
+  // rack; the faction behind it thanks you.
   site: (s, e) => {
+    // A runner's trade: the runner asks, then says how it went, in their own voice.
+    if (e.kind === 'runner') return e.phase === 'up' ? simSay(s, e.handle, `found it. ${e.name}, floor ${e.floor}. ${e.what}. could use a hand`) : e.phase === 'won' ? simSay(s, e.handle, `${(e.stamp || 'settled').toLowerCase()}. thanks for the hand`) : null;
+    if (e.kind === 'rack') {
+      if (e.phase === 'up') return known(s, 'kestrel') ? contact(s, 'kestrel', `Rack ${e.rack} will close at the end of this cycle. Please collect your belongings.`) : wire(s, `Kestrel has a rack up out of cold storage.`);
+      return e.phase === 'won' && known(s, 'kestrel') ? contact(s, 'kestrel', CONTACTS.kestrel.thanks({ you: you(s) })) : null;
+    }
     const crew = (e.crew || '').toUpperCase(), short = e.short || 'a settlement run';
     if (e.phase === 'up') return known(s, 'lantern') ? contact(s, 'lantern', `${digits(e.trades)}. ${short[0].toUpperCase()}${short.slice(1)} settles in ${WORDS[e.mins] || `${e.mins}`} minutes. ${crew} on the line.`) : wire(s, `${crew} is locking ${short}'s settlement run.`);
     if (e.phase === 'won') return known(s, e.faction) ? contact(s, e.faction, CONTACTS[e.faction].thanks({ you: you(s) })) : null;
@@ -311,6 +318,7 @@ function runnerTurns(s, turns) {
   if (!s.tutorialCompleted || !turns.length) return;
   const c = channelOf(s);
   for (const q of turns) {
+    if (q.kind === 'trade' && s.runners?.known?.[q.h]?.settled === q.prev?.trade?.n) continue; // settled with you already (sites.mjs, a runner's trade)
     const text = TURN[q.kind](s, q);
     if ((q.kind === 'trade' && roll(s) < 0.8) || (q.kind === 'crash' && roll(s) < 0.2)) { later(s, q.h, text); continue; }
     c.rq = c.rq.filter((x) => x.h !== q.h); // only their latest turn waits

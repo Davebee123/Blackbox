@@ -50,7 +50,7 @@ import { vaultItem, zoneSpawns, kingOpen, spawnFight, levelOf, layoutOf, fileInf
 import { blipStood, blipRooms, runCardRoll, runCardUp, runCardEnd } from './events.mjs';
 import { RUN_CARDS } from './runcards.mjs';
 import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
-import { siteWon } from './sites.mjs';
+import { siteWon, siteVault } from './sites.mjs';
 
 export const KIND_OF = FP.KIND_OF;
 export const NET = {
@@ -297,7 +297,7 @@ WORLD_hook('coreOpen', (s) => {
   if (loc.zone) return kingOpen(s); // RELAY-KING holds the Core from level 3
   if (loc.farm) return !!loc.state?.unlocked?.['/ledger'];
   if (loc.lair) return lairOpen(s, loc);
-  if (loc.site) return true; // a quest site's Core: its lock, open from the start (sites.mjs)
+  if (loc.site) return loc.site.kind !== 'rack'; // a quest site's Core (sites.mjs): a rig's lock and a trade's Resident, open from the start; a rack's, sealed
   if (loc.temp) return tempCoreOpen(loc); // a temporary server's kill switch: once you know it (threads.mjs)
   if (isWild(loc)) return true;
   return R.graph.vaults[0] ? !!R.opened[R.graph.vaults[0]] : true;
@@ -328,7 +328,7 @@ WORLD_hook('fight', (s, room, as) => {
     const level = residentLevel(loc, now()), seed = (((loc.seed || 1) * 7 + 31) >>> 0) + (R.spawns[room.id] || 0) * 7919;
     // Guarded (specials.mjs): a crew elite holds the Core in the Resident's place, as a Pit's (rogue.mjs).
     // A rig's lock (sites.mjs): an elite of its crew in the Core.
-    if (loc.site) { const name = `THE LOCK · ${loc.name}`; return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: loc.family, elite: true, mutation: null, name, author: R.author }, size: 'elite', name, level, family: loc.family, elite: true, author: R.author }; }
+    if (loc.site?.kind === 'rig') { const name = `THE LOCK · ${loc.name}`; return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: loc.family, elite: true, mutation: null, name, author: R.author }, size: 'elite', name, level, family: loc.family, elite: true, author: R.author }; }
     if (hasSpecial(loc, 'guarded') && !loc.temp) { const name = `ELITE · ${loc.name}`; return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: loc.family, elite: true, mutation: armoredAt(loc) ? 'armored' : null, name, author: R.author }, size: 'elite', name, level, family: loc.family, elite: true, author: R.author }; }
     // A floor job's boss (arcs.mjs jobBossAt): it holds this Core in the Resident's place.
     const job = !loc.temp && jobBossAt(s, loc);
@@ -576,6 +576,7 @@ WORLD_hook('vault', (s, room) => {
   emit(s, 'rooms-good', n ? `The vault: ${n} ${n === 1 ? 'file' : 'files'} into your pack.` : 'The vault is bare.', { gains: gainsOf(got) });
   setDrop(s, { kind: 'vault', floor: loc.depth || 1 }, levelOf(loc), `${loc.name}'s vault`, { pack: true, path: `vault/#set-${s.serial}` }); // Cold Storage's and Deep Archive's pieces (sets.mjs)
   if (loc.member) { R.cleared[R.graph.core] ||= now(); }
+  if (loc.site) siteVault(s, loc); // a rack's cage: its own, after the usual files (sites.mjs)
   return true;
 });
 WORLD_hook('pull', (s, room) => {

@@ -11,7 +11,14 @@ import { floorsOf } from './dist/floors.mjs';
 import { rep } from './dist/factions.mjs';
 import { mapMarkup, threatsOf } from './dist/view.mjs';
 import { RIVAL } from './dist/rivals.mjs';
-import { SITE, CREWS, dealRig, tickSites, siteServers } from './dist/sites.mjs';
+import { SITE, CREWS, dealRig, dealRack, dealRunner, dealSite, tickSites, siteServers } from './dist/sites.mjs';
+import { castOf, raiseStanding, standingOf, tierOf, runnersOf, stateOf } from './dist/runners.mjs';
+import { knowsCodebase, CODEBASE_SHOPS } from './dist/sockets.mjs';
+import { hiddenNodes } from './dist/hidden.mjs';
+import { STAMPS } from './dist/receipts.mjs';
+import { tickChannel, channelLines } from './dist/channel.mjs';
+import { filtersOf } from './dist/filters.mjs';
+import { keptReceipts } from './dist/receipts.mjs';
 RIVAL.chance = 0;
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false; CONFIG.exfil.chance = 0;
@@ -133,4 +140,132 @@ test('on the map: the rig in the threat’s red with its clock, a red aim at its
   const row = threatsOf(s).find((r) => r.sel === loc.id);
   assert.equal(row.name, 'The Tenements Board');
   assert.equal(row.left, loc.site.left);
+});
+
+test('a rack mounts beside a server of yours: Kessler hardware, its trades older than the floor, its Core sealed', () => {
+  const s = setup(6);
+  const loc = dealRack(s);
+  assert.match(loc.name, /^KESSLER-RACK-\d\d$/);
+  assert.equal(findLocation(s, loc.id), loc);
+  const host = findLocation(s, loc.site.host);
+  assert.ok(host && !host.rogue);
+  assert.equal(loc.level, host.level);
+  assert.ok(loc.site.era >= 3, 'an older layer than floor 1');
+  assert.ok(loc.site.year < 2086, 'before floor 1 mounted');
+  assert.ok(loc.site.left >= SITE.rack.ms[0] && loc.site.left <= SITE.rack.ms[1]);
+  connect(s, loc);
+  assert.equal(FP.coreOpen(s), false, 'nothing to take over');
+});
+
+test('open the cage: two filters (the first Tuned or better), three receipts for your commission, Kestrel +6; home', () => {
+  const s = setup(6);
+  const loc = dealRack(s), f0 = filtersOf(s).length, r0 = keptReceipts(s).length, k0 = rep(s, 'kestrel');
+  connect(s, loc);
+  const g = loc.floorplan.graph, vault = g.vaults[0], guard = Object.values(g.rooms).find((r) => r.kind === 'guard' && r.key === vault);
+  walk(s, guard.id);
+  walk(s, vault);
+  FP.act(s, 'open');
+  assert.equal(loc.site.state, 'won');
+  assert.equal(filtersOf(s).length, f0 + SITE.rack.filters);
+  assert.ok(['tuned', 'custom'].includes(filtersOf(s)[f0].rarity), 'the first Tuned or better');
+  assert.equal(keptReceipts(s).length, r0 + SITE.rack.receipts);
+  assert.ok(keptReceipts(s).slice(-3).every((x) => Number(x.date.slice(-4)) < 2086), 'from before floor 1 mounted');
+  assert.equal(rep(s, 'kestrel'), k0 + SITE.rack.rep);
+  assert.equal(FP.coreOpen(s), false, 'still sealed');
+  assert.doesNotMatch(s.logs.slice(-12).map((e) => e.message).join('\n'), /The Core unseals/);
+  tickSites(s, 1000);
+  assert.equal(s.run, null, 'pulled back: home, the pack banked');
+  assert.equal(siteServers(s).length, 0);
+});
+
+test('a rack’s clock runs out: back to cold storage, nothing lost, nothing on the table', () => {
+  const s = setup(6);
+  const loc = dealRack(s), t0 = s.table ?? 84;
+  tickSites(s, loc.site.left + 1000);
+  assert.equal(loc.site.state, 'closed');
+  assert.equal(s.table ?? 84, t0);
+  assert.match(s.logs.findLast((e) => e.type === 'site' && e.phase === 'closed').message, /Kestrel pulls KESSLER-RACK-\d\d back to cold storage\./);
+  assert.ok(!siteServers(s).includes(loc), 'gone');
+});
+
+test('the kinds come in turn', () => {
+  const s = setup(6);
+  const a = dealSite(s);
+  tickSites(s, a.site.left + 1000);
+  const b = dealSite(s);
+  assert.notEqual(a.site.kind, b.site.kind);
+});
+
+test('a rack on the map: the director’s violet with its clock, a dashed link to its host; its card; its row', () => {
+  const s = setup(6);
+  const loc = dealRack(s);
+  const map = mapMarkup(s, loc.id, 'mine', { side: true });
+  assert.match(map, new RegExp(`class="mnode site site-rack f-target[^"]*" data-select="${loc.id}"`));
+  assert.match(map, /class="mlink[^"]* slink/);
+  assert.match(map, /Rack pull/);
+  assert.match(map, /The cage/);
+  assert.ok(map.includes(`>${loc.site.c}<`), 'its era');
+  const row = threatsOf(s).find((r) => r.sel === loc.id);
+  assert.equal(row.name, 'Rack pull');
+});
+
+// A runner you've met: the network's cast (runners.mjs), one of them helped once.
+const metRunner = (s) => { s.netSeed = 4242; const r = castOf(s)[0]; raiseStanding(s, r.handle, 1, 'a room'); return r; };
+
+test('a runner’s trade: only for a runner you’ve met, on the server their trade froze on; no clock', () => {
+  const s = setup(6);
+  assert.equal(dealRunner(s), null, 'no one met, no trade');
+  const r = metRunner(s);
+  tickChannel(s, 0); // the channel reads what's logged after it opens
+  const loc = dealRunner(s);
+  assert.ok(loc);
+  assert.equal(loc.site.handle, r.handle);
+  assert.equal(loc.site.what, stateOf(s, r).trade.what, 'their trade, as their card says');
+  assert.match(loc.name, /^[A-Z]+-LEDGER-\d\d$/);
+  assert.match(loc.site.receipt.id, /^TRD-\d\d-\d{7}$/);
+  assert.equal(loc.site.total, undefined, 'no clock');
+  assert.ok(dealRig(s), 'beside a clocked one');
+  assert.equal(dealRunner(s), null, 'one at a time');
+  tickSites(s, 30 * 60000);
+  assert.ok(siteServers(s).includes(loc), 'it waits while they are on the net');
+  tickChannel(s, 1000);
+  assert.match(channelLines(s).map((x) => x.text).join('\n'), new RegExp(`found it\\. ${loc.name}`, 'i'), 'they ask on #net');
+});
+
+test('their Resident, open from the start, with them beside you: a tier, a codebase, a lead; then their stamp', () => {
+  const s = setup(6);
+  const r = metRunner(s), loc = dealRunner(s), t0 = tierOf(standingOf(s, r.handle)).i, leads0 = hiddenNodes(s).filter((n) => n.lead >= 100).length;
+  const cb = (CODEBASE_SHOPS[r.faction] || []).map(([id]) => id).find((id) => !knowsCodebase(s, id));
+  connect(s, loc);
+  assert.equal(FP.coreOpen(s), true);
+  const core = loc.floorplan.graph.core, path = FP.pathTo(s.rooms.graph, s.rooms.at, core, () => true);
+  walk(s, path.at(-2));
+  FP.go(s, core);
+  if (s.rooms.screen?.kind === 'virus') FP.act(s, 'engage');
+  assert.ok(active(s));
+  assert.ok(s.guests?.some((g) => g.name === r.handle && g.helper), 'they fight beside you');
+  win(s);
+  assert.equal(loc.site.state, 'won');
+  assert.equal(tierOf(standingOf(s, r.handle)).i, Math.min(3, t0 + 1), 'up a tier');
+  if (cb) assert.ok(knowsCodebase(s, cb), 'a codebase of their faction’s');
+  assert.equal(runnersOf(s).known[r.handle].settled, loc.site.n, 'that trade is settled with them');
+  const S = STAMPS[r.faction];
+  assert.match(s.logs.findLast((e) => e.type === 'site').message, new RegExp(`^${loc.site.receipt.id}, \\w[\\w ]* by ${r.handle}: `));
+  assert.equal(s.logs.findLast((e) => e.type === 'site').stamp, S.done);
+  tickSites(s, 1000);
+  assert.equal(s.run, null, 'home, the pack banked');
+  assert.equal(dealRunner(s), null, 'not the same trade again');
+});
+
+test('a runner’s trade on the map: paper white, their diamond under it; its card with the receipt and their stamp', () => {
+  const s = setup(6);
+  const r = metRunner(s), loc = dealRunner(s);
+  const map = mapMarkup(s, loc.id, 'mine', { side: true });
+  assert.match(map, new RegExp(`class="mnode site site-runner f-target[^"]*" data-select="${loc.id}"`));
+  assert.match(map, /class="rdiamond"/);
+  assert.match(map, new RegExp(`${r.handle}’s trade|${r.handle}'s trade`));
+  assert.ok(map.includes(loc.site.receipt.id));
+  assert.ok(map.includes(`>${STAMPS[r.faction].verb}<`), 'their stamp');
+  assert.match(map, />Help</);
+  assert.equal(threatsOf(s).find((x) => x.sel === loc.id).name, `${r.handle}'s trade`);
 });

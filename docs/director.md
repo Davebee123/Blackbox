@@ -1,8 +1,8 @@
 # The event director: a living net
 
 **Status.** The plan to make the net move without you. Built: the director, its deck and chains (D1), blips and the
-history list (D2), run cards (D3; GAME_RULES.md *Events*, *Chains*, *Blips*, *Run cards*, *History*). Left: crises (D4)
-and quest sites past the Settlement run (D5, docs/sites.md).
+history list (D2), run cards (D3; GAME_RULES.md *Events*, *Chains*, *Blips*, *Run cards*, *History*). Left: crises
+(D4). Quest sites (D5, docs/sites.md) are built.
 
 What it does **not** do: read how you're doing. It never looks at your Signal, deaths, streaks or gear (section 6).
 
@@ -91,8 +91,7 @@ It never reads your Signal, deaths, win streaks, gear or play time per session. 
    (3 caches) and 3 rare spawns' kills (+0.0015 uniques an hour); uniques within one of the run with blips off.
 3. **D3: run cards**: built, lean (section 4).
 4. **D4: crises**: Strain bloom first (strains already exist), then Turf war, then Blackout.
-5. **D5: quest sites** (docs/sites.md): temporary servers the director mounts on your floor. The Settlement run is
-   built; the Rack pull and a runner's trade are not.
+5. **D5: quest sites** (docs/sites.md): temporary servers the director mounts on your floor. All three are built.
 
 Each phase gets a pacing check in the sims: events and blips per hour of play, rewards per hour against the economy targets, and uniques still under one an hour.
 
