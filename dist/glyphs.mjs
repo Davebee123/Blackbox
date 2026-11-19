@@ -24,6 +24,8 @@ const P = {
   evasion: '<path d="M2 12.5c4.5 0 4-9 8.5-9H14M11.5 1l2.5 2.5L11.5 6"/><path d="M2 8h2" stroke-dasharray="1 1.5"/>',
   sanitize: '<path d="M2 3h12L9.2 8.8v4.7l-2.4-1.2V8.8z"/>',
   leech: '<path d="M8 13.5S2 10 2 6.2a3 3 0 0 1 6-.9 3 3 0 0 1 6 .9C14 10 8 13.5 8 13.5z"/>',
+  // A cooling fan (the Cryptominer's: its Rig and Cooler): three blades round a hub.
+  fan: '<circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.1"/><path d="M8 6.9c-.5-1.9.1-3.3 1.7-3.9.9 1.5-.1 3.1-1.7 3.9Z"/><path d="M8 6.9c-.5-1.9.1-3.3 1.7-3.9.9 1.5-.1 3.1-1.7 3.9Z" transform="rotate(120 8 8)"/><path d="M8 6.9c-.5-1.9.1-3.3 1.7-3.9.9 1.5-.1 3.1-1.7 3.9Z" transform="rotate(240 8 8)"/>',
   clock: '<circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/>',
   stealth: '<path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><path d="M2.5 13.5 13.5 2.5"/>',
   sync: '<path d="M1.5 8h2.5l2-4.5 3 9 2-4.5h3.5"/>',
