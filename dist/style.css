@@ -4967,3 +4967,39 @@ input, textarea, [contenteditable], .mbody, .ch-lines, .page-error pre { -webkit
 @media (max-width: 900px) {
   .map-right { flex-wrap: wrap; justify-content: flex-end; row-gap: var(--s3); }
 }
+
+/* HOME's ring (view.mjs homeRing, the old Server page's): blocks round the core, Integrity the inner ring. */
+.home-ring { width: min(240px, 84%); margin: 0 auto 14px; }
+.hsv-ring { display: block; width: 100%; height: auto; overflow: visible; }
+.hsv-ring text { font-family: var(--mono); }
+.hsv-ring .num { font-size: 31px; font-weight: 600; fill: var(--you); }
+.hsv-ring .num.warn { fill: var(--amber); } .hsv-ring .num.hot { fill: var(--hot); }
+.hsv-ring .of { font-size: 12px; fill: var(--dim); }
+.hsv-ring .blk { fill: rgba(127, 209, 199, 0.62); stroke: rgba(127, 209, 199, 0.95); stroke-width: 0.8; }
+.hsv-ring .shell { fill: none; stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 2 5; }
+.hsv-ring .pit { fill: var(--inset); stroke: var(--line-strong); }
+.hsv-ring .track { fill: none; stroke: var(--line); stroke-width: 6; }
+.hsv-ring .integ { fill: none; stroke: var(--you); stroke-width: 6; }
+.hsv-ring .integ.warn { stroke: var(--amber); } .hsv-ring .integ.hot { stroke: var(--hot); }
+/* At HOME: an amber arc where it presses, pulsing (light only). */
+.hsv-ring .press { fill: none; stroke: var(--amber); stroke-width: 5; stroke-linecap: round; filter: drop-shadow(0 0 6px rgba(241, 185, 47, 0.75)); animation: hsv-press 2.4s ease-in-out infinite; }
+@keyframes hsv-press { 50% { opacity: 0.35; } }
+/* On its way: a red road down from the top, its marker coming down it, the time left beside it. */
+.hsv-ring .road { stroke: var(--hot); stroke-width: 1.6; stroke-dasharray: 4 4; animation: hsv-flow 1.2s linear infinite; }
+@keyframes hsv-flow { to { stroke-dashoffset: -8; } }
+.hsv-ring .mark { fill: var(--hot); filter: drop-shadow(0 0 5px rgba(255, 91, 61, 0.8)); }
+.hsv-ring .eta { font-size: 17px; font-weight: 600; fill: var(--hot); }
+.no-motion .hsv-ring .press, .no-motion .hsv-ring .road { animation: none; }
+@media (prefers-reduced-motion: reduce) { .hsv-ring .press, .hsv-ring .road { animation: none; } }
+/* The invasion card's rows: the road a red bar filling, the source in plain text. */
+.inv-card .srv-bar.inv-road > span { background: var(--hot); opacity: 0.7; }
+.inv-card .srv-bar.hp.low > span { background: var(--hot); }
+.inv-card .inv-from { font-weight: 500; color: var(--text); }
+.inv-card .row.acts .btn { width: 100%; }
+/* The top bar's Materials button and its panel. */
+.meter-stores { cursor: pointer; background: none; border: 1px solid transparent; border-radius: 4px; font: inherit; color: inherit; }
+.meter-stores:hover, .meter-stores[aria-expanded='true'] { border-color: var(--amber-soft); }
+.stores-pop { position: absolute; top: 52px; right: 160px; z-index: 60; width: 260px; }
+.stores-pop[hidden] { display: none; }
+.stores-pop .card { margin: 0; }
+@media (max-width: 900px) { .stores-pop { top: 96px; right: 12px; } }

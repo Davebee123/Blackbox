@@ -31,16 +31,15 @@ test('pages are the lines you can act on; news only tells you something', () => 
     line(s, 'consortium-invite', 'dana invites you. consortium accept, or consortium decline.'),
   ];
   const threats = [
-    line(s, 'wall-breach', 'cryptjack BREACHED your wall.'),
-    line(s, 'invader', 'Invasion: lapsejack left X. At your wall in 4 min.', { invader: 1 }),
+    line(s, 'wall-breach', 'cryptjack reached HOME.'),
+    line(s, 'invader', 'Invasion: lapsejack left X. At HOME in 4 min.', { invader: 1 }),
   ];
   const news = [
     line(s, 'retainer', 'Halcyon retainer: +38 credits.'),
     line(s, 'store', 'x'),
     line(s, 'standing-up', 'Halcyon standing +5.'),
     line(s, 'hot-strain', 'Keylogger is running hot.'),
-    line(s, 'invasion-cleared', 'Your wall stopped it.', { blocked: true }),
-    line(s, 'invader', 'lapsejack left X. Your wall will stop it.', { quiet: true }),
+    line(s, 'invasion-cleared', 'lapsejack is gone from HOME.'),
     line(s, 'located', 'Located: ORIN-CACHE-57.', { location: 'x' }),
     line(s, 'harvest', 'Your outpost harvested 3 Cipher.', { location: 'x' }),
     line(s, 'thread', 'A step on.', { thread: 't1' }),
@@ -92,7 +91,7 @@ test('a page that takes on a task asks first: its quest with Take or Cancel; the
   assert.ok(offers(s).some((x) => x.id === offer.ref), 'asking takes nothing');
 });
 
-test('acts follow the game: a full hand reads the offer, a contract not done opens it, the wall says what it can', () => {
+test('acts follow the game: a full hand reads the offer, a contract not done opens it, an invasion offers Intercept', () => {
   const s = filled();
   const offer = PG.pages(s).find((c) => c.kind === 'offer');
   s.mail.jobs.push(...Array.from({ length: MAIL.take }, (_, i) => ({ id: 900 + i, type: 'kill', count: 3, got: 0, reward: {} })));
@@ -103,11 +102,9 @@ test('acts follow the game: a full hand reads the offer, a contract not done ope
   const t = fresh();
   const inv = line(t, 'invader', 'Invasion: lapsejack left X.', { invader: 1 });
   t.invasion = { id: 1, name: 'lapsejack', state: 'travel', kind: 'raider' };
-  assert.deepEqual(PG.actOf(t, inv), { label: 'Show', go: 'map:invader' }, 'on its way: where it is');
-  t.invasion.kind = 'thief';
-  assert.deepEqual(PG.actOf(t, inv), { label: 'Intercept', cmd: 'intercept' }, 'a thief can be caught on the way');
-  t.invasion.state = 'siege';
-  assert.deepEqual(PG.actOf(t, inv), { label: 'Jack in', cmd: 'jack in' }, 'at the wall: jack in');
+  assert.deepEqual(PG.actOf(t, inv), { label: 'Intercept', cmd: 'intercept' }, 'on its way: catch it');
+  t.invasion.state = 'breach';
+  assert.deepEqual(PG.actOf(t, inv), { label: 'Intercept', cmd: 'intercept' }, 'at HOME: the same');
 });
 
 test('the count is the pages; the order is threat, clock, pay, the rest, letters, offers', () => {
@@ -119,14 +116,14 @@ test('the count is the pages; the order is threat, clock, pay, the rest, letters
   assert.deepEqual(PG.lampOf(s), { on: true, blink: true, threat: false, n: 5 });
   seeAll(s);
   assert.deepEqual(PG.lampOf(s), { on: true, blink: false, threat: false, n: 5 }, 'looking stops the blink, not the count');
-  line(s, 'wall-breach', 'cryptjack BREACHED your wall.');
+  line(s, 'invader', 'Invasion: cryptjack left X. At HOME in 2 min.', { invader: 2 });
   s.invasion = { id: 2, name: 'cryptjack', state: 'breach' };
-  assert.equal(PG.pages(s)[0].label, 'Breach', 'a threat goes first');
+  assert.equal(PG.pages(s)[0].label, 'Invasion', 'a threat goes first');
   assert.deepEqual(PG.lampOf(s), { on: true, blink: true, threat: true, n: 6 });
-  line(s, 'wall-siege', 'Your wall now contests cryptjack.');
-  assert.equal(PG.pages(s).filter((c) => c.from === 'Wall').length, 1, 'one invasion at your wall is one page');
+  line(s, 'wall-breach', 'cryptjack reached HOME.', { invader: 2 });
+  assert.equal(PG.pages(s).filter((c) => c.from === 'HOME').length, 1, 'one invasion at HOME is one page');
   assert.equal(PG.pages(s)[0].label, 'Invasion', 'the newest line says where it is now');
-  for (const c of commsOf(s).filter((x) => x.from === 'Wall')) markDone(s, c.id);
+  for (const c of commsOf(s).filter((x) => x.from === 'HOME')) markDone(s, c.id);
   assert.equal(PG.lampOf(s).n, 5, 'handled: off the count');
   const letter = PG.pages(s).find((c) => c.kind === 'mail');
   s.mail.list.find((m) => `mail:l${m.id}` === letter.go).read = true;

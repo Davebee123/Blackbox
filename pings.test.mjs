@@ -30,7 +30,7 @@ test('newest at the bottom; a plain line fades after 30 s, a page stays until it
 test('a threat and a contract to turn in stay; handling one takes it off at once', () => {
   const s = world();
   const ready = line(s, 'contract-ready', 'Contract ready: a job. Deliver it from Mail.', { contract: 8 });
-  const breach = line(s, 'wall-breach', 'cryptjack BREACHED your wall.', {}, T + 1);
+  const breach = line(s, 'wall-breach', 'cryptjack reached HOME.', {}, T + 1);
   s.invasion = { id: 2, name: 'cryptjack', state: 'breach' };
   const later = T + 10 * 60000;
   assert.deepEqual(pingsOf(s, later).map((c) => c.id), [ready.id, breach.id]);
@@ -45,29 +45,29 @@ test('a threat and a contract to turn in stay; handling one takes it off at once
 
 test('at most five: the pages that stay are kept, the oldest plain lines give way', () => {
   const s = world();
-  line(s, 'wall-breach', 'cryptjack BREACHED your wall.');
+  line(s, 'wall-breach', 'cryptjack reached HOME.');
   s.invasion = { id: 2, name: 'cryptjack', state: 'breach' };
   const types = ['retainer', 'store', 'standing-up', 'hot-strain', 'transfer-in', 'harvest'];
   types.forEach((type, i) => line(s, type, `Line ${i}.`, { location: 'x' }, T + 100 + i));
   const p = pingsOf(s, T + 1000);
   assert.equal(p.length, PINGS.max);
-  assert.equal(p[0].label, 'Breach', 'the threat stays, oldest at the top');
+  assert.equal(p[0].label, 'Invasion', 'the threat stays, oldest at the top');
   assert.deepEqual(p.slice(1).map((c) => c.text), ['Line 2.', 'Line 3.', 'Line 4.', 'Line 5.'], 'the newest four plain lines');
-  assert.deepEqual(pingsOf(s, T + 1000, { only: (c) => c.kind === 'alert' }).map((c) => c.label), ['Breach'], 'a fight shows only threats');
+  assert.deepEqual(pingsOf(s, T + 1000, { only: (c) => c.kind === 'alert' }).map((c) => c.label), ['Invasion'], 'a fight shows only threats');
 });
 
 test('a line: one short sentence, names bold, yours teal, a threat red; older lines fade in steps', () => {
   const s = world();
   const letter = line(s, 'mail', 'New mail from wick · LOWLIGHT: hi.', { letter: 1, from: 'wick · LOWLIGHT', subject: 'hi' });
   assert.equal(lineOf(s, letter), 'Letter from <b>wick</b>.');
-  const inv = line(s, 'wall-siege', 'Invasion at your wall: GHOSTROOT, contested. −0.9% Integrity a minute. Bounty 14 Worm code.');
-  assert.equal(lineOf(s, inv), 'Invasion at <span class="you">your wall</span>: <b>GHOSTROOT</b>, contested.');
+  const inv = line(s, 'wall-breach', 'GHOSTROOT reached HOME. −1% Integrity a minute. Bounty 14 Worm code.');
+  assert.equal(lineOf(s, inv), '<b>GHOSTROOT</b> reached <span class="you">HOME</span>.');
   assert.equal(lineOf(s, line(s, 'retainer', 'Halcyon retainer: +38 credits.')), 'Retainer: +38 credits.', 'a line says whose it is');
-  assert.equal(lineOf(s, line(s, 'invasion-cleared', 'Your wall stopped <b>lapsejack-2231</b> at the gate.', { blocked: true })), '<span class="you">Your wall</span> stopped &lt;b&gt;<b>lapsejack-2231</b>&lt;/b&gt; at the gate.', 'escaped first');
-  s.invasion = { id: 2, name: 'GHOSTROOT', state: 'siege' };
+  assert.equal(lineOf(s, line(s, 'invasion-cleared', 'Your server stopped <b>lapsejack-2231</b> at the gate.')), '<span class="you">Your server</span> stopped &lt;b&gt;<b>lapsejack-2231</b>&lt;/b&gt; at the gate.', 'escaped first: markup in a message is text');
+  s.invasion = { id: 2, name: 'GHOSTROOT', state: 'breach' };
   const html = pingsMarkup(s, T + 1000);
   assert.deepEqual([...html.matchAll(/style="--o:([\d.]+)"/g)].map((m) => m[1]), ['0.35', '0.55', '0.8', '1'], 'the newest is full, the older fade in steps');
-  assert.match(html, /class="ping threat stays[^"]*"[^>]*><button type="button" class="pi-in" data-ping="\d+" title="GHOSTROOT: Invasion at your wall: [^"]*\n▸ Jack in" data-tt-kind="Invasion · Wall"/, 'a threat: red, it stays; its tooltip is a name, its kind, the line, the answer');
+  assert.match(html, /class="ping threat stays[^"]*"[^>]*><button type="button" class="pi-in" data-ping="\d+" title="GHOSTROOT: GHOSTROOT reached HOME[^"]*\n▸ Intercept" data-tt-kind="Invasion · HOME"/, 'a threat: red, it stays; its tooltip is a name, its kind, the line, the answer');
   assert.match(html, /data-t="\d+"><button/, 'a plain line carries when it came in, for its fade');
 });
 

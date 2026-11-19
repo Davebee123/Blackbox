@@ -1,6 +1,6 @@
 // The pager's pages: which of its lines ask something of you, what one tap does about each, and in what order.
 // comms.mjs keeps the lines (world events in, entries out); this sorts them. A *page* is a line you can act on (a
-// threat at your wall, a courier to intercept, a contract to deliver, a letter, an offer); *news* is a line that only
+// threat at HOME, a courier to intercept, a contract to deliver, a letter, an offer); *news* is a line that only
 // tells you something (pay, standing, a restock, a find). Pure: the save in, pages and acts out. The pager on the top
 // bar (the tray: one icon per page) and Comms draw from it (pager-view.mjs).
 import { active, emit, warn } from './combat.mjs';
@@ -11,8 +11,8 @@ import { deal, CARDS } from './events.mjs';
 
 // A fight starts from a world event's card; what the tap says depends on the card.
 const FIGHT_VERB = { courier: 'Intercept', lantern: 'Intercept', bounty: 'Hunt', returning: 'Hunt', hunt: 'Hunt', choir: 'Engage', spotter: 'Engage', counter: 'Engage', zero: 'Engage', feud: 'Fight' };
-// Threats: red, first in line. Everything at your wall, a swarm on a hub or an outpost, a lockdown, a consortium alarm.
-const isThreat = (c) => c.kind === 'alert' || (c.label === 'Invasion' && c.from === 'Wall' && c.beep !== false);
+// Threats: red, first in line. Everything at HOME, a swarm on a hub or an outpost, a lockdown, a consortium alarm.
+const isThreat = (c) => c.kind === 'alert' || (c.label === 'Invasion' && c.from === 'HOME' && c.beep !== false);
 // Lines with something to do about them. The rest is news.
 export function classOf(c) {
   if (isThreat(c)) return 'threat';
@@ -25,7 +25,7 @@ export function classOf(c) {
 export const isPage = (c) => classOf(c) !== 'news';
 
 const busy = (s) => active(s) || !!s.run;
-const openLabel = (go) => (/^mail:l/.test(go) || go === 'mail' ? 'Read' : /^map/.test(go) ? 'Show' : go === 'jack' ? 'Jack in' : 'Open');
+const openLabel = (go) => (/^mail:l/.test(go) || go === 'mail' ? 'Read' : /^map/.test(go) ? 'Show' : go === 'jack' ? 'Intercept' : 'Open');
 const open = (c) => (c.go ? { label: openLabel(c.go), go: c.go } : null);
 const eventOf = (s, c) => (c.event != null ? (s.events || []).find((e) => e.id === c.event) : null);
 
@@ -37,11 +37,10 @@ export function actOf(s, c) {
   const free = !busy(s);
   if (isThreat(c)) {
     const inv = s.invasion;
-    if (c.go === 'jack' || (c.label === 'Invasion' && c.from === 'Wall')) {
+    if (c.go === 'jack' || (c.label === 'Invasion' && c.from === 'HOME')) {
       if (!inv) return open(c);
       if (!free) return { label: 'Show', go: 'map:invader' };
-      if (inv.state === 'travel') return inv.kind === 'thief' ? { label: 'Intercept', cmd: 'intercept' } : { label: 'Show', go: 'map:invader' };
-      return { label: 'Jack in', cmd: 'jack in' };
+      return { label: 'Intercept', cmd: 'intercept' };
     }
     if (c.from === 'Consortium' && c.go === 'map:roamer' && free) return { label: 'Intercept', cmd: 'consortium intercept' };
     return open(c);
@@ -87,7 +86,7 @@ function inHand(s, c) {
   if (!active(s)) return false;
   const e = s.encounter;
   if (c.event != null && e.event === c.event) return true;
-  return isThreat(c) && (c.go === 'jack' || (c.label === 'Invasion' && c.from === 'Wall')) && !!s.invasion && e.invader === s.invasion.id;
+  return isThreat(c) && (c.go === 'jack' || (c.label === 'Invasion' && c.from === 'HOME')) && !!s.invasion && e.invader === s.invasion.id;
 }
 // Still waiting on you: not handled, not in hand, still true, and (a letter) not read in Mail already.
 function waiting(s, c) {
@@ -108,9 +107,9 @@ export function rankOf(c) {
 }
 const leftOf = (s, c) => eventOf(s, c)?.left ?? Infinity;
 // The pages, most urgent first.
-// One invasion at your wall is one page, however many lines it sent (it set out, it's contested, it broke through):
+// One invasion at HOME is one page, however many lines it sent (it set out, it reached HOME):
 // the newest says where it is now.
-const atHome = (c) => isThreat(c) && (c.go === 'jack' || (c.label === 'Invasion' && c.from === 'Wall'));
+const atHome = (c) => isThreat(c) && (c.go === 'jack' || (c.label === 'Invasion' && c.from === 'HOME'));
 export function pages(s) {
   let home = false;
   return commsOf(s).filter((c) => isPage(c) && waiting(s, c))
@@ -133,7 +132,7 @@ export function shortOf(s, c) {
   if (ev?.name) return ev.name;
   if (c.kind === 'ready') { const j = jobs(s).find((x) => x.id === c.ref); if (j) return title(s, j); }
   if (c.kind === 'offer') { const o = offers(s).find((x) => x.id === c.ref); if (o?.subject) return o.subject; }
-  if (c.label === 'Invasion' && c.from === 'Wall' && s.invasion?.name) return s.invasion.name;
+  if (c.label === 'Invasion' && c.from === 'HOME' && s.invasion?.name) return s.invasion.name;
   if (c.kind === 'mail') return c.text.replace(/\.$/, '');
   return c.text.replace(/[.:].*$/, '') || c.label;
 }
@@ -166,11 +165,11 @@ export function developerPager(s, what = 'fill') {
     () => emit(s, 'store', 'New stock at the Halcyon store.'),
     () => emit(s, 'standing-up', 'Contract delivered: Halcyon standing +5 (42, Associate).', { standing: 42 }),
     () => { const k = Object.keys(STRAINS)[0]; emit(s, 'hot-strain', `${STRAINS[k].name} is running hot. Its kills give 50% more XP and lead for 4 hours.`, { strain: k }); },
-    () => emit(s, 'invasion-cleared', 'Your wall stopped lapsejack-2231 at the gate.', { blocked: true, quiet: true }),
+    () => emit(s, 'invasion-cleared', 'lapsejack-2231 is gone from HOME: +14 Worm code.', { quiet: true }),
     () => emit(s, 'transfer-in', '3 Cipher arrived at your server from the Kestrel market.'),
   ];
   const page = [
-    () => { const l = systemLetter(s, { from: 'wick', subject: 'a name on the list', body: ['saw your handle on a list. not a good list. keep your wall up.'] }); if (l) emit(s, 'mail', `New mail from ${l.from}: ${l.subject}.`, { letter: l.id, from: l.from, subject: l.subject }); },
+    () => { const l = systemLetter(s, { from: 'wick', subject: 'a name on the list', body: ['saw your handle on a list. not a good list. keep an eye on home.'] }); if (l) emit(s, 'mail', `New mail from ${l.from}: ${l.subject}.`, { letter: l.id, from: l.from, subject: l.subject }); },
     () => { const o = offer(s); if (o) emit(s, 'board', `New offer on the board: ${o.subject}.`, { offer: o.id }); },
     () => { // a contract ready to deliver: an offer taken and done (a kill job, its kills in)
       const o = offer(s);

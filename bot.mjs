@@ -3,7 +3,7 @@
 // each level takes, and where it runs dry. A policy, not a person: it plays the planner from
 // balance.mjs, explores every room, takes every file but bait, and opens every vault. It plays by
 // the current rules: it frees memory by detaching finished servers, waits out the reconnect timer,
-// jacks in to invasions that reach the wall, and installs relays on servers it takes over. Since R1 every server is
+// intercepts invasions that reach HOME, and installs relays on servers it takes over. Since R1 every server is
 // rooms (netrooms.mjs): on a visit it walks them like the rooms sim's bot (roomsim.mjs botStep: the key, the vault,
 // the Core, rooms not cleared yet, caches, respawns), fights with the planner, and jacks out when its Signal runs low.
 // Two clocks: the bot's own (`t`: 12-second cycles, 3 seconds a command, every reconnect wait and rest; levelAt,
@@ -265,12 +265,12 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     leave();
     return true;
   };
-  // An invasion at the wall: jack in and fight it (unless it's far over your level).
+  // An invasion at HOME: intercept it (unless it's far over your level).
   const invasion = () => {
     const inv = s.invasion;
     if (!inv || inv.state === 'travel' || s.run || active(s) || inv.level > hackerLevel(s) + 3) return false;
     const key = inv.id + ':' + (inv.mine || 0); // a pack or pair is a fight per virus: count tries per virus
-    if ((tries[key] || 0) >= 2) return false; // lost to it twice: leave it to the wall, like a player would
+    if ((tries[key] || 0) >= 2) return false; // lost to it twice: leave it be, like a player would
     tries[key] = (tries[key] || 0) + 1;
     (play(s, 'jack in') || []).forEach(note);
     fight();

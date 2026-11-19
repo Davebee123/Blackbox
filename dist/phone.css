@@ -217,11 +217,11 @@
 [data-form='phone'] #sheet :is(.pz-card, .jr-card) { width: auto; max-width: none; max-height: none; margin: 0; padding: 0; overflow: visible; background: none; border: 0; box-shadow: none; }
 
 /* Every pop-up is the one sheet (app.js phPops lifts each in): at home, in the page or on the body, none shows. */
-[data-form='phone'] #page-view :is(#map-pop, #fp-pop, #hsv-panel, .dm-panel, #th-panel), [data-form='phone'] body > :is(#comms, #levelup, .pg-pop, .pg-scrim, #jr-find, #th-offer) { display: none !important; }
-[data-form='phone'] #sheet :is(.map-pop, .hsv-panel, .dm-panel, .th-panel, .comms, .levelup, .pg-pop, .jr-wrap, .th-offer) { position: static; visibility: visible !important; inset: auto; width: auto; max-width: none; height: auto; max-height: none; margin: 0; padding: 0; overflow: visible; background: none; border: 0; border-radius: 0; box-shadow: none; filter: none; transform: none; opacity: 1; animation: none; zoom: 1; pointer-events: auto; backdrop-filter: none; container-type: normal; }
+[data-form='phone'] #page-view :is(#map-pop, #fp-pop, .dm-panel, #th-panel), [data-form='phone'] body > :is(#comms, #levelup, .pg-pop, .pg-scrim, #jr-find, #th-offer) { display: none !important; }
+[data-form='phone'] #sheet :is(.map-pop, .dm-panel, .th-panel, .comms, .levelup, .pg-pop, .jr-wrap, .th-offer) { position: static; visibility: visible !important; inset: auto; width: auto; max-width: none; height: auto; max-height: none; margin: 0; padding: 0; overflow: visible; background: none; border: 0; border-radius: 0; box-shadow: none; filter: none; transform: none; opacity: 1; animation: none; zoom: 1; pointer-events: auto; backdrop-filter: none; container-type: normal; }
 [data-form='phone'] #sheet :is(.map-pop, .th-panel, .comms, .levelup, .pg-pop, .jr-wrap, .th-offer) { display: block; }
-[data-form='phone'] #sheet :is(.hsv-panel, .dm-panel) { display: grid; }
-[data-form='phone'] #sheet :is(.map-pop-x, .hsv-close, .dm-close, [data-comms-close], [data-lu-close], .pz-x) { display: none; } /* the sheet closes itself */
+[data-form='phone'] #sheet .dm-panel { display: grid; }
+[data-form='phone'] #sheet :is(.map-pop-x, .dm-close, [data-comms-close], [data-lu-close], .pz-x) { display: none; } /* the sheet closes itself */
 [data-form='phone'] #sheet .card { margin: 0; padding: 4px 0 8px; background: none; border: 0; box-shadow: none; }
 [data-form='phone'] #sheet .card::before, [data-form='phone'] #sheet .card::after { display: none; }
 [data-form='phone'] #sheet .card + .card { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }

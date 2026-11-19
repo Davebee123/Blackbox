@@ -3,7 +3,6 @@
 // engage, cat, pull, open, force, rest and slip work on its rooms. The old file system below (layouts, passwords,
 // Trace, quirk folders) no longer runs on the real game; nothing has deleted it yet.
 // Pure like the combat engine: state in, events out.
-import { vaultFilter, addFilter, filterLine } from './filters.mjs';
 import { gainComponents } from './salvage.mjs';
 import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES, layerOf, lifted } from './data.mjs';
 // A run's flat Integrity cost at your level: lifted with your Integrity (data.mjs lift).
@@ -14,7 +13,7 @@ import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE,
 import { scavengeOf, relockWait, findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, syncServer, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
-import { developerWall, developerDamage } from './firewall.mjs';
+import { developerDamage } from './firewall.mjs';
 import { contractTakeover, bankCargo, payloadHome, wantedBy, title as contractTitle } from './mail.mjs';
 import { hiddenNodes, locate, flagged, bankRoute, hiddenLead, spawnHidden, HIDDEN, routed } from './hidden.mjs';
 import { hiddenNear, reached as floorsReached } from './floors.mjs';
@@ -138,11 +137,11 @@ export function layoutOf(loc) {
   const extra = QUIRK_ROOMS[loc?.quirk];
   let out = iced(loc, base);
   if (extra) out = Object.assign({ ...out, '/': { ...out['/'], dirs: [...out['/'].dirs, ...Object.keys(extra).map((k) => k.slice(1))] } }, extra);
-  // A vault holds a code cache, and maybe a protocol, spare credits, a second code cache, a Zero-day (floor 2+) or a
-  // filter: fixed by its seed (LOOT.vault*). Your first server's has a protocol and spare credits.
+  // A vault holds a code cache, and maybe a protocol, spare credits, a second code cache or a Zero-day (floor 2+):
+  // fixed by its seed (LOOT.vault*). Your first server's has a protocol and spare credits.
   const vault = Object.keys(out).find((k) => out[k].locked && !out[k].drop);
   // Contracts plant files in vaults too (see mail.mjs).
-  if (vault && loc) out = { ...out, [vault]: { ...out[vault], files: [...out[vault].files, ...(hasKit(loc) ? ['kit.bin'] : []), ...(loc.template === 'cold' ? ['kit2.bin'] : []), ...(hasTokens(loc) ? ['tokens.dat'] : []), ...(hasBackup(loc) ? ['backup.bin'] : []), ...(sourceOf(loc) ? [sourceOf(loc) + '.src'] : []), ...(vaultFilter(loc) ? ['filter.flt'] : [])] } };
+  if (vault && loc) out = { ...out, [vault]: { ...out[vault], files: [...out[vault].files, ...(hasKit(loc) ? ['kit.bin'] : []), ...(loc.template === 'cold' ? ['kit2.bin'] : []), ...(hasTokens(loc) ? ['tokens.dat'] : []), ...(hasBackup(loc) ? ['backup.bin'] : []), ...(sourceOf(loc) ? [sourceOf(loc) + '.src'] : [])] } };
   // About half the found servers keep an incident file at the root (a Log sweep, see forensics.mjs).
   const incident = sweepFile(loc);
   if (incident && out['/'] && !out['/'].files.includes(incident)) out = { ...out, '/': { ...out['/'], files: [...out['/'].files, incident] } };
@@ -320,7 +319,6 @@ export function fileInfo(loc, path, name) {
   const vaultPath = Object.keys(layoutOf(loc)).find((k) => layoutOf(loc)[k].locked && !layoutOf(loc)[k].drop);
   const planted = loc.extraFiles?.find((f) => f.name === name && (f.dir || vaultPath) === path);
   if (planted) return { kind: planted.kind || 'contract', size: planted.kind === 'route' ? '6k' : '40k', label: planted.label, hidden: planted.hidden, text: planted.text };
-  if (name === 'filter.flt' && vaultFilter(loc) && layoutOf(loc)[path]?.locked) { const f = vaultFilter(loc); return { kind: 'filter', size: '24k', filter: f, text: [`firewall filter: ${f.name} (${RARITIES[f.rarity].name.toLowerCase()}, lv ${f.level}).`, `${filterLine(f)}.`, 'bank it, then put it in your firewall at home (Server page).'] }; }
   if (name === 'backup.bin' && hasBackup(loc) && layoutOf(loc)[path]?.locked) return { ...payload, size: '40k', text: [`binary: ${payload.amount} ${MATERIALS[code].name.toLowerCase()}, a backup of the vault's cache.`, 'pull it and bank it.'] };
   if (name === 'tokens.dat' && hasTokens(loc) && layoutOf(loc)[path]?.locked) return credits(cash, 'spare payment tokens');
   if (name.endsWith('.src') && sourceOf(loc) + '.src' === name) {
@@ -646,7 +644,6 @@ export function packGain(f, credits = null) {
     case 'code': return row(MATERIALS[f.material]?.name || f.material, `+${f.amount}`, f.material === 'exploit' ? 'exploit' : 'code');
 
     case 'deeper': return row('Trace record', '', 'found');
-    case 'filter': return row(f.filter.name, '', 'item', { rarity: f.filter.rarity, sub: filterLine(f.filter) });
     default: return row(f.label || f.name, '', 'found');
   }
 }
@@ -736,7 +733,6 @@ export function bank(s, loc, why = '') {
   if (clean) { emit(s, 'clean-job', `Clean job: in and out at ${Math.round(r0.trace || 0)}% trace.`); gainXp(s, deedXpFor(s, levelOf(loc), TRACE.cleanXp), 'clean job', 'breakin'); }
   gainCode(s, code, 'Banked: ');
   for (const f of gear) addItem(s, f.item, 'Banked: ');
-  for (const f of pack.filter((x) => x.kind === 'filter')) addFilter(s, f.filter, 'Filter banked: ');
 
   for (const f of pack.filter((x) => x.kind === 'contract')) bankCargo(s, { name: f.name, label: f.label, loc: f.loc || loc.id, path: f.path });
   // A trace record moves the trace on one of the ? servers linked to this one (a flagged one first, else one of its
@@ -784,8 +780,7 @@ export function play(s, input) {
   if (text === 'jack in' || text === 'defend' || text === 'intercept') return jackIn(s, text === 'intercept' ? 'intercept' : 'jack in');
   if (text === 'invasions' || text === 'invasion') return invasionsCommand(s);
   if (/^developer invade( \w+)?( road)?$/.test(text) || text === 'developer crash') return developerNetwork(s, text);
-  if (/^developer (frag|integrity) \d+$/.test(text)) { const first = s.serial; developerDamage(s, text); return since(s, first); } // a fragmented wall, a damaged server (firewall.mjs)
-  if (/^developer wall (\d+|off)$/.test(text)) { const first = s.serial; developerWall(s, text); return since(s, first); } // pin your wall's base (firewall.mjs)
+  if (/^developer integrity \d+$/.test(text)) { const first = s.serial; developerDamage(s, text); return since(s, first); } // a damaged server (firewall.mjs)
   if (/^(install|uninstall) /.test(text)) { const first = s.serial; if (sabotageBlock(s, text)) return since(s, first); } // a saboteur holds a service (invasion.mjs)
   if (/^threads?\b/.test(text)) return threadCommand(s, text); // threads, thread <id>, thread track|abandon|resume <id>, thread take <n> (threads.mjs)
   if (/^developer thread\b/.test(text)) return developerThread(s, text.replace(/^developer thread\s*/, ''));

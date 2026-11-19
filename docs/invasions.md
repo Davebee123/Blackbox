@@ -1,7 +1,8 @@
 # Invasions: what's left
 
-Invasions, the wall and daemons are built: the rules are in GAME_RULES.md "Home". This sheet keeps the numbers to watch
-and what's still worth doing.
+Invasions and daemons are built: the rules are in GAME_RULES.md "Home". The wall, its tiers and filters went in November
+2026 (the designer: HOME is its health, invasions attack it, you intercept them); what's below about them is history.
+This sheet keeps the numbers to watch and what's still worth doing.
 
 ## To watch
 

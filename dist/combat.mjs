@@ -35,17 +35,16 @@ import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
 import { tickRoot, processWon, rootRoll } from './root.mjs';
-import { firewallCommand, wear, hardenRestore } from './firewall.mjs';
+import { hardenRestore } from './firewall.mjs';
 import { tiersRestore, LEGACY_TREES } from './talents.mjs';
 import { rollSpecials, specialsRestore, hasSpecial, SPECIAL, leaningOf } from './specials.mjs';
 import { leanDealt, leanTaken, leanPaid } from './leanings.mjs';
 import { levelGains, nextGains, progressionRestore, climbRestore, craftRestore, RETIRED } from './progression.mjs';
-import { invaderDown, invasionRestore, signatureRestore } from './invasion.mjs';
+import { invaderDown, invasionRestore, signatureRestore, wallgoneRestore } from './invasion.mjs';
 import { daemonsAgain } from './daemons.mjs';
 import { runDaemons, daemonsOn, daemonsHurt, flushDaemons, lifeline, lifelineHeal, daemonCommand, daemonRestore, slottedDaemons, daemonAmount, watchmanBar, gainDaemon } from './daemons.mjs';
 export { daemonSlots, slottedDaemons, daemonLevel, daemonAmount, daemonNext, watchmanBar, gainDaemon } from './daemons.mjs';
 import { LEG, legendFired } from './legends.mjs';
-import { filterCommand, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, traceNear, leadOf, firstRank } from './hidden.mjs';
 import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, floorLairBosses, reached, floorCommand, floorsRestore, floorsLetter } from './floors.mjs';
 import { orphanXpMult, intelXpMult, trashItemMult, clearOddsMult } from './table.mjs';
@@ -504,9 +503,9 @@ export function loadedOn(s, id) {
 
 // ---------- the server ----------
 // (Services retired with outposts in save v40, GAME_RULES.md "Saves": a save that ran one got what it cost back, sockets.mjs
-// retireOutposts. The server runs no rules of its own; the firewall, its filters and the daemons are its kit.)
+// retireOutposts. The server runs no rules of its own; daemons are its kit.)
 
-// A stat's total. side 'hacker': your protocols; 'server': the firewall's filters at home; none: both.
+// A stat's total: your protocols (side 'server' counts none: HOME has no gear of its own).
 // (Survival stats exist on both sides and count where that side is defending.)
 export function gearStat(s, stat, side = null) {
   let n = 0, pieces = false;
@@ -528,7 +527,6 @@ export function gearStat(s, stat, side = null) {
   }
   if (pieces) n += setStat(s, stat); // a set piece's own stat, its green line, a set bonus (sets.mjs)
   if (pct) n = Math.round(n * (1 + pct / 100));
-  if (side !== 'hacker') n += (FILTER_STATS[stat]?.home ? (FILTER_STATS[stat].pct ? Math.round((serverMax(s) * filterStat(s, stat)) / 100) : filterStat(s, stat)) : 0); // the firewall's filters for the fights at home: decoys, a sandbox, Block, a shield, Regen, barbs
   return STATS[stat]?.cap ? Math.min(STATS[stat].cap, n) : n;
 }
 // Scavenge with a visit's Warm cache on top (visit.mjs).
@@ -2504,7 +2502,7 @@ function distance(a, b) {
 }
 // A command that isn't one, with no fight running: a fight order says so; a run command says where it
 // works; anything else gets a "did you mean" (clickable in the notice).
-const HOME_WORDS = ['connect', 'jack', 'mail', 'repair', 'top', 'install', 'uninstall', 'cancel', 'load', 'unload', 'deconstruct', 'craft', 'filter', 'firewall', 'relay', 'use', 'detach', 'attach', 'encounter', 'status', 'daemon', 'speed', 'consortium', 'market', 'buy', 'sell', 'event', 'config', 'map', 'server', 'loadout', 'system', 'rig', 'settings', 'help', 'mail', 'equip', 'unequip', 'whoami'];
+const HOME_WORDS = ['connect', 'jack', 'mail', 'repair', 'top', 'install', 'uninstall', 'cancel', 'load', 'unload', 'deconstruct', 'craft', 'relay', 'use', 'detach', 'attach', 'encounter', 'status', 'daemon', 'speed', 'consortium', 'market', 'buy', 'sell', 'event', 'config', 'map', 'server', 'loadout', 'system', 'rig', 'settings', 'help', 'mail', 'equip', 'unequip', 'whoami'];
 const RUN_WORDS = ['ls', 'cd', 'cat', 'pull', 'unlock', 'attack', 'engage', 'slip', 'spoof', 'tap', 'sweep'];
 function unknownAtHome(s, text) {
   const [w, ...rest] = text.split(' ');
@@ -2731,10 +2729,6 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     s.devServer = Math.max(1, Math.min(SERVER.maxLevel, Number(text.split(' ')[2])));
     syncServer(s);
     emit(s, 'info', `Developer: server level ${serverLevel(s)} (a floor under your highest class level, for testing).`);
-  } else if (/^filter (equip|unequip|scrap) \d+$/.test(text)) {
-    filterCommand(s, text);
-  } else if (/^firewall (upgrade|defrag)( \S+)?$/.test(text) || text === 'defrag') {
-    firewallCommand(s, text, now);
   } else if (/^hub (assemble|retune) \S+$/.test(text)) {
     assemble(s, text.split(' ')[2]); // a faction piece (faction-gear.mjs)
   } else if (/^commission \S+$/.test(text)) {
@@ -3983,7 +3977,6 @@ export function takeDamage(s, amount, source, label, { dot = false } = {}) {
   if (amount > 0) amount = fbTaken(s, d, amount); // Overdraft (floorbosses.mjs)
   const dealt = survive(s, d, Math.min(d.integrity, amount));
   d.integrity -= dealt;
-  if (e.mode === 'home' && dealt) wear(s, dealt); // your server's Integrity: it wears your firewall
   e.metrics.attackDamage += dealt;
   lifelineHeal(s); // a Lifeline that just held you at 1 (daemons.mjs)
   if (dealt) daemonsHurt(s, source); // below half, below a quarter: Canary, Snapshot, Spite, Checkpoint
@@ -5213,14 +5206,12 @@ function retireTraits(s) {
   for (const h of s.harvesters || []) h.traits = [];
   for (const l of s.locations || []) if (l.outpost?.h) l.outpost.h.traits = [];
   for (const l of s.locations || []) if (l.outpost) { delete l.outpost.infest; delete l.outpost.siege; }
-  for (const l of s.locations || []) if (l.outpost?.fw) Object.assign(l.outpost.fw, { frag: 0, defragUntil: 0 }); // holdings' firewalls don't fragment
 }
 function retireWall(s, was) {
   if (was >= 30) return;
-  const L = Math.max(1, serverLevel(s));
   for (const [id, stat] of Object.entries(RETIRED_SERVICES)) {
     const v = s.services?.[id];
-    if (v) { addFilter(s, rollFilter(seeded(L * 31 + v), { level: L, rarity: v >= 3 ? 'custom' : 'tuned', stat }), `${id[0].toUpperCase() + id.slice(1)} retired: `); delete s.services[id]; }
+    if (v) { (s.filters ||= { held: [], on: [] }).held.push({ rarity: v >= 3 ? 'custom' : 'tuned', stat }); delete s.services[id]; } // a filter once; wallgoneRestore scraps it
     if (s.install?.id === id) { s.server.credits += [120, 600, 2000][s.install.v - 1] || 0; s.install = null; }
     if (s.configs) delete s.configs[id];
   }
@@ -5408,6 +5399,7 @@ export function restore(raw) {
     hardenRestore(s); // harden.sh is gone: scripts you held come back as credits (firewall.mjs)
     healthRestore(s); // one Integrity bar, and no crashes; keyed on s.signal, s.degraded, s.occupation
     componentsRestore(s); // v47: a pile of named components becomes its count (salvage.mjs); keyed on the field
+    wallgoneRestore(s); // v66: the firewall and its filters are gone, refunded (firewall.mjs, invasion.mjs); keyed on the fields
     { const l = craftRestore(s); if (l) systemLetter(s, l); } // v49: crafting goes (progression.mjs): keyed on what the save holds
     { const w = (h) => (h === 'moth' ? 'wisp' : h); for (const x of s.crewSim || []) x.name = w(x.name); if (s.friends) s.friends = s.friends.map(w); const c = s.consortium; if (c) { c.members = (c.members || []).map(w); c.founder = w(c.founder); } } // moth is the story's (docs/lore.md): the handle is wisp now; keyed on the name
     shuntRestore(s); // the Shunt was cut (docs/parts-plan.md): keyed on the part, not the version
@@ -5441,7 +5433,7 @@ export function suggestions(s, input = '') {
   }
   const base = active(s)
     ? [...usable(s).map((id) => (id === 'spike' ? spikeWord(s) : id)), 'hold', 'pause', 'resume', 'cancel', 'status', 'scan', ...living.filter((p) => p.kind !== 'fragment').map((p) => `inspect ${packed(s, s.encounter.virus, p) ? partKey(s, p) : p.id}`)]
-    : ['engage', 'jack in', 'mail', 'repair', 'top up', 'protocols', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
+    : ['engage', 'intercept', 'mail', 'repair', 'top up', 'protocols', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
   return base.filter((x) => x.startsWith(text));
 }
 

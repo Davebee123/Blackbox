@@ -7,12 +7,12 @@ import { online, PRESENCE } from './dist/presence.mjs';
 import { matesOf } from './dist/crew.mjs';
 import * as consortiumMod from './dist/consortium.mjs';
 import { rebooting, CONSORTIUM, memberServers, serversOf, sizeOf, tiersOf, tickConsortium, isGround, consortiumOf, consortiumSockets, consortiumLinked } from './dist/consortium.mjs';
-import { tickNetwork, ratioOf } from './dist/invasion.mjs';
+import { tickNetwork } from './dist/invasion.mjs';
 import { rogueSpawns } from './dist/rogue.mjs';
 import * as FP from './dist/floorplan.mjs';
 
 const world = () => { const s = fresh(); s.hackers = { breaker: { level: 6, xp: 0 } }; play(s, 'online sim'); return s; };
-// A server found and connected to (only those send invasions: GAME_RULES.md "Invasions and the wall").
+// A server found and connected to (only those send invasions: GAME_RULES.md "Invasions").
 const found = (s, family) => { command(s, `developer location ${family}`); s.locations.at(-1).runs = 1; return s.locations.at(-1); };
 const win = (s) => {
   for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: 1, attack: null });
@@ -171,12 +171,11 @@ test('the crew strip: linked crew follow you, split crew wander, link follows th
 
 // Helpers: always / never does a member step in.
 const helping = (k, f) => { const was = CONSORTIUM.help; CONSORTIUM.help = k; try { f(); } finally { CONSORTIUM.help = was; } };
-test('away, in a consortium: a weak wall chips you to 1 and no lower; nothing crashes, nothing moves in', () => {
+test('away, in a consortium: an invasion chips you to 1 and no lower; nothing crashes, nothing moves in', () => {
   helping(0, () => {
     const s = world();
     found(s, 'ransomware');
     play(s, 'consortium create LOWLIGHT'); play(s, 'consortium invite nyx');
-    s.firewall = { pin: 0, plus: 0, frag: 0, defragUntil: 0 }; // a weak wall
     const T0 = 1_800_000_000_000;
     tickNetwork(s, T0);
     s.server.integrity = 5;
@@ -188,48 +187,15 @@ test('away, in a consortium: a weak wall chips you to 1 and no lower; nothing cr
   });
 });
 
-test('away, solo too: the network plays on, and your firewall decides', () => {
+test('away, solo too: the network plays on, and nothing crashes', () => {
   const T0 = 1_800_000_000_000;
-  const weak = world();
-  found(weak, 'ransomware');
-  weak.firewall = { pin: 0, plus: 0, frag: 0, defragUntil: 0 };
-  tickNetwork(weak, T0);
-  tickNetwork(weak, T0 + 8 * 3600000);
-  assert.ok(weak.logs.some((e) => e.type === 'invader'), 'invaders came while you were away');
-  assert.ok(!weak.logs.some((e) => e.type === 'crashed'), 'nothing stopped them, and nothing crashes');
-  assert.ok(weak.server.integrity >= 1);
-  const strong = world();
-  found(strong, 'ransomware');
-  strong.firewall = { pin: 30, plus: 0, frag: 0, defragUntil: 0 };
-  tickNetwork(strong, T0);
-  tickNetwork(strong, T0 + 8 * 3600000);
-  assert.ok(strong.logs.some((e) => e.type === 'invasion-cleared'), 'the firewall stopped them');
-  assert.ok(!strong.logs.some((e) => e.type === 'crashed'));
-});
-
-test('away, a strong wall holds: invaders are stopped and nothing crashes', () => {
-  helping(0, () => {
-    const s = world();
-    found(s, 'ransomware');
-    play(s, 'consortium create LOWLIGHT'); play(s, 'consortium invite nyx');
-    s.hackers = { breaker: { level: 50, xp: 0 } }; // a high-level server (your highest class level)
-    const T0 = 1_800_000_000_000;
-    tickNetwork(s, T0);
-    tickNetwork(s, T0 + 8 * 3600000);
-    assert.ok(s.logs.filter((e) => e.type === 'invader').length >= 2, 'invaders came');
-    assert.ok(!s.logs.some((e) => e.type === 'crashed'));
-    assert.ok(s.logs.some((e) => e.type === 'invasion-cleared'), 'the wall stopped them');
-  });
-});
-
-test('Grid: firewall +2 levels', async () => {
-  const { effLevel } = await import('./dist/firewall.mjs');
   const s = world();
   found(s, 'ransomware');
-  const base = effLevel(s, 0);
-  play(s, 'consortium create LOWLIGHT');
-  for (const h of PRESENCE.pool.slice(0, 11)) play(s, 'consortium invite ' + h);
-  assert.equal(effLevel(s, 0), base + 2);
+  tickNetwork(s, T0);
+  tickNetwork(s, T0 + 8 * 3600000);
+  assert.ok(s.logs.some((e) => e.type === 'invader'), 'invaders came while you were away');
+  assert.ok(!s.logs.some((e) => e.type === 'crashed'), 'nothing crashes');
+  assert.ok(s.server.integrity >= 1);
 });
 
 test('a member server reset brings fights and caches back, not vault loot or vault XP', async () => {

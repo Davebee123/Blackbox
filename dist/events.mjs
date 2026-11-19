@@ -42,7 +42,6 @@ import { eventMult, noteEvent, leanPick, darknetPick, darknetBuy, nameNative, ho
 import { isPiece } from './sets.mjs';
 import { factionAuthor } from './authors.mjs';
 import { FACTIONS, hubsOf, changeRep, hubFound, FACTION_FAMILY, RIPPLE, commissionOf } from './factions.mjs';
-import { addFilter, rollFilter } from './filters.mjs';
 import { invasionsLive, scoutNext, SCOUTED } from './invasion.mjs';
 import { gainPart, pieceOf } from './faction-gear.mjs';
 import { addrsOf } from './address.mjs';
@@ -103,12 +102,11 @@ const rival = (ev, f) => ev.sides.find((x) => x !== f);
 // The feud won for your side: a part of its piece (faction-gear.mjs), its good (fixed by the event; a sealed item carries its
 // implicit), +bonusRep, its allies a quarter of a win and the bonus. No ripple.
 function feudBonus(s, ev) {
-  const f = ev.side, r = seeded(ev.seed), good = feudGood(f) === 'crate' ? 'a sealed item' : 'a bootleg filter';
+  const f = ev.side, r = seeded(ev.seed), good = 'a sealed item';
   const part = gainPart(s, f);
   changeRep(s, f, FEUD.bonusRep, `You won the feud for ${FACTIONS[f].short}`, { ripple: false });
   for (const a of FACTIONS[f].allies) changeRep(s, a, Math.round((FEUD.rep + FEUD.bonusRep) * RIPPLE.ally), `${FACTIONS[f].short}'s ally noticed`, { ripple: false });
-  if (feudGood(f) === 'crate') addItem(s, rollItem(r, { level: ev.level, rarity: 'tuned', faction: f }), `${FACTIONS[f].short}: `);
-  else addFilter(s, rollFilter(r, { level: ev.level, rarity: r() < 0.7 ? 'stock' : 'tuned' }), `${FACTIONS[f].short}: `);
+  addItem(s, rollItem(r, { level: ev.level, rarity: 'tuned', faction: f }), `${FACTIONS[f].short}: `);
   return part ? `${part} and ${good}` : good;
 }
 // A runner beaten: a protocol at your level with your side's implicit, Stock or Tuned as a courier's (fixed by the event and the win).
@@ -119,8 +117,6 @@ function runnerDrop(s, ev, f) {
 // Two located hubs that are rivals (factions.mjs), each pair once.
 export const feuds = (s) => { const fs = hubsOf(s).map((h) => h.faction); return fs.flatMap((a, i) => fs.slice(i + 1).filter((b) => FACTIONS[a].rivals.includes(b)).map((b) => [a, b])); };
 const markets = (s) => hubsOf(s).map((h) => h.faction); // hubs you can trade at
-// What your side gives for the win: a sealed item (Tuned, at your level), or from LANTERN a bootleg filter.
-export const feudGood = (f) => (f === 'lantern' ? 'bootleg' : 'crate');
 const NAMES = ['lapsejack', 'deductible', 'subrogate', 'rider', 'lossrun', 'waiver', 'binder', 'tallow', 'cinder', 'quarry'];
 
 export const CARDS = {
@@ -198,7 +194,7 @@ export const CARDS = {
     make: (s, loc) => { const sides = pick(s, feuds(s)); return { sides, level: placeLevel(s, loc), name: sides.map((f) => FACTIONS[f].short).join(' vs '), bar: Math.round((0.5 + (roll(s) * 2 - 1) * FEUD.start) * 100) / 100, steps: 0, wins: 0, runners: Object.fromEntries(sides.map((f) => [f, runnerName(s, f)])) }; },
     foe: (ev, f) => { const o = rival(ev, f); return { family: FACTION_FAMILY[o], name: ev.runners[o], elite: true, eliteHp: FEUD.hp }; },
     text: (ev, where) => `${FACTIONS[ev.sides[0]].short} and ${FACTIONS[ev.sides[1]].short} are fighting over ${where}. Pick a side and push its bar to 100%.`,
-    reward: (ev, f = ev.side) => `Each win pays ${feudPay(ev.level)} credits, a protocol with ${FACTIONS[f].short}'s mark and ${FACTIONS[f].short} +${FEUD.rep}. Winning the feud adds a part of ${pieceOf(f)?.name || 'its piece'}, ${feudGood(f) === 'crate' ? 'a sealed item' : 'a bootleg filter'} and ${FACTIONS[f].short} +${FEUD.bonusRep}`,
+    reward: (ev, f = ev.side) => `Each win pays ${feudPay(ev.level)} credits, a protocol with ${FACTIONS[f].short}'s mark and ${FACTIONS[f].short} +${FEUD.rep}. Winning the feud adds a part of ${pieceOf(f)?.name || 'its piece'}, ${'a sealed item'} and ${FACTIONS[f].short} +${FEUD.bonusRep}`,
     gone: (ev, where) => `The feud over ${where} is over.`,
     // The world moves without you: a step every driftMs, on the director's dice. Outward only inside hold; inward always.
     tick: (s, ev) => {
