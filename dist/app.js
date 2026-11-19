@@ -123,7 +123,6 @@ let mapView = 'mine'; // the Map: 'mine' (your network) or 'consortium' (the mer
 let mailSel = null; // the open item on the Mail page: 'l<id>' a letter, 'j<id>' a contract
 let logJr = { writer: null, read: null }; // the Ledger's Journals entry: the writer open, the entry being read (journals-view.mjs)
 let codexSel = null, codexIdx = false, codexTab = 'codex', logSel = null, logFind = '', codexShut = false; // and its tab ('codex' or 'log', the Collection: collection-view.mjs) and the log's entry open; // the Codex tab: the entry open ('family:worm'), and the phone's index unfolded
-let srvUi = { sel: null, open: false, preview: null, armed: null }; // the Server page (server-view.mjs): what's picked, the phone's sheet, the before and after showing and the one a tap armed
 let history = [];
 let historyIndex = -1;
 let suggestionList = [];
@@ -1298,10 +1297,7 @@ function react(events) {
       case 'service-done': feel.add('unlock', null); rewardCard('Installed', e, events, true); break;
       // Invasions: one line each, and only when something changes.
       case 'invader': if (!e.quiet) notice(e.message); break;
-      case 'wall-scout': feel.add('interrupt', '#meter-integrity', 'SCOUT'); notice(e.message); break;
       case 'sabotage': feel.add('hurt', '#meter-integrity', 'SABOTAGE'); notice(e.message, true); break;
-      case 'theft': case 'wall-mapped': feel.add('lose', null); notice(e.message, true); break;
-      case 'wall-siege': feel.add('interrupt', '#meter-integrity', 'SIEGE'); notice(e.message); break;
       case 'jack-in': feel.add('jackin', null); shell.glitch?.(); break;
       case 'run-start': feel.add('jackin', null); if (!dialFx()) shell.glitch?.(); break; // (the connect's own effect stands in for the glitch)
       case 'jacked-out': feel.add('hangup', null); if (e.gains?.length) { const name = e.message.match(/JACKED OUT of (.+?)\. Banked/)?.[1] || ''; setTimeout(() => whenHome(() => showGain('Banked', name, e.gains, false)), 350); } break;
@@ -1315,7 +1311,7 @@ function react(events) {
         break;
       }
       case 'world-event': lampBlink('net'); if (e.card === 'courier') feel.numbers(); break; // LANTERN on the radio (the pager carries the text)
-      case 'wall-breach': feel.add('hurt', '#meter-integrity', 'BREACH'); notice(e.message, true); ledRing(); break;
+      case 'wall-breach': feel.add('hurt', '#meter-integrity', 'INVASION'); notice(e.message, true); ledRing(); break;
       case 'invasion-cleared': if (!won && !e.quiet && !e.lost) { feel.add(e.blocked ? 'good' : 'win', MINE); notice(e.message); } break;
       case 'rebooted': feel.add('unlock', MINE); notice(e.message); break;
       // The Encryptor's attack: a tendril of hex, and locks over your bar; each tick of it after: the locks only.
@@ -1479,8 +1475,8 @@ function noticeCard(html) {
 }
 
 // ---------- commands ----------
-const NAV = ['map', 'combat', 'net', 'server', 'loadout', 'daemons', 'codex', 'rig', 'system'];
-const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 'loadout', inventory: 'loadout', services: 'server', ports: 'server', wall: 'server', talents: 'loadout', skills: 'loadout', archetypes: 'loadout', home: 'map', trace: 'map', leads: 'map', logs: 'system', settings: 'system', achievements: 'rig', casing: 'rig', terminal: 'rig', bestiary: 'codex', fight: 'combat', run: 'net' };
+const NAV = ['map', 'combat', 'net', 'loadout', 'daemons', 'codex', 'rig', 'system'];
+const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 'loadout', inventory: 'loadout', services: 'map', ports: 'map', wall: 'map', server: 'map', talents: 'loadout', skills: 'loadout', archetypes: 'loadout', home: 'map', trace: 'map', leads: 'map', logs: 'system', settings: 'system', achievements: 'rig', casing: 'rig', terminal: 'rig', bestiary: 'codex', fight: 'combat', run: 'net' };
 
 function run(raw) {
   let text = raw.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -1561,7 +1557,7 @@ function run(raw) {
   if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); markDirty(); return notice(`Window ${text.slice(7)}.`); }
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();
-  if (text === 'help') return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload and deconstruct. For your server, use install, uninstall, firewall upgrade|defrag and filter equip. On the net, use connect, relay, detach and mail. The pages are map, mail, server, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
+  if (text === 'help') return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload and deconstruct. For your server, use top up and intercept. On the net, use connect, relay, detach and mail. The pages are map, mail, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
 
   if (fighting && !realSave && turnLocked() && isOrder(text)) return refused(toIntent(campaign, text.split(';')[0].trim(), false).ability); // one entry a turn (turnLocked)
   // A co-op guest: a fight command goes to the host, a loadout change to their own save (and on to the host).
@@ -1671,6 +1667,7 @@ function go(name, quiet = false) {
   // Halcyon's store is its hub's Shop now: anything that asks for the store opens that.
   if (name === 'store' && boardOpen(campaign)) { hubSel = 'halcyon'; hubOpen = true; hubLines = [...V.hubBanner(campaign, 'halcyon').slice(0, -1), menuLine]; hubWin = 'shop'; V.setOrder(null); name = 'hub'; }
   if (name === 'daemons') { loadoutTab = 'daemons'; name = 'loadout'; } // a Loadout tab now
+  if (name === 'server') { mapSel = 'server'; name = 'map'; } // the Server page is gone: HOME's card on the map
   // Contextual tabs only exist while there is something there.
   if (name === 'combat' && !active(campaign) && !(campaign.encounter && campaign.encounter.mode === 'run')) name = 'map';
   if (name === 'net' && (!campaign.run || campaign.run.rooms)) name = campaign.rooms ? 'rooms' : 'map';
@@ -1681,7 +1678,6 @@ function go(name, quiet = false) {
   if (leaving) { campaign.encounter.paused = true; campaign.encounter.autoPaused = true; notice('Fight paused.'); }
   if (name === 'combat' && active(campaign) && campaign.encounter.autoPaused) { campaign.encounter.paused = false; campaign.encounter.autoPaused = false; }
   if (name !== module && !quiet) feel.add('channel', null);
-  if (name === 'server' && module !== 'server') srvUi = { ...srvUi, open: false, preview: null, armed: null }; // the sheet comes up when you pick something
   if (name !== 'combat') hideSpoils();
   if (gainOpen()) hideGain();
   if (name !== 'hub') { hubOpen = false; hubWin = null; }
@@ -2057,6 +2053,9 @@ function renderMeters() {
       `Integrity ${hp}/${max}\nYour health. It regenerates slowly at home${resting ? ` (${f < toConnect ? `${Math.ceil(max * toConnect)} to connect` : 'full'} in ${eta.textContent})` : ''}.`);
   }
   $('vault-value').textContent = srv.credits;
+  $('meter-stores').setAttribute('aria-expanded', String(storesOpen));
+  $('stores-panel').hidden = !storesOpen;
+  if (storesOpen) put('stores-panel', V.storesMarkup(campaign));
   tableMeter();
   const s = shown();
   // Fight and Run tabs appear only while there is a fight or a run.
@@ -2360,7 +2359,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, runnersAt: mapRunnersAt, railShut, phone: F.isPhone() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab, phone: F.isPhone() }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi, house: houseUi, casing: casingSec }) };
+    const pages = { rooms: (x) => roomsMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, runnersAt: mapRunnersAt, railShut, phone: F.isPhone() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab, phone: F.isPhone() }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi, house: houseUi, casing: casingSec }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
     const findAt = module === 'codex' && document.activeElement?.id === 'lg-find' ? document.activeElement.selectionStart : null; // the log's search keeps its focus and caret
@@ -2750,11 +2749,6 @@ function services() {
   if (module === 'map' && campaign.events?.length && now - (services.ev || 0) > 5000) { services.ev = now; markDirty(); }
   // Offers and shelves count down: refresh those pages now and then.
   if ((module === 'mail' || module === 'store') && now - (services.page || 0) > 15000) { services.page = now; markDirty(); }
-  const job = campaign.install;
-  if (module !== 'server' || !job) return;
-  const bar = document.querySelector('.install-bar span'), left = document.querySelector('.install-top span');
-  if (bar) bar.style.width = Math.min(100, ((now - job.startedAt) / (job.doneAt - job.startedAt)) * 100) + '%';
-  if (left) left.textContent = V.fmtTime(job.doneAt - now) + ' left';
 }
 
 // ---------- first-time tips ----------
@@ -3134,34 +3128,6 @@ document.querySelector('.modules').addEventListener('click', (e) => {
   const b = e.target.closest('[data-module]');
   if (b) go(b.dataset.module);
 });
-// The Server page (server-view.mjs). Pick anything on the card and the panel shows it (on a phone the sheet comes up;
-// × or Esc puts it away). Point at an action that changes the wall or the server, or focus it, and the panel shows
-// before and after; on a touch screen the first tap shows it and the second does it. Its buttons are real commands:
-// the click handler below runs them.
-const touchFirst = () => lastPointer === 'touch' || matchMedia('(hover: none)').matches;
-document.addEventListener('click', (e) => {
-  if (module !== 'server') return;
-  const pv = e.target.closest('button[data-preview]');
-  if (pv && !pv.disabled && touchFirst() && srvUi.armed !== pv.dataset.preview) {
-    e.preventDefault(); e.stopImmediatePropagation();
-    srvUi = { ...srvUi, sel: pv.closest('#hsv-panel') ? srvUi.sel : 'core', open: true, preview: pv.dataset.preview, armed: pv.dataset.preview };
-    markDirty(); return;
-  }
-  if (pv) { srvUi = { ...srvUi, armed: null }; return; } // a click, or the second tap: the command runs
-  const k = e.target.closest('button[data-svkey]');
-  if (k) { srvUi = { sel: k.dataset.svkey, open: true, preview: null, armed: null }; markDirty(); return; }
-  if (e.target.closest('button[data-hsv-close]')) { srvUi = { ...srvUi, open: false, preview: null, armed: null }; markDirty(); }
-}, true);
-document.addEventListener('pointerover', (e) => {
-  if (module !== 'server' || e.pointerType === 'touch') return;
-  const pv = e.target.closest?.('button[data-preview]:not(:disabled)'), want = pv ? pv.dataset.preview : srvUi.armed;
-  if ((want || null) !== srvUi.preview) { srvUi = { ...srvUi, preview: want || null }; markDirty(); }
-});
-document.addEventListener('focusin', (e) => {
-  const pv = module === 'server' && e.target.closest?.('button[data-preview]:not(:disabled)');
-  if (pv && srvUi.preview !== pv.dataset.preview) { srvUi = { ...srvUi, preview: pv.dataset.preview }; markDirty(); }
-});
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && module === 'server' && (srvUi.open || srvUi.preview)) { srvUi = { ...srvUi, open: false, preview: null, armed: null }; markDirty(); } });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && V.daemonUi.sel && document.querySelector('.dm-panel.open')) { V.daemonUi.sel = null; markDirty(); } }); // the Daemons tab's panel, where it closes
 document.addEventListener('click', (e) => {
   if (tip && !e.target.closest('#tip') && (e.target.closest(tip.cur.at) || (tip.cur.also && e.target.closest(tip.cur.also)))) advanceTip();
@@ -3622,7 +3588,6 @@ const PH_POPS = [
   { id: 'item', host: () => pd.el, want: () => !!pd.id && pd.tap, label: 'Datasheet', shut: () => pdHide() },
   { id: 'map', page: '#map-pop', through: true, label: 'Server', shut: () => { mapPop = false; mapSel = null; V.setMemAsk(null); }, drawn: phPeek },
   { id: 'room', page: '#fp-pop', through: true, label: 'Room', shut: () => closePop(campaign) },
-  { id: 'server', page: '#hsv-panel.open', through: true, height: 'half', label: 'Details', shut: () => { srvUi = { ...srvUi, open: false, preview: null, armed: null }; } },
   { id: 'daemon', page: '.dm-panel.open', through: true, label: 'Daemon', shut: () => { V.daemonUi.sel = null; } },
   { id: 'levelup', host: () => $('levelup'), want: () => lu.showing(), through: true, label: 'Firmware update', shut: () => lu.dismiss() },
 ];
@@ -3790,6 +3755,11 @@ addEventListener('contextmenu', (e) => { if (F.isPhone() && e.target.closest?.(P
 
 // People (presence.mjs): a button on the top bar with how many are online, and its panel.
 let peopleOpen = false, peopleTab = 'friends';
+// The top bar's Materials button: Code and Components in a small panel under it (view.mjs storesMarkup).
+let storesOpen = false;
+$('meter-stores').addEventListener('click', (e) => { e.stopPropagation(); storesOpen = !storesOpen; markDirty(); });
+document.addEventListener('click', (e) => { if (storesOpen && !e.target.closest('#stores-panel, #meter-stores')) { storesOpen = false; markDirty(); } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && storesOpen) { storesOpen = false; markDirty(); } });
 function peopleUi() {
   const on = peopleOn(campaign);
   $('people').hidden = !on;
@@ -3889,7 +3859,11 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && profileO
 function tableMeter() {
   const el = $('meter-table'), n = shownCount(campaign);
   if (+el.dataset.n === n) return;
-  el.dataset.n = n; $('table-value').textContent = `${n}%`; el.title = tableTip(campaign); el.dataset.ttKind = `INIT's table · ${tableKind(campaign)}`;
+  el.dataset.n = n; $('table-value').textContent = `${n}%`; el.dataset.ttKind = `INIT's table · ${tableKind(campaign)}`;
+  if (el.dataset.tt == null) el.title = tableTip(); // the hover moves it to data-tt; the rows below change, the line doesn't
+  let more = el.querySelector(':scope > template.tt-more');
+  if (!more) { more = document.createElement('template'); more.className = 'tt-more'; el.append(more); }
+  more.innerHTML = V.tableMore(campaign);
 }
 function setComms(open) {
   commsOpen = open;
@@ -3941,7 +3915,7 @@ function goTo(target) {
   const [where, what, sub] = target.split(':');
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
   else if (where === 'store') go('store');
-  else if (where === 'server') go('server');
+  else if (where === 'server') { mapSel = 'server'; go('map'); }
   else if (where === 'hub') { openHub(what); if (sub) pickHub(sub); } // hub:<faction>:<window> opens straight to it (a market shock's tile)
   else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what?.startsWith('con=')) { mapView = 'consortium'; mapSel = what.slice(4); } else if (what) { mapSel = what; mapPop = true; } go('map'); }
   else if (where === 'consortium' || where === 'people') { peopleOpen = false; go('consortium'); }

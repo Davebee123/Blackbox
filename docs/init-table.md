@@ -67,7 +67,7 @@ one costs nothing.
 ## 5. On screen
 
 - *Plain* in the header (picked, replacing the map's *Readout*, too small to notice): *PROCESS TABLE 84%* between
-  Signal and Credits. Its tooltip names the band and its effects at the count.
+  Signal and Credits. Its tooltip: the band as its kind, a bar from 70% to 95% with both bands and the count's tick, the band's effects as rows (icon chips), what fills and empties it.
 - ◌ on an orphan's name, its tooltip: *Orphan. A trade still waiting for its other side. Breaking it frees a slot.*
 - LANTERN's census lines and INIT's warnings on the Log.
 

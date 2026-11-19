@@ -29,8 +29,6 @@ CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap sca
 const item =(stats, extra = {}) => ({ kind: 'protocol', side: 'hacker', rarity: 'stock', level: 5, stats, zeroDay: null, name: 'Test protocol', ...extra });
 const give = (s, stats, extra) => { const it = addItem(s, item(stats, extra)); command(s, 'load ' + it.id); return it; };
 const svc = (s, services) => { s.services = { ...services }; syncServer(s); s.server.integrity = s.server.max; return s; };
-// Filters in the wall's slots (two at +0), with the stats a home fight reads.
-const wall = (s, ...stats) => { s.filters = { held: stats.map((x, i) => ({ kind: 'filter', rarity: 'tuned', level: 1, name: `Filter ${i + 1}`, stats: { strength: 1, ...x } })), on: stats.map((_, i) => i) }; syncServer(s); s.server.integrity = s.server.max; return s; };
 const fight = (s, key = 'cryptjack', level = 6) => { selectEncounter(s, key, 7, { level }); command(s, 'engage'); s.encounter.surpriseSpent = true; return s; }; // the Infiltrator's Surprise is tested on its own (skills2.test.mjs)
 const bare = (s) => { for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, maxArmor: 0, patchAt: null }); return s; };
 const quiet = (s) => { for (const p of s.encounter.virus.parts) p.attack = null; return s; };
@@ -259,27 +257,6 @@ test('enemies crit too (from level 3), for ×1.5 damage', () => {
   CONFIG.enemyCrit = 0;
 });
 
-test('filters at home (the services that were): Hardened softens hits, of the Scrubber shields the start, Self-healing heals over 5 cycles and very slowly between fights', () => {
-  const s = wall(fresh(), { reduction: 6, shield: 10 }, { regen: 3 });
-  assert.equal(gearStat(s, 'reduction', 'server'), 6);
-  assert.equal(gearStat(s, 'shield', 'server'), 10, '10% of max Integrity');
-  assert.equal(gearStat(s, 'regen', 'server'), 3);
-  fight(s);
-  assert.equal(s.encounter.shield, 10);
-  part(s, 'encryptor').attack = null;
-  const pulse = part(s, 'pulse');
-  pulse.attack.amount = 25;
-  s.encounter.cycle = pulse.attack.due;
-  command(s, 'hold'); resolveCycle(s);
-  assert.equal(s.server.integrity, 100 - (19 - 10), '25 → 19 after 6 Block, then the shield soaks 10');
-  command(s, 'hold'); resolveCycle(s);
-  assert.equal(s.server.integrity, 92, 'Regen 3: 3 every 5 cycles, a fifth a cycle: +1 on the second');
-  s.encounter = null;
-  assert.equal(idleRegen(s, 60000), false, 'between fights: 3 every 5 minutes');
-  idleRegen(s, 60000);
-  assert.equal(s.server.integrity, 93);
-});
-
 test('your survival stats count on runs, the server\'s services at home', () => {
   const s = fresh();
   give(s, { reduction: 3 });
@@ -323,24 +300,6 @@ test('misses: your damaging skills can miss (the cooldown is still spent); Accur
   fight(t, 'cryptjack', 23);
   assert.equal(missChance(t), 2, '3 levels up: 8%, less 6% Accuracy');
   CONFIG.misses = false;
-});
-
-test('Decoy and Sandboxed filters: attacks and specials on your server can fail', () => {
-  const was = { e: STATS.evasion.cap, s: STATS.sanitize.cap };
-  STATS.evasion.cap = STATS.sanitize.cap = 100;
-  const s = fresh();
-  s.filters = { held: [{ kind: 'filter', rarity: 'tuned', level: 1, name: 'Decoy Packet Filter', stats: { strength: 1, evasion: 100, sanitize: 100 } }], on: [0] };
-  fight(s);
-  const pulse = part(s, 'pulse'), enc = part(s, 'encryptor');
-  s.encounter.hardened = 0;
-  s.encounter.cycle = Math.max(pulse.attack.due, enc.attack.due);
-  command(s, 'hold');
-  const ev = resolveCycle(s);
-  assert.ok(ev.some((e) => e.type === 'evaded'));
-  assert.ok(ev.some((e) => /Sanitize stopped it/.test(e.message)));
-  assert.equal(s.server.integrity, 100);
-  assert.equal(s.encounter.encrypt, 0);
-  Object.assign(STATS.evasion, { cap: was.e }); Object.assign(STATS.sanitize, { cap: was.s });
 });
 
 test('Echo repeats a hit (breaking another chit); Crit Damage raises crits; Payload boosts burns', () => {
@@ -445,7 +404,6 @@ test('v44: whole-number stats. Regen five times over (it counts over 5 cycles), 
   const shell = addItem(old, item({ signal: 30, regen: 0.8, restore: 12 }));
   const script = addItem(old, item({ damage: 9, payload: 24 }, { level: 30 }));
   const cursed = addItem(old, item({ signal: 90, regen: -2 }, { level: 32 }));
-  old.filters = { held: [{ kind: 'filter', rarity: 'tuned', level: 4, name: 'Self-healing Packet Filter', stats: { strength: 1, regen: 0.4 } }], on: [] };
   old.market = { offers: [{ item: { kind: 'protocol', rarity: 'tuned', level: 18, stats: { payload: 30, regen: 1.3 }, name: 'Offered' } }] };
   const s = restore(JSON.parse(JSON.stringify(old)));
   assert.equal(s.version, SAVE_VERSION);
@@ -453,24 +411,20 @@ test('v44: whole-number stats. Regen five times over (it counts over 5 cycles), 
   assert.deepEqual(got(shell), { signal: 30, regen: 4, restore: 12 }, 'Regen 0.8 a cycle is 4 every 5');
   assert.deepEqual(got(script), { damage: 9, payload: 5 }, '24% of a level-30 tick (12 × 1.58): 5 flat');
   assert.equal(got(cursed).regen, -10, 'a downside too');
-  assert.equal(s.filters.held[0].stats.regen, 2, 'a filter\'s Regen at home');
   assert.deepEqual(s.market.offers[0].item.stats, { payload: 5, regen: 7 }, 'an item anywhere in the save');
   const again = restore(JSON.parse(JSON.stringify(s)));
   assert.deepEqual(again.stash.find((x) => x.id === script.id).stats, { damage: 9, payload: 5 }, 'once only');
   assert.equal(again.stash.find((x) => x.id === shell.id).stats.regen, 4);
 });
 
-test('every stat a player reads is a whole number: rolled items, uniques, filters and the character sheet totals', async () => {
+test('every stat a player reads is a whole number: rolled items, uniques and the character sheet totals', async () => {
   const { UNIQUES } = await import('./dist/combat.mjs');
-  const { rollFilter } = await import('./dist/filters.mjs');
   const { statLine } = await import('./dist/gear.mjs');
   const r = seeded(11), off = [];
   for (let L = 1; L <= 50; L += 1) for (const rarity of ['stock', 'tuned', 'custom']) for (let k = 0; k < 4; k++) {
     const it = rollItem(r, { level: L, rarity });
     for (const [st, v] of Object.entries(it.stats)) if (!Number.isInteger(v)) off.push(`${it.name} v${L} ${st} ${v}`);
     if (/\d\.\d/.test(statLine(it.stats))) off.push(statLine(it.stats));
-    const f = rollFilter(r, { level: L, rarity });
-    for (const [st, v] of Object.entries(f.stats)) if (!Number.isInteger(v)) off.push(`${f.name} ${st} ${v}`);
   }
   for (const u of Object.values(UNIQUES)) for (const L of [u.level, u.level + 10]) for (const [st, v] of Object.entries(uniqueItem(u, L, r).stats)) if (!Number.isInteger(v)) off.push(`${u.name} v${L} ${st} ${v}`);
   assert.deepEqual(off, []);
@@ -509,16 +463,6 @@ test('Clock Speed ticks cooldowns faster; Leech heals per hit; Stealth delays fi
   command(t, 'engage');
   assert.equal(part(t, 'pulse').attack.due, due + 1);
   STATS.stealth.cap = cap;
-});
-
-test('a filter of Barbs (Counter-intrusion that was): whatever hits your server takes a hit back', () => {
-  const s = wall(fresh(), { countermeasures: 6 });
-  bare(fight(s));
-  part(s, 'encryptor').attack = null;
-  const pulse = part(s, 'pulse');
-  s.encounter.cycle = pulse.attack.due;
-  command(s, 'hold'); resolveCycle(s);
-  assert.equal(pulse.max - pulse.integrity, 6);
 });
 
 test('home wins give the family\'s code, and can drop an item at the enemy\'s level', () => {

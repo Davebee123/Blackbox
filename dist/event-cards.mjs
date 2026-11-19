@@ -10,7 +10,7 @@ import { glyphMarkup } from './protocol-glyphs.mjs';
 import { FACTIONS as FX, commissionOf } from './factions.mjs';
 import { FAMILIES, CONFIG } from './data.mjs';
 import { UNIQUES, hackerLevel, active, materialsOf } from './combat.mjs';
-import { CALL, callRep, CARDS, BLIPS, blipsAt, blipText, historyOf, HUNT, huntPay, hopLeft, feudShare, feudPay, feudGood, eventText, courierPay, bountyPay, FEUD, CHAIN, counterPay, returnPay, zeroCode, causeText } from './events.mjs';
+import { CALL, callRep, CARDS, BLIPS, blipsAt, blipText, historyOf, HUNT, huntPay, hopLeft, feudShare, feudPay, eventText, courierPay, bountyPay, FEUD, CHAIN, counterPay, returnPay, zeroCode, causeText } from './events.mjs';
 import { SCOUTED, KINDS as INV_KINDS } from './invasion.mjs';
 import { WARES } from './market.mjs';
 import { codeOf } from './gear.mjs';
@@ -67,11 +67,11 @@ function feud(s, ev) {
   const lead = pa > 50 ? a : pa < 50 ? b : null, gain = ev.trend > 0 ? a : ev.trend < 0 ? b : null;
   const barTip = `${FX[a].short} ${Math.round(pa)}%, ${FX[b].short} ${100 - Math.round(pa)}%.${gain ? ` ${FX[gain].short} is gaining.` : ''}`;
   const bar = `<div class="fd-bar${lead ? ' lead-' + (lead === a ? 'a' : 'b') : ''}" style="--ca:${FX[a].color};--cb:${FX[b].color};--p:${pa.toFixed(1)}%" role="img" aria-label="${esc(barTip)}" title="${esc(barTip)}"><i class="fd-seg sa"></i><i class="fd-seg sb"></i><i class="fd-mid"></i><i class="fd-edge${ev.trend > 0 ? ' up' : ev.trend < 0 ? ' down' : ''}"></i></div>`;
-  const good = (f) => feudGood(f) === 'crate' ? rw(glyph('crate'), null, 'A sealed item: a Tuned item at your level', 'r-tuned') : rw(glyph('firewall'), null, 'A bootleg filter at your level, Stock or better');
+  const good = () => rw(glyph('crate'), null, 'A sealed item: a Tuned item at your level', 'r-tuned');
   // A win's protocol carries its side's mark (gear.mjs IMPLICITS); the feud's part fills the next of its piece's pips (faction-gear.mjs).
   const drop = (f) => `<span class="evc-rw fd-drop" style="--fc:${FX[f].color}" title="${esc(`A protocol at your level with ${FX[f].short}'s mark`)}">${glyph('item')}</span>`;
   const part = (f) => { const st = pieceState(s, f); return st ? `<span class="evc-rw fd-part" style="--fc:${FX[f].color}" title="${esc(`A part of ${st.name}: ${Math.min(st.parts + 1, st.need)} of ${st.need}`)}">${glyph('part')}${partPips(st, 'sm', true)}</span>` : ''; };
-  const pays = (f, i) => `<div class="fd-rw fd-${i ? 'b' : 'a'}${mine && mine !== f ? ' off' : ''}">${credits(feudPay(ev.level))}${repOf(f, FEUD.rep)}${drop(f)}<span class="fd-won" title="${esc(`Win the feud: a part of ${pieceOf(f)?.name || 'its piece'}, ${feudGood(f) === 'crate' ? 'a sealed item' : 'a bootleg filter'} and ${FX[f].short} +${FEUD.bonusRep}`)}">${glyph('takeover')}${part(f)}${good(f)}${repOf(f, FEUD.bonusRep)}</span></div>`;
+  const pays = (f, i) => `<div class="fd-rw fd-${i ? 'b' : 'a'}${mine && mine !== f ? ' off' : ''}">${credits(feudPay(ev.level))}${repOf(f, FEUD.rep)}${drop(f)}<span class="fd-won" title="${esc(`Win the feud: a part of ${pieceOf(f)?.name || 'its piece'}, a sealed item and ${FX[f].short} +${FEUD.bonusRep}`)}">${glyph('takeover')}${part(f)}${good(f)}${repOf(f, FEUD.bonusRep)}</span></div>`;
   return shell(s, ev, { sub: levelTag(s, ev.level, `lv ${ev.level}`), cls: mine ? 'chosen' : '', body: `<div class="fd-arena">${half(a, 0)}${half(b, 1)}<i class="fd-vs" aria-hidden="true">vs</i>${bar}${pays(a, 0)}${pays(b, 1)}</div>` });
 }
 // Bounty hunt: its route as a strip of server dots (the quarry on the one it's on, the next dashed), each with its pay

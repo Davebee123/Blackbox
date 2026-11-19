@@ -34,8 +34,8 @@ other file copied but the editor. The Pages workflow (`.github/workflows/pages.y
   the Resident in the Core to take it over. `jack out` banks your pack.
 - **Contracts.** Mail brings jobs from your crew and from Halcyon Mutual, a floor's job chain, and threads you stumble
   on in rooms.
-- **Invasions.** Servers on your network send invasions home. Your firewall meets them; the ones that get through are
-  yours to fight, and the only source of daemons.
+- **Invasions.** Servers on your network send invasions home. Each chips your Integrity until you intercept it, and
+  they're the only source of daemons.
 
 [`GAME_RULES.md`](GAME_RULES.md) holds every rule as built. It is the single source of truth.
 
@@ -125,7 +125,6 @@ comment saying what it does.
 | `dist/sets.mjs` | Sets: piece counts and their bonuses in a fight. |
 | `dist/earned.mjs`, `dist/content/earned.mjs` | Earned pieces (a floor feat's unique): their counts in one table, each from its band, the piece once it fills, and the map's pins. |
 | `dist/faction-gear.mjs` | Faction gear: implicit lines on a faction's items, and the five faction uniques assembled from parts (feuds, receipts). |
-| `dist/filters.mjs` | Filters: rolled gear for your firewall's slots. |
 | `dist/salvage.mjs` | Components, one currency every broken part drops. |
 | `dist/store.mjs` | Every hub's Shop, one shape: tools, the shelf (rerolls every 30 minutes of play), the chase line, codebases; `buy`. |
 | `dist/chase.mjs` | The other hubs' chase protocols' rules (Failover to Crescendo), on the class hooks. |
@@ -171,13 +170,12 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/invasion.mjs` | Invasions: servers on your network send kinds of invader home while you play; their chip stops at 1. |
-| `dist/firewall.mjs` | The firewall: its base follows your network, plus the margin you buy. |
-| `dist/server-view.mjs`, `dist/server.css` | The Server page: your home server's ring, rows and detail panel. |
+| `dist/firewall.mjs` | The firewall is gone: an old save's refunds (tiers, filters), and `developer integrity`. |
 | `dist/events.mjs`, `dist/event-cards.mjs` | The event director's deck, chains, blips and history; each card's panel, the blips' sparks and the history list. |
 | `dist/factions.mjs` | Factions: hubs, rep (1 to 100, four tiers), friends and enemies, and your commission. |
 | `dist/receipts.mjs` | Receipts: each traced server's vault receipt, stamped for a faction at the takeover or handed in at your commission's hub. |
 | `dist/market.mjs` | Hub markets: prices that move with conditions, world events and sales. |
-| `dist/table.mjs` | INIT's table: the count (`s.table`), what fills and empties it, the two bands' multipliers, the orphans' share, the header meter's tooltip. |
+| `dist/table.mjs` | INIT's table: the count (`s.table`), what fills and empties it, the two bands' multipliers, the orphans' share, the header meter's tooltip (its rows; view.mjs `tableMore` draws the bar and chips). |
 | `dist/consortium.mjs` | Consortium: simulated members who merged servers with yours. |
 
 ### Mail, story and quests

@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, restore } from './dist/combat.mjs';
 import { TIPS, nextTip, markSeen, settleTips, paceOf } from './dist/tips.mjs';
-import { mapMarkup, serverMarkup, protocolsMarkup, loadoutMarkup, daemonsMarkup, systemMarkup, boardMarkup, hudMarkup } from './dist/view.mjs';
+import { mapMarkup, protocolsMarkup, loadoutMarkup, daemonsMarkup, systemMarkup, boardMarkup, hudMarkup } from './dist/view.mjs';
 
 // A stand-in for "is it on screen": the selector's last class/attribute appears in the markup.
 const onPage = (html) => (sel) => {
@@ -114,7 +114,7 @@ test('the screens carry names, numbers and state, not explanations', () => {
   const s = fresh();
   command(s, 'developer location worm');
   command(s, 'encounter cryptjack');
-  const pages = [mapMarkup(s, 'server'), mapMarkup(s, s.locations[0].id), serverMarkup(s), protocolsMarkup(s), loadoutMarkup(s, 'breaker'), daemonsMarkup(s), systemMarkup(s)].join('\n');
+  const pages = [mapMarkup(s, 'server'), mapMarkup(s, s.locations[0].id), protocolsMarkup(s), loadoutMarkup(s, 'breaker'), daemonsMarkup(s), systemMarkup(s)].join('\n');
   for (const phrase of [/Neutralize intrusions to trace/, /Services run on ports/, /Any protocol goes in any slot/, /Daemons act for you in cycles/, /Each class levels on its own/, /numbers are layers/, /click to target/, /Speed changes seconds per cycle/, /its guards, its vault/]) {
     assert.doesNotMatch(pages, phrase);
   }
@@ -170,7 +170,7 @@ test('the market teaches itself in order: rows, ▲/▼, the news, then the tick
 
 test('every threat on the map has a tip, and none speaks of outposts (gone in R2)', () => {
   const has = (sel) => TIPS.some((t) => t.page === 'map' && t.at === sel);
-  for (const sel of ['.mnode.intrusion', '.mnode.invader[data-select="invader"]', '.mnode.invader.siege[data-select="invader"]', '.mnode.invader.breach']) assert.ok(has(sel), sel);
+  for (const sel of ['.mnode.intrusion', '.mnode.invader[data-select="invader"]']) assert.ok(has(sel), sel);
   for (const t of TIPS) assert.doesNotMatch(t.text, /outpost|bandwidth|salvage|take (it|the outpost) back|cut off/i, t.id);
 });
 
