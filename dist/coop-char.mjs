@@ -27,6 +27,7 @@ export function characterOf(s) {
     geneCodex: clone(s.geneCodex || {}),
     met: clone(s.met || {}),
     metAll: !!s.metAll,
+    integrity: s.server?.integrity ?? null, // the Integrity you bring to a host's run (coop.mjs)
   };
 }
 

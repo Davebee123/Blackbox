@@ -262,6 +262,37 @@ test('contracts point at rooms: clear N new rooms on a server, map a server; the
   assert.equal(typeof contractRooms, 'function');
 });
 
+test('Warm cache: each room won on a visit adds +10% XP and +5 Scavenge to what comes after, up to 10; every connect starts cold; the strip shows its ladder and the Pack', async () => {
+  const { WARM, warmOf } = await import('./dist/visit.mjs'), { gainXp, hackerOf, scavengeOf } = await import('./dist/combat.mjs');
+  const { s, loc } = traced();
+  play(s, 'connect ' + loc.id);
+  assert.equal(warmOf(s), 0, 'cold at connect');
+  const sc0 = scavengeOf(s), xp0 = hackerOf(s).xp;
+  gainXp(s, 100, 'test'); const cold = hackerOf(s).xp - xp0;
+  const first = FP.roomList(s).find((r) => FP.isUp(s, r) && r.kind === 'process');
+  enterRoom(s, first.id); play(s, 'engage'); win(s);
+  assert.equal(warmOf(s), 1, 'a room won: one stack');
+  assert.equal(scavengeOf(s), sc0 + WARM.scavenge, '+5 Scavenge');
+  const xp1 = hackerOf(s).xp; gainXp(s, 100, 'test');
+  assert.equal(hackerOf(s).xp - xp1, Math.round(cold * 1.1), '+10% XP after it');
+  s.rooms.visit.warm = 14;
+  assert.equal(warmOf(s), WARM.max, 'up to 10');
+  s.rooms.visit.warm = 6;
+  s.run.pack.length = 0;
+  s.run.pack.push({ path: 'a', kind: 'credits', amount: 30 }, { path: 'b', kind: 'credits', amount: 22 }, { path: 'c', kind: 'code', material: 'worm', amount: 6 });
+  const html = roomsMarkup(s);
+  assert.match(html, /<span class="lbl">Warm<\/span>/);
+  assert.equal((html.match(/<i class="on"/g) || []).length, 6, 'six bars of ten lit');
+  assert.match(html, /\+60%<\/b>/); assert.match(html, /\+30<\/b>/);
+  assert.match(html, /6 rooms: \+60% XP, \+30 Scavenge\./, 'the tooltip\'s answer');
+  assert.doesNotMatch(html, /class="pbar"/, 'Rooms: no bar');
+  const btnB = html.match(/data-fp-pack[^>]*>(?:<svg[\s\S]*?<\/svg>)<b>(\d+)<\/b>/);
+  assert.equal(Number(btnB?.[1]), 2, 'the Pack: credits summed into one row, the code into another');
+  play(s, 'jack out');
+  play(s, 'connect ' + loc.id);
+  assert.equal(warmOf(s), 0, 'a new visit starts cold');
+});
+
 test('the room page on the network: the strip names the server, its rule and level; no boss-rule switch; nothing undefined', () => {
   const s = fresh();
   play(s, 'connect sprawl');

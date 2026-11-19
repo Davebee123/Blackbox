@@ -86,7 +86,7 @@ test('a cache the host takes pays the guest a share of their own, on the guest\'
   assert.ok(P.G.view.logs.some((x) => /Your share of the cache/.test(x.message)), 'and on their screen');
 });
 
-test('a shared fight on the host\'s server: the guest\'s Integrity carries to the next fight; a rest heals it; a new run starts it full', () => {
+test('a shared fight on the host\'s server: the guest\'s Integrity carries to the next fight; a rest heals it; the jack out writes it back, and they bring it to the next run', () => {
   const P = pairUp();
   play(P.host, 'connect ' + traced(P.host).id); P.tick();
   const room = Object.values(P.host.rooms.graph.rooms).find((r) => r.kind === 'process');
@@ -107,10 +107,12 @@ test('a shared fight on the host\'s server: the guest\'s Integrity carries to th
   if (active(P.host)) win(P);
   play(P.host, 'rest'); P.tick();
   assert.ok(seat.signal == null || seat.signal > hurt, `the rest healed the guest too: ${hurt} → ${seat.signal}`);
+  const carried = seat.signal ?? max;
   play(P.host, 'jack out'); P.tick();
+  assert.equal(P.guest.server.integrity, carried, 'the jack out writes the guest\'s Integrity back to their own server');
   play(P.host, 'connect sprawl'); P.tick(); // (the server just left is relocking)
-  assert.equal(seat.signal, null, 'a new run: full');
-  assert.equal(P.G.view.run.integrity, maxSignal(bo()));
+  assert.equal(bo().seat.signal ?? maxSignal(bo()), carried, 'a new run: they bring their own');
+  assert.equal(P.G.view.run.integrity, carried);
 });
 
 test('Go to <guest>\'s network: refused on a run; out of one, the guest hosts and both walk the new host\'s server', () => {
@@ -154,4 +156,79 @@ test('Go to <guest>\'s network: refused on a run; out of one, the guest hosts an
   assert.ok(hackerOf(P.host).xp > hostXp, 'the old host was paid on their own save');
   assert.ok(hackerOf(P.guest).xp > guestXp, 'and the new host on theirs');
   assert.ok(!JSON.stringify(P.guest).includes('"demolitionist"') && !JSON.stringify(P.host).includes('"sysop"'), 'neither save holds the other\'s character');
+});
+
+// The visit in co-op (the designer's rules, November 2026): no battle rez; the fight and the run end only when every
+// player is down, a disconnect for each; the host's jack out (or the host dropping) saves everyone's visit.
+const fightIn = (P) => {
+  const room = FP.roomList(P.host).find((r) => FP.isUp(P.host, r) && r.kind === 'process' && !P.host.rooms.cleared[r.id]);
+  stepInto(P.host, room.id);
+  if (!active(P.host)) play(P.host, 'engage');
+  assert.ok(active(P.host), 'a fight');
+  return room;
+};
+const bo = (P) => matesOf(P.host).find((m) => m.who === 'bo');
+
+test('co-op: the host going down sits out the fight while the guest stands, and comes back at 25% for the next', () => {
+  const P = pairUp();
+  play(P.host, 'connect ' + traced(P.host).id); P.tick();
+  fightIn(P);
+  for (let i = 0; i < 40 && active(P.host) && !P.host.encounter.down; i++) { P.host.run.integrity = 1; command(P.host, 'hold'); command(P.host, 'now'); }
+  assert.ok(active(P.host), 'the fight goes on: the guest still stands');
+  assert.ok(P.host.encounter.down, 'the host is down');
+  assert.ok(P.host.logs.some((e) => /You're down/.test(e.message)));
+  win(P);
+  assert.equal(P.host.reports.at(-1).result, 'victory', 'the guest finished it');
+  assert.ok(P.host.run, 'the run goes on');
+  assert.equal(P.host.run.integrity, Math.round(P.host.run.max * 0.25), 'back at 25%');
+});
+
+test('co-op: every player down is a disconnect for everyone, each visit undone on its own save; a jack out keeps it, and so does the host dropping', () => {
+  const P = pairUp();
+  play(P.host, 'connect ' + traced(P.host).id); P.tick();
+  const xp0 = JSON.stringify(P.guest.hackers), int0 = P.guest.server.integrity;
+  fightIn(P); win(P);
+  assert.notEqual(JSON.stringify(P.guest.hackers), xp0, 'the guest earned XP on the visit');
+  fightIn(P);
+  bo(P).run.integrity = 0; bo(P).encounter.down = true;
+  for (let i = 0; i < 60 && active(P.host); i++) { P.host.run.integrity = 0; command(P.host, 'now'); }
+  P.tick();
+  assert.equal(P.host.run, null, 'everyone down: the host disconnects');
+  assert.equal(JSON.stringify(P.guest.hackers), xp0, 'and the guest\'s visit is undone');
+  assert.equal(P.guest.server.integrity, int0);
+  // A jack out keeps it.
+  const loc = traced(P.host); loc.lockUntil = 0; loc.floorplan.reconnectAt = 0;
+  P.host.server.integrity = P.host.server.max;
+  play(P.host, 'connect ' + loc.id); P.tick();
+  assert.ok(P.host.run, 'back in');
+  fightIn(P); win(P);
+  const won = JSON.stringify(P.guest.hackers);
+  assert.notEqual(won, xp0);
+  play(P.host, 'jack out'); P.tick();
+  assert.equal(JSON.stringify(P.guest.hackers), won, 'the host\'s jack out saves the guest\'s visit');
+  // The host dropping counts as a jack out.
+  loc.lockUntil = 0; loc.floorplan.reconnectAt = 0; P.host.server.integrity = P.host.server.max;
+  play(P.host, 'connect ' + loc.id); P.tick();
+  fightIn(P); win(P);
+  const won2 = JSON.stringify(P.guest.hackers);
+  P.c.t += 60000; P.G.tick(); // the host went quiet
+  assert.ok(P.G.closed);
+  assert.equal(JSON.stringify(P.guest.hackers), won2, 'kept');
+});
+
+test('co-op: the Warm cache is one count for the crew, paid on the guest\'s own XP', async () => {
+  const { payReward } = await import('./dist/coop.mjs'), { gainXp } = await import('./dist/combat.mjs');
+  const P = pairUp();
+  play(P.host, 'connect ' + traced(P.host).id); P.tick();
+  fightIn(P); win(P);
+  assert.equal(P.host.rooms.visit.warm, 1, 'a stack on the host\'s visit');
+  const seat = bo(P).seat, owed = [], push = seat.rewards.push.bind(seat.rewards);
+  seat.rewards.push = (...x) => { owed.push(...x); return push(...x); };
+  fightIn(P); win(P);
+  assert.equal(owed.at(-1)?.warm, 1, 'the guest\'s reward carries the crew\'s stacks');
+  const g = P.guest, h = hackerOf(g), base = { kind: 'kill', name: 'x', level: 10, party: 2, base: 1 };
+  const a = h.xp; payReward(g, { ...base, warm: 0 }); const cold = hackerOf(g).xp - a;
+  const b = hackerOf(g).xp; payReward(g, { ...base, warm: 4 }); const warm = hackerOf(g).xp - b;
+  assert.equal(warm, Math.round(cold * 1.4), '+40% on the guest\'s own XP');
+  assert.equal(g._warm, undefined, 'nothing left on the save');
 });

@@ -43,6 +43,28 @@
 .fp-visit b { color: var(--amber); }
 .fp-visit b small { margin-left: 3px; font: 600 10px var(--mono); letter-spacing: 1px; color: var(--dim); text-transform: uppercase; }
 .fp-visit.empty { opacity: 0.5; }
+/* Warm cache (visit.mjs): a ladder of ten stacks, lit amber, then what they add. */
+.fp-warm { gap: var(--s3); }
+.fp-ladder { display: inline-flex; align-items: flex-end; gap: 2px; height: 13px; }
+.fp-ladder i { width: 3px; background: var(--amber); opacity: 0.18; }
+.fp-ladder i.on { opacity: 1; }
+.fp-warm b { display: inline-flex; align-items: center; gap: 3px; font: 600 13px var(--mono); }
+.fp-warm .glyph { width: 13px; height: 13px; }
+/* The Pack: inverted amber, the box's height; its popover hangs under it. */
+.fp-packwrap { position: relative; display: inline-flex; align-self: stretch; align-items: stretch; }
+.fp-packbtn { display: inline-flex; align-items: center; gap: 5px; margin: 0; padding: 0 var(--s4); border: 1px solid var(--amber); border-radius: 2px; background: var(--amber); color: #0a0703; font: 700 13px var(--mono); cursor: pointer; }
+.fp-packbtn .glyph { width: 16px; height: 16px; }
+.fp-packbtn:hover, .fp-packbtn.open { background: #ffd85c; border-color: #ffd85c; }
+.fp-packpop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 240px; max-width: min(320px, calc(100vw - 32px)); padding: var(--s3) 0; background: var(--panel, #0e0b07); border: 1px solid var(--amber); border-radius: 2px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.6); cursor: default; }
+.fp-packpop header { display: flex; align-items: baseline; justify-content: space-between; padding: var(--s2) var(--s4) var(--s3); border-bottom: 1px solid var(--line); }
+.fp-packpop header b { font: 600 13px var(--mono); letter-spacing: 1px; color: var(--amber); }
+.fp-packpop header small { font: 600 10px var(--mono); letter-spacing: 1px; color: var(--dim); }
+.fp-packpop ul { margin: 0; padding: var(--s2) 0 0; list-style: none; }
+.fp-packpop li { display: flex; align-items: center; gap: var(--s3); padding: 3px var(--s4); font: 13px var(--mono); color: var(--amber); }
+.fp-packpop li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp-packpop li small { color: var(--muted); font: 12px var(--mono); }
+.fp-packpop li .glyph { flex: none; width: 15px; height: 15px; }
+.fp-packpop li.none { color: var(--dim); }
 .fp-unsaved { font: 600 9px var(--mono); letter-spacing: 1px; fill: var(--amber); pointer-events: none; }
 .fp-exfilstat .fp-ic, .fp-exfilstat b { color: var(--next); }
 .fp-tools { margin-left: auto; display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s4) var(--s5); min-width: 0; }
