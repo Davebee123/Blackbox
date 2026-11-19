@@ -25,7 +25,7 @@ odds; the activity only changes what it pays on top.
 | Visit | What rolls for gear | An item | A blue or better | Its own thing |
 |---|---|---:|---:|---|
 | A Settlement run | 4 processes, the lock (an elite) | 29% | 1.3% | 3 Exploits, LANTERN +12 |
-| A Rack pull | 5 processes, a guard, the cage (a vault) | 66% | 5.4% | 2 filters, 3 receipts, Kestrel +6 |
+| A Rack pull | 5 processes, a guard, the cage (a vault) | 66% | 5.4% | 15 + level/2 components, 3 receipts, Kestrel +6 |
 | A server, cleared | 10 processes, 2 elites, the vault | 77% | 6.9% | Mapped's item, its takeover |
 | A Courier | Its fight, and its sure protocol | 100% | 100% (a yellow 15%) | Better gear is its thing |
 
@@ -35,10 +35,9 @@ odds; the activity only changes what it pays on top.
 |---|---|---|---|
 | **Better gear** | Your slots | Courier, Escort, LANTERN's offer, Hollow Choir, a Pit, a Sighting, a Hunter pack, a rival's lineup, a dead runner's stash, a thread's pick of three, a Mapped server's item | The courier's, the escort's and the rival's credits go into the item's rarity |
 | **Credits** | Top-ups, programs, codebases, the Shops, tools | Contracts, the retainer, Bounty, Bounty hunt, Counter-raid, the Gauntlet, Ping sweep, Terminal, caches, a Stray cache | The code in their caches comes as credits |
-| **One family's code** | Programs, the wall's tiers | Invasions (the bounty), Outbreak, Patient zero, Quarantine, Packet routing, vault payloads, Root's stash room, a Code Siphon | Patient zero pays a second code cache in place of an elite's loot |
+| **One family's code** | Programs, supply orders | Invasions (the bounty), Outbreak, Patient zero, Quarantine, Packet routing, vault payloads, Root's stash room, a Code Siphon | Patient zero pays a second code cache in place of an elite's loot |
 | **Exploits** | Medium programs, darknet listings | Settlement runs, the Exfil, elites, guard posts | The Exfil's credits come as Exploits (its item and 5% unique stay); elites and guards drop them more often |
-| **Components** | Nothing yet: hubs buy them | Surge room, Cascade, Deadlock, a Nest, scrapping, a Harvester | A surge's waves pay components in place of credits; Deadlock pays as Cascade does |
-| **Filters** | Your wall's slots | Rack pulls; vaults, 1 in 7 | New with quest sites |
+| **Components** | NULL CHOIR's supply order; hubs buy them | Rack pulls, Surge room, Cascade, Deadlock, a Nest, scrapping, a Harvester | A surge's waves pay components in place of credits; Deadlock pays as Cascade does |
 | **Daemons** | Your party | Invasions only | — |
 | **One faction's standing** | Shop tiers, codebases, chase lines, your commission | Defence calls, Feuds, Settlement runs, the faction's contracts and supply order | A feud's wins pay standing in place of credits and protocols; its faction piece stays |
 | **Receipts** | Faction pieces, standing where you stamp them | Takeovers, Rack pulls | New with quest sites |
@@ -59,12 +58,12 @@ in credits and +4 standing. Patches (economy.md 2) are the long goal on top, spe
 
 | Currency | Spent on | Its supply order |
 |---|---|---|
-| Credits | Top-ups, programs, codebases, the Shops, tools, the wall | — (orders pay it) |
-| Code | Programs, the wall's tiers; patches | Halcyon (Cipher), Kestrel (Kernel), LANTERN (Worm) |
+| Credits | Top-ups, programs, codebases, the Shops, tools | — (orders pay it) |
+| Code | Programs; patches | Halcyon (Cipher), Kestrel (Kernel), LANTERN (Worm) |
 | Exploits | Medium programs, darknet listings; patches | GLASSJAW |
 | Components | Patches; hubs buy them | NULL CHOIR |
 | Standing, receipts | Shop tiers, codebases, chase lines; faction pieces | — (orders pay +4) |
-| Gear, filters, daemons | Slots | — |
+| Gear, daemons | Slots | — |
 
 ## Reacting
 

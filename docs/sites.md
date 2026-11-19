@@ -21,7 +21,7 @@ edges.
 
 | Site | Who | Clock | Goal | Pays | Standing |
 |---|---|---|---|---|---|
-| **Rack pull** · `KESSLER-RACK-nn` | Kestrel, which owns Kessler's hardware (lore.md 2), brings a rack back from cold storage before it scraps it | 30–35 min | Open the cage; its guard holds the key | 2 filters (Custom 1 in 4); 3 receipts dated to the rack's era (*C+3*), stamped like a vault's | Kestrel +6 |
+| **Rack pull** · `KESSLER-RACK-nn` | Kestrel, which owns Kessler's hardware (lore.md 2), brings a rack back from cold storage before it scraps it | 30–35 min | Open the cage; its guard holds the key | 15 + level/2 components (Kessler's hardware); 3 receipts dated to the rack's era (*C+3*), kept for your commission | Kestrel +6 |
 | **Settlement run** · `<CREW>-RIG-nn` | TOLLGATE, SWARMLINE or PALEMASK lock a living institution's run as it passes a server (a red aim at it) | 18–20 min, the run's | Break the lock, an elite in the Core, before the run settles | 3 Exploits (the crew's lock, taken apart) | The institution's faction +12 |
 | **A runner's trade** | A runner you've met reaches the floor of their frozen trade (runners.md, *Someone's money*) and traces the server it froze on | None | Beat its Resident, the orphan holding it, with them beside you | The runner: a standing tier, a codebase they know, a lead (a server traced) | — |
 
@@ -40,7 +40,7 @@ edges.
 
 ## Why you'd go
 
-Each site is the best place for one thing (docs/pays.md): a Rack pull for your wall's gear and faction pieces, a
+Each site is the best place for one thing (docs/pays.md): a Rack pull for components and faction pieces, a
 Settlement run for Exploits and one faction's standing, a runner's trade for a crewmate.
 
 **Value.** Every site is worth about the same: 30 minutes of play at your level (a level's XP over its minutes in

@@ -17,7 +17,6 @@ import { knowsCodebase, CODEBASE_SHOPS } from './dist/sockets.mjs';
 import { hiddenNodes } from './dist/hidden.mjs';
 import { STAMPS } from './dist/receipts.mjs';
 import { tickChannel, channelLines } from './dist/channel.mjs';
-import { filtersOf } from './dist/filters.mjs';
 import { keptReceipts } from './dist/receipts.mjs';
 RIVAL.chance = 0;
 
@@ -157,17 +156,16 @@ test('a rack mounts beside a server of yours: Kessler hardware, its trades older
   assert.equal(FP.coreOpen(s), false, 'nothing to take over');
 });
 
-test('open the cage: two filters (the first Tuned or better), three receipts for your commission, Kestrel +6; home', () => {
+test('open the cage: a NULL CHOIR order’s worth of components, three receipts for your commission, Kestrel +6; home', () => {
   const s = setup(6);
-  const loc = dealRack(s), f0 = filtersOf(s).length, r0 = keptReceipts(s).length, k0 = rep(s, 'kestrel');
+  const loc = dealRack(s), c0 = s.components || 0, r0 = keptReceipts(s).length, k0 = rep(s, 'kestrel');
   connect(s, loc);
   const g = loc.floorplan.graph, vault = g.vaults[0], guard = Object.values(g.rooms).find((r) => r.kind === 'guard' && r.key === vault);
   walk(s, guard.id);
   walk(s, vault);
   FP.act(s, 'open');
   assert.equal(loc.site.state, 'won');
-  assert.equal(filtersOf(s).length, f0 + SITE.rack.filters);
-  assert.ok(['tuned', 'custom'].includes(filtersOf(s)[f0].rarity), 'the first Tuned or better');
+  assert.ok((s.components || 0) >= c0 + SITE.rack.components(loc.level), 'Kessler hardware: components (its fights drop some too)');
   assert.equal(keptReceipts(s).length, r0 + SITE.rack.receipts);
   assert.ok(keptReceipts(s).slice(-3).every((x) => Number(x.date.slice(-4)) < 2086), 'from before floor 1 mounted');
   assert.equal(rep(s, 'kestrel'), k0 + SITE.rack.rep);

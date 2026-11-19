@@ -7,9 +7,8 @@
 //     elite in the rig's Core, open from the start): SITE.rig.exploits Exploits and +SITE.rig.rep with the institution's
 //     faction. Run out the clock and the lock lands: its trades orphan, INIT's table +SITE.rig.table.
 //   Rack pull (rack): Kestrel mounts one of Kessler's racks from cold storage for a cycle, SITE.rack.ms, before it
-//     pulls it back. Open its cage (the vault; its guard post holds the key): SITE.rack.filters filters (the first
-//     Tuned or better, Custom one time in four), SITE.rack.receipts receipts dated older than the floor, and Kestrel
-//     +SITE.rack.rep. Its Core stays sealed: nothing to take over.
+//     pulls it back. Open its cage (the vault; its guard post holds the key): SITE.rack.components components (Kessler's
+//     hardware), SITE.rack.receipts receipts dated older than the floor, and Kestrel +SITE.rack.rep. Its Core stays sealed: nothing to take over.
 //   A runner's trade (runner): a runner you've met has traced the server their frozen trade sits on (runners.mjs
 //     tradeOf). No clock: it waits while they're on the net. Beat its Resident (open from the start) with them beside
 //     you: their standing up a tier, a codebase of their faction's you don't know, and a lead (a ? beside it traced
@@ -25,9 +24,9 @@ import { graphOf, floorOfSlot, holderOf } from './floors.mjs';
 import { changeRep } from './factions.mjs';
 import { moveTable } from './table.mjs';
 import { AUTHORS } from './authors.mjs';
-import { codeOf, seeded } from './gear.mjs';
+import { codeOf } from './gear.mjs';
 import { receiptOf, receiptsOf, STAMPS } from './receipts.mjs';
-import { rollFilter, addFilter } from './filters.mjs';
+import { gainComponents } from './salvage.mjs';
 import { runnerOf, knownOf, stateOf, raiseStanding, standingOf, tierOf, runnersOf, STANDING } from './runners.mjs';
 import { CODEBASE_SHOPS, knowsCodebase, learnCodebase } from './sockets.mjs';
 import { openNext } from './hidden.mjs';
@@ -38,7 +37,7 @@ export const SITE = {
   everyMs: [50 * 60000, 70 * 60000], // and from one's end to the next
   kinds: ['rig', 'rack', 'runner'], // taken in turn
   rig: { ms: [18 * 60000, 20 * 60000], exploits: 3, rep: 12, table: 1, trades: [120, 480] },
-  rack: { ms: [30 * 60000, 35 * 60000], filters: 2, custom: 0.25, receipts: 3, rep: 6 },
+  rack: { ms: [30 * 60000, 35 * 60000], components: (L) => Math.floor(15 + L / 2), receipts: 3, rep: 6 }, // components: a NULL CHOIR supply order's worth
 };
 // The crews that lock runs, the rig's room kinds by crew (as a thread's temporary server's), and the living
 // institutions by floor (lore.md 8.1) with the faction that stands behind each.
@@ -188,17 +187,14 @@ export function siteVault(s, loc) {
   const x = loc?.site;
   if (!x || x.kind !== 'rack' || x.state !== 'up') return;
   x.state = 'won';
-  const r = seeded(((loc.seed || 1) * 53 + 11) >>> 0);
-  for (let i = 0; i < SITE.rack.filters; i++) {
-    const rarity = i === 0 ? (r() < SITE.rack.custom ? 'custom' : 'tuned') : null; // the first Tuned or better; the rest as a vault's
-    addFilter(s, rollFilter(r, { level: loc.level || 1, rarity }), 'The cage: ');
-  }
+  const n = SITE.rack.components(loc.level || 1);
+  gainComponents(s, n);
   const R = receiptsOf(s), got = [];
   for (let i = 0; i < SITE.rack.receipts; i++) {
     const rc = { ...receiptOf({ seed: (loc.seed || 1) * 3 + i, depth: x.era, id: loc.id, name: loc.name }), loc: loc.id, server: loc.name };
     if (!R.kept.some((k) => k.id === rc.id)) { R.kept.push(rc); got.push(rc); }
   }
-  emit(s, 'site', `The cage on ${loc.name}: ${SITE.rack.filters} filters and ${got.length} receipts from ${x.year}, kept for your commission.`, { location: loc.id, kind: 'rack', phase: 'won', faction: 'kestrel', receipts: got.map((k) => k.id) });
+  emit(s, 'site', `The cage on ${loc.name}: ${n} components and ${got.length} receipts from ${x.year}, kept for your commission.`, { location: loc.id, kind: 'rack', phase: 'won', faction: 'kestrel', components: n, receipts: got.map((k) => k.id) });
   changeRep(s, 'kestrel', SITE.rack.rep, `${loc.name}'s cage emptied`);
 }
 // A runner's trade: its Resident beaten with them. Their standing a tier, a codebase, a lead; then their stamp.

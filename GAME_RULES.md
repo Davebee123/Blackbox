@@ -2461,9 +2461,9 @@ and a runner's trade, in turn. A runner's trade has no clock and stands beside t
 - **The Rack pull.** Kestrel mounts one of Kessler's racks (`KESSLER-RACK-04`) beside a server you've located on your
   floor, chosen as a rig's, for one cycle before it pulls it back to cold storage: 30–35 minutes of logged-on time,
   waiting while you fight on it. Its trades froze two or three layers below the floor (a *C+n* tag on its card).
-- **The cage** is its vault, keyed by its guard post as any vault. Open it (or force it): its usual files, then 2
-  filters (the first Tuned or better, Custom one time in four), 3 receipts from its era kept for your commission, and
-  Kestrel +6 (with its ripples). Its Core stays sealed: nothing to take over.
+- **The cage** is its vault, keyed by its guard post as any vault. Open it (or force it): its usual files, then
+  15 + level/2 components (Kessler's hardware, a NULL CHOIR supply order's worth), 3 receipts from its era kept for your
+  commission, and Kestrel +6 (with its ripples). Its Core stays sealed: nothing to take over.
 - **The clock runs out:** Kestrel pulls it back. Nothing lost. Either way it unmounts as a rig does.
 - **On the map:** the hexagon in violet with the cold mark and a ring of the time left, a dashed link to the server
   it's mounted beside; its row on the threat rail. Kestrel's desk posts *Rack 4 will close at the end of this cycle.
