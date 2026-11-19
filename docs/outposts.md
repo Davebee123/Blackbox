@@ -8,7 +8,7 @@ seeds × 20 logged-on hours), and the looks from mock-ups drawn on the real floo
   as they are (taken like any server: its vault, then its Resident).
 - Each outpost rolls a **quality** from its owner: what it reliably wants, what it's prone to, and how hard it swings.
   Events push it to its extremes.
-- Activities pay mostly one thing (market.md, *What pays what*); outposts are where it sells.
+- Activities pay mostly one thing (docs/pays.md); outposts are where it sells.
 - All five balances below.
 - **Exploits may pay best**, as the hardest and riskiest ware to get: they come from the Exfil, elites, guard posts and
   raids, and sell best on black markets.

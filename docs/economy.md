@@ -93,7 +93,7 @@ Each faction keeps a **standing order**, one at a time, never on a clock:
 
 An order asks for 10 + level/2 (an Exploit order 1 + level/15) and pays its market value ×1.25 in credits and +4
 standing. The next arrives an hour after you deliver. Supply orders are how you climb a faction you don't do contracts
-for.
+for. They are the main sink for code, components and Exploits (docs/pays.md).
 
 ## 4. Consortium projects: everyone's
 

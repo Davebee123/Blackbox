@@ -338,10 +338,11 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/house.md`](docs/house.md) | Your house and its furniture (built: GAME_RULES.md "Your house"). |
 | [`docs/leanings.md`](docs/leanings.md) | Leanings: a server's one positive rule (built: GAME_RULES.md "Server kinds, specials and quirks"). |
 | [`docs/server-specials.md`](docs/server-specials.md) | Server specials: an upside, a cost and the programs for each (picked, not built). |
-| [`docs/threads.md`](docs/threads.md), [`docs/director.md`](docs/director.md) | Threads, and the event director. |
+| [`docs/threads.md`](docs/threads.md), [`docs/director.md`](docs/director.md), [`docs/sites.md`](docs/sites.md) | Threads, the event director, and its quest sites (picked, not built). |
 | [`docs/invasions.md`](docs/invasions.md), [`docs/networks.md`](docs/networks.md), [`docs/bosses.md`](docs/bosses.md), [`docs/solo-bosses.md`](docs/solo-bosses.md), [`docs/boss-guide.md`](docs/boss-guide.md) | Review sheets: invasions, network signatures, crew bosses, solo bosses; how each floor 2–8 boss plays. |
 | [`docs/coop.md`](docs/coop.md) | Co-op, peer to peer. |
 | [`docs/runners.md`](docs/runners.md) | Runners: the people on the net, solo-first multiplayer, the picked looks (decided, not built). |
+| [`docs/pays.md`](docs/pays.md) | What pays what: gear general, each activity's own thing on top, and what each currency is spent on (designed). |
 | [`docs/market.md`](docs/market.md) | The market: the ticker's cards and what each activity pays (the rest shelved; proposed). |
 | [`docs/ticker.md`](docs/ticker.md) | The ticker: market cards that move hub prices, in their owners' voices (ready to build). |
 | [`docs/exchange.md`](docs/exchange.md) | The exchange: one central market in place of the hubs', moved by the ticker and by what you do (tabled). |
