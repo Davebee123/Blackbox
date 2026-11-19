@@ -2494,7 +2494,8 @@ pad in a window beside it), **[2] recordings** (the tape), **[3] log**, **[0] di
 minute (half that while an invasion is at HOME), offline too. Home never takes the last point: a chip stops at 1, and
 losing a home fight leaves you at 1 with the invader still at HOME, as worn as you left it. The top bar's meter (the
 server tower) shows it, with a clock to full; its **+** (`top up`, or `repair`) pays for the rest. HOME has no page of
-its own: its card on the map is its Integrity ring (a red arc while an invasion is at HOME), the invasion with
+its own: its card on the map is its ring (Integrity inside; an amber arc while an invasion is at HOME, a red road while
+one is on its way), the invasion with
 **Intercept**, and **Top up**. The top bar's **Materials** button opens your Code and Components.
 
 ### Invasions

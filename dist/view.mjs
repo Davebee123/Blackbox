@@ -2715,18 +2715,31 @@ function ownerLine(f) {
   const F = FX[f], tip = `${F.short}\nOwner\nBeat its Resident and the server is yours, with its vault's receipt to stamp.`;
   return `<p class="svc-line fline" style="--fc:${F.color}" title="${esc(tip)}">${fIcon(f)}<b>${esc(F.short)}</b></p>`;
 }
-// HOME's health as a ring (the old Server page's core): Integrity round the track, the number inside, teal, amber
-// under 60%, red under 30%; a red arc over the top while an invasion is at HOME.
+// HOME's ring (the old Server page's): sixteen blocks round the core, Integrity the inner ring with its number; an
+// amber arc where an invasion presses while it's at HOME, and while one is on its way a red marker coming down its road
+// with the time left. The road and the arc are at the top, where invasions come in.
+const RC = 116, RB0 = 76, RB1 = 98, RTOP = 48; // the centre, the blocks' inner and outer radii, the road's length above the ring
+const rf1 = (n) => Math.round(n * 10) / 10;
+const RP = (r, a) => [RC + r * Math.sin((a * Math.PI) / 180), RC - r * Math.cos((a * Math.PI) / 180)];
+const rBand = (r0, r1, a0, a1) => { const [x1, y1] = RP(r1, a0), [x2, y2] = RP(r1, a1), [x3, y3] = RP(r0, a1), [x4, y4] = RP(r0, a0); return `M${rf1(x1)} ${rf1(y1)}A${r1} ${r1} 0 0 1 ${rf1(x2)} ${rf1(y2)}L${rf1(x3)} ${rf1(y3)}A${r0} ${r0} 0 0 0 ${rf1(x4)} ${rf1(y4)}Z`; };
+const rArc = (r, a0, a1) => { const [x1, y1] = RP(r, a0), [x2, y2] = RP(r, a1); return `M${rf1(x1)} ${rf1(y1)}A${r} ${r} 0 0 1 ${rf1(x2)} ${rf1(y2)}`; };
+const RING_BLOCKS = Array.from({ length: 16 }, (_, i) => { const seg = 22.5, a0 = i * seg - seg / 2 + 1.6, a1 = (i + 1) * seg - seg / 2 - 1.6; return `<path class="blk" d="${rBand(RB0, RB1, a0, a1)}"/>`; }).join('');
 export function homeRing(s) {
   const max = s.server.max, hp = Math.max(0, s.server.integrity), share = hp / Math.max(1, max), tone = share < 0.3 ? 'hot' : share < 0.6 ? 'warn' : '';
-  const C = 60, r = 46, c = 2 * Math.PI * r, f1 = (n) => Math.round(n * 10) / 10, inv = s.invasion && s.invasion.state !== 'travel' ? s.invasion : null;
-  const P = (a) => [f1(C + 55 * Math.sin((a * Math.PI) / 180)), f1(C - 55 * Math.cos((a * Math.PI) / 180))];
-  const [x1, y1] = P(-38), [x2, y2] = P(38);
-  return `<div class="home-ring" title="${esc(`Integrity ${hp}/${max}${inv ? `. ${inv.name} is at HOME` : ''}`)}"><svg viewBox="0 0 120 120" role="img" aria-label="${esc(`Integrity ${hp} of ${max}`)}">
-    <circle class="pit" cx="${C}" cy="${C}" r="40"/><circle class="track" cx="${C}" cy="${C}" r="${r}"/>
-    <circle class="integ ${tone}" cx="${C}" cy="${C}" r="${r}" stroke-dasharray="${f1(c * share)} ${f1(c)}" transform="rotate(-90 ${C} ${C})"/>
-    ${inv ? `<path class="press" d="M${x1} ${y1}A55 55 0 0 1 ${x2} ${y2}"/>` : ''}
-    <text class="num ${tone}" x="${C}" y="${C + 7}" text-anchor="middle">${hp}</text><text class="of" x="${C}" y="${C + 22}" text-anchor="middle">/ ${max}</text></svg></div>`;
+  const inv = s.invasion, atHome = inv && inv.state !== 'travel', onRoad = inv && inv.state === 'travel';
+  const arc = atHome ? `<path class="press" d="${rArc(RB1 + 7, -40, 40)}"><title>${esc(`${inv.name} at HOME`)}</title></path>` : '';
+  let road = '';
+  if (onRoad) {
+    const gone = Math.max(0, Math.min(1, 1 - inv.left / Math.max(1, inv.total))), y = rf1(-RTOP + 8 + (RTOP + RC - RB1 - 24) * gone);
+    road = `<g class="road-g"><title>${esc(`${inv.name}: at HOME in ${fmtLeft(inv.left)}`)}</title><line class="road" x1="${RC}" y1="${-RTOP}" x2="${RC}" y2="${RC - RB1 - 8}"/>`
+      + `<rect class="mark" x="${RC - 6}" y="${y - 6}" width="12" height="12" transform="rotate(45 ${RC} ${y})"/><text class="eta" x="${RC + 14}" y="${rf1(y + 7)}">${fmtLeft(inv.left)}</text></g>`;
+  }
+  const r = 63, c = 2 * Math.PI * r;
+  return `<div class="home-ring"><svg class="hsv-ring" viewBox="0 ${-RTOP} ${RC * 2} ${RC * 2 + RTOP}" role="img" aria-label="${esc(`Integrity ${hp} of ${max}${inv ? `; ${inv.name} ${onRoad ? 'on its way' : 'at HOME'}` : ''}`)}">
+    <circle class="shell" cx="${RC}" cy="${RC}" r="${RB1 + 10}"/>${road}<g class="blocks">${RING_BLOCKS}</g>${arc}
+    <g class="core"><title>${esc(`Integrity ${hp}/${max}`)}</title><circle class="pit" cx="${RC}" cy="${RC}" r="57"/><circle class="track" cx="${RC}" cy="${RC}" r="${r}"/>
+      <circle class="integ ${tone}" cx="${RC}" cy="${RC}" r="${r}" stroke-dasharray="${rf1(c * share)} ${rf1(c)}" transform="rotate(-90 ${RC} ${RC})"/>
+      <text class="num ${tone}" x="${RC}" y="${RC + 10}" text-anchor="middle">${hp}</text><text class="of" x="${RC}" y="${RC + 30}" text-anchor="middle">/ ${max}</text></g></svg></div>`;
 }
 // The top bar's Materials panel (app.js): Code and Components, one row each, what each is for on hover.
 const MAT_USE = { cipher: 'Ransomware kills and their invasions pay it.', worm: 'Worm kills and their invasions pay it.', kernel: 'Ghostroot kills and their invasions pay it.', exploit: 'Rare: bosses, vaults and deep servers pay it.' };
