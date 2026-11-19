@@ -11,7 +11,7 @@ import INFILTRATOR_FX from './classes/infiltrator.mjs';
 import OPERATOR_FX from './classes/operator.mjs';
 
 import { contractKill, contractTakeover, mailCommand, tickMail, initMail, openContracts, systemLetter, contractPackLost, contractDefuse, contractLocated, itemRestore } from './mail.mjs';
-import { revertVisit } from './visit.mjs';
+import { revertVisit, warmXp, warmScavenge } from './visit.mjs';
 import { buy, indemnityRestore, hubsRestore, shopRestore } from './store.mjs';
 import { buyFrom, claimServer, reclaimCheck, clearedFor, strikeServer, setCommission, repRestore } from './factions.mjs';
 import { receiptCommand } from './receipts.mjs';
@@ -531,6 +531,8 @@ export function gearStat(s, stat, side = null) {
   if (side !== 'hacker') n += (FILTER_STATS[stat]?.home ? (FILTER_STATS[stat].pct ? Math.round((serverMax(s) * filterStat(s, stat)) / 100) : filterStat(s, stat)) : 0); // the firewall's filters for the fights at home: decoys, a sandbox, Block, a shield, Regen, barbs
   return STATS[stat]?.cap ? Math.min(STATS[stat].cap, n) : n;
 }
+// Scavenge with a visit's Warm cache on top (visit.mjs).
+export const scavengeOf = (s, side = null) => gearStat(s, 'scavenge', side) + warmScavenge(s);
 // Who's being defended right now: your rig on a run, the server at home.
 export const guarding = (s) => (s.encounter && (active(s) || s.encounter.phase === 'alert') ? (s.encounter.mode === 'run' ? 'hacker' : 'server') : s.run ? 'hacker' : 'server');
 export const defense = (s, stat) => gearStat(s, stat, guarding(s));
@@ -873,7 +875,7 @@ export function puzzleUnique(s, floor, level) {
   const pool = floorUniques('puzzle', floor, level);
   if (!pool.length) return null;
   const heard = pool.some((u) => u.id === s.listen) ? listenBoost(s) : 1;
-  if (!(rand(s) < lootOdds('elite').zeroday * magicFind(gearStat(s, 'scavenge')) * heard)) return null;
+  if (!(rand(s) < lootOdds('elite').zeroday * magicFind(scavengeOf(s)) * heard)) return null;
   const u = floorUnique(s, 'puzzle', floor, level);
   return u ? uniqueItem(u, level, () => rand(s)) : null;
 }
@@ -890,7 +892,7 @@ function eliteUnique(s, level, more = []) {
 // unique), else a yellow.
 function rollOnce(s, ctx, level, tier) {
   const lu = listened(s), heard = lu && lu.level <= level + 2 && dropsHere(lu, ctx) ? listenBoost(s) : 1; // a Listening Post's unique drops here
-  const odds = lootOdds(tier), mf = magicFind(gearStat(s, 'scavenge')), deep = 1 + LOOT.depthBonus * Math.max(0, (ctx.layer || 1) - 1);
+  const odds = lootOdds(tier), mf = magicFind(scavengeOf(s)), deep = 1 + LOOT.depthBonus * Math.max(0, (ctx.layer || 1) - 1);
   // INIT's table (table.mjs): Full, trash rolls a white or blue more often; Clear, elites and ★ rare spawns roll blues and yellows more often.
   const full = tier === 'trash' ? trashItemMult(s) : 1, good = tier !== 'trash' ? clearOddsMult(s) : 1;
   const gold = odds.zeroday * heard * mf, yellow = gold + odds.custom * deep * mf * good, blue = yellow + odds.tuned * deep * mf * good * full;
@@ -1308,7 +1310,7 @@ export function gainCode(s, gains, why = '') {
 export function codeFrom(s, family, level, source) {
   const k = codeOf(family), who = fightNet(s);
   const out = {};
-  if (k) out[k] = Math.round(codeDrop(level) * (source === 'guard' ? 1.5 : 1) * (1 + gearStat(s, 'scavenge', 'hacker') / 100) * outbreakMult(s, family));
+  if (k) out[k] = Math.round(codeDrop(level) * (source === 'guard' ? 1.5 : 1) * (1 + scavengeOf(s, 'hacker') / 100) * outbreakMult(s, family));
   if (rand(s) < EXPLOIT_CHANCE[source] * richMult(s, who, 'exploit')) out.exploit = 1;
   return source === 'guard' ? out : biasCode(s, who, out);
 }
@@ -1605,6 +1607,7 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
   if (kind === 'breakin' || kind === 'intel') amount = Math.round(amount * intelXpMult(s)); // INIT's table, Clear (table.mjs)
   const bonus = freshBonus(s, amount, kind);
   if (bonus) { emit(s, 'fresh', `Fresh bonus +${bonus} XP (${XP_KINDS[kind]}).`, { amount: bonus, kind }); amount += bonus; }
+  amount = Math.round(amount * warmXp(s)); // Warm cache (visit.mjs)
   if (tally) (s.xpMix ||= {})[tally] = (s.xpMix[tally] || 0) + amount;
   const h = hackerOf(s);
   if (h.level >= LOADOUT.maxLevel) return;
@@ -2340,6 +2343,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
 export function finish(s, result) {
   const e = s.encounter;
   if (!active(s)) return;
+  if (result === 'crashed' && !crashed(s) && defender(s).integrity <= 0) return; // another player still stands (co-op)
   hooks.crewEnd?.(s, result);
   e.phase = result;
   e.queue = null;
@@ -2851,7 +2855,7 @@ export function turnPriority(enc) {
 // This cycle's turns: 'you' and crewmates' names, in priority order.
 export function turnOrder(s) {
   const crew = hooks.crewStanding?.(s) || [];
-  const actors = [{ who: 'you', p: turnPriority(s.encounter) }, ...crew.map((m) => ({ who: m.who, p: turnPriority(m.encounter) }))];
+  const actors = [...(s.encounter.down ? [] : [{ who: 'you', p: turnPriority(s.encounter) }]), ...crew.map((m) => ({ who: m.who, p: turnPriority(m.encounter) }))];
   return actors.map((x, i) => ({ ...x, i })).sort((a, b) => a.p - b.p || a.i - b.i).map((x) => x.who);
 }
 // One actor's turn in a crew cycle. False if the fight ended (you fled).
@@ -4412,6 +4416,7 @@ function programTurn(s, prog) {
 }
 export function playerPhase(s, phase = 'all') {
   const e = s.encounter;
+  if (e.down) return true; // down in a co-op fight: you sit it out (crashed)
   if (phase !== 'after' && e.leaving && e.cycle >= e.leaving.done) { leaveNow(s); return false; }
   if (phase !== 'after' && e.leaving && !e.leaving.firing) return leavingTurn(s, phase);
   if (phase !== 'after') {
@@ -4619,7 +4624,7 @@ function cycleStart(s) {
     const dealt = takeDamage(s, e.encrypt, src?.id, 'the encryption', { dot: true });
     e.metrics.encrypted += dealt;
     if (dealt) emit(s, 'encrypted', `Encrypted: −${dealt}. ${e.mode === 'run' ? 'Integrity' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: src?.id, amount: dealt });
-    if (defender(s).integrity <= 0) {
+    if (crashed(s)) {
       finish(s, 'crashed');
       return true;
     }
@@ -4635,7 +4640,7 @@ function cycleStart(s) {
     const dealt = takeDamage(s, heat, p.id, p.ratchet.name, { dot: true });
     e.metrics.encrypted += dealt;
     if (dealt) emit(s, 'encrypted', `${p.ratchet.name} (${p.name}): −${dealt}. ${e.mode === 'run' ? 'Integrity' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: p.id, amount: dealt, ratchet: true });
-    if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
+    if (crashed(s)) { finish(s, 'crashed'); return true; }
   }
 
   // Full Disk (a tell, tells.mjs): a burst of encryption on top of the stack, for a few cycles.
@@ -4645,7 +4650,7 @@ function cycleStart(s) {
     e.metrics.encrypted += dealt;
     if (dealt) emit(s, 'encrypted', `${burst.name}: −${dealt}. ${e.mode === 'run' ? 'Integrity' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: burst.source, amount: dealt });
     if (!burst.left && e.burst === burst) e.burst = null;
-    if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
+    if (crashed(s)) { finish(s, 'crashed'); return true; }
   }
 
   // Corrupted (a tell that landed, tells.mjs): a few cycles of damage on you, until it runs out or you cleanse it
@@ -4655,7 +4660,7 @@ function cycleStart(s) {
     e.corrupt.left--;
     if (dealt) emit(s, 'encrypted', `Corrupted (${e.corrupt.name}): −${dealt}. ${e.mode === 'run' ? 'Integrity' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: e.corrupt.source, amount: dealt, corrupt: true });
     if (!e.corrupt.left) e.corrupt = null;
-    if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
+    if (crashed(s)) { finish(s, 'crashed'); return true; }
   }
 
   // Sleeper: dormant until a hit or its timer wakes it. While it sleeps its attacks wait.
@@ -4686,7 +4691,7 @@ function cycleStart(s) {
       if (soak) e.shield -= soak;
       const dealt = n - soak > 0 ? takeDamage(s, n - soak, z.id, `${z.name} fuse`) : 0;
       emit(s, 'server-hit', `The ${z.name} goes off: −${dealt}${soak ? ` (${soak} on your shield)` : ''}.`, { source: z.id, amount: dealt, atk: 'Fuse', fuse: true });
-      if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
+      if (crashed(s)) { finish(s, 'crashed'); return true; }
     }
     const hitBy = livingParts(s).filter((x) => !frozenNow(s, x));
     if (hitBy.length) emit(s, 'phase', `The blast hits the virus too: every part loses a ◆ and ${Math.round(CONFIG.zipbomb.parts * 100)}% of its max.`, { source: z.id, blast: true });
@@ -4708,7 +4713,7 @@ function cycleStart(s) {
       if (!src) break;
       const dealt = takeDamage(s, x.amount, src.id, x.name + ' echo', { dot: true });
       if (dealt) emit(s, 'server-hit', `${x.name} echoes: −${dealt}.`, { source: src.id, amount: dealt, atk: `${x.name} echo` });
-      if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
+      if (crashed(s)) { finish(s, 'crashed'); return true; }
     }
   }
 
@@ -4723,6 +4728,15 @@ const dueNow = (s) => {
   for (const p of attackers(s)) if (p.attack.alone && live > 1 && p.attack.due <= s.encounter.cycle) p.attack.due = s.encounter.cycle + 1;
   return attackers(s).sort((a, b) => a.attack.due - b.attack.due).filter((p) => p.attack.due <= s.encounter.cycle && !chargeNow(s, p)); // a charge takes the place of its part's attack (tells.mjs)
 };
+// Out of the fight at 0 Integrity. In co-op (coop.mjs, the crew rule) you go down and sit the fight out while another
+// player stands; it ends only when every player is down.
+function crashed(s) {
+  const e = s.encounter;
+  if (defender(s).integrity > 0) return false;
+  if (!hooks.coopStanding?.(s)) return true;
+  if (!e.down) { e.down = true; e.queue = null; defender(s).integrity = 0; emit(s, 'status', "You're down. You sit out the rest of this fight."); }
+  return false;
+}
 // One part's attack lands. True if the fight ended.
 function strike(s, p) {
   const e = s.encounter;
@@ -4741,7 +4755,7 @@ function strike(s, p) {
   }
   flushDaemons(s); // what it set off: Spite, Backscatter, a Watchman's hit
   hooks.crewHurt?.(s);
-  if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
+  if (crashed(s)) { finish(s, 'crashed'); return true; }
   if (virusIntegrity(s).current === 0) { finish(s, 'victory'); return true; }
   return false;
 }
@@ -4891,7 +4905,7 @@ function cycleClose(s, landed) {
   if (hooks.roomCycle && bodyRules(e)) {
     hooks.roomCycle(s);
     if (virusIntegrity(s).current === 0) return finish(s, 'victory');
-    if (defender(s).integrity <= 0) return finish(s, 'crashed');
+    if (crashed(s)) return finish(s, 'crashed');
   }
   // An objective's clock (objectives.mjs): the Exfil's upload completes and it gets away, Uptime held wins, a Priority missed.
   { const end = objectiveCycle(s); if (end) return finish(s, end); }

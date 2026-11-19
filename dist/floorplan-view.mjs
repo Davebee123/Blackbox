@@ -39,6 +39,7 @@
 // the markup only changes when the server does and a hovered chip keeps its tooltip.
 import { esc, conClass, deathMark, trackedJobs, contractTipRows, serverTracker } from './view.mjs';
 import { glyph } from './glyphs.mjs';
+import { WARM, warmOf } from './visit.mjs';
 import { groundSvg } from './ground.mjs';
 import { OBJECTIVES, OBJ, objectiveLine } from './objectives.mjs';
 import { recapMarkup } from './recap.mjs';
@@ -669,9 +670,9 @@ function hudMarkup(s) {
   const reboot = rb ? `<span class="fp-stat fp-reboot${rb.pending ? ' on' : ''}" title="${esc(`Reboot\nFallen fight rooms stay down until every one has fallen. Then ${R.name} reboots, and ${fmtLeft(rb.ms)} later they all come back.\n${rb.pending ? 'Rebooting now.' : `${rb.up} ${rb.up === 1 ? 'fight room is' : 'fight rooms are'} still up.`}`)}"><span class="lbl">Reboot</span><b>${rb.pending ? `<span data-at="${rb.at}"></span>` : `${rb.up} up`}</b></span>` : '';
   const keys = R.at && R.visit?.keys.length ? `<span class="fp-stat fp-keys" title="Keys: each opens its vault, this visit only. Jack out and it goes back to the elite that held it.">${ic('key')}<b>${R.visit.keys.length}</b></span>` : '';
   const packed = R.world ? (s.run?.pack || []).map((f) => net(s, 'packLine', f)) : R.pack.map((id) => itemLabel(stashItem(s, id) || { name: '?' }));
-  // This visit (visit.mjs): what you've won since you connected, unsaved until you jack out; the pack rides in it.
+  // The visit (visit.mjs): the Warm cache's ladder and what it adds, then the Pack, unsaved until you jack out.
   const v = visitOf(s);
-  const pack = v ? `<span class="fp-stat fp-visit fp-packstat${v.rooms || v.xp || v.files ? '' : ' empty'}" data-tt-kind="Unsaved" title="${esc(`This visit: Jack out to keep it. A disconnect undoes it.${packed.length ? `\n▸ Pack: ${packed.join(', ')}.` : ''}`)}"><span class="lbl">This visit</span><b>${v.rooms}<small>rooms</small></b><b>${v.xp.toLocaleString('en-US')}<small>XP</small></b><b>${v.files}<small>files</small></b></span>`
+  const pack = v ? warmBox(s) + `<span class="fp-packwrap">${packButton(s)}${packUi.open ? packPop(s) : ''}</span>`
     : packed.length ? `<span class="fp-stat fp-packstat" title="${esc(`Pack: ${packed.join(', ')}.\nBanks when you jack out. Lost if your Integrity hits 0.`)}"><span class="lbl">Pack</span><b>${packed.length}</b></span>` : '';
   // Contracts on this server, and how far along each is. The tip draws them as the map's tracker does, a row each.
   const jobs = net(s, 'jobs') || [], tracked = jobs.length ? trackedJobs(s).filter((t) => jobs.some((j) => j.id === t.id)) : [];
@@ -686,11 +687,39 @@ function hudMarkup(s) {
   return `<header class="fp-hud" aria-label="The server">
     <span class="fp-id" title="${esc(net(s, 'idTip') ?? `${R.name}: ${author} ${kindName(R.kind)}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`)}"><span class="ico" ${icon('server')}></span><b>${esc(R.name)}</b><small>${esc(net(s, 'idLine') ?? `${kindName(R.kind)} · lv ${R.level} · ${K.rule}`)}</small></span>
     <div class="fp-sig ${lvl}" title="${esc(`Integrity: your health, carried from fight to fight and rested back at home.\nA room's first step each visit costs ${step}, or ${stepNew} into one you've never been in.`)}"><span class="lbl">Integrity</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small></div>
-    <div class="fp-prog" title="${esc(`Rooms cleared: ${prog.done} of ${prog.total}. ${R.mapped ? 'The server is Mapped.' : `At ${Math.ceil(prog.total / 2)} the whole map is drawn. At ${prog.total} the server is Mapped.`}`)}"><span class="lbl">Rooms</span><span class="pbar"><span style="width:${(prog.done / prog.total) * 100}%"></span><i style="left:50%"></i></span><b>${prog.done}/${prog.total}</b>${R.mapped ? '<small class="fp-mapped">MAPPED</small>' : ''}</div>
+    <div class="fp-prog" title="${esc(`Rooms cleared: ${prog.done} of ${prog.total}. ${R.mapped ? 'The server is Mapped.' : `At ${Math.ceil(prog.total / 2)} the whole map is drawn. At ${prog.total} the server is Mapped.`}`)}"><span class="lbl">Rooms</span><b>${prog.done}/${prog.total}</b>${R.mapped ? '<small class="fp-mapped">MAPPED</small>' : ''}</div>
     ${keys}${reboot}${hunt}${rival}${cardStat}${ml}${pack}${job}${R.world && s.threads ? threadHud(s) : ''}
     <span class="fp-tools">${R.world ? '' : `<span class="fp-rules" role="group" aria-label="Boss rule"><span class="lbl" title="${esc(`Boss rule: how ${BOSSES[RESIDENT].name}'s ticks work. It applies to your next fight with it.`)}">Boss</span>${rule}</span>`}
     <span class="fp-acts">${acts}</span></span>
   </header>`;
+}
+// The Warm cache (visit.mjs WARM): a ladder of its stacks, lit amber as rooms are won, and what they add now.
+function warmBox(s) {
+  const n = warmOf(s), xp = Math.round(WARM.xp * 100 * n), sc = WARM.scavenge * n;
+  const bars = Array.from({ length: WARM.max }, (_, i) => `<i class="${i < n ? 'on' : ''}" style="height:${4 + Math.round((i * 9) / (WARM.max - 1))}px"></i>`).join('');
+  const tip = `Warm cache: Each room you win on this visit adds +${WARM.xp * 100}% XP and +${WARM.scavenge} Scavenge to the rooms after it, up to ${WARM.max}. It starts cold on every visit.\n▸ ${n} room${n === 1 ? '' : 's'}: +${xp}% XP, +${sc} Scavenge.`;
+  return `<span class="fp-stat fp-visit fp-warm${n ? '' : ' empty'}" data-tt-kind="Visit bonus" title="${esc(tip)}"><span class="lbl">Warm</span><span class="fp-ladder" aria-hidden="true">${bars}</span><b>${glyph('xp')}+${xp}%</b><b>${glyph('scavenge')}+${sc}</b></span>`;
+}
+// The Pack: what you carry on this visit, a row per thing (credits summed, each code summed, each item its own).
+export const packUi = { open: false };
+function packRows(s) {
+  const credits = { n: 0 }, code = {}, rows = [];
+  for (const f of s.run?.pack || []) {
+    if (f.kind === 'credits') credits.n += f.amount || 0;
+    else if (f.kind === 'code') code[f.material] = (code[f.material] || 0) + (f.amount || 0);
+    else if (f.kind === 'gear' && f.item) rows.push(`<li class="iname r-${shownRarity(f.item)}">${glyph('item')}<span>${esc(f.item.name)}</span><small>lv ${f.item.level}</small></li>`);
+    else if (f.kind !== 'payload') rows.push(`<li>${glyph('item')}<span>${esc(net(s, 'packLine', f))}</span></li>`);
+  }
+  const top = [credits.n ? `<li>${glyph('credits')}<span>${credits.n.toLocaleString('en-US')} credits</span></li>` : '', ...Object.entries(code).map(([k, n]) => `<li>${glyph(k)}<span>${n} ${esc(MATERIALS[k]?.name || `${k} code`)}</span></li>`)];
+  return [...top.filter(Boolean), ...rows];
+}
+function packButton(s) {
+  const n = packRows(s).length;
+  return `<button type="button" class="fp-packbtn fp-packstat${packUi.open ? ' open' : ''}" data-fp-pack aria-expanded="${packUi.open}"${packUi.open ? ' aria-label="Pack"' : ' title="Pack: What you carry. Jack out to keep it."'}>${glyph('pack')}<b>${n}</b></button>`;
+}
+function packPop(s) {
+  const rows = packRows(s);
+  return `<div class="fp-packpop" role="dialog" aria-label="Pack"><header><b>Pack</b><small>UNSAVED</small></header><ul>${rows.join('') || '<li class="none"><span>Empty</span></li>'}</ul></div>`;
 }
 // Whether you can connect from home: Integrity enough, and the reconnect wait over.
 function connectOf(s) {

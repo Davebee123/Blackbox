@@ -55,7 +55,7 @@ import { tickPlay } from './progression.mjs';
 import * as FP from './floorplan.mjs';
 import { spawnRival } from './rivals.mjs';
 import { RUN_CARDS, dealCard } from './runcards.mjs';
-import { roomsMarkup, roomsView, POP_MARK, fillClocks, popOf, pickRoom, closePop, stepPath, traceHop } from './floorplan-view.mjs';
+import { roomsMarkup, roomsView, POP_MARK, fillClocks, popOf, pickRoom, closePop, stepPath, traceHop, packUi } from './floorplan-view.mjs';
 import { createPuzzleFx, panelRoom, closePanel, openPanel, pzUi } from './puzzle-view.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { threadPanel, thUi, offerMarkup as thOfferMarkup } from './threads-view.mjs';
@@ -1103,6 +1103,12 @@ document.addEventListener('pointermove', (e) => {
 document.addEventListener('pointerup', () => { if (fpDrag?.moved) { const stop = (ev) => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', stop, { capture: true, once: true }); setTimeout(() => document.removeEventListener('click', stop, { capture: true }), 0); } fpDrag = null; });
 document.addEventListener('dblclick', (e) => { if (!F.isPhone() && e.target.closest?.('.fp-svg') && !e.target.closest('[data-rooms], [data-fp-sel]')) fpZoomReset(); });
 document.addEventListener('click', (e) => { if (e.target.closest?.('[data-fp-zoom]')) fpZoomReset(); });
+// The Pack's popover (floorplan-view.mjs): its button opens and closes it; a click outside it or Esc closes it.
+document.addEventListener('click', (e) => {
+  if (e.target.closest?.('[data-fp-pack]')) { packUi.open = !packUi.open; feel.key('click'); markDirty(); return; }
+  if (packUi.open && !e.target.closest?.('.fp-packpop')) { packUi.open = false; markDirty(); }
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && packUi.open) { packUi.open = false; e.stopImmediatePropagation(); markDirty(); } }, true);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && lu.showing()) lu.dismiss(); }); // the level-up (levelup-ui.mjs)
 // The gain card: a pull pops a one-row card that fades on its own; a jack-out shows everything
 // banked and waits for Enter (or a click, or the next command).

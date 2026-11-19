@@ -293,7 +293,7 @@
 [data-form='phone'] body.ph-rooms .fp { display: flex; flex-direction: column; gap: 0; height: calc(100dvh - var(--ph-bar) - var(--safe-t)); }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud { position: static; display: flex; flex: none; flex-wrap: nowrap; align-items: center; gap: 12px; height: var(--tap); padding: 0 12px; background: var(--bg); border: 0; border-bottom: 1px solid var(--line-strong); border-radius: 0; box-shadow: none; overflow: hidden; }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud::before, [data-form='phone'] body.ph-rooms #page-view .fp-hud::after { display: none; }
-[data-form='phone'] body.ph-rooms #page-view .fp-hud > :not(.fp-id, .fp-sig, .fp-visit, .fp-prog, .fp-hunt, .fp-tools) { display: none; }
+[data-form='phone'] body.ph-rooms #page-view .fp-hud > :not(.fp-id, .fp-sig, .fp-visit, .fp-packwrap, .fp-prog, .fp-hunt, .fp-tools) { display: none; }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud :is(.lbl, .fp-id small, .fp-id .ico, .fp-sig small, .sigbar, .pbar, .fp-mapped, .fp-rules) { display: none; }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud .fp-tools { display: contents; }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud .fp-in { display: none; }
@@ -303,7 +303,10 @@
 [data-form='phone'] body.ph-rooms #page-view .fp-sig { display: flex; flex: none; align-items: center; gap: 6px; min-width: 0; min-height: var(--tap); }
 [data-form='phone'] body.ph-rooms #page-view .fp-sig::before { content: ''; box-sizing: border-box; width: 10px; height: 14px; border: 1.5px solid currentColor; border-radius: 2px; background: linear-gradient(currentColor, currentColor) 50% 2px / 4px 1px no-repeat, linear-gradient(currentColor, currentColor) 50% 5px / 4px 1px no-repeat; color: var(--you); } /* the server tower, as on the top bar */
 [data-form='phone'] body.ph-rooms #page-view .fp-visit { display: flex; flex: none; gap: 8px; min-height: 26px; padding: 0 6px; }
-[data-form='phone'] body.ph-rooms #page-view .fp-visit b:last-child { display: none; } /* rooms and XP; the files ride in the name's sheet */
+[data-form='phone'] body.ph-rooms #page-view .fp-ladder { display: none; } /* Warm: its two numbers only */
+[data-form='phone'] body.ph-rooms #page-view .fp-packwrap { flex: none; align-self: center; height: 26px; }
+[data-form='phone'] body.ph-rooms #page-view .fp-packbtn { padding: 0 6px; }
+[data-form='phone'] body.ph-rooms #page-view .fp-packpop { position: fixed; top: calc(var(--safe-t) + var(--tap) + 6px); left: 16px; right: 16px; max-width: none; }
 [data-form='phone'] body.ph-rooms #page-view .fp-sig.mid::before { color: var(--next); }
 [data-form='phone'] body.ph-rooms #page-view .fp-sig.low::before { color: var(--hot); }
 [data-form='phone'] body.ph-rooms #page-view .fp-sig strong { font: 600 var(--ph-body) var(--mono); }

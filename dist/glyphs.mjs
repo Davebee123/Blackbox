@@ -88,6 +88,8 @@ const P = {
   bounty: '<path d="M4 7.5a4 4 0 1 1 8 0v2.5l-1.3 1v2.5H5.3V11L4 10z"/><circle cx="6.3" cy="7.5" r="1"/><circle cx="9.7" cy="7.5" r="1"/>',
   takeover: '<path d="M3.5 14.5V2"/><path d="M3.5 2.5h9l-2 3 2 3h-9"/>',
   materials: '<path d="M8 1.5 14 4.8v6.4L8 14.5 2 11.2V4.8z"/><path d="M5 3.2l6 3.3v2.8"/>',
+  // The Pack (floorplan-view.mjs): a backpack, its handle arc, a rounded body and a pocket.
+  pack: '<path d="M6 4V3a2 2 0 0 1 4 0v1"/><rect x="3" y="4" width="10" height="10.5" rx="2.5"/><path d="M5.5 9.5h5v3h-5z"/>',
   item: '<path d="M3.5 1.5h6l3 3v10h-9z"/><path d="M9.5 1.5v3h3M5.5 8.5h5M5.5 11h3.5"/>',
   // ---------- daemons ----------
   sweeper: '<path d="M11 1.5 7 8.5M3.5 9.5l5 2.5-1.5 2.5c-2-.3-4-1.5-5-3.5z"/>',
