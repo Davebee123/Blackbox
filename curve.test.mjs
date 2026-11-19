@@ -140,7 +140,10 @@ test('events take their server\'s level, never yours; SPRAWL-00\'s rooms keep th
       else assert.ok(x.level >= ZONE_BAND[room][0] && x.level <= ZONE_BAND[room][1], `${room} in its band at level ${L}`);
     }
     assert.ok(zoneOf(t));
+    assert.deepEqual(['/tmp', '/srv', '/home', '/dev'].map((r) => sp[r].level), [1, 1, 1, 1], 'four level 1 rooms by the entry');
   }
+  const old = fresh(); zoneSpawns(old); old.zone.spawns['/tmp'].level = 2; // a stray rolled before the band dropped
+  assert.equal(zoneSpawns(old)['/tmp'].level, 1);
   assert.deepEqual([benchCurve('?bench=a&curve=8'), benchCurve('?bench=a'), benchCurve('?curve=50')], [0.08, null, null]);
 });
 

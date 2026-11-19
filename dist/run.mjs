@@ -98,9 +98,10 @@ const ZONE_FAMILIES = ['ransomware', 'worm', 'ghostroot'];
 // coming (Slay the Spire).
 export const kingOpen = (s) => hackerLevel(s) >= 3;
 // A SPRAWL-00 room's level band: the nearer folders lower (docs/scaling.md 4), at least two rooms to a band. Each
-// stray rolls its level in the band off its own seed. RELAY-KING, in /net/relay, at the top.
+// stray rolls its level in the band off its own seed. Four of the six rooms by the entry are level 1. RELAY-KING, in
+// /net/relay, at the top.
 export const ZONE_BAND = {
-  '/tmp': [1, 2], '/srv': [1, 2], '/home': [1, 2], '/dev': [1, 2],
+  '/tmp': [1, 1], '/srv': [1, 1], '/home': [1, 1], '/dev': [1, 1],
   '/var': [2, 3], '/net': [2, 3],
   '/var/spool': [3, 4], '/var/cache': [3, 4],
   '/var/log': [4, 5], '/home/guest': [4, 5],
@@ -110,6 +111,7 @@ export function zoneSpawns(s, now = clock()) {
   if (!kingOpen(s)) delete z.spawns[KING_ROOM]; // a sealed Core holds nothing (a save from before held a stray, or the king)
   for (const room of zoneRooms()) {
     const sp = z.spawns[room];
+    if (sp?.alive && !sp.boss && ZONE_BAND[room] && sp.level > ZONE_BAND[room][1]) sp.level = ZONE_BAND[room][1]; // a stray rolled before its band dropped
     if (sp?.alive || (sp && sp.respawnAt > now)) continue; // a stray down until its clears (respawnAt null) is back
     if (room === KING_ROOM && !kingOpen(s)) continue;
     const n = ++z.serial;
