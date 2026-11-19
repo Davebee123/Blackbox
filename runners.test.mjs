@@ -583,6 +583,7 @@ test('SPRAWL-00: a runner between jobs fights the stray in their room and never 
   assert.ok(spot.fighting && spot.folder !== '/net/relay', 'in a stray room, never the Core');
   play(s, 'connect sprawl');
   const room = FP.roomList(s).find((x) => x.path0 === spot.folder);
+  for (const id of Object.keys(s.rooms.graph.rooms)) s.rooms.seen[id] ||= 'kind'; // their room revealed, wherever on the plus
   const m = meetingOf(s, FP.isUp, room.id);
   assert.equal(m?.r.handle, r.handle, 'fighting its stray');
   assert.equal(placeOf(s, r).fighting, true);

@@ -28,8 +28,8 @@ test('names and bylines: WARDED CRYPTJACK-4821 v2 · TOLLGATE, a named build kee
   // The fight on a run carries its spawn's tag (SPRAWL-00's rooms are its folders: netrooms.mjs), and the HUD the
   // byline in the author's colour.
   const s = at(12);
-  play(s, 'connect sprawl'); play(s, 'cd tmp');
-  const file = s.zone.spawns['/tmp'].name;
+  play(s, 'connect sprawl'); play(s, 'cd dev');
+  const file = s.zone.spawns['/dev'].name;
   assert.match(file, /^(cryptjack|splinter|ghostroot)-\d{4}$/);
   play(s, 'attack');
   assert.ok(s.encounter.virus.name.endsWith(file.toUpperCase()), `${s.encounter.virus.name} for ${file}`);
