@@ -2433,9 +2433,6 @@ export function finish(s, result) {
       hooks.runWon?.(s);
     } else {
       emit(s, 'crashed', `${e.virus.name} burned your Integrity to zero.`, { mode: 'run' });
-      // A Resident that beats you grows: a level more for 6 hours, up to three.
-      const home = e.virus.boss === 'resident' && findLocation(s, s.run?.loc);
-      if (home) { const now = hooks.now?.() ?? Date.now(), had = home.resident && now - home.resident.at < 6 * 3600000 ? home.resident.bonus : 0; home.resident = { bonus: Math.min(3, had + 1), at: now }; emit(s, 'warning', `The Resident of ${home.name} beat you. It's a level stronger for the next 6 hours.`, { location: home.id }); }
       disconnect(s, 'Integrity lost');
     }
     return;

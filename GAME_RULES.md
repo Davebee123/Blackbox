@@ -577,7 +577,7 @@ re-arms every part. Its ♛ runs a **Watchdog**: every 5 cycles it stands above 
 acts instead (below), 1.1× Integrity, its ♛ half each act's (taken from its other parts): act 1 the **Backlash**, act 2
 the **Watchdog**, act 3 the worm's **Outbreak** (a lash also hatches a fragment) or the ransomware's **Lockdown** (a lash
 also encrypts you, while the Encryptor stands). *outbreak* or *lockdown* on its ♛. Beat it and the server is **taken over**: yours, teal on the map, its Core
-quiet for good. Lose and you're disconnected, and for 6 hours it is a level stronger, up to three levels.
+quiet for good. Lose and you're disconnected; it stays as it was.
 
 On a run each solo boss takes its own Integrity and hits on top of the fight length (`BOSSES` long). In acts each
 act runs 15 to 20 cycles (below). In a breach the Resident keeps its old size and enrages at 18.
@@ -976,8 +976,7 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
   rep, floor jobs, contract counts (an Install job's item back in your stash) and the server's rooms (cleared, opened,
   its spawns and Root) go back to the connect. What keeps moving: the market and the director, mail and contracts
   received, invasions and the wall, runners, the consortium, achievements, your profile, INIT's table, settings, clocks,
-  servers and leads found, and a Resident that beat you stays a level up. The **NO CARRIER** card strikes through what the
-  visit lost.
+  servers and leads found. The **NO CARRIER** card strikes through what the visit lost.
 - **Reconnect wait.** A server you leave takes you back after 30 s (`CONFIG.relockMs`), +15 s for each disconnect on
   its run, 2 min at most (`CONFIG.deathWait`). A jack out mid-fight waits like a disconnect but still saves the visit;
   any other jack out resets the count. Connect counts it down, with ☠ and the count. Deadman's Switch counts as a jack

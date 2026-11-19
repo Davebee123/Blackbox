@@ -140,8 +140,8 @@ test('Hostile: its fights pay 50% more XP and hit 25% harder', () => {
 test('Legacy: rare spawns twice as often, its Resident a level higher', () => {
   const { s, loc } = traced(['legacy']);
   assert.equal(FP.WORLD.rare(s), 2);
-  const plain = residentLevel({ ...loc, special: ['rich'] }, clock);
-  assert.equal(residentLevel(loc, clock), plain + 1);
+  const plain = residentLevel({ ...loc, special: ['rich'] });
+  assert.equal(residentLevel(loc), plain + 1);
 });
 
 test('Backbone: one more socket room', () => {

@@ -15,7 +15,7 @@
 // node bot.mjs [class] [targetLevel] [seed]
 import { UNIQUES, topUpCost, tickServices, fresh, command, resolveCycle, active, hooks, hackerLevel, subWaiting, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
 import { meetsReq, RARITY_ORDER, SLOT_KINDS, groupOf, LOOT } from './dist/gear.mjs';
-import { play, layoutOf, currentLocation, signalNow, takeable, CORE, residentBonus } from './dist/run.mjs';
+import { play, layoutOf, currentLocation, signalNow, takeable, CORE } from './dist/run.mjs';
 import { relockLeft, relocks } from './dist/rogue.mjs';
 import { joinCost, memoryCost, isLive } from './dist/memory.mjs';
 import { items } from './dist/hidden.mjs';
@@ -179,10 +179,18 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   // Has this server anything left (a guard up, the vault shut, files not taken)? And is it done with:
   // nothing left, no outpost, relay or contract on it?
   // (A LANTERN dead drop needs the broadcast's key: the bot doesn't listen, so it doesn't count.)
-  // A Resident that just beat it waits until it calms down (6 hours), like a player would.
-  // On rooms: not Mapped yet, or not taken over (a Resident that just beat it waits), and not outgrown (3 levels under
+  // The bot's memory of a boss that beat it, per server: its boss losses (R.stats.boss) and when the last one came.
+  const bossLosses = new Map();
+  const lostLately = (loc) => {
+    const b = loc.floorplan?.stats?.boss, lost = b ? b.tries - b.won : 0, k = bossLosses.get(loc.id);
+    if (!k || lost !== k.lost) bossLosses.set(loc.id, { lost, at: k && lost > k.lost ? t : k?.at ?? -Infinity });
+    return t - bossLosses.get(loc.id).at < 6 * 3600000;
+  };
+  // A server whose boss just beat it waits 6 hours on the bot's own memory (the boss stays as it was), like a player
+  // who goes off to level and comes back.
+  // On rooms: not Mapped yet, or not taken over (a boss that just beat it waits), and not outgrown (3 levels under
   // you: a player moves on, and frees its memory).
-  const pending = (loc) => { const R = loc.floorplan; if (!R) return true; if ((loc.level || 1) <= hackerLevel(s) - 3) return false; return !R.mapped || (!loc.takenOver && !loc.member && !(residentBonus(loc, t) > 0)); };
+  const pending = (loc) => { const R = loc.floorplan; if (!R) return true; if ((loc.level || 1) <= hackerLevel(s) - 3) return false; return !R.mapped || (!loc.takenOver && !loc.member && !lostLately(loc)); };
   const finished = (loc) => (loc.rogue ? (loc.level || 1) < hackerLevel(s) - 3 : !pending(loc) && !(loc.takenOver && procOf(loc, t))) && isLive(s, loc) && !Object.keys(loc.floorplan?.programs || {}).length && !openContracts(s).some((c) => c.loc === loc.id); // a relay has done its pinging: fine to detach
   // A fresh find needs memory: detach the lowest finished server until it fits (or give up).
   const makeRoom = (loc) => {
@@ -224,7 +232,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
       for (const d of dirs) {
         if (!s.run) break;
         if (L[d].locked && !loc.state.unlocked[d]) { say(`cd ${d.slice(0, d.lastIndexOf('/')) || '/'}`); say(`unlock ${d.split('/').pop()} ${loc.password}`); }
-        if (d === CORE && (residentBonus(loc, t) > 0 || s.run.integrity < s.run.max * 0.7)) continue; // the Resident: fresh, and on a good Signal
+        if (d === CORE && (lostLately(loc) || s.run.integrity < s.run.max * 0.7)) continue; // the Resident: fresh, and on a good Signal
         say(`cd ${d}`);
         if (s.encounter?.mode === 'run') fight();
         if (s.run && procIn(loc, d, t)) { say('attack'); fight(); stats.procs = (stats.procs || 0) + 1; } // a log rotation's process (root.mjs)

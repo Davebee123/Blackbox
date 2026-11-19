@@ -9,13 +9,12 @@
 //   PROGRESS   your XP and levels (and what spends with them: rested, the bar and talents), items, credits, code,
 //              components, what kills teach (the Codex, research, mastery), drop luck, rep and floor jobs.
 //   the server the one you're on, in place: its rooms (cleared, down, taken, opened), its spawns, Root, its Resident;
-//              never its visit bookkeeping (LOC_KEEP, ROOMS_KEEP: the reconnect wait, the last visit's card, the log),
-//              and a Resident that beat you keeps its level (what the loss did, not what the visit won).
+//              never its visit bookkeeping (LOC_KEEP, ROOMS_KEEP: the reconnect wait, the last visit's card, the log).
 //   contracts  each one you held at connect gets its count back, and an Install job's item goes back in your stash;
 //              contracts received meanwhile stay.
 //   Integrity  back to what it was at connect.
 export const PROGRESS = ['hackers', 'rested', 'xpMix', 'killXp', 'killXpFrom', 'firsts', 'freshAt', 'loadout', 'gear', 'stash', 'nextItem', 'items', 'collection', 'earned', 'pins', 'materials', 'components', 'filters', 'programs', 'codebases', 'factionParts', 'cargo', 'dex', 'research', 'mastery', 'geneCodex', 'pity', 'netPity', 'standing', 'arcs'];
-const LOC_KEEP = ['floorplan', 'lockUntil', 'deaths', 'runs', 'unseen', 'resident']; // resident: a Resident that beat you stays a level up
+const LOC_KEEP = ['floorplan', 'lockUntil', 'deaths', 'runs', 'unseen'];
 const ROOMS_KEEP = ['at', 'visit', 'visits', 'screen', 'homeAt', 'reconnectAt', 'deaths', 'last', 'log', 'stats', 'fightFrom', 'inSince', 'max', 'signal'];
 
 const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
