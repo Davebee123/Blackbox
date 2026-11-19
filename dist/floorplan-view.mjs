@@ -47,13 +47,14 @@ import { itemLabel, statLine, shownRarity } from './gear.mjs';
 import { stashItem, active, classOf, hackerLevel } from './combat.mjs';
 import { AUTHORS } from './authors.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
-import { familyName, ROOM_RULES } from './families.mjs';
+import { familyName, ROOM_RULES, FAMILY_ICON } from './families.mjs';
+import { GLYPHS } from './glyphs.mjs';
 import { RUNCARD, RUN_CARDS, cardOf as runCardOf, surgeAt, surgeFill, escortOf, escortRoute, packOf, packRoute, packRooms } from './runcards.mjs';
 import { rivalP, COUNTERS, READS, rivalOf, routeOf, raceOf, lineupOf, memoryOf, wickLine, crewName, crewColour, rivalSays, rivalLine } from './rivals.mjs';
 import { GENES } from './genes.mjs';
 import { meetingOf, meetingsOf, deadOf, runnerOf } from './runners.mjs';
 import { roomRunner, runnerRow, tierBar } from './runners-view.mjs';
-import { held, slipsLeft, slippable, ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, rebootOf, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, visitOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, retreat, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, restUsed, lureFamilies, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
+import { held, slipsLeft, slippable, ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, rebootOf, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, visitOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, retreat, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, restUsed, lureFamilies, addrOf, PUZZLES, isPuzzle, puzzleState, familyOf } from './floorplan.mjs';
 import { puzzlePanel } from './puzzle-view.mjs';
 import { PROGRAMS, SOCKET, programCost, buildBlock, codebasesOf, costLine as programCostLine } from './sockets.mjs';
 import { materialsOf } from './combat.mjs';
@@ -93,9 +94,9 @@ export function labelOf(s, room) {
   if (!['process', 'elite', 'guard'].includes(room.kind) || room.mirror || !known(s, room.id) || !isUp(s, room)) return room.path;
   return virusName(s, room);
 }
-// The plate is narrow: a wild virus by its stem and tag (XMRIG-1516), its ELITE and its rolled adjective left to the
-// chip, the card and the tooltip.
-const plateOf = (s, room) => { const n = labelOf(s, room); return n.match(/\S+-\d{4}$/)?.[0] || n; };
+// The plate is narrow: a live fight room by its family (CRYPTOMINER; a Lure's while one runs), anything else by its
+// stem and tag (XMRIG-1516); the exact virus is left to the card and the tooltip.
+const plateOf = (s, room) => { const n = labelOf(s, room); if (n !== room.path && ['process', 'elite'].includes(room.kind) && room.family) return familyName(familyOf(s, room)); return n.match(/\S+-\d{4}$/)?.[0] || n; };
 const pctOf = (s, x) => Math.max(1, Math.round(s.rooms.max * x));
 const restGain = (s) => Math.min(s.rooms.max - sigOf(s), Math.round(s.rooms.max * ROOMS.rest));
 // The threads' marks on this server (threads-view.mjs): { roomId: { mark: '!' | '?', text } }. None on the playtest.
@@ -184,6 +185,8 @@ const MARK_ICONS = {
   backup: '<path d="M3 3h11.5L17 5.5V17H3z"/><path d="M6.5 3v5h7V3M6.5 17v-5.5h7V17"/>',
   clean: '<circle cx="10" cy="10" r="7"/><path d="M7 10.2l2.2 2.2 4-4.6"/>',
   uptime: '<path d="M5 2.5h10M5 17.5h10M6.5 2.5c0 4.5 7 4.5 7 7.5s-7 3-7 7.5M13.5 2.5c0 4.5-7 4.5-7 7.5s7 3 7 7.5"/>',
+  // An elite's rank: two chevrons.
+  rank: '<path d="M4 10.5 10 5.5l6 5M4 15.5l6-5 6 5"/>',
   // A contract's mark (the mail's): a page with a tick, on a room a job points at.
   contract: '<path d="M4.5 2.5h7.5l3.5 3.5v11.5h-11Z"/><path d="M12 2.5V6h3.5"/><path d="M7 11.8l2 2 4-4.3"/>',
 };
@@ -192,6 +195,7 @@ const symbol = (k, body, vb, sw) => `<symbol id="fp-i-${k}" viewBox="0 0 ${vb} $
 const sprite = () => `<svg class="fp-sprite" width="0" height="0" aria-hidden="true" focusable="false"><defs>`
   + Object.entries(ROOM_ICONS).map(([k, b]) => symbol(k, b, 24, 1.6)).join('')
   + Object.entries(MARK_ICONS).map(([k, b]) => symbol(k, b, 20, 1.7)).join('')
+  + Object.entries(FAMILY_ICON).map(([f, g]) => symbol(`fam-${f}`, GLYPHS[g], 16, 1.1)).join('')
   + '<linearGradient id="fp-g-node" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c1408"/><stop offset="1" stop-color="#0d0904"/></linearGradient>'
   + '<linearGradient id="fp-g-here" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#173a34"/><stop offset="1" stop-color="#0c1d1a"/></linearGradient>'
   + '<linearGradient id="fp-g-hot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a0f09"/><stop offset="1" stop-color="#120705"/></linearGradient>'
@@ -201,7 +205,9 @@ const sprite = () => `<svg class="fp-sprite" width="0" height="0" aria-hidden="t
   + '<marker id="fp-arrow-exfil" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 10 5 0 10Z" class="fp-arrowhead exfil"/></marker>'
   + '</defs></svg>';
 // A room's icon: what it is (a guard post is an elite to you; a mirrored cache shows its mirror), once you've seen it.
-const iconOf = (s, room) => (!known(s, room.id) ? null : room.nook ? nookIcon(s, room) : room.kind === 'socket' && programIn(s, room.id) ? programIn(s, room.id) : room.mirror ? 'mirror' : room.kind === 'guard' ? 'elite' : room.kind === 'boss' ? 'core' : room.kind === 'stash' ? 'cache' : room.wild && room.kind === 'process' && net(s, 'elite', room) ? 'elite' : room.kind);
+const kindIcon = (s, room) => (!known(s, room.id) ? null : room.nook ? nookIcon(s, room) : room.kind === 'socket' && programIn(s, room.id) ? programIn(s, room.id) : room.mirror ? 'mirror' : room.kind === 'guard' ? 'elite' : room.kind === 'boss' ? 'core' : room.kind === 'stash' ? 'cache' : room.wild && room.kind === 'process' && net(s, 'elite', room) ? 'elite' : room.kind);
+// A fight room shows the family it spawns (a Lure's, while one runs); its kind still sets its outline and hue (lookOf).
+const iconOf = (s, room) => { const k = kindIcon(s, room), f = ['process', 'elite'].includes(k) && !room.mirror && room.family && familyOf(s, room); return f && FAMILY_ICON[f] ? `fam-${f}` : k; };
 // The Exfil where you can see it, and the room it runs to next (when that room is on the map).
 const exfilShown = (s) => { const m = exfilOf(s); return m && exfilSeen(s, m) ? m : null; };
 const exfilStep = (s) => { const m = exfilShown(s), next = m && exfilNext(s, m); return next && seenOf(s, next) ? next : null; };
@@ -335,7 +341,7 @@ const n1 = (v) => +v.toFixed(1);
 // A room's look on the map: its kind's outline and hue (floorplan.css .look-*), so a room reads before its name does.
 // An elite (a guard post, a wild elite) looks like an elite; a socket keeps its pins with a program in it.
 const LOOKS = { process: 'process', elite: 'elite', guard: 'elite', core: 'core', socket: 'socket', cache: 'cache', stash: 'cache', secret: 'cache', purse: 'cache', vault: 'vault', rest: 'rest', entry: 'hall', den: 'hall' };
-const lookOf = (s, room) => (!known(s, room.id) || room.nook ? null : room.kind === 'socket' ? 'socket' : LOOKS[iconOf(s, room)] || LOOKS[room.kind] || null);
+const lookOf = (s, room) => (!known(s, room.id) || room.nook ? null : room.kind === 'socket' ? 'socket' : LOOKS[kindIcon(s, room)] || LOOKS[room.kind] || null);
 // Its outline as a path, centred on (x, y): process (and anything without a look) the cut-corner chip; an elite deep
 // bevels; the Core a point at the foot; a socket a bus slot's pins on both sides; a cache rounded; the vault square;
 // the rest room deeply rounded; the entry and the den a hexagon.
@@ -569,6 +575,7 @@ function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, fi
   // Top left: the tags.
   const tags = [];
   if (kind) {
+    if (look === 'elite') tags.push(['', 'elite', 'rank', 'Elite. A tougher virus, worth more for the kill.']);
     if (room.kind === 'guard' && room.key && !R.opened[room.key] && !R.visit?.keys.includes(room.key)) tags.push(['KEY', 'key']);
     if (room.kind === 'vault' && !opened(s, room)) tags.push(R.visit?.keys.includes(room.id) ? ['KEY FITS', 'key'] : ['LOCKED', 'lock']);
     if (sealed) tags.push(['SEALED', 'hot']);
@@ -586,8 +593,8 @@ function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, fi
   if (race) tags.push([`YOU ${race.you ?? '?'}`, 'race-you'], [`${rv.id} ${race.it}`, 'race-it']);
   let tx = x0 - 6;
   for (const [t, c, icon, tip] of tags) { // a tag with an icon (an objective's): the icon, then its number
-    const w = t ? tagW(t) + (icon ? 10 : 0) : 18; // an icon alone (a Backup's, a Clean run's)
-    out += `<g class="fp-tag ${c}"${tip ? ` title="${esc(tip)}"` : ''}><rect x="${n1(tx)}" y="${n1(y0 - 8)}" width="${w}" height="16" rx="2"/>${icon ? `<use href="#fp-i-${icon}" x="${n1(tx + 4)}" y="${n1(y0 - 5)}" width="10" height="10"/>` : ''}<text x="${n1(tx + w / 2 + (icon ? 5 : 0))}" y="${n1(y0 + 3.5)}" text-anchor="middle">${t}</text></g>`;
+    const big = c === 'elite', w = t ? tagW(t) + (icon ? 10 : 0) : big ? 24 : 18, h = big ? 22 : 16, is = big ? 18 : 10; // an icon alone (a Backup's, a Clean run's); an elite's rank larger
+    out += `<g class="fp-tag ${c}"${tip ? ` title="${esc(tip)}"` : ''}><rect x="${n1(tx)}" y="${n1(y0 - h / 2)}" width="${w}" height="${h}" rx="2"/>${icon ? `<use href="#fp-i-${icon}" x="${n1(tx + (t ? 4 : (w - is) / 2))}" y="${n1(y0 - is / 2)}" width="${is}" height="${is}"/>` : ''}<text x="${n1(tx + w / 2 + (icon ? 5 : 0))}" y="${n1(y0 + 3.5)}" text-anchor="middle">${t}</text></g>`;
     tx += w + 4;
   }
   // Top centre: YOU, and the hunter's skull (beside YOU when it's on you).

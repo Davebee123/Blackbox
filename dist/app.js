@@ -2050,7 +2050,7 @@ function renderMeters() {
     if (resting) eta.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
     $('meter-integrity').classList.toggle('resting', resting);
     meterBuy($('meter-integrity'), 'top up', run ? 0 : topUpCost(campaign),
-      `Integrity: ${hp}/${max}. Your health at home and on a run. It rests back at home${resting ? ` (${f < toConnect ? `${Math.ceil(max * toConnect)} to connect` : 'full'} in ${eta.textContent})` : ''}; an invasion chips it, never below 1.`);
+      `Integrity ${hp}/${max}\nYour health. It regenerates slowly at home${resting ? ` (${f < toConnect ? `${Math.ceil(max * toConnect)} to connect` : 'full'} in ${eta.textContent})` : ''}.`);
   }
   $('vault-value').textContent = srv.credits;
   $('meter-stores').setAttribute('aria-expanded', String(storesOpen));

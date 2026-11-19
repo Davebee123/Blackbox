@@ -1659,7 +1659,6 @@ export function networkCardMarkup(s, who = 'you', opts = {}) {
     <h3 class="net-sub">Native</h3><ul class="net-natives">${natives}</ul>${darkRows}${opts.extra || ''}</section>`;
 }
 
-// The Server page lives in server-view.mjs.
 
 export function logsMarkup(s) {
   return `<div class="page-grid"><section class="card"><h2>Logs</h2><ol class="fulllog">${s.logs.slice(-300).map((e) => `<li>c${e.cycle} · ${esc(e.message)}</li>`).join('')}</ol></section>
@@ -2737,7 +2736,7 @@ export function homeRing(s) {
   const r = 63, c = 2 * Math.PI * r;
   return `<div class="home-ring"><svg class="hsv-ring" viewBox="0 ${-RTOP} ${RC * 2} ${RC * 2 + RTOP}" role="img" aria-label="${esc(`Integrity ${hp} of ${max}${inv ? `; ${inv.name} ${onRoad ? 'on its way' : 'at HOME'}` : ''}`)}">
     <circle class="shell" cx="${RC}" cy="${RC}" r="${RB1 + 10}"/>${road}<g class="blocks">${RING_BLOCKS}</g>${arc}
-    <g class="core"><title>${esc(`Integrity ${hp}/${max}`)}</title><circle class="pit" cx="${RC}" cy="${RC}" r="57"/><circle class="track" cx="${RC}" cy="${RC}" r="${r}"/>
+    <g class="core"><title>${esc(`Integrity ${hp}/${max}. Your health. It regenerates slowly at home.`)}</title><circle class="pit" cx="${RC}" cy="${RC}" r="57"/><circle class="track" cx="${RC}" cy="${RC}" r="${r}"/>
       <circle class="integ ${tone}" cx="${RC}" cy="${RC}" r="${r}" stroke-dasharray="${rf1(c * share)} ${rf1(c)}" transform="rotate(-90 ${RC} ${RC})"/>
       <text class="num ${tone}" x="${RC}" y="${RC + 10}" text-anchor="middle">${hp}</text><text class="of" x="${RC}" y="${RC + 30}" text-anchor="middle">/ ${max}</text></g></svg></div>`;
 }

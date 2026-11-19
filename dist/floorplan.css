@@ -113,15 +113,15 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 .fp-room.k-fog.reach .fp-q { fill: #8a7346; }
 .fp-hair { fill: none; stroke: var(--t); stroke-width: 1; opacity: 0.35; pointer-events: none; }
 /* a room's kind as its hue (floorplan-view.mjs lookOf), while it's live or unused: cleared stays gray, yours teal.
-   The rooms map is the one place these hues mean a kind: magenta an elite, orange a socket, green the rest room,
-   gold the vault, white the entry and the den; red is still a process and the Core, amber a cache. */
-.fp-room.look-elite:is(.t-hot, .t-amber) { --t: #ff4fd8; }
+   The rooms map is the one place these hues mean a kind: orange a socket, green the rest room, gold the vault, white
+   the entry and the den; red is a process, an elite (its bevel and rank tag) and the Core, amber a cache. */
+.fp-room.look-elite.t-amber { --t: var(--hot); }
 .fp-room.look-core:is(.t-hot, .t-amber) { --t: #ff2626; }
 .fp-room.look-socket:is(.t-hot, .t-amber) { --t: #ff9a2a; }
 .fp-room.look-vault:is(.t-hot, .t-amber) { --t: #ffe066; }
 .fp-room.look-rest:is(.t-hot, .t-amber) { --t: #7fdc7a; }
 .fp-room.look-hall:is(.t-hot, .t-amber) { --t: #e6e1d6; }
-.fp-room:is(.look-elite, .look-core, .look-socket, .look-vault, .look-rest, .look-hall):is(.t-hot, .t-amber) .fp-body { fill: color-mix(in srgb, var(--t) 12%, #120d08); }
+.fp-room:is(.look-core, .look-socket, .look-vault, .look-rest, .look-hall):is(.t-hot, .t-amber) .fp-body { fill: color-mix(in srgb, var(--t) 12%, #120d08); }
 .fp-icon { color: var(--t); pointer-events: none; }
 .fp-room.t-gray .fp-icon { opacity: 0.6; }
 .fp-plate { fill: rgba(0, 0, 0, 0.45); pointer-events: none; }
@@ -145,6 +145,7 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 .fp-tag.key rect { fill: var(--next); stroke: none; }
 .fp-tag.key text { fill: #1a1400; font-weight: 700; }
 .fp-tag.hot rect { stroke: var(--hot); } .fp-tag.hot text { fill: var(--hot); }
+.fp-tag.elite rect { stroke: var(--t); } .fp-tag.elite use { color: var(--t); }
 .fp-tag.rare rect { stroke: var(--next); } .fp-tag.rare text { fill: var(--next); font-size: 10px; }
 .fp-tag.lvup text { font-size: 10px; font-weight: 700; } .fp-tag.lvup.con-orange rect { stroke: #ff9a3d; } .fp-tag.lvup.con-orange text { fill: #ff9a3d; } .fp-tag.lvup.con-red rect { stroke: #ff5b3d; } .fp-tag.lvup.con-red text { fill: #ff5b3d; }
 .fp-cost rect { fill: #0a0703; stroke: var(--amber); stroke-width: 1; }
