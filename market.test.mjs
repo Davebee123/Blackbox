@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, materialsOf, tickServices } from './dist/combat.mjs';
-import { WARE_IDS, HUB_CONDITION, CONDITIONS, quote, priceOf, trade, tickMarket, transfersOf, travelMs, MARKET } from './dist/market.mjs';
+import { WARE_IDS, HUB_CONDITION, CONDITIONS, quote, priceOf, trade, tickMarket, transfersOf, travelMs } from './dist/market.mjs';
 import { hubsOf } from './dist/factions.mjs';
 
 const open = () => { const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; s.server.credits = 5000; return s; };
@@ -60,13 +60,16 @@ test('buying pays now and the goods land later; can’t overspend or oversell', 
   assert.equal(materialsOf(s).worm, 0, 'the bottom tier still trades');
 });
 
-test('the world event turns over on the clock, and the market runs from the service tick', () => {
+test('no world event on the clock (the ticker took its place); the market runs from the service tick', () => {
   const s = open();
   tickServices(s, T0);
-  const e0 = s.market.event, rolls = [];
-  for (let i = 1; i <= 6; i++) { tickServices(s, T0 + i * MARKET.eventMs); rolls.push(s.market.event); }
-  assert.notEqual(rolls[0], e0);
-  assert.ok(rolls.every((e, i) => e !== (i ? rolls[i - 1] : e0)), 'never the same twice running');
+  s.market.event = 'outbreak'; s.market.eventUntil = T0 + 1; // an old save's world event: nothing reads it
+  const before = Object.fromEntries(WARE_IDS.map((w) => [w, priceOf(s, 'halcyon', w)]));
+  assert.equal(before.cipher, 14 * CONDITIONS.claims.mult.cipher, 'its condition only');
+  const first = s.serial;
+  for (let i = 1; i <= 6; i++) tickServices(s, T0 + i * 4 * 3600000);
+  assert.ok(!s.logs.some((e) => e.id > first && e.type === 'market-event'), 'no event turns over');
+  for (const w of WARE_IDS) assert.equal(priceOf(s, 'halcyon', w), before[w], w);
   assert.equal(fresh().market, undefined, 'nothing before the hubs');
   tickMarket(fresh(), T0);
 });

@@ -1,8 +1,8 @@
-// The newer event cards (events.mjs): feud (a tug-of-war), bounty hunt, market shock, spotter; and every card's look (event-cards.mjs).
+// The newer event cards (events.mjs): feud (a tug-of-war), bounty hunt, spotter, the retired market shock; and every card's look (event-cards.mjs).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, active, resolveCycle, addLocation } from './dist/combat.mjs';
-import { deal, eventsOf, tickEvents, CARDS, FEUD, HUNT, SHOCK, huntPay, feuds, feudShare, feudPay } from './dist/events.mjs';
+import { deal, eventsOf, tickEvents, CARDS, FEUD, HUNT, huntPay, feuds, feudShare, feudPay } from './dist/events.mjs';
 import { filtersOf } from './dist/filters.mjs';
 import { LOOT } from './dist/gear.mjs';
 import { rep, FACTIONS } from './dist/factions.mjs';
@@ -30,6 +30,8 @@ const win = (s) => {
   for (let i = 0; i < 6 && active(s); i++) { const p = s.encounter.virus.parts.find((x) => x.integrity > 0); command(s, 'spike ' + p.id); resolveCycle(s); }
 };
 const can = (s, card) => CARDS[card].where(s).length > 0;
+// A live market shock, as an old save can hold one (the director no longer deals it: the ticker took its place).
+const oldShock = (s, hub = 'halcyon', ware = 'kernel', mult = 2.5) => { const ev = { id: 900 + eventsOf(s).length, card: 'shock', loc: null, left: CARDS.shock.ms, seed: 1, hub, ware, mult }; eventsOf(s).push(ev); return ev; };
 
 test('each new card deals only when its conditions hold', () => {
   // Feud: level 8, two located hubs that are rivals.
@@ -41,17 +43,16 @@ test('each new card deals only when its conditions hold', () => {
   // Hunt: level 6, two traced servers to hop between.
   assert.ok(!can(world({ level: 5 }), 'hunt'));
   { const s = world({ level: 6 }); assert.ok(can(s, 'hunt')); s.locations.pop(); assert.ok(!can(s, 'hunt'), 'one server: nowhere to hop'); }
-  // Shock: level 5, a hub you can trade at.
-  assert.ok(!can(world({ level: 4 }), 'shock'));
-  { const s = world({ level: 5 }); assert.ok(can(s, 'shock')); s.standing = { halcyon: 1 }; assert.ok(can(s, 'shock'), 'no hub shuts on rep'); }
-  { const s = world({ level: 5 }); s.mail.boardOpen = false; s.mail.story = 0; assert.ok(!can(s, 'shock'), 'no hubs'); }
+  // Shock: retired (the ticker's market cards took its place), never dealt.
+  assert.ok(!can(world({ level: 14, hubs: ['glassjaw', 'kestrel'] }), 'shock'));
+  assert.equal(deal(world({ level: 14, hubs: ['glassjaw', 'kestrel'] }), 'shock'), null);
   // Spotter: level 6, invasions live (a server you've connected to), none scouted already.
   assert.ok(!can(world({ level: 5 }), 'spotter'));
   { const s = world({ level: 6 }); assert.ok(can(s, 'spotter')); s.locations.forEach((l) => { l.runs = 0; }); assert.ok(!can(s, 'spotter'), 'nothing connected sends invasions'); }
   { const s = world({ level: 6 }); s.net = { scouted: { levels: 2 } }; assert.ok(!can(s, 'spotter'), 'one scouted already'); }
   // And dealt by name only when they fit.
   assert.equal(deal(world({ level: 7, hubs: ['glassjaw'] }), 'feud'), null);
-  for (const c of ['feud', 'hunt', 'shock', 'spotter']) assert.equal(deal(world({ hubs: ['glassjaw'] }), c)?.card, c);
+  for (const c of ['feud', 'hunt', 'spotter']) assert.equal(deal(world({ hubs: ['glassjaw'] }), c)?.card, c);
 });
 
 // A feud between GLASSJAW and LANTERN (on the director's dice), and the rep of every faction as it stands.
@@ -196,9 +197,8 @@ test('event cards are shown, not told: no sentence on any card, its action a but
   const cards = [];
   for (const c of ['courier', 'bounty', 'choir', 'feud', 'hunt', 'spotter', 'outbreak', 'shock', 'darknet', 'leak']) {
     s.events = []; s.director.last = null;
-    const ev = deal(s, c);
+    const ev = c === 'shock' ? oldShock(s) : deal(s, c); // an old save's live shock still shows (Halcyon's hub is on this floor's map)
     assert.ok(ev, c);
-    if (c === 'shock') ev.hub = 'halcyon'; // a hub on this floor's map
     const where = c === 'leak' ? ev.loc || s.locations.find((l) => l.leaked)?.id : ev.loc || (ev.hub ? 'hub-' + ev.hub : 'server');
     const html = mapMarkup(s, where);
     const m = html.match(new RegExp(`<section class="evc evc-${c}[\\s\\S]*?</section>`));
@@ -253,25 +253,22 @@ test('a bounty hunt hops three times, a level and more pay each hop, then it\'s 
   assert.equal(deal(world({ level: 9 }), 'hunt').hunter, 'halcyon');
 });
 
-test('a market shock moves exactly that hub\'s ware, and ends', () => {
+test('the director never deals a market shock; an old save\'s live one moves exactly that hub\'s ware, and ends', () => {
   const s = world({ level: 9, hubs: ['kestrel'] }); // Halcyon's and Kestrel's: both on floor 1's map
+  for (let i = 0; i < 200; i++) { s.events = []; s.director.last = null; assert.notEqual(deal(s)?.card, 'shock'); }
+  s.events = [];
   const hubs = Object.keys(FACTIONS), before = Object.fromEntries(hubs.map((f) => [f, Object.fromEntries(WARE_IDS.map((w) => [w, priceOf(s, f, w)]))]));
-  const ev = deal(s, 'shock');
-  assert.ok(SHOCK.wares.includes(ev.ware));
-  assert.ok([SHOCK.up, SHOCK.down].includes(ev.mult));
+  const ev = oldShock(s, 'kestrel', 'kernel', 2.5);
   for (const f of hubs) for (const w of WARE_IDS) {
     const want = f === ev.hub && w === ev.ware ? before[f][w] * ev.mult : before[f][w];
     assert.ok(Math.abs(priceOf(s, f, w) - want) < 1e-9, `${f} ${w}`);
   }
   assert.match(mapMarkup(s, 'hub-' + ev.hub), /hub-shock/, 'a chip on the hub');
   s.director.blipNext = Infinity; // no price flicker (a blip) meanwhile
-  tickEvents(s, SHOCK.ms);
+  s.ticker = { live: [], next: Infinity, n: 0, last: null }; // and no market card
+  tickEvents(s, CARDS.shock.ms);
   assert.equal(eventsOf(s).length, 0);
   for (const f of hubs) for (const w of WARE_IDS) assert.ok(Math.abs(priceOf(s, f, w) - before[f][w]) < 1e-9, 'back to normal');
-  // A crash, one time in three or so.
-  const dirs = new Set();
-  for (let i = 0; i < 30; i++) { s.events = []; dirs.add(deal(s, 'shock').mult); }
-  assert.deepEqual([...dirs].sort(), [SHOCK.down, SHOCK.up]);
 });
 
 test('a spotter: kill it and the next invasion comes weaker, its kind known; ignore it and nothing changes', () => {
@@ -309,7 +306,7 @@ test('the director\'s rolls (dealing, hops, endings) never shift the game\'s rng
   addLocation(s, 'ghostroot'); s.locations.forEach((l) => { l.rogue = false; l.runs = 1; });
   s.director = { next: 9e9, n: 0, last: null };
   const rng = s.rng;
-  for (const c of ['feud', 'hunt', 'shock', 'spotter']) assert.ok(deal(s, c), c);
+  for (const c of ['feud', 'hunt', 'spotter']) assert.ok(deal(s, c), c);
   for (let i = 0; i < 6; i++) tickEvents(s, HUNT.hopMs);
   assert.equal(eventsOf(s).length, 0, 'all over');
   assert.equal(s.rng, rng);
@@ -324,7 +321,7 @@ test('a hunt\'s pager line follows it; developer event names the new cards', () 
   assert.equal(mine.length, 1, 'one line, replaced');
   assert.equal(mine[0].go, `map:${ev.path[1]}`);
   assert.equal(mine[0].from, 'Kestrel');
-  for (const c of ['feud', 'hunt', 'shock', 'spotter']) {
+  for (const c of ['feud', 'hunt', 'spotter']) {
     const t = world({ hubs: ['glassjaw'] });
     play(t, `developer event ${c}`);
     assert.equal(eventsOf(t)[0]?.card, c, c);

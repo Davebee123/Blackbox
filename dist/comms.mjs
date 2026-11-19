@@ -39,6 +39,8 @@ const MAP = {
   'outpost-fell': (e) => ({ kind: 'alert', label: 'Lockdown', from: 'Outpost', text: e.message.replace(/^LOCKDOWN: /, ''), go: e.location ? `map:${e.location}` : 'map', beep: true }),
   'outpost-held': (e) => ({ kind: 'net', label: 'Held', from: 'Outpost', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: false }),
   'transfer-in': (e) => ({ kind: 'paid', label: 'Transfer', from: 'Market', text: e.message, go: e.faction ? `hub:${e.faction}` : 'map', beep: false }),
+  // A market card (ticker.mjs): its owner's line, quiet, gone when the card is. pings.mjs puts the owner in front.
+  ticker: (e) => ({ tk: e.tk, kind: 'net', label: e.name, from: e.owner, text: e.line, go: e.hub ? `hub:${e.hub}:market` : null, beep: false }),
   fleet: (e) => ({ kind: 'alert', label: 'Swarm', from: 'Network', text: e.message.replace(/^SWARM: /, ''), go: 'map:fleet', beep: true, alert: true }),
   'fleet-siege': (e) => ({ kind: 'alert', label: 'Swarm', from: 'Outpost', text: e.message, go: 'map:fleet', beep: true, alert: true }),
   'fleet-broken': (e) => ({ kind: 'net', label: 'Broken', from: 'Swarm', text: e.message.replace(/^SWARM BROKEN\. /, ''), go: e.location ? `map:${e.location}` : 'map', beep: false }),
@@ -112,6 +114,7 @@ export function live(s, c) {
   }
   if (c.event) return (s.events || []).some((x) => x.id === c.event);
   if (c.blip) return (s.director?.blips || []).some((x) => x.id === c.blip);
+  if (c.tk != null) return (s.ticker?.live || []).some((x) => x.id === c.tk);
   return true;
 }
 export function pruneComms(s, now = Date.now()) {

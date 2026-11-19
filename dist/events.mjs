@@ -11,7 +11,7 @@
 //   feud      Two rival factions (located hubs) clash over one of your servers: a tug-of-war bar that drifts on its own.
 //             Pick a side and beat the other's runners, each win a push; take the bar to 100% (or lead at the end) for the bonus.
 //   hunt      A named elite that hops server to server every 5 minutes, a level tougher and better paid each hop.
-//   shock     One hub's price for one ware jumps ×2.5 (or crashes ×0.4) for 15 minutes (market.mjs outsideMult).
+//   shock     Retired: the ticker's market cards took its place (ticker.mjs). Never dealt; an old save's live one ticks out.
 //   spotter   A spotter watches your wall. Kill it at home and the next invasion comes weaker, its kind known (invasion.mjs).
 //   call      A faction server you've found is under attack from its owner's rival. Ignore it, or answer (Defend) and hold it.
 //
@@ -32,6 +32,8 @@
 // Your network's signature (network.mjs) leans the deck: its two favoured cards come up more often, and the
 // families of couriers, bounties and outbreaks lean toward its own.
 //
+// The ticker's market cards (ticker.mjs) run on the same logged-on clock, on dice of their own, outside the slots.
+//
 // Pure: state in, events out.
 import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique, setDrop, WORLD_SOURCES, hooks, gainCode } from './combat.mjs';
 import { FAMILIES, CONFIG, floorFor } from './data.mjs';
@@ -47,6 +49,7 @@ import { invasionsLive, scoutNext, SCOUTED } from './invasion.mjs';
 import { gainPart, pieceOf } from './faction-gear.mjs';
 import { addrsOf } from './address.mjs';
 import { castOf, hired, personFor, HANDLES } from './runners.mjs';
+import { tickTicker } from './ticker.mjs';
 
 export const DIRECTOR = {
   from: 3, // class level the director starts dealing at
@@ -65,10 +68,9 @@ const FAMS = Object.keys(FAMILIES).filter((f) => ['ransomware', 'worm', 'ghostro
 // pay × a bounty's credits and +rep; 100%, or the lead when time's up, wins the feud: your side's good and +bonusRep (its allies a
 // quarter of a win and the bonus). Never a loss with anyone. Each runner also drops a protocol at your level with your side's
 // implicit, and the win gives a part of its piece (faction-gear.mjs) and its good with the implicit. A runner is sized for one (hp: invasion.mjs CHAMPION's). HUNT: a hop every hopMs, hops of them,
-// a level a hop (up to your level + cap), pay × mult[hop]. SHOCK: a hub's ware ×up, or ×down one time in crash.
+// a level a hop (up to your level + cap), pay × mult[hop].
 export const FEUD = { from: 8, ms: 20 * 60000, start: 0.05, driftMs: 60000, drift: [0.02, 0.05], hold: [0.2, 0.8], push: 0.25, pay: 0.5, rep: 4, bonusRep: 6, hp: 1.5 };
 export const HUNT = { from: 6, hopMs: 5 * 60000, hops: 3, cap: 3, mult: [1, 1.3, 1.6, 2], rep: 2 };
-export const SHOCK = { from: 5, ms: 15 * 60000, up: 2.5, down: 0.4, crash: 1 / 3, wares: ['cipher', 'worm', 'kernel', 'salvage'] }; // not Exploits: the wall's and the programs' currency stays steady
 export const SCOUT_EVENT = { from: 6, ms: 10 * 60000 };
 // CALL (docs/factions-plan.md 8), from level 6: a faction server you've found (still its owner's, at your level + 2 or under)
 // is hit by one of its owner's rivals, an elite sized like a feud's runner, for ms of logged-on time. Ignoring it costs
@@ -267,12 +269,12 @@ export const CARDS = {
       return `Bounty collected on ${ev.name}: ${huntPay(ev)} credits.`;
     },
   },
-  // A price spike (or crash) at one hub for one ware: market.mjs multiplies it in (shockMult). No fight.
+  // Retired: the ticker's market cards took its place (ticker.mjs). Never dealt; an old save's live shock (a hub's ware
+  // ×2.5 or ×0.4, market.mjs shockMult) still shows and ticks out.
   shock: {
-    name: 'Market shock', weight: 1, ms: SHOCK.ms, from: SHOCK.from,
-    where: (s) => (hackerLevel(s) >= SHOCK.from && markets(s).length ? [null] : []),
-    make: (s) => { const hub = pick(s, markets(s)), ware = pick(s, SHOCK.wares), down = roll(s) < SHOCK.crash; return { hub, ware, mult: down ? SHOCK.down : SHOCK.up }; },
-    text: (ev) => (ev.mult > 1 ? `${FACTIONS[ev.hub].short} pays ${ev.mult} times the usual for ${WARE_NAME[ev.ware]} for the next ${SHOCK.ms / 60000} minutes.` : `${cap(WARE_NAME[ev.ware])} sells at ${FACTIONS[ev.hub].short} for ${Math.round(ev.mult * 100)}% of the usual for the next ${SHOCK.ms / 60000} minutes.`),
+    name: 'Market shock', retired: true, weight: 0, ms: 15 * 60000,
+    where: () => [],
+    text: (ev) => (ev.mult > 1 ? `${FACTIONS[ev.hub].short} pays ${ev.mult} times the usual for ${WARE_NAME[ev.ware]} for the next 15 minutes.` : `${cap(WARE_NAME[ev.ware])} sells at ${FACTIONS[ev.hub].short} for ${Math.round(ev.mult * 100)}% of the usual for the next 15 minutes.`),
     gone: (ev) => `${FACTIONS[ev.hub].short}'s price for ${WARE_NAME[ev.ware]} is back to normal.`,
   },
   // A spotter watching your wall (not the invasion kind Scout, invasion.mjs): a quick fight at home. Win and the next invasion comes SCOUTED.levels weaker, and
@@ -408,12 +410,13 @@ export const eventText = (s, ev) => CARDS[ev.card].text(ev, placeName(s, ev.loc)
 export const eventMinutes = (ev) => Math.max(1, Math.ceil(ev.left / 60000));
 // Kills of a family in an outbreak drop this much more code.
 export const outbreakMult = (s, family) => (eventsOf(s).some((e) => e.card === 'outbreak' && e.family === family) ? 2 : 1);
-// A market shock on this hub's ware (market.mjs outsideMult): ×SHOCK.up, ×SHOCK.down, or 1.
+// An old save's live market shock on this hub's ware (market.mjs outsideMult): ×2.5, ×0.4, or 1.
 export const shockMult = (s, f, w) => (s.events || []).find((e) => e.card === 'shock' && e.hub === f && e.ware === w)?.mult ?? 1;
 export const shockOf = (s, f) => (s.events || []).find((e) => e.card === 'shock' && e.hub === f) || null;
 
 export function tickEvents(s, dt) {
   openFarm(s); // KESSLER-FARM-00 turns up at level 7 (rogue.mjs)
+  tickTicker(s, dt); // the ticker's market cards (ticker.mjs): their own clock and dice, from the hubs on
   const d = (s.director ||= { next: null, n: 0, last: null });
   tickChains(s, dt); // before the cards end: a follow-up one of them schedules now starts its delay from here
   for (const ev of [...eventsOf(s)]) {
@@ -619,7 +622,7 @@ export function eventWon(s, e) {
 export const BLIP = {
   everyMs: [4 * 60000, 6 * 60000], max: 2,
   cache: { ms: [3 * 60000, 6 * 60000] },
-  flicker: { ms: 5 * 60000, pct: 0.15 },
+  flicker: { ms: 5 * 60000, pct: 0.15, wares: ['cipher', 'worm', 'kernel', 'salvage'] }, // not Exploits: the wall's and the programs' currency stays steady
   rumour: { ms: [2 * 60000, 4 * 60000] },
   sighting: { ms: [4 * 60000, 8 * 60000], due: [60000, 4 * 60000] },
 };
@@ -665,7 +668,7 @@ export const BLIPS = {
   },
   flicker: {
     name: 'Price flicker', icon: 'sync', label: 'Price',
-    where: (s) => markets(s).flatMap((hub) => SHOCK.wares.filter((ware) => shockMult(s, hub, ware) === 1).map((ware) => ({ hub, ware }))),
+    where: (s) => markets(s).flatMap((hub) => BLIP.flicker.wares.filter((ware) => shockMult(s, hub, ware) === 1).map((ware) => ({ hub, ware }))),
     make: (s, { hub, ware }) => ({ hub, ware, mult: broll(s) < 0.5 ? 1 + BLIP.flicker.pct : 1 - BLIP.flicker.pct }),
     text: (s, b) => `${FACTIONS[b.hub].short} ${b.mult > 1 ? 'pays' : 'charges'} ${Math.round(Math.abs(b.mult - 1) * 100)}% ${b.mult > 1 ? 'more' : 'less'} for ${WARE_NAME[b.ware]} for ${BLIP.flicker.ms / 60000} minutes.`,
   },

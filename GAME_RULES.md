@@ -2075,8 +2075,8 @@ Every hub buys and sells what you farm (`market.mjs`): Cipher, Worm and Kernel c
 components (7) it only buys. Each ware shows what you hold, what it pays here, and ▲ ▼ against the average across
 hubs.
 
-- **Prices move on things you can't change.** Each hub has a fixed condition, and one world event at a time (turning
-  over every 4 hours, never the same twice running) touches every hub.
+- **Prices move on things you can't change.** Each hub has a fixed condition, and the ticker's market cards move
+  prices for a while (below).
 
   | Hub | Condition | Effect |
   |---|---|---|
@@ -2086,8 +2086,27 @@ hubs.
   | LANTERN | Thin bandwidth | Worm ×1.45 |
   | NULL CHOIR | Scrap economy | components ×0.6, Cipher ×1.15 |
 
-  World events: Ransomware outbreak (Cipher ×1.5), Worm season (Worm ×1.5), Patch Tuesday (all code ×0.8), Zero-day
-  rush (Exploits ×1.6), Grid blackout (components ×1.5, Kernel ×1.25), Quiet market.
+- **The ticker** (`ticker.mjs`, docs/ticker.md): a market card every 20–40 minutes of logged-on time, from the hubs on,
+  on dice of its own; several can run at once, and nothing moves while you're logged off. A card moves prices for its
+  minutes (20 unless it says) and says why in its owner's voice: a Log line, *Kestrel: Rack 4 will close…*. A card
+  needs its poster's hub found. In the hub's market window it's a tag (▲ or ▼, its name, minutes left; what it does
+  and its line on hover), every price it touches names it in its tooltip, and the hub's map chip shows the strongest.
+
+  | Owner | Card | Does |
+  |---|---|---|
+  | Halcyon | Premium review · Rent day · Small print | One code ×1.6 · Cipher ×1.4 · Cipher ×0.7, there |
+  | Kestrel | Rack closure · Thermal alarm · Insured lots | Components ×1.6 · Kernel ×1.6 · one code ×1.5 (30 min), there |
+  | LANTERN | Census · Beacon repair | Worm ×1.5 (25 min) · components ×1.5, there |
+  | NULL CHOIR | Open mic · Rehearsal · Rollback night | Kernel ×1.5 · Cipher ×1.5, there · components ×0.7 everywhere (30 min) |
+  | GLASSJAW | Report auction · Sink clearance · Early word · Claim files | Exploits ×1.8 · Kernel ×1.5, there · three prices across the hubs ×1.3 or ×0.75 · Exploits ×1.5 there (25 min) |
+  | City Treasury | Tax run | Everything ×1.15 everywhere |
+  | Pellucid Payroll | Wage run | Worm ×0.8 everywhere (30 min) |
+
+  Your network's two favoured cards come up 2.5 times as often. Two cards in five carry a modifier, leaning with your
+  network's style: **Rushed** (half as long, half again as far from ×1), **Lingering** (twice as long, half as far) or
+  **Wide** (a second hub posts it too, only on a card at one hub); Early word takes none. However many stack, a hub's
+  ware stays within ×0.4 and ×2.5. Saved:
+  `s.ticker`. `developer ticker [card] [rushed|lingering|wide]`.
 - **The order ticket:** click a ware for **Sell** or **Buy**, a slider for how many, and a live preview (the total, the
   first and last unit's price, the same order at other hubs, your credits after). `market sell|buy <faction> <ware> <n>`.
 - **Spread and pressure:** a hub asks 15% over its price and pays 15% under (2% better a rep tier above the first).
@@ -2351,7 +2370,6 @@ Each goes to the pager and to #net; missing one costs nothing. The director roll
 | **Darknet listing** (0.5) | the net, from 8 | 20 min | A broker lists a native unique from another network, naming it (`event buy <id>`) | It, for 400 + 40L credits and 2 Exploits |
 | **Feud** (1) | a traced server, from 8, with two rival hubs located | 20 min | A tug-of-war between two rival factions (the bar drifts 2–5% a minute, never past 20/80 alone). *Pick a side* (`event fight <id> <faction>`): fight the other side's runner (one of the net's runners who works for it, by handle: an elite of its family at your level); each win pushes your side +25% and brings a fresh runner. Your side wins at 100%, or ahead when time runs out | Each win: 40 + 7.5L credits, a protocol with your side's implicit. Your side +4 rep. The feud: a **part** of your side's faction piece, one of its goods and your side +6, its allies a quarter of a win and the win (+3). No ripple: a feud never costs rep with anyone |
 | **Bounty hunt** (1.5) | a traced server, from 6, two or more traced | 20 min | A named elite that hops to another of your servers every 5 minutes, 3 hops, a level each | 80 + 15L credits ×1, ×1.3, ×1.6, ×2 by hops made, +2 Kestrel rep |
-| **Market shock** (1) | a hub you can trade at, from 5 | 15 min | One ware's price ×2.5 there, or one time in three ×0.4 | No fight |
 | **Spotter** (1) | your wall, from 6 | 10 min | A spotter watching your wall: *Fight* it | The next invasion comes 2 levels weaker, and you know where from and what kind |
 | **Defence call** (1) | a faction server you've found, from 6, at your level + 2 or under | 10 min | Its owner's rival hits it (an elite of the rival's family at the server's level). Ignoring it costs nothing. *Defend* (`event fight <id>`) answers it: beat the invader at its wall before the clock runs out | Held: +6 rep with the owner (the ripples too). Answered and rebooted: −4 with the owner, no ripple. Your commission's calls ×1.5 (+9, −6) |
 
@@ -2363,7 +2381,8 @@ Your network's two favoured cards come up 2.5 times as often, and couriers', bou
 its lean. A server with an event wears an antenna on the map, and its card shows the event as a small panel: a strip
 with its icon, name and a ring of time left, then its picture with the action built in (the card's sentence is the
 strip's tooltip). An event you're fighting waits for you; losing leaves it up. `developer event [courier|bounty|choir|
-outbreak|leak|darknet|feud|hunt|shock|spotter|call]`.
+outbreak|leak|darknet|feud|hunt|spotter|call]`. The Market shock is retired (the ticker took its place): an old save's
+live one ticks out.
 
 ### Chains
 
@@ -2481,7 +2500,7 @@ pad in a window beside it), **[2] recordings** (the tape), **[3] log**, **[0] di
 | Kind | Stations | Pays |
 |---|---|---|
 | Numbers station | 4 | LANTERN's decode, kept in the log: a hit schedule read out to the rival crews |
-| Pirate broadcast | 3 | A tip for a hub you've found: one ware's price there moves (Kernel ×1.3 for 20 min, Cipher ×0.75 for 60, Worm ×1.5 for 40), shown on the hub like a market shock. Only once you've found a hub |
+| Pirate broadcast | 3 | A tip for a hub you've found: one ware's price there moves (Kernel ×1.3 for 20 min, Cipher ×0.75 for 60, Worm ×1.5 for 40), shown on the hub's ▲/▼ chip. Only once you've found a hub |
 | Distress call | 3 | A one-off thread on the traced server it names (one with no thread, at most 3 levels over you), its ! on the map |
 
 - **Sound** follows Sound and the Effects volume, and plays only while Tune is open: static that thins as your light
@@ -2647,10 +2666,10 @@ no attaching, detaching or memory pips.
   cycles); reaching it, they start on another. They never touch your servers or move a faction. Saved: `s.runners`
   (the logged-on clock, who you know, standing, fee paid, a hire's Integrity, their last two jobs).
 - **Their job** (`chooseJob`), picked at the hub from the six servers nearest their level: the code its family writes,
-  at what their own hub pays for it now (its condition, the world event, a shock or flicker; never your selling or a
+  at what their own hub pays for it now (its condition, a ticker card, a flicker; never your selling or a
   tip you logged), 8% more a level above them, times their odds to a power by temperament (Careful 3, Steady 1, Bold
   0.3), ±10% noise. A cycle first seen on the road keeps the old roll. They read the market and never move it. The
-  runner card's Now row shows the code as its amber glyph, why in its tooltip (*Worm season: every hub pays 1.5× for
+  runner card's Now row shows the code as its amber glyph, why in its tooltip (*Census: LANTERN pays 1.5× for
   it.*); the map tooltip says *for its Worm code*; arriving, their #net line says why.
 - **Meeting**: a runner at work on the server you're on fights in one of its live process or elite rooms: a paper-white
   tab with their handle and their Integrity on its chip. Walk in and the card shows their row and line, the standing a win

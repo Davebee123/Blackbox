@@ -20,6 +20,7 @@ import { hiddenNodes, locate, flagged, bankRoute, hiddenLead, spawnHidden, HIDDE
 import { hiddenNear, reached as floorsReached } from './floors.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
 import { deal, developerChain, CARDS as EVENT_CARDS, dealBlip, BLIPS, RUNCARD_DEAL } from './events.mjs';
+import { developerTicker } from './ticker.mjs';
 import { RUN_CARDS, dealCard } from './runcards.mjs';
 import { crewCommand } from './crew.mjs';
 import { runnerOf, cutOf } from './runners.mjs';
@@ -791,7 +792,7 @@ export function play(s, input) {
   if (/^developer thread\b/.test(text)) return developerThread(s, text.replace(/^developer thread\s*/, ''));
   if (/^developer event( \w+)?$/.test(text) || text === 'developer station') { // an event now
     const first = s.serial, card = text.split(' ')[2] || (text.endsWith('station') ? 'courier' : null);
-    if (card && (!EVENT_CARDS[card] || EVENT_CARDS[card].chain)) warn(s, `developer event [${Object.keys(EVENT_CARDS).filter((k) => !EVENT_CARDS[k].chain).join('|')}]`);
+    if (card && (!EVENT_CARDS[card] || EVENT_CARDS[card].chain || EVENT_CARDS[card].retired)) warn(s, `developer event [${Object.keys(EVENT_CARDS).filter((k) => !EVENT_CARDS[k].chain && !EVENT_CARDS[k].retired).join('|')}]`);
     else if (!deal(s, card)) warn(s, card ? `No ${EVENT_CARDS[card].name.toLowerCase()} fits now${EVENT_CARDS[card].from ? ` (from level ${EVENT_CARDS[card].from})` : ''}, or one is up already.` : 'No event fits now.');
     return since(s, first);
   }
@@ -809,6 +810,7 @@ export function play(s, input) {
     else if (!dealBlip(s, kind)) warn(s, kind ? `No ${BLIPS[kind].name.toLowerCase()} fits now, or one is up already.` : 'No blip fits now.');
     return since(s, first);
   }
+  if (/^developer ticker( \w+){0,2}$/.test(text)) { const first = s.serial; developerTicker(s, text); return since(s, first); } // a market card now (ticker.mjs): developer ticker [card] [rushed|lingering|wide]
   if (/^developer chain( \w+)?$/.test(text)) { const first = s.serial; developerChain(s, text.split(' ')[2] || 'counter'); return since(s, first); } // a follow-up now (events.mjs chains)
   // On rooms (R1): ls, cd, map, go, wait, back, engage, cat, pull, open, force, rest, slip, jack out (floorplan.mjs).
   // Mid-fight, jack out is the emergency escape, as on the old runs.

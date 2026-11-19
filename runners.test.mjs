@@ -9,6 +9,7 @@ import { addLocation } from './dist/combat.mjs';
 import { graphOf, floorsOf } from './dist/floors.mjs';
 import { online } from './dist/presence.mjs';
 import { tickChannel, channelOf } from './dist/channel.mjs';
+import { FACTION_IDS } from './dist/factions.mjs';
 
 const world = (seed = 4242, level = 14) => { const s = fresh(); s.netSeed = seed; s.tutorialCompleted = true; s.hackers = { breaker: { level, xp: 0 } }; return s; };
 // The first logged-on time (on a minute) the runners on floor fl fit: the save's clock set there.
@@ -516,9 +517,11 @@ test('a runner on a road glides to its end by the time the clock gets them there
 });
 
 // Jobs (runners.mjs chooseJob): picked at the hub from what the market pays them, against the risk their temperament takes.
-// Every pick a runner in the cast makes over n cycles at level L under a world event.
-function picks(L, event, n = 40) {
-  const s = world(4242, L); s.market = { event, pressure: {}, transfers: [] };
+// A market card (ticker.mjs) posted at every hub, so every runner's hub reads it: its ware at mult.
+const posted = (card, ware, mult = 1.5) => ({ live: [{ id: 1, card, left: 9e9, ms: 9e9, moves: FACTION_IDS.map((hub) => ({ hub, ware, mult })) }], next: 9e9, n: 1, last: null });
+// Every pick a runner in the cast makes over n cycles at level L under a market card (none: a calm market).
+function picks(L, ticker = null, n = 40) {
+  const s = world(4242, L); s.market = { pressure: {}, transfers: [] }; if (ticker) s.ticker = ticker;
   const out = [];
   for (const r of castOf(s)) {
     const k0 = Math.ceil(r.phase / r.cycle) + 1;
@@ -536,12 +539,12 @@ test('jobs: picked at the hub from what the market pays them now, against the ri
   assert.equal(chooseJob(s, r), job, 'once a cycle');
   const road = when(s, (x, y) => x.stage === 'work' && !s.runners.jobs?.[y.handle]?.some((j) => j.k === x.k));
   assert.equal(chooseJob(s, road.r), null, 'a cycle first seen on the road keeps its roll');
-  // A world event pulls them toward its code, and they say so.
+  // A market card pulls them toward its code, and they say so.
   const count = (xs, w) => xs.filter((x) => x.j.ware === w).length;
-  const calm = picks(14, 'calm'), outbreak = picks(14, 'outbreak'), worms = picks(14, 'wormseason');
-  assert.ok(count(outbreak, 'cipher') > count(calm, 'cipher'), `Cipher: ${count(calm, 'cipher')} → ${count(outbreak, 'cipher')}`);
-  assert.ok(count(worms, 'worm') > count(calm, 'worm'), `Worm: ${count(calm, 'worm')} → ${count(worms, 'worm')}`);
-  assert.ok(outbreak.some((x) => x.j.why === 'event' && x.j.ware === 'cipher' && x.j.ev === 'Ransomware outbreak'));
+  const calm = picks(14), rehearsal = picks(14, posted('rehearsal', 'cipher')), census = picks(14, posted('census', 'worm'));
+  assert.ok(count(rehearsal, 'cipher') > count(calm, 'cipher'), `Cipher: ${count(calm, 'cipher')} → ${count(rehearsal, 'cipher')}`);
+  assert.ok(count(census, 'worm') > count(calm, 'worm'), `Worm: ${count(calm, 'worm')} → ${count(census, 'worm')}`);
+  assert.ok(rehearsal.some((x) => x.j.why === 'event' && x.j.ware === 'cipher' && x.j.ev === 'Rehearsal'));
   assert.ok(calm.some((x) => x.j.why === 'hub'), 'a hub that pays over the odds for a code draws its runners');
   // Careful takes the servers below them, Bold the ones above.
   const gap = (t) => { const xs = calm.filter((x) => x.r.temper === t); return xs.reduce((a, x) => a + x.gap, 0) / xs.length; };
@@ -549,22 +552,22 @@ test('jobs: picked at the hub from what the market pays them now, against the ri
 });
 
 test('jobs on the screen: the card shows the code they are after and why; arriving, they say why on #net', () => {
-  const s = world(4242, 14); s.market = { event: 'wormseason', pressure: {}, transfers: [] };
+  const s = world(4242, 14); s.market = { pressure: {}, transfers: [] }; s.ticker = posted('census', 'worm');
   let x = null;
   for (let i = 0; i < 4 * 3600 && !x; i++) {
     tickRunners(s, 1000);
     x = castOf(s).map((r) => ({ r, st: stateOf(s, r) })).find((y) => y.st.stage === 'work' && y.st.job.why === 'event');
   }
-  assert.ok(x, 'someone took a job for Worm season');
+  assert.ok(x, 'someone took a job for the Census');
   know(s, x.r.handle);
   const card = runnerCard(s, x.r.handle);
-  assert.match(card, /class="rc-ware" title="Worm code\nWhat [^"]+ is after on this job\.\n▸ Worm season: every hub pays 1\.5× for it\."><svg class="glyph"/);
+  assert.match(card, /class="rc-ware" title="Worm code\nWhat [^"]+ is after on this job\.\n▸ Census: [^"]+ pays 1\.5× for it\."><svg class="glyph"/);
   assert.match(runnerRail(s), /, for its Worm code\./, 'the tooltip says it in words');
-  // #net: their arrival line names the event.
+  // #net: their arrival line names the card.
   const lines = []; s.channel = null;
   for (let i = 0; i < 2 * 3600; i++) { tickChannel(s, 1000); }
   for (const l of channelOf(s).lines) lines.push(l.text);
-  assert.ok(lines.some((l) => /worm season\. on .+ for the worm|worm is up everywhere\. working /.test(l)), lines.join(' | '));
+  assert.ok(lines.some((l) => /census\. on .+ for the worm|worm is up at .+\. working /.test(l)), lines.join(' | '));
 });
 
 // SPRAWL-00: a runner between jobs there whose base is the entry, at the hub stage with a minute to go.

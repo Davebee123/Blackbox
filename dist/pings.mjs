@@ -51,6 +51,7 @@ export function lineOf(s, c) {
     if (c.card === 'choir') return `${b(ev.name)} singing through ${b(at)}.`;
     if (c.card === 'hunt') return `Hunt: ${b(ev.name)}, on ${b(at)}.`;
   }
+  if (c.tk != null) return `${b(c.from)}: ${marks(esc(c.text))}`; // a market card (ticker.mjs): its owner, then the whole line
   const sold = c.card === 'darknet' && /lists (.+?),/.exec(c.text);
   if (sold) return `Darknet broker lists ${b(sold[1])}.`;
   const said = first(c.text);

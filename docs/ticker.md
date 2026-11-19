@@ -1,8 +1,11 @@
 # The ticker: market cards
 
-**Status.** Ready to build (November 2026); the look is to be picked from mock-ups. It's what stays of market.md: the
-cards, without sway or INIT's count (now docs/init-table.md). It replaces the wall-clock world event and the Market shock (GAME_RULES
-*Markets*, *Events*). Outposts (outposts.md) are tabled.
+**Status.** Built lean (November 2026, `ticker.mjs`): the cards in section 2 but the crews' runs, favoured cards and
+the style from the seed, Rushed, Lingering and Wide, the clamp, the Log lines, price tooltips naming their cards, and
+look A (the tag). The wall-clock world event and the Market shock are gone (GAME_RULES *Markets*, *Events*). Left for
+after the designer has played it: bulk orders, two buyers, corners, rare cards, Leaked and Quiet, the crews' runs,
+pays.md's *reacting*, and looks B and C. It's what stays of market.md: the cards, without sway or INIT's count (now
+docs/init-table.md). Outposts (outposts.md) are tabled.
 
 ## 1. The rule
 

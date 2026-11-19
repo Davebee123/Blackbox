@@ -22,6 +22,7 @@ const threat = (c) => classOf(c) === 'threat';
 export function glyphOf(c) {
   if (c.card && EVENT_ICON[c.card]) return glyph(EVENT_ICON[c.card]);
   if (c.bk && BLIPS[c.bk]) return glyph(BLIPS[c.bk].icon); // a blip (events.mjs)
+  if (c.tk != null) return glyph('sync'); // a market card (ticker.mjs)
   if (threat(c)) return glyph(c.label === 'Lockdown' ? 'lock' : c.label === 'Swarm' ? 'raid' : c.from === 'Consortium' ? 'relay' : 'firewall');
   if (c.kind === 'ready') return glyph('credits');
   if (c.kind === 'offer') return glyph('contract');

@@ -81,7 +81,7 @@ changes.
 
 1. **P1: supply orders** (economy.md 3), so code, components and Exploits always have a buyer.
 2. **P2: the pay changes** (the map's last column) and each card leading with its own thing. Nothing saved.
-3. **P3: reacting**, after the ticker.
+3. **P3: reacting**, next: the ticker is built (docs/ticker.md).
 4. **P4: patches** (economy.md 2), the long goal.
 
 Quest sites build after P2. Supply orders and the pay changes are economy work: one session after the other.

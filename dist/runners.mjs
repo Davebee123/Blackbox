@@ -160,8 +160,8 @@ function loopAt(s, r, t) {
 }
 const serversNear = (g, L) => Object.values(g.nodes).filter((n) => n.kind === 'server').sort((a, b) => Math.abs(a.level - L) - Math.abs(b.level - L) || (a.id < b.id ? -1 : 1));
 // ---------- the job ----------
-// What the market tells a runner about a ware at their own hub (market.mjs marketRead: the hub's condition, the world
-// event, a shock; never your own selling, never a tip you logged): { mult, hub, event, shock, eventName }.
+// What the market tells a runner about a ware at their own hub (market.mjs marketRead: the hub's condition, the ticker's
+// cards, a flicker; never your own selling, never a tip you logged): { mult, hub, event, shock, eventName }.
 const readOf = (s, r, w) => (w ? marketRead(s, r.faction, w) : { mult: 1, hub: 1, event: 1, shock: 1 });
 // Their job on cycle k: the one they picked at the hub (chooseJob), else the old roll among the four servers nearest
 // their level (a cycle that began before you logged on). { k, fl, target, ware, why, ev }.
@@ -173,8 +173,8 @@ function jobOf(s, r, k, fl, g, L) {
 }
 // At the hub, a runner picks the cycle's job: of the servers nearest their level (RUNNERS.pool), the one whose code
 // their hub pays most for now, a level above them a little more, weighed by their odds on it to their temperament's
-// power (Careful dreads a crash, Bold barely minds), with a little noise. why: what decided it (event, shock, hub,
-// safe, rich, or null). Kept on the save, the newest two a runner. Returns the job, or null off the hub stage.
+// power (Careful dreads a crash, Bold barely minds), with a little noise. why: what decided it (event: a ticker card,
+// ev its name; shock, hub, safe, rich, or null). Kept on the save, the newest two a runner. Returns the job, or null off the hub stage.
 export function chooseJob(s, r, t = clockOf(s)) {
   const { L, k, u, fl, g } = loopAt(s, r, t);
   const jobs = (runnersOf(s).jobs ||= {}), mine = jobs[r.handle] || [];
@@ -197,7 +197,7 @@ export function chooseJob(s, r, t = clockOf(s)) {
 export function whyText(s, r, job) {
   if (!job?.ware) return '';
   const hub = FACTIONS[r.faction]?.short || 'Their hub', m = readOf(s, r, job.ware), x = (n) => `${Math.round(n * 100) / 100}×`;
-  if (job.why === 'event') return `${job.ev || 'A world event'}: every hub pays ${x(m.event)} for it.`;
+  if (job.why === 'event') return `${job.ev || 'A market card'}: ${hub} pays ${x(m.event)} for it.`;
   if (job.why === 'shock') return `A market shock has it at ${x(m.shock)} at ${hub}.`;
   if (job.why === 'hub') return `${hub}, who pay them, pay ${x(m.hub)} for it.`;
   if (job.why === 'safe') return 'Careful: a server below their level.';

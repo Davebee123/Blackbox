@@ -1,8 +1,8 @@
 // Markets: each faction hub buys and sells what you farm (the three codes, Exploits, components).
 // Prices move on things you can't change: each hub's own condition (Kestrel's data centre runs
-// hot, so it pays well for Kernel code to tune its racks), a world event that rotates every few
-// hours, and how much has been sold there lately (you selling a lot drives the price down; it
-// recovers over real time). What you can do is read them and trade where the prices are good.
+// hot, so it pays well for Kernel code to tune its racks), the ticker's market cards (ticker.mjs,
+// on logged-on time), and how much has been sold there lately (you selling a lot drives the price
+// down; it recovers over real time). What you can do is read them and trade where the prices are good.
 //
 // Trades are file transfers: what you sell leaves your stock now and its credits arrive when the
 // transfer completes; what you buy is paid now and arrives later. Transfer time depends on the hub, and
@@ -10,9 +10,9 @@
 import { emit, warn, materialsOf, hooks, rand, firstTime, addItem } from './combat.mjs';
 import { addFilter, rollFilter } from './filters.mjs';
 import { FACTIONS, hubsOf, repTier, hubFound } from './factions.mjs';
-import { seeded } from './gear.mjs';
 import { deliverGoods } from './store.mjs';
 import { deal, shockMult, flickerMult } from './events.mjs';
+import { tickerMult, tickerName } from './ticker.mjs';
 import { learnCodebase } from './sockets.mjs';
 import { gainComponents, componentsOf, spend } from './salvage.mjs';
 
@@ -28,8 +28,7 @@ export const WARES = {
 };
 export const WARE_IDS = Object.keys(WARES);
 
-// Conditions: a multiplier on what a hub pays (and asks) for each ware. Each hub has its own,
-// fixed; one world event at a time touches every hub.
+// Conditions: a multiplier on what a hub pays (and asks) for each ware. Each hub has its own, fixed.
 export const CONDITIONS = {
   claims: { name: 'Claims backlog', about: 'Halcyon is buried in ransomware claims and pays to study the code.', mult: { cipher: 1.35 } },
   blackbudget: { name: 'Black budget', about: 'GLASSJAW buys every Exploit it can, no questions.', mult: { exploit: 1.5 } },
@@ -38,40 +37,32 @@ export const CONDITIONS = {
   scrapyard: { name: 'Scrap economy', about: 'NULL CHOIR lives on components and has more than it needs.', mult: { salvage: 0.6, cipher: 1.15 } },
 };
 export const HUB_CONDITION = { halcyon: 'claims', glassjaw: 'blackbudget', kestrel: 'hotracks', lantern: 'thinpipe', nullchoir: 'scrapyard' };
-export const EVENTS = {
-  outbreak: { name: 'Ransomware outbreak', about: 'A wave of ransomware hits, and everyone wants Cipher code.', mult: { cipher: 1.5 } },
-  wormseason: { name: 'Worm season', about: 'A worm tears through the backbone, and Worm code is in demand.', mult: { worm: 1.5 } },
-  patchday: { name: 'Patch Tuesday', about: 'Everyone patched last night, so code is cheap for a while.', mult: { cipher: 0.8, worm: 0.8, kernel: 0.8 } },
-  zerorush: { name: 'Zero-day rush', about: 'A zero-day panic grips the market, and Exploits fetch a fortune.', mult: { exploit: 1.6 } },
-  blackout: { name: 'Grid blackout', about: 'A city grid failed, and components and Kernel code go to rebuilding it.', mult: { salvage: 1.5, kernel: 1.25 } },
-  calm: { name: 'Quiet market', about: 'Nothing is moving. Prices sit near normal.', mult: {} },
-};
 export const MARKET = {
   spread: 0.15, // a hub asks 15% over its price and pays 15% under
   pressure: 0.04, // each unit sold there lately takes 4% off its price (bought, adds 4%)
   recover: 0.12, // and the pressure eases 12% an hour
-  eventMs: 4 * 3600000, // the world event turns over every 4 hours
   travelMin: { halcyon: 5, kestrel: 8, lantern: 10, glassjaw: 12, nullchoir: 15 }, // file transfer, minutes
   relayCut: 0.1, // each relay you've installed: 10% faster, up to 40%
   maxLots: 99,
 };
 
-const marketOf = (s) => (s.market ||= { pressure: {}, transfers: [], serial: 0, event: 'calm', eventUntil: 0, at: null });
-export const eventOf = (s) => EVENTS[marketOf(s).event] || EVENTS.calm;
+// An old save's s.market still carries the retired world event (event, eventUntil): nothing reads it.
+const marketOf = (s) => (s.market ||= { pressure: {}, transfers: [], serial: 0, at: null });
 
-// What moves a hub's price that you can't: its condition × the world event × a market shock
-// on this hub's ware (events.mjs, the Market shock card) × a price flicker (a blip) × a pirate's tip you logged (scanner.mjs).
+// What moves a hub's price that you can't: its condition × the ticker's cards (ticker.mjs) × an old save's market shock
+// still ticking out (events.mjs) × a price flicker (a blip) × a pirate's tip you logged (scanner.mjs).
 // A tip is { hub, ware, mult, until } in s.scanner.tips (scanner.mjs catchStation).
 export const tipMult = (s, f, w) => (s.scanner?.tips || []).find((x) => x.hub === f && x.ware === w && x.until > now())?.mult ?? 1;
 export function outsideMult(s, f, w) {
-  const cond = CONDITIONS[HUB_CONDITION[f]]?.mult[w] ?? 1, ev = eventOf(s).mult[w] ?? 1;
-  return cond * ev * shockMult(s, f, w) * flickerMult(s, f, w) * tipMult(s, f, w);
+  const cond = CONDITIONS[HUB_CONDITION[f]]?.mult[w] ?? 1;
+  return cond * tickerMult(s, f, w) * shockMult(s, f, w) * flickerMult(s, f, w) * tipMult(s, f, w);
 }
 // What a runner reads off the market (runners.mjs chooseJob): the public part of a hub's price for a ware (never your
-// selling, never a tip you logged) and what moved it. Reads the save without writing to it.
+// selling, never a tip you logged) and what moved it: event is the ticker's, eventName the card driving it hardest.
+// Reads the save without writing to it.
 export function marketRead(s, f, w) {
-  const e = EVENTS[s.market?.event] || EVENTS.calm, hub = CONDITIONS[HUB_CONDITION[f]]?.mult[w] ?? 1, event = e.mult[w] ?? 1, shock = shockMult(s, f, w) * flickerMult(s, f, w);
-  return { mult: hub * event * shock, hub, event, shock, eventName: e.name };
+  const hub = CONDITIONS[HUB_CONDITION[f]]?.mult[w] ?? 1, event = tickerMult(s, f, w), shock = shockMult(s, f, w) * flickerMult(s, f, w);
+  return { mult: hub * event * shock, hub, event, shock, eventName: tickerName(s, f, w) };
 }
 // The price at a hub for one unit, before the spread: base × outside factors × your own pressure
 // (selling pushes it down to 35% at most, buying up to 160%).
@@ -152,20 +143,14 @@ export function orderMax(s, side, f, w) {
   return n;
 }
 
-// The clock (real time, offline too): transfers complete, pressure eases, the world event turns over.
+// The clock (real time, offline too): transfers complete, pressure eases. The ticker's cards run on logged-on time
+// instead (ticker.mjs, from events.mjs tickEvents).
 export function tickMarket(s, at = now()) {
   if (!hubsOf(s).length) return;
   const m = marketOf(s);
   const hours = m.at == null ? 0 : Math.max(0, at - m.at) / 3600000;
   m.at = at;
   if (hours) for (const f of Object.keys(m.pressure)) for (const w of Object.keys(m.pressure[f])) m.pressure[f][w] *= Math.pow(1 - MARKET.recover, hours);
-  if (at >= (m.eventUntil || 0)) {
-    // Seeded by the clock, not the game's dice: the market doesn't move anything else's luck.
-    const first = !m.eventUntil, keys = Object.keys(EVENTS).filter((k) => k !== m.event);
-    m.event = keys[Math.floor(seeded(Math.floor(at / 60000) >>> 0)() * keys.length)];
-    m.eventUntil = at + MARKET.eventMs;
-    if (!first) emit(s, 'market-event', `Market: ${EVENTS[m.event].name}. ${EVENTS[m.event].about}`, {});
-  }
   for (const t of m.transfers.filter((x) => at >= x.landsAt)) {
     m.transfers.splice(m.transfers.indexOf(t), 1);
     if (t.side === 'good') {
