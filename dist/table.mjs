@@ -46,13 +46,17 @@ export const trashItemMult = (s) => 1 + TABLE.trashItems * full(s);
 export const clearOddsMult = (s) => 1 + TABLE.clearOdds * clear(s);
 export const rareMult = (s) => 1 + TABLE.rare * clear(s);
 export const ORPHAN_TIP = 'Orphan\nA trade still waiting for its other side.\nBreaking it frees a slot.';
-// The header meter's tooltip (app.js tableMeter), in WoW's grammar: the name, the band as its kind (tableKind), what
-// the band does at this count, then the answer, muted.
+// The header meter's tooltip (app.js tableMeter), in WoW's grammar: the name, the band as its kind (tableKind), then
+// what the band does now as rows (view.mjs tableMore draws them, with the band bar), the answer muted.
 export const tableKind = (s) => (full(s) > 0 ? 'Full band' : clear(s) > 0 ? 'Clear band' : 'Between the bands');
-export function tableTip(s) {
-  const f = full(s), c = clear(s), pct = (x) => `${Math.round(x * 100)}%`, x = (m) => `${m.toFixed(2)}×`;
-  const now = f > 0 ? [`Orphans are 1 stray in ${Math.round(1 / orphanShare(s))}.`, `Orphan kills pay +${pct(TABLE.orphanXp * f)} XP.`, `Trash drops whites and blues ${x(1 + TABLE.trashItems * f)} as often.`, 'Elites bring an orphan along.']
-    : c > 0 ? [`Orphans are 1 stray in ${Math.round(1 / orphanShare(s))}.`, `Break-ins and Intel pay +${pct(TABLE.intelXp * c)} XP.`, `Elites, ★ rare spawns and vaults drop blues and yellows ${x(1 + TABLE.clearOdds * c)} as often.`, `★ rare spawns turn up ${x(1 + TABLE.rare * c)} as often.`]
-    : ['Orphans are 1 stray in 8.', 'The net runs as it is.'];
-  return `Process table: ${now.join('\n')}\nThe Full band starts at ${TABLE.full[0]}%, the Clear band at ${TABLE.clear[0]}%.\nTime logged on fills it. Orphans broken, servers Mapped and Orphans contracts empty it.\n▸ Break orphans to clear it, or let it fill.`;
+export const tableTip = () => 'Process table: \n▸ Break orphans to empty it, or let it fill.';
+// What the band does at this count: [glyph, what, value] a row.
+export function tableRows(s) {
+  const f = full(s), c = clear(s), pct = (x) => `+${Math.round(x * 100)}%`, x = (m) => `×${Math.round(m * 100) / 100}`;
+  const rows = [[null, '◌ Orphans', `1 in ${Math.round(1 / orphanShare(s))}`]];
+  if (f > 0) rows.push(['xp', '◌ Orphan kills', pct(TABLE.orphanXp * f)], ['item', 'Trash', x(1 + TABLE.trashItems * f)], [null, 'Elites', '+1 ◌']);
+  if (c > 0) rows.push(['xp', 'Break-ins, Intel', pct(TABLE.intelXp * c)], ['item', 'Elites, ★, vaults', x(1 + TABLE.clearOdds * c)], ['target', '★ Rare spawns', x(1 + TABLE.rare * c)]);
+  return rows;
 }
+// How it moves: [what, [glyph, value] a chip].
+export const tableMoves = () => [['Fills', [['clock', `+${TABLE.perHour} an hour`]]], ['Empties', [[null, `◌ −${TABLE.orphan}`], ['node', `−${TABLE.mapped}`], ['contract', `−${TABLE.contract}`]]]];

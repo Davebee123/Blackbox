@@ -2430,7 +2430,7 @@ Each band grows from its edge to its end:
 | XP | Orphan kills +25% | Break-ins and Intel +25% |
 | Gear | Trash rolls a white or blue up to 1.5× as often | Blue and yellow odds up to ×1.4 on elites, ★ rare spawns and vaults |
 
-The header shows it as *Process table N%*; its tooltip says what the band does now.
+The header shows it as *Process table N%*; its tooltip draws the bar from 70% to 95% with the count's tick, the band's effects as rows, and what fills and empties it.
 
 ## The scanner
 
