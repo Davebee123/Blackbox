@@ -20,9 +20,9 @@ first transmission comes in over the map (Transmissions).
 
 ### The loop
 
-1. `connect sprawl`: **SPRAWL-00**, the starter server, ten rooms of strays in level bands (the six beside the
-   entry at level 1, the four past them at 2–3; `ZONE_BAND`), each stray rolling its level in its room's band. An
-   older save's SPRAWL-00 is laid out again on load. Walk into a room and `engage`. Your first two kills there hit at 60%
+1. `connect sprawl`: **SPRAWL-00**, the starter server, a plus of twelve stray rooms, an arm of three each way
+   from the entry, a level a ring (1 beside the entry, then 2, then 3; `ZONE_BAND`), RELAY-KING's Core at the top
+   arm's tip. An older save's SPRAWL-00 is laid out again on load. Walk into a room and `engage`. Your first two kills there hit at 60%
    (`CONFIG.zone.starterHit`). A kill pays at once, and the room fills again 90 seconds later. Its Core opens from
    level 3.
 2. The network is a stack of eight **floors**; SPRAWL-00 is floor 1's entry. The servers linked to what you know show
@@ -587,7 +587,7 @@ last round's, compounding (×1.4 by round 5, ×1.85 by round 9), its enrage on t
 
 | Boss | Where | From | Integrity | Enrages |
 |---|---|---|---|---|
-| RELAY-KING (worm) | SPRAWL-00's relay room (level 5), a Core sealed until level 3; back 30 minutes after it falls | level 3 | 1.31× | cycle 36 |
+| RELAY-KING (worm) | SPRAWL-00's Core, the top arm's tip (level 5), a Core sealed until level 3; back 30 minutes after it falls | level 3 | 1.31× | cycle 36 |
 | REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.84× | cycle 34 |
 | HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.33× | cycle 40 |
 

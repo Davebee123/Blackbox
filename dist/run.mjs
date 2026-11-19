@@ -97,12 +97,12 @@ const ZONE_FAMILIES = ['ransomware', 'worm', 'ghostroot'];
 // past that, the fights worth having are on the servers you trace. Below level 3 no Ghostroot (it's veiled): your first fights show you what's
 // coming (Slay the Spire).
 export const kingOpen = (s) => hackerLevel(s) >= 3;
-// A SPRAWL-00 room's level band: the nearer folders lower (docs/scaling.md 4), at least two rooms to a band. Each
-// stray rolls its level in the band off its own seed. The six rooms by the entry are level 1, the four past them 2–3. RELAY-KING, in
-// /net/relay, at the top.
+// A SPRAWL-00 room's level band: its ring on the plus (netrooms.mjs SPRAWL_ARMS), level 1 next to the entry and a level
+// more each ring out (docs/scaling.md 4). RELAY-KING, in /net/relay at the top arm's tip, at the top.
 export const ZONE_BAND = {
-  '/tmp': [1, 1], '/srv': [1, 1], '/home': [1, 1], '/dev': [1, 1], '/var': [1, 1], '/net': [1, 1],
-  '/var/spool': [2, 3], '/var/cache': [2, 3], '/var/log': [2, 3], '/home/guest': [2, 3],
+  '/net': [1, 1], '/var': [1, 1], '/home': [1, 1], '/dev': [1, 1],
+  '/net/hub': [2, 2], '/var/log': [2, 2], '/home/guest': [2, 2], '/tmp': [2, 2],
+  '/net/gate': [3, 3], '/var/spool': [3, 3], '/var/cache': [3, 3], '/srv': [3, 3],
 };
 export function zoneSpawns(s, now = clock()) {
   const z = zoneOf(s);

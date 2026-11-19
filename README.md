@@ -25,8 +25,8 @@ other file copied but the editor. The Pages workflow (`.github/workflows/pages.y
 
 ## How a session goes
 
-- **SPRAWL-00** is where you start: a starter server of ten rooms with a stray in each, in level bands (1 by
-  the entry, 2–3 past them). Kill them to trace the servers linked to it. A room fills again 90 seconds after its stray falls. Its
+- **SPRAWL-00** is where you start: a starter server laid out as a plus (netrooms.mjs `sprawlGraph`): twelve
+  rooms with a stray in each, a level a ring (1, 2, 3), RELAY-KING's Core at the top arm's tip. Kill them to trace the servers linked to it. A room fills again 90 seconds after its stray falls. Its
   Core (RELAY-KING) opens from level 3.
 - **Floors.** The network is a stack of eight floors. Each server you trace sits on one, at a fixed level; each floor
   has an exit down.
