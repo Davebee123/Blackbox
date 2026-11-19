@@ -50,6 +50,7 @@ import { vaultItem, zoneSpawns, kingOpen, spawnFight, levelOf, layoutOf, fileInf
 import { blipStood, blipRooms, runCardRoll, runCardUp, runCardEnd } from './events.mjs';
 import { RUN_CARDS } from './runcards.mjs';
 import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
+import { siteWon } from './sites.mjs';
 
 export const KIND_OF = FP.KIND_OF;
 export const NET = {
@@ -275,6 +276,7 @@ WORLD_hook('coreOpen', (s) => {
   if (loc.zone) return kingOpen(s); // RELAY-KING holds the Core from level 3
   if (loc.farm) return !!loc.state?.unlocked?.['/ledger'];
   if (loc.lair) return lairOpen(s, loc);
+  if (loc.site) return true; // a quest site's Core: its lock, open from the start (sites.mjs)
   if (loc.temp) return tempCoreOpen(loc); // a temporary server's kill switch: once you know it (threads.mjs)
   if (isWild(loc)) return true;
   return R.graph.vaults[0] ? !!R.opened[R.graph.vaults[0]] : true;
@@ -304,6 +306,8 @@ WORLD_hook('fight', (s, room, as) => {
   if (room.kind === 'core' && R.type === 'server') {
     const level = residentLevel(loc, now()), seed = (((loc.seed || 1) * 7 + 31) >>> 0) + (R.spawns[room.id] || 0) * 7919;
     // Guarded (specials.mjs): a crew elite holds the Core in the Resident's place, as a Pit's (rogue.mjs).
+    // A rig's lock (sites.mjs): an elite of its crew in the Core.
+    if (loc.site) { const name = `THE LOCK · ${loc.name}`; return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: loc.family, elite: true, mutation: null, name, author: R.author }, size: 'elite', name, level, family: loc.family, elite: true, author: R.author }; }
     if (hasSpecial(loc, 'guarded') && !loc.temp) { const name = `ELITE · ${loc.name}`; return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: loc.family, elite: true, mutation: armoredAt(loc) ? 'armored' : null, name, author: R.author }, size: 'elite', name, level, family: loc.family, elite: true, author: R.author }; }
     // A floor job's boss (arcs.mjs jobBossAt): it holds this Core in the Resident's place.
     const job = !loc.temp && jobBossAt(s, loc);
@@ -334,7 +338,7 @@ WORLD_hook('won', (s, room, e, { first = false, mirror = false, rare = false } =
   contractBounty(s, loc, room); // a board bounty on this room (mail.mjs)
   if (room.kind === 'guard') clearedFor(s, loc); // a faction's server: they notice (factions.mjs)
   if (room.kind === 'core' && e.virus.boss && e.virus.boss === jobBossAt(s, loc)) loc.jobFell = now(); // a floor job's boss: no takeover (arcs.mjs)
-  else if (room.kind === 'core') { if (loc.temp) tempKilled(s, loc); else takeover(s, loc, room); } // a temporary server's kill switch: dark for good (threads.mjs)
+  else if (room.kind === 'core') { if (loc.site) siteWon(s, loc); else if (loc.temp) tempKilled(s, loc); else takeover(s, loc, room); } // a rig's lock broken (sites.mjs); a temporary server's kill switch: dark for good (threads.mjs)
   // Root (2.8): a respawned fight room cleared on a server you hold.
   if (!first && owned(loc) && FP.FIGHTS.includes(room.kind) && room.kind !== 'core') { rootClear(s, loc, hasSpecial(loc, 'hardened') ? SPECIAL.root : 1); earnEvent(s, { kind: 'root-clear', floor: loc.depth || 1 }); } // Hardened: twice as fast; Bootloader's count
 });

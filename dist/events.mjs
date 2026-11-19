@@ -414,6 +414,7 @@ export const shockOf = (s, f) => (s.events || []).find((e) => e.card === 'shock'
 
 export function tickEvents(s, dt) {
   openFarm(s); // KESSLER-FARM-00 turns up at level 7 (rogue.mjs)
+  hooks.tickSites?.(s, dt); // quest sites: their clocks, and the next one (sites.mjs, on its own dice; a hook: it loads with the rooms engine)
   const d = (s.director ||= { next: null, n: 0, last: null });
   tickChains(s, dt); // before the cards end: a follow-up one of them schedules now starts its delay from here
   for (const ev of [...eventsOf(s)]) {

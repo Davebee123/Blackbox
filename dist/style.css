@@ -4372,6 +4372,30 @@ body.no-motion .recap { animation: none; }
 .mnode.temp .mlabel.th { fill: var(--amber); }
 .mnode.temp.dark .mlabel { fill: var(--gray); }
 .mlink.tlink { stroke: rgba(241, 185, 47, 0.45); stroke-dasharray: 3 4; }
+/* A quest site's rig (sites-view.mjs): the temporary frame in the threat's red, the lock in it, a ring of the run's time
+   left; a red dashed aim at the server its run passes. Grey once it has settled or landed. Nothing moves. */
+.mnode.site .sframe { fill: rgba(255, 91, 61, 0.08); stroke: var(--hot); stroke-width: 1.4; stroke-dasharray: 3 2.5; }
+.mnode.site .sico { fill: none; stroke: var(--hot); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.mnode.site .sr-bg { fill: none; stroke: rgba(255, 91, 61, 0.2); stroke-width: 2; }
+.mnode.site .sr-fg { fill: none; stroke: var(--hot); stroke-width: 2; stroke-linecap: round; }
+.mnode.site.here .sframe { stroke: var(--you); }
+.mnode.site.done .sframe { fill: rgba(125, 115, 98, 0.08); stroke: var(--gray); stroke-dasharray: none; }
+.mnode.site.done .sico { stroke: var(--gray); }
+.mlink.saim { stroke: var(--hot); stroke-dasharray: 5 4; opacity: 0.8; }
+/* Its card: the run as a track from the lock to the server it passes, then what it pays as icons. */
+.site-card .hot-t { color: var(--hot); }
+.site-run { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 8px; font: 600 12px var(--mono); }
+.site-run .sr-end { display: inline-flex; color: var(--muted); } .site-run .sr-end .glyph { width: 14px; height: 14px; margin: 0; }
+.site-run .sr-end.hot-t { color: var(--hot); }
+.site-run .sr-track { position: relative; height: 2px; background: repeating-linear-gradient(90deg, rgba(255, 91, 61, 0.55) 0 5px, transparent 5px 9px); }
+.site-run .sr-track > i { position: absolute; left: 0; top: -2px; height: 6px; background: var(--hot); }
+.site-run .sr-what { display: grid; line-height: 1.2; text-align: right; } .site-run .sr-what b { color: var(--text); } .site-run .sr-what small { color: var(--dim); }
+.site-pay { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 4px 2px; border-top: 1px solid color-mix(in srgb, var(--ec) 22%, transparent); }
+.site-pay .evc-rw.sp { display: inline-flex; align-items: center; gap: 6px; font: 600 15px var(--mono); color: var(--text); }
+.site-pay .evc-rw.sp .glyph { width: 18px; height: 18px; margin: 0; }
+.site-pay .evc-rw.sp-f { color: var(--fc); }
+.site-pay .sp-gap { flex: 1; }
+.site-pay .evc-rw.tbl { font: 600 12px var(--mono); gap: 4px; color: color-mix(in srgb, var(--hot) 70%, var(--dim)); }
 .mnode.transit { pointer-events: none; }
 .mnode.transit .troute { fill: none; stroke: var(--amber); stroke-width: 1.4; stroke-dasharray: 5 6; opacity: 0.65; }
 .mnode.transit .tbg { fill: #1a1103; stroke: var(--amber); stroke-width: 1.2; }

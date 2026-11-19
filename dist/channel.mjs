@@ -67,6 +67,10 @@ const clsName = (c) => ARCHETYPES[c]?.name || c;
 const room = (folder) => hooks.sprawlRoomName?.(folder) || folder;
 const sims = (s) => online(s);
 const you = (s) => handleOf(s);
+// LANTERN's way with a number: its digits, read out (412: Four. One. Two.). And the minutes a run takes, in words.
+const DIGIT = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+const digits = (n) => String(n || 0).split('').map((d) => DIGIT[+d]).join('. ');
+const WORDS = { 17: 'seventeen', 18: 'eighteen', 19: 'nineteen', 20: 'twenty' };
 
 // ---------- the contacts (view.mjs VOICE: who answers at each hub) ----------
 // Each speaks for its side: after a feud it was in (won or lost, never at you), and now and then by your tier.
@@ -124,6 +128,14 @@ const NEWS = {
   'world-event-hop': (s, e) => { const ev = (s.events || []).find((x) => x.id === e.event); return ev ? wire(s, `${ev.name} hopped to ${placeName(s, e.location)}. Level ${ev.level} now.`) : null; },
   'world-event-end': (s, e) => ended(s, e, false),
   'world-event-won': (s, e) => ended(s, e, true),
+  // A quest site (sites.mjs): LANTERN reads a Settlement run's count out as numbers; the institution's faction thanks you.
+  site: (s, e) => {
+    const crew = (e.crew || '').toUpperCase(), short = e.short || 'a settlement run';
+    if (e.phase === 'up') return known(s, 'lantern') ? contact(s, 'lantern', `${digits(e.trades)}. ${short[0].toUpperCase()}${short.slice(1)} settles in ${WORDS[e.mins] || `${e.mins}`} minutes. ${crew} on the line.`) : wire(s, `${crew} is locking ${short}'s settlement run.`);
+    if (e.phase === 'won') return known(s, e.faction) ? contact(s, e.faction, CONTACTS[e.faction].thanks({ you: you(s) })) : null;
+    if (e.phase === 'landed') return wire(s, `${short[0].toUpperCase()}${short.slice(1)} didn't settle. ${e.trades} trades went to the table.`);
+    return null;
+  },
   collected: (s, e) => {
     const name = UNIQUES[e.unique]?.name;
     if (!name) return null;

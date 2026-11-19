@@ -81,6 +81,7 @@ import { daemonText } from './daemons.mjs';
 import { ROOMS as ROOMS_FP, KIND_OF, KINDS as KINDS_FP, offlineLeft } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
 import { rivalP } from './rivals.mjs';
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
+import { siteNodes, siteNodeSvg, siteCard, siteRows } from './sites-view.mjs';
 import { arcRows, arcReader } from './arcs-view.mjs';
 import { threadById, serverMarks } from './threads.mjs';
 import { tipOf, postFound } from './scanner.mjs';
@@ -2150,6 +2151,8 @@ export function mapLayout(s, floor = null, portrait = mapPortrait) {
   }
   // A thread's temporary servers on this floor (threads.mjs): beside the server they grew from, a dashed link to it.
   for (const t of tempNodes(s, n)) { const node = put(portrait ? { ...t, x: t.y, y: t.x } : t); const host = byId[t.host]; if (host) links.push({ from: host.id, to: node.id, ghost: true, temp: true }); }
+  // A quest site's rig (sites.mjs): beside the server its run passes, a red dashed aim at it.
+  for (const t of siteNodes(s, n)) { const node = put(portrait ? { ...t, x: t.y, y: t.x } : t), aim = byId[t.target]; if (aim && t.loc.site.state === 'up') links.push({ from: node.id, to: aim.id, aim: true }); }
   // Links between what's drawn: solid between found places, a ghost line to a ? or an exit you can't take yet.
   for (const [a, b] of g.links) {
     const A = byId[idOf[a]], B = byId[idOf[b]];
@@ -2303,6 +2306,7 @@ export function threatsOf(s, now = Date.now()) {
     : { cls: 'hot', icon: 'kill', name: inv.name, where: inv.state === 'siege' ? 'contested at your wall' : 'BREACH at your wall', tag: `lv ${inv.level}`, pct: inv.hp, sel: 'invader' });
   else if (threatTop(s) && s.net?.next > 0) add({ cls: 'dim', icon: 'clock', name: 'Next invasion', where: 'your wall', left: s.net.next, total: CONFIG.invasion.everyMs[1], sel: 'server' });
   for (const ev of eventsOf(s)) { const c = EVENT_CARDS[ev.card], l = s.locations.find((x) => x.id === ev.loc); add({ cls: 'drop', icon: EVENT_ICON[ev.card] || 'signal', left: ev.left, total: c.ms, sel: l ? l.id : 'server', verb: c.fight ? 'leaves' : 'ends', ...railOf(s, ev, l) }); }
+  for (const row of siteRows(s)) add(row); // a Settlement run's clock (sites.mjs)
   const sc = s.net?.scouted, scFrom = sc && s.locations.find((l) => l.id === sc.from);
   if (sc) { const row = out.find((x) => x.name === 'Next invasion'); if (row) Object.assign(row, { name: scFrom ? `Next: ${INV_KINDS[sc.kind].name}` : 'Next invasion', tag: `−${sc.levels} lv`, where: scFrom ? `from ${scFrom.name}` : row.where }); }
   const rank = { hot: 0, warn: 1, drop: 2, dim: 3 };
@@ -2507,7 +2511,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   const lines = links.map((k) => {
     const a2 = find(k.from), b2 = find(k.to);
     const flow = k.hot || k.trunk ? flowSvg([a2, b2], `mlink ${k.hot ? 'hot' : 'trunk'}`, k.hot ? 8 : 10, { id: 'm' }) : ''; // its dashes, flowing (flowfx.mjs)
-    return `<line x1="${a2.x}" y1="${a2.y}" x2="${b2.x}" y2="${b2.y}" class="mlink ${k.hot ? 'hot' : ''} ${k.ghost ? 'ghost' : ''} ${k.trunk ? 'trunk' : ''} ${k.temp ? 'tlink' : ''}${flow ? ' flowed' : ''}"/>${flow}`;
+    return `<line x1="${a2.x}" y1="${a2.y}" x2="${b2.x}" y2="${b2.y}" class="mlink ${k.hot ? 'hot' : ''} ${k.ghost ? 'ghost' : ''} ${k.trunk ? 'trunk' : ''} ${k.temp ? 'tlink' : ''}${k.aim ? ' saim' : ''}${flow ? ' flowed' : ''}"/>${flow}`;
   }).join('');
   // Labels that would overlap: the more important one keeps its label, the other's comes back on
   // hover, selection or zoom. Importance: selected, under threat, a contract or fresh find, an
@@ -2585,6 +2589,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       const p = labelAt(n, 12), shape = n.kind === 'exit' ? 'M-9 -6 L9 -6 L0 9 Z' : 'M0 -9 L9 6 L-9 6 Z';
       return `<g class="mnode ${n.kind}${n.open || been ? ' open' : ''}${been ? ' been' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${n.kind === 'exit' ? 'Exit to' : 'Up to'} floor ${to}"><circle r="18" class="mhit"/><circle r="14" class="exit-glow"/><path d="${shape}" class="exit-mark"/>${pick}<text ${p.name} class="mlabel">Floor ${to}</text><text ${p.sub} class="msub">${band}</text></g>`;
     }
+    if (n.kind === 'site') return siteNodeSvg(s, n, on + (crowded.has(n.id) ? ' crowded' : '') + (s.run?.loc === n.id ? ' here' : ''), (nn, r, name, sub, cls) => (pick || '') + label(nn, r, name, sub, cls));
     if (n.kind === 'temp') return tempNodeSvg(s, n, on + (crowded.has(n.id) ? ' crowded' : '') + (s.run?.loc === n.id ? ' here' : ''), (nn, r, name, sub, cls) => (pick || '') + label(nn, r, name, sub, cls));
     if (n.kind === 'transit') return transitSvg(n, s.settings?.motion !== false);
     if (n.kind === 'hidden') {
@@ -2891,6 +2896,7 @@ function mapSide(s, sel, node) {
       ${kit.injector ? `<div class="row"><button type="button" class="btn" data-command="use injector ${h.id}">${glyph('injector')}Trace injector · ${kit.injector}</button></div>` : ''}</section>`;
   }
   if (node.kind === 'exit' || node.kind === 'entry') return floorCard(s, node);
+  if (node.kind === 'site') return siteCard(s, node.loc, { here: s.run?.loc === node.loc.id, busy, relock: relockLeft(node.loc), btn }); // a quest site's rig (sites-view.mjs)
   if (node.kind === 'temp') return tempCard(s, node.loc, { here: s.run?.loc === node.loc.id, busy, relock: relockLeft(node.loc), btn }); // a thread's temporary server (threads-view.mjs)
   const l = node.loc, st = nodeState(s, l);
   // A server you found but never connected: Connect asks first, showing the memory it takes.

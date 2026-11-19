@@ -1,12 +1,13 @@
 # Quest sites: places the director mounts
 
-**Status.** Prototyped and picked with the designer (November 2026), not built. RimWorld's quest sites and Starsector's
-derelicts: the floor keeps its fixed servers, and short-lived places turn up at their edges.
+**Status.** Picked with the designer (November 2026). The Settlement run is built (GAME_RULES.md *Quest sites*); the
+Rack pull and a runner's trade are not. RimWorld's quest sites and Starsector's derelicts: the floor keeps its fixed
+servers, and short-lived places turn up at their edges.
 
 ## The rule
 
 - **The director deals a site** (docs/director.md): a temporary server mounted on your floor, beside a server you've
-  located. About one an hour of logged-on time, one up at a time, on the director's dice. It takes its place's level.
+  located. About one an hour of logged-on time, one up at a time, on dice of its own. It takes its place's level.
   Built on threads' temporary servers (threads.mjs `spawnTemp`).
 - **The look is the *Temporary frame*** (picked over a docked rack and a chart fix): threads' hexagon in the director's
   violet, a ring of the time left, a dashed link to the server it hangs off. Its card is an event card's shell.

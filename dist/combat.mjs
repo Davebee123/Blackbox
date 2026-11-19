@@ -1476,7 +1476,7 @@ export function addLead(s, family, amount, why = '', at = null) {
 }
 
 // A server by id: one you've traced, or a consortium member's (consortium.mjs).
-export const findLocation = (s, id) => s.locations.find((l) => l.id === id) || s.consortium?.servers?.find((l) => l.id === id) || s.threads?.servers?.find((l) => l.id === id) || null; // a thread's temporary server is no server of your network (threads.mjs)
+export const findLocation = (s, id) => s.locations.find((l) => l.id === id) || s.consortium?.servers?.find((l) => l.id === id) || s.threads?.servers?.find((l) => l.id === id) || s.sites?.up?.find((l) => l.id === id) || null; // a thread's temporary server or a quest site is no server of your network (threads.mjs, sites.mjs)
 
 // A server located on a floor (floors.mjs): at a slot (a ? traced to 100%, a floor's landing server), or, when no slot
 // is named (a developer find, a story's server), the next free slot on that floor (pickSlot: a ? of its family first).
@@ -2734,6 +2734,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     firewallCommand(s, text, now);
   } else if (/^hub (assemble|retune) \S+$/.test(text)) {
     assemble(s, text.split(' ')[2]); // a faction piece (faction-gear.mjs)
+  } else if (text === 'developer site') {
+    hooks.developerSite?.(s); // a Settlement run, now (sites.mjs)
   } else if (/^(hub )?deliver \S+$/.test(text)) {
     deliver(s, text.split(' ').at(-1)); // a faction's supply order (supply.mjs)
   } else if (/^commission \S+$/.test(text)) {

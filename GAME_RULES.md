@@ -2420,6 +2420,25 @@ going. Jack out and it ends; missing one costs nothing. `developer runcard [surg
 
 The history (below) lists each, ending *won*, *taken* (a surge you fought in, left), *gone* (the courier lost) or *missed*.
 
+### Quest sites (sites.mjs)
+
+Short-lived servers the director mounts on your floor (docs/sites.md): one up at a time, the first 20–40 minutes of
+logged-on time after level 5, the next 50–70 minutes after one ends, on dice of their own. A site lives off your
+network: no invasions, no tracing, no takeover. Gear drops on it as anywhere. Built: the Settlement run.
+
+- **The Settlement run.** A crew (TOLLGATE, SWARMLINE or PALEMASK; the floor's holder when it's one) bolts a rig
+  (`TOLLGATE-RIG-31`) beside a server you've located on your floor, at your level + 2 or under and among the three
+  nearest your level, at that server's level. It's locking a living institution's settlement run as it passes that
+  server: the Tenements Board on floor 1 (Halcyon's), Harrow Street Credit Union on 2 (LANTERN's), Corvid Exchange on 3
+  (Kestrel's), the City Treasury's tax rolls from 4 (Halcyon's).
+- **The clock** is the run's, 18–20 minutes of logged-on time. It waits while you fight on the rig.
+- **The lock** is an elite of the crew in the rig's Core, open from the start. Break it before the run settles: 3
+  Exploits and +12 rep with the institution's faction (with its ripples).
+- **The lock lands** when the clock runs out: its trades orphan and the process table goes up 1. Nothing else.
+- **Either way the rig unmounts.** On it, you're sent home with your pack banked, as at a jack out.
+- **On the map:** threads' hexagon in red with the lock in it and a ring of the time left, a red dashed aim at its
+  target; its row on the threat rail. LANTERN reads its trades out on #net. `developer site`.
+
 ### History
 
 The director's last 20 (events, follow-ups and blips) and how each ended (*up*, *won*, *gone*, *taken*, *missed*,
