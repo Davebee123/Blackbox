@@ -3889,7 +3889,11 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && profileO
 function tableMeter() {
   const el = $('meter-table'), n = shownCount(campaign);
   if (+el.dataset.n === n) return;
-  el.dataset.n = n; $('table-value').textContent = `${n}%`; el.title = tableTip(campaign); el.dataset.ttKind = `INIT's table · ${tableKind(campaign)}`;
+  el.dataset.n = n; $('table-value').textContent = `${n}%`; el.dataset.ttKind = `INIT's table · ${tableKind(campaign)}`;
+  if (el.dataset.tt == null) el.title = tableTip(); // the hover moves it to data-tt; the rows below change, the line doesn't
+  let more = el.querySelector(':scope > template.tt-more');
+  if (!more) { more = document.createElement('template'); more.className = 'tt-more'; el.append(more); }
+  more.innerHTML = V.tableMore(campaign);
 }
 function setComms(open) {
   commsOpen = open;

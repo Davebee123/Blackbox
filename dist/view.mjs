@@ -92,7 +92,7 @@ import { housePageMarkup } from './house-view.mjs';
 import { objectiveText, objectiveTip, backupAims } from './objectives.mjs';
 import { pointsOf } from './achievements.mjs';
 import { flowSvg } from './flowfx.mjs';
-import { ORPHAN_TIP } from './table.mjs';
+import { ORPHAN_TIP, TABLE, countOf, bandOf as tableBand, tableRows, tableMoves } from './table.mjs';
 export { toolkitMarkup, subPromptDue } from './skills-view.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
@@ -1178,6 +1178,18 @@ function keyKind(s, id) {
 const keyFace = (ico, name) => `<span class="ico" ${icon(ico)}></span><span class="name">${esc(name)}</span>`;
 const ttState = (lines) => (lines.length ? ` data-tt-state="${esc(lines.map(([tone, t]) => `${tone}|${t}`).join('\n'))}"` : '');
 // selected: the part you picked on the board (app.js), the one a key prefills.
+// INIT's table in the header's tooltip (app.js tableMeter, its <template class="tt-more">): the bar from 70% to 95% with
+// its two bands and the count's tick, what the band does now as rows, how it moves as chips.
+export function tableMore(s) {
+  const span = TABLE.max - TABLE.min, at = (n) => ((n - TABLE.min) / span) * 100, band = tableBand(s);
+  const seg = (k, a, b, label) => `<i class="tb-seg ${k}${band === k ? ' on' : ''}" style="flex:${b - a}">${label}</i>`;
+  const bar = `<span class="tb-bar">${seg('clear', TABLE.min, TABLE.clear[0], 'Clear')}${seg('between', TABLE.clear[0], TABLE.full[0], '')}${seg('full', TABLE.full[0], TABLE.max, 'Full')}<b class="tb-tick" style="left:${at(countOf(s)).toFixed(1)}%"></b></span>`;
+  const chip = (g, v) => `<span class="rw">${g ? glyph(g) : ''}<b>${esc(v)}</b></span>`;
+  const row = (what, chips) => `<span class="tb-row"><span>${esc(what)}</span><span class="tb-chips">${chips}</span></span>`;
+  const rows = tableRows(s).map(([g, what, v]) => row(what, chip(g, v))).join('');
+  const moves = tableMoves().map(([what, cs]) => row(what, cs.map(([g, v]) => chip(g, v)).join(''))).join('');
+  return `${bar}${rows}<span class="tb-moves">${moves}</span>`;
+}
 export function trayMarkup(s, selected = null) {
   const e = s.encounter;
   const fighting = active(s);
