@@ -2759,7 +2759,6 @@ function mapSide(s, sel, node) {
         ${s.invasion ? `<div class="invader-line ${s.invasion.state}"><b>${esc(s.invasion.name)}</b>${levelTag(s, s.invasion.level)}<span>${esc(invaderShort(s))}</span></div><div class="row acts">${jackInButton(invaderStatus(s))}</div>` : ''}
         ${homeEvents(s)}
         ${upkeep.length ? `<div class="row acts">${upkeep.join('')}</div>` : ''}
-        ${globalThis.location?.search?.includes('dev') ? `<details><summary>Test intrusions</summary><div class="row" style="margin-top:8px">${btn('encounter cryptjack', 'CRYPTJACK')}${btn('encounter splinter', 'SPLINTER')}${btn('encounter ghostroot', 'GHOSTROOT')}</div></details>` : ''}
       </section>`;
   }
   if (node.kind === 'zone') return zoneCard(s) + alertCard();
