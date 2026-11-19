@@ -276,7 +276,7 @@ WORLD_hook('coreOpen', (s) => {
   if (loc.zone) return kingOpen(s); // RELAY-KING holds the Core from level 3
   if (loc.farm) return !!loc.state?.unlocked?.['/ledger'];
   if (loc.lair) return lairOpen(s, loc);
-  if (loc.site) return loc.site.kind === 'rig'; // a quest site's Core (sites.mjs): a rig's lock, open from the start; a rack's, sealed
+  if (loc.site) return loc.site.kind !== 'rack'; // a quest site's Core (sites.mjs): a rig's lock and a trade's Resident, open from the start; a rack's, sealed
   if (loc.temp) return tempCoreOpen(loc); // a temporary server's kill switch: once you know it (threads.mjs)
   if (isWild(loc)) return true;
   return R.graph.vaults[0] ? !!R.opened[R.graph.vaults[0]] : true;

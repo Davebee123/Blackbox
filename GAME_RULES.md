@@ -2424,8 +2424,8 @@ The history (below) lists each, ending *won*, *taken* (a surge you fought in, le
 
 Short-lived servers the director mounts on your floor (docs/sites.md): one up at a time, the first 20–40 minutes of
 logged-on time after level 5, the next 50–70 minutes after one ends, on dice of their own. A site lives off your
-network: no invasions, no tracing, no takeover. Gear drops on it as anywhere. Built: the Settlement run and the Rack
-pull, which come in turn.
+network: no invasions, no tracing, no takeover. Gear drops on it as anywhere. Built: the Settlement run, the Rack pull
+and a runner's trade, in turn. A runner's trade has no clock and stands beside the others, one at a time.
 
 - **The Settlement run.** A crew (TOLLGATE, SWARMLINE or PALEMASK; the floor's holder when it's one) bolts a rig
   (`TOLLGATE-RIG-31`) beside a server you've located on your floor, at your level + 2 or under and among the three
@@ -2449,6 +2449,16 @@ pull, which come in turn.
 - **On the map:** the hexagon in violet with the cold mark and a ring of the time left, a dashed link to the server
   it's mounted beside; its row on the threat rail. Kestrel's desk posts *Rack 4 will close at the end of this cycle.
   Please collect your belongings.* on #net once you've found its hub. `developer site rack`.
+- **A runner's trade.** A runner you've met (helped in a room, beaten as a rival, pulled out of a crash) traces the
+  server their frozen trade sits on (`HARROW-LEDGER-22`, named for its payer), beside one of yours on your floor, at
+  that server's level. Its card shows the trade as a receipt and the stamp they'll put on it, their faction's. No
+  clock: it stays while they're on the net and comes back with them.
+- **Its Resident** is open from the start, and they fight beside you in every fight there, as a runner you help
+  (standing comes with the trade, not each room). Beat it: their standing up a tier, a codebase of their faction's you
+  don't know, and a lead (a **?** beside the server it's mounted by, traced the rest of the way). Then they stamp it,
+  and their own *came through* line for that trade is left out of #net.
+- **On the map:** the hexagon in paper white with the receipt in it, their diamond under it and a dashed link to its
+  host; its row on the threat rail; their own line on #net (*found it. … could use a hand*). `developer site runner`.
 
 ### History
 
