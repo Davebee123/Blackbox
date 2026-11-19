@@ -39,16 +39,8 @@ derelicts: the floor keeps its fixed servers, and short-lived places turn up at 
 
 ## Why you'd go
 
-Each site is the best place for one thing, so the player picks by what they need:
-
-| You need | Go |
-|---|---|
-| Gear | Anywhere: every fight, vault and goal drops it |
-| Your wall's gear | A rack pull (today a filter is 1 vault in 7) |
-| A faction piece | Rack pulls and takeovers (receipts) |
-| Exploits | Settlement runs, the Exfil, elites |
-| One faction's standing | Settlement runs, defence calls, feuds |
-| A crewmate, a codebase without the rep | A runner's trade |
+Each site is the best place for one thing (docs/pays.md): a Rack pull for your wall's gear and faction pieces, a
+Settlement run for Exploits and one faction's standing, a runner's trade for a crewmate.
 
 **Value.** Every site is worth about the same: 30 minutes of play at your level (a level's XP over its minutes in
 `CLIMB`; credits at the economy's 0.08 a point of XP, econ.mjs). Its own thing is sized against the usual way to get it
@@ -56,7 +48,6 @@ when it's built, so none is a trap or a must.
 
 ## Open
 
-- **Sinks.** A thing is only worth chasing if it's spent: components buy nothing yet and Exploits only medium programs.
-  Patches (economy.md 2) spend both.
-- **What pays what** (market.md) as its own sheet: the map above for every activity, gear general.
+- **Sinks.** A thing is only worth chasing if it's spent: supply orders (economy.md 3) are the main buyer, NULL
+  CHOIR's for components and GLASSJAW's for Exploits (docs/pays.md).
 - **How often.** About one an hour is a start; set it once the designer has played them.

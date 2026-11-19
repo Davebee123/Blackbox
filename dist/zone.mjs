@@ -4,7 +4,9 @@ import { CONFIG } from './data.mjs';
 
 export const SPRAWL = {
   '/': { dirs: ['net', 'tmp', 'var', 'srv', 'home', 'dev'], files: ['motd.txt'] },
-  '/net': { dirs: ['relay'], files: ['routes.txt'] },
+  '/net': { dirs: ['hub', 'gate', 'relay'], files: ['routes.txt'] },
+  '/net/hub': { dirs: [], files: [] },
+  '/net/gate': { dirs: [], files: [] },
   '/net/relay': { dirs: [], files: [] },
   '/tmp': { dirs: [], files: [] },
   '/var': { dirs: ['log', 'spool', 'cache'], files: [] },

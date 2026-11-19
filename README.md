@@ -25,8 +25,8 @@ other file copied but the editor. The Pages workflow (`.github/workflows/pages.y
 
 ## How a session goes
 
-- **SPRAWL-00** is where you start: a starter server of ten rooms with a stray in each, in level bands (1–2, 2–3,
-  3–4, 4–5). Kill them to trace the servers linked to it. A room fills again 90 seconds after its stray falls. Its
+- **SPRAWL-00** is where you start: a starter server laid out as a plus (netrooms.mjs `sprawlGraph`): twelve
+  rooms with a stray in each, a level a ring (1, 2, 3), RELAY-KING's Core at the top arm's tip. Kill them to trace the servers linked to it. A room fills again 90 seconds after its stray falls. Its
   Core (RELAY-KING) opens from level 3.
 - **Floors.** The network is a stack of eight floors. Each server you trace sits on one, at a fixed level; each floor
   has an exit down.
@@ -344,6 +344,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/invasions.md`](docs/invasions.md), [`docs/networks.md`](docs/networks.md), [`docs/bosses.md`](docs/bosses.md), [`docs/solo-bosses.md`](docs/solo-bosses.md), [`docs/boss-guide.md`](docs/boss-guide.md) | Review sheets: invasions, network signatures, crew bosses, solo bosses; how each floor 2–8 boss plays. |
 | [`docs/coop.md`](docs/coop.md) | Co-op, peer to peer. |
 | [`docs/runners.md`](docs/runners.md) | Runners: the people on the net, solo-first multiplayer, the picked looks (decided, not built). |
+| [`docs/pays.md`](docs/pays.md) | What pays what: gear general, each activity's own thing on top, and what each currency is spent on (designed). |
 | [`docs/market.md`](docs/market.md) | The market: the ticker's cards and what each activity pays (the rest shelved; proposed). |
 | [`docs/ticker.md`](docs/ticker.md) | The ticker: market cards that move hub prices, in their owners' voices (ready to build). |
 | [`docs/exchange.md`](docs/exchange.md) | The exchange: one central market in place of the hubs', moved by the ticker and by what you do (tabled). |
