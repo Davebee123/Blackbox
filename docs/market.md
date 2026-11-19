@@ -304,26 +304,7 @@ faction's **thanks**, +2.5. Unanswered: half the time it **comes back** a quarte
 
 ### What pays what
 
-No place holds a ware. Each activity pays in **one thing**: a lot of it, and hardly anything else. What an activity
-pays today, at usual prices, goes into that one thing, so nothing pays more on an ordinary day. A card that wants a
-ware makes its activities worth more, and the ware's bulk order holds the price for what they bring in.
-
-| Pays in | Activities | Changed from today |
-|---|---|---|
-| One family's code | Invasions (the bounty), Outbreak and Patient zero, Quarantine, Packet routing, a Nest | Patient zero pays a second code cache in place of an elite's loot |
-| Components | Surge room, Cascade, Deadlock, scrapping | A surge's waves pay components in place of credits; Deadlock pays as Cascade does |
-| Exploits | The Exfil, elites, guard posts, a raid's attackers | The hardest and riskiest to get (outposts.md 4): the Exfil's credits and item come as Exploits, its 5% unique stays; elites and guards drop them more often |
-| Credits | Contracts, Bounty, Bounty hunt, the Gauntlet, Ping sweep, Terminal, Stray cache | The code in their caches comes as credits |
-| Gear | Courier, Escort, a Pit, Sighting, Hunter pack, a rival's lineup | The courier's, the escort's and the rival's credits go into the item's rarity |
-| Rep | Defence call, Feud | A feud's wins pay rep in place of credits and protocols; its faction piece stays |
-
-The lore: an Exploit is a flaw somebody guards. An Exfil's archive is someone's findings on the way to a buyer. A surge breaks the same virus over and over, and the room
-fills with parts.
-
-- **Reacting.** While a card wants a ware, the director deals what pays it twice as often: its events (a courier, a
-  bounty, an outbreak), the surge among run cards, the Exfil's roll. Puzzle rooms stay where they are.
-- **Who it's for.** A player holding stock fills an order from their pack. Going out for a ware pays when you're short
-  of it, which is most often Exploits (section 8).
+Moved to docs/pays.md (gear general; each activity pays its own thing on top).
 
 ### Runner cards
 
@@ -448,4 +429,4 @@ gives a different result in each JavaScript engine.
 | M3 | **Moves and the tide** | Faction moves with variants, dispositions and favoured moves; cost cards; the tide; modifiers and follow-ups; bulk orders, two buyers; feuds and calls move sway | `s.market.tide`, `due` |
 | M4 | **INIT's count** | The count, the network's table, its movers and bands, cancel rounds, the bar on the network map, LANTERN's readout; runners' trades and corners; rare cards | `s.market.count`, the rare cards left |
 | M5 | **Arcs and Turf war** | Institution arcs; Turf war (director.md D4): two rivals within 2 points at the top contest a floor, the winner takes 5 | Each arc's step, the crisis |
-| M6 | **What pays what** (after M3) | Each activity's pay in its one thing (the table's changes), the director dealing a wanted ware's activities twice as often, the activities in a price's tooltip | Nothing new |
+| M6 | **What pays what** (after M3; now docs/pays.md) | Each activity's pay in its one thing (the table's changes), the director dealing a wanted ware's activities twice as often, the activities in a price's tooltip | Nothing new |
