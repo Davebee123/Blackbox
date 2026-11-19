@@ -12,7 +12,8 @@ import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './me
 // The server whose Connect is waiting on a yes (app.js): its card shows the memory it takes.
 let memAsk = null;
 export const setMemAsk = (id) => { memAsk = id; };
-import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, eventOf, quote, priceOf, travelMs, transfersOf, orderQuote, orderMax } from './market.mjs';
+import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, quote, priceOf, travelMs, transfersOf, orderQuote, orderMax } from './market.mjs';
+import { tickerAt, tickerTip, tickerKind, minutesLeft } from './ticker.mjs';
 // The market's open order ticket (app.js): { f, w, side, n }.
 let order = null;
 export const setOrder = (o) => { order = o; };
@@ -2769,8 +2770,13 @@ function tipShock(s, f) {
   const x = tipOf(s, f);
   return x && { mult: x.mult, ware: x.ware, title: `Pirate tip: ${FX[f].short} ${x.mult > 1 ? 'pays' : 'charges'} ${Math.round(x.mult * 100)}% of the usual for ${WARES[x.ware].name}. ${Math.max(1, Math.ceil((x.until - (hooks.now?.() ?? Date.now())) / 60000))} min left.` };
 }
+// The ticker's strongest card at a hub (ticker.mjs), shown like a shock: everything it moves is a crate.
+function tickerShock(s, f) {
+  const c = tickerAt(s, f)[0];
+  return c && { mult: c.mult, ware: c.ware === '*' ? 'crate' : c.ware, title: tickerTip(c) };
+}
 function shockSvg(s, f) {
-  const ev = shockOf(s, f) || flickerOf(s, f) || tipShock(s, f);
+  const ev = shockOf(s, f) || tickerShock(s, f) || flickerOf(s, f) || tipShock(s, f);
   // Sized for the screen, not the map (--z, like the labels): it sits above the hub's mark at any zoom.
   return ev ? `<g class="hub-shock ${ev.mult > 1 ? 'up' : 'down'}" transform="translate(10 -14)"><title>${esc(ev.title || `${eventText(s, ev)} ${eventMinutes(ev)} min left.`)}</title><g class="hs-in"><rect x="0" y="-15" width="${32 + 6.2 * String(ev.mult).length}" height="15" rx="2"/><text x="4" y="-4">${ev.mult > 1 ? '▲' : '▼'}</text><g class="hs-ware" transform="translate(14 -13.5) scale(0.75)">${GLYPHS[GLYPH_OF_GOOD[ev.ware]]}</g><text x="28" y="-4">×${ev.mult}</text></g></g>` : '';
 }
@@ -3520,14 +3526,14 @@ function orderTicket(s, f, w) {
   return `<div class="mk-ticket"><div class="mk-sides">${tab('sell', 'Sell')}${WARES[w].sellOnly ? '' : tab('buy', 'Buy')}</div>${body}</div>`;
 }
 function marketMarkup(s, f, now) {
-  const cond = CONDITIONS[HUB_CONDITION[f]], ev = eventOf(s), mats = materialsOf(s), shock = shockOf(s, f);
+  const cond = CONDITIONS[HUB_CONDITION[f]], cards = tickerAt(s, f), mats = materialsOf(s), shock = shockOf(s, f);
   const haveOf = (w) => (w === 'salvage' ? componentsOf(s) : mats[w] || 0);
   const min = Math.round(travelMs(s, f) / 60000);
   const rows = WARE_IDS.map((w) => {
     const q = quote(s, f, w), n = haveOf(w), lot = Math.min(10, n);
     // Its value here against the average across every hub: the one number that says where to sell.
     const avg = FACTION_IDS.reduce((a, g) => a + quote(s, g, w).sell, 0) / FACTION_IDS.length, d = Math.round((q.sell / avg - 1) * 100);
-    const why = [cond.mult[w] ? `${cond.name} ×${cond.mult[w]}` : '', ev.mult[w] ? `${ev.name} ×${ev.mult[w]}` : '', shock?.ware === w ? `Market shock ×${shock.mult}` : ''].filter(Boolean).join(' · ');
+    const why = [cond.mult[w] ? `${cond.name} ×${cond.mult[w]}` : '', ...tickerAt(s, f, w).map((c) => `${c.name} ×${c.mult}`), shock?.ware === w ? `Market shock ×${shock.mult}` : ''].filter(Boolean).join(' · ');
     const dir = d >= 3 ? 'up' : d <= -3 ? 'down' : 'flat';
     // A read-only row (click it for an order ticket): held, what it pays here (and against other
     // hubs), what it charges. The ticket opens under the row you picked.
@@ -3546,7 +3552,9 @@ function marketMarkup(s, f, now) {
       <span class="mk-num mk-price ${x.side === 'sell' ? 'in' : ''}">${x.side === 'sell' ? '+' : '−'}${x.credits}</span>
       <span class="xfer-bar" title="${Math.max(1, Math.ceil(left / 60000))} min"><i style="width:${pct}%"></i></span>
     </div>`; }).join('')}</div>` : '';
-  return `<div class="mk-tags"><span class="tag" title="${esc(cond.about)}">${esc(cond.name)}</span><span class="tag dim" title="${esc(ev.about)}">${esc(ev.name)}</span><span class="tag dim" title="File transfer">⇄ ${min} min</span>${shockTag(s, f)}</div>
+  // The ticker's cards here (ticker.mjs): ▲ or ▼, the name, minutes left; what it does and its owner's line on hover.
+  const tags = cards.map((c) => `<span class="tag shock mk-card ${c.mult > 1 ? 'up' : 'down'}" title="${esc(tickerTip(c))}" data-tt-kind="${esc(tickerKind(c))}">${c.mult > 1 ? '▲' : '▼'} ${esc(c.name)} · ${minutesLeft(c)} min</span>`).join('');
+  return `<div class="mk-tags"><span class="tag" title="${esc(cond.about)}">${esc(cond.name)}</span>${tags}<span class="tag dim" title="File transfer">⇄ ${min} min</span>${shockTag(s, f)}</div>
     <div class="mk-table mk-wares">${head}${rows}</div>${flying}`;
 }
 const GLYPH_OF_GOOD = { shelf: 'protocol', chase: 'protocol', relay: 'relay', cracker: 'cracker', injector: 'injector', signal: 'signal', repair: 'repair', cipher: 'cipher', worm: 'worm', kernel: 'kernel', exploit: 'exploit', salvage: 'salvage', crate: 'crate', blueprint: 'blueprint' };

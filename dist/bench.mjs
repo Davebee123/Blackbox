@@ -211,7 +211,7 @@ export const PANEL = [
 export const PANEL_IDS = PANEL.flatMap((g) => g.items.map((x) => x.id));
 // What the panel offers in its pickers.
 export const panelKits = () => [...Object.keys(SUBS), ...Object.keys(ARCHETYPES)];
-export const panelEvents = () => Object.keys(EVENT_CARDS).filter((k) => !EVENT_CARDS[k].chain);
+export const panelEvents = () => Object.keys(EVENT_CARDS).filter((k) => !EVENT_CARDS[k].chain && !EVENT_CARDS[k].retired);
 export const panelFamilies = () => ['random', ...Object.keys(FAMILIES)];
 export const panelParts = () => [...new Set(Object.values(FAMILIES).flatMap((f) => f.parts.map((p) => p.id)))];
 // The command a panel button types. v: its row's fields { level, kit, event, family, seed, part, pick, leaning, objective }.

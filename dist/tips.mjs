@@ -106,7 +106,7 @@ export const TIPS = [
   // The market, one step per tip in the order you meet it: rows, ▲/▼, the news, then the ticket.
   { id: 'hub-market', page: 'hub', at: '.mk-wares .mk-row', text: 'each row shows how many of a ware you hold, what this hub pays for one (sell) and what it charges (buy). click a ware to trade it.' },
   { id: 'hub-compare', page: 'hub', at: '.mk-wares .mk-d', text: '▲ means this hub pays more than the average hub, ▼ less. prices differ hub to hub, so sell where a ware\'s ▲ and buy where it\'s cheap.' },
-  { id: 'hub-news', page: 'hub', at: '.mk-tags .tag', text: 'this shows what this hub wants, and today\'s news across the net. news pushes some prices up and others down. hover one to see which.' },
+  { id: 'hub-news', page: 'hub', at: '.mk-tags .tag', text: 'this shows what this hub always wants, and any market card moving its prices now. hover one to see which.' },
   { id: 'hub-slider', page: 'hub', at: '.mk-ticket input[data-mk-n]', text: 'drag for how many. each one you sell drops this hub\'s price a little and each one you buy raises it, so a big order gets a worse price per unit.' },
   { id: 'hub-preview', page: 'hub', at: '.mk-ticket .mk-prev', text: 'this is your order before you place it: the total, the price per unit, and how it stacks up against the same order elsewhere. amber means it\'s better here.' },
   { id: 'hub-go', page: 'hub', at: '.mk-ticket .mk-go', text: 'orders take the minutes next to ⇄ to arrive, and relays cut that down. prices you\'ve pushed drift back over a few hours.' },

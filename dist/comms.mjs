@@ -43,6 +43,8 @@ const MAP = {
   // A quest site (sites.mjs): mounted (a beep), settled, landed; gone quietly.
   site: (e) => ({ kind: 'net', label: e.phase === 'won' ? (e.kind === 'rack' ? 'Cage' : e.kind === 'runner' ? e.stamp || 'Settled' : 'Settled') : e.phase === 'landed' ? 'Landed' : e.phase === 'closed' ? 'Closed' : e.phase === 'gone' ? 'Gone' : e.kind === 'rack' ? 'Rack' : e.kind === 'runner' ? 'Trade' : 'Rig', from: 'Network', text: e.message, go: e.location && e.phase === 'up' ? `map:${e.location}` : 'map', beep: e.phase === 'up' }),
   'site-gone': (e) => ({ kind: 'net', label: 'Gone', from: 'Network', text: e.message, go: null, beep: false }),
+  // A market card (ticker.mjs): its owner's line, quiet, gone when the card is. pings.mjs puts the owner in front.
+  ticker: (e) => ({ tk: e.tk, kind: 'net', label: e.name, from: e.owner, text: e.line, go: e.hub ? `hub:${e.hub}:market` : null, beep: false }),
   fleet: (e) => ({ kind: 'alert', label: 'Swarm', from: 'Network', text: e.message.replace(/^SWARM: /, ''), go: 'map:fleet', beep: true, alert: true }),
   'fleet-siege': (e) => ({ kind: 'alert', label: 'Swarm', from: 'Outpost', text: e.message, go: 'map:fleet', beep: true, alert: true }),
   'fleet-broken': (e) => ({ kind: 'net', label: 'Broken', from: 'Swarm', text: e.message.replace(/^SWARM BROKEN\. /, ''), go: e.location ? `map:${e.location}` : 'map', beep: false }),
@@ -116,6 +118,7 @@ export function live(s, c) {
   }
   if (c.event) return (s.events || []).some((x) => x.id === c.event);
   if (c.blip) return (s.director?.blips || []).some((x) => x.id === c.blip);
+  if (c.tk != null) return (s.ticker?.live || []).some((x) => x.id === c.tk);
   return true;
 }
 export function pruneComms(s, now = Date.now()) {

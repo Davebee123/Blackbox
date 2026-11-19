@@ -297,7 +297,7 @@ function ambient(s) {
 // the rest wait in c.rq for an ambient line (turnLine). Only the last CHANNEL.turns are kept.
 // Arriving, a runner says why they took the job (runners.mjs chooseJob): the market, or their nerve.
 const WHY = {
-  event: (j, at, code) => [`${(j.ev || 'the market').toLowerCase()}. on ${at} for the ${code}`, `${code} is up everywhere. working ${at}`],
+  event: (j, at, code, hub) => [`${(j.ev || 'the market').toLowerCase()}. on ${at} for the ${code}`, `${code} is up at ${hub}. working ${at}`],
   shock: (j, at, code, hub) => [`${code} spiked at ${hub}. on ${at}`, `${hub} wants ${code}. working ${at}`],
   hub: (j, at, code, hub) => [`${hub} pays well for ${code}. on ${at}`, `${code} for ${hub}. working ${at}`],
   safe: (j, at) => [`on ${at}. an easy one`, `working ${at}. low and slow`],
