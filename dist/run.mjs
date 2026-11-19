@@ -98,11 +98,10 @@ const ZONE_FAMILIES = ['ransomware', 'worm', 'ghostroot'];
 // coming (Slay the Spire).
 export const kingOpen = (s) => hackerLevel(s) >= 3;
 // A SPRAWL-00 room's level band: the nearer folders lower (docs/scaling.md 4), at least two rooms to a band. Each
-// stray rolls its level in the band off its own seed. Four of the six rooms by the entry are level 1. RELAY-KING, in
+// stray rolls its level in the band off its own seed. The six rooms by the entry are level 1. RELAY-KING, in
 // /net/relay, at the top.
 export const ZONE_BAND = {
-  '/tmp': [1, 1], '/srv': [1, 1], '/home': [1, 1], '/dev': [1, 1],
-  '/var': [2, 3], '/net': [2, 3],
+  '/tmp': [1, 1], '/srv': [1, 1], '/home': [1, 1], '/dev': [1, 1], '/var': [1, 1], '/net': [1, 1],
   '/var/spool': [3, 4], '/var/cache': [3, 4],
   '/var/log': [4, 5], '/home/guest': [4, 5],
 };

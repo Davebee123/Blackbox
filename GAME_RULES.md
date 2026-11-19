@@ -20,8 +20,8 @@ first transmission comes in over the map (Transmissions).
 
 ### The loop
 
-1. `connect sprawl`: **SPRAWL-00**, the starter server, ten rooms of strays in level bands (four at level 1 beside the
-   entry, two each at 2–3, 3–4 and 4–5 deeper; `ZONE_BAND`), each stray rolling its level in its room's band. An
+1. `connect sprawl`: **SPRAWL-00**, the starter server, ten rooms of strays in level bands (the six beside the
+   entry at level 1, two each at 3–4 and 4–5 deeper; `ZONE_BAND`), each stray rolling its level in its room's band. An
    older save's SPRAWL-00 is laid out again on load. Walk into a room and `engage`. Your first two kills there hit at 60%
    (`CONFIG.zone.starterHit`). A kill pays at once, and the room fills again 90 seconds later. Its Core opens from
    level 3.
