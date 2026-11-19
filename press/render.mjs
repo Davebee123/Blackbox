@@ -1,4 +1,5 @@
-// Saves the Steam capsules (press/capsules.html) as PNGs at their exact sizes, beside it or in the folder given.
+// Saves the Steam capsules and the logo (press/capsules.html) as PNGs at their exact sizes, beside it or in the
+// folder given.
 //   node press/render.mjs [out dir] [seed]
 // Needs Playwright's Chromium and the network (the fonts load from Google Fonts).
 import { createRequire } from 'node:module';
@@ -21,4 +22,9 @@ for (const cap of await page.$$('.cap')) {
   await cap.screenshot({ path: file });
   console.log(file);
 }
+// the logo, on transparent ground
+await page.evaluate(() => { document.body.style.background = 'transparent'; });
+const logo = path.join(out, 'blackbox-logo.png');
+await (await page.$('.logo')).screenshot({ path: logo, omitBackground: true });
+console.log(logo);
 await browser.close();

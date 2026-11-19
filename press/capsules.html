@@ -195,5 +195,17 @@ for (const [n, [w, h]] of Object.entries(SIZES)) {
   d.innerHTML = cityCap(w, h, PLAN[n], seed);
   document.body.append(d);
 }
+
+// The logo: the box and the name alone, on transparent ground, at Steam's library logo size. The capsules'
+// proportions: the name 0.37 of the box, half the box under it, the two centred together.
+{
+  const [w, h] = [1280, 720], B = 260, size = Math.round(B * 40 / 108), track = 0.5, capTop = B * 1.5;
+  const top = Math.round((h - (capTop + size * 0.727)) / 2);
+  const d = document.createElement('div');
+  d.className = 'logo'; d.dataset.size = 'logo'; d.style.cssText = `position:relative;width:${w}px;height:${h}px;flex:none`;
+  d.innerHTML = `<div class="box" style="left:${(w - B) / 2}px;top:${top}px;width:${B}px;height:${B}px;--blur:${B / 16}px"><b></b></div>`
+    + `<div class="word" style="top:${Math.round(top + capTop - size * 0.25)}px;font-size:${size}px;letter-spacing:${track}em;margin-right:-${track}em">BLACKBOX</div>`;
+  document.body.append(d);
+}
 </script>
 </body>

@@ -355,4 +355,5 @@ and `style.test.mjs` the tooltip grammar.
 `design/` holds the specs and reviews of the previous UI pass: history, not instructions.
 
 `press/` holds the Steam capsules (header 920×430, main 1232×706, small 462×174, vertical 748×896, library
-600×900) and their generator: `capsules.html` draws them, `node press/render.mjs` saves them.
+600×900), the logo (the box and the name on transparent ground, 1280×720) and their generator: `capsules.html` draws
+them, `node press/render.mjs` saves them.
