@@ -257,7 +257,7 @@ function detail(s, M, key, ui) {
     const sv = s.server, cost = topUpCost(s), lvl = serverLevel(s), next = serverNext(lvl);
     const rest = CONFIG.signalRest * (s.invasion && ['siege', 'breach'].includes(s.invasion.state) ? 0.5 : 1), toFull = sv.integrity >= sv.max ? 0 : Math.ceil((sv.max - sv.integrity) / (sv.max * rest)) * 60000;
     const tone = sv.integrity / sv.max < 0.3 ? 'hot' : sv.integrity / sv.max < 0.6 ? 'warn' : 'you';
-    return head('integrity', 'Your server', 'Integrity', 'you') + facts([tag(`${sv.integrity}/${sv.max}`, tone, 'Your health at home and on a run. An invasion chips it, never below 1.'), tag(`Lv ${lvl}`, 'you', next ? `Server ${next}` : ''),
+    return head('integrity', 'Your server', 'Integrity', 'you') + facts([tag(`${sv.integrity}/${sv.max}`, tone, 'Your health. It regenerates slowly at home.'), tag(`Lv ${lvl}`, 'you', next ? `Server ${next}` : ''),
       toFull ? tag(`+${Math.round(rest * 1000) / 10}%/min · full in ${fmtTime(toFull)}`, 'dim', rest < CONFIG.signalRest ? 'Rests at half while something is at the wall' : 'Rests back between fights, offline too') : ''])
       + `<div class="hsv-bar ${tone}"><i style="width:${pct(sv.integrity, sv.max)}"></i></div>`
       + acts([act('Top up', 'repair', { cost: cost ? { credits: cost } : null, s, primary: true, actId: 'repair', why: !cost ? 'Integrity is full' : sv.credits <= 0 ? 'No credits' : M.busy, tip: 'Integrity full now' })]);

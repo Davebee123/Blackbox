@@ -128,8 +128,9 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
     *material* (a picture under the map was rejected: its landmarks fell under rooms); the *Swap* (the picture left of
     the board, the virus's bar over it, yours over the board); the board's *frame* by floor (playhead form, rules,
     headings; never chips); strikes throwing the floor's material were rejected;
-  - rooms map: each room kind its own outline and hue (the *Hues*: magenta elite, orange socket, green rest, gold
-    vault, white entry and den), thick borders. The one place a colour means a kind.
+  - rooms map: each room kind its own outline and hue (the *Hues*: orange socket, green rest, gold vault, white
+    entry and den), thick borders. The one place a colour means a kind. An elite is red like any threat, with its bevel
+    and a chevron rank tag (magenta was dropped); a fight room's icon is its virus family's.
   - class picker: the *Drawer* (four squares; the picked one slides its traits, starting skills and subclasses out of
     its side, the rest narrow to strips) with a class border each (Breaker *Fracture*, Bastion *Deflect*, Infiltrator
     *Trace*, Operator *Threads*) and Start as a lit command, `> start --as <class>` (docs/ui.md);

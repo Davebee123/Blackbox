@@ -77,6 +77,8 @@ export const AUTHOR_FAMILIES = {
   glassjaw: ['ransomware', 'worm', 'ghostroot', 'cryptominer', 'wiper'],
   lantern: ['worm', 'trojan'],
 };
+// Each family's icon (glyphs.mjs): the codex's row and a fight room's chip on the rooms map.
+export const FAMILY_ICON = { ransomware: 'lock', worm: 'worm', ghostroot: 'stealth', trojan: 'crate', cryptominer: 'fan', wiper: 'scrubber', botnet: 'spider', logicbomb: 'clock' };
 export const familyName = (id) => FAMILIES[id]?.name || ROOM_FAMILIES[id]?.name || id;
 
 // ---------- attack sets (4.1) ----------
