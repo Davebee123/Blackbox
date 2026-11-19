@@ -45,5 +45,7 @@
 /* Elsewhere: above the prompt in the dock, at the left, taking its own room (nothing under it is covered). */
 .ping-dock { max-width: min(560px, 100%); }
 .ping-dock:empty { display: none; }
+/* On a server's rooms map: over the map's lower-left corner, so the map keeps its height. */
+@media (min-width: 901px) { body.rooms-page .ping-dock { position: absolute; left: 34px; bottom: calc(100% + 14px); width: min(420px, calc(100% - 68px)); } }
 /* A phone keeps its page: three lines above the prompt (the rail on the map keeps five). */
 @media (max-width: 900px) { .ping-dock .ping:nth-last-child(n + 4) { display: none; } }

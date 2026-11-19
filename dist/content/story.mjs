@@ -46,7 +46,9 @@ export default {
       },
       "reward": {
         "credits": 80,
-        "standing": 3
+        "standing": 3,
+        "levelXp": 2,
+        "levelPart": 0.25
       }
     },
     {
@@ -70,6 +72,7 @@ export default {
       "boardAfterHour": true,
       "reward": {
         "item": "wicks-old-toolkit",
+        "levelXp": 2,
         "credits": 100,
         "standing": 3
       }

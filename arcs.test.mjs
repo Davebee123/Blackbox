@@ -251,3 +251,15 @@ test("a built floor-job boss holds its step's server's Core for good, never the 
   loc.jobFell = T; T += 1000; tickMail(s, T);
   assert.ok(ready(s, c), 'beating it in that Core readies the step');
 });
+
+test('a death that rolls the chains back to the connect never posts a held step twice', () => {
+  const s = boarded();
+  assert.ok(chainJob(s, 1), 'floor 1 opened its chain');
+  delete s.arcs[1]; // what a death's restore does to a step posted during the visit (visit.mjs PROGRESS)
+  T += 1000; tickMail(s, T);
+  assert.equal(openContracts(s).filter((c) => c.chain === 1).length, 1, 'one Page nine');
+  assert.equal(arcsOf(s)[1].step, 0, 'its chain is under way again');
+  const c = chainJob(s, 1); s.mail.jobs.push({ ...c, id: c.id + 'x' }); // a save that already posted it twice
+  T += 1000; tickMail(s, T);
+  assert.equal(openContracts(s).filter((x) => x.chain === 1).length, 1, 'the copy goes');
+});
