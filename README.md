@@ -353,3 +353,5 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/scaling.md`](docs/scaling.md) | Scaling: how power grows by level, floor and gear, measured, and the WoW-style plan. |
 
 `design/` holds the specs and reviews of the previous UI pass: history, not instructions.
+
+`press/` holds the Steam capsules: header 920×430, main 1232×706, small 462×174, vertical 748×896, library 600×900.
