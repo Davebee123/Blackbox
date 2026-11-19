@@ -54,7 +54,6 @@ export function skipTour(s) { s.tour ||= {}; for (const id of tourIds) s.tour[id
 export const TIPS = [
   ...TOUR, // first, on the rooms page: the tour of your first server (above)
   // ---------- anywhere ----------
-  { id: 'code', page: '*', at: '.modules [data-module="server"]', when: (s, m) => m !== 'server' && Object.values(s.materials || {}).some((n) => n > 0), text: 'kills drop code. spend it on programs in a server\'s sockets and on your firewall\'s tiers.' },
   // Your first protocol: Loadout → the Protocols tab → Load. Three short steps, each pointing at the next click.
   { id: 'protocol', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && spare(s), text: 'you\'ve got a protocol sitting idle. open loadout to equip it. you can only equip at home, off a run and out of a fight.' },
   { id: 'protocol-tab', page: 'loadout', at: '[data-ltab="protocols"][aria-selected="false"]', when: (s) => spare(s), text: 'your protocols are on this tab.' },
@@ -88,8 +87,7 @@ export const TIPS = [
   { id: 'map-exit', page: 'map', at: '.mnode.exit', text: 'this is the way down to the next floor. it sits beside a server you located. go down from that server\'s card. the floor below runs higher-level servers.' },
   { id: 'map-origin', page: 'map', at: '.mnode.loc', text: 'you found a server. select it and connect. it takes memory while it\'s on your network, and its ring fills as you explore it.' },
   { id: 'map-memory', page: 'map', at: '.mem-join', text: 'these pips are your free memory: how many more servers your network holds. the blinking one is what this server would take. detach a server to free one.' },
-  { id: 'map-invader', page: 'map', at: '.mnode.invader[data-select="invader"]', text: 'an invasion\'s heading for your wall. your firewall\'s strength decides whether it\'s blocked, contested or breaks through.' },
-  { id: 'map-contested', page: 'map', at: '.mnode.invader.siege[data-select="invader"]', text: 'your wall\'s wearing this one down, and it\'s costing you integrity. jack in to finish it now, or raise the wall to block it next time.' },
+  { id: 'map-invader', page: 'map', at: '.mnode.invader[data-select="invader"]', text: 'an invasion\'s heading home. once it gets there it eats your integrity until you intercept it. the longer it sits, the bigger its bounty.' },
   { id: 'map-breach', page: 'map', at: '.mnode.invader.breach', text: 'a breach eats integrity every minute. jack in and fight it yourself, and it counts as a full kill.' },
   { id: 'map-contract', page: 'map', at: '.mnode.job', text: 'a contract points here. open the vault for the file you were sent for, or beat the resident in /core and take the server.' },
   { id: 'pager', page: '*', at: '#pager .led.on', text: 'this is your pager. mail, offers, finished contracts, your retainer and news off the net land here. click it for the list.' },
@@ -144,11 +142,6 @@ export const TIPS = [
   { id: 'fight-daemon', page: 'combat', at: '.board .intent.daemon:not(.cron)', under: '#board', text: 'that\'s your daemon. it acts on its own cooldown, in the cycle where its chip sits, on top of your own move.' },
   { id: 'fight-proc', page: 'combat', pause: true, at: '#tray .lit', text: 'a skill lit up. it only works for a cycle or two after something happens, so use it while it glows.' },
 
-  // ---------- server ----------
-  { id: 'server-level', page: 'server', at: '.hsv-top', text: 'your server\'s level matches your highest class level. its wall holds invasions back, and your codebases let you build programs on other servers.' },
-  { id: 'server-wall', page: 'server', at: '.hsv-level', text: 'your firewall stops invasions up to its level. servers on your network send them, even while you\'re away. amber or red up top means one can get through.' },
-  { id: 'fw-upgrade', page: 'server', at: '#hsv-panel [data-act="upgrade"]', text: 'your firewall keeps up with your network on its own. an upgrade adds a margin on top, up to +6, for credits and code.' },
-  { id: 'fw-frag', page: 'server', at: '.hsv-ring .blk.frag', text: 'each invasion breaks some blocks, and every 4 broken blocks cost a level. defrag repairs them for credits. the wall\'s weaker while it runs.' },
 
   // ---------- loadout ----------
   { id: 'loadout-status', page: 'loadout', at: '.sk-status', text: 'your skills put this status on parts. hover it to see what it does.' },

@@ -14,12 +14,12 @@ export function contextOf(s, { active = false } = {}) {
   return null;
 }
 
-// The four page slots (More is the fifth). opts: module (the page showing), active (a fight is live), counts { mail,
+// The three page slots (More is the fourth). opts: module (the page showing), active (a fight is live), counts { mail,
 // ready, loadout }. The first slot is the live context in Map's place while there is one.
 export function tabsOf(s, { module = 'map', active = false, counts = {} } = {}) {
   const ctx = contextOf(s, { active });
   const first = ctx || { module: 'map', label: 'Map', icon: 'router' };
-  const slots = [first, { module: 'mail', label: 'Mail', icon: 'letter', count: counts.mail, ready: counts.ready }, { module: 'loadout', label: 'Loadout', icon: 'module', count: counts.loadout }, { module: 'server', label: 'Server', icon: 'integrity' }];
+  const slots = [first, { module: 'mail', label: 'Mail', icon: 'letter', count: counts.mail, ready: counts.ready }, { module: 'loadout', label: 'Loadout', icon: 'module', count: counts.loadout }];
   return slots.map((t) => ({ ...t, ctx: t === ctx, dot: t === ctx && module !== t.module, on: module === t.module || (t === first && !ctx && module === 'hub') }));
 }
 

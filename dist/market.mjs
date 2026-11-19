@@ -8,7 +8,6 @@
 // transfer completes; what you buy is paid now and arrives later. Transfer time depends on the hub, and
 // relays on servers you hold shorten it. A transfer can't be lost: the worst case is waiting.
 import { emit, warn, materialsOf, hooks, rand, firstTime, addItem } from './combat.mjs';
-import { addFilter, rollFilter } from './filters.mjs';
 import { FACTIONS, hubsOf, repTier, hubFound } from './factions.mjs';
 import { deliverGoods } from './store.mjs';
 import { deal, shockMult, flickerMult } from './events.mjs';
@@ -158,7 +157,7 @@ export function tickMarket(s, at = now()) {
       if (t.item) addItem(s, t.item, `${FACTIONS[t.f].short}: `); // a shelf or chase protocol (store.mjs buyAt)
       else if (t.good === 'tip') deal(s, 'courier'); // a broadcast schedule bought before LANTERN dropped it
       else if (t.good.startsWith('cb-')) learnCodebase(s, t.good.slice(3), 'Unsealed: ');
-      else if (t.good === 'bootleg') addFilter(s, rollFilter(() => rand(s), { level: t.L, rarity: rand(s) < 0.7 ? 'stock' : 'tuned' }), 'Unsealed: ');
+      else if (t.good === 'bootleg') gainComponents(s, 2); // a bootleg filter bought before filters went: its scrap
       else deliverGoods(s, t.good, t.L, t.f);
       continue;
     }

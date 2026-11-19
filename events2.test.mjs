@@ -3,7 +3,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, active, resolveCycle, addLocation } from './dist/combat.mjs';
 import { deal, eventsOf, tickEvents, CARDS, FEUD, HUNT, huntPay, feuds, feudShare, feudPay } from './dist/events.mjs';
-import { filtersOf } from './dist/filters.mjs';
 import { LOOT } from './dist/gear.mjs';
 import { rep, FACTIONS } from './dist/factions.mjs';
 import { FACTION_FAMILY } from './dist/factions.mjs';
@@ -147,18 +146,18 @@ test('taking the bar to 100% wins the feud: the bonus, once', () => {
   assert.ok(s.logs.some((e) => e.id > first && e.type === 'world-event-won'));
   command(s, `event fight ${ev.id}`);
   assert.ok(!active(s), 'nothing more to fight');
-  // LANTERN sells no sealed item: its bootleg filter. Halcyon's ally Kestrel warms a little.
+  // Halcyon's ally Kestrel warms a little.
   const t = world({ hubs: ['glassjaw'] }); t.director.r = 1;
-  const e2 = deal(t, 'feud'), filters = filtersOf(t).length, w2 = reps(t);
+  const e2 = deal(t, 'feud'), w2 = reps(t);
   e2.bar = 0.5;
   command(t, `event fight ${e2.id} halcyon`); win(t); command(t, `event fight ${e2.id}`); win(t);
   assert.equal(rep(t, 'kestrel'), w2.kestrel + Math.round((FEUD.rep + FEUD.bonusRep) * 0.25), 'Halcyon\'s ally warms a little');
   for (const f of ['glassjaw', 'nullchoir', 'lantern']) assert.equal(rep(t, f), w2[f], `${f} unchanged (GLASSJAW the other side, NULL CHOIR a rival)`);
   const u = glassLantern(); u.ev.bar = 0.5;
-  const uf = filtersOf(u.s).length;
+  const us = u.s.stash.length;
   command(u.s, `event fight ${u.ev.id} lantern`); win(u.s); command(u.s, `event fight ${u.ev.id}`); win(u.s);
-  assert.equal(filtersOf(u.s).length, uf + 1, 'LANTERN\'s bootleg filter');
-  assert.equal(filters, filtersOf(t).length, 'Halcyon gives a sealed item, not a filter');
+  assert.equal(u.s.stash.at(-1).rarity, 'tuned', 'LANTERN gives a sealed item too');
+  assert.ok(u.s.stash.length > us);
 });
 
 test('when a feud\'s time runs out: ahead, the bonus; behind, you keep what each fight paid and lose nothing', () => {

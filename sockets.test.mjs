@@ -13,7 +13,7 @@ import * as SK from './dist/sockets.mjs';
 import { roomsFor, addRootSocket, socketRoomsRestore } from './dist/netrooms.mjs';
 import { ROOT } from './dist/root.mjs';
 import { roomsMarkup } from './dist/floorplan-view.mjs';
-import { mapMarkup, serverMarkup, storeMarkup } from './dist/view.mjs';
+import { mapMarkup, storeMarkup } from './dist/view.mjs';
 import { shopOf } from './dist/store.mjs';
 import { RESEARCH } from './dist/research.mjs';
 import { CONSORTIUM } from './dist/consortium.mjs';
@@ -430,15 +430,12 @@ test('a server\'s size is fixed by its seed', () => {
   assert.equal(SK.sizeOf({ seed: 5 }).id, SK.sizeOf({ seed: 5 }).id);
 });
 
-test('outposts, services and architecture are gone from the commands and the pages; the Server page lists your codebases', () => {
+test('outposts, services and architecture are gone from the commands and the pages', () => {
   const { s } = traced();
   assert.match(command(s, 'outpost build x siphon').map?.((e) => e.message).join(' ') ?? s.logs.at(-1).message, /Outposts are gone/);
   command(s, 'install router'); assert.match(s.logs.at(-1).message, /Services are gone/);
   command(s, 'architecture hub'); assert.match(s.logs.at(-1).message, /architecture is gone/);
   command(s, 'consortium collect');
-  const page = serverMarkup(s);
-  assert.match(page, /Codebases · 1/);
-  assert.doesNotMatch(page, /Install queue|Blueprints ·|Architecture|Bandwidth/);
   const map = mapMarkup(s, s.locations[0].id, 'mine', { pop: true });
   assert.doesNotMatch(map, /Outpost|bandwidth|Build panel|data-build-open/);
   assert.match(storeMarkup(s), /Codebases/);

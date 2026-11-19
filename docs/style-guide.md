@@ -16,7 +16,7 @@ Everything below is how the text in tooltips, logs, mail and tips is written. It
 
 ## 1. Two voices
 
-**Tooltip grammar** is for anything that describes a mechanic: skills, talents, edges, statuses, item effects, rule affixes, zero-days, stats, daemons, filters, firewall tiers, programs, a part's rules, strains, guards, bosses and tells.
+**Tooltip grammar** is for anything that describes a mechanic: skills, talents, edges, statuses, item effects, rule affixes, zero-days, stats, daemons, programs, a part's rules, strains, guards, bosses and tells.
 
 **Plain sentences** are for everything else: log lines, mail, contracts, story, tips, tutorial steps, warnings and hover text.
 

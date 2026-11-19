@@ -45,15 +45,13 @@ import { momentumCap } from './classes/breaker.mjs';
 import { online, listed, inSprawl, whereText, simOn, peopleOn, friends, profileOf } from './presence.mjs';
 import { pingsMarkup } from './pings.mjs';
 import { runnerRail, runnerMark, runnerCard, runnersMap, runnersList } from './runners-view.mjs';
-import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, rebooting, consortiumWall, alertsOf, tiersOf as conTiers } from './consortium.mjs';
+import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, rebooting, alertsOf, tiersOf as conTiers } from './consortium.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, tierIndex, standing, tierOf, nextTier, retainer, retainerWith, unread, title as contractTitle, progress as contractProgress, placeOf, levelOf as contractLevel, rewardLine, ready as contractReady, nextPayIn, xpOf } from './mail.mjs';
 import { commsOf } from './comms.mjs';
 import { shopOf, chaseItem, blockOf } from './store.mjs';
 import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, connectedTo, viaName } from './hidden.mjs';
 import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend, waypointOf, holderOf } from './floors.mjs';
 import { ROOT, ROOT_RULES, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
-import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel } from './firewall.mjs';
-import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, FILTER_CAP, baseName as filterBase } from './filters.mjs';
 import { situationOf } from './situations.mjs';
 import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine } from './sets.mjs';
 import { earnedOf, cellsOf, pinsOf, PIN_MAX } from './earned.mjs';
@@ -64,7 +62,7 @@ import { programMarkup, progNow, progTarget, progText, progMove, progOnPart, pro
 import { unlocked as routinesOpen, LOCKED as ROUTINES_LOCKED } from './routines.mjs';
 import { bodyTags, AUTHOR_FAMILIES, familyName } from './families.mjs';
 import { heatOf } from './parts.mjs';
-import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, fmtLeft, bountyOf, tellOf, quirkLine, labelOf, verdictOf, strength, sendersOf, senderGrade, sendsAt, streakOf, streakMult, STREAK, SCOUT, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine, sendTop, countsAt, wallSafety } from './invasion.mjs';
+import { chipRate, leavesIn, LEAVE_MS, fighting, fmtLeft, bountyOf, tellOf, quirkLine, labelOf, sendersOf, senderGrade, sendsAt, streakOf, streakMult, STREAK, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine, sendTop } from './invasion.mjs';
 import { reqLevel, meetsReq, shownRarity, RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS, rarityName, CHASE_LINE } from './gear.mjs';
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
@@ -1292,15 +1290,14 @@ export function nativeHome(s, it) {
   const who = homeOf(s, it.unique), h = who ? { name: nameOf(s, who), who } : it.home || homeName(s, it.unique);
   return `${h.name}${h.who ? ` (${whoLabel(h.who)})` : ''}`;
 }
-// The hover card for an item (app.js shows it): a protocol's glyph (protocol-glyphs.mjs; a filter's rotating ASCII
-// wireframe, which app.js spins), in its rarity colour, over its name, rarity, kind, level, stats one a line and effect.
+// The hover card for an item (app.js shows it): a protocol's glyph (protocol-glyphs.mjs), in its rarity colour, over its name, rarity, kind, level, stats one a line and effect.
 export function itemTipMarkup(s, ref) {
-  const f = ref?.startsWith('f:') ? filtersOf(s)[Number(ref.slice(2))] : null;
+  const f = null; // (filters were the other kind: gone with the firewall)
   const shelf = ref?.startsWith('p:') ? shelfOf(s, ref) : null; // a Shop's protocol: p:<hub>:<n> or p:<hub>:c-<id>
   const it = f || shelf?.it || stashItem(s, ref);
   if (!it) return '';
   const kind = f ? 'filter' : groupOf(it), r = it.rarity;
-  const stats = f ? `<span>${esc(filterLine(f))}</span>` : invStats(it);
+  const stats = invStats(it);
   const where = !f && loadedOn(s, it.id) ? `<span class="tag dim">on ${esc(ARCHETYPES[loadedOn(s, it.id)].name)}</span>` : '';
   const flavour = !f && (it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour);
   const vs = f || loadedOn(s, it.id) === classOf(s) ? '' : swapCompare(s, it);
@@ -1549,121 +1546,36 @@ export function needChips(s, cost) {
 
 // ---------- the server (services) ----------
 export const fmtTime = (ms) => (ms >= 3600000 ? `${Math.floor(Math.ceil(ms / 60000) / 60)}h ${Math.ceil(ms / 60000) % 60}m` : ms >= 60000 ? `${Math.ceil(ms / 60000)} min` : `${Math.max(0, Math.ceil(ms / 1000))}s`);
-// ---------- the wall (invasions) ----------
-export function bandsText(s) {
-  const { blocks, holds } = wallBands(s);
-  if (!holds) return 'Your wall holds nothing yet. Every invasion breaches.';
-  const held = holds > blocks ? ` and holds ${blocks ? `level ${blocks + 1}–${holds}` : `up to level ${holds}`} contested` : '';
-  return `Your wall ${blocks ? `blocks invasions up to level ${blocks}` : 'blocks none outright'}${held}; above level ${holds}, they breach.`;
-}
-// "≤12 · contested ≤22": what your wall stops outright, and what it holds.
-export function wallShort(s) {
-  const { blocks, holds } = wallBands(s);
-  return !holds ? 'none' : `${blocks ? `Lv ≤${blocks}` : '—'} · contested ≤${holds}`;
-}
+// ---------- invasions ----------
 export function invaderShort(s) {
   const inv = s.invasion;
   if (!inv) return '';
-  const r = ratioOf(s, inv), pct1 = (x) => `${Math.round(x * 10) / 10}%`;
-  if (inv.state === 'travel') return `${fmtLeft(inv.left)} out`;
-  if (inv.state === 'watch') return `mapping · ${fmtLeft(inv.mapLeft)}`;
-  return inv.state === 'siege' ? `contested · ${Math.round(inv.hp * 100)}% · −${pct1(chipRate(r))}/min` : `breach · −${pct1(chipRate(r))}/min`;
+  return inv.state === 'travel' ? `${fmtLeft(inv.left)} out` : `at HOME · −${chipRate()}%/min`;
 }
-// One line on what the invader is doing, and whether jacking in is possible.
+// One line on what the invader is doing, and whether you can intercept it.
 export function invaderStatus(s) {
   const inv = s.invasion;
   if (!inv) return null;
-  const r = ratioOf(s, inv);
-  const hp = Math.round(inv.hp * 100);
-  const pct1 = (x) => `${Math.round(x * 10) / 10}%`;
   const why = fighting(s, inv) ? 'You are fighting it' : s.run ? 'Jack out of your run first' : active(s) ? 'Finish this fight first' : '';
-  if (inv.state === 'travel') {
-    const verdict = { blocked: 'will stop it', siege: 'will contest it', breach: "won't hold it: a breach" }[verdictOf(s, inv)];
-    if (inv.kind === 'thief') return { text: `${inv.name} reaches ${s.locations.find((l) => l.id === inv.target)?.name || 'your outpost'} in about ${fmtLeft(inv.left)}; its firewall ${verdict}.`, can: !why, why, hp, intercept: true };
-    return { text: `${inv.name} reaches your wall in about ${fmtLeft(inv.left)}; your wall ${verdict}.`, can: false, why: 'Still on its way' };
-  }
-  if (inv.state === 'watch') return { text: `${inv.name} is mapping your wall: ${fmtLeft(inv.mapLeft)} left.`, can: !why, why, hp };
-  if (inv.state === 'siege') return { text: `Contested: your wall wears ${inv.name} down (${pct1(grindRate(r))} a minute, ${hp}% left) while it chips ${pct1(chipRate(r))} of your Integrity a minute. Jack in to finish it for a full kill.`, can: !why, why, hp };
-  return { text: `Breach: ${inv.name} chips ${pct1(chipRate(r))} of your Integrity a minute until you jack in and fight it.`, can: !why, why, hp };
+  if (inv.state === 'travel') return { text: `${inv.name} reaches HOME in about ${fmtLeft(inv.left)}.`, can: !why, why };
+  return { text: `${inv.name} chips ${chipRate()}% of your Integrity a minute until you intercept it.`, can: !why, why };
 }
 function jackInButton(st) {
-  if (st.intercept) return `<button type="button" class="btn ${st.can ? 'primary' : ''}" data-command="intercept" ${st.can ? '' : 'disabled'} title="${esc(st.can ? 'Catch it on its way for a full kill, with nothing stolen' : st.why)}">Intercept</button>`;
-  return `<button type="button" class="btn ${st.can ? 'primary' : ''}" data-command="jack in" ${st.can ? '' : 'disabled'} title="${esc(st.can ? 'Fight it at the wall, worn down but with its armor intact, for a full kill' : st.why)}">Jack in</button>`;
+  return `<button type="button" class="btn ${st.can ? 'primary' : ''}" data-command="intercept" ${st.can ? '' : 'disabled'} title="${esc(st.can ? 'Fight it now for a full kill and its bounty' : st.why)}">Intercept</button>`;
 }
-// An invasion's kind, quirk and a scout's mark, as tags (what it does on hover).
+// An invasion's kind and quirk, as tags (what it does on hover).
 function invTags(s, inv) {
   const kind = inv.kind && inv.kind !== 'raider' ? `<span class="tag ${inv.kind === 'champion' ? 'tag-crew' : 'warn'} inv-kind" title="${esc(tellOf(s, inv))}">${esc(labelOf(inv))}</span>` : '';
   const q = inv.quirk && QUIRKS[inv.quirk] ? `<span class="tag tag-strain" title="${esc(quirkLine(inv))}">${esc(QUIRKS[inv.quirk].name)}</span>` : ''; // what the quirk does to the invasion (its server's rule is about its rooms)
-  const m = inv.marked ? `<span class="tag hot" title="A scout mapped your wall for it">mapped +${inv.marked}</span>` : '';
-  return [kind, q, m].filter(Boolean).map((t) => ' ' + t).join(''); // a space before each, so they never butt up against the level
-}
-// What it pays, before the fight: its family's code for your kill (now, then the most it can grow to), the
-// odds of a daemon (sure with a capture), and your streak's bonus.
-function bountyChips(s, inv) {
-  const b = bountyOf(s, inv), n = streakOf(s), name = MATERIALS[b.code]?.name || b.code;
-  const chip = (ic, v, tip, cls = '') => `<span class="rw ${cls}" title="${esc(tip)}">${glyph(ic)}<b>${esc(String(v))}</b></span>`;
-  const sure = b.capture, odds = Math.round(daemonChance(s, inv.kind === 'thief' && inv.state === 'travel' ? 'intercept' : 'you') * 100);
-  return `<div class="rw-chips inv-pay">${chip(b.code, b.now >= b.max ? b.now : `${b.now} → ${b.max}`, `${name} for your kill: ${b.now} now, up to ${b.max} the longer it sits contested. If the wall wears it down, ${b.wall}. An outright block pays ${b.blocked}.`)}${chip('daemon', sure ? 'daemon' : `${odds}%`, sure ? `Your kill leaves a capture: a daemon of band ${daemonBand(inv.level)}, at level ${inv.level}, and a chance at a unique only invasions carry` : `The chance your kill leaves a daemon (band ${daemonBand(inv.level)}, level ${inv.level}). Every stop without one raises it.`, sure ? 'you' : '')}${n ? chip('xp', `+${Math.round((streakMult(s) - 1) * 100)}%`, `A streak of ${n}: each stop pays more`) : ''}</div>`;
+  return [kind, q].filter(Boolean).map((t) => ' ' + t).join(''); // a space before each, so they never butt up against the level
 }
 // Finish a timed build now (credit buyout): the price on the button, off if you can't pay.
 // Slots as pips: filled for used, hollow for free, with an icon and the name on hover.
 export function slotPips(icon, used, total, name) {
   return `<span class="slots" title="${esc(name)}: ${used} of ${total} in use">${glyph(icon)}${Array.from({ length: total }, (_, i) => `<i class="${i < used ? 'on' : ''}"></i>`).join('')}<small>${used}/${total}</small></span>`;
 }
-// The wall as a level ruler: blocked (teal), held at a siege (amber), breaks through (red),
-// with your server's level and an incoming invader marked on it. Each level is a cell; marks and
-// scale numbers sit on the middle of theirs, and a number a mark already shows isn't repeated.
-export function wallRuler(s, compact = false, bands = wallBands(s)) {
-  // Shown once something has come for your wall (FFXIV/WoW: UI as it starts to matter).
-  if (!s.invasion && !Object.keys(s.net?.seen || {}).length) return compact ? '' : '<div class="wall-ruler quiet" title="Nothing has come for your wall yet"><span>no invasions yet</span></div>';
-  const { blocks, holds } = bands, you = threatTop(s), inv = s.invasion; // the mark: the highest level your attached servers send
-  const hi = Math.max(holds + 4, you + 4, (inv ? countsAt(inv) : 0) + 2, 8), pct = (lv) => `${Math.min(100, (lv / hi) * 100)}%`;
-  const seg = (cls, from, to, icon, tip) => (to > from ? `<span class="wr-seg ${cls}" style="left:${pct(from)};width:calc(${pct(to)} - ${pct(from)})" title="${esc(tip)}">${compact ? '' : glyph(icon)}</span>` : '');
-  const mark = (lv, cls, label) => `<span class="wr-mark ${cls}" style="left:${pct(lv - 0.5)}" title="${esc(label)}"><i></i><small>${esc(label)}</small></span>`;
-  return `<div class="wall-ruler${compact ? ' compact' : ''}" title="${esc(bandsText(s))}">
-    <div class="wr-track">${seg('blocked', 0, blocks, 'firewall', blocks ? `Stopped at the wall: up to level ${blocks}` : '')}${seg('siege', blocks, holds, 'tarpit', `Contested: level ${blocks + 1}–${holds}`)}${seg('breach', holds, hi, 'kill', `Breaks through: level ${holds + 1} and up`)}</div>
-    <div class="wr-marks">${you ? mark(you, 'you', `servers ${you}`) : ''}${inv ? mark(countsAt(inv), 'inv ' + inv.state, `${inv.name} ${countsAt(inv)}`) : ''}</div>
-    ${compact ? '' : `<div class="wr-scale">${[...new Set([1, blocks, holds, hi])].filter((lv) => lv >= 1 && Math.abs(lv - you) > 1 && (!inv || Math.abs(lv - countsAt(inv)) > 1)).map((lv) => `<span style="left:${pct(lv - 0.5)}">${lv}</span>`).join('')}</div>`}
-  </div>`;
-}
-// The highest level a plain invasion from your network counts as at your wall, its server's grade and all
-// (invasion.mjs sendTop): what your firewall is up against.
+// The highest level a plain invasion from your network comes at, its server's grade and all.
 export const threatTop = (s) => sendTop(s);
-// The Safe readout's hover (invasion.mjs wallSafety): what reaches your wall, grade and all, and the invasion out now.
-const VERDICT_WORD = { blocked: 'blocks it', siege: 'contests it', breach: 'won\'t hold it' };
-export function safetyTip(s, w = wallSafety(s), { bands = true } = {}) {
-  const sends = w.top ? `Your servers' invasions count up to level ${w.top} at your wall, grade and all.` : 'Nothing attached sends invasions.';
-  const inv = s.invasion && s.invasion.kind !== 'thief' ? s.invasion : null, now = inv ? ` ${inv.name} counts ${w.at}: your wall ${VERDICT_WORD[w.verdict]}.` : '';
-  return `${bands && w.state !== 'ok' ? `Blocks up to level ${w.blocks} and contests up to ${w.holds}. ` : ''}${sends}${now}`;
-}
-// A holding's firewall in one compact block (an outpost, a hub you hold): its level, the line on
-// what it's vulnerable to against what comes for it (top: the highest level that does), its blocks,
-// and Upgrade and Defrag. arg: what the firewall commands take for it.
-// A holding's wall in a card row (an outpost, a hub): one status line (level, tier, what it lets through), then
-// its actions as equal tiles, each with its name on top and its cost under it.
-function fwRow(s, holder, arg, top, now = Date.now()) {
-  const f = fwAt(s, holder), b = wallBands(s, ratingAt(s, holder, null, now)), c = upgradeCost(s, holder), busy = active(s) || !!s.run;
-  const can = canPay(s, c);
-  const state = b.blocks >= top ? 'ok' : b.holds >= top ? 'mid' : 'low', frag = fragLevels(s, holder), def = defragging(s, now, holder);
-  const line = state === 'ok' ? `<span class="fw-vuln ok" title="Up to level ${top} comes for it">Safe</span>` : `<span class="fw-vuln ${state}" title="Blocks up to level ${b.blocks} and contests up to ${b.holds}. Up to level ${top} comes for it.">Vulnerable to lv ${b.blocks + 1}+</span>`;
-  const mods = frag || def ? `<span class="fw-mod warn" title="Fragmented">−${frag + (def ? FIREWALL.defragLoss : 0)}</span>` : '';
-  const cmd = (v) => `firewall ${v}${arg ? ' ' + esc(arg) : ''}`;
-  const t = fwTierOf(s, holder) + 1, nv = TIER_PERKS.find((p) => p.tier === t), dc = defragCost(s, holder);
-  const tile = (name, cost, command, ok, tip, cls = '') => `<button type="button" class="fw-act${cls ? ' ' + cls : ''}" data-command="${command}" ${ok ? '' : 'disabled'} title="${esc(tip)}"><span class="fa-name">${name}</span>${cost ? `<span class="fa-cost">${cost}</span>` : ''}</button>`;
-  const tiles = [
-    c && tile(`Upgrade to +${t}`, bcost({ credits: c.credits, cipher: c.cipher, worm: c.worm, kernel: c.kernel }), cmd('upgrade'), !busy && can, `One level more over the base, for good${nv ? `. ${nv.name}` : ''}${f.frag ? '. It leaves every block whole again' : ''}`, can ? 'primary' : ''),
-    (f.frag || def) && tile(def ? 'Defragmenting' : 'Defrag', def ? fmtLeft(f.defragUntil - now) : bcost({ credits: dc }), cmd('defrag'), !def && !busy && s.server.credits >= dc, `${FIREWALL.defragLoss} levels down while it runs`),
-  ].filter(Boolean).join('');
-  return `<div class="fw-row"><div class="fw-stat"><span class="fw-lv">${glyph('firewall')}<b>lv ${effLevel(s, now, null, holder)}</b></span>${fwTier(s, holder)}${mods}${line}</div>${tiles ? `<div class="fw-tiles">${tiles}</div>` : ''}</div>`;
-}
-// Its tier over the base (the network's, or the holding's own level): the tag, the base and the
-// perks it has on hover, the next one ahead.
-function fwTier(s, holder = null) {
-  const t = fwTierOf(s, holder), got = perksAt(t), next = TIER_PERKS.find((p) => p.tier > t);
-  const why = holder ? `Base ${baseOf(s, holder)}: this server's level` : `Base ${baseOf(s)}: your highest attached server's level, less ${BASE_GAP}`;
-  const tip = [why, ...got.map((p) => `+${p.tier}: ${p.name}`), next ? `Next perk at +${next.tier}: ${next.name}` : ''].filter(Boolean).join(' · ');
-  return `<span class="tag fw-ver" title="${esc(tip)}">+${t}</span>`;
-}
 // A button's price, after its label: an icon and a number for each thing it takes.
 const bcost = (c) => `<span class="bcost">${Object.entries(c).filter(([, n]) => n).map(([k, n]) => `<span title="${esc(k === 'credits' ? 'Credits' : MATERIALS[k]?.name || k)}">${glyph(k)}${n}</span>`).join('')}</span>`;
 // A contract's pay as icon chips: credits, XP, standing and rep, anything extra.
@@ -1702,22 +1614,25 @@ function traceWays(s, h, via, kit) {
   ].filter(Boolean).join('');
   return `${main}<ul class="trace-ways">${ways}</ul>`;
 }
-// The invasion's own card on the map: the virus, where it's from, what it's doing (with a timer
-// bar), one line on how your firewall meets it, and Jack in once it's at your wall.
+// The invasion's own card on the map: its name and tags, then rows (label | value) like HOME's card: where it's from,
+// where it is (a bar on its road, the chip at HOME), its bounty and its daemon chance; Intercept under them.
 function invaderCard(s) {
   const inv = s.invasion;
   if (!inv) return '';
-  const st = invaderStatus(s), o = verdictOf(s, inv), tgt = inv.target && s.locations.find((l) => l.id === inv.target), lv = tgt ? effLevel(s, undefined, inv.family, tgt) : effLevel(s, undefined, inv.family);
-  const verdict = { blocked: ['you', 'blocks it'], siege: ['warn', 'contests it'], breach: ['hot', 'won\'t hold it'] }[o];
-  const pct = inv.state === 'travel' ? (1 - inv.left / Math.max(1, inv.total)) * 100 : inv.state === 'watch' ? (inv.mapLeft / SCOUT.mapMs) * 100 : inv.hp * 100;
-  const tags = `${levelTag(s, inv.level)}${invTags(s, inv)}${inv.mutation ? `<span class="tag tag-mut" title="${esc(MUTATIONS[inv.mutation].rule)}">${esc(MUTATIONS[inv.mutation].name)}</span>` : ''}${inv.strain && STRAINS[inv.strain] ? `<span class="tag tag-strain" title="${esc(STRAINS[inv.strain].rule || '')}">${esc(STRAINS[inv.strain].name)}</span>` : ''}`;
-  return `<section class="card inv-card ${inv.state}"><h2>Invasion</h2><h1>${esc(inv.name)}</h1><p class="svc-line tagline">${tags}</p><p class="svc-line quiet">from ${esc(inv.fromName)}</p>
-    <div class="inv-state"><span class="tag ${inv.state === 'breach' ? 'hot' : inv.state === 'siege' || inv.state === 'watch' ? 'warn' : ''}">${esc(inv.state === 'travel' ? (tgt ? `to ${tgt.name}` : 'on its way') : inv.state === 'watch' ? 'mapping' : inv.state === 'siege' ? 'contested' : 'breach')}</span><b>${esc(invaderShort(s))}</b></div>
-    <div class="wall-bar ${inv.state}"><span style="width:${Math.max(0, Math.min(100, Math.round(pct)))}%"></span></div>
+  const st = invaderStatus(s), home = inv.state !== 'travel', b = bountyOf(s, inv), name = MATERIALS[b.code]?.name || b.code;
+  const pct = home ? 100 : (1 - inv.left / Math.max(1, inv.total)) * 100;
+  const odds = b.capture ? 'sure' : `${Math.round(daemonChance(s, home ? 'you' : 'intercept') * 100)}%`;
+  const tags = `${levelTag(s, inv.level)}${invTags(s, inv)}${inv.mutation ? ` <span class="tag tag-mut" title="${esc(MUTATIONS[inv.mutation].rule)}">${esc(MUTATIONS[inv.mutation].name)}</span>` : ''}${inv.strain && STRAINS[inv.strain] ? ` <span class="tag tag-strain" title="${esc(STRAINS[inv.strain].rule || '')}">${esc(STRAINS[inv.strain].name)}</span>` : ''}`;
+  const where = home
+    ? srvLine('kill', 'At HOME', `<span class="srv-bar hp low"><span style="width:${Math.round((100 * leavesIn(inv)) / LEAVE_MS)}%"></span></span>`, `−${chipRate()}<small>%/min</small>`, `It chips ${chipRate()}% of your max Integrity a minute. Left alone, it leaves in ${fmtLeft(leavesIn(inv))}, its bounty unpaid.`)
+    : srvLine('clock', 'Arrives', `<span class="srv-bar inv-road"><span style="width:${Math.round(pct)}%"></span></span>`, fmtLeft(inv.left), 'Intercept it on its road for a better daemon chance.');
+  return `<section class="card inv-card ${home ? 'breach' : 'travel'}"><h2>Invasion</h2><h1>${esc(inv.name)}</h1><p class="svc-line tagline">${tags}</p>
+    ${srvLine('router', 'From', '', `<span class="inv-from">${esc(inv.fromName)}</span>`)}
+    ${where}
+    ${srvLine(b.code, 'Bounty', '', b.now >= b.max ? `${b.now}` : `${b.now}<small> → ${b.max}</small>`, `${name} for your kill: ${b.now} now, up to ${b.max} the longer it sits at HOME.`)}
+    ${srvLine('daemon', 'Daemon', '', odds, b.capture ? 'Your kill leaves a capture: a sure daemon, and a chance at a unique only invasions carry.' : `The chance your kill leaves a daemon (band ${daemonBand(inv.level)}, level ${inv.level}). Every stop without one raises it.`)}
     ${tellOf(s, inv) ? `<p class="inv-tell">${esc(tellOf(s, inv))}</p>` : ''}
-    <p class="svc-line">${glyph('firewall')} ${tgt ? `${esc(tgt.name)}'s firewall` : 'Your firewall'} <b>lv ${lv}</b> <span class="tag ${verdict[0]}">${verdict[1]}</span></p>
-    ${bountyChips(s, inv)}
-    <div class="row">${(inv.state !== 'travel' || st?.intercept) && st ? jackInButton(st) : ''}<button type="button" class="btn" data-go="server">Firewall</button></div></section>`;
+    <div class="row acts">${jackInButton(st)}</div></section>`;
 }
 // Server architecture: picked at server level 20, a trade each way.
 // ---------- networks (network.mjs) ----------
@@ -1759,8 +1674,6 @@ export function networkCardMarkup(s, who = 'you', opts = {}) {
     <h3 class="net-sub">Native</h3><ul class="net-natives">${natives}</ul>${darkRows}${opts.extra || ''}</section>`;
 }
 
-// The Server page lives in server-view.mjs.
-export { serverMarkup } from './server-view.mjs';
 
 export function logsMarkup(s) {
   return `<div class="page-grid"><section class="card"><h2>Logs</h2><ol class="fulllog">${s.logs.slice(-300).map((e) => `<li>c${e.cycle} · ${esc(e.message)}</li>`).join('')}</ol></section>
@@ -2057,7 +1970,6 @@ export function consortiumMarkup(s, now = Date.now()) {
       <p>${size} servers merged · founded by ${esc(c.founder)} · ${memberServers(s).length} servers on the network</p>
       <ol class="con-ladder">${ladder}</ol></section>
     ${networkCardMarkup(s, 'you')}
-    <section class="card"><h2>While you're away</h2>${awayLine(s)}<div class="row">${btn('server', 'Firewall')}</div></section>
     <div class="row con-leave"><button type="button" class="btn small" data-command="consortium leave" data-confirm="Click again to leave">Leave</button></div>
   </div></div>`;
 }
@@ -2178,7 +2090,7 @@ export function mapLayout(s, floor = null, portrait = mapPortrait) {
   // The invader: from its server when it's on this floor, else up through the entry; it stops just outside home.
   const inv = s.invasion, src = inv && (byId[inv.from] || byId[idOf[g.entry]]);
   if (src) {
-    const tgt = inv.target && byId[inv.target];
+    const tgt = null;
     const dx = src.x - home.x, dy = src.y - home.y, len = Math.hypot(dx, dy) || 1;
     const wall = tgt ? { x: Math.round(src.x + (tgt.x - src.x) * 0.85), y: Math.round(src.y + (tgt.y - src.y) * 0.85) } : { x: Math.round(home.x + (dx / len) * 70), y: Math.round(home.y + (dy / len) * 70) };
     const start = tgt ? src : { x: src.x - (dx / len) * 30, y: src.y - (dy / len) * 30 };
@@ -2314,10 +2226,9 @@ export function threatsOf(s, now = Date.now()) {
   const out = [], add = (x) => out.push(x);
   const inv = s.invasion;
   if (inv) add(inv.state === 'travel'
-    ? { cls: inv.quiet ? 'dim' : 'warn', icon: 'kill', name: inv.name, where: inv.target ? `${labelOf(inv).toLowerCase()} · to ${s.locations.find((l) => l.id === inv.target)?.name || 'outpost'}` : `${inv.kind && inv.kind !== 'raider' ? labelOf(inv).toLowerCase() : 'invasion'} · your wall`, tag: `lv ${inv.level}`, left: inv.left, total: inv.total, sel: 'invader', verb: 'arrives' }
-    : inv.state === 'watch' ? { cls: 'hot', icon: 'kill', name: inv.name, where: 'scout mapping your wall', tag: `lv ${inv.level}`, left: inv.mapLeft, total: SCOUT.mapMs, sel: 'invader', verb: 'leaves' }
-    : { cls: 'hot', icon: 'kill', name: inv.name, where: inv.state === 'siege' ? 'contested at your wall' : 'BREACH at your wall', tag: `lv ${inv.level}`, pct: inv.hp, sel: 'invader' });
-  else if (threatTop(s) && s.net?.next > 0) add({ cls: 'dim', icon: 'clock', name: 'Next invasion', where: 'your wall', left: s.net.next, total: CONFIG.invasion.everyMs[1], sel: 'server' });
+    ? { cls: 'warn', icon: 'kill', name: inv.name, where: `${inv.kind && inv.kind !== 'raider' ? labelOf(inv).toLowerCase() : 'invasion'} · HOME`, tag: `lv ${inv.level}`, left: inv.left, total: inv.total, sel: 'invader', verb: 'arrives' }
+    : { cls: 'hot', icon: 'kill', name: inv.name, where: 'at HOME', tag: `lv ${inv.level}`, pct: 1, sel: 'invader' });
+  else if (threatTop(s) && s.net?.next > 0) add({ cls: 'dim', icon: 'clock', name: 'Next invasion', where: 'HOME', left: s.net.next, total: CONFIG.invasion.everyMs[1], sel: 'server' });
   for (const ev of eventsOf(s)) { const c = EVENT_CARDS[ev.card], l = s.locations.find((x) => x.id === ev.loc); add({ cls: 'drop', icon: EVENT_ICON[ev.card] || 'signal', left: ev.left, total: c.ms, sel: l ? l.id : 'server', verb: c.fight ? 'leaves' : 'ends', ...railOf(s, ev, l) }); }
   for (const row of siteRows(s)) add(row); // a Settlement run's clock (sites.mjs)
   const sc = s.net?.scouted, scFrom = sc && s.locations.find((l) => l.id === sc.from);
@@ -2586,7 +2497,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     }
     if (n.kind === 'invader') {
       const inv = n.inv, kind = inv.kind && inv.kind !== 'raider' ? labelOf(inv).toLowerCase() + ' · ' : '';
-      const sub = kind + (inv.state === 'travel' ? `${fmtLeft(inv.left)} out` : inv.state === 'watch' ? `mapping ${fmtLeft(inv.mapLeft)}` : inv.state === 'siege' ? `contested ${Math.round(inv.hp * 100)}%` : 'breach');
+      const sub = kind + (inv.state === 'travel' ? `${fmtLeft(inv.left)} out` : 'at HOME');
       const ang = Math.atan2(-n.y, -n.x) * 180 / Math.PI; // it points at home
       return `<g class="mnode invader ${inv.state} f-threat${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="invader" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Invasion: ${esc(inv.name)}"><circle r="18" class="mhit"/><circle r="13" class="vring"/><path class="vbody" d="M0 -9.5 L2.3 -3.8 L8.1 -4.6 L4.3 0 L8.1 4.6 L2.3 3.8 L0 9.5 L-2.3 3.8 L-8.1 4.6 L-4.3 0 L-8.1 -4.6 L-2.3 -3.8 Z"/><circle r="2.6" class="vcore"/>${pick}${label({ ...n, angle: undefined }, 7, inv.name, sub, inv.state === 'breach' ? 'hot' : '')}</g>`;
     }
@@ -2682,13 +2593,11 @@ function serverList(s, sel, filter, sort) {
       <span class="sl-status">${r.chips}${locBtn(l.id)}</span></button>`; }).join('');
   return `<div class="server-list"><div class="sl-head">${head}</div><div class="sl-body">${body || '<p class="quiet">None.</p>'}${listHubs(s, sel, filter)}${listLeads(s, sel, filter)}</div></div>`;
 }
-// A server that sends invasions: your wall's shield, in the colour of what it does to a plain one (blocks, contests,
-// lets through), the rule on hover.
-const WALL_MARK = { blocked: ['you', 'blocks'], siege: ['warn', 'contests'], breach: ['hot', 'lets through'] };
+// A server that sends invasions: a red mark, what it sends on hover.
 function wallMark(s, l) {
-  const g = senderGrade(l), v = outcome(wallRating(s, l.family) / strength(l.level || 1, null, g)), [tone, word] = WALL_MARK[v];
-  const tip = `Sends invasions\n${FAMILIES[l.family]?.name || 'Viruses'} at level ${l.level || 1}${g > 1 ? `, v${g}: a plain one counts ${sendsAt(l)} at your wall` : ''}.\nYour wall ${word} a plain one.`;
-  return `<span class="sl-wall ${tone}" title="${esc(tip)}">${glyph('firewall')}</span>`;
+  const g = senderGrade(l);
+  const tip = `Sends invasions\n${FAMILIES[l.family]?.name || 'Viruses'} at level ${l.level || 1}${g > 1 ? `, v${g}` : ''}.`;
+  return `<span class="sl-wall hot" title="${esc(tip)}">${glyph('kill')}</span>`;
 }
 // Locate: back to the map, centred and zoomed on it (app.js).
 const locBtn = (id) => `<span class="sl-loc" role="button" tabindex="0" data-locate="${esc(id)}" title="Show it on the map">${glyph('trace')}</span>`;
@@ -2781,20 +2690,6 @@ function shockSvg(s, f) {
   return ev ? `<g class="hub-shock ${ev.mult > 1 ? 'up' : 'down'}" transform="translate(10 -14)"><title>${esc(ev.title || `${eventText(s, ev)} ${eventMinutes(ev)} min left.`)}</title><g class="hs-in"><rect x="0" y="-15" width="${32 + 6.2 * String(ev.mult).length}" height="15" rx="2"/><text x="4" y="-4">${ev.mult > 1 ? '▲' : '▼'}</text><g class="hs-ware" transform="translate(14 -13.5) scale(0.75)">${GLYPHS[GLYPH_OF_GOOD[ev.ware]]}</g><text x="28" y="-4">×${ev.mult}</text></g></g>` : '';
 }
 
-// In a consortium, your wall meets invaders while you're logged off: what it stops.
-// The wall as a server-card row: a bar of how well it covers the highest level your traced servers
-// send (teal: it stops them; amber: they'd be contested; red: they'd break through), and the level it stops.
-function wallRow(s, icon, label, b, tipExtra = '') {
-  const w = wallSafety(s, b), top = Math.max(w.top, w.at), state = w.state;
-  const cover = top ? Math.min(1, b.blocks / top) : 1;
-  const tip = `Firewall lv ${b.blocks}: stops invasions up to level ${b.blocks}${b.holds > b.blocks ? `, contests ${b.blocks + 1}–${b.holds}` : ''}. ${safetyTip(s, w, { bands: false })}${tipExtra}`;
-  return srvLine(icon, label, `<span class="srv-bar wall ${state}"><span style="width:${(cover * 100).toFixed(0)}%"></span></span>`, state === 'ok' ? '<small>safe</small>' : `<small>vuln lv</small> ${w.vuln}+`, tip);
-}
-function awayLine(s) {
-  if (!consortiumOf(s)) return '';
-  return wallRow(s, 'clock', 'Away', wallBands(s, wallRating(s)), ' While you\'re logged off (consortium bonus included).');
-}
-
 // The consortium (consortium.mjs) on a server card: whose it is, or shared ground.
 function consortiumLine(s, l) {
   const c = consortiumOf(s);
@@ -2843,6 +2738,40 @@ function ownerLine(f) {
   const F = FX[f], tip = `${F.short}\nOwner\nBeat its Resident and the server is yours, with its vault's receipt to stamp.`;
   return `<p class="svc-line fline" style="--fc:${F.color}" title="${esc(tip)}">${fIcon(f)}<b>${esc(F.short)}</b></p>`;
 }
+// HOME's ring (the old Server page's): sixteen blocks round the core, Integrity the inner ring with its number; an
+// amber arc where an invasion presses while it's at HOME, and while one is on its way a red marker coming down its road
+// with the time left. The road and the arc are at the top, where invasions come in.
+const RC = 116, RB0 = 76, RB1 = 98, RTOP = 48; // the centre, the blocks' inner and outer radii, the road's length above the ring
+const rf1 = (n) => Math.round(n * 10) / 10;
+const RP = (r, a) => [RC + r * Math.sin((a * Math.PI) / 180), RC - r * Math.cos((a * Math.PI) / 180)];
+const rBand = (r0, r1, a0, a1) => { const [x1, y1] = RP(r1, a0), [x2, y2] = RP(r1, a1), [x3, y3] = RP(r0, a1), [x4, y4] = RP(r0, a0); return `M${rf1(x1)} ${rf1(y1)}A${r1} ${r1} 0 0 1 ${rf1(x2)} ${rf1(y2)}L${rf1(x3)} ${rf1(y3)}A${r0} ${r0} 0 0 0 ${rf1(x4)} ${rf1(y4)}Z`; };
+const rArc = (r, a0, a1) => { const [x1, y1] = RP(r, a0), [x2, y2] = RP(r, a1); return `M${rf1(x1)} ${rf1(y1)}A${r} ${r} 0 0 1 ${rf1(x2)} ${rf1(y2)}`; };
+const RING_BLOCKS = Array.from({ length: 16 }, (_, i) => { const seg = 22.5, a0 = i * seg - seg / 2 + 1.6, a1 = (i + 1) * seg - seg / 2 - 1.6; return `<path class="blk" d="${rBand(RB0, RB1, a0, a1)}"/>`; }).join('');
+export function homeRing(s) {
+  const max = s.server.max, hp = Math.max(0, s.server.integrity), share = hp / Math.max(1, max), tone = share < 0.3 ? 'hot' : share < 0.6 ? 'warn' : '';
+  const inv = s.invasion, atHome = inv && inv.state !== 'travel', onRoad = inv && inv.state === 'travel';
+  const arc = atHome ? `<path class="press" d="${rArc(RB1 + 7, -40, 40)}"><title>${esc(`${inv.name} at HOME`)}</title></path>` : '';
+  let road = '';
+  if (onRoad) {
+    const gone = Math.max(0, Math.min(1, 1 - inv.left / Math.max(1, inv.total))), y = rf1(-RTOP + 8 + (RTOP + RC - RB1 - 24) * gone);
+    road = `<g class="road-g"><title>${esc(`${inv.name}: at HOME in ${fmtLeft(inv.left)}`)}</title><line class="road" x1="${RC}" y1="${-RTOP}" x2="${RC}" y2="${RC - RB1 - 8}"/>`
+      + `<rect class="mark" x="${RC - 6}" y="${y - 6}" width="12" height="12" transform="rotate(45 ${RC} ${y})"/><text class="eta" x="${RC + 14}" y="${rf1(y + 7)}">${fmtLeft(inv.left)}</text></g>`;
+  }
+  const r = 63, c = 2 * Math.PI * r;
+  return `<div class="home-ring"><svg class="hsv-ring" viewBox="0 ${-RTOP} ${RC * 2} ${RC * 2 + RTOP}" role="img" aria-label="${esc(`Integrity ${hp} of ${max}${inv ? `; ${inv.name} ${onRoad ? 'on its way' : 'at HOME'}` : ''}`)}">
+    <circle class="shell" cx="${RC}" cy="${RC}" r="${RB1 + 10}"/>${road}<g class="blocks">${RING_BLOCKS}</g>${arc}
+    <g class="core"><title>${esc(`Integrity ${hp}/${max}. Your health. It regenerates slowly at home.`)}</title><circle class="pit" cx="${RC}" cy="${RC}" r="57"/><circle class="track" cx="${RC}" cy="${RC}" r="${r}"/>
+      <circle class="integ ${tone}" cx="${RC}" cy="${RC}" r="${r}" stroke-dasharray="${rf1(c * share)} ${rf1(c)}" transform="rotate(-90 ${RC} ${RC})"/>
+      <text class="num ${tone}" x="${RC}" y="${RC + 10}" text-anchor="middle">${hp}</text><text class="of" x="${RC}" y="${RC + 30}" text-anchor="middle">/ ${max}</text></g></svg></div>`;
+}
+// The top bar's Materials panel (app.js): Code and Components, one row each, what each is for on hover.
+const MAT_USE = { cipher: 'Ransomware kills and their invasions pay it.', worm: 'Worm kills and their invasions pay it.', kernel: 'Ghostroot kills and their invasions pay it.', exploit: 'Rare: bosses, vaults and deep servers pay it.' };
+export function storesMarkup(s) {
+  const row = (icon, name, kind, n, what) => srvLine(icon, name, '', `${n}`, `${name}\n${kind}\n${what}`);
+  return `<section class="card stores-card"><h2>Materials</h2>
+    ${['cipher', 'worm', 'kernel', 'exploit'].map((k) => row(k, MATERIALS[k].short, 'Code', s.materials?.[k] || 0, `${MAT_USE[k]} It goes into programs on a server's sockets, and a hub's market buys it.`)).join('')}
+    ${row('salvage', 'Components', 'Salvage', componentsOf(s), 'What broken parts leave behind. A hub\'s market buys them.')}</section>`;
+}
 function mapSide(s, sel, node) {
   const e = gateOf(s), srv = s.server;
   const busy = active(s) || s.run;
@@ -2860,17 +2789,12 @@ function mapSide(s, sel, node) {
     const runCard = s.run ? `<section class="card lesson"><h2>On a run</h2><h1>${esc(currentLocation(s).name)}</h1><p>Integrity ${s.run.integrity}/${s.run.max} · ${s.run.pack.length} unbanked.</p><div class="row">${btn('net', 'Back to the run', true)}</div></section>` : '';
     return `${runCard}${alertCard()}
       <section class="card srv-card"><h2>Your server</h2>
-        ${srvLine('integrity', 'Server', `<span class="tag dim">${esc(ARCHETYPES[serverClass(s)]?.name || '')}</span>`, `<small>Lv</small> ${serverLevel(s)}`, `Your server's level is your highest class level.${serverNext(serverLevel(s)) ? ` ${serverNext(serverLevel(s))}.` : ''}`)}
-        ${srvLine('integrity', 'Integrity', `<span class="srv-bar hp ${srv.integrity / srv.max <= 0.3 ? 'low' : srv.integrity / srv.max <= 0.6 ? 'mid' : ''}"><span style="width:${(srv.integrity / srv.max) * 100}%"></span></span>`, `${srv.integrity}<small>/${srv.max}</small>`)}
-        ${wallRow(s, 'firewall', 'Firewall', wallBands(s))}
-        ${awayLine(s)}
+        ${homeRing(s)}
         ${!MEMORY.on ? '' : srvLine('memory', 'Memory', '', `${Math.max(0, memoryCap(s) - liveCount(s))}<small>/${memoryCap(s)} free</small>`, `${liveCount(s)} servers on your network`)}
-        ${srvLine('salvage', 'Components', '', `${componentsOf(s)}`, 'Components: what broken parts leave behind. Sell them at a hub\'s market.')}
 
-        ${s.invasion ? `<div class="invader-line ${s.invasion.state}"><b>${esc(s.invasion.name)}</b>${levelTag(s, s.invasion.level)}<span>${esc(invaderShort(s))}</span></div>${s.invasion.state !== 'travel' ? `<div class="row acts">${jackInButton(invaderStatus(s))}</div>` : ''}` : ''}
+        ${s.invasion ? `<div class="invader-line ${s.invasion.state}"><b>${esc(s.invasion.name)}</b>${levelTag(s, s.invasion.level)}<span>${esc(invaderShort(s))}</span></div><div class="row acts">${jackInButton(invaderStatus(s))}</div>` : ''}
         ${homeEvents(s)}
-        <div class="row acts">${btn('server', 'Server')}${upkeep.join('')}</div>
-        ${globalThis.location?.search?.includes('dev') ? `<details><summary>Test intrusions</summary><div class="row" style="margin-top:8px">${btn('encounter cryptjack', 'CRYPTJACK')}${btn('encounter splinter', 'SPLINTER')}${btn('encounter ghostroot', 'GHOSTROOT')}</div></details>` : ''}
+        ${upkeep.length ? `<div class="row acts">${upkeep.join('')}</div>` : ''}
       </section>`;
   }
   if (node.kind === 'zone') return zoneCard(s) + alertCard();

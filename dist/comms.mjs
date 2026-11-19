@@ -28,13 +28,10 @@ const MAP = {
   located: (e) => ({ kind: 'net', label: 'Located', from: 'Trace', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: true }),
   takeover: (e) => ({ kind: 'net', label: 'Taken', from: 'Network', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: false }),
   // A weak invasion the wall will stop: a quiet line, no beep. Only what gets past the wall asks for you.
-  invader: (e) => ({ kind: 'net', label: 'Invasion', from: 'Wall', text: e.message, go: 'map:invader', beep: !e.quiet }),
-  'invasion-cleared': (e) => ({ kind: 'net', label: e.blocked ? 'Blocked' : e.lost ? 'Gone' : 'Stopped', from: 'Wall', text: e.message, go: null, beep: false }),
-  'wall-scout': (e) => ({ kind: 'alert', label: 'Scout', from: 'Wall', text: e.message, go: 'jack', beep: true, alert: true }),
-  'wall-mapped': (e) => ({ kind: 'net', label: 'Mapped', from: 'Wall', text: e.message, go: 'server', beep: true }),
-  sabotage: (e) => ({ kind: 'alert', label: 'Sabotage', from: 'Wall', text: e.message, go: 'jack', beep: true, alert: true }),
+  invader: (e) => ({ kind: 'net', label: 'Invasion', from: 'HOME', text: e.message, go: 'map:invader', beep: !e.quiet }),
+  'invasion-cleared': (e) => ({ kind: 'net', label: e.lost ? 'Gone' : 'Stopped', from: 'HOME', text: e.message, go: null, beep: false }),
+  sabotage: (e) => ({ kind: 'alert', label: 'Sabotage', from: 'HOME', text: e.message, go: 'jack', beep: true, alert: true }),
   theft: (e) => ({ kind: 'net', label: 'Theft', from: 'Outpost', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: true }),
-  'wall-siege': (e) => ({ kind: 'alert', label: 'Invasion', from: 'Wall', text: e.message, go: 'jack', beep: true }),
   'outpost-siege': (e) => ({ kind: 'alert', label: 'Invasion', from: 'Outpost', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: true, alert: true }),
   'outpost-fell': (e) => ({ kind: 'alert', label: 'Lockdown', from: 'Outpost', text: e.message.replace(/^LOCKDOWN: /, ''), go: e.location ? `map:${e.location}` : 'map', beep: true }),
   'outpost-held': (e) => ({ kind: 'net', label: 'Held', from: 'Outpost', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: false }),
@@ -81,7 +78,7 @@ const MAP = {
   // The collection log's first time for a slot (collection.mjs, combat.mjs): a quiet line. It opens the log on its entry.
   collected: (e) => ({ kind: 'standing', label: 'Collection', from: 'Codex', text: e.message.replace(/^Collection: /, ''), go: e.go || 'log', beep: false }),
   logged: (e) => ({ kind: 'standing', label: 'Collection', from: 'Codex', text: e.message.replace(/^Collection: /, ''), go: e.go || 'log', beep: false }),
-  'wall-breach': (e) => ({ kind: 'alert', label: 'Breach', from: 'Wall', text: e.message, go: 'jack', beep: true, alert: true }),
+  'wall-breach': (e) => ({ kind: 'alert', label: 'Invasion', from: 'HOME', text: e.message, go: 'jack', beep: true, alert: true }),
 };
 
 export const commsOf = (s) => (s.comms ||= []);
