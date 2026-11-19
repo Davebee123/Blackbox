@@ -323,7 +323,7 @@ WORLD_hook('fight', (s, room, as) => {
     return { key, seed, opts: { ...opts, room: room.path, author: loc.zone ? null : opts.author }, size: crew ? 'raw' : sp.boss ? 'boss' : sp.elite ? 'elite' : loc.zone ? 'stray' : 'process', name: sp.boss || sp.bounty ? sp.name.toUpperCase?.() === sp.name ? sp.name : opts.name || sp.name : null, level: sp.level, family: fam, elite: !!sp.elite, boss: sp.boss || null, bounty: !!sp.bounty, author: loc.zone ? null : authorOf(loc), xp: NET.wildXp, wild: true };
   }
   if (room.kind === 'core' && R.type === 'server') {
-    const level = residentLevel(loc, now()), seed = (((loc.seed || 1) * 7 + 31) >>> 0) + (R.spawns[room.id] || 0) * 7919;
+    const level = residentLevel(loc), seed = (((loc.seed || 1) * 7 + 31) >>> 0) + (R.spawns[room.id] || 0) * 7919;
     // Guarded (specials.mjs): a crew elite holds the Core in the Resident's place, as a Pit's (rogue.mjs).
     if (hasSpecial(loc, 'guarded') && !loc.temp) { const name = `ELITE · ${loc.name}`; return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: loc.family, elite: true, mutation: armoredAt(loc) ? 'armored' : null, name, author: R.author }, size: 'elite', name, level, family: loc.family, elite: true, author: R.author }; }
     // A floor job's boss (arcs.mjs jobBossAt): it holds this Core in the Resident's place.
@@ -363,12 +363,6 @@ WORLD_hook('lost', (s, room, e) => {
   const loc = locOf(s);
   if (!loc) return;
   if (room.wild) return wildLost(s, loc, room, e);
-  // A Resident that beats you grows: a level more for 6 hours, up to three.
-  if (room.kind === 'core' && e.virus.boss === 'resident') {
-    const t = now(), had = loc.resident && t - loc.resident.at < RESIDENT.lossMs ? loc.resident.bonus : 0;
-    loc.resident = { bonus: Math.min(RESIDENT.maxLoss, had + 1), at: t };
-    emit(s, 'warning', `The Resident of ${loc.name} beat you. It's a level stronger for the next 6 hours.`, { location: loc.id });
-  }
 });
 // The Resident down with the vault open: the server is yours (teal on the map), its Core quiet for good.
 function takeover(s, loc, room) {

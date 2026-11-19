@@ -48,22 +48,16 @@ test('beating the Resident takes the server; the core goes quiet', () => {
   assert.equal(FP.isUp(s, coreRoom(s)), false, 'nothing holds the Core of a server you hold');
 });
 
-test('a Resident that beats you is a level stronger for 6 hours, up to three', () => {
-  let t = 1_700_000_000_000;
-  hooks.now = () => t;
-  try {
-    const s = onRun();
-    const loc = openVault(s);
-    const base = residentLevel(loc, t);
-    toCore(s);
-    s.run.integrity = 1;
-    for (const p of s.encounter.virus.parts) if (p.attack) p.attack.due = s.encounter.cycle;
-    for (let i = 0; i < 6 && active(s); i++) { command(s, 'hold'); resolveCycle(s); }
-    assert.equal(loc.takenOver, undefined);
-    assert.equal(residentLevel(loc, t), base + 1);
-    t += 7 * 3600000;
-    assert.equal(residentLevel(loc, t), base, 'it wears off');
-  } finally { hooks.now = null; }
+test('losing to a Resident leaves it as it was: no level up, so retrying is never harder', () => {
+  const s = onRun();
+  const loc = openVault(s);
+  const base = residentLevel(loc);
+  toCore(s);
+  s.run.integrity = 1;
+  for (const p of s.encounter.virus.parts) if (p.attack) p.attack.due = s.encounter.cycle;
+  for (let i = 0; i < 6 && active(s); i++) { command(s, 'hold'); resolveCycle(s); }
+  assert.ok(!active(s) && loc.takenOver === undefined, 'it beat you');
+  assert.equal(residentLevel(loc), base);
 });
 
 // The ghostroot Resident keeps this phase; the worm's and ransomware's play in acts (acts.test.mjs).

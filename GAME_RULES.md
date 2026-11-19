@@ -202,12 +202,14 @@ empty line goes back. **Fast kills:** each class keeps your usual pace (cycles p
 with it, a win at least a quarter faster pays **+25% XP** (*Fast kill*). Loadout and Daemons carry a teal count of what's
 arrived since you last opened them.
 
-**Disconnect.** At 0 Integrity on a run you're thrown home, back to when you connected (Visits). The screen holds on the
-hit for 0.8 s, drops to static with **NO CARRIER** and the server's name, then clears onto the **No carrier** card (a key
-skips it): what took you out, and the visit's rooms, XP and files struck through. Over it sits the **death recap**
-of the last 6 cycles (recap.mjs): your Integrity as a bar a cycle, the hits that did it (biggest first, at most 4, the
-last hit tagged **Last**), and **Taken**, **Healed** and **Shielded**; hover any of it for the sentence. A loss at home
-leaves you at 1 (Home).
+**Disconnect.** At 0 Integrity on a run your server reboots from the image taken when you connected (Visits). The screen
+holds on the hit for 0.8 s, drops to static with **NO CARRIER** and the server's name, then clears onto the map: your
+signal runs home, HOME's outline draws itself round, and HOME lights with its bar back at the image's Integrity, the
+image's time under it (bootfx.mjs `playReboot`; a key skips each). Then the **No carrier** card: **Restored**, the
+image's time, its Integrity as a teal bar, the visit's rooms, XP and files struck through, and how long the net ran on.
+What took you out is one red row with what you took; open it for the **death recap** of the last 6 cycles (recap.mjs):
+your Integrity as a bar a cycle, the hits that did it (biggest first, at most 4, the last hit tagged **Last**), and
+**Taken**, **Healed** and **Shielded**; hover any of it for the sentence. A loss at home leaves you at 1 (Home).
 
 ## Viruses
 
@@ -576,7 +578,7 @@ re-arms every part. Its ♛ runs a **Watchdog**: every 5 cycles it stands above 
 acts instead (below), 1.1× Integrity, its ♛ half each act's (taken from its other parts): act 1 the **Backlash**, act 2
 the **Watchdog**, act 3 the worm's **Outbreak** (a lash also hatches a fragment) or the ransomware's **Lockdown** (a lash
 also encrypts you, while the Encryptor stands). *outbreak* or *lockdown* on its ♛. Beat it and the server is **taken over**: yours, teal on the map, its Core
-quiet for good. Lose and you're disconnected, and for 6 hours it is a level stronger, up to three levels.
+quiet for good. Lose and you're disconnected; it stays as it was.
 
 On a run each solo boss takes its own Integrity and hits on top of the fight length (`BOSSES` long). In acts each
 act runs 15 to 20 cycles (below). In a breach the Resident keeps its old size and enrages at 18.
@@ -974,9 +976,8 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
   Integrity included. Your XP and levels, items, credits, code, components, the Codex, research and mastery, drop luck,
   rep, floor jobs, contract counts (an Install job's item back in your stash) and the server's rooms (cleared, opened,
   its spawns and Root) go back to the connect. What keeps moving: the market and the director, mail and contracts
-  received, invasions, runners, the consortium, achievements, your profile, INIT's table, settings, clocks,
-  servers and leads found, and a Resident that beat you stays a level up. The **NO CARRIER** card strikes through what the
-  visit lost.
+  received, invasions, runners, the consortium, achievements, your profile, INIT's table, settings, clocks, servers and
+  leads found. The **NO CARRIER** card strikes through what the visit lost.
 - **Reconnect wait.** A server you leave takes you back after 30 s (`CONFIG.relockMs`), +15 s for each disconnect on
   its run, 2 min at most (`CONFIG.deathWait`). A jack out mid-fight waits like a disconnect but still saves the visit;
   any other jack out resets the count. Connect counts it down, with ☠ and the count. Deadman's Switch counts as a jack

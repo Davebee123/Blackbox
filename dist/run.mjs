@@ -223,9 +223,8 @@ const guardName = (loc, path) => (layoutOf(loc)[path]?.resident ? 'Resident' : G
 export const CORE = '/core';
 // The Resident: two levels over its server (your first server's, none), and a level more for each
 // time it has beaten you in the last 6 hours (up to 3).
-export const RESIDENT = { over: 0, perLoss: 1, maxLoss: 3, lossMs: 6 * 3600000, starterHp: 1.1 }; // over: levels above its server
-export const residentBonus = (loc, now = Date.now()) => (loc.resident && now - loc.resident.at < RESIDENT.lossMs ? loc.resident.bonus : 0);
-export const residentLevel = (loc, now = Date.now()) => Math.min(CONFIG.maxMobLevel, (loc.level || 1) + (loc.starter ? 0 : RESIDENT.over) + residentBonus(loc, now) + (hasSpecial(loc, 'legacy') ? SPECIAL.resident : 0)); // Legacy: a level higher (specials.mjs)
+export const RESIDENT = { over: 0, starterHp: 1.1 }; // over: levels above its server. Losing to it changes nothing about it.
+export const residentLevel = (loc) => Math.min(CONFIG.maxMobLevel, (loc.level || 1) + (loc.starter ? 0 : RESIDENT.over) + (hasSpecial(loc, 'legacy') ? SPECIAL.resident : 0)); // Legacy: a level higher (specials.mjs)
 
 const FLAVOR = {
   ransomware: 'payout routing for the ransom crews.',
@@ -441,7 +440,7 @@ export function connect(s, id) {
       emit(s, 'run-start', `CONNECTED to ${loc.name}${zone ? ', a rogue server' : loc.member ? `, ${loc.member}'s server` : loc.rogue ? `, a rogue server (${ROGUE.kinds[loc.rogue.kind].name})` : ''}.${rooms}${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}`, { location: loc.id, rooms: true });
     }
     if (firstVisit) gainXp(s, deedXpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`, 'breakin');
-    snapVisit(s, loc); // jack out keeps the visit, a disconnect puts this back (visit.mjs)
+    snapVisit(s, loc, hooks.now?.() ?? Date.now()); // jack out keeps the visit, a disconnect puts this back (visit.mjs)
     return since(s, first);
   }
   return since(s, first);
@@ -926,7 +925,7 @@ const procFight = (s, loc, proc, room) => ['random', proc.seed, { mode: 'run', r
 export const spawnFight = (s, loc, sp, room) => ['random', sp.seed, { mode: 'run', room, level: sp.level, family: sp.family, zone: true, ...(sp.bounty || sp.boss || !tagOf(sp.name) ? { name: sp.bounty ? sp.name : sp.name.toUpperCase() } : { tag: tagOf(sp.name) }), ...(sp.boss ? { boss: sp.boss, mutation: null } : {}), ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade, elite: sp.elite, eliteHp: sp.eliteHp } : sp.grade ? { grade: sp.grade } : {}), ...(sp.calm ? { mutation: null } : {})}];
 // A traced server's guarded folder: its Resident in /core, or its guard.
 const guardFight = (s, loc, room) => (layoutOf(loc)[room].resident
-  ? ['random', (loc.seed * 7 + 31) >>> 0, { mode: 'run', room, level: residentLevel(loc, hooks.now?.() ?? Date.now()), family: loc.family, boss: 'resident', ...(loc.starter ? { bossHp: RESIDENT.starterHp } : {}), mutation: armoredAt(loc) ? 'armored' : null, name: `RESIDENT · ${loc.name}` }]
+  ? ['random', (loc.seed * 7 + 31) >>> 0, { mode: 'run', room, level: residentLevel(loc), family: loc.family, boss: 'resident', ...(loc.starter ? { bossHp: RESIDENT.starterHp } : {}), mutation: armoredAt(loc) ? 'armored' : null, name: `RESIDENT · ${loc.name}` }]
   : [layoutOf(loc)[room].guard, loc.seed + room.length, { mode: 'run', room, level: levelOf(loc), ...(loc.quirk === 'hoard' || armoredAt(loc) ? { mutation: 'armored' } : {}) }]);
 
 // The rogue server: attack the virus in this folder.
