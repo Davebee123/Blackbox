@@ -1,6 +1,7 @@
 // Losing a fight, felt: the board holds a moment on the hit that took you out, then the monitor drops to static with
 // NO CARRIER over it (the line a modem printed when the call dropped). Under the static the screen swaps to the map,
-// and the static clears onto the Disconnected card (app.js lossCard). A click or a key skips to the card.
+// and the static clears onto the map, where your server reboots (bootfx.mjs playReboot) before the No carrier card
+// (app.js lossCard). A click or a key skips to the card.
 // No canvas: a CSS layer over the screen (nocarrier.css), gone before the card shows. With motion off the static
 // is one still frame, held shorter.
 

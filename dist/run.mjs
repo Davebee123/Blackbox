@@ -442,7 +442,7 @@ export function connect(s, id) {
       emit(s, 'run-start', `CONNECTED to ${loc.name}${zone ? ', a rogue server' : loc.member ? `, ${loc.member}'s server` : loc.rogue ? `, a rogue server (${ROGUE.kinds[loc.rogue.kind].name})` : ''}.${rooms}${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}`, { location: loc.id, rooms: true });
     }
     if (firstVisit) gainXp(s, deedXpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`, 'breakin');
-    snapVisit(s, loc); // jack out keeps the visit, a disconnect puts this back (visit.mjs)
+    snapVisit(s, loc, hooks.now?.() ?? Date.now()); // jack out keeps the visit, a disconnect puts this back (visit.mjs)
     return since(s, first);
   }
   return since(s, first);

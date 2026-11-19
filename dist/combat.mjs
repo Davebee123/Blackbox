@@ -2173,13 +2173,14 @@ export function disconnect(s, reason) {
   const recap = s.encounter?.mode === 'run' ? deathRecap(s) : null; // how: the last cycles' Integrity and hits (recap.mjs)
   const reverted = revertVisit(s, run.snap, loc);
   if (!reverted) s.server.integrity = 1;
+  const image = reverted ? { at: run.snap.at || null, integrity: s.server.integrity } : null; // what you're back to, for the card
   s.run = null;
   const wait = loc ? relockWait((loc.deaths = (loc.deaths || 0) + 1)) : 0;
   if (loc) loc.lockUntil = (hooks.now?.() ?? Date.now()) + wait; // every server: see rogue.mjs relocks/relockLeft
   if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
-  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}. ${reverted ? 'Back to when you connected.' : lost ? `${lost} unbanked ${lost === 1 ? 'file' : 'files'} lost.` : ''}`, { by, reason: reason || '', lost, visit, reverted, where: loc?.name || '', relockMs: wait, deaths: loc?.deaths || 0, failed, ...(recap ? { recap } : {}) });
+  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}. ${reverted ? 'Back to when you connected.' : lost ? `${lost} unbanked ${lost === 1 ? 'file' : 'files'} lost.` : ''}`, { by, reason: reason || '', lost, visit, reverted, image, out: loc?.id || null, where: loc?.name || '', relockMs: wait, deaths: loc?.deaths || 0, failed, ...(recap ? { recap } : {}) });
 }
 
 function newMetrics(s) {

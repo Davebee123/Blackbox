@@ -9,7 +9,8 @@ import { play } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { tellsOf } from './dist/tells.mjs';
 import { gainMarkup } from './dist/view.mjs';
-import { deathRecap, recapMarkup, RECAP } from './dist/recap.mjs';
+import { deathRecap, recapMarkup, RECAP, restoreMarkup, foldMarkup, sinceLabel } from './dist/recap.mjs';
+import { maxSignal } from './dist/combat.mjs';
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false;
 const hold = (s, n = 200) => { for (let i = 0; i < n && active(s); i++) { command(s, 'hold'); resolveCycle(s); } };
@@ -95,4 +96,28 @@ test('the card shows it, not explains it: numbers, marks and labels; the sentenc
   const card = gainMarkup('Disconnected', 'X', [{ kind: 'lost', label: 'Taken out by X', qty: '', text: 'Integrity lost' }], true, html);
   assert.ok(card.indexOf('class="recap"') < card.indexOf('class="sp-rows"'));
   assert.equal(recapMarkup(null), '', 'nothing to show, nothing drawn');
+});
+
+test('No carrier, folded: the card opens on the image you are back to; the recap waits behind one row', () => {
+  const s = runFight();
+  const snap = s.run.snap, back = snap.integrity;
+  assert.ok(snap.at > 0, 'the snap notes when it was taken');
+  s.run.max = s.run.integrity = 400;
+  hold(s);
+  const d = s.logs.findLast((x) => x.type === 'disconnected');
+  assert.ok(d.reverted && d.image, 'the event carries the image');
+  assert.equal(d.image.at, snap.at);
+  assert.equal(d.image.integrity, back, 'Integrity back to the connect');
+  assert.equal(d.out, s.locations[0].id, 'and which server it was, for the map');
+  const max = maxSignal(s), top = restoreMarkup(d, max, snap.at + 17 * 60000), fold = foldMarkup(d.recap, d.by);
+  const pc = Math.round((back / max) * 100);
+  assert.deepEqual(visible(top).slice(0, 3).map((x) => x.toLowerCase()), ['restored', `image ${new Date(snap.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`.toLowerCase(), `${pc}%`]);
+  assert.ok(top.includes(`width:${pc}%`), 'the teal bar at the Integrity you are back to');
+  assert.ok(visible(top).includes('17 min passed'), 'the net kept its time');
+  assert.match(fold, /^<details class="rc-fold">/, 'the recap folded: closed until opened');
+  assert.deepEqual(visible(fold).slice(0, 2), [`Taken out by ${d.by}`, `−${d.recap.took}`]);
+  assert.ok(fold.includes(recapMarkup(d.recap)), 'the whole recap inside');
+  assert.equal(restoreMarkup({ ...d, reverted: false }, max), '', 'nothing undone (an old save): no restore');
+  assert.equal(foldMarkup(null, d.by), '');
+  assert.deepEqual([sinceLabel(10e3), sinceLabel(17 * 60000), sinceLabel(65 * 60000), sinceLabel(120 * 60000)], ['1 min', '17 min', '1 h 5 min', '2 h']);
 });

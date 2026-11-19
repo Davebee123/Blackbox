@@ -202,12 +202,14 @@ empty line goes back. **Fast kills:** each class keeps your usual pace (cycles p
 with it, a win at least a quarter faster pays **+25% XP** (*Fast kill*). Loadout and Daemons carry a teal count of what's
 arrived since you last opened them.
 
-**Disconnect.** At 0 Integrity on a run you're thrown home, back to when you connected (Visits). The screen holds on the
-hit for 0.8 s, drops to static with **NO CARRIER** and the server's name, then clears onto the **No carrier** card (a key
-skips it): what took you out, and the visit's rooms, XP and files struck through. Over it sits the **death recap**
-of the last 6 cycles (recap.mjs): your Integrity as a bar a cycle, the hits that did it (biggest first, at most 4, the
-last hit tagged **Last**), and **Taken**, **Healed** and **Shielded**; hover any of it for the sentence. A loss at home
-leaves you at 1 (Home).
+**Disconnect.** At 0 Integrity on a run your server reboots from the image taken when you connected (Visits). The screen
+holds on the hit for 0.8 s, drops to static with **NO CARRIER** and the server's name, then clears onto the map: your
+signal runs home, HOME's outline draws itself round, and HOME lights with its bar back at the image's Integrity, the
+image's time under it (bootfx.mjs `playReboot`; a key skips each). Then the **No carrier** card: **Restored**, the
+image's time, its Integrity as a teal bar, the visit's rooms, XP and files struck through, and how long the net ran on.
+What took you out is one red row with what you took; open it for the **death recap** of the last 6 cycles (recap.mjs):
+your Integrity as a bar a cycle, the hits that did it (biggest first, at most 4, the last hit tagged **Last**), and
+**Taken**, **Healed** and **Shielded**; hover any of it for the sentence. A loss at home leaves you at 1 (Home).
 
 ## Viruses
 

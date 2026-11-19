@@ -28,4 +28,13 @@
 .bootfx-wire { height: 2px; background: var(--you); box-shadow: 0 0 8px var(--you); transform-origin: 0 50%; }
 .bootfx-dot { width: 8px; height: 8px; border-radius: 50%; background: #d9fffa; box-shadow: 0 0 12px 3px var(--you); }
 .bootfx-ping { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--you); box-shadow: 0 0 12px var(--you); }
+/* The reboot after a disconnect (bootfx.mjs playReboot): the map dimmed round HOME, the outline's sides, the light
+   leaking round it, the line under HOME. */
+.bootfx-page > .bootfx-dim { inset: 0; }
+.bootfx-cover { background: #0b0805; }
+.bootfx-bar { background: var(--you); transform-origin: 0 50%; }
+.bootfx-edge { background: var(--you); box-shadow: 0 0 6px rgba(127, 209, 199, 0.8); }
+.bootfx-leak { border: 2px solid var(--you); border-radius: 2px; box-shadow: 0 0 18px 4px rgba(127, 209, 199, 0.35), inset 0 0 12px rgba(127, 209, 199, 0.3); }
+.bootfx-cap { width: 160px; text-align: center; font: 600 10px/1 var(--mono); letter-spacing: 2px; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.bootfx-cap.you { color: var(--you); }
 .bootfx-iris { border-radius: 50%; border: 2px solid var(--you); box-shadow: 0 0 14px rgba(127, 209, 199, 0.7), inset 0 0 14px rgba(127, 209, 199, 0.25); }
