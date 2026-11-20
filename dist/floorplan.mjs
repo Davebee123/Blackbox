@@ -48,6 +48,8 @@
 // Fights are ordinary run fights (combat.mjs selectEncounter, mode 'run') flagged e.rooms: combat.mjs finish hands the
 // end back here (hooks.roomEnd), and families.mjs and interrupt.mjs play the room rules (attack sets, the new bodies,
 // the interrupt). The Resident is DEADBOLT, under the boss rule the playtest switches (interrupt.mjs BOSS_RULES).
+import { warmUp } from './visit.mjs';
+import { CREW } from './crew.mjs';
 import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, gainXp, gainCode, xpFor, deedXpFor, rollDrop, fxPct, puzzleUnique } from './combat.mjs';
 import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, CONFIG, ELITE, ROLLED_MUTATIONS, SERVER, xpToNext, spreadOf } from './data.mjs';
 import { botTiers } from './talents.mjs';
@@ -1014,7 +1016,7 @@ export function enter(s, now = nowOf(), { keys = [] } = {}) {
   R.fightFrom = null; // in with the Integrity you connected with, never a fight's from an earlier visit
   R.at = R.graph.entry;
   R.inSince = now;
-  R.visit = { n: R.visits, walked: { [R.graph.entry]: true }, keys: [...keys], rested: false, moves: 0, hunter: newHunter(s), slips: 0, back: null, xp0: xpTotal(s) };
+  R.visit = { n: R.visits, walked: { [R.graph.entry]: true }, keys: [...keys], rested: false, moves: 0, hunter: newHunter(s), slips: 0, back: null, xp0: xpTotal(s), warm: 0 };
   R.screen = null;
   look(s);
   const fresh = clear(s, R.graph.rooms[R.graph.entry], true);
@@ -1704,7 +1706,7 @@ hooks.roomEnd = (s, result) => {
   if (e.virus.boss) R.stats.boss.won++;
   const out = R.world ? pulledOut(s, room.id) : null; // a crashed runner in it (runners.mjs R3): pulled out
   if (out) { R.visit.metWon = { h: out.h, room: room.id }; say(s, `You pull ${out.h} out. Standing ${out.standing}.`, 'rooms-good'); }
-  setSig(s, Math.max(1, Math.min(s.run.max, s.run.integrity, R.fightFrom ?? s.run.max)));
+  setSig(s, e.down ? Math.max(1, Math.round(s.run.max * CREW.reboot)) : Math.max(1, Math.min(s.run.max, s.run.integrity, R.fightFrom ?? s.run.max))); // down in a co-op win: back at the crew's reboot share
   if (e.roomsLoot?.credits) { if (R.world) s.run.pack.push({ path: `${room.path}/#loot-${s.serial}`, name: 'loot.dat', kind: 'credits', amount: e.roomsLoot.credits }); else { R.credits += e.roomsLoot.credits; s.server.credits += e.roomsLoot.credits; } }
   if (as === 'exfil') {
     say(s, `${e.virus.name} is down. Archive recovered.`, 'rooms-good');
@@ -1765,6 +1767,7 @@ hooks.roomEnd = (s, result) => {
   if (R.world) ask('won', s, room, e, { first, rare: wasRare });
   else if (room.kind === 'core') say(s, `${BOSSES[RESIDENT].name} falls.`, 'rooms-good');
   revealSecret(s, room); // a hidden room beside it opens (a Ghostroot server's: addSecret)
+  warmUp(R); // Warm cache (visit.mjs): a stack for the rooms after this one
   if (R.at === room.id && !R.screen) stood(s, room);
 };
 // A nest's kill: a cache's worth of components (straight into your stock).

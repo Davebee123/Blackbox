@@ -11,10 +11,11 @@
 import { characterOf, playerFrom } from './coop-char.mjs';
 import { handleOf } from './profile.mjs';
 import { hooks, active, command, emit, maxSignal, bindRooms, xpFor, gainXp, gainCode, codeFrom, rollDrop, addItem, rand, PARTY_XP } from './combat.mjs';
-import { matesOf, mateUp, mateSignal } from './crew.mjs';
+import { matesOf, mateUp, mateSignal, CREW } from './crew.mjs';
 import { currentLocation } from './run.mjs';
 import { ROOMS } from './floorplan.mjs';
 import { XP, GUARDS, ELITE, layerOf } from './data.mjs';
+import { warmOf, snapSave, revertSave } from './visit.mjs';
 
 export const COOP = {
   v: 1,
@@ -129,6 +130,7 @@ function guestTick(G) {
 function guestLeave(G, why) {
   if (G.closed) return;
   G.closed = true;
+  if (G.visit) guestVisitEnd(G, 'out'); // the host gone, or you leaving: a jack out, your visit kept
   if (why === 'left' && G.link.open) G.link.send({ t: 'leave' });
   if (G.link.open) G.link.close();
   if (G.joined || why !== 'refused') note(G, why === 'left' ? 'left' : 'host-gone', why === 'left' ? 'You leave the party.' : why === 'host-left' ? `${G.host || 'The host'} ended the session. You're home.` : why === 'refused' ? 'Not joined.' : `${G.host || 'The host'} dropped. You're home.`, { why });
@@ -176,9 +178,12 @@ export function seatCommand(s, name, text) {
   command(m, text);
   const warned = s.logs.some((e) => e.id > first && e.type === 'warning');
   // Everyone's in: the cycle turns now (else the host's own command, or the timer, turns it).
-  if (!warned && m.encounter.queue && m.encounter.queue !== was && s.encounter.queue && humansReady(s)) command(s, 'now');
+  if (!warned && m.encounter.queue && m.encounter.queue !== was && (s.encounter.queue || s.encounter.down) && humansReady(s)) command(s, 'now');
   return out();
 }
+
+// A player still standing in the fight: while one does, the host going down only sits them out (combat.mjs crashed).
+hooks.coopStanding = (s) => matesOf(s).some((m) => m.seat && mateUp(m));
 
 // A won fight, owed to each player seated in it: what their own game needs to pay them at their own level.
 hooks.coopEnd = (s, m, result) => {
@@ -186,7 +191,7 @@ hooks.coopEnd = (s, m, result) => {
   const e = s.encounter, v = e.virus, loc = s.run ? currentLocation(s) : null, depth = loc?.depth || 1;
   const base = e.rooms ? e.roomsXp || 1 : e.zone ? XP.home : e.mode === 'run' ? XP.guard : XP.home;
   const guard = !!GUARDS[e.key];
-  m.seat.rewards.push({ kind: 'kill', host: handleOf(s), name: v.name, level: v.level, family: v.family || loc?.family || null, elite: !!v.elite, boss: v.boss || null, party: e.party || 2, base,
+  m.seat.rewards.push({ kind: 'kill', host: handleOf(s), name: v.name, level: v.level, family: v.family || loc?.family || null, elite: !!v.elite, boss: v.boss || null, party: e.party || 2, base, warm: warmOf(s),
     ctx: { kind: guard ? 'guard' : 'home', id: e.key, layer: layerOf(depth), floor: depth, family: loc?.family || v.family, elite: !!v.elite, boss: v.boss || null, rare: !!v.rare } });
 };
 
@@ -252,7 +257,8 @@ function reseat(seat) { seat.char = seat.next; seat.next = null; seat.rev++; }
 function roomShares(H) {
   const s = H.s, R = s.run ? s.rooms : null, key = s.run ? `${s.run.loc}:${R?.visits ?? 0}` : null;
   if (key !== H.runKey) {
-    if (key && !String(H.runKey || '').startsWith(s.run.loc + ':')) for (const x of seats(s)) x.signal = null; // a new run: everyone full
+    if (H.runKey && !key) visitEnd(H); // the run is over: each guest keeps their visit, or a wipe undoes it
+    if (key && !String(H.runKey || '').startsWith(s.run.loc + ':')) for (const x of seats(s)) x.signal = x.char.integrity ?? null; // a new run: each player brings their own Integrity
     H.runKey = key; H.taken = { ...(R?.taken || {}) }; H.rested = !!R?.visit?.rested;
     return;
   }
@@ -264,12 +270,24 @@ function roomShares(H) {
     if (!['cache', 'stash', 'secret', 'purse'].includes(room?.kind)) continue;
     const fam = Object.values(R.graph.rooms).find((x) => x.family)?.family;
     const material = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher', botnet: 'worm', logicbomb: 'cipher' }[fam] || 'cipher';
-    for (const x of seats(s)) x.rewards.push({ kind: 'cache', room: room.kind, level: R.level || 1, material });
+    for (const x of seats(s)) x.rewards.push({ kind: 'cache', room: room.kind, level: R.level || 1, material, warm: warmOf(s) });
   }
   if (R.visit?.rested && !H.rested) {
     for (const m of matesOf(s).filter((x) => x.seat)) { const max = maxSignal(m), now = m.seat.signal == null ? max : m.seat.signal; m.seat.signal = Math.min(max, now + Math.round(max * ROOMS.rest)); if (m.seat.signal >= max) m.seat.signal = null; }
   }
   H.rested = !!R.visit?.rested;
+}
+
+// The end of the host's run, to each guest: 'out' (the host jacked out: everyone's visit is saved, and each writes back
+// the Integrity they carry) or 'lost' (every player went down: a disconnect, each visit undone on its own save).
+function visitEnd(H) {
+  const s = H.s, id = String(H.runKey).replace(/:\d+$/, ''), R = (s.locations || []).find((l) => l.id === id)?.floorplan || s.rooms;
+  const end = R?.last?.result === 'lost' ? 'lost' : 'out';
+  for (const g of H.guests.filter((x) => x.joined)) {
+    const m = mateOf(s, g.name), seat = seatOf(s, g.name);
+    const integrity = m ? mateSignal(s, m) : seat?.signal ?? null;
+    g.link.send({ t: 'visit', end, integrity });
+  }
 }
 
 // ---------- the game: the guest's side ----------
@@ -278,7 +296,11 @@ function roomShares(H) {
 export function guestGame(G) {
   G.log = []; G.serial = 0; G.players = {}; G.chars = {}; G.view = null;
   G.hears = (m) => {
+    if (m.t === 'visit') return guestVisitEnd(G, m.end, m.integrity);
     if (m.t !== 'snap') return;
+    // The guest's own save, snapped as they join the host's run (visit.mjs snapSave): a wipe puts it back.
+    const key = m.run ? `${m.run.loc}:${m.loc?.floorplan?.visits ?? 0}` : null;
+    if (key && key !== G.runKey) { G.runKey = key; G.visit = snapSave(G.save); }
     Object.assign(G.chars, m.chars || {});
     const paid = (m.rewards || []).flatMap((r) => payReward(G.save, r));
     const fresh = [...remap(m.logs || [], m.host, m.you), ...paid.map((e) => ({ ...e }))].map((e) => ({ ...e, id: ++G.serial }));
@@ -300,6 +322,23 @@ export function guestGame(G) {
   G.sendChar = () => { if (G.joined && !G.closed) G.link.send({ t: 'char', char: characterOf(G.save) }); };
   return G;
 }
+// The host's run over, on the guest's save: 'out' keeps what the visit paid and writes back the Integrity they carry
+// (integrity: the host's count; without it, the last snapshot's); 'lost' undoes the visit (revertSave).
+function guestVisitEnd(G, end, integrity) {
+  const s = G.save, snap = G.visit;
+  G.visit = null; G.runKey = null;
+  if (!snap) return;
+  if (end === 'lost') { revertSave(s, snap); note(G, 'visit-lost', 'Every player went down. Your visit is undone.', { end }); }
+  else {
+    const me = G.snap?.party?.find((p) => p.who === G.snap.you), max = maxSignal(s);
+    const n = integrity ?? (me ? (me.enc ? me.run.integrity : me.sig) : null);
+    s.server.integrity = n == null ? s.server.integrity : Math.max(1, Math.min(max, n > 0 ? n : Math.round(max * CREW.reboot)));
+    note(G, 'visit-out', 'Jacked out. Your visit is saved.', { end });
+  }
+  G.visitEnded?.(end);
+  G.sendChar?.(); // the Integrity you carry into the host's next run
+}
+
 // Who did it, from the guest's side: the guest's lines lose their name (they are "you"), the host's player lines gain
 // the host's. Another player's typo stays theirs.
 const PLAYER_TYPES = new Set(['damage', 'miss', 'server-hit', 'evaded', 'blocked', 'heal', 'queued', 'hold', 'resolved', 'warning', 'warning-soft', 'encrypt', 'encrypted', 'scrambled', 'hung', 'regen', 'synced', 'read', 'proc', 'locked', 'armor', 'status', 'blind', 'fled']);
@@ -360,6 +399,12 @@ export function viewOf(G, m) {
 // a cache's share. Returns the lines it logged.
 export function payReward(s, r) {
   const first = s.serial;
+  // The host's Warm cache (visit.mjs): one count of stacks for the crew, paid on this save's own XP and dice.
+  Object.defineProperty(s, '_warm', { value: r.warm || 0, enumerable: false, configurable: true, writable: true });
+  try { payOne(s, r); } finally { delete s._warm; }
+  return s.logs.filter((e) => e.id > first);
+}
+function payOne(s, r) {
   if (r.kind === 'kill') {
     const n = Math.max(1, r.party || 2);
     const pool = xpFor(s, r.level, r.base || 1) * (r.elite ? ELITE.xp : 1) * (1 + PARTY_XP * (n - 1));
@@ -374,7 +419,6 @@ export function payReward(s, r) {
     emit(s, 'coop-share', `Your share of the ${r.room === 'cache' ? 'cache' : 'stash'}: ${credits} credits.`, { amount: credits });
     gainCode(s, { [r.material || 'cipher']: code }, 'Cache share: ');
   }
-  return s.logs.filter((e) => e.id > first);
 }
 
 // ---------- the host swap ----------

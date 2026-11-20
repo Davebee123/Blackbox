@@ -970,8 +970,13 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
 - **Integrity** (Home) walks in as it is, spent by moves, fights, forcing a vault and bait; an invasion's chip takes it
   too, never below 1. A fight never leaves you with more than you walked into it with. You need a quarter to connect.
 - **Jack out saves the visit** (`jack out`, or the strip's button): from any room it banks your **pack** (cache credits
-  and code, the vault's files, kill drops; a **Banked** card) and sends you home. The strip's dashed **This visit** box
-  counts what you'd keep (rooms won, XP, files), and a room won this visit reads **UNSAVED** on the map until you do.
+  and code, the vault's files, kill drops; a **Banked** card) and sends you home. The strip's amber **Pack** button
+  counts its rows (credits summed, each code summed, each item its own) and opens the list, *UNSAVED*; a room won this
+  visit reads **UNSAVED** on the map until you jack out.
+- **Warm cache** (`visit.mjs` `WARM`): each room you win on a visit adds a stack, up to 10. Each gives **+10% XP** and
+  **+5 Scavenge** to everything after it on that visit (room fights, kills, deeds), paid as you go. Every connect starts
+  cold; a disconnect takes the stacks with the rest. The strip's dashed **Warm** box: a ladder of ten bars, lit as
+  rooms are won, then the XP and Scavenge it adds.
 - **A disconnect undoes it** (Integrity 0 on a run, `visit.mjs`): you're back exactly as you were when you connected,
   Integrity included. Your XP and levels, items, credits, code, components, the Codex, research and mastery, drop luck,
   rep, supply orders, floor jobs, contract counts (an Install job's item back in your stash) and the server's rooms
@@ -1636,7 +1641,7 @@ the rest and more (a blue Sysop at 30 carries about 65% Restore). Heals that giv
 Kill) take Restore only. Burns and helper hits grow on your own line, and gear Damage and Payload carry the rest, in proportion
 to each tick's size: a burn or helper class gains about the share of its damage from gear a skill-hit one does.
 
-**Scavenge is magic find** with diminishing returns (+50% Scavenge = +33% better odds) and more cache credits. It
+**Scavenge is magic find** with diminishing returns (+50% Scavenge = +33% better odds) and more cache credits; a visit's Warm cache adds to it. It
 **costs stats**, as in D2: of the Scavenger rolls 3% at item level 1 to 10% at most, and a rolled blue or yellow
 carrying it has its primaries 1% lower a point (`SCAVENGE_COST`, at most 15%). RAM costs 6% a point (`RAM_COST`),
 within the same 15%. Uniques and set pieces that carry either keep their stats.
@@ -2848,7 +2853,7 @@ Crews of up to three are hired runners (Social, above; `crew kick <name>`), or, 
   damage, one more ◆ and a clash (`ELITE`; Fights), only +5% a player. A champion, a feud and the farm's packs size
   their own Integrity, keep ×1.3 damage and roll no clash. Three times the XP, three drop rolls, never less than a blue, 8% a
   unique. Never in the way of anything you need.
-- A crewmate at 0 Integrity is down for the fight (a hired runner disconnects after it); you going down ends it. Their abilities sound at half your level, two a batch at most, and never on your beat.
+- A crewmate at 0 Integrity is down for the fight (a hired runner disconnects after it); you going down ends it (in co-op, only once every player is down). Their abilities sound at half your level, two a batch at most, and never on your beat.
 
 ### Co-op, peer to peer (coop.mjs)
 
@@ -2864,6 +2869,12 @@ Two players, two saves, no server; developer mode while it's a prototype (docs/c
 - **Go to <guest>'s network** (`coop swap`, out of a run) hands hosting over on the same link.
 - **Rewards:** each player's game pays them on their own save. A guest who drops is played by the planner to the end of
   that fight; a host who drops sends the guest home.
+- **Down:** no battle rez. A player at 0 sits out the rest of the fight and comes back at 25% for the next, the host too.
+  The fight and the run end only when every player is down: a disconnect for everyone, each visit undone on its own
+  save (each game snaps its own save as it joins the run).
+- **The visit:** the host's jack out saves everyone's; a host who drops counts as a jack out for the guest. Each player
+  brings their own Integrity and writes it back to their own server on jack out. **Warm cache:** one count for the
+  crew; each player gets its bonus on their own XP and drop rolls. The Pack is personal.
 
 ## The screen
 
