@@ -170,7 +170,7 @@ comment saying what it does.
 
 | File | What it does |
 |---|---|
-| `dist/invasion.mjs` | Invasions: servers on your network send kinds of invader home while you play; their chip stops at 1. |
+| `dist/invasion.mjs` | Invasions: servers on your network send kinds of invader home while you play, none while you're logged off; their chip stops at 1. |
 | `dist/firewall.mjs` | The firewall is gone: an old save's refunds (tiers, filters), and `developer integrity`. |
 | `dist/events.mjs`, `dist/event-cards.mjs` | The event director's deck, chains, blips and history; each card's panel, the blips' sparks and the history list. |
 | `dist/factions.mjs` | Factions: hubs, rep (1 to 100, four tiers), friends and enemies, and your commission. |

@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, restore, syncServer, uniqueFrom, UNIQUES, SAVE_VERSION, endInvasion } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
-import { tickNetwork, KINDS, BOUNTY, STREAK, CHAMPION, QUIRKED, AWAY, bountyOf, tellOf, capture, captureChance, invasionUniques, streakMult } from './dist/invasion.mjs';
+import { tickNetwork, KINDS, BOUNTY, STREAK, CHAMPION, QUIRKED, bountyOf, tellOf, capture, captureChance, invasionUniques, streakMult } from './dist/invasion.mjs';
 import { CONFIG, ELITE, codeUnit } from './dist/data.mjs';
 import { logComms } from './dist/comms.mjs';
 import { threatsOf } from './dist/view.mjs';
@@ -57,10 +57,9 @@ function win(s) {
 // Whatever reaches HOME, gone at once (as if you'd killed it): the clock for the next one starts.
 function clear(s) { if (s.invasion && s.invasion.state !== 'travel') endInvasion(s, null); }
 
-test('pacing: the first a few minutes after your first find, then one every 20-30 minutes online; away 2-4 hours', () => {
+test('pacing: the first a few minutes after your first find, then one every 20-30 minutes online; none while logged off', () => {
   assert.deepEqual(I.everyMs, [20 * MIN, 30 * MIN]);
   assert.equal(I.firstMs, 3 * MIN);
-  assert.deepEqual(AWAY.everyMs, [2 * 3600000, 4 * 3600000]);
   const s = world();
   s.net.next = 0;
   wait(s, 5000 + 2 * MIN + 5000);
@@ -71,6 +70,11 @@ test('pacing: the first a few minutes after your first find, then one every 20-3
   for (let m = 0; m < 5 * 60; m++) { wait(s, MIN); clear(s); }
   const n = s.logs.filter((e) => e.type === 'invader').length - n0;
   assert.ok(n >= 9 && n <= 15, `${n} in five hours`);
+  // A day logged off sends none.
+  const n1 = s.logs.filter((e) => e.type === 'invader').length;
+  s.clock += 24 * 60 * MIN;
+  tickNetwork(s, s.clock);
+  assert.equal(s.logs.filter((e) => e.type === 'invader').length, n1, 'nothing sets out while you are logged off');
 });
 
 test('every invasion asks for you: an alert on the pager when it sets out and when it reaches HOME', () => {
@@ -180,13 +184,12 @@ test('quirks: a Hoard invasion is Armored and pays half again; a Nest one brings
   assert.equal(n.invasion.queue.length, 1, 'one more behind it');
 });
 
-test('away: invasions keep coming while you are logged off', () => {
+test('away: two days logged off send no invasion', () => {
   const s = world();
   const T0 = 1_800_000_000_000;
   s.net.wall = T0;
   tickNetwork(s, T0 + 48 * 3600000);
-  const kinds = s.logs.filter((e) => e.type === 'invader').map((e) => e.message);
-  assert.ok(kinds.length >= 1);
+  assert.ok(!s.logs.some((e) => e.type === 'invader'));
 });
 
 test('captures: an invasion-only unique, with pity; never anywhere else', () => {

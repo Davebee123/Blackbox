@@ -243,10 +243,10 @@ test('Rested is World of Warcraft\'s rule: 5% of a level every 8 hours safely aw
   const { gainXp } = await import('./dist/combat.mjs');
   assert.deepEqual(RESTED, { share: 0.05, everyMs: 8 * 3600000, cap: 1.5 });
   const T = 1_800_000_000_000, safe = (s) => { s.firewall = { pin: 60, plus: 0, frag: 0, defragUntil: 0 }; return s; };
-  // A day away: three nights' worth, 15% of the level (the day is played out a minute at a time).
+  // A day away: three nights' worth, 15% of the level.
   const a = safe(at(20)); tickNetwork(a, T); tickNetwork(a, T + 24 * 3600000);
   assert.ok(Math.abs(a.rested / (0.15 * xpToNext(20)) - 1) < 0.01, `a day: 15% of level 20 (${a.rested})`);
-  // Past a day nothing is played out, but it still banks: 4 days is 12 eight-hour blocks, 60% of a level.
+  // Every minute away banks: 4 days is 12 eight-hour blocks, 60% of a level.
   const b = safe(at(20)); tickNetwork(b, T); tickNetwork(b, T + 4 * 24 * 3600000);
   assert.ok(Math.abs(b.rested / (0.6 * xpToNext(20)) - 1) < 0.01, `four days: 60% of level 20 (${b.rested})`);
   // Ten days fill it, and it stops at 1.5 levels.
