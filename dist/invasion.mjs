@@ -428,7 +428,7 @@ export function invasionRestore(s, was) {
   const inv = s.invasion;
   if (inv) { inv.kind ||= 'raider'; inv.queue ||= []; inv.size ||= 1; inv.bounty ??= KINDS.raider.bounty; inv.grown ||= 0; inv.push ||= 0; }
 }
-// The wall is gone (v66): what was invested in it comes back, and an invasion out of a kind that's gone is a raider.
+// The wall is gone: what was invested in it comes back, and an invasion out of a kind that's gone is a raider.
 // Keyed on the fields (wallRestore, firewall.mjs).
 export function wallgoneRestore(s) {
   wallRestore(s);
