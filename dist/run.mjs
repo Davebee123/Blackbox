@@ -10,7 +10,7 @@ const cost = (s, n) => lifted(n, hackerLevel(s));
 import { hasSpecial, armoredAt, SPECIAL } from './specials.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
-import { relockWait, findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, syncServer, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
+import { scavengeOf, relockWait, findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, syncServer, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
 import { developerDamage } from './firewall.mjs';
@@ -706,7 +706,7 @@ export function bank(s, loc, why = '') {
   for (const f of pack.filter((x) => x.kind === 'code')) raw[f.material] = (raw[f.material] || 0) + f.amount;
   const code = biasCode(s, netOf(s, loc), raw); // a network rich in a code: a share of the rest comes as it (network.mjs)
   // Scavenge: more credits from what you bank.
-  credits = Math.round(credits * (1 + gearStat(s, 'scavenge') / 100));
+  credits = Math.round(credits * (1 + scavengeOf(s) / 100));
   // A clean job: the vault opened and the trace still low.
   const clean = !!s.run.cracked && !s.run.hunter && (s.run.trace || 0) < TRACE.clean;
   if (clean) credits += Math.round(credits * TRACE.cleanCredits);

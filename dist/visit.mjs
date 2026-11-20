@@ -58,3 +58,31 @@ export function revertVisit(s, snap, loc) {
   }
   return true;
 }
+
+// Warm cache (GAME_RULES.md "Warm cache"): each room you win on a visit adds a stack, up to WARM.max; each gives
+// WARM.xp more XP and WARM.scavenge more Scavenge to everything after it on that visit. It lives on the visit
+// (R.visit.warm), so every connect starts cold and a disconnect's revert takes it with the rest. A co-op guest's game
+// gets the host's stacks with each reward (coop.mjs payReward: s._warm while it pays).
+export const WARM = { max: 10, xp: 0.1, scavenge: 5 };
+export const warmOf = (s) => {
+  if (s?._warm != null) return s._warm;
+  const R = s?.rooms;
+  return R?.world && R.at && R.visit ? Math.min(WARM.max, R.visit.warm || 0) : 0;
+};
+export const warmXp = (s) => 1 + WARM.xp * warmOf(s);
+export const warmScavenge = (s) => WARM.scavenge * warmOf(s);
+// A room won: one more stack (floorplan.mjs roomEnd, after the room's own pay).
+export const warmUp = (R) => { if (R?.world && R.visit) R.visit.warm = Math.min(WARM.max, (R.visit.warm || 0) + 1); };
+
+// A co-op guest's own save as they join the host's run (coop.mjs guestGame): their progress, credits and Integrity.
+// A wipe puts it back (revertSave); the host's jack out, or the host dropping, keeps it.
+export const snapSave = (s) => structuredClone({ integrity: s.server.integrity, credits: s.server.credits, progress: pick(s, PROGRESS) });
+export function revertSave(s, snap) {
+  if (!snap) return false;
+  const x = structuredClone(snap);
+  for (const k of PROGRESS) if (!(k in x.progress)) delete s[k];
+  Object.assign(s, x.progress);
+  s.server.credits = x.credits;
+  s.server.integrity = Math.max(1, x.integrity);
+  return true;
+}

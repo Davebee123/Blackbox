@@ -141,7 +141,7 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/run.mjs` | Runs: connecting, the pack, banking at jack out, the run commands on rooms. |
-| `dist/visit.mjs` | A visit: the snap of your progress taken at connect, and the revert a disconnect plays (an allowlist of what goes back). |
+| `dist/visit.mjs` | A visit: the snap of your progress taken at connect, the revert a disconnect plays (an allowlist of what goes back), a co-op guest's own snap, and the Warm cache. |
 | `dist/floorplan.mjs` | A server as a graph of rooms: moving, fights, caches, the hunter, the vault and the Core; the server kinds, a Router's one-way links among them; the reboot (a traced server's fight rooms come back together once all have fallen; a Mapped one goes offline for it: offlineLeft). |
 | `dist/objectives.mjs` | A room fight's objective (`e.objective`): Priority, Uptime, Backup, Clean run and the Exfil's upload, their roll, rules, board text and bonus. |
 | `dist/netrooms.mjs` | Every server on the real save as a room graph, kept on its location; takeover and Root rooms. |
@@ -229,7 +229,7 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/crew.mjs` | Crewmates in your fights (hired runners, `crew sim` bots, a runner you help), played by the planner. |
-| `dist/coop.mjs` | Peer-to-peer co-op sessions: the host runs the world, a guest sends commands. |
+| `dist/coop.mjs` | Peer-to-peer co-op sessions: the host runs the world, a guest sends commands; the run's end saves or undoes each player's visit. |
 | `dist/coop-net.mjs` | Co-op transports: in memory, BroadcastChannel, WebRTC. |
 | `dist/coop-char.mjs` | The character a guest sends the host. |
 | `dist/coop-ui.mjs`, `dist/coop.css` | The Co-op panel. Developer mode only. |

@@ -43,7 +43,7 @@ test('the character: a fight\'s worth of the save, nothing personal, and a playe
   const c = characterOf(g);
   assert.equal(c.name, 'wisp'); assert.equal(c.cls, 'bastion'); assert.equal(c.level, 12);
   assert.ok(!JSON.stringify(c).includes('example.com'), 'no email');
-  assert.deepEqual(Object.keys(c).sort(), ['cls', 'daemonLv', 'daemons', 'geneCodex', 'hackers', 'level', 'loadout', 'met', 'metAll', 'name', 'programs', 'research', 'rig', 'stash', 'v'].sort());
+  assert.deepEqual(Object.keys(c).sort(), ['cls', 'daemonLv', 'daemons', 'geneCodex', 'hackers', 'integrity', 'level', 'loadout', 'met', 'metAll', 'name', 'programs', 'research', 'rig', 'stash', 'v'].sort());
   assert.ok(!('locations' in c) && !('mail' in c) && !('server' in c), 'no world, no mail, no bank');
   assert.equal(c.stash.length, c.rig.filter(Boolean).length, 'only the protocols loaded for the class');
   const m = playerFrom(c);
