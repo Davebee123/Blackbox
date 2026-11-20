@@ -3502,6 +3502,7 @@ details.map-pick { pointer-events: auto; }
 .evc-rw.cl-risk { opacity: 0.45; } /* a defence call's cost: muted until you answer, then a threat */
 .evc-rw.cl-risk.on { opacity: 1; color: var(--hot); }
 .evc-rw.cl-risk.on > .glyph { color: var(--hot); }
+.evc-rw.sec { font-size: 10.5px; color: var(--dim); } .evc-rw.sec > .glyph { width: 11px; height: 11px; } /* standing and gear after a card's own thing */
 .evc-rw.r-tuned > .glyph { color: var(--r-tuned); } .evc-rw.r-custom > .glyph { color: var(--r-custom); } .evc-rw.r-zeroday > .glyph { color: var(--r-zeroday); }
 .evc-fm { display: inline-flex; color: var(--fc); } .evc-fm .glyph { width: 13px; height: 13px; margin: 0; }
 .evc-sub .evc-fm .glyph { width: 15px; height: 15px; }
@@ -3527,7 +3528,7 @@ details.map-pick { pointer-events: auto; }
 .evc-target.boss { border-color: color-mix(in srgb, var(--hot) 45%, transparent); }
 .evc-target.boss .evc-face { color: var(--hot); border-color: var(--hot); box-shadow: 0 0 0 2px #0c0905, 0 0 0 3px color-mix(in srgb, var(--hot) 55%, transparent), 0 0 14px rgba(255, 91, 61, 0.3); }
 .evc-target.boss .evc-face > .glyph { filter: drop-shadow(0 0 5px rgba(255, 91, 61, 0.6)); animation: evc-pulse 2.4s ease-in-out infinite var(--ph, 0s); }
-.evc-target.courier .evc-face { color: var(--r-tuned); }
+.evc-target.courier .evc-face { color: var(--r-custom); } /* its cargo: a Custom (docs/pays.md) */
 .evc-target.courier.unique .evc-face { overflow: hidden; border-color: color-mix(in srgb, var(--r-zeroday) 50%, transparent); }
 .evc-face .pglyph { padding: 0; }
 

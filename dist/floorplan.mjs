@@ -65,6 +65,7 @@ import { contractDid } from './mail.mjs';
 import { TABLE, moveTable, orphanShare, full as tableFull, rareMult } from './table.mjs';
 import { addrsOf, byAddr } from './address.mjs';
 import { gainComponents } from './salvage.mjs';
+import { codeCredits } from './pays.mjs';
 import { rollObjective, armObjective } from './objectives.mjs';
 import { GENES } from './genes.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
@@ -117,11 +118,11 @@ export const ROOMS = {
   // to its end (won or lost) stays done until it refills, a cache's two hours. XP: a kill for a win (intel).
   puzzles: { second: { small: 0.25, medium: 0.5, large: 0.75 }, worm: 3, chase: 2, xp: 1,
     code: (L) => 6 + Math.floor(L / 2), // Quarantine: the whole board's worth of the server's code (a node's share of it, ★ three)
-    parts: 3, spare: 2, // Cascade: components, and this many more for each tap left over
-    cache: 1, budget: 0.25, // Ping sweep: a cache's credits and code, a quarter more for each of the budget left
+    parts: 3, spare: 2, // Cascade: components, and this many more for each tap left over (Deadlock: parts)
+    cache: 1, budget: 0.25, // Ping sweep: a cache's credits (its code as credits), a quarter more for each of the budget left
     trail: 0.5, // the chase: half a cache, and the Tracker loses your trail for the visit
     low: 0.5, // Packet routing, Deadlock and Cryptogram pay less: half a kill's XP
-    route: 0.5, lock: 1, // Packet routing: half a cache's code; Deadlock: a component; Cryptogram: the note
+    route: 0.5, // Packet routing: half a cache's code; Deadlock: Cascade's components; Cryptogram: the note
     terminal: 1.5, miss: 0.5 }, // the terminal (floor 2+) comes this much more often than one board; it pays a cache, half after a wrong answer
   // The quirks' rooms (netrooms.mjs places them): a Worm server's nest, a Ghostroot server's hidden room. Both optional,
   // never in Rooms n/N. The nest: a Crawler with its brood already out (brood fragments), an elite-lite fight, a kill
@@ -1330,12 +1331,11 @@ function takeCache(s, room) {
   if (isBait(s, room)) { const lost = Math.round(R.max * ROOMS.bait); setSig(s, Math.max(1, sigOf(s) - lost)); say(s, `The canary costs you ${lost} Integrity.`, 'rooms-bad'); }
   const mend = Math.round((R.max * fxPct(s, 'cache-heal%')) / 100); // Sweetener (a floor feat's unique, earned.mjs)
   if (mend > 0) { setSig(s, Math.min(R.max, sigOf(s) + mend)); say(s, `+${mend} Integrity from the cache.`, 'rooms-good'); }
-  const bait = baitPays(s, room), credits = Math.round((C.credits[0] + Math.floor(r() * (C.credits[1] - C.credits[0] + 1))) * rich * (1 + R.level / 20) * bait);
-  const fam = roomList(s).find((x) => x.family)?.family, kind = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher', botnet: 'worm', logicbomb: 'cipher' }[fam] || 'cipher';
-  const code = Math.round((C.code[0] + Math.floor(r() * (C.code[1] - C.code[0] + 1))) * mill * bait);
-  if (R.world) ask('cache', s, room, { credits, code, material: kind }); // into the pack: banked when you jack out
-  else { R.credits += credits; s.server.credits += credits; gainCode(s, { [kind]: code }, 'Cache: '); }
-  say(s, `You take the ${room.kind === 'secret' ? 'stash' : 'cache'}: ${credits} credits and ${code} ${kind} code.`, 'rooms-good').fx = { kind: isBait(s, room) ? 'bait' : 'cache', room: room.id, lid: room.kind === 'cache' };
+  // Its code comes as credits (docs/pays.md: a cache pays credits), at the code's base price.
+  const bait = baitPays(s, room), credits = Math.round((C.credits[0] + Math.floor(r() * (C.credits[1] - C.credits[0] + 1))) * rich * (1 + R.level / 20) * bait) + codeCredits(Math.round((C.code[0] + Math.floor(r() * (C.code[1] - C.code[0] + 1))) * mill * bait));
+  if (R.world) ask('cache', s, room, { credits }); // into the pack: banked when you jack out
+  else { R.credits += credits; s.server.credits += credits; }
+  say(s, `You take the ${room.kind === 'secret' ? 'stash' : 'cache'}: ${credits} credits.`, 'rooms-good').fx = { kind: isBait(s, room) ? 'bait' : 'cache', room: room.id, lid: room.kind === 'cache' };
   if (room.kind === 'secret' && r() < ROOMS.secret.blue) {
     const L = (R.world ? ask('level', s) : undefined) ?? R.level, it = addItem(s, rollItem(r, { level: L, rarity: 'tuned', cls: classOf(s) }), 'Stash: ');
     if (it) { if (R.world) ask('packItem', s, it); else R.pack.push(it.id); say(s, `${itemLabel(it)} goes in your pack.`, 'rooms-good'); }
@@ -1422,10 +1422,10 @@ function playPuzzle(s, room, text, opts = {}) {
 //   Quarantine  the server's code for the nodes it never reached (the whole board ROOMS.puzzles.code(L), a ★ three
 //               shares); half or more saved is a win.
 //   Cascade     components (ROOMS.puzzles.parts, +spare for each tap left over), on a win.
-//   Ping sweep  a cache (credits and code) for the caches found, a quarter more for each of the budget left.
-//   The chase   a win: half a cache, and the Tracker loses your trail for the rest of the visit. A loss: it's on you, and
+//   Ping sweep  a cache (its code as credits) for the caches found, a quarter more for each of the budget left.
+//   The chase   a win: half a cache (credits), and the Tracker loses your trail for the rest of the visit. A loss: it's on you, and
 //               the fight starts here.
-//   Packet routing  half a cache's code, on a win. Deadlock: a component, on a win. Cryptogram: the note itself.
+//   Packet routing  half a cache's code, on a win. Deadlock: Cascade's components, on a win. Terminal: a cache (credits). Cryptogram: the note itself.
 // A win pays a kill's XP (intel), half one on the last three; only the first four roll the floor's uniques.
 function finishPuzzle(s, room, b, opts = {}) {
   const R = s.rooms, P = ROOMS.puzzles, L = (R.world ? ask('level', s) : undefined) ?? R.level, sc = puzzleScore(b), won = b.done === 'won', now = nowOf();
@@ -1435,14 +1435,15 @@ function finishPuzzle(s, room, b, opts = {}) {
   R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
   const r = rnd(R, 61), C = ROOMS.cache, rich = (R.world && ask('cacheMult', s, room)) || 1;
   const cache = () => ({ credits: Math.round((C.credits[0] + Math.floor(r() * (C.credits[1] - C.credits[0] + 1))) * rich * (1 + L / 20)), code: C.code[0] + Math.floor(r() * (C.code[1] - C.code[0] + 1)) });
+  const cash = (c, k) => Math.round((c.credits + codeCredits(c.code)) * k); // a cache's credits and its code as credits (docs/pays.md)
   const pay = { credits: 0, code: 0, parts: 0, material: R.code || serverCodeOf(s) };
   if (room.kind === 'quarantine') pay.code = Math.round((P.code(L) * sc.saved) / Math.max(1, sc.total));
   if (room.kind === 'cascade' && won) pay.parts = P.parts + P.spare * sc.spare;
-  if (room.kind === 'sweep' && sc.found) { const c = cache(), k = (sc.found / sc.caches) * P.cache * (1 + P.budget * sc.left); pay.credits = Math.round(c.credits * k); pay.code = Math.max(1, Math.round(c.code * k)); }
-  if (room.kind === 'chase' && won) { const c = cache(); pay.credits = Math.round(c.credits * P.trail); pay.code = Math.max(1, Math.round(c.code * P.trail)); }
+  if (room.kind === 'sweep' && sc.found) pay.credits = cash(cache(), (sc.found / sc.caches) * P.cache * (1 + P.budget * sc.left));
+  if (room.kind === 'chase' && won) pay.credits = cash(cache(), P.trail);
   if (room.kind === 'routing' && won) pay.code = Math.max(1, Math.round(cache().code * P.route));
-  if (room.kind === 'deadlock' && won) pay.parts = P.lock;
-  if (room.kind === 'terminal' && won) { const c = cache(), k = sc.misses ? P.miss : 1; pay.credits = Math.round(c.credits * k); pay.code = Math.max(1, Math.round(c.code * k)); }
+  if (room.kind === 'deadlock' && won) pay.parts = P.parts; // as Cascade's (no taps to spare)
+  if (room.kind === 'terminal' && won) pay.credits = cash(cache(), sc.misses ? P.miss : 1);
   const low = ['routing', 'deadlock', 'cryptogram'].includes(room.kind);
   if (R.world) ask('puzzlePay', s, room, { ...pay, won }); // into the pack (credits, code), components at once, and a won board's set roll (netrooms.mjs)
   else { R.credits += pay.credits; s.server.credits += pay.credits; if (pay.code) gainCode(s, { [pay.material]: pay.code }, `${room.path}: `); if (pay.parts) gainComponents(s, pay.parts); }

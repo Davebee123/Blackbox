@@ -21,7 +21,7 @@
 // Sockets (R2, sockets.mjs): a traced server's socket rooms (by size, +1 Backbone, +1 Root 4, +1 in a Grid consortium);
 // a server you hold has its Core as its core socket. A Resident's first fall pays a protocol, and Mapped credits. A run on rooms: s.run.rooms, Integrity is the
 // run's, the pack the run's files (run.mjs bank). The save migration (v39) builds every found server's rooms.
-import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, deedXpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand, setDrop, fxPct, guardedUnique } from './combat.mjs';
+import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, deedXpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand, setDrop, fxPct, guardedUnique, materialsOf } from './combat.mjs';
 import { setCredits } from './sets.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { CONFIG, BOSSES, FAMILIES, GUARDS, ROOM_FAMILIES, QUIRKS, layerOf } from './data.mjs';
@@ -51,6 +51,7 @@ import { blipStood, blipRooms, runCardRoll, runCardUp, runCardEnd } from './even
 import { RUN_CARDS } from './runcards.mjs';
 import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
 import { siteWon, siteVault } from './sites.mjs';
+import { reactMult, asExploits, codeCredits } from './pays.mjs';
 
 export const KIND_OF = FP.KIND_OF;
 export const NET = {
@@ -452,14 +453,16 @@ WORLD_hook('purse', (s, room) => {
   return { credits, code, material: MATERIALS[material].name.toLowerCase() };
 });
 // The Exfil's roll: once a visit to a Nest, Pit or Gauntlet (as you connect), and never while your own cooldown runs
-// (s.exfil, on your save: it blocks your Exfils on every rogue server, never anyone else's). The seed, or 0.
+// (s.exfil, on your save: it blocks your Exfils on every rogue server, never anyone else's). Twice as likely while the
+// ticker wants Exploits (pays.mjs). The seed, or 0.
+export const exfilChance = (s) => CONFIG.exfil.chance * reactMult(s, 'exploit');
 WORLD_hook('exfil', (s, t) => {
   const loc = locOf(s), M = CONFIG.exfil;
   if (!plainRogue(loc) || !s.run) return 0;
   const c = (s.exfil ||= { at: null, n: 0 });
   if (c.at != null && t < c.at + M.cooldownMs) return 0;
   const seed = (((loc.seed || 1) * 2654435761 + (s.rooms?.visits || 0) * 40503 + (c.n || 0) * 7919) >>> 0) || 1;
-  if (seeded(seed)() >= M.chance) return 0;
+  if (seeded(seed)() >= exfilChance(s)) return 0;
   c.at = t; c.n = (c.n || 0) + 1;
   return seed;
 });
@@ -477,18 +480,18 @@ WORLD_hook('vaultGone', (s) => {
   const taken = ((loc.state ||= {}).taken ||= {});
   for (const { dir, name } of vaultFiles(loc)) taken[`${dir}/${name}`] = true;
 });
-// Its archive, recovered: CONFIG.exfil.credits Stashes' worth of credits and one item at the server's level (the best of two flat
+// Its archive, recovered: CONFIG.exfil.credits Stashes' worth of credits, paid as Exploits (pays.mjs), and one item at the server's level (the best of two flat
 // rolls, else a white: about twice a kill's blue chance, never a guaranteed blue, nothing else stacked on: no
 // clean read or Pit roll), and now and then one of the server's uniques (its kind's and floor's, as its folders drop).
 // A trash kill's odds (LOOT.odds.trash) and a sure white: plain loot, under a rare spawn's, by design.
 WORLD_hook('exfilWon', (s, room, e) => {
-  const loc = locOf(s), M = CONFIG.exfil, lvl = e.virus.level, credits = M.credits * FP.ROOMS.purse(loc.level || 1);
+  const loc = locOf(s), M = CONFIG.exfil, lvl = e.virus.level, exploits = asExploits(M.credits * FP.ROOMS.purse(loc.level || 1));
   const ctx = { kind: 'rogue', id: loc.rogue?.kind, layer: layerOf(loc.depth || 1), family: loc.family };
-  s.server.credits += credits;
+  materialsOf(s).exploit = (materialsOf(s).exploit || 0) + exploits;
   let item = rollDrop(s, { ...ctx, rolls: M.rolls, flat: true }, lvl) || rollItem(() => rand(s), { level: lvl, rarity: 'stock' }); // always an item: a white unless the rolls found better
   if (rand(s) < M.unique) { const u = uniqueFrom(s, ctx, lvl); if (u) item = uniqueItem(u, lvl, () => rand(s)); }
   const got = item ? addItem(s, item, 'The archive: ') : null;
-  emit(s, 'rooms-good', `The archive: +${credits} credits${got ? `, ${itemLabel(got)}` : ''}.`, { credits });
+  emit(s, 'rooms-good', `The archive: +${exploits} Exploit${exploits > 1 ? 's' : ''}${got ? `, ${itemLabel(got)}` : ''}.`, { gains: { exploit: exploits } });
   contractExfil(s); // a Catch an Exfil job (mail.mjs)
 });
 // A contract's item installed in its room (an Install job, mail.mjs): undefined when you carry none for this server.
@@ -518,10 +521,9 @@ WORLD_hook('puzzlePay', (s, room, { credits = 0, code = 0, parts = 0, material =
   if (code) packFile(s, { path: `${room.path}/#puzzle-code-${n}`, name: `${material}.code`, kind: 'code', material, amount: code });
   if (parts) gainComponents(s, parts);
 });
-WORLD_hook('cache', (s, room, { credits, code, material }) => {
+WORLD_hook('cache', (s, room, { credits }) => { // credits only: a cache's code comes as credits (docs/pays.md)
   const n = s.serial;
   packFile(s, { path: `${room.path}/#cache-${n}`, name: 'cache.dat', kind: 'credits', amount: credits });
-  packFile(s, { path: `${room.path}/#code-${n}`, name: `${material}.code`, kind: 'code', material, amount: code });
   if (s.rooms.kind === 'Honeypot' && FP.isBait(s, room)) earnEvent(s, { kind: 'bait', floor: locOf(s)?.depth || 1 }); // Sweetener's count (earned.mjs)
 });
 WORLD_hook('cacheMult', (s) => { const loc = locOf(s); return (loc?.quirk === 'hoard' ? NET.hoard : 1) * setCredits(s, 'cache') * (1 + fxPct(s, 'cache%') / 100); }); // setCredits: Lantern Route, the Logbook (sets.mjs); cache%: Golden Image

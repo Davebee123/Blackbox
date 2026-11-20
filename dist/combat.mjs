@@ -1303,14 +1303,15 @@ export function gainCode(s, gains, why = '') {
   for (const [k, n] of parts) m[k] = (m[k] || 0) + n;
   emit(s, 'code', `${why}${parts.map(([k, n]) => `+${n} ${MATERIALS[k].name}`).join(', ')}.`, { gains: Object.fromEntries(parts) });
 }
-// What a kill of a family at a level drops (Scavenge adds to it).
+// What a kill of a family at a level drops (Scavenge adds to it). source: home, elite (a home kill's code, an elite's
+// Exploit odds) or guard.
 // On a network rich in a code, part of it comes as that code (network.mjs biasCode); a guard's goes in your pack and
 // leans when you bank it. A network rich in Exploits drops them more often.
 export function codeFrom(s, family, level, source) {
   const k = codeOf(family), who = fightNet(s);
   const out = {};
   if (k) out[k] = Math.round(codeDrop(level) * (source === 'guard' ? 1.5 : 1) * (1 + scavengeOf(s, 'hacker') / 100) * outbreakMult(s, family));
-  if (rand(s) < EXPLOIT_CHANCE[source] * richMult(s, who, 'exploit')) out.exploit = 1;
+  if (rand(s) < (EXPLOIT_CHANCE[source] ?? EXPLOIT_CHANCE.home) * richMult(s, who, 'exploit')) out.exploit = 1;
   return source === 'guard' ? out : biasCode(s, who, out);
 }
 
@@ -2314,7 +2315,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
   if (sprawl && !guard && FAMILIES[family]) addLead(s, family, leadOf(s, lvl, !!v.strain && v.strain === hotStrain(s)), '', { id: CONFIG.zone.id });
   if (wild) {
     if (sprawl) hooks.earnEvent?.(s, { kind: 'sprawl' }); // Regular's count (earned.mjs)
-    gainCode(s, codeFrom(s, family, lvl, 'home'), 'Code: ');
+    gainCode(s, codeFrom(s, family, lvl, v.elite ? 'elite' : 'home'), 'Code: ');
     const ctx = { kind: sprawl ? 'sprawl' : 'rogue', id: loc?.rogue?.kind, layer: layerOf(loc?.depth || 1), floor: loc?.depth || null, family, strain: v.strain, elite: !!v.elite || guard, boss: v.boss || null, rare, rolls: bounty ? LOOT.rolls.bounty : undefined };
     const item = rollDrop(s, ctx, lvl);
     if (item) addItem(s, item);
@@ -2324,7 +2325,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
     return { more: () => rollDrop(s, { ...ctx, strain: null }, lvl) };
   }
   if (!s.run) return {};
-  const tag = `${e.room}/#${e.seed}-${s.serial}`, src = guard ? 'guard' : 'home';
+  const tag = `${e.room}/#${e.seed}-${s.serial}`, src = guard ? 'guard' : v.elite ? 'elite' : 'home';
   // A Honeytoken on the server (sockets.mjs): its kills roll for loot once more.
   for (let i = (programsOn(loc).includes('honeytoken') ? 2 : 1) + (heldLoc(loc) && fxPct(s, 'held-roll') ? 1 : 0) + (guard ? rootRoll(loc) : 0), n = 0; n < i; n++) { // Tenure (3): a held server's kills roll once more; Root 3 its elites and guard posts once more again (root.mjs)
     const item = rollDrop(s, { kind: guard ? 'guard' : 'home', id: e.key, layer: layerOf(loc?.depth || 1), floor: loc?.depth || null, family: loc?.family || family, elite: !!v.elite, boss: v.boss || null, rare }, lvl);
@@ -2450,7 +2451,7 @@ export function finish(s, result) {
     eventKill(s, e.virus.family); // an outbreak's source (events.mjs chains)
     if (!hid) huntKill(s, e.virus.family);
     payKill(s, e, XP.home, `${e.virus.name} neutralized`);
-    gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
+    gainCode(s, codeFrom(s, e.virus.family, e.virus.level, e.virus.elite ? 'elite' : 'home'), 'Code: ');
     const item = rollDrop(s, { kind: 'home', family: e.virus.family, strain: e.virus.strain, layer: e.virus.grade || 1, elite: !!e.virus.elite, boss: e.virus.boss || null }, e.virus.level);
     if (item) addItem(s, item);
     nativeDrop(s, e); // network.mjs: its own dice

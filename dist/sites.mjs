@@ -30,6 +30,7 @@ import { gainComponents } from './salvage.mjs';
 import { runnerOf, knownOf, stateOf, raiseStanding, standingOf, tierOf, runnersOf, STANDING } from './runners.mjs';
 import { CODEBASE_SHOPS, knowsCodebase, learnCodebase } from './sockets.mjs';
 import { openNext } from './hidden.mjs';
+import { wants } from './pays.mjs';
 
 export const SITE = {
   from: 5, // class level the first site can mount at
@@ -162,10 +163,14 @@ export function dealRunner(s) {
 // What it pays, named: the tier they'd reach, the codebase they'd give (their faction's, the first you don't know).
 export const runnerPay = (s, x) => ({ tier: tierOf(Math.min(100, standingOf(s, x.handle) + STANDING.help)), codebase: (CODEBASE_SHOPS[x.faction] || []).map(([id]) => id).find((id) => !knowsCodebase(s, id)) || null });
 const DEAL = { rig: dealRig, rack: dealRack, runner: dealRunner };
-// The next kind in turn (the other one from the last), else whichever fits.
+// The next kind in turn (the other one from the last), else whichever fits. A kind whose ware the ticker wants comes
+// first, last or not (pays.mjs): a Settlement run while Exploits are wanted, a Rack pull while components are, so it's
+// dealt twice as often as in turn.
+const WARE = { rig: 'exploit', rack: 'salvage' };
 export function dealSite(s, kind = null) {
   if (kind) return DEAL[kind]?.(s) || null;
-  const last = s.sites?.last, order = SITE.kinds.filter((k) => k !== last).concat(last && SITE.kinds.includes(last) ? [last] : []);
+  const last = s.sites?.last, turn = SITE.kinds.filter((k) => k !== last).concat(last && SITE.kinds.includes(last) ? [last] : []);
+  const order = [...turn.filter((k) => WARE[k] && wants(s, WARE[k])), ...turn.filter((k) => !(WARE[k] && wants(s, WARE[k])))];
   for (const k of order) { const loc = DEAL[k](s); if (loc) return loc; }
   return null;
 }

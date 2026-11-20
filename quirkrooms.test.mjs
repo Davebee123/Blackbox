@@ -141,7 +141,7 @@ test('the hidden room: off the map, the fog, the hunter and every path until the
   play(t, 'connect ' + loc.id);
   const T = t.rooms;
   assert.ok(FP.roomList(t).some((r) => r.id === x.id));
-  // The stash: a cache's pile (credits and code into the pack), never bait, then empty for two hours.
+  // The stash: a cache's pile (credits into the pack, its code as credits), never bait, then empty for two hours.
   T.at = by.id; T.screen = null; T.visit.walked[x.id] = false;
   FP.go(t, x.id);
   assert.equal(T.at, x.id);
@@ -149,7 +149,8 @@ test('the hidden room: off the map, the fog, the hunter and every path until the
   assert.equal(FP.isBait(t, x), false);
   const pack0 = t.run.pack.length;
   play(t, 'pull');
-  assert.ok(t.run.pack.length >= pack0 + 2, 'credits and code into the pack');
+  assert.ok(t.run.pack.length >= pack0 + 1, 'credits into the pack');
+  assert.ok(!t.run.pack.slice(pack0).some((f) => f.kind === 'code'), 'no code: a cache pays credits (docs/pays.md)');
   assert.ok(t.run.pack.some((f) => f.kind === 'credits' && f.amount >= FP.ROOMS.cache.credits[0]));
   assert.equal(FP.cacheFull(t, x), false, 'taken');
   assert.ok(FP.refillAt(t, x) - clock <= FP.ROOMS.respawn.cache * 60000, 'it fills again like a cache');

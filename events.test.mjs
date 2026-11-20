@@ -29,14 +29,14 @@ test('a courier is a fight from the server card; winning takes the drop', () => 
   const ev = deal(s, 'courier');
   assert.ok(ev && ev.loc);
   assert.match(mapMarkup(s, ev.loc), new RegExp(`event fight ${ev.id}`));
-  const credits = s.server.credits, stash = s.stash.length;
+  const stash = s.stash.length;
   command(s, `event fight ${ev.id}`);
   assert.ok(active(s));
   assert.equal(s.encounter.event, ev.id);
   win(s);
   assert.ok(!active(s));
-  assert.ok(s.server.credits - credits >= 40 + 12 * ev.level, 'the cache');
-  assert.ok(s.stash.length > stash, 'and a protocol');
+  assert.ok(s.stash.length > stash, 'its protocol');
+  assert.ok(s.stash.some((it) => it.rarity === 'custom'), 'a Custom: the credits it carried went into the rarity (docs/pays.md)');
   assert.equal(eventsOf(s).length, 0, 'the event is over');
 });
 

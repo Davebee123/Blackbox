@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, active, resolveCycle, addLocation } from './dist/combat.mjs';
-import { deal, eventsOf, tickEvents, CARDS, FEUD, HUNT, huntPay, feuds, feudShare, feudPay } from './dist/events.mjs';
+import { deal, eventsOf, tickEvents, CARDS, FEUD, HUNT, huntPay, feuds, feudShare } from './dist/events.mjs';
 import { LOOT } from './dist/gear.mjs';
 import { rep, FACTIONS } from './dist/factions.mjs';
 import { FACTION_FAMILY } from './dist/factions.mjs';
@@ -84,8 +84,7 @@ test('a feud: pick a side by its half of the card, fight the other side\'s runne
   assert.ok(Math.abs(feudShare(ev, 'glassjaw') - (bar + FEUD.push)) < 1e-9, 'a win pushes your side');
   assert.equal(rep(s, 'glassjaw'), was.glassjaw + FEUD.rep, 'your side');
   for (const f of Object.keys(FACTIONS)) if (f !== 'glassjaw') assert.equal(rep(s, f), was[f], `${f}: nobody loses`);
-  assert.ok(s.server.credits - credits >= feudPay(ev.level), 'a win pays on its own');
-  assert.equal(feudPay(ev.level), Math.round((80 + 15 * ev.level) / 2), 'half a bounty\'s credits');
+  assert.equal(s.server.credits, credits, 'a win pays standing, its one thing (docs/pays.md): no credits');
   assert.ok(eventsOf(s).includes(ev), 'still up: fight again');
   assert.notEqual(ev.runners.lantern, runner, 'a fresh runner');
   assert.match(mapMarkup(s, ev.loc), /class="fd-half fd-[ab] on"/, 'your side lit');
@@ -134,14 +133,13 @@ test('taking the bar to 100% wins the feud: the bonus, once', () => {
   const was = reps(s), stash = s.stash.length, credits = s.server.credits, mine = 'glassjaw';
   command(s, `event fight ${ev.id} ${mine}`); win(s);
   assert.ok(eventsOf(s).includes(ev));
-  assert.equal(s.stash.length, stash + 1, 'no bonus at 75%: the runner\'s protocol only');
+  assert.equal(s.stash.length, stash, 'no bonus at 75%, and a runner drops no protocol of its own');
   const first = s.serial;
   command(s, `event fight ${ev.id}`); win(s);
   assert.ok(!eventsOf(s).includes(ev), 'won: over');
-  assert.equal(s.stash.length, stash + 3, 'the second runner\'s protocol and GLASSJAW\'s sealed item, once');
+  assert.equal(s.stash.length, stash + 1, 'GLASSJAW\'s sealed item, once');
   assert.equal(rep(s, mine), was[mine] + 2 * FEUD.rep + FEUD.bonusRep);
   for (const f of Object.keys(FACTIONS)) if (f !== mine) assert.ok(rep(s, f) >= was[f], `${f}: never a loss`);
-  assert.ok(s.server.credits - credits >= 2 * feudPay(ev.level));
   LOOT.odds = odds;
   assert.ok(s.logs.some((e) => e.id > first && e.type === 'world-event-won'));
   command(s, `event fight ${ev.id}`);
