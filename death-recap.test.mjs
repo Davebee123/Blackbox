@@ -7,6 +7,7 @@ import { fresh, command, resolveCycle, active, part } from './dist/combat.mjs';
 import { CONFIG } from './dist/data.mjs';
 import { play } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
+import { xpTotal } from './dist/floorplan.mjs';
 import { tellsOf } from './dist/tells.mjs';
 import { gainMarkup } from './dist/view.mjs';
 import { deathRecap, recapMarkup, RECAP, restoreMarkup, foldMarkup, sinceLabel } from './dist/recap.mjs';
@@ -119,5 +120,13 @@ test('No carrier, folded: the card opens on the image you are back to; the recap
   assert.ok(fold.includes(recapMarkup(d.recap)), 'the whole recap inside');
   assert.equal(restoreMarkup({ ...d, reverted: false }, max), '', 'nothing undone (an old save): no restore');
   assert.equal(foldMarkup(null, d.by), '');
+  // A first run's XP is paid as you connect, before the snap: a disconnect keeps it, the card doesn't strike it, and
+  // the next connect doesn't pay it again.
+  const xp = xpTotal(s);
+  assert.ok(xp > 0 && xp === snap.xp, 'the first run paid, and kept');
+  assert.equal(d.visit.xp, 0, 'nothing struck that the death did not take');
+  const loc = s.locations[0]; loc.lockUntil = 0;
+  play(s, 'connect ' + loc.id);
+  assert.equal(xpTotal(s), xp, 'paid once');
   assert.deepEqual([sinceLabel(10e3), sinceLabel(17 * 60000), sinceLabel(65 * 60000), sinceLabel(120 * 60000)], ['1 min', '17 min', '1 h 5 min', '2 h']);
 });

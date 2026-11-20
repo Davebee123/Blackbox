@@ -980,9 +980,10 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
 - **A disconnect undoes it** (Integrity 0 on a run, `visit.mjs`): you're back exactly as you were when you connected,
   Integrity included. Your XP and levels, items, credits, code, components, the Codex, research and mastery, drop luck,
   rep, supply orders, floor jobs, contract counts (an Install job's item back in your stash) and the server's rooms
-  (cleared, opened, its spawns and Root) go back to the connect. What keeps moving: the market and the director, mail
-  and contracts received, invasions, runners, the consortium, achievements, your profile, INIT's table, settings,
-  clocks, servers and leads found. The **NO CARRIER** card strikes through what the visit lost.
+  (cleared, opened, its spawns and Root) go back to the connect. A first run's XP, paid as you connect, stays: it's
+  paid once. What keeps moving: the market and the director, mail and contracts received, invasions, runners, the
+  consortium, achievements, your profile, INIT's table, settings, clocks, servers and leads found. The **NO CARRIER**
+  card strikes through what the visit lost.
 - **Reconnect wait.** A server you leave takes you back after 30 s (`CONFIG.relockMs`), +15 s for each disconnect on
   its run, 2 min at most (`CONFIG.deathWait`). A jack out mid-fight waits like a disconnect but still saves the visit;
   any other jack out resets the count. Connect counts it down, with ☠ and the count. Deadman's Switch counts as a jack
