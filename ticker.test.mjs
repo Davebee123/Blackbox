@@ -3,7 +3,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, addLocation } from './dist/combat.mjs';
-import { TICK, MODS, STYLES, TICKER_CARDS, tickerSig, sigFor, tickerOf, tickTicker, dealTicker, tickerMult, tickerAt, tickerTip, tickerKind } from './dist/ticker.mjs';
+import { TICK, MODS, STYLES, TICKER_CARDS, RARE_CARDS, RIVALS, CREW_MULT, tickerSig, sigFor, tickerOf, tickTicker, dealTicker, tickerMult, tickerAt, tickerTip, tickerKind, orderLeft, raresLeft } from './dist/ticker.mjs';
+import { trade, quote, transfersOf } from './dist/market.mjs';
+import { tickChannel, channelOf } from './dist/channel.mjs';
+import { castOf } from './dist/runners.mjs';
 import { priceOf, outsideMult, marketRead, WARE_IDS, CONDITIONS, HUB_CONDITION } from './dist/market.mjs';
 import { deal, tickEvents, historyOf } from './dist/events.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
@@ -156,7 +159,7 @@ test('a card needs its poster\'s hub; the city\'s cards move every hub; early wo
   const s = fresh(); s.tutorialCompleted = true; s.netSeed = 777; command(s, 'mail'); s.mail.boardOpen = true; // Halcyon's hub only
   assert.equal(dealTicker(s, 'rack'), null, 'Kestrel\'s hub not found');
   assert.equal(dealTicker(s, 'early'), null, 'GLASSJAW\'s neither');
-  for (let i = 0; i < 40; i++) { tickerOf(s).live = []; const c = dealTicker(s); assert.ok(!TICKER_CARDS[c.card].by || TICKER_CARDS[c.card].by === 'halcyon', c.card); }
+  for (let i = 0; i < 40; i++) { tickerOf(s).live = []; const c = dealTicker(s); assert.ok(c.moves.every((x) => x.hub === '*' || x.hub === 'halcyon'), c.card); }
   const t = world(), tax = dealTicker(t, 'tax', null), wage = dealTicker(t, 'wage', null);
   assert.equal(tax.ms, 20 * MIN); assert.equal(wage.ms, 30 * MIN);
   for (const f of FACTION_IDS) { assert.ok(near(tickerMult(t, f, 'exploit'), 1.15)); assert.ok(near(tickerMult(t, f, 'worm'), 1.15 * 0.8)); }
@@ -199,8 +202,8 @@ test('the director deals exactly as before beside it, never a market shock; the 
 
 test('on the screen: the market window\'s tag, the price tooltips, the hub\'s chip; developer ticker', () => {
   const s = world();
-  play(s, 'developer ticker rack');
-  play(s, 'developer ticker tax');
+  dealTicker(s, 'rack', null); dealTicker(s, 'tax', null); // plain: a Leaked one waits five minutes
+  tickerOf(s).live.forEach((c) => delete c.order);
   const c = s.ticker.live[0], html = hubTerminalMarkup(s, 'kestrel', hubBanner(s, 'kestrel'), 'market');
   const head = html.match(/<div class="mk-tags">[\s\S]*?<\/div>/)[0];
   assert.match(head, new RegExp(`class="tag shock mk-card ${c.moves[0].mult > 1 ? 'up' : 'down'}" title="Rack closure: Multiplies the price of components here by ${c.moves[0].mult}\\. Ends in ${c.ms / MIN} minutes\\.\\n“Rack 4 will close at the end of this cycle\\. Please collect your belongings\\.”" data-tt-kind="Kestrel · Market card[^"]*">${c.moves[0].mult > 1 ? '▲' : '▼'} Rack closure · ${c.ms / MIN} min</span>`));
@@ -221,5 +224,125 @@ test('on the screen: the market window\'s tag, the price tooltips, the hub\'s ch
   assert.equal(t.ticker.live[0].mod, 'lingering');
   assert.ok(play(t, 'developer ticker census').some((e) => e.type === 'warning'), 'up already');
   assert.ok(play(t, 'developer ticker nothing').some((e) => e.type === 'warning' && /developer ticker \[premium\|/.test(e.message)));
-  assert.equal(play(t, 'developer ticker').filter((e) => e.type === 'ticker').length, 1, 'any card that fits');
+  play(t, 'developer ticker');
+  assert.equal(t.ticker.live.length, 2, 'any card that fits');
+});
+
+test('a bulk order: three price cards in ten carry one, sized by its ware, and it holds the price until it is filled', () => {
+  // How often and how big, over many deals.
+  const t = world(); tickTicker(t, 0);
+  const cards = dealt(t, 3000).filter((c) => c.moves.some((x) => x.hub !== '*' && x.ware !== '*' && x.mult > 1) && c.card !== 'early');
+  const with_ = cards.filter((c) => c.order);
+  assert.ok(with_.length / cards.length > 0.25 && with_.length / cards.length < 0.35, `${with_.length} in ${cards.length}`);
+  for (const c of with_) {
+    const [lo, hi] = c.order.ware === 'salvage' ? [40, 120] : c.order.ware === 'exploit' ? [2, 6] : [20, 60];
+    assert.ok(c.order.n >= lo && c.order.n <= hi && c.order.left === c.order.n, `${c.order.ware} ${c.order.n}`);
+    assert.ok(c.moves.some((x) => x.hub === c.order.hub && x.ware === c.order.ware && x.mult > 1), 'on a price the card raises');
+  }
+  // Selling into it takes nothing off the price; past it, each unit presses as before.
+  const s = world(), c = dealTicker(s, 'rack', null);
+  c.order = { hub: 'kestrel', ware: 'salvage', n: 5, left: 5 };
+  s.components = 20;
+  const before = quote(s, 'kestrel', 'salvage').sell;
+  assert.equal(orderLeft(s, 'kestrel', 'salvage'), 5);
+  trade(s, 'sell', 'kestrel', 'salvage', 3);
+  assert.equal(quote(s, 'kestrel', 'salvage').sell, before, 'held');
+  assert.equal(c.order.left, 2);
+  assert.equal(transfersOf(s)[0].credits, before * 3);
+  trade(s, 'sell', 'kestrel', 'salvage', 4); // two into the order, two pressing
+  assert.equal(c.order.left, 0);
+  assert.ok(quote(s, 'kestrel', 'salvage').sell < before);
+  // On the screen: a chip on the ware's price, its tooltip in WoW grammar.
+  c.order = { hub: 'kestrel', ware: 'salvage', n: 31, left: 31 };
+  const html = hubTerminalMarkup(s, 'kestrel', hubBanner(s, 'kestrel'), 'market');
+  assert.match(html, /<span class="mk-want" title="Bulk order: Kestrel buys 31 more components at this price\. Selling into it doesn(?:'|&#39;)t lower the price\. Ends with Rack closure in 20 minutes\." data-tt-kind="Kestrel · Bulk order">31 wanted<\/span>/);
+});
+
+test('two buyers: rival hubs bid ×1.4 for one ware at once, posted by Corvid Exchange', () => {
+  const s = world(), c = dealTicker(s, 'rivals', null);
+  assert.equal(c.moves.length, 2);
+  assert.ok(RIVALS.some((p) => p.join() === c.moves.map((x) => x.hub).join()), c.moves.map((x) => x.hub).join());
+  assert.equal(c.moves[0].ware, c.moves[1].ware);
+  assert.ok(c.moves.every((x) => x.mult === 1.4));
+  const said = s.logs.at(-1);
+  assert.match(said.message, /^Corvid Exchange: \w[\w ]+ and [\w ]+ are bidding against each other for [\w ]+\.$/);
+  // Only rivals with both hubs found.
+  const t = fresh(); t.tutorialCompleted = true; t.netSeed = 777; command(t, 'mail'); t.mail.boardOpen = true; t.hubFound = { kestrel: true };
+  assert.equal(dealTicker(t, 'rivals'), null);
+});
+
+test('a corner: a runner on the net buys up one code at their hub, ×1.4 for 10 minutes, on #net in their voice', () => {
+  const s = world();
+  tickChannel(s, 0);
+  const c = dealTicker(s, 'corner', null);
+  const r = castOf(s).find((x) => x.handle === c.who);
+  assert.ok(r, 'a runner on the net now');
+  assert.deepEqual(c.moves, [{ hub: r.faction, ware: c.moves[0].ware, mult: 1.4 }]);
+  assert.ok(['cipher', 'worm', 'kernel'].includes(c.moves[0].ware));
+  assert.equal(c.ms, 10 * MIN);
+  assert.equal(c.mod, undefined, 'no modifier');
+  assert.match(s.logs.at(-1).message, new RegExp(`^${c.who}: buying every (cipher|worm|kernel) lot at [a-z ]+\\. sell me yours$`));
+  tickChannel(s, 0);
+  assert.ok(channelOf(s).lines.some((l) => l.kind === 'sim' && l.from === c.who && /every (cipher|worm|kernel) lot/i.test(l.text)), '#net');
+  assert.equal(tickerAt(s, r.faction, c.moves[0].ware)[0].owner, c.who);
+});
+
+test('rare cards: each network holds two of five, each dealt once a playthrough, price effects only', () => {
+  const a = tickerSig(3).rare, b = tickerSig(2).rare;
+  assert.equal(new Set(a).size, 2); assert.ok(a.every((k) => RARE_CARDS[k]));
+  assert.ok([1, 2, 3, 4, 5, 6, 7, 8].some((n) => tickerSig(n).rare.join() !== a.join()), 'networks differ');
+  const s = world(3); tickTicker(s, 0);
+  assert.equal(s.ticker.rare, undefined, 'made on first use');
+  const got = dealt(s, 2000).filter((c) => RARE_CARDS[c.card]).map((c) => c.card);
+  assert.deepEqual(got.sort(), [...a].sort(), 'each once');
+  assert.deepEqual(raresLeft(s), []);
+  // Rack zero: components ×1.5 at Kestrel and Kernel ×0.6 everywhere, 30 min; a rare card's kind line says so.
+  const t = world(), z = dealTicker(t, 'rackzero');
+  assert.equal(z.ms, 30 * MIN);
+  assert.ok(near(tickerMult(t, 'kestrel', 'salvage'), 1.5) && near(tickerMult(t, 'lantern', 'kernel'), 0.6) && near(tickerMult(t, 'kestrel', 'kernel'), 0.6));
+  assert.match(tickerKind(tickerAt(t, 'kestrel')[0]), /^Kestrel · Rare market card$/);
+  assert.match(hubTerminalMarkup(t, 'kestrel', hubBanner(t, 'kestrel'), 'market'), /class="tag shock mk-card (up|down) rare"/);
+});
+
+test('Leaked: GLASSJAW puts the card on the Log five minutes ahead. Quiet: no Log line, only the hub\'s tag', () => {
+  const s = world(), first = s.serial, c = dealTicker(s, 'thermal', 'leaked');
+  s.ticker.next = Infinity;
+  assert.equal(c.mod, 'leaked');
+  const said = s.logs.filter((e) => e.id > first);
+  assert.deepEqual(said.map((e) => e.message), ['GLASSJAW: In five minutes, Kestrel posts this: “The north aisle is running warm. Kernel code is wanted for the tuning.”']);
+  assert.equal(tickerMult(s, 'kestrel', 'kernel'), 1, 'not yet');
+  tickTicker(s, 4 * MIN); assert.equal(tickerMult(s, 'kestrel', 'kernel'), 1);
+  tickTicker(s, 2 * MIN); assert.equal(tickerMult(s, 'kestrel', 'kernel'), 1.6, 'now');
+  assert.equal(c.left, 19 * MIN, 'its own minutes start when it moves');
+  assert.equal(dealTicker(world(), 'auction', 'leaked').mod, undefined, 'never GLASSJAW leaking its own');
+  const t = world(), n = t.serial, q = dealTicker(t, 'census', 'quiet');
+  assert.equal(q.mod, 'quiet');
+  assert.equal(t.logs.filter((e) => e.id > n && e.type === 'ticker').length, 0, 'no Log line');
+  assert.match(hubTerminalMarkup(t, 'lantern', hubBanner(t, 'lantern'), 'market'), /▲ Census · 25 min/);
+  assert.match(tickerKind(tickerAt(t, 'lantern')[0]), /· Quiet$/);
+});
+
+test('a crew\'s run: the director\'s Outbreak, its code ×0.8 everywhere while it runs, the crew\'s line on #net', () => {
+  const s = world(); s.hackers = { breaker: { level: 12, xp: 0 } };
+  s.events = [{ id: 1, card: 'outbreak', family: 'ransomware', left: 30 * MIN, loc: null }];
+  for (const f of FACTION_IDS) assert.ok(near(tickerMult(s, f, 'cipher'), CREW_MULT), f);
+  assert.equal(tickerMult(s, 'kestrel', 'worm'), 1);
+  const c = tickerAt(s, 'halcyon', 'cipher')[0];
+  assert.equal(c.name, "TOLLGATE's run");
+  assert.equal(tickerKind(c), 'TOLLGATE · Crew run');
+  assert.match(hubTerminalMarkup(s, 'halcyon', hubBanner(s, 'halcyon'), 'market'), /class="tag shock mk-card down crew"[^>]*>▼ TOLLGATE(?:'|&#39;)s run · 30 min/);
+  assert.equal(tickerAt(s, 'halcyon')[0].crew, true);
+  s.events = [{ id: 2, card: 'outbreak', family: 'botnet', left: 10 * MIN }];
+  assert.equal(tickerAt(s, 'lantern', 'worm')[0].name, "SWARMLINE's rental");
+  s.events = [{ id: 3, card: 'outbreak', family: 'cryptominer', left: 10 * MIN }];
+  assert.equal(tickerAt(s, 'lantern').length, 0, 'GLASSJAW\'s family: no crew\'s run');
+  s.events = [];
+  assert.equal(tickerMult(s, 'halcyon', 'cipher'), 1, 'over with the outbreak');
+  // On #net: the crew's own line when the director deals it.
+  const t = world(); t.hackers = { breaker: { level: 12, xp: 0 } };
+  tickChannel(t, 0);
+  const ev = deal(t, 'outbreak');
+  tickChannel(t, 0);
+  const run = { ransomware: 'TOLLGATE', wiper: 'TOLLGATE', logicbomb: 'TOLLGATE', worm: 'SWARMLINE', botnet: 'SWARMLINE', ghostroot: 'PALEMASK' }[ev.family];
+  if (run) assert.ok(channelOf(t).lines.some((l) => l.kind === 'crew' && l.from === run), channelOf(t).lines.map((l) => l.text).join(' | '));
 });

@@ -32,7 +32,7 @@ edges.
   line (*412 trades orphaned*). Nothing else.
 - **A runner's trade ends on their stamp:** their faction's (*Settle* for LANTERN's), shown on the receipt. It replaces
   today's off-screen *came through* line for a runner you've met.
-- **Voices** (#net): `facilities@kestrel` *Rack 4 will close at the end of this cycle. Please collect your belongings.*
+- **Voices** (#net): `facilities@kestrel` *Rack 4 is out of cold storage until the end of this cycle. Its contents are unclaimed.*
   · LANTERN *Four. One. Two. Harrow Street settles in eighteen minutes. TOLLGATE on the line.* · the runner,
   lowercase: *found it. HARROW-LEDGER-22, floor 2. my mother's house sale. could use a hand*
 - **Log lines:** *MOUNTED on floor 2: KESSLER-RACK-04.* · *STAGED on floor 2: TOLLGATE-RIG-31.* · *marrow found

@@ -23,6 +23,7 @@ const linked = (l) => esc(l.text).replace(/\[([^\]]+)\]/g, (m, name) => {
 // Who said it: a hacker's handle opens their card; a contact wears its faction's mark and colour; the wire is the wire.
 function who(s, l) {
   if (l.kind === 'wire') return '<span class="ch-from wire">wire</span>';
+  if (l.kind === 'crew') return `<span class="ch-from crew">${esc(l.from)}</span>`; // a crew's run (ticker.mjs), in threat red
   if (l.kind === 'contact') return `<span class="ch-from contact" style="--fc:${FACTIONS[l.faction]?.color || 'inherit'}">${glyph('f-' + l.faction)}${esc(l.from)}</span>`;
   const cls = l.kind === 'you' || l.kind === 'feat' ? (l.from === (s.profile?.handle || 'rookie') ? ' me' : '') : isFriend(s, l.from) ? ' friend' : '';
   return `<button type="button" class="ch-from hacker${cls}" data-finger="${esc(l.from)}" title="finger ${esc(l.from)}">${esc(l.from)}</button>${l.title ? `<i class="ch-title">${esc(l.title)}</i>` : ''}`;

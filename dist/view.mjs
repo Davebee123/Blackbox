@@ -13,7 +13,7 @@ import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './me
 let memAsk = null;
 export const setMemAsk = (id) => { memAsk = id; };
 import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, quote, priceOf, travelMs, transfersOf, orderQuote, orderMax } from './market.mjs';
-import { tickerAt, tickerTip, tickerKind, minutesLeft } from './ticker.mjs';
+import { tickerAt, tickerTip, tickerKind, minutesLeft, orderTip } from './ticker.mjs';
 // The market's open order ticket (app.js): { f, w, side, n }.
 let order = null;
 export const setOrder = (o) => { order = o; };
@@ -3459,11 +3459,14 @@ function marketMarkup(s, f, now) {
     const avg = FACTION_IDS.reduce((a, g) => a + quote(s, g, w).sell, 0) / FACTION_IDS.length, d = Math.round((q.sell / avg - 1) * 100);
     const why = [cond.mult[w] ? `${cond.name} ×${cond.mult[w]}` : '', ...tickerAt(s, f, w).map((c) => `${c.name} ×${c.mult}`), shock?.ware === w ? `Market shock ×${shock.mult}` : ''].filter(Boolean).join(' · ');
     const dir = d >= 3 ? 'up' : d <= -3 ? 'down' : 'flat';
+    // A bulk order on this ware here (ticker.mjs): how many it still wants, beside the ware's name (the prices stay aligned).
+    const bulk = tickerAt(s, f, w).find((c) => c.order);
+    const want = bulk ? `<span class="mk-want" title="${esc(orderTip(bulk))}" data-tt-kind="${esc(`${FX[f].short} · Bulk order`)}">${bulk.order.left} wanted</span>` : '';
     // A read-only row (click it for an order ticket): held, what it pays here (and against other
     // hubs), what it charges. The ticket opens under the row you picked.
     const open = order && order.f === f && order.w === w;
     return `<button type="button" class="mk-tr mk-row${open ? ' open' : ''}" data-mk-pick="${w}" aria-expanded="${open}">
-      <span class="mk-name" title="${esc(WARES[w].name)}">${glyph(GLYPH_OF_GOOD[w])}<b>${esc(WARES[w].name.replace(/ code$/, ''))}</b></span>
+      <span class="mk-name" title="${esc(WARES[w].name)}">${glyph(GLYPH_OF_GOOD[w])}<b>${esc(WARES[w].name.replace(/ code$/, ''))}</b>${want}</span>
       <span class="mk-num mk-held${n ? '' : ' zero'}">${n}</span>
       <span class="mk-sellp"><b class="mk-price">${q.sell}</b><span class="mk-d ${dir}" title="Against the ${Math.round(avg)}-credit average across hubs${why ? ` · ${esc(why)}` : ''}">${dir === 'up' ? '▲' : dir === 'down' ? '▼' : '='}${Math.abs(d)}%</span></span>
       <span class="mk-buyp"${WARES[w].sellOnly ? ` title="Hubs buy ${esc(WARES[w].name.toLowerCase())} but don't sell them."` : ''}>${WARES[w].sellOnly ? '—' : q.buy}</span>
@@ -3477,7 +3480,7 @@ function marketMarkup(s, f, now) {
       <span class="xfer-bar" title="${Math.max(1, Math.ceil(left / 60000))} min"><i style="width:${pct}%"></i></span>
     </div>`; }).join('')}</div>` : '';
   // The ticker's cards here (ticker.mjs): ▲ or ▼, the name, minutes left; what it does and its owner's line on hover.
-  const tags = cards.map((c) => `<span class="tag shock mk-card ${c.mult > 1 ? 'up' : 'down'}" title="${esc(tickerTip(c))}" data-tt-kind="${esc(tickerKind(c))}">${c.mult > 1 ? '▲' : '▼'} ${esc(c.name)} · ${minutesLeft(c)} min</span>`).join('');
+  const tags = cards.map((c) => `<span class="tag shock mk-card ${c.mult > 1 ? 'up' : 'down'}${c.crew ? ' crew' : ''}${c.rare ? ' rare' : ''}" title="${esc(tickerTip(c))}" data-tt-kind="${esc(tickerKind(c))}">${c.mult > 1 ? '▲' : '▼'} ${esc(c.name)} · ${minutesLeft(c)} min</span>`).join('');
   return `<div class="mk-tags"><span class="tag" title="${esc(cond.about)}">${esc(cond.name)}</span>${tags}<span class="tag dim" title="File transfer">⇄ ${min} min</span>${shockTag(s, f)}</div>
     <div class="mk-table mk-wares">${head}${rows}</div>${flying}`;
 }

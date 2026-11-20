@@ -2107,11 +2107,31 @@ hubs.
   | City Treasury | Tax run | Everything ×1.15 everywhere |
   | Pellucid Payroll | Wage run | Worm ×0.8 everywhere (30 min) |
 
+  | Corvid Exchange | Two buyers | Two rival hubs ×1.4 for one ware: Halcyon and GLASSJAW, GLASSJAW and LANTERN, Kestrel and NULL CHOIR, Halcyon and NULL CHOIR |
+  | A runner on the net | Corner | One code ×1.4 at their hub, 10 min; their line on #net: *buying every kernel lot at kestrel. sell me yours* |
+  | A crew | TOLLGATE's run · SWARMLINE's rental · PALEMASK's harvest | The director's Outbreak of a family the crew writes: that code ×0.8 everywhere while it runs, the crew's line on #net in red (the ticker never deals it) |
+
   Your network's two favoured cards come up 2.5 times as often. Two cards in five carry a modifier, leaning with your
-  network's style: **Rushed** (half as long, half again as far from ×1), **Lingering** (twice as long, half as far) or
-  **Wide** (a second hub posts it too, only on a card at one hub); Early word takes none. However many stack, a hub's
-  ware stays within ×0.4 and ×2.5. Saved:
-  `s.ticker`. `developer ticker [card] [rushed|lingering|wide]`.
+  network's style: **Rushed** (half as long, half again as far from ×1), **Lingering** (twice as long, half as far),
+  **Wide** (a second hub posts it too, only on a card at one hub), **Leaked** (GLASSJAW's word is on the Log five
+  minutes before it moves anything; GLASSJAW found, on another's card) or **Quiet** (no Log line, only the hub's tag);
+  Early word, corners and rare cards take none. However many stack, a hub's ware stays within ×0.4 and ×2.5.
+- **Bulk orders:** three price cards in ten carry one on the price they raise: 20–60 code, 40–120 components or 2–6
+  Exploits. Until it's filled or the card ends, a unit sold into it takes nothing off the price. The ware's name wears
+  a chip, *31 wanted*.
+- **Rare cards:** each network holds two of five, each dealt once a playthrough (one deal in ten while one fits). A
+  double-ruled tag.
+
+  | Owner | Card | Does |
+  |---|---|---|
+  | GLASSJAW | The original | Exploits ×3 there, 10 min |
+  | Kestrel | Rack zero | Components ×1.5 there and Kernel ×0.6 everywhere, 30 min |
+  | LANTERN | Every name | Worm ×1.5 there, 30 min |
+  | NULL CHOIR | The long rollback | Components ×0.6 everywhere, 30 min |
+  | Halcyon | The Guarantee, renewed | Cipher ×1.5 there, 30 min |
+
+  Saved: `s.ticker` (its `rare`, the rare cards not yet dealt, made on first use).
+  `developer ticker [card] [rushed|lingering|wide|leaked|quiet]`.
 - **The order ticket:** click a ware for **Sell** or **Buy**, a slider for how many, and a live preview (the total, the
   first and last unit's price, the same order at other hubs, your credits after). `market sell|buy <faction> <ware> <n>`.
 - **Spread and pressure:** a hub asks 15% over its price and pays 15% under (2% better a rep tier above the first).
@@ -2382,7 +2402,7 @@ Each goes to the pager and to #net; missing one costs nothing. The director roll
 | **Courier** (weight 3) | a traced server | 15 min | LANTERN's courier passes through: *Intercept* it, a fight. From level 10, one in twenty carries a unique you lack, and says which | 40 + 12L credits and a protocol (85% Tuned, 15% Custom), or that unique |
 | **Bounty** (2) | a traced server | 25 min | A named virus two levels above its server (from level 8, REPO MAN) | 80 + 15L credits, +2 Halcyon rep |
 | **Hollow Choir** (1) | a traced server, from 10 | 25 min | The boss | Twice the bounty's credits and a Custom protocol |
-| **Outbreak** (2) | the net | 30 min | One family surges | Its kills drop double code |
+| **Outbreak** (2) | the net | 30 min | One family surges; a crew's family is its run on the ticker (its code ×0.8 everywhere, *Markets*) | Its kills drop double code |
 | **Leak** (1) | a server you've found, not taken | at once | Someone leaks its vault key | You hold the key as you connect |
 | **Darknet listing** (0.5) | the net, from 8 | 20 min | A broker lists a native unique from another network, naming it (`event buy <id>`) | It, for 400 + 40L credits and 2 Exploits |
 | **Feud** (1) | a traced server, from 8, with two rival hubs located | 20 min | A tug-of-war between two rival factions (the bar drifts 2–5% a minute, never past 20/80 alone). *Pick a side* (`event fight <id> <faction>`): fight the other side's runner (one of the net's runners who works for it, by handle: an elite of its family at your level); each win pushes your side +25% and brings a fresh runner. Your side wins at 100%, or ahead when time runs out | Each win: 40 + 7.5L credits, a protocol with your side's implicit. Your side +4 rep. The feud: a **part** of your side's faction piece, one of its goods and your side +6, its allies a quarter of a win and the win (+3). No ripple: a feud never costs rep with anyone |
@@ -2471,8 +2491,8 @@ and a runner's trade, in turn. A runner's trade has no clock and stands beside t
   commission, and Kestrel +6 (with its ripples). Its Core stays sealed: nothing to take over.
 - **The clock runs out:** Kestrel pulls it back. Nothing lost. Either way it unmounts as a rig does.
 - **On the map:** the hexagon in violet with the cold mark and a ring of the time left, a dashed link to the server
-  it's mounted beside; its row on the threat rail. Kestrel's desk posts *Rack 4 will close at the end of this cycle.
-  Please collect your belongings.* on #net once you've found its hub. `developer site rack`.
+  it's mounted beside; its row on the threat rail. Kestrel's desk posts *Rack 4 is out of cold storage until the end of
+  this cycle. Its contents are unclaimed.* on #net once you've found its hub. `developer site rack`.
 - **A runner's trade.** A runner you've met (helped in a room, beaten as a rival, pulled out of a crash) traces the
   server their frozen trade sits on (`HARROW-LEDGER-22`, named for its payer), beside one of yours on your floor, at
   that server's level. Its card shows the trade as a receipt and the stamp they'll put on it, their faction's. No

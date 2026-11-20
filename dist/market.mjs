@@ -11,7 +11,7 @@ import { emit, warn, materialsOf, hooks, rand, firstTime, addItem } from './comb
 import { FACTIONS, hubsOf, repTier, hubFound } from './factions.mjs';
 import { deliverGoods } from './store.mjs';
 import { deal, shockMult, flickerMult } from './events.mjs';
-import { tickerMult, tickerName } from './ticker.mjs';
+import { tickerMult, tickerName, orderLeft, fillOrder } from './ticker.mjs';
 import { learnCodebase } from './sockets.mjs';
 import { gainComponents, componentsOf, spend } from './salvage.mjs';
 
@@ -92,9 +92,12 @@ export function trade(s, side, f, w, n, at = now()) {
   if (side === 'sell') {
     if (have(s, w) < n) return warn(s, `You have ${have(s, w)} ${WARES[w].name}.`);
     // The price slides over the lot. Each unit is priced after its own push, so selling a lot
-    // exactly undoes buying it (never a profit on the round trip, even with no spread).
+    // exactly undoes buying it (never a profit on the round trip, even with no spread). A unit sold into a ticker
+    // card's bulk order (ticker.mjs) pushes nothing: the order holds the price.
     let credits = 0;
-    for (let i = 0; i < n; i++) { m.pressure[f][w] += 1; credits += quote(s, f, w).sell; }
+    const held = Math.min(n, orderLeft(s, f, w));
+    for (let i = 0; i < n; i++) { if (i >= held) m.pressure[f][w] += 1; credits += quote(s, f, w).sell; }
+    fillOrder(s, f, w, held);
     if (w === 'salvage') spend(s, n); else materialsOf(s)[w] -= n;
     const t = { id: ++m.serial, side, f, w, n, credits, sentAt: at, landsAt: at + travelMs(s, f) };
     m.transfers.push(t);
@@ -114,10 +117,10 @@ export function trade(s, side, f, w, n, at = now()) {
 // unit's price, and the same lot priced at the average of the other hubs you can reach (the honest
 // "profit or loss": selling here beats or trails selling elsewhere; buying here costs more or less).
 function lotTotal(s, side, f, w, n) {
-  const m = marketOf(s), was = (m.pressure[f] ||= {})[w] || 0;
+  const m = marketOf(s), was = (m.pressure[f] ||= {})[w] || 0, held = side === 'sell' ? orderLeft(s, f, w) : 0;
   let total = 0, first = 0, last = 0;
   for (let i = 0; i < n; i++) {
-    if (side === 'sell') { m.pressure[f][w] = was + i + 1; last = quote(s, f, w).sell; }
+    if (side === 'sell') { m.pressure[f][w] = was + Math.max(0, i + 1 - held); last = quote(s, f, w).sell; }
     else { m.pressure[f][w] = was - i; last = quote(s, f, w).buy; }
     if (!i) first = last;
     total += last;

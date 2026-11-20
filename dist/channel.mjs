@@ -18,6 +18,7 @@ import { tickRunners, know, nodeName, runnerOf, stateOf } from './runners.mjs';
 import { MATERIALS } from './gear.mjs';
 import { handleOf, shownTitle, simTitle, voice, worldUniques, hash, titleById } from './profile.mjs';
 import { pieceOf } from './faction-gear.mjs';
+import { crewRun } from './ticker.mjs';
 import { achById } from './achievements.mjs';
 
 export const CHANNEL = { keep: 80, everyMs: [20000, 90000], reactMs: [3000, 12000], say: 120, liveMs: 5 * 60000, feuds: 4, turns: 8 };
@@ -107,13 +108,19 @@ const known = (s, f) => f === 'halcyon' || hubFound(s, f);
 
 // ---------- news: what the log says happened ----------
 const NEWS = {
+  // A runner's corner (ticker.mjs): their line, in their voice. A hub's market card stays on the Log.
+  ticker: (s, e) => (e.runner ? simSay(s, e.runner, e.line) : null),
   'world-event': (s, e) => {
     const at = placeName(s, e.location), ev = (s.events || []).find((x) => x.id === e.event);
     if (!ev && !['leak', 'choir'].includes(e.card)) return null; // over before the channel heard of it
     if (e.card === 'courier') return wire(s, ev.unique ? `Word is a courier through ${at} is carrying [${UNIQUES[ev.unique].name}].` : `A courier was seen heading for ${at}.`, ev.unique ? { items: [UNIQUES[ev.unique].name] } : {});
     if (e.card === 'bounty') return contact(s, 'halcyon', ev.boss ? `REPO MAN is loose on ${at}. The claims department has posted a bounty.` : `Bounty posted on ${ev.name}, last seen on ${at}.`);
     if (e.card === 'choir') return wire(s, `Something is singing on ${at}. The HOLLOW CHOIR.`);
-    if (e.card === 'outbreak') { reactAll(s, 0.5, (h) => [`${fam(ev.family)} everywhere. double code though`, `${fam(ev.family)} everywhere`]); return wire(s, `A ${fam(ev.family)} outbreak is spreading. Kills drop double code.`); }
+    if (e.card === 'outbreak') {
+      reactAll(s, 0.5, (h) => [`${fam(ev.family)} everywhere. double code though`, `${fam(ev.family)} everywhere`]);
+      const run = crewRun(ev.family); // a crew's run (ticker.mjs): the crew says it, in red
+      return run ? post(s, { kind: 'crew', from: run.owner, text: run.line }) : wire(s, `A ${fam(ev.family)} outbreak is spreading. Kills drop double code.`);
+    }
     if (e.card === 'leak') return wire(s, `Somebody dumped a vault key for ${at}.`);
     if (e.card === 'darknet') return wire(s, `A broker is listing [${UNIQUES[ev.unique]?.name}] on a darknet channel.`, { items: [UNIQUES[ev.unique]?.name] });
     if (e.card === 'feud') { reactAll(s, 0.4, (h, x) => [`${short(ev.sides[x.n % 2])} vs ${short(ev.sides[(x.n + 1) % 2])} over ${at}. who's pushing ${short(ev.sides[x.n % 2])}?`, `${at} feud. going ${short(ev.sides[x.n % 2])}`]); return wire(s, `${short(ev.sides[0])} and ${short(ev.sides[1])} are fighting over ${at}.`); }
@@ -134,7 +141,7 @@ const NEWS = {
     // A runner's trade: the runner asks, then says how it went, in their own voice.
     if (e.kind === 'runner') return e.phase === 'up' ? simSay(s, e.handle, `found it. ${e.name}, floor ${e.floor}. ${e.what}. could use a hand`) : e.phase === 'won' ? simSay(s, e.handle, `${(e.stamp || 'settled').toLowerCase()}. thanks for the hand`) : null;
     if (e.kind === 'rack') {
-      if (e.phase === 'up') return known(s, 'kestrel') ? contact(s, 'kestrel', `Rack ${e.rack} will close at the end of this cycle. Please collect your belongings.`) : wire(s, `Kestrel has a rack up out of cold storage.`);
+      if (e.phase === 'up') return known(s, 'kestrel') ? contact(s, 'kestrel', `Rack ${e.rack} is out of cold storage until the end of this cycle. Its contents are unclaimed.`) : wire(s, `Kestrel has a rack up out of cold storage.`);
       return e.phase === 'won' && known(s, 'kestrel') ? contact(s, 'kestrel', CONTACTS.kestrel.thanks({ you: you(s) })) : null;
     }
     const crew = (e.crew || '').toUpperCase(), short = e.short || 'a settlement run';

@@ -4590,6 +4590,7 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .ch-from.contact { color: var(--fc); }
 .ch-from.contact .glyph { width: 11px; height: 11px; margin: 0 4px 0 0; vertical-align: -1px; }
 .ch-from.wire { color: var(--amber-soft); font-weight: 600; letter-spacing: 0.5px; }
+.ch-from.crew { color: var(--hot); font-weight: 600; letter-spacing: 0.5px; }
 .ch-title { margin-left: 5px; font-style: normal; font-size: 11px; color: var(--amber-soft); }
 .ch-title::before { content: '‹'; opacity: 0.6; } .ch-title::after { content: '›'; opacity: 0.6; }
 .ch-text::before { content: ': '; color: var(--dim); }
@@ -5083,3 +5084,9 @@ input, textarea, [contenteditable], .mbody, .ch-lines, .page-error pre { -webkit
 .stores-pop[hidden] { display: none; }
 .stores-pop .card { margin: 0; }
 @media (max-width: 900px) { .stores-pop { top: 96px; right: 12px; } }
+
+/* The ticker (ticker.mjs): a bulk order's chip on its ware's price (amber: what you sell into it), a crew's run in red,
+   a rare card double-ruled. */
+.mk-want { margin-left: 8px; font: 600 10px var(--mono); color: var(--amber); border: 1px solid var(--amber-deep); border-radius: 3px; padding: 0 4px; cursor: help; white-space: nowrap; }
+.tag.shock.crew { color: var(--hot); }
+.tag.shock.rare { border-style: double; border-width: 3px; }

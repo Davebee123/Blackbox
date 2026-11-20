@@ -1,4 +1,5 @@
 // #net, the public channel (channel.mjs): lines only from real state, its pacing and history, its own dice, never the pager.
+import { crewRun } from './dist/ticker.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, addLocation, hooks, UNIQUES, emit, giveUnique } from './dist/combat.mjs';
@@ -85,7 +86,8 @@ test('world news follows the director: dealt, a hunt hops, a bounty you took', (
   assert.match(hop.text, new RegExp(`^${hunt.name} hopped to .+\\. Level ${hunt.level} now\\.$`));
   const ob = deal(s, 'outbreak');
   tickChannel(s, 1);
-  assert.ok(channelOf(s).lines.some((l) => l.kind === 'wire' && l.text.includes(`${ob.family === 'ghostroot' ? 'ghostroot' : ob.family}`) || l.text.includes('outbreak')));
+  // A crew's family: the crew's own line (a crew's run, ticker.mjs); any other, the wire's.
+  assert.ok(channelOf(s).lines.some((l) => (l.kind === 'crew' && l.from === crewRun(ob.family)?.owner) || (l.kind === 'wire' && l.text.includes('outbreak'))));
 }));
 
 test('sim hackers: lines from people who are online, items that are real, titles shown', () => clocked((tick) => {

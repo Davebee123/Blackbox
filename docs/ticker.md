@@ -1,11 +1,12 @@
 # The ticker: market cards
 
-**Status.** Built lean (November 2026, `ticker.mjs`): the cards in section 2 but the crews' runs, favoured cards and
-the style from the seed, Rushed, Lingering and Wide, the clamp, the Log lines, price tooltips naming their cards, and
-look A (the tag). The wall-clock world event and the Market shock are gone (GAME_RULES *Markets*, *Events*). Left for
-after the designer has played it: bulk orders, two buyers, corners, rare cards, Leaked and Quiet, the crews' runs,
-pays.md's *reacting*, and looks B and C. It's what stays of market.md: the cards, without sway or INIT's count (now
-docs/init-table.md). Outposts (outposts.md) are tabled.
+**Status.** Built (November 2026, `ticker.mjs`; GAME_RULES *Markets*): the cards, favoured cards, the style and two
+rare cards from the seed, all five modifiers, bulk orders, two buyers, corners, the clamp, the Log lines, price
+tooltips naming their cards, and look A (the tag). The crews' runs are read off the director's Outbreak (events.mjs),
+which keeps dealing it: its patient zero and its family's lean stay with it. Rare cards move prices only (no count, no
+sway). Two buyers are posted by Corvid Exchange. Left: looks B and C are mock-ups for the designer to pick against A;
+pays.md's *reacting* is next. The wall-clock world event and the Market shock are gone. Outposts (outposts.md) are
+tabled.
 
 ## 1. The rule
 
@@ -59,7 +60,7 @@ docs/init-table.md). Outposts (outposts.md) are tabled.
 The card's line goes to the Log in every option. In the hub's market window:
 
 - **A, the tag:** the card replaces the world event's tag in the window's head (▲, its name, minutes left); the bulk
-  order is a chip on the ware's price (*31 wanted*).
+  order is a chip beside the ware's name (*31 wanted*), so the prices stay in their column. Built.
 - **B, the strip:** a thin amber line under the ware's row: the card, the order (*Kestrel buys 31 more at 26*), minutes
   left and a bar.
 - **C, the wire:** every live card on the net above the table, this hub's first: the ware, its name, what it does and

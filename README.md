@@ -177,7 +177,7 @@ comment saying what it does.
 | `dist/receipts.mjs` | Receipts: each traced server's vault receipt, stamped for a faction at the takeover or handed in at your commission's hub. |
 | `dist/market.mjs` | Hub markets: prices that move with conditions, the ticker's cards and sales. |
 | `dist/supply.mjs` | Supply orders: each faction's standing order for one ware, its pay and the clock to the next. |
-| `dist/ticker.mjs` | The ticker: market cards on logged-on time that move hub prices in their owners' voices; seeded per network (favoured cards, a modifier style), clamped, on dice of its own. |
+| `dist/ticker.mjs` | The ticker: market cards on logged-on time that move hub prices in their owners' voices; seeded per network (favoured cards, a modifier style, two rare cards), bulk orders, two buyers, runners' corners, crews' runs off the Outbreak; clamped, on dice of its own. |
 | `dist/table.mjs` | INIT's table: the count (`s.table`), what fills and empties it, the two bands' multipliers, the orphans' share, the header meter's tooltip (its rows; view.mjs `tableMore` draws the bar and chips). |
 | `dist/consortium.mjs` | Consortium: simulated members who merged servers with yours. |
 
@@ -347,7 +347,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/runners.md`](docs/runners.md) | Runners: the people on the net, solo-first multiplayer, the picked looks (decided, not built). |
 | [`docs/pays.md`](docs/pays.md) | What pays what: gear general, each activity's own thing on top, and what each currency is spent on (designed). |
 | [`docs/market.md`](docs/market.md) | The market: the ticker's cards and what each activity pays (the rest shelved; proposed). |
-| [`docs/ticker.md`](docs/ticker.md) | The ticker: market cards that move hub prices, in their owners' voices (built lean; the rest to come). |
+| [`docs/ticker.md`](docs/ticker.md) | The ticker: market cards that move hub prices, in their owners' voices (built; looks B and C mocked up). |
 | [`docs/exchange.md`](docs/exchange.md) | The exchange: one central market in place of the hubs', moved by the ticker and by what you do (tabled). |
 | [`docs/outposts.md`](docs/outposts.md) | Outposts: faction markets on every floor, their qualities, events and five balances (tabled). |
 | [`docs/init-table.md`](docs/init-table.md) | INIT's table: one count you fill by playing time and empty by breaking orphans; its bands change fights, drops, XP and events (proposed). |
