@@ -39,7 +39,7 @@ import { showCard } from './genome.mjs';
 import { owned, procIn, procOf, rootFileInfo, rootFiles, rootOf, CACHE_FILE, STASH_DIR, STASH_FILE } from './root.mjs';
 import { enterRooms, roomsFor } from './netrooms.mjs';
 import { snapVisit } from './visit.mjs';
-import { roomsCommand, jackOut as roomsJackOut, settle as roomsSettle, hereOf, FIGHTS, roomList, neighbours, isUp, coreOpen, walkToRoom, seenOf, fightOf, offlineLeft, WORLD as ROOMS_WORLD } from './floorplan.mjs';
+import { roomsCommand, jackOut as roomsJackOut, settle as roomsSettle, hereOf, FIGHTS, roomList, neighbours, isUp, coreOpen, walkToRoom, seenOf, fightOf, offlineLeft, WORLD as ROOMS_WORLD, xpTotal } from './floorplan.mjs';
 import { threadCommand, developerThread, isDark } from './threads.mjs';
 export { zoneOf, zoneRooms };
 
@@ -440,7 +440,7 @@ export function connect(s, id) {
       emit(s, 'run-start', `CONNECTED to ${loc.name}${zone ? ', a rogue server' : loc.member ? `, ${loc.member}'s server` : loc.rogue ? `, a rogue server (${ROGUE.kinds[loc.rogue.kind].name})` : ''}.${rooms}${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}`, { location: loc.id, rooms: true });
     }
     if (firstVisit) gainXp(s, deedXpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`, 'breakin');
-    snapVisit(s, loc, hooks.now?.() ?? Date.now()); // jack out keeps the visit, a disconnect puts this back (visit.mjs)
+    snapVisit(s, loc, hooks.now?.() ?? Date.now(), xpTotal(s)); // jack out keeps the visit, a disconnect puts this back (visit.mjs)
     return since(s, first);
   }
   return since(s, first);

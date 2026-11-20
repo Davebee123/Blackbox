@@ -21,11 +21,12 @@ const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefin
 const omit = (o, keys) => Object.fromEntries(Object.entries(o || {}).filter(([k]) => !keys.includes(k)));
 
 // The snap, taken once the connect is done (its first-visit XP is yours).
-export function snapVisit(s, loc, at = Date.now()) {
+export function snapVisit(s, loc, at = Date.now(), xp = null) {
   if (!s.run) return null;
   const R = loc?.floorplan;
   return (s.run.snap = structuredClone({
     at, // when: the No carrier card's image time
+    xp, // your XP total at the snap: what a disconnect can take back starts here (a first run's XP is already yours)
     integrity: s.run.integrity,
     credits: s.server.credits,
     progress: pick(s, PROGRESS),
