@@ -39,12 +39,12 @@ held server's core socket. ✓ marks one built with the server specials (docs/se
 | Program | Code | Weight | Codebase | v1 (v2, v3 by patch) |
 |---|---|---|---|---|
 | **Seeder** | Worm | light | | Market transfers from your network 10% faster, with other Seeders up to 40% (20%, 30%) |
-| **Botnet** | Worm | medium | | A fight here starts with 1 helper on the weakest part (2, 3); small hits, about 2–3 cycles off a fight at v3 |
+| **Conscript** | Worm | medium | | A fight here starts with 1 helper on the weakest part (2, 3); small hits, about 2–3 cycles off a fight at v3 |
 | **Crawler** | Worm | light | | Walking into a room reveals 1 neighbour's kind (2, all) |
 | **Escrow** | Cipher | light | | Contracts on this server pay +15% (+30%, +45%) |
 | **Lockdown** ✓ | Cipher | medium | Kestrel | Built as: invasions this server sends come 2 levels lower |
 | **Amplifier** ✓ | any | medium | NULL CHOIR | Invasions this server sends come 2 levels higher |
-| **Rootkit** | Kernel | light | | Moves here cost 25% less Signal (40%, 50%: the cap) |
+| **Shim** | Kernel | light | | Moves here cost 25% less Signal (40%, 50%: the cap) |
 | **Bulkhead** ✓ | any | medium | Kestrel | The hunter can't pass through this room. Fights here and next door start with a shield of 10% of your max Signal. |
 | **Sentry Turret** | any | medium | Kestrel | In fights here and next door, deals 6% of a part's max Integrity to the part whose move lands soonest every 3 cycles. Its hits count toward interrupts. |
 | **Patch Injector** ✓ | any | medium | GLASSJAW | Viruses on this server respawn with 1 ◆ less on every part |
@@ -156,4 +156,3 @@ Built and tested against simulated players until there's a backend.
 - Patch prices (set before v49 took components out of installs) need the re-measure in step 2.
 - Codebases come from activities as well as the shops (the designer, November 2026); a runner's trade already
   teaches one. Which activity teaches which is for the patches session to propose.
-- Names: *Botnet* is also a family (docs/servers.md 4.3) and an Operator skill; *Rootkit* a family and a Zero-day.
