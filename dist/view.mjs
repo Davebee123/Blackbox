@@ -13,7 +13,7 @@ import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './me
 let memAsk = null;
 export const setMemAsk = (id) => { memAsk = id; };
 import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, quote, priceOf, travelMs, transfersOf, orderQuote, orderMax } from './market.mjs';
-import { tickerAt, tickerTip, tickerKind, minutesLeft, orderTip } from './ticker.mjs';
+import { tickerAt, tickerTip, tickerKind, minutesLeft, orderTip, PAYERS, wanted, REACT } from './ticker.mjs';
 import { cardIcon, condIcon } from './ticker-icons.mjs';
 // The market's open order ticket (app.js): { f, w, side, n }.
 let order = null;
@@ -3450,10 +3450,12 @@ function orderTicket(s, f, w) {
       <button type="button" class="btn primary mk-go" data-command="${k.cmd}" data-mk-out="cmd" title="Arrives in ${k.minutes} min">${side === 'sell' ? 'Sell' : 'Buy'} <span data-mk-out="n2">${k.n}</span></button>`;
   return `<div class="mk-ticket"><div class="mk-sides">${tab('sell', 'Sell')}${WARES[w].sellOnly ? '' : tab('buy', 'Buy')}</div>${body}</div>`;
 }
-function marketMarkup(s, f, now) {
+export function marketMarkup(s, f, now) {
   const cond = CONDITIONS[HUB_CONDITION[f]], cards = tickerAt(s, f), mats = materialsOf(s), shock = shockOf(s, f);
   const haveOf = (w) => (w === 'salvage' ? componentsOf(s) : mats[w] || 0);
   const min = Math.round(travelMs(s, f) / 60000);
+  // What pays each ware (ticker.mjs PAYERS), chips in the price's tooltip; ×2 on each while a card wants it (reacting).
+  const want = wanted(s), payers = (w) => `<template class="tt-more">${(PAYERS[w] || []).map(([g, name, tip]) => `<span class="rw" title="${esc(tip)}">${glyph(g)}<b>${esc(name)}</b>${want.has(w) ? `<b class="rw-x">×${REACT}</b>` : ''}</span>`).join('')}</template>`;
   const rows = WARE_IDS.map((w) => {
     const q = quote(s, f, w), n = haveOf(w), lot = Math.min(10, n);
     // Its value here against the average across every hub: the one number that says where to sell.
@@ -3469,7 +3471,7 @@ function marketMarkup(s, f, now) {
     return `<button type="button" class="mk-tr mk-row${open ? ' open' : ''}" data-mk-pick="${w}" aria-expanded="${open}">
       <span class="mk-name" title="${esc(WARES[w].name)}">${glyph(GLYPH_OF_GOOD[w])}<b>${esc(WARES[w].name.replace(/ code$/, ''))}</b>${want}</span>
       <span class="mk-num mk-held${n ? '' : ' zero'}">${n}</span>
-      <span class="mk-sellp"><b class="mk-price">${q.sell}</b><span class="mk-d ${dir}" title="Against the ${Math.round(avg)}-credit average across hubs${why ? ` · ${esc(why)}` : ''}">${dir === 'up' ? '▲' : dir === 'down' ? '▼' : '='}${Math.abs(d)}%</span></span>
+      <span class="mk-sellp"><b class="mk-price">${q.sell}</b><span class="mk-d ${dir}" title="Against the ${Math.round(avg)}-credit average across hubs${why ? ` · ${esc(why)}` : ''}">${payers(w)}${dir === 'up' ? '▲' : dir === 'down' ? '▼' : '='}${Math.abs(d)}%</span></span>
       <span class="mk-buyp"${WARES[w].sellOnly ? ` title="Hubs buy ${esc(WARES[w].name.toLowerCase())} but don't sell them."` : ''}>${WARES[w].sellOnly ? '—' : q.buy}</span>
     </button>${open ? orderTicket(s, f, w) : ''}`;
   }).join('');

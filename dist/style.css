@@ -3861,6 +3861,7 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .tt .tt-more { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; white-space: normal; } /* icon chips under the text (a contract's pay) */
 .tt .tt-more b { display: inline; margin: 0; color: var(--bright); font: 700 12px var(--mono); letter-spacing: 0; }
 .tt .tt-more .rw.neg b { color: var(--hot); } /* a cost (a server special's) */
+.tt .tt-more .rw .rw-x { color: var(--amber); } /* a payer dealt twice as often while a market card wants its ware (view.mjs marketMarkup) */
 .tt .tt-more .tt-ct { flex: 1 1 100%; cursor: inherit; backdrop-filter: none; } /* a contract as the map's tracker draws it (floorplan-view.mjs strip) */
 .tt .tt-ct .ct-txt b { display: block; margin: 0; color: var(--bright); font: 600 12px var(--sans, inherit); letter-spacing: 0; }
 /* INIT's table (view.mjs tableMore): the bar from 70% to 95%, its bands, the count's tick; the band's rows; how it moves */

@@ -51,6 +51,7 @@ import { blipStood, blipRooms, runCardRoll, runCardUp, runCardEnd } from './even
 import { RUN_CARDS } from './runcards.mjs';
 import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
 import { siteWon, siteVault } from './sites.mjs';
+import { wanted, REACT } from './ticker.mjs';
 
 export const KIND_OF = FP.KIND_OF;
 export const NET = {
@@ -459,7 +460,7 @@ WORLD_hook('exfil', (s, t) => {
   const c = (s.exfil ||= { at: null, n: 0 });
   if (c.at != null && t < c.at + M.cooldownMs) return 0;
   const seed = (((loc.seed || 1) * 2654435761 + (s.rooms?.visits || 0) * 40503 + (c.n || 0) * 7919) >>> 0) || 1;
-  if (seeded(seed)() >= M.chance) return 0;
+  if (seeded(seed)() >= M.chance * (wanted(s).has('salvage') ? REACT : 1)) return 0; // twice as likely while a market card wants components (ticker.mjs): its archive's item scraps to them
   c.at = t; c.n = (c.n || 0) + 1;
   return seed;
 });
