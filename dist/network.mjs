@@ -165,15 +165,16 @@ export const homeOf = (s, id) => knownNets(s).find((who) => sigOf(s, who)?.uniqu
 // join the lean at NETWORK.late each.
 export const lateFamilies = (level, floor) => Object.keys(FAMILIES).filter((f) => FAMILIES[f].opens && level >= FAMILIES[f].opens.level && floor >= FAMILIES[f].opens.floor);
 // A family from one roll x and a lean (null: even), with the later families open at `at` ({ level, floor }) beside them.
-export function leanOf(lean, x, at = null) {
-  const late = at ? lateFamilies(at.level, at.floor) : [], w = (f) => (late.includes(f) ? NETWORK.late : lean ? lean[f] : 1), all = [...FAMS, ...late];
+// more: a family's extra weight (ticker.mjs reactOf: its code wanted), or null.
+export function leanOf(lean, x, at = null, more = null) {
+  const late = at ? lateFamilies(at.level, at.floor) : [], w = (f) => (late.includes(f) ? NETWORK.late : lean ? lean[f] : 1) * (more ? more(f) : 1), all = [...FAMS, ...late];
   let r = x * all.reduce((n, f) => n + w(f), 0);
   for (const f of all) { r -= w(f); if (r < 0) return f; }
   return all.at(-1);
 }
 // A family for something on a network, from one roll (so callers keep their dice in step): its lean, or even. at: the
 // level and floor it's for, so the later families can come.
-export const leanPick = (s, who, x, at = null) => leanOf(sigOf(s, who)?.lean || null, x, at);
+export const leanPick = (s, who, x, at = null, more = null) => leanOf(sigOf(s, who)?.lean || null, x, at, more);
 export const nativeStrain = (s, who) => sigOf(s, who)?.strain || null;
 
 // ---------- named and seen ----------
