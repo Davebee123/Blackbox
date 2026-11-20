@@ -7,9 +7,10 @@
 //   Gauntlet  mixed families; the full clear pays a bonus cache
 // Each fight room fills again on its own timer (ROGUE.respawnMs), like SPRAWL-00's. A Gauntlet pays its
 // cache when you clear every fight room in one visit (s.run.felled).
-import { emit, rand, gainCode, gainXp, xpFor, hooks, hackerLevel, giveUnique } from './combat.mjs';
+import { emit, rand, gainXp, xpFor, hooks, hackerLevel, giveUnique } from './combat.mjs';
 import { FAMILIES, variantFor, STRAINS, CONFIG, ELITE, SERVER, BOSSES, createLocation } from './data.mjs';
-import { seeded, codeOf } from './gear.mjs';
+import { seeded } from './gear.mjs';
+import { codeCredits } from './pays.mjs';
 import { occupationCleared } from './consortium.mjs';
 import { netOf, leanPick, nativeStrain, lairSpawns, NETWORK } from './network.mjs';
 
@@ -26,6 +27,8 @@ export const ROGUE = {
   relockMs: CONFIG.relockMs, // after you leave a wild server it won't take you back for 30 seconds
 };
 // A Nest, a Pit or a Gauntlet (not a lair, the farm or an occupied server): rooms laid out from its seed, Stashes, the Exfil.
+// A Gauntlet's full clear: its cache's credits, and its code as credits (docs/pays.md).
+export const gauntletCredits = (L) => 60 + 12 * L + codeCredits(4 + Math.floor(L / 5));
 export const plainRogue = (loc) => !!loc?.rogue && ['nest', 'pit', 'gauntlet'].includes(loc.rogue.kind) && !loc.occupied && !loc.lair && !loc.farm;
 export const isRogue = (loc) => !!loc?.rogue;
 export const isWild = (loc) => !!(loc?.zone || loc?.rogue);
@@ -154,11 +157,10 @@ export function rogueKill(s, loc, room, now, extraDrop) {
   if (!rogueRooms(loc).every((p) => felled[p])) return false;
   s.run.cleared = true;
   if (loc.rogue.kind === 'gauntlet') {
-    const credits = 60 + 12 * (loc.level || 1), code = 4 + Math.floor((loc.level || 1) / 5);
+    const credits = gauntletCredits(loc.level || 1);
     s.server.credits += credits;
-    gainCode(s, { [codeOf(loc.family)]: code }, '');
     gainXp(s, xpFor(s, loc.level || 1, 1), 'gauntlet cleared', 'fight');
-    emit(s, 'net-good', `GAUNTLET CLEARED. The cache at the root opens: +${credits} credits, +${code} code.`);
+    emit(s, 'net-good', `GAUNTLET CLEARED. The cache at the root opens: +${credits} credits.`);
   }
   return true;
 }

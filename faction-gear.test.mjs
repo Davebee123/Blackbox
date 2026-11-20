@@ -279,16 +279,13 @@ test('parts: a feud won gives one part of the piece of the side you backed; runn
   assert.equal(partsOf(s, 'glassjaw'), 1, 'held at the end: the part');
 });
 
-test('each runner beaten drops a protocol at your level with your side\'s implicit; the win\'s sealed item carries it too', () => {
+test('a runner beaten pays standing, no protocol of its own (docs/pays.md); the win\'s sealed item carries the side\'s implicit', () => {
   const s = world({ level: 24, hubs: ['glassjaw'] });
   const ev = feudOf(s, 'halcyon', 'glassjaw'), marked = () => s.stash.filter((x) => x.implicit);
   command(s, `event fight ${ev.id} glassjaw`); win(s);
-  assert.equal(marked().length, 1, 'a protocol a runner (on top of what the kill rolls)');
-  const it = marked()[0];
-  assert.equal(it.implicit, 'glassjaw'); assert.equal(it.level, 24); assert.ok(['stock', 'tuned'].includes(it.rarity));
-  assert.ok(s.logs.some((x) => x.type === 'drop' && x.item?.id === it.id && /dropped: /.test(x.message)));
+  assert.equal(marked().length, 0, 'no marked protocol a runner');
   command(s, `event fight ${ev.id}`); win(s);
-  assert.equal(marked().length, 3, 'the second runner\'s and the sealed item');
+  assert.equal(marked().length, 1, 'the sealed item');
   assert.ok(marked().every((x) => x.implicit === 'glassjaw'));
   assert.equal(marked().at(-1).rarity, 'tuned', 'the sealed item: a blue');
 });
@@ -361,24 +358,24 @@ test('parts are shown, not told: three pips in the collection, the hub\'s Assemb
   const card = mapMarkup(s, ev.loc);
   for (const f of ev.sides) assert.match(card, new RegExp(`class="evc-rw fd-part" style="--fc:${FACTIONS[f].color}" title="A part of ${PIECES[f].name}: `), `${f}'s part`);
   assert.match(card, /class="next"/);
-  assert.match(card, /class="evc-rw fd-drop"/, 'a win\'s protocol with the side\'s mark');
+  assert.doesNotMatch(card, /class="evc-rw fd-drop"/, 'a win pays standing, no protocol');
 });
 
 // ---------- the feud's rep ----------
-test('feud rep: +4 a runner beaten, +6 for the win (about +14 a good feud), its allies a quarter; nobody ever loses any', () => {
-  assert.equal(FEUD.rep, 4); assert.equal(FEUD.bonusRep, 6);
+test('feud rep: +10 a runner beaten, +6 for the win (about +26 a good feud), its allies a quarter; nobody ever loses any', () => {
+  assert.equal(FEUD.rep, 10); assert.equal(FEUD.bonusRep, 6);
   const s = world({ hubs: ['glassjaw', 'kestrel', 'nullchoir'] });
   const was = reps(s);
   winFeud(s, 'halcyon', 'glassjaw');
-  assert.equal(rep(s, 'halcyon') - was.halcyon, 2 * 4 + 6, 'a good feud: +14');
-  assert.equal(rep(s, 'kestrel') - was.kestrel, Math.round((4 + 6) * 0.25), 'Halcyon\'s ally: a quarter of a win and the bonus');
+  assert.equal(rep(s, 'halcyon') - was.halcyon, 2 * 10 + 6, 'a good feud: +26');
+  assert.equal(rep(s, 'kestrel') - was.kestrel, Math.round((10 + 6) * 0.25), 'Halcyon\'s ally: a quarter of a win and the bonus');
   for (const f of ['glassjaw', 'nullchoir', 'lantern']) assert.equal(rep(s, f), was[f], `${f}: no ripple, no loss`);
   // Every side, every pairing: no rep goes down.
   for (const [a, b] of [['glassjaw', 'halcyon'], ['nullchoir', 'kestrel'], ['kestrel', 'nullchoir'], ['nullchoir', 'halcyon']]) {
     const t = world({ hubs: ['glassjaw', 'kestrel', 'nullchoir'] }), w = reps(t);
     winFeud(t, a, b);
     for (const f of Object.keys(FACTIONS)) assert.ok(rep(t, f) >= w[f], `${a} over ${b}: ${f} never down`);
-    assert.equal(rep(t, a) - w[a], Math.min(100, w[a] + 14) - w[a]);
+    assert.equal(rep(t, a) - w[a], Math.min(100, w[a] + 26) - w[a]);
     assert.equal(partsOf(t, a), 1);
   }
 });

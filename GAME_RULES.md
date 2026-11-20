@@ -843,7 +843,7 @@ strip (the server, its kind, level and rule, your Integrity, **Rooms n/N**, your
 | Guard post | ◆▣ KEY | A guard or ICE holding the vault's key, shown as an elite. Hoard, Rich and Hardened servers' are Armored. |
 | Vault | ▥ | `open` with its key, or `force` it for 15% of your max Integrity. It holds the server's files: a protocol half the time (your first server's always), code, a trace record, spare credits, now and then a Zero-day (floor 2+) or a filter, a contract's planted file, and on half the servers a journal entry (*Journals*). Everything goes in your pack. |
 | Core | ♛ | The Resident, **SEALED** until the vault opens. |
-| Cache | ▤ | Credits and code; one in four is **bait** (10% of your max Integrity; `cat` shows it). Refills 2 hours after you take it. |
+| Cache | ▤ | Credits (its code as credits); one in four is **bait** (10% of your max Integrity; `cat` shows it). Refills 2 hours after you take it. |
 | Rest room | ☰ | `rest`: 30% of your max Integrity, once a visit. |
 | Den | ☠ | The hunter's. |
 | Junction | · | A crossing. |
@@ -941,7 +941,7 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
   of a fifth of the virus's Integrity), spread (two parts hit in a quarter of your cycles), slow (14 cycles), burns or
   helpers (a third of the damage), every tell read, small strips (◆ broken six times). Shown before you engage; the
   part wears **+ sable**. The Veil veils every part of the next virus instead (a ◆ each at least).
-- **Stakes.** Beat the whole lineup: its pack (4 Stashes' credits and a blue one level over you) and, if it opened
+- **Stakes.** Beat the whole lineup: its pack (a yellow one level over you) and, if it opened
   the vault, the vault's files, into your pack, and you've met them: their standing +25. Lose: they're gone with both,
   and you're disconnected as from any fight.
 - **Memory.** `s.rivals.by[handle]`: meetings, your record (*meeting 3 · 1–1*), how it last ended. Their line (by
@@ -1046,7 +1046,7 @@ Every traced server has its family's quirk (`QUIRKS`): one rule, a tag on its ca
 |---|---|---|
 | Ransomware | Hoard | Caches pay 50% more, but the guards are Armored. |
 | Worm | Nest | An optional **nest** room holds a Crawler and its brood (two hatchlings already out), an elite-lite fight at the server's level. A kill pays the usual and **6 components**. It respawns like an elite, never as a rare spawn. |
-| Ghostroot | Hidden | A **hidden room** stays off the map (no chip, no ?, no address) until you clear the room beside it, then opens for good: a stash (a cache's pile, a blue one time in ten), refilling 2 hours after you take it, never bait. |
+| Ghostroot | Hidden | A **hidden room** stays off the map (no chip, no ?, no address) until you clear the room beside it, then opens for good: a stash (a cache's credits, a blue one time in ten), refilling 2 hours after you take it, never bait. |
 
 Each quirk room hangs off a dead end of a branch, never in the way of the vault or the Core, and never counts for
 Rooms n/N, Mapped or a no-rest job. Invasions carry the quirk too (Invasions).
@@ -1089,13 +1089,13 @@ farm have none.
 | Room | The board | What it pays | Deeper |
 |---|---|---|---|
 | Quarantine, *Wall it in* | A 7×9 grid with a worm outbreak, ★ data nodes and dead slots. Click a node to firewall it; the worm then copies into the open frontier node with the most open neighbours (marked in advance). It ends when the worm can't spread. | Each node it never reached pays this server's code (a ★ three; 6 + level/2 for the whole board). Half or more saved is **Contained**. | Two outbreaks, or a worm that copies twice a turn |
-| Hunter chase, *Reach the door* | A 5×5 den with walls. You move or wait; the Tracker takes two steps toward you, across first, never around a wall. Cells where it would catch you show red. Undo and Restart. Every den can be won (5 to 12 moves). | Through the door: the real Tracker loses you for the visit, and half a cache. **Caught:** the hunter fight starts. | Floor 3+: a second Tracker in the den |
+| Hunter chase, *Reach the door* | A 5×5 den with walls. You move or wait; the Tracker takes two steps toward you, across first, never around a wall. Cells where it would catch you show red. Undo and Restart. Every den can be won (5 to 12 moves). | Through the door: the real Tracker loses you for the visit, and half a cache's credits. **Caught:** the hunter fight starts. | Floor 3+: a second Tracker in the den |
 | Cascade, *Bring it all down* | A 5×5 rack of nodes charged 1–3. A tap discharges a node and every neighbour gains 1; one past 3 discharges too. Clear it within the fewest taps + 1. | 3 components of the server's families, 2 more for the spare tap. | Floor 3+: two 4×4 racks; a node on a rack's edge (notched) also charges the same slot on the other rack |
-| Ping sweep, *Find the cache* | A 7×7 dark room with a buried cache. **Ping** reads the steps to it and lights that ring; **Dig** digs. A budget of 5. | A cache's credits and code, a quarter more for each unspent action. | Two caches (budget 8), or four noisy cells that read one off |
+| Ping sweep, *Find the cache* | A 7×7 dark room with a buried cache. **Ping** reads the steps to it and lights that ring; **Dig** digs. A budget of 5. | A cache's credits (its code as credits), a quarter more for each unspent action. | Two caches (budget 8), or four noisy cells that read one off |
 | Packet routing, *Get it through* | 7×5 wire tiles (straight, elbow, tee, empty). Click turns one clockwise, right-click back (a phone's tap: clockwise). Join the source to the sink within the fewest turns (9–14, by search) + 2; lit wire glows. Out of turns shows the fewest route. | Half a cache's code. | — |
-| Deadlock, *Let them all finish* | Six processes round a pool of free locks (A–D), each needing 2–3 and holding some. Give one a free lock it needs; one holding all it needs finishes and returns its locks. **Deadlocked** when none can finish from the pool. One can finish at the start, never more than two at once. | 1 component. | — |
+| Deadlock, *Let them all finish* | Six processes round a pool of free locks (A–D), each needing 2–3 and holding some. Give one a free lock it needs; one holding all it needs finishes and returns its locks. **Deadlocked** when none can finish from the pool. One can finish at the start, never more than two at once. | 3 components, as Cascade. | — |
 | Cryptogram, *Read wick's note* | A note of wick's in your own substitution key. Pick a cipher letter, then type or tap its letter: right fills every one, wrong is a strike (three lose). Solved letters stay in your key for every later note, won or lost; once no note has three left, wick changes the key. | The note. | — |
-| Terminal, *Name it* | The log sweep: an incident file (a breach log, a transfer log or a process list), its question and three suspects. Click a line to light every line sharing its value; filter the noise; name a suspect. A second wrong answer loses. | A cache's credits and code, half after a wrong answer; counts for a Sweep contract. | The trick: obvious on floor 2, a decoy on 3, the note at the log's top from 4 |
+| Terminal, *Name it* | The log sweep: an incident file (a breach log, a transfer log or a process list), its question and three suspects. Click a line to light every line sharing its value; filter the noise; name a suspect. A second wrong answer loses. | A cache's credits, half after a wrong answer; counts for a Sweep contract. | The trick: obvious on floor 2, a decoy on 3, the note at the log's top from 4 |
 
 ### Rogue servers
 
@@ -1110,7 +1110,7 @@ as you walk in, 1 code one time in five). No vault, nothing to take over, no puz
 |---|---|
 | Nest | One family only, and strains twice as often |
 | Pit | Mixed families, 2 levels above the server, a second roll for drops. A third of its rooms hold a **◆ CREW elite** (Co-op); one that beats you, or that you run from, moves on and the room fills again in 30 minutes |
-| Gauntlet | Mixed families; clear every fight room in one visit for a bonus cache (60 + 12×level credits, code, XP) |
+| Gauntlet | Mixed families; clear every fight room in one visit for a bonus cache (60 + 12×level credits and 4 + level/5 code's worth as credits, XP) |
 
 On floor 2 a Pit's last room (its deepest fight room) is SHAKEDOWN's throne, on floor 3 a Gauntlet's is RECURSION's, and
 on floor 4 a Pit's is BYZANTINE's:
@@ -1127,7 +1127,7 @@ off the server (**EXFIL-####**). After one turns up, none does on any rogue serv
   from you, never into your room or through a live virus's room. With nowhere farther to go it's **cornered**.
 - **Catch it** by walking into its room: a short fight with an Uplink and an Archive, light hits. Its row counts the
   upload (its objective), **Upload 0/6**: still up at the end of cycle 6 and the archive is gone. Break it in time: **Archive
-  recovered**: 10 Stashes' worth of credits, one item at the server's level (the best of two trash rolls, a white if
+  recovered**: 10 Stashes' worth of credits as Exploits (one at level 20, at least one), one item at the server's level (the best of two trash rolls, a white if
   both miss), 5% one of the server's uniques, and a process kill's XP. Jack out and it's gone.
 
 ### Threads
@@ -2037,7 +2037,7 @@ kills. `node econ.mjs` measures it.
 **Code** comes one kind a virus family, plus rare **Exploits**: Cipher code (ransomware), Worm code (worms), Kernel code
 (ghostroots), from kills, guards and vaults of that family. A kill drops 1 code at level 1 (+1 every 10 levels), a guard
 half again, into your pack; every vault's `payload.bin` is a cache of 12 + half the server's level. Exploits drop from 4%
-of home kills and 8% of guard kills. Scavenge adds to all of it.
+of home kills, 8% of elites' and 12% of guard posts'. Scavenge adds to all of it.
 
 **Components** (salvage.mjs) are one currency, a count: what broken parts leave behind. Breaking a part drops them **60%
 of the time in a room fight**, always from an elite's parts with **one more** at the kill, and **35% anywhere else**
@@ -2400,13 +2400,13 @@ Each goes to the pager and to #net; missing one costs nothing. The director roll
 
 | Event | Where | Lasts | What it is | What you get |
 |---|---|---|---|---|
-| **Courier** (weight 3) | a traced server | 15 min | LANTERN's courier passes through: *Intercept* it, a fight. From level 10, one in twenty carries a unique you lack, and says which | 40 + 12L credits and a protocol (85% Tuned, 15% Custom), or that unique |
+| **Courier** (weight 3) | a traced server | 15 min | LANTERN's courier passes through: *Intercept* it, a fight. From level 10, one in twenty carries a unique you lack, and says which | A Custom protocol, or that unique |
 | **Bounty** (2) | a traced server | 25 min | A named virus two levels above its server (from level 8, REPO MAN) | 80 + 15L credits, +2 Halcyon rep |
 | **Hollow Choir** (1) | a traced server, from 10 | 25 min | The boss | Twice the bounty's credits and a Custom protocol |
 | **Outbreak** (2) | the net | 30 min | One family surges; a crew's family is its run on the ticker (its code ×0.8 everywhere, *Markets*) | Its kills drop double code |
 | **Leak** (1) | a server you've found, not taken | at once | Someone leaks its vault key | You hold the key as you connect |
 | **Darknet listing** (0.5) | the net, from 8 | 20 min | A broker lists a native unique from another network, naming it (`event buy <id>`) | It, for 400 + 40L credits and 2 Exploits |
-| **Feud** (1) | a traced server, from 8, with two rival hubs located | 20 min | A tug-of-war between two rival factions (the bar drifts 2–5% a minute, never past 20/80 alone). *Pick a side* (`event fight <id> <faction>`): fight the other side's runner (one of the net's runners who works for it, by handle: an elite of its family at your level); each win pushes your side +25% and brings a fresh runner. Your side wins at 100%, or ahead when time runs out | Each win: 40 + 7.5L credits, a protocol with your side's implicit. Your side +4 rep. The feud: a **part** of your side's faction piece, one of its goods and your side +6, its allies a quarter of a win and the win (+3). No ripple: a feud never costs rep with anyone |
+| **Feud** (1) | a traced server, from 8, with two rival hubs located | 20 min | A tug-of-war between two rival factions (the bar drifts 2–5% a minute, never past 20/80 alone). *Pick a side* (`event fight <id> <faction>`): fight the other side's runner (one of the net's runners who works for it, by handle: an elite of its family at your level); each win pushes your side +25% and brings a fresh runner. Your side wins at 100%, or ahead when time runs out | Each win: your side +10 rep. The feud: a **part** of your side's faction piece, one of its goods and your side +6, its allies a quarter of a win and the win (+3). No ripple: a feud never costs rep with anyone |
 | **Bounty hunt** (1.5) | a traced server, from 6, two or more traced | 20 min | A named elite that hops to another of your servers every 5 minutes, 3 hops, a level each | 80 + 15L credits ×1, ×1.3, ×1.6, ×2 by hops made, +2 Kestrel rep |
 | **Spotter** (1) | HOME, from 6 | 10 min | A spotter watching HOME: *Fight* it | The next invasion comes 2 levels weaker, and you know where from and what kind |
 | **Defence call** (1) | a faction server you've found, from 6, at your level + 2 or under | 10 min | Its owner's rival hits it (an elite of the rival's family at the server's level). Ignoring it costs nothing. *Defend* (`event fight <id>`) answers it: beat the invader at its wall before the clock runs out | Held: +6 rep with the owner (the ripples too). Answered and rebooted: −4 with the owner, no ripple. Your commission's calls ×1.5 (+9, −6) |
@@ -2433,7 +2433,7 @@ and pager line carry a chain-link mark. Ignoring a card never starts a chain.
 | A **Feud** you won a fight in | **Counter-raid** | 20–40 min | The side you fought sends a runner at a server you've been on (or home). 15 min | 40 + 7.5L credits, +2 rep with your side |
 | A **Bounty hunt** that got away | **Returning bounty** | 30–60 min | Back once at the level it got away at (*last chance*). 20 min | What the hunt would have paid then, +2 rep |
 | 3 **Couriers** intercepted | **LANTERN's offer** | at once | LANTERN's own courier on one of your servers. 15 min | A Custom protocol, +5 LANTERN rep |
-| 15 kills of an **Outbreak**'s family while it's on | **Patient zero** | at once | The outbreak's source, an elite, on one of your servers; kill it and the outbreak ends. 15 min | A code cache (12 + level/2) and the elite's loot |
+| 15 kills of an **Outbreak**'s family while it's on | **Patient zero** | at once | The outbreak's source, an elite, on one of your servers; kill it and the outbreak ends. 15 min | Two code caches (2 × (12 + level/2)) |
 | A **Spotter** killed | the next invasion | its own clock | 2 levels weaker, its kind known | — |
 
 ### Blips
@@ -2445,7 +2445,7 @@ nothing. `developer blip [cache|flicker|rumour|sighting]`.
 
 | Blip | Where | Lasts | What it is | What you get |
 |---|---|---|---|---|
-| **Stray cache** | a room you've cleared on one of your servers | 3–6 min | Walk into the room (a live virus there first) | (40 + 12L) / 2 credits and half a vault's code (12 + L/2), into your pack |
+| **Stray cache** | a room you've cleared on one of your servers | 3–6 min | Walk into the room (a live virus there first) | (40 + 12L) / 2 credits and half a vault's code (12 + L/2) as credits, into your pack |
 | **Price flicker** | a hub you can trade at | 5 min | One ware ±15%, on the hub's ▲/▼ chip | No fight |
 | **Rumour** | a traced server | 2–4 min | Names where the next event lands. It's true: the director deals that card there while it still fits | — |
 | **Sighting** | a fight room you've cleared on one of your servers | 4–8 min | Its next virus is a ★ rare spawn, up within 1–4 minutes. Not met in time, it moves on (the room's next virus is ordinary) | A rare spawn's kill |
@@ -2459,8 +2459,8 @@ going. Jack out and it ends; missing one costs nothing. `developer runcard [surg
 
 | Card | On the map | What it is | What you get |
 |---|---|---|---|
-| **Surge room** | a fight room ringed violet, SURGE, a bar | Walk in and waves of the room's family hold it, one fight after another. After 3 kills a guardian (an elite) holds it; beat it and the surge ends. Step back between fights | Each wave: its kill's pay and (40 + 12L) / 3 credits; the guardian an elite's |
-| **Escort** | a courier at the entry, a violet dotted route, DROP on the farthest room | It walks a room each time you move or wait, never into a room something holds. In a fight in its room or the one it waits to walk into, it's a Backup (*Objectives*) with Integrity 60% of your max Integrity, carried fight to fight. At 0 it's lost | At the drop: 40 + 12L credits and a protocol (85% Tuned, 15% Custom) |
+| **Surge room** | a fight room ringed violet, SURGE, a bar | Walk in and waves of the room's family hold it, one fight after another. After 3 kills a guardian (an elite) holds it; beat it and the surge ends. Step back between fights | Each wave: its kill's pay and (40 + 12L) / 3 credits' worth of components; the guardian an elite's |
+| **Escort** | a courier at the entry, a violet dotted route, DROP on the farthest room | It walks a room each time you move or wait, never into a room something holds. In a fight in its room or the one it waits to walk into, it's a Backup (*Objectives*) with Integrity 60% of your max Integrity, carried fight to fight. At 0 it's lost | At the drop: a Custom protocol |
 | **Hunter pack** | a room ringed red, PACK ×3, a red dashed way to you | An elite of the server's family and 2 runners, starting 3 rooms or more from you (somewhere it can reach you), a room toward you for each of your moves; never into the Core, the entry or a rest room. On you, the fight starts | An elite's kill |
 
 The history (below) lists each, ending *won*, *taken* (a surge you fought in, left), *gone* (the courier lost) or *missed*.

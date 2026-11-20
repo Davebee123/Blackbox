@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, active, resolveCycle, addLocation, materialsOf } from './dist/combat.mjs';
-import { deal, eventsOf, tickEvents, CARDS, CHAIN, FEUD, HUNT, DIRECTOR, chainOf, schedule, eventKill, returnPay, bountyPay, huntPay, feudPay, zeroCode } from './dist/events.mjs';
+import { deal, eventsOf, tickEvents, CARDS, CHAIN, FEUD, HUNT, DIRECTOR, chainOf, schedule, eventKill, returnPay, bountyPay, huntPay, counterPay, zeroCode } from './dist/events.mjs';
 import { rep, FACTIONS } from './dist/factions.mjs';
 import { FACTION_FAMILY } from './dist/factions.mjs';
 import { codeOf } from './dist/gear.mjs';
@@ -97,7 +97,7 @@ test('a counter-raid never lowers anyone\'s rep: beaten, your side +2 and nothin
   assert.ok(!eventsOf(s).includes(c), 'over');
   assert.equal(rep(s, 'glassjaw'), was.glassjaw + CHAIN.counter.rep);
   for (const f of Object.keys(FACTIONS)) if (f !== 'glassjaw') assert.equal(rep(s, f), was[f], `${f}: no ripple, no loss`);
-  assert.ok(s.server.credits - cr >= feudPay(c.level));
+  assert.ok(s.server.credits - cr >= counterPay(c.level));
   assert.deepEqual(chainOf(s), [], 'the grudge ends');
   // Ignored: it leaves, and costs nothing.
   const t = world({ hubs: ['glassjaw'] });

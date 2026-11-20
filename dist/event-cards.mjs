@@ -10,7 +10,7 @@ import { glyphMarkup } from './protocol-glyphs.mjs';
 import { FACTIONS as FX, commissionOf } from './factions.mjs';
 import { FAMILIES, CONFIG } from './data.mjs';
 import { UNIQUES, hackerLevel, active, materialsOf } from './combat.mjs';
-import { CALL, callRep, CARDS, BLIPS, blipsAt, blipText, historyOf, HUNT, huntPay, hopLeft, feudShare, feudPay, eventText, courierPay, bountyPay, FEUD, CHAIN, counterPay, returnPay, zeroCode, causeText } from './events.mjs';
+import { CALL, callRep, CARDS, BLIPS, blipsAt, blipText, historyOf, HUNT, huntPay, hopLeft, feudShare, eventText, bountyPay, FEUD, CHAIN, counterPay, returnPay, zeroCode, causeText } from './events.mjs';
 import { SCOUTED, KINDS as INV_KINDS } from './invasion.mjs';
 import { WARES } from './market.mjs';
 import { codeOf } from './gear.mjs';
@@ -25,10 +25,11 @@ const mins = (ms) => Math.max(1, Math.ceil(ms / 60000));
 const busyOf = (s) => (active(s) || s.run ? 'Finish what you are doing first' : '');
 const placeOf = (s, id) => (s.locations || []).find((l) => l.id === id);
 const fmark = (f) => `<span class="evc-fm" style="--fc:${FX[f].color}">${glyph('f-' + f)}</span>`;
-// A reward: an icon and a number, its detail on hover.
+// A reward: an icon and a number, its detail on hover. A card leads with its own thing (docs/pays.md); standing and gear
+// after it are .sec, smaller.
 const rw = (icon, n, tip, cls = '') => `<span class="evc-rw${cls ? ' ' + cls : ''}" title="${esc(tip)}">${icon}${n != null ? `<b>${n}</b>` : ''}</span>`;
 const credits = (n) => rw(glyph('credits'), n, `${n} credits`);
-const repOf = (f, n) => rw(fmark(f), `+${n}`, `${FX[f].short} +${n} rep`);
+const repOf = (f, n, sec = false) => rw(fmark(f), `+${n}`, `${FX[f].short} +${n} rep`, sec ? 'sec' : '');
 // A unique as a protocol glyph (protocol-glyphs.mjs), gold and flickering like any unique.
 const uniqueGlyph = (id, size = 'sm') => glyphMarkup({ name: UNIQUES[id].name, rarity: 'zeroday', unique: true, stats: { ...UNIQUES[id].primary } }, size);
 // Time left as a ring that drains; the minutes are its tooltip.
@@ -68,10 +69,9 @@ function feud(s, ev) {
   const barTip = `${FX[a].short} ${Math.round(pa)}%, ${FX[b].short} ${100 - Math.round(pa)}%.${gain ? ` ${FX[gain].short} is gaining.` : ''}`;
   const bar = `<div class="fd-bar${lead ? ' lead-' + (lead === a ? 'a' : 'b') : ''}" style="--ca:${FX[a].color};--cb:${FX[b].color};--p:${pa.toFixed(1)}%" role="img" aria-label="${esc(barTip)}" title="${esc(barTip)}"><i class="fd-seg sa"></i><i class="fd-seg sb"></i><i class="fd-mid"></i><i class="fd-edge${ev.trend > 0 ? ' up' : ev.trend < 0 ? ' down' : ''}"></i></div>`;
   const good = () => rw(glyph('crate'), null, 'A sealed item: a Tuned item at your level', 'r-tuned');
-  // A win's protocol carries its side's mark (gear.mjs IMPLICITS); the feud's part fills the next of its piece's pips (faction-gear.mjs).
-  const drop = (f) => `<span class="evc-rw fd-drop" style="--fc:${FX[f].color}" title="${esc(`A protocol at your level with ${FX[f].short}'s mark`)}">${glyph('item')}</span>`;
+  // A win pays its side's standing; the feud's part fills the next of its piece's pips (faction-gear.mjs).
   const part = (f) => { const st = pieceState(s, f); return st ? `<span class="evc-rw fd-part" style="--fc:${FX[f].color}" title="${esc(`A part of ${st.name}: ${Math.min(st.parts + 1, st.need)} of ${st.need}`)}">${glyph('part')}${partPips(st, 'sm', true)}</span>` : ''; };
-  const pays = (f, i) => `<div class="fd-rw fd-${i ? 'b' : 'a'}${mine && mine !== f ? ' off' : ''}">${credits(feudPay(ev.level))}${repOf(f, FEUD.rep)}${drop(f)}<span class="fd-won" title="${esc(`Win the feud: a part of ${pieceOf(f)?.name || 'its piece'}, a sealed item and ${FX[f].short} +${FEUD.bonusRep}`)}">${glyph('takeover')}${part(f)}${good(f)}${repOf(f, FEUD.bonusRep)}</span></div>`;
+  const pays = (f, i) => `<div class="fd-rw fd-${i ? 'b' : 'a'}${mine && mine !== f ? ' off' : ''}">${repOf(f, FEUD.rep)}<span class="fd-won" title="${esc(`Win the feud: a part of ${pieceOf(f)?.name || 'its piece'}, a sealed item and ${FX[f].short} +${FEUD.bonusRep}`)}">${glyph('takeover')}${part(f)}${good(f)}${repOf(f, FEUD.bonusRep)}</span></div>`;
   return shell(s, ev, { sub: levelTag(s, ev.level, `lv ${ev.level}`), cls: mine ? 'chosen' : '', body: `<div class="fd-arena">${half(a, 0)}${half(b, 1)}<i class="fd-vs" aria-hidden="true">vs</i>${bar}${pays(a, 0)}${pays(b, 1)}</div>` });
 }
 // Bounty hunt: its route as a strip of server dots (the quarry on the one it's on, the next dashed), each with its pay
@@ -85,21 +85,21 @@ function hunt(s, ev) {
   const last = ev.hop >= HUNT.hops, here = placeOf(s, ev.loc)?.name || '';
   return shell(s, ev, {
     sub: fmark(ev.hunter), left: hopLeft(ev), total: HUNT.hopMs, tip: `${last ? 'Leaves' : 'Hops'} in ${mins(hopLeft(ev))} min`,
-    body: `<ol class="hn-route" style="--n:${ev.path.length}">${stops}</ol>${target(s, ev, { face: glyph(FAM_GLYPH[ev.family] || 'kill'), tags: `<small class="evc-at">${esc(here)}</small>`, pay: `${credits(huntPay(ev))}${repOf(ev.hunter, HUNT.rep)}`, tip: `Fight ${ev.name}, level ${ev.level}. ${CARDS.hunt.reward(ev)}.` })}`,
+    body: `<ol class="hn-route" style="--n:${ev.path.length}">${stops}</ol>${target(s, ev, { face: glyph(FAM_GLYPH[ev.family] || 'kill'), tags: `<small class="evc-at">${esc(here)}</small>`, pay: `${credits(huntPay(ev))}${repOf(ev.hunter, HUNT.rep, true)}`, tip: `Fight ${ev.name}, level ${ev.level}. ${CARDS.hunt.reward(ev)}.` })}`,
   });
 }
 // Bounty: a wanted poster. The family's glyph framed, the name, level, the pay.
 function bounty(s, ev) {
-  return shell(s, ev, { body: target(s, ev, { cls: 'poster', face: glyph(FAM_GLYPH[ev.family] || 'bounty'), tags: ev.boss ? '<span class="tag hot">boss</span>' : '<span class="tag">elite</span>', pay: `${credits(bountyPay(ev.level))}${repOf('halcyon', 2)}`, tip: `Fight ${ev.name}. ${CARDS.bounty.reward(ev)}.` }) });
+  return shell(s, ev, { body: target(s, ev, { cls: 'poster', face: glyph(FAM_GLYPH[ev.family] || 'bounty'), tags: ev.boss ? '<span class="tag hot">boss</span>' : '<span class="tag">elite</span>', pay: `${credits(bountyPay(ev.level))}${repOf('halcyon', 2, true)}`, tip: `Fight ${ev.name}. ${CARDS.bounty.reward(ev)}.` }) });
 }
 // Hollow Choir: a boss in a frame. Its pay: double a bounty's credits and a Custom protocol.
 function choir(s, ev) {
-  return shell(s, ev, { body: target(s, ev, { cls: 'boss', face: glyph('echo'), tags: '<span class="tag hot">boss</span>', pay: `${credits(bountyPay(ev.level) * 2)}${rw(glyph('protocol'), null, 'A protocol, Custom or better', 'r-custom')}`, tip: `Fight the HOLLOW CHOIR. ${CARDS.choir.reward(ev)}.` }) });
+  return shell(s, ev, { body: target(s, ev, { cls: 'boss', face: glyph('echo'), tags: '<span class="tag hot">boss</span>', pay: `${credits(bountyPay(ev.level) * 2)}${rw(glyph('protocol'), null, 'A protocol, Custom or better', 'r-custom sec')}`, tip: `Fight the HOLLOW CHOIR. ${CARDS.choir.reward(ev)}.` }) });
 }
 // Courier: a packet crossing a line through your server, as far along as its time is gone; its cargo on it.
 function courier(s, ev) {
   const gone = 1 - ev.left / CARDS.courier.ms, cargo = ev.unique ? uniqueGlyph(ev.unique) : glyph('protocol');
-  const pay = `${credits(courierPay(ev.level))}${ev.unique ? rw(glyph('item'), null, UNIQUES[ev.unique].name, 'r-zeroday') : rw(glyph('protocol'), null, 'A protocol, Tuned or Custom', 'r-tuned')}`;
+  const pay = ev.unique ? rw(glyph('item'), null, UNIQUES[ev.unique].name, 'r-zeroday') : rw(glyph('protocol'), null, 'A Custom protocol', 'r-custom');
   return shell(s, ev, {
     body: `<div class="cr-line" style="--at:${(gone * 100).toFixed(1)}%" title="${esc(`It leaves in ${mins(ev.left)} min`)}"><i class="cr-track"></i><i class="cr-srv">${glyph('integrity')}</i><span class="cr-pkt">${glyph('upload')}</span></div>${target(s, ev, { cls: ev.unique ? 'courier unique' : 'courier', face: cargo, tags: ev.unique ? `<span class="iname r-zeroday">${esc(UNIQUES[ev.unique].name)}</span>` : '', pay, tip: `Intercept ${ev.name}. ${CARDS.courier.reward(ev)}.` })}`,
   });
@@ -151,7 +151,7 @@ function counter(s, ev) {
   const blow = `<div class="cx-blow" style="--fc:${FX[ev.foe].color};--yc:${FX[ev.side].color}" title="${esc(`${FX[ev.foe].short} strikes back at ${to}`)}"><span class="cx-from">${glyph('f-' + ev.foe)}</span><i class="cx-arc"></i><span class="cx-to">${glyph(ev.loc ? 'integrity' : 'firewall')}<i class="cx-hit"></i><span class="cx-mine">${glyph('f-' + ev.side)}</span></span></div>`;
   return shell(s, ev, {
     sub: fmark(ev.foe), ec: FX[ev.foe].color,
-    body: `${blow}${target(s, ev, { cls: 'runner', face: glyph(FAM_GLYPH[ev.family] || 'claw'), tags: `<span class="tag">elite</span><small class="evc-at">${esc(to)}</small>`, pay: `${credits(counterPay(ev.level))}${repOf(ev.side, CHAIN.counter.rep)}`, tip: `Fight ${ev.name}, level ${ev.level}. ${CARDS.counter.reward(ev)}.` })}`,
+    body: `${blow}${target(s, ev, { cls: 'runner', face: glyph(FAM_GLYPH[ev.family] || 'claw'), tags: `<span class="tag">elite</span><small class="evc-at">${esc(to)}</small>`, pay: `${credits(counterPay(ev.level))}${repOf(ev.side, CHAIN.counter.rep, true)}`, tip: `Fight ${ev.name}, level ${ev.level}. ${CARDS.counter.reward(ev)}.` })}`,
   });
 }
 // Defence call: the attacker's mark, an arc onto the owner's server (its mark on it), and the invader's tile. A hold's rep
@@ -170,7 +170,7 @@ function call(s, ev) {
 function returning(s, ev) {
   return shell(s, ev, {
     sub: fmark(ev.hunter),
-    body: target(s, ev, { cls: 'poster returning', face: glyph(FAM_GLYPH[ev.family] || 'bounty'), tags: `<span class="tag hot" title="Back once: if it gets away again, it's gone for good">last chance</span>`, pay: `${credits(returnPay(ev))}${repOf(ev.hunter, CHAIN.returning.rep)}`, tip: `Fight ${ev.name}, level ${ev.level}. ${CARDS.returning.reward(ev)}.` }),
+    body: target(s, ev, { cls: 'poster returning', face: glyph(FAM_GLYPH[ev.family] || 'bounty'), tags: `<span class="tag hot" title="Back once: if it gets away again, it's gone for good">last chance</span>`, pay: `${credits(returnPay(ev))}${repOf(ev.hunter, CHAIN.returning.rep, true)}`, tip: `Fight ${ev.name}, level ${ev.level}. ${CARDS.returning.reward(ev)}.` }),
   });
 }
 // LANTERN's offer: the courier's packet line in LANTERN's colour, its lamp as the packet; a Custom protocol aboard.
@@ -179,15 +179,15 @@ function lantern(s, ev) {
   const gone = 1 - ev.left / CARDS.lantern.ms;
   return shell(s, ev, {
     sub: fmark('lantern'), ec: FX.lantern.color,
-    body: `<div class="cr-line" style="--at:${(gone * 100).toFixed(1)}%" title="${esc(`It leaves in ${mins(ev.left)} min`)}"><i class="cr-track"></i><i class="cr-srv">${glyph('integrity')}</i><span class="cr-pkt">${glyph('f-lantern')}</span></div>${target(s, ev, { cls: 'courier lantern', face: glyph('protocol'), tags: '<span class="tag r-custom">Custom</span>', pay: `${rw(glyph('protocol'), null, 'A Custom protocol', 'r-custom')}${repOf(ev.ally, CHAIN.lantern.rep)}`, tip: `Intercept ${ev.name}. ${CARDS.lantern.reward(ev)}.` })}`,
+    body: `<div class="cr-line" style="--at:${(gone * 100).toFixed(1)}%" title="${esc(`It leaves in ${mins(ev.left)} min`)}"><i class="cr-track"></i><i class="cr-srv">${glyph('integrity')}</i><span class="cr-pkt">${glyph('f-lantern')}</span></div>${target(s, ev, { cls: 'courier lantern', face: glyph('protocol'), tags: '<span class="tag r-custom">Custom</span>', pay: `${rw(glyph('protocol'), null, 'A Custom protocol', 'r-custom')}${repOf(ev.ally, CHAIN.lantern.rep, true)}`, tip: `Intercept ${ev.name}. ${CARDS.lantern.reward(ev)}.` })}`,
   });
 }
 // Patient zero: the family's code glyph at an epicentre (rings out from it), the outbreak's ×2 struck through (it ends
-// with the kill), and the code cache it pays.
+// with the kill), and the two code caches it pays.
 function zero(s, ev) {
   const code = codeOf(ev.family), n = zeroCode(ev);
   return shell(s, ev, {
-    body: target(s, ev, { cls: 'zero', face: `${glyph(FAM_GLYPH[ev.family] || 'spider')}<i class="zr-ring"></i><i class="zr-ring r2"></i>`, tags: `<span class="tag">elite</span><span class="zr-end" title="${esc(`Kill it and the ${FAMILIES[ev.family].name.toLowerCase()} outbreak ends`)}">${glyph('spider')}<s>×2</s></span>`, pay: `${rw(glyph(FAM_GLYPH[ev.family] || 'materials'), n, `${n} ${WARES[code]?.name || 'code'}`)}${rw(glyph('item'), null, "An elite's loot", 'r-tuned')}`, tip: `Fight ${ev.name}, level ${ev.level}. ${CARDS.zero.reward(ev)}.` }),
+    body: target(s, ev, { cls: 'zero', face: `${glyph(FAM_GLYPH[ev.family] || 'spider')}<i class="zr-ring"></i><i class="zr-ring r2"></i>`, tags: `<span class="tag">elite</span><span class="zr-end" title="${esc(`Kill it and the ${FAMILIES[ev.family].name.toLowerCase()} outbreak ends`)}">${glyph('spider')}<s>×2</s></span>`, pay: rw(glyph(FAM_GLYPH[ev.family] || 'materials'), n, `${n} ${WARES[code]?.name || 'code'}`), tip: `Fight ${ev.name}, level ${ev.level}. ${CARDS.zero.reward(ev)}.` }),
   });
 }
 

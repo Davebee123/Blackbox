@@ -38,7 +38,7 @@
 import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique, setDrop, WORLD_SOURCES, hooks, gainCode } from './combat.mjs';
 import { FAMILIES, CONFIG, floorFor } from './data.mjs';
 import { floorOfSlot } from './floors.mjs';
-import { LOOT, rollItem, seeded, codeOf, vaultCode, MATERIALS } from './gear.mjs';
+import { rollItem, seeded, codeOf, vaultCode, MATERIALS } from './gear.mjs';
 import { openFarm } from './rogue.mjs';
 import { eventMult, noteEvent, leanPick, darknetPick, darknetBuy, nameNative, homeName, NETWORK } from './network.mjs';
 import { isPiece } from './sets.mjs';
@@ -49,6 +49,7 @@ import { gainPart, pieceOf } from './faction-gear.mjs';
 import { addrsOf } from './address.mjs';
 import { castOf, hired, personFor, HANDLES } from './runners.mjs';
 import { tickTicker } from './ticker.mjs';
+import { codeCredits } from './pays.mjs';
 
 export const DIRECTOR = {
   from: 3, // class level the director starts dealing at
@@ -64,11 +65,11 @@ export const missing = (s) => Object.values(UNIQUES).filter((u) => !s.collection
 const FAMS = Object.keys(FAMILIES).filter((f) => ['ransomware', 'worm', 'ghostroot'].includes(f));
 // The newer cards' numbers. FEUD, from level 8: a bar (sides[0]'s share) that starts within ±start of even and drifts a step of
 // drift every driftMs on the director's dice, never past hold on its own; each runner you beat pushes your side by push and pays
-// pay × a bounty's credits and +rep; 100%, or the lead when time's up, wins the feud: your side's good and +bonusRep (its allies a
-// quarter of a win and the bonus). Never a loss with anyone. Each runner also drops a protocol at your level with your side's
-// implicit, and the win gives a part of its piece (faction-gear.mjs) and its good with the implicit. A runner is sized for one (hp: invasion.mjs CHAMPION's). HUNT: a hop every hopMs, hops of them,
+// +rep, its one thing (docs/pays.md); 100%, or the lead when time's up, wins the feud: your side's good and +bonusRep (its allies a
+// quarter of a win and the bonus). Never a loss with anyone. The win gives a part of its piece (faction-gear.mjs) and its good with
+// the implicit. A runner is sized for one (hp: invasion.mjs CHAMPION's). HUNT: a hop every hopMs, hops of them,
 // a level a hop (up to your level + cap), pay × mult[hop].
-export const FEUD = { from: 8, ms: 20 * 60000, start: 0.05, driftMs: 60000, drift: [0.02, 0.05], hold: [0.2, 0.8], push: 0.25, pay: 0.5, rep: 4, bonusRep: 6, hp: 1.5 };
+export const FEUD = { from: 8, ms: 20 * 60000, start: 0.05, driftMs: 60000, drift: [0.02, 0.05], hold: [0.2, 0.8], push: 0.25, rep: 10, bonusRep: 6, hp: 1.5 };
 export const HUNT = { from: 6, hopMs: 5 * 60000, hops: 3, cap: 3, mult: [1, 1.3, 1.6, 2], rep: 2 };
 export const SCOUT_EVENT = { from: 6, ms: 10 * 60000 };
 // CALL (docs/factions-plan.md 8), from level 6: a faction server you've found (still its owner's, at your level + 2 or under)
@@ -97,9 +98,8 @@ function runnerName(s, f) {
   const pool = HANDLES.filter((h) => personFor(s, h).faction === f);
   return pool.length ? pool[Math.floor(x * pool.length)] : HANDLES[Math.floor(x * HANDLES.length)];
 }
-// How much of a feud's bar is this side's (0–1), and its pay a win.
+// How much of a feud's bar is this side's (0–1).
 export const feudShare = (ev, f) => (f === ev.sides[0] ? ev.bar ?? 0.5 : 1 - (ev.bar ?? 0.5));
-export const feudPay = (level) => Math.round(bountyPay(level) * FEUD.pay);
 const rival = (ev, f) => ev.sides.find((x) => x !== f);
 // The feud won for your side: a part of its piece (faction-gear.mjs), its good (fixed by the event; a sealed item carries its
 // implicit), +bonusRep, its allies a quarter of a win and the bonus. No ripple.
@@ -110,11 +110,6 @@ function feudBonus(s, ev) {
   for (const a of FACTIONS[f].allies) changeRep(s, a, Math.round((FEUD.rep + FEUD.bonusRep) * RIPPLE.ally), `${FACTIONS[f].short}'s ally noticed`, { ripple: false });
   addItem(s, rollItem(r, { level: ev.level, rarity: 'tuned', faction: f }), `${FACTIONS[f].short}: `);
   return part ? `${part} and ${good}` : good;
-}
-// A runner beaten: a protocol at your level with your side's implicit, Stock or Tuned as a courier's (fixed by the event and the win).
-function runnerDrop(s, ev, f) {
-  const r = seeded((ev.seed + 7919 * (ev.wins || 0)) >>> 0);
-  return addItem(s, rollItem(r, { level: hackerLevel(s), rarity: r() < LOOT.minor ? 'tuned' : 'stock', faction: f }), `${ev.runners[rival(ev, f)]} dropped: `);
 }
 // Two located hubs that are rivals (factions.mjs), each pair once.
 export const feuds = (s) => { const fs = hubsOf(s).map((h) => h.faction); return fs.flatMap((a, i) => fs.slice(i + 1).filter((b) => FACTIONS[a].rivals.includes(b)).map((b) => [a, b])); };
@@ -128,14 +123,14 @@ export const CARDS = {
     // About one courier in DIRECTOR.named carries a unique you haven't found, by name, from level DIRECTOR.namedFrom: a lucky shot.
     make: (s, loc) => ({ family: fam(s), level: placeLevel(s, loc), name: `COURIER-${1000 + Math.floor(roll(s) * 9000)}`, ...(roll(s) * DIRECTOR.named < 1 && hackerLevel(s) >= DIRECTOR.namedFrom && missing(s).length ? { unique: pick(s, missing(s)) } : {}) }),
     text: (ev, where) => `LANTERN's courier ${ev.name} is carrying ${ev.unique ? `${UNIQUES[ev.unique].name}, a unique you haven't found,` : 'a dead drop'} through ${where}. Intercept it before it leaves to take ${ev.unique ? 'it' : 'the drop'}.`,
-    reward: (ev) => `${credits(ev.level)} credits and ${ev.unique ? UNIQUES[ev.unique].name : 'a protocol'}`,
+    reward: (ev) => (ev.unique ? UNIQUES[ev.unique].name : 'a Custom protocol'),
+    // Its pay is the item (docs/pays.md): the credits it once carried went into its rarity, a Custom.
     won: (s, ev) => {
-      s.server.credits += credits(ev.level);
       setDrop(s, { kind: 'courier' }, ev.level, ev.name); // Lantern Route's pieces (sets.mjs): one roll a courier intercepted
-      if (ev.unique) { giveUnique(s, ev.unique, 'Dead drop: '); return `You took the dead drop: ${credits(ev.level)} credits and ${UNIQUES[ev.unique].name}.`; }
-      const r = seeded(ev.seed), item = rollItem(r, { level: ev.level, rarity: r() < LOOT.minor ? 'tuned' : 'stock' }); // fixed by the event
+      if (ev.unique) { giveUnique(s, ev.unique, 'Dead drop: '); return `You took the dead drop: ${UNIQUES[ev.unique].name}.`; }
+      const item = rollItem(seeded(ev.seed), { level: ev.level, rarity: COURIER_RARITY }); // fixed by the event
       addItem(s, item, 'Dead drop: ');
-      return `You took the dead drop: ${credits(ev.level)} credits and a protocol.`;
+      return 'You took the dead drop: a Custom protocol.';
     },
   },
   bounty: {
@@ -196,7 +191,7 @@ export const CARDS = {
     make: (s, loc) => { const sides = pick(s, feuds(s)); return { sides, level: placeLevel(s, loc), name: sides.map((f) => FACTIONS[f].short).join(' vs '), bar: Math.round((0.5 + (roll(s) * 2 - 1) * FEUD.start) * 100) / 100, steps: 0, wins: 0, runners: Object.fromEntries(sides.map((f) => [f, runnerName(s, f)])) }; },
     foe: (ev, f) => { const o = rival(ev, f); return { family: FACTION_FAMILY[o], name: ev.runners[o], elite: true, eliteHp: FEUD.hp }; },
     text: (ev, where) => `${FACTIONS[ev.sides[0]].short} and ${FACTIONS[ev.sides[1]].short} are fighting over ${where}. Pick a side and push its bar to 100%.`,
-    reward: (ev, f = ev.side) => `Each win pays ${feudPay(ev.level)} credits, a protocol with ${FACTIONS[f].short}'s mark and ${FACTIONS[f].short} +${FEUD.rep}. Winning the feud adds a part of ${pieceOf(f)?.name || 'its piece'}, ${'a sealed item'} and ${FACTIONS[f].short} +${FEUD.bonusRep}`,
+    reward: (ev, f = ev.side) => `Each win pays ${FACTIONS[f].short} +${FEUD.rep}. Winning the feud adds a part of ${pieceOf(f)?.name || 'its piece'}, ${'a sealed item'} and ${FACTIONS[f].short} +${FEUD.bonusRep}`,
     gone: (ev, where) => `The feud over ${where} is over.`,
     // The world moves without you: a step every driftMs, on the director's dice. Outward only inside hold; inward always.
     tick: (s, ev) => {
@@ -212,16 +207,14 @@ export const CARDS = {
     timeout: (s, ev, where) => (ev.side && feudShare(ev, ev.side) > 0.5 ? `${FACTIONS[ev.side].short} held ${where}. You won the feud: ${feudBonus(s, ev)}.` : null),
     won: (s, ev) => {
       const f = ev.side, o = rival(ev, f), beat = ev.runners[o];
-      s.server.credits += feudPay(ev.level);
       // Picking a side never costs you: no ripple onto its rivals (the other side's rep stays put).
       changeRep(s, f, FEUD.rep, `You beat ${beat} for ${FACTIONS[f].short}`, { ripple: false });
-      runnerDrop(s, ev, f);
       ev.wins = (ev.wins || 0) + 1;
       ev.trend = f === ev.sides[0] ? 1 : -1;
       ev.bar = Math.max(0, Math.min(1, Math.round(((ev.bar ?? 0.5) + ev.trend * FEUD.push) * 1000) / 1000));
       ev.runners[o] = runnerName(s, o); // a fresh runner
-      if (feudShare(ev, f) >= 1) { ev.over = true; return `You beat ${beat} and won the feud for ${FACTIONS[f].short}: ${feudPay(ev.level)} credits, a protocol, ${feudBonus(s, ev)}.`; }
-      return `You beat ${beat}: ${feudPay(ev.level)} credits and a protocol. ${FACTIONS[f].short} holds ${Math.round(feudShare(ev, f) * 100)}%.`;
+      if (feudShare(ev, f) >= 1) { ev.over = true; return `You beat ${beat} and won the feud for ${FACTIONS[f].short}: ${FACTIONS[f].short} +${FEUD.rep}, ${feudBonus(s, ev)}.`; }
+      return `You beat ${beat}: ${FACTIONS[f].short} +${FEUD.rep}. ${FACTIONS[f].short} holds ${Math.round(feudShare(ev, f) * 100)}%.`;
     },
   },
   // A faction server under attack (CALL above). The fight is the invader at that server's wall; fighting answers the call.
@@ -343,11 +336,11 @@ export const CARDS = {
     make: (s, loc, f) => ({ family: f.data.family, outbreak: f.data.outbreak, level: placeLevel(s, loc), name: `${FAMILIES[f.data.family].name.toUpperCase()}-0`, elite: true }),
     from: () => 'Network',
     text: (ev, where) => `The ${FAMILIES[ev.family].name.toLowerCase()} outbreak's source, ${ev.name}, is on ${where}. Kill it and the outbreak ends.`,
-    reward: (ev) => `${zeroCode(ev)} ${MATERIALS[codeOf(ev.family)]?.name || 'code'} and an elite's loot`,
+    reward: (ev) => `${zeroCode(ev)} ${MATERIALS[codeOf(ev.family)]?.name || 'code'}`,
     gone: (ev) => `${ev.name} went quiet.`,
     won: (s, ev) => {
       const k = codeOf(ev.family);
-      if (k) gainCode(s, { [k]: zeroCode(ev) }, `${ev.name}'s cache: `);
+      if (k) gainCode(s, { [k]: zeroCode(ev) }, `${ev.name}'s caches: `);
       const ob = eventsOf(s).find((e) => e.card === 'outbreak' && e.id === ev.outbreak);
       if (ob) end(s, ob, `The ${FAMILIES[ob.family].name.toLowerCase()} outbreak is over: its source is down.`);
       return `${ev.name} is down.`;
@@ -363,14 +356,16 @@ const placeName = (s, id) => (s.locations || []).find((l) => l.id === id)?.name 
 // A family for an event on your network: its lean (network.mjs), on the director's own dice.
 const fam = (s) => leanPick(s, 'you', roll(s));
 const credits = (level) => 40 + 12 * level; // about two ordinary caches
-export const courierPay = credits;
+export const courierPay = credits; // what a courier carried in credits before it went into the item (a stray cache's half, a run card's cache)
+export const COURIER_RARITY = 'custom'; // a courier's, an escort's and a rival's item: a rarity up for the credits they carried
 export const bountyPay = (level) => 80 + 15 * level;
 // A hunt's time to its next hop (or to leaving, after the last).
 export const hopLeft = (ev) => Math.max(0, ev.left - (HUNT.hops - ev.hop) * HUNT.hopMs);
-// A counter-raid's pay: part of a bounty's credits (a feud runner's). A returning bounty's pay: what the hunt paid when it got away. Patient zero's cache: a vault's code.
+// A counter-raid's pay: half a bounty's credits. A returning bounty's pay: what the hunt paid when it got away. Patient
+// zero's: two of a vault's code caches (the second in place of an elite's loot; gear drops as from any elite).
 export const counterPay = (level) => Math.round(bountyPay(level) * CHAIN.counter.pay);
 export const returnPay = (ev) => ev.pay ?? bountyPay(ev.level);
-export const zeroCode = (ev) => vaultCode(ev.level);
+export const zeroCode = (ev) => 2 * vaultCode(ev.level);
 // The director rolls its own dice (mulberry32 on the save), so dealing an event never shifts the
 // rest of the game's rolls.
 function roll(s) {
@@ -614,8 +609,8 @@ export function eventWon(s, e) {
 }
 
 // ---------- blips (docs/director.md section 3) ----------
-// One every everyMs of logged-on time, max up at once, each up for its own few minutes. CACHE: half a vault's credits
-// and code (a courier's credits halved, vaultCode halved). FLICKER: a hub's ware ×(1 ± pct). SIGHTING: due within due.
+// One every everyMs of logged-on time, max up at once, each up for its own few minutes. CACHE: credits, half a courier's
+// and half a vault's code as credits (docs/pays.md). FLICKER: a hub's ware ×(1 ± pct). SIGHTING: due within due.
 export const BLIP = {
   everyMs: [4 * 60000, 6 * 60000], max: 2,
   cache: { ms: [3 * 60000, 6 * 60000] },
@@ -624,6 +619,8 @@ export const BLIP = {
   sighting: { ms: [4 * 60000, 8 * 60000], due: [60000, 4 * 60000] },
 };
 export const HISTORY = { keep: 20 };
+export const strayCredits = (L) => Math.round(courierPay(L) / 2) + codeCredits(Math.ceil(vaultCode(L) / 2));
+const strayPay = (b) => b.credits + codeCredits(b.code || 0); // an old save's blip still carries its code: as credits
 // The blips' own dice (as the events' roll, on its own stream), so a blip never shifts what the deck deals.
 function broll(s) {
   const d = s.director;
@@ -659,8 +656,8 @@ export const BLIPS = {
   cache: {
     name: 'Stray cache', icon: 'crate', label: 'Cache',
     where: (s) => roomSpots(s, (R, r) => R.cleared[r.id] && ['process', 'elite', 'guard', 'junction', 'rest'].includes(r.kind)).filter((x) => !taken(s, x.loc.id, x.room.id)),
-    make: (s, { loc, room }) => { const L = loc.floorplan.level || loc.level || hackerLevel(s); return { loc: loc.id, room: room.id, level: L, credits: Math.round(courierPay(L) / 2), code: Math.ceil(vaultCode(L) / 2), material: loc.floorplan.code || codeOf(loc.family) || 'cipher' }; },
-    text: (s, b) => `A stray cache sits in ${roomName(s, b)} on ${placeName(s, b.loc)}: ${b.credits} credits and ${b.code} code. Walk in before someone else takes it.`,
+    make: (s, { loc, room }) => { const L = loc.floorplan.level || loc.level || hackerLevel(s); return { loc: loc.id, room: room.id, level: L, credits: strayCredits(L) }; },
+    text: (s, b) => `A stray cache sits in ${roomName(s, b)} on ${placeName(s, b.loc)}: ${strayPay(b)} credits. Walk in before someone else takes it.`,
     gone: (s, b) => `Someone took the stray cache on ${placeName(s, b.loc)}.`,
   },
   flicker: {
@@ -745,9 +742,9 @@ function endBlip(s, b, how, message = null) {
 export function blipStood(s, loc, room) {
   const b = blipsOf(s).find((x) => x.kind === 'cache' && x.loc === loc.id && x.room === room.id);
   if (!b || !s.run?.pack) return;
-  s.run.pack.push({ path: `${room.path}/#stray-${b.id}`, name: 'cache.dat', kind: 'credits', amount: b.credits }, { path: `${room.path}/#stray-code-${b.id}`, name: `${b.material}.code`, kind: 'code', material: b.material, amount: b.code });
+  s.run.pack.push({ path: `${room.path}/#stray-${b.id}`, name: 'cache.dat', kind: 'credits', amount: strayPay(b) });
   endBlip(s, b, 'taken');
-  emit(s, 'rooms-good', `You take the stray cache: ${b.credits} credits and ${b.code} ${MATERIALS[b.material]?.name || 'code'}.`, { blip: b.id });
+  emit(s, 'rooms-good', `You take the stray cache: ${strayPay(b)} credits.`, { blip: b.id });
 }
 // The marks on a server's room map (netrooms.mjs 'blips'): { roomId: { kind, text } }.
 export const blipRooms = (s, loc) => Object.fromEntries(blipsOf(s).filter((b) => loc && b.loc === loc.id && b.room).map((b) => [b.room, { kind: b.kind, name: BLIPS[b.kind].name, text: blipText(s, b) }]));

@@ -552,7 +552,7 @@ const CODE_ALSO = { trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher', botn
 export const codeOf = (family) => Object.keys(MATERIALS).find((k) => MATERIALS[k].family === family) || CODE_ALSO[family] || null;
 // How much code a kill drops (1 at level 1, 6 at 50); guards give half again; vault caches more.
 export const codeDrop = (level) => 1 + Math.floor(Math.max(1, level) / 10);
-export const EXPLOIT_CHANCE = { home: 0.04, guard: 0.08 };
+export const EXPLOIT_CHANCE = { home: 0.04, elite: 0.08, guard: 0.12 }; // a kill's Exploit: elites and guard posts pay them (docs/pays.md)
 export const vaultCode = (level) => 12 + Math.floor(Math.max(1, level) / 2);
 
 // ---------- services (retired) ----------

@@ -157,12 +157,11 @@ test('stakes: beat it and its pack is yours, with the vault it opened; lose and 
   const s = onServer(), R = s.rooms, g = R.graph, v = RV.spawnRival(s, 99, K);
   until(s);
   assert.ok(v.vault, 'it got to the vault first (you waited)');
-  const credits = R.credits, packed = R.pack.length;
+  const packed = R.pack.length;
   for (let i = 0; i < v.fights; i++) { FP.act(s, 'engage'); kill(s); }
   assert.equal(v.state, 'down');
   assert.equal(R.pack.length, packed + 2, "its pack's item and the vault's");
-  assert.ok(R.credits > credits, 'its credits');
-  assert.ok(s.logs.some((e) => e.type === 'spoil' && e.kind === 'credits'), 'a row on the spoils card');
+  assert.ok(s.stash.some((it) => it.id === R.pack[packed] && it.rarity === 'custom') || s.stash.some((it) => R.pack.includes(it.id) && it.rarity === 'custom'), 'its item a Custom: its credits went into the rarity (docs/pays.md)');
   assert.equal(R.screen, null);
   // Lost: gone with its pack, your record says so, and you're disconnected as from any lost fight.
   const t = onServer({ seed: 11 }), w = RV.spawnRival(t, 5, H);

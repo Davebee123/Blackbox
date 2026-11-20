@@ -7,13 +7,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { fresh, command, resolveCycle, active, hooks, restore, finish } from './dist/combat.mjs';
+import { fresh, command, resolveCycle, active, hooks, restore, finish, materialsOf } from './dist/combat.mjs';
 import { CONFIG, ROOM_FAMILIES } from './dist/data.mjs';
 import { play } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { rogueGraph, treeGraph, rogueRestore } from './dist/netrooms.mjs';
 import { ROGUE, rogueRooms, rogueSpawns, plainRogue } from './dist/rogue.mjs';
 import { matesOf } from './dist/crew.mjs';
+import { asExploits } from './dist/pays.mjs';
 import { roomsMarkup } from './dist/floorplan-view.mjs';
 import { boardMarkup } from './dist/view.mjs';
 import { TIPS } from './dist/tips.mjs';
@@ -174,7 +175,7 @@ test('walking into its room starts a short fight: a weak, quick EXFIL-####; stil
   assert.equal(FP.exfilOf(s), null);
 });
 
-test('break it in time: archive recovered, 10 Stashes of credits and 10 Stashes of credits and an item at the server\'s level, once', () => {
+test('break it in time: archive recovered, 10 Stashes of credits as Exploits and an item at the server\'s level, once', () => {
   const { s, loc } = rogueSave();
   connect(s, loc);
   const R = s.rooms, g = R.graph;
@@ -182,12 +183,13 @@ test('break it in time: archive recovered, 10 Stashes of credits and 10 Stashes 
   const leaf = FP.roomList(s).find((r) => r.id !== g.entry && FP.neighbours(g, r.id).length === 1);
   place(s, FP.neighbours(g, leaf.id)[0]);
   const m = exfil(s, leaf.id);
-  const credits = s.server.credits, stash = s.stash.length;
+  const credits = s.server.credits, stash = s.stash.length, ex = materialsOf(s).exploit || 0;
   FP.go(s, leaf.id);
   kill(s);
   assert.equal(m.state, 'down');
-  assert.equal(s.server.credits - credits >= M.credits * (4 + Math.floor(loc.level / 2)), true, 'about 10 Stashes');
-  assert.ok(s.logs.some((e) => /^The archive: \+\d+ credits, /.test(e.message)), 'the archive, said');
+  assert.equal((materialsOf(s).exploit || 0) - ex, asExploits(M.credits * (4 + Math.floor(loc.level / 2))), '10 Stashes\' worth of Exploits (docs/pays.md)');
+  assert.ok(s.server.credits - credits < M.credits * (4 + Math.floor(loc.level / 2)), 'and no longer its credits');
+  assert.ok(s.logs.some((e) => /^The archive: \+\d+ Exploits?, /.test(e.message)), 'the archive, said');
   assert.ok(s.logs.some((e) => /is down\. Archive recovered\.$/.test(e.message)), 'Archive recovered.');
   assert.equal(s.stash.length, stash + 1, 'one item');
   const it = s.stash.at(-1);

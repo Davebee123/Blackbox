@@ -21,7 +21,7 @@ import { emit, encounterVirus, hackerLevel, addItem, classOf, hooks } from './co
 import { GENES } from './genes.mjs';
 import { FACTIONS } from './factions.mjs';
 import { rollItem, seeded } from './gear.mjs';
-import { distances, pathTo, ROOMS, WORLD } from './floorplan.mjs';
+import { distances, pathTo, WORLD } from './floorplan.mjs';
 import { HANDLES, castOf, hired, personFor, raiseStanding, STANDING, huntsYou } from './runners.mjs';
 export { huntsYou };
 
@@ -29,8 +29,7 @@ export const RIVAL = {
   chance: 0.2, cooldownMs: 60 * 60000, // a visit's roll, and your cooldown after one turns up
   level: 1, // levels over you
   fights: (floor) => (floor >= 3 ? 3 : 2),
-  credits: 4, // its pack: this many Stashes' worth of credits, and an item one level over you
-  rarity: 'tuned',
+  rarity: 'custom', // its pack: an item one level over you (its Stashes' worth of credits went into the rarity, docs/pays.md)
 };
 
 // A rival's lineup, by their faction: its fights in order, a family (genes: its third) or a named build (strain), and
@@ -287,17 +286,16 @@ export function rivalWon(s, room, e) {
   raiseStanding(s, v.id, STANDING.help, `You beat them racing you to a vault on ${R.name}.`); // a rival you beat: you've met
   return true;
 }
-// Its pack (credits and an item one level over you) and, if it opened the vault, the vault's files: into your pack.
+// Its pack (an item one level over you, a Custom) and, if it opened the vault, the vault's files: into your pack.
 function spoils(s, room, v) {
   const R = s.rooms, P = rivalP(v), r = seeded((v.seed ^ 0x5a17) >>> 0), L = hackerLevel(s) + RIVAL.level;
   if (v.vault) {
     const vault = R.graph.rooms[R.graph.vaults[0]];
     if (!(R.world && ask('vault', s, vault))) { const it = addItem(s, rollItem(r, { level: R.level, rarity: (vault.loot || {}).rarity || 'tuned', cls: classOf(s) }), 'The vault: '); if (it) { if (R.world) ask('packItem', s, it); else R.pack.push(it.id); } }
   }
-  const credits = RIVAL.credits * ROOMS.purse(R.level || 1), it = addItem(s, rollItem(r, { level: L, rarity: RIVAL.rarity, cls: classOf(s) }), `${P.name}'s pack: `);
-  if (R.world) { s.run.pack.push({ path: `${room.path}/#rival-${s.serial}`, name: 'pack.dat', kind: 'credits', amount: credits }); if (it) ask('packItem', s, it); }
-  else { R.credits += credits; s.server.credits += credits; if (it) R.pack.push(it.id); }
-  emit(s, 'spoil', `${P.name}'s pack: +${credits} credits.`, { label: 'Credits', qty: `+${credits}`, kind: 'credits', sub: `${P.name}'s pack`, pack: true });
+  const it = addItem(s, rollItem(r, { level: L, rarity: RIVAL.rarity, cls: classOf(s) }), `${P.name}'s pack: `);
+  if (R.world) { if (it) ask('packItem', s, it); }
+  else if (it) R.pack.push(it.id);
   say(s, `${P.name} is down. Their pack is yours${v.vault ? ', and the vault\'s files' : ''}.`, 'rooms-good');
 }
 // A fight in its lineup lost (or fled): it's gone with its pack and anything it took.

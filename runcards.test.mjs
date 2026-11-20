@@ -51,11 +51,11 @@ test('surge: waves hold the lit room, each kill pays a slice and fills the bar, 
   assert.ok(c && R.graph.rooms[c.room].kind === 'process');
   assert.match(roomsMarkup(s), /fp-card-tab surge[^>]*>.*SURGE/s, 'its tab on the map');
   walkTo(s, FP.neighbours(R.graph, c.room).sort((a, b) => FP.distances(R.graph, R.graph.entry)[a] - FP.distances(R.graph, R.graph.entry)[b])[0]);
-  const credits = R.credits;
+  const parts = s.components || 0;
   FP.go(s, c.room);
   assert.equal(R.screen?.as, 'surge', 'a wave holds it');
   FP.act(s, 'engage'); kill(s);
-  assert.equal(c.kills, 1); assert.ok(R.credits > credits, 'a slice of the cache');
+  assert.equal(c.kills, 1); assert.ok((s.components || 0) - parts >= RC.waveParts(R.level), 'components: a third of a cache\'s worth (docs/pays.md), and the parts it broke');
   assert.equal(R.screen?.as, 'surge', 'the next wave, no rest between');
   FP.act(s, 'back');
   assert.equal(R.screen, null, 'you can step back between fights');
@@ -87,6 +87,7 @@ test('escort: the courier walks a room a move, waits outside a held room, takes 
   for (let i = 0; i < 40 && c.state === 'on'; i++) { walkTo(s, RC.escortRoute(s)[1] || c.dest); FP.wait(s); }
   assert.equal(c.state, 'won');
   assert.ok(R.pack.length >= 1, 'a protocol in the pack');
+  assert.ok(s.stash.some((it) => R.pack.includes(it.id) && it.rarity === 'custom'), 'a Custom: the credits it carried went into the rarity');
 });
 
 test('escort: at 0 Integrity the courier is lost', () => {

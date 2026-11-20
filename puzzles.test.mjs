@@ -334,7 +334,7 @@ test('what each pays: Cascade components (more for a tap left over), Ping sweep 
     const b = FP.boardOf(s, room);
     FP.act(s, 'play', `dig ${b.caches[0]}`);
     const end = s.logs.findLast((e) => e.type === 'puzzle-end');
-    assert.ok(end.won && end.pay.credits > 0 && end.pay.code > 0);
+    assert.ok(end.won && end.pay.credits > 0 && !end.pay.code, 'a cache, its code as credits (docs/pays.md)');
     assert.ok(s.run.pack.some((f) => f.kind === 'credits' && f.amount === end.pay.credits));
   }
   {
@@ -361,7 +361,7 @@ test('the chase, with the real Tracker: through the door it loses your trail for
   for (const m of PZ.chaseSolve(b.walls, b.p, b.h, b.exit, b.h2 ?? null).moves) FP.act(s, 'play', m);
   assert.equal(b.done, 'won');
   assert.ok(h.lost, 'it lost your trail');
-  assert.equal(s.run.pack.length, pack + 2, 'half a cache: credits and code');
+  assert.equal(s.run.pack.length, pack + 1, 'half a cache: credits (its code as credits)');
   // Back to its den and asleep, and walking past it doesn't wake it again this visit.
   Object.assign(h, { at: h.den, awake: false, returning: false, count: 0 });
   const by = FP.neighbours(g, g.den).find((id) => id !== room.id && !FP.isPuzzle(g.rooms[id].kind));
@@ -518,7 +518,7 @@ test('cryptogram: one key a player (none to itself), a right letter fills it, a 
   const t = {}; assert.deepEqual(PZ.cipherOf(t).solved, []); const seed = t.cipher.seed; PZ.cipherOf(t); assert.equal(t.cipher.seed, seed, 'safe to run twice');
 });
 
-test('the three new boards pay less: half a kill\'s XP; routing half a cache\'s code, deadlock a component, cryptogram the note', () => {
+test('the three new boards pay less: half a kill\'s XP; routing half a cache\'s code, deadlock Cascade\'s components, cryptogram the note', () => {
   for (const kind of ['routing', 'deadlock', 'cryptogram']) {
     const { s, loc, room } = serverWith(kind);
     play(s, `connect ${loc.name}`); walkIn(s, room.id);
@@ -529,7 +529,7 @@ test('the three new boards pay less: half a kill\'s XP; routing half a cache\'s 
     const kill = s.logs.find((e) => e.type === 'xp' && e.message.includes(`${PZ.PUZZLES[kind].name} solved`));
     assert.ok(kill?.amount > 0 && kill.kind === 'intel', `${kind}: XP as intel`);
     if (kind === 'routing') { assert.ok(end.pay.code >= 1 && end.pay.code <= 2); assert.equal(end.pay.credits, 0); }
-    if (kind === 'deadlock') assert.equal(s.components - parts, FP.ROOMS.puzzles.lock);
+    if (kind === 'deadlock') assert.equal(s.components - parts, FP.ROOMS.puzzles.parts, 'as Cascade pays (docs/pays.md)');
     if (kind === 'cryptogram') { assert.equal(end.pay.code + end.pay.credits + end.pay.parts, 0); assert.equal(end.line, b.text.replace(/\.$/, ''), 'the note, decoded'); }
   }
 });
@@ -618,7 +618,7 @@ test('the terminal on a server: only from floor 2; a first read pays a cache, a 
     const end = FP.act(s, 'play', `name ${b.answer}`).find((e) => e.type === 'puzzle-end');
     assert.equal(b.done, 'won');
     assert.equal(FP.puzzleState(s, room), 'won');
-    assert.ok(end.won && end.pay.credits > 0 && end.pay.code > 0, 'a cache');
+    assert.ok(end.won && end.pay.credits > 0 && !end.pay.code, 'a cache, in credits');
     assert.ok(s.hackers[Object.keys(s.hackers)[0]].xp > xp0, 'XP');
     ends.push(end);
   }

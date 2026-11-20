@@ -6,7 +6,7 @@ import { fresh, command, addLocation } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { roomsFor } from './dist/netrooms.mjs';
-import { deal, eventsOf, tickEvents, dealBlip, blipsOf, historyOf, BLIP, HISTORY, DIRECTOR, flickerMult } from './dist/events.mjs';
+import { deal, eventsOf, tickEvents, dealBlip, blipsOf, historyOf, BLIP, HISTORY, DIRECTOR, flickerMult, strayCredits } from './dist/events.mjs';
 import { priceOf, WARE_IDS } from './dist/market.mjs';
 import { FACTIONS } from './dist/factions.mjs';
 import { mapMarkup } from './dist/view.mjs';
@@ -31,7 +31,8 @@ const locOf = (s, b) => s.locations.find((l) => l.id === b.loc);
 test('a stray cache: a spark on its server and its room; walk in and it goes in your pack; let it go and nothing is lost', () => {
   const s = world(), b = dealBlip(s, 'cache'), loc = locOf(s, b), R = loc.floorplan;
   assert.ok(b && R.cleared[b.room], 'in a room you cleared');
-  assert.ok(b.credits > 0 && b.code > 0);
+  assert.ok(b.credits > 0 && !b.code, 'credits only: its code comes as credits (docs/pays.md)');
+  assert.equal(b.credits, strayCredits(b.level));
   assert.match(mapMarkup(s, loc.id), /blipmark/, 'a spark on the map node');
   for (const r of Object.values(R.graph.rooms)) if (FP.FIGHTS.includes(r.kind)) R.down[r.id] = Date.now(); // nothing live on the way
   play(s, 'connect ' + loc.id);
@@ -42,7 +43,7 @@ test('a stray cache: a spark on its server and its room; walk in and it goes in 
   FP.go(s, b.room);
   assert.equal(R2.at, b.room);
   assert.ok(s.run.pack.some((f) => f.kind === 'credits' && f.amount === b.credits), 'credits in the pack');
-  assert.ok(s.run.pack.some((f) => f.kind === 'code' && f.amount === b.code), 'code in the pack');
+  assert.ok(!s.run.pack.some((f) => f.kind === 'code'), 'no code');
   assert.equal(blipsOf(s).length, 0);
   assert.equal(historyOf(s)[0].how, 'taken');
   // Let one go: it leaves, and nothing else changes.
