@@ -172,6 +172,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     if (!out?.isConnected) { out = document.createElement('canvas'); out.id = 'art-out'; out.setAttribute('aria-hidden', 'true'); document.body.appendChild(out); octx = out.getContext('2d'); }
     return octx;
   };
+  const clearOut = () => { flung.length = 0; if (outDirty && out) { octx.setTransform(1, 0, 0, 1, 0, 0); octx.clearRect(0, 0, out.width, out.height); } outDirty = false; };
 
   // ---------- building: primitives with normals ----------
   const add = (x, y, z, nx, ny, nz, region, a = 0) => { const l = Math.hypot(nx, ny, nz) || 1; points.push({ x, y, z, nx: nx / l, ny: ny / l, nz: nz / l, region, a }); };
@@ -565,7 +566,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     queued = false;
     const s = getState();
     const v = s?.encounter?.virus;
-    if (!canvas?.isConnected || !v) return rest();
+    if (!canvas?.isConnected || !v) { clearOut(); return rest(); } // a fight that ends mid-strike leaves nothing over the page
     const r = rate(), step = GFX.frameMs[r] || 40; // the Graphics setting (graphics.mjs): full, slow or still
     if (rested) { rested = false; previous = now - step; } // back from a rest: one frame's step, as if it had been running
     const wait = step - (now - previous);
@@ -587,7 +588,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     if (motion) clock += delta / 1000;
 
     const { width, height } = canvas.getBoundingClientRect();
-    if (!width || !height) return;
+    if (!width || !height) { clearOut(); return; }
     const dpr = Math.min(devicePixelRatio || 1, 2);
     if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) { canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr); }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

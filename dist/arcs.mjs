@@ -32,7 +32,7 @@ import { graphOf, locAt, hiddenAt, neighbours, floorName, reached, serverSlot, f
 import { lairBoss, NETWORK } from './network.mjs';
 import { addrsOf, sweepRooms } from './address.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
-import { letter, arm, boardOpen, openContracts, title, CREWS, contractXp } from './mail.mjs';
+import { letter, arm, disarm, boardOpen, openContracts, title, CREWS, contractXp } from './mail.mjs';
 import { FACTIONS } from './factions.mjs';
 import { fill } from './content.mjs';
 import STORY_TEXT from './content/story.mjs';
@@ -176,9 +176,19 @@ function setup(s, c) {
 export function arcTick(s, at = nowOf()) {
   if (!s.mail?.jobs || !s.mail.list || !boardOpen(s)) return; // a mail state with no letters (a test's) has nowhere to post
   const A = arcsOf(s);
+  // A death rolls s.arcs back to the connect (visit.mjs PROGRESS) while mail received meanwhile stays: a step posted
+  // during the visit is held, so its chain is under way. A save that posted it twice drops the copy.
+  const held = {};
+  for (const c of openContracts(s).filter((x) => x.chain)) {
+    const k = `${c.chain}:${c.step}`;
+    if (!held[k]) { held[k] = c; continue; }
+    disarm(s, c); s.mail.jobs.splice(s.mail.jobs.indexOf(c), 1); if (c.type === 'bounty') arm(s, held[k]); // the same room: the one kept stays there
+  }
   for (let n = 1; n <= reached(s); n++) {
     regrown(s, n, at);
     if (!chainOf(n) || A[n]) continue;
+    const c = Object.values(held).find((x) => x.chain === n);
+    if (c) { A[n] = { step: c.step, at: c.at, titles: [] }; continue; }
     const l = post(s, n, 0, at);
     emit(s, 'mail', `New mail from ${l.from}: ${l.subject}.`, { letter: l.id, from: l.from, subject: l.subject, chain: n });
   }
