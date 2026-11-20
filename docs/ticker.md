@@ -2,11 +2,10 @@
 
 **Status.** Built (November 2026, `ticker.mjs`; GAME_RULES *Markets*): the cards, favoured cards, the style and two
 rare cards from the seed, all five modifiers, bulk orders, two buyers, corners, the clamp, the Log lines, price
-tooltips naming their cards, and look A (the tag). The crews' runs are read off the director's Outbreak (events.mjs),
-which keeps dealing it: its patient zero and its family's lean stay with it. Rare cards move prices only (no count, no
-sway). Two buyers are posted by Corvid Exchange. Left: looks B and C are mock-ups for the designer to pick against A;
-pays.md's *reacting* is next. The wall-clock world event and the Market shock are gone. Outposts (outposts.md) are
-tabled.
+tooltips naming their cards, and the picked look (icon squares, section 4). The crews' runs are read off the
+director's Outbreak (events.mjs), which keeps dealing it: its patient zero and its family's lean stay with it. Rare
+cards move prices only (no count, no sway). Two buyers are posted by Corvid Exchange. Next: pays.md's *reacting*. The
+wall-clock world event and the Market shock are gone. Outposts (outposts.md) are tabled.
 
 ## 1. The rule
 
@@ -55,16 +54,19 @@ tabled.
 - **Rare cards:** each network holds two of five, each once a playthrough (market.md 5, *Rare cards*), price effects
   only.
 
-## 4. On the screen (mock-ups; pick one)
+## 4. On the screen (picked: A, as squares)
 
-The card's line goes to the Log in every option. In the hub's market window:
+The card's line goes to the Log. In the hub's market window, its head is a row of squares (`ticker-icons.mjs`), each an
+icon centred in a 30px square, everything else on hover (WoW grammar: name, kind, what it does, the line):
 
-- **A, the tag:** the card replaces the world event's tag in the window's head (▲, its name, minutes left); the bulk
-  order is a chip beside the ware's name (*31 wanted*), so the prices stay in their column. Built.
-- **B, the strip:** a thin amber line under the ware's row: the card, the order (*Kestrel buys 31 more at 26*), minutes
-  left and a bar.
-- **C, the wire:** every live card on the net above the table, this hub's first: the ware, its name, what it does and
-  where, minutes left and a bar. A crew's run in red.
+- **The hub's condition** first, in amber, no time edge.
+- **Each live card:** its own icon (one per card, crew's run and rare card); the border green up, pink down, red for a
+  crew's run; its bottom edge the time left. A rare card wears a star on its top-left corner, a bulk order its count on
+  the top-right. The order's ware wears a crate and the count beside its name, so the prices stay in their column.
+
+Rejected (November 2026): A as text tags, and the same tag with owner and ware glyphs or one event icon; B, *the
+strip* (a line under the ware's row); C, *the wire* (every card on the net above the table); for rare cards, a bevel
+and chevron, or a filled square.
 
 ## 5. Building it
 

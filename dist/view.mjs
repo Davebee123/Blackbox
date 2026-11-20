@@ -14,6 +14,7 @@ let memAsk = null;
 export const setMemAsk = (id) => { memAsk = id; };
 import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, quote, priceOf, travelMs, transfersOf, orderQuote, orderMax } from './market.mjs';
 import { tickerAt, tickerTip, tickerKind, minutesLeft, orderTip } from './ticker.mjs';
+import { cardIcon, condIcon } from './ticker-icons.mjs';
 // The market's open order ticket (app.js): { f, w, side, n }.
 let order = null;
 export const setOrder = (o) => { order = o; };
@@ -3461,7 +3462,7 @@ function marketMarkup(s, f, now) {
     const dir = d >= 3 ? 'up' : d <= -3 ? 'down' : 'flat';
     // A bulk order on this ware here (ticker.mjs): how many it still wants, beside the ware's name (the prices stay aligned).
     const bulk = tickerAt(s, f, w).find((c) => c.order);
-    const want = bulk ? `<span class="mk-want" title="${esc(orderTip(bulk))}" data-tt-kind="${esc(`${FX[f].short} · Bulk order`)}">${bulk.order.left} wanted</span>` : '';
+    const want = bulk ? `<span class="mk-want" title="${esc(orderTip(bulk))}" data-tt-kind="${esc(`${FX[f].short} · Bulk order`)}">${glyph('crate')}${bulk.order.left}</span>` : '';
     // A read-only row (click it for an order ticket): held, what it pays here (and against other
     // hubs), what it charges. The ticket opens under the row you picked.
     const open = order && order.f === f && order.w === w;
@@ -3479,9 +3480,13 @@ function marketMarkup(s, f, now) {
       <span class="mk-num mk-price ${x.side === 'sell' ? 'in' : ''}">${x.side === 'sell' ? '+' : '−'}${x.credits}</span>
       <span class="xfer-bar" title="${Math.max(1, Math.ceil(left / 60000))} min"><i style="width:${pct}%"></i></span>
     </div>`; }).join('')}</div>` : '';
-  // The ticker's cards here (ticker.mjs): ▲ or ▼, the name, minutes left; what it does and its owner's line on hover.
-  const tags = cards.map((c) => `<span class="tag shock mk-card ${c.mult > 1 ? 'up' : 'down'}${c.crew ? ' crew' : ''}${c.rare ? ' rare' : ''}" title="${esc(tickerTip(c))}" data-tt-kind="${esc(tickerKind(c))}">${c.mult > 1 ? '▲' : '▼'} ${esc(c.name)} · ${minutesLeft(c)} min</span>`).join('');
-  return `<div class="mk-tags"><span class="tag" title="${esc(cond.about)}">${esc(cond.name)}</span>${tags}<span class="tag dim" title="File transfer">⇄ ${min} min</span>${shockTag(s, f)}</div>
+  // The hub's condition and the ticker's cards here (ticker.mjs), each a square with its icon (ticker-icons.mjs); the rest
+  // on hover. A card's border says up or down (a crew's run red), its bottom edge the time left; a rare card wears a
+  // star on one corner, a bulk order its count on the other.
+  const condDoes = Object.entries(cond.mult).map(([w, m], i) => `of ${w === 'salvage' ? 'components' : WARES[w].name}${i ? '' : ' here'} by ${m}`).join(' and ');
+  const condSq = `<span class="tk-sq cond" tabindex="0" title="${esc(`${cond.name}: Multiplies the price ${condDoes}.\n${cond.about}`)}" data-tt-kind="${esc(`${FX[f].short} · Hub condition`)}">${condIcon(HUB_CONDITION[f])}</span>`;
+  const tags = cards.map((c) => `<span class="tk-sq mk-card ${c.crew ? 'crew' : c.mult > 1 ? 'up' : 'down'}${c.rare ? ' rare' : ''}" tabindex="0" title="${esc(tickerTip(c))}" data-tt-kind="${esc(tickerKind(c))}">${cardIcon(c.crew || c.card)}<i style="width:${Math.round(Math.max(0, Math.min(1, c.left / (c.ms || c.left))) * 100)}%"></i>${c.rare ? '<b class="tk-star">★</b>' : ''}${c.order ? `<b class="tk-ord">${c.order.left}</b>` : ''}</span>`).join('');
+  return `<div class="mk-tags">${condSq}${tags}<span class="tag dim" title="File transfer">⇄ ${min} min</span>${shockTag(s, f)}</div>
     <div class="mk-table mk-wares">${head}${rows}</div>${flying}`;
 }
 const GLYPH_OF_GOOD = { shelf: 'protocol', chase: 'protocol', relay: 'relay', cracker: 'cracker', injector: 'injector', signal: 'signal', repair: 'repair', cipher: 'cipher', worm: 'worm', kernel: 'kernel', exploit: 'exploit', salvage: 'salvage', crate: 'crate', blueprint: 'blueprint' };

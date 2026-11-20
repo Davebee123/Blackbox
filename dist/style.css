@@ -5087,6 +5087,19 @@ input, textarea, [contenteditable], .mbody, .ch-lines, .page-error pre { -webkit
 
 /* The ticker (ticker.mjs): a bulk order's chip on its ware's price (amber: what you sell into it), a crew's run in red,
    a rare card double-ruled. */
-.mk-want { margin-left: 8px; font: 600 10px var(--mono); color: var(--amber); border: 1px solid var(--amber-deep); border-radius: 3px; padding: 0 4px; cursor: help; white-space: nowrap; }
-.tag.shock.crew { color: var(--hot); }
-.tag.shock.rare { border-style: double; border-width: 3px; }
+.mk-want { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; font: 600 10px var(--mono); color: var(--amber); border: 1px solid var(--amber-deep); border-radius: 3px; padding: 0 4px; cursor: help; white-space: nowrap; }
+.mk-want .glyph { width: 10px; height: 10px; margin: 0; }
+/* The hub's condition and its cards as squares (view.mjs marketMarkup): the icon centred, the rest on hover. */
+.mk-tags:has(.tk-sq) { align-items: center; }
+.tk-sq { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none; width: 30px; height: 30px; border: 1px solid currentColor; border-radius: 4px; cursor: help; }
+.tk-sq .tk-ico { display: block; width: 17px; height: 17px; margin: 0; }
+.tk-sq > i { position: absolute; left: 0; bottom: 0; height: 2px; background: currentColor; opacity: 0.8; }
+.tk-sq.cond { color: var(--amber); border-color: var(--amber-deep); }
+.tk-sq.up { color: #8fd46b; }
+.tk-sq.down { color: #ff6f91; }
+.tk-sq.crew { color: var(--hot); }
+.tk-sq > b { position: absolute; top: -8px; font: 700 9px/1 var(--mono); color: #140f06; border-radius: 6px; padding: 2px 3px; }
+.tk-sq > .tk-ord { right: -7px; background: var(--amber); }
+.tk-sq > .tk-star { left: -7px; font-family: var(--sans, sans-serif); font-size: 10px; padding: 1px 2px; } /* a rare card: its own colour */
+.tk-sq.up > .tk-star { background: #8fd46b; }
+.tk-sq.down > .tk-star { background: #ff6f91; }

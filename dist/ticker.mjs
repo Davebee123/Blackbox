@@ -276,7 +276,8 @@ export function fillOrder(s, f, w, n) {
   }
 }
 // The live cards that move a hub's prices (or one ware's there), strongest first: { id, card, name, owner, line, mult,
-// ware, left, mod, moves, rare, crew, order }. mult and ware are its strongest move there; order its bulk order here.
+// ware, left, ms, mod, moves, rare, crew (a crew's run: the crew's id), order }. mult and ware are its strongest move
+// there; order its bulk order here.
 export function tickerAt(s, f, w = null) {
   const out = [];
   for (const c of moving(s)) {
@@ -284,7 +285,7 @@ export function tickerAt(s, f, w = null) {
     if (!xs.length) continue;
     const top = xs.reduce((a, b) => (Math.abs(Math.log(b.mult)) > Math.abs(Math.log(a.mult)) ? b : a));
     const run = c.crew ? CREW_RUNS[c.crew] : null, order = c.order?.hub === f && c.order.left > 0 && (!w || c.order.ware === w) ? c.order : null;
-    out.push({ id: c.id, card: c.card, name: run?.name || defOf(c.card).name, owner: run?.owner || ownerOf(c), line: run?.line || lineOf(c), mult: top.mult, ware: top.ware, left: c.left, mod: c.mod || null, moves: xs, rare: !!RARE_CARDS[c.card], crew: !!run, order });
+    out.push({ id: c.id, card: c.card, name: run?.name || defOf(c.card).name, owner: run?.owner || ownerOf(c), line: run?.line || lineOf(c), mult: top.mult, ware: top.ware, left: c.left, ms: c.ms, mod: c.mod || null, moves: xs, rare: !!RARE_CARDS[c.card], crew: run ? c.crew : null, order });
   }
   return out.sort((a, b) => Math.abs(Math.log(b.mult)) - Math.abs(Math.log(a.mult)));
 }

@@ -86,6 +86,9 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
     draws itself round while the game warms up, then the light leaks out); and the same box on a short line as the small mark
     (the top bar, the class pick, the favicon); a faint `/` between the top bar's tabs;
   - quest window: the *Transmission*;
+  - a hub's market head: *Squares* (the condition and each ticker card an icon in a 30px square, everything else on
+    hover; up green, down pink, a crew's run red, the time left on its bottom edge; a rare card's star top-left, a bulk
+    order's count top-right; docs/ticker.md 4); text tags, the strip and the wire were the alternatives;
   - level-up: the *Firmware update*;
   - wick's tips (the guided path's, tips.mjs `wick`): the *Transmission* (his face, the kicker, his lowercase line);
   - pager: the *Log* on a desktop (ping lines in the map's left column under Contracts, above the prompt elsewhere;

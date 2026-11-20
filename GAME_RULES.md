@@ -2094,8 +2094,9 @@ hubs.
 - **The ticker** (`ticker.mjs`, docs/ticker.md): a market card every 20–40 minutes of logged-on time, from the hubs on,
   on dice of its own; several can run at once, and nothing moves while you're logged off. A card moves prices for its
   minutes (20 unless it says) and says why in its owner's voice: a Log line, *Kestrel: Rack 4 will close…*. A card
-  needs its poster's hub found. In the hub's market window it's a tag (▲ or ▼, its name, minutes left; what it does
-  and its line on hover), every price it touches names it in its tooltip, and the hub's map chip shows the strongest.
+  needs its poster's hub found. In the hub's market window it's a square with its own icon, after the hub's
+  condition's (amber): green up, pink down, red for a crew's run, its bottom edge the time left; its name, what it
+  does and its line on hover. Every price it touches names it in its tooltip, and the hub's map chip shows the strongest.
 
   | Owner | Card | Does |
   |---|---|---|
@@ -2117,10 +2118,10 @@ hubs.
   minutes before it moves anything; GLASSJAW found, on another's card) or **Quiet** (no Log line, only the hub's tag);
   Early word, corners and rare cards take none. However many stack, a hub's ware stays within ×0.4 and ×2.5.
 - **Bulk orders:** three price cards in ten carry one on the price they raise: 20–60 code, 40–120 components or 2–6
-  Exploits. Until it's filled or the card ends, a unit sold into it takes nothing off the price. The ware's name wears
-  a chip, *31 wanted*.
-- **Rare cards:** each network holds two of five, each dealt once a playthrough (one deal in ten while one fits). A
-  double-ruled tag.
+  Exploits. Until it's filled or the card ends, a unit sold into it takes nothing off the price. Its count sits on the
+  card's square, and a crate and the count beside the ware's name.
+- **Rare cards:** each network holds two of five, each dealt once a playthrough (one deal in ten while one fits). A star
+  on its square.
 
   | Owner | Card | Does |
   |---|---|---|

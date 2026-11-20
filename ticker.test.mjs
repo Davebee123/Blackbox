@@ -206,8 +206,10 @@ test('on the screen: the market window\'s tag, the price tooltips, the hub\'s ch
   tickerOf(s).live.forEach((c) => delete c.order);
   const c = s.ticker.live[0], html = hubTerminalMarkup(s, 'kestrel', hubBanner(s, 'kestrel'), 'market');
   const head = html.match(/<div class="mk-tags">[\s\S]*?<\/div>/)[0];
-  assert.match(head, new RegExp(`class="tag shock mk-card ${c.moves[0].mult > 1 ? 'up' : 'down'}" title="Rack closure: Multiplies the price of components here by ${c.moves[0].mult}\\. Ends in ${c.ms / MIN} minutes\\.\\n“Rack 4 will close at the end of this cycle\\. Please collect your belongings\\.”" data-tt-kind="Kestrel · Market card[^"]*">${c.moves[0].mult > 1 ? '▲' : '▼'} Rack closure · ${c.ms / MIN} min</span>`));
-  assert.match(head, /▲ Tax run · \d+ min/, 'the city\'s card at every hub');
+  // The condition and each card a square: its icon; the name, what it does and the line on hover.
+  assert.match(head, /^<div class="mk-tags"><span class="tk-sq cond" tabindex="0" title="Overheating racks: Multiplies the price of Kernel code here by 1\.8 and of components by 1\.25\.\n[^"]+" data-tt-kind="Kestrel · Hub condition"><svg class="glyph tk-ico"/);
+  assert.match(head, new RegExp(`<span class="tk-sq mk-card ${c.moves[0].mult > 1 ? 'up' : 'down'}" tabindex="0" title="Rack closure: Multiplies the price of components here by ${c.moves[0].mult}\\. Ends in ${c.ms / MIN} minutes\\.\\n“Rack 4 will close at the end of this cycle\\. Please collect your belongings\\.”" data-tt-kind="Kestrel · Market card[^"]*"><svg class="glyph tk-ico"[^>]*>.*?</svg><i style="width:100%"></i></span>`));
+  assert.match(head, /title="Tax run: [^"]*"/, 'the city\'s card at every hub');
   assert.doesNotMatch(head, /Quiet market|Ransomware outbreak/, 'no world event');
   const tips = [...html.matchAll(/class="mk-d [^"]*" title="([^"]*)"/g)].map((m) => m[1]);
   assert.ok(tips.some((t) => t.includes(`Rack closure ×${c.moves[0].mult}`) && t.includes('Tax run ×1.15')), tips.join(' | '));
@@ -255,7 +257,8 @@ test('a bulk order: three price cards in ten carry one, sized by its ware, and i
   // On the screen: a chip on the ware's price, its tooltip in WoW grammar.
   c.order = { hub: 'kestrel', ware: 'salvage', n: 31, left: 31 };
   const html = hubTerminalMarkup(s, 'kestrel', hubBanner(s, 'kestrel'), 'market');
-  assert.match(html, /<span class="mk-want" title="Bulk order: Kestrel buys 31 more components at this price\. Selling into it doesn(?:'|&#39;)t lower the price\. Ends with Rack closure in 20 minutes\." data-tt-kind="Kestrel · Bulk order">31 wanted<\/span>/);
+  assert.match(html, /<span class="mk-want" title="Bulk order: Kestrel buys 31 more components at this price\. Selling into it doesn(?:'|&#39;)t lower the price\. Ends with Rack closure in 20 minutes\." data-tt-kind="Kestrel · Bulk order"><svg[^>]*>.*?<\/svg>31<\/span>/);
+  assert.match(html, /<b class="tk-ord">31<\/b><\/span>/, 'its count on the card\'s square');
 });
 
 test('two buyers: rival hubs bid ×1.4 for one ware at once, posted by Corvid Exchange', () => {
@@ -301,7 +304,7 @@ test('rare cards: each network holds two of five, each dealt once a playthrough,
   assert.equal(z.ms, 30 * MIN);
   assert.ok(near(tickerMult(t, 'kestrel', 'salvage'), 1.5) && near(tickerMult(t, 'lantern', 'kernel'), 0.6) && near(tickerMult(t, 'kestrel', 'kernel'), 0.6));
   assert.match(tickerKind(tickerAt(t, 'kestrel')[0]), /^Kestrel · Rare market card$/);
-  assert.match(hubTerminalMarkup(t, 'kestrel', hubBanner(t, 'kestrel'), 'market'), /class="tag shock mk-card (up|down) rare"/);
+  assert.match(hubTerminalMarkup(t, 'kestrel', hubBanner(t, 'kestrel'), 'market'), /class="tk-sq mk-card (up|down) rare"[\s\S]*?<b class="tk-star">★<\/b>/);
 });
 
 test('Leaked: GLASSJAW puts the card on the Log five minutes ahead. Quiet: no Log line, only the hub\'s tag', () => {
@@ -318,7 +321,7 @@ test('Leaked: GLASSJAW puts the card on the Log five minutes ahead. Quiet: no Lo
   const t = world(), n = t.serial, q = dealTicker(t, 'census', 'quiet');
   assert.equal(q.mod, 'quiet');
   assert.equal(t.logs.filter((e) => e.id > n && e.type === 'ticker').length, 0, 'no Log line');
-  assert.match(hubTerminalMarkup(t, 'lantern', hubBanner(t, 'lantern'), 'market'), /▲ Census · 25 min/);
+  assert.match(hubTerminalMarkup(t, 'lantern', hubBanner(t, 'lantern'), 'market'), /class="tk-sq mk-card up" tabindex="0" title="Census: /);
   assert.match(tickerKind(tickerAt(t, 'lantern')[0]), /· Quiet$/);
 });
 
@@ -330,8 +333,8 @@ test('a crew\'s run: the director\'s Outbreak, its code ×0.8 everywhere while i
   const c = tickerAt(s, 'halcyon', 'cipher')[0];
   assert.equal(c.name, "TOLLGATE's run");
   assert.equal(tickerKind(c), 'TOLLGATE · Crew run');
-  assert.match(hubTerminalMarkup(s, 'halcyon', hubBanner(s, 'halcyon'), 'market'), /class="tag shock mk-card down crew"[^>]*>▼ TOLLGATE(?:'|&#39;)s run · 30 min/);
-  assert.equal(tickerAt(s, 'halcyon')[0].crew, true);
+  assert.match(hubTerminalMarkup(s, 'halcyon', hubBanner(s, 'halcyon'), 'market'), /class="tk-sq mk-card crew" tabindex="0" title="TOLLGATE(?:'|&#39;)s run: Multiplies the price of Cipher code here by 0\.8\./);
+  assert.equal(tickerAt(s, 'halcyon')[0].crew, 'tollgate');
   s.events = [{ id: 2, card: 'outbreak', family: 'botnet', left: 10 * MIN }];
   assert.equal(tickerAt(s, 'lantern', 'worm')[0].name, "SWARMLINE's rental");
   s.events = [{ id: 3, card: 'outbreak', family: 'cryptominer', left: 10 * MIN }];
