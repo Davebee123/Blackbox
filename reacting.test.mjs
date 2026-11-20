@@ -117,4 +117,10 @@ test('a price\'s tooltip lists what pays its ware as icons, ×2 on each while a 
   const rows = html().split('data-mk-pick="').slice(1), row = (w) => rows.find((r) => r.startsWith(w));
   assert.match(row('kernel'), /<template class="tt-more">.*Hollow Choir.*×2/s);
   assert.doesNotMatch(row('worm'), /rw-x/);
+  // Named for the card moving it most, its kind the card's; a price no card moves is named for its ware.
+  assert.match(row('kernel'), /class="mk-d [a-z]+" title="Thermal alarm: Overheating racks ×1\.8 · Thermal alarm ×1\.6" data-tt-kind="Kestrel · Market card"/);
+  assert.match(row('worm'), /class="mk-d [a-z]+" title="Worm code" data-tt-kind="Kestrel · Price"/);
+  // The Hollow Choir only from level 10, when the director can deal it.
+  s.hackers[s.loadout.archetype].level = 9;
+  assert.doesNotMatch(html(), /Hollow Choir/);
 });

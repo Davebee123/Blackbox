@@ -2129,7 +2129,8 @@ hubs.
   | Exploits | The Exfil's roll; the Settlement run: the sites' clock runs twice as fast and it comes next |
   | Components | The surge among run cards; the Rack pull, as Exploits' |
 
-  A price's tooltip shows what pays its ware as icons, ×2 on each while it's wanted.
+  A price's tooltip, named for the card moving it most, shows what pays its ware as icons (the Hollow Choir from level
+  10), ×2 on each while it's wanted.
 - **Rare cards:** each network holds two of five, each dealt once a playthrough (one deal in ten while one fits). A star
   on its square.
 

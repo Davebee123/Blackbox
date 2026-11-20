@@ -281,12 +281,12 @@ export function wanted(s) {
 }
 // A family's lean while its code is wanted (events.mjs fam, network.mjs leanOf): REACT, else 1.
 export const reactOf = (s) => { const w = wanted(s); return w.size ? (f) => (w.has(codeOf(f)) ? REACT : 1) : null; };
-// What pays each ware, for a price's tooltip (view.mjs): [glyph, name, what it is].
+// What pays each ware, for a price's tooltip (view.mjs): [glyph, name, what it is, the level it shows from].
 const FIGHTS = (fam) => [['upload', 'Courier', `A courier event, ${fam}`], ['bounty', 'Bounty', `A bounty, ${fam}`], ['spider', 'Outbreak', `A ${fam} outbreak: its kills drop double code`], ['kill', 'Bounty hunt', `A bounty hunt, ${fam}`]];
 export const PAYERS = {
   cipher: FIGHTS('ransomware'),
   worm: FIGHTS('worm'),
-  kernel: [...FIGHTS('ghostroot'), ['echo', 'Hollow Choir', 'A ghostroot boss event']],
+  kernel: [...FIGHTS('ghostroot'), ['echo', 'Hollow Choir', 'A ghostroot boss event', 10]],
   exploit: [['lock', 'Settlement run', 'A quest site: break the lock for Exploits'], ['capture', 'Exfil', 'A loot mob on a rogue server: its archive pays Exploits']],
   salvage: [['target', 'Surge room', 'A run card: each wave pays components'], ['cold', 'Rack pull', "A quest site: the cage holds Kessler's hardware"]],
 };
