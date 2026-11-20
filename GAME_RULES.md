@@ -2118,8 +2118,8 @@ hubs.
   minutes before it moves anything; GLASSJAW found, on another's card) or **Quiet** (no Log line, only the hub's tag);
   Early word, corners and rare cards take none. However many stack, a hub's ware stays within ×0.4 and ×2.5.
 - **Bulk orders:** three price cards in ten carry one on the price they raise: 20–60 code, 40–120 components or 2–6
-  Exploits. Until it's filled or the card ends, a unit sold into it takes nothing off the price. Its count sits on the
-  card's square, and a crate and the count beside the ware's name.
+  Exploits. Until it's filled or the card ends, a unit sold into it takes nothing off the price. A crate and its count
+  sit beside the ware's name.
 - **Rare cards:** each network holds two of five, each dealt once a playthrough (one deal in ten while one fits). A star
   on its square.
 

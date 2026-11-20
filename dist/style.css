@@ -5100,7 +5100,6 @@ input, textarea, [contenteditable], .mbody, .ch-lines, .page-error pre { -webkit
 .tk-sq.down { color: #ff6f91; }
 .tk-sq.crew { color: var(--hot); }
 .tk-sq > b { position: absolute; top: -8px; font: 700 9px/1 var(--mono); color: #140f06; border-radius: 6px; padding: 2px 3px; }
-.tk-sq > .tk-ord { right: -7px; background: var(--amber); }
 .tk-sq > .tk-star { left: -7px; font-family: var(--sans, sans-serif); font-size: 10px; padding: 1px 2px; } /* a rare card: its own colour */
 .tk-sq.up > .tk-star { background: #8fd46b; }
 .tk-sq.down > .tk-star { background: #ff6f91; }

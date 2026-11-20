@@ -63,8 +63,8 @@ icon centred in a 30px square, everything else on hover (WoW grammar: name, kind
 - **The hub's condition** first, in amber, no time edge.
 - **Grouped,** a gap between each group: the condition, the cards that raise prices, then those that lower them.
 - **Each live card:** its own icon (one per card, crew's run and rare card); the border green up, pink down, red for a
-  crew's run; its bottom edge the time left. A rare card wears a star on its top-left corner, a bulk order its count on
-  the top-right. The order's ware wears a crate and the count beside its name, so the prices stay in their column.
+  crew's run; its bottom edge the time left. A rare card wears a star on its top-left corner. A bulk order's ware
+  wears a crate and the count beside its name, so the prices stay in their column.
 
 Rejected (November 2026): A as text tags, and the same tag with owner and ware glyphs or one event icon; B, *the
 strip* (a line under the ware's row); C, *the wire* (every card on the net above the table); for rare cards, a bevel

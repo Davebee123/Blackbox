@@ -259,7 +259,6 @@ test('a bulk order: three price cards in ten carry one, sized by its ware, and i
   c.order = { hub: 'kestrel', ware: 'salvage', n: 31, left: 31 };
   const html = hubTerminalMarkup(s, 'kestrel', hubBanner(s, 'kestrel'), 'market');
   assert.match(html, /<span class="mk-want" title="Bulk order: Kestrel buys 31 more components at this price\. Selling into it doesn(?:'|&#39;)t lower the price\. Ends with Rack closure in 20 minutes\." data-tt-kind="Kestrel · Bulk order"><svg[^>]*>.*?<\/svg>31<\/span>/);
-  assert.match(html, /<b class="tk-ord">31<\/b><\/span>/, 'its count on the card\'s square');
 });
 
 test('two buyers: rival hubs bid ×1.4 for one ware at once, posted by Corvid Exchange', () => {

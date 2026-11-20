@@ -34,7 +34,7 @@ export const CARD_ICONS = {
 export const COND_ICONS = {
   claims: ["1.25 0.75 13.5 13.5", '<path d="M2 9.5h3l1 2h4l1-2h3"/><path d="M2 9.5v4h12v-4l-2-4H4z"/><path d="M5 3.5h6M6 1.5h4"/>'], // Claims backlog
   blackbudget: ["0.75 0.75 14.5 14.5", '<path d="M3 1.5h10v13H3z"/><path d="M5 4.5h6"/><rect x="5" y="7" width="6" height="2" fill="currentColor"/><rect x="5" y="10.5" width="4" height="1.6" fill="currentColor"/>'], // Black budget
-  hotracks: ["1.25 1.6 14.1 14.1", '<rect x="2" y="4.5" width="8" height="10" rx="1"/><path d="M4 7.5h4M4 10h4M4 12.5h4"/><path d="M12 6c1.2-1.2-.6-2 .6-3.2M14 7c1.2-1.2-.6-2 .6-3.2M12.6 14.5V9"/>'], // Overheating racks
+  hotracks: ["0.95 1.15 14.1 14.1", '<rect x="4" y="6" width="8" height="8.5" rx="1"/><path d="M6 8.7h4M6 11.3h4"/><path d="M5.5 4.5c1-1-.5-1.6.5-2.6M8 4.5c1-1-.5-1.6.5-2.6M10.5 4.5c1-1-.5-1.6.5-2.6"/>'], // Overheating racks
   thinpipe: ["1.5 2.75 12.5 12.5", '<path d="M2.5 14.5v-2"/><path d="M6 14.5v-5M9.5 14.5v-8M13 14.5v-11" stroke-dasharray="1.2 1.6"/>'], // Thin bandwidth
   scrapyard: ["1.75 1.75 12.5 12.5", '<path d="M8 2.5v2M8 11.5v2M2.5 8h2M11.5 8h2M4.1 4.1l1.4 1.4M10.5 10.5l1.4 1.4M4.1 11.9l1.4-1.4"/><path d="M10.6 6.4A3 3 0 1 0 9.6 10.6"/><path d="m11.2 3.4.6 2.6"/>'], // Scrap economy
 };
