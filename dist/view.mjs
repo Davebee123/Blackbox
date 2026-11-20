@@ -3455,12 +3455,13 @@ export function marketMarkup(s, f, now) {
   const haveOf = (w) => (w === 'salvage' ? componentsOf(s) : mats[w] || 0);
   const min = Math.round(travelMs(s, f) / 60000);
   // What pays each ware (ticker.mjs PAYERS), chips in the price's tooltip; ×2 on each while a card wants it (reacting).
-  const want = wanted(s), payers = (w) => `<template class="tt-more">${(PAYERS[w] || []).map(([g, name, tip]) => `<span class="rw" title="${esc(tip)}">${glyph(g)}<b>${esc(name)}</b>${want.has(w) ? `<b class="rw-x">×${REACT}</b>` : ''}</span>`).join('')}</template>`;
+  const want = wanted(s), payers = (w) => `<template class="tt-more">${(PAYERS[w] || []).filter(([, , , from]) => !from || hackerLevel(s) >= from).map(([g, name, tip]) => `<span class="rw" title="${esc(tip)}">${glyph(g)}<b>${esc(name)}</b>${want.has(w) ? `<b class="rw-x">×${REACT}</b>` : ''}</span>`).join('')}</template>`;
   const rows = WARE_IDS.map((w) => {
     const q = quote(s, f, w), n = haveOf(w), lot = Math.min(10, n);
     // Its value here against the average across every hub: the one number that says where to sell.
     const avg = FACTION_IDS.reduce((a, g) => a + quote(s, g, w).sell, 0) / FACTION_IDS.length, d = Math.round((q.sell / avg - 1) * 100);
     const why = [cond.mult[w] ? `${cond.name} ×${cond.mult[w]}` : '', ...tickerAt(s, f, w).map((c) => `${c.name} ×${c.mult}`), shock?.ware === w ? `Market shock ×${shock.mult}` : ''].filter(Boolean).join(' · ');
+    const top = tickerAt(s, f, w)[0]; // its tooltip is named for the card moving it most, else the ware
     const dir = d >= 3 ? 'up' : d <= -3 ? 'down' : 'flat';
     // A bulk order on this ware here (ticker.mjs): how many it still wants, beside the ware's name (the prices stay aligned).
     const bulk = tickerAt(s, f, w).find((c) => c.order);
@@ -3471,7 +3472,7 @@ export function marketMarkup(s, f, now) {
     return `<button type="button" class="mk-tr mk-row${open ? ' open' : ''}" data-mk-pick="${w}" aria-expanded="${open}">
       <span class="mk-name" title="${esc(WARES[w].name)}">${glyph(GLYPH_OF_GOOD[w])}<b>${esc(WARES[w].name.replace(/ code$/, ''))}</b>${want}</span>
       <span class="mk-num mk-held${n ? '' : ' zero'}">${n}</span>
-      <span class="mk-sellp"><b class="mk-price">${q.sell}</b><span class="mk-d ${dir}" title="Against the ${Math.round(avg)}-credit average across hubs${why ? ` · ${esc(why)}` : ''}">${payers(w)}${dir === 'up' ? '▲' : dir === 'down' ? '▼' : '='}${Math.abs(d)}%</span></span>
+      <span class="mk-sellp"><b class="mk-price">${q.sell}</b><span class="mk-d ${dir}" title="${esc(why ? `${top?.name || WARES[w].name}: ${why}` : WARES[w].name)}" data-tt-kind="${esc(top ? tickerKind(top) : `${FX[f].short} · Price`)}">${payers(w)}${dir === 'up' ? '▲' : dir === 'down' ? '▼' : '='}${Math.abs(d)}%</span></span>
       <span class="mk-buyp"${WARES[w].sellOnly ? ` title="Hubs buy ${esc(WARES[w].name.toLowerCase())} but don't sell them."` : ''}>${WARES[w].sellOnly ? '—' : q.buy}</span>
     </button>${open ? orderTicket(s, f, w) : ''}`;
   }).join('');
