@@ -3482,10 +3482,13 @@ function marketMarkup(s, f, now) {
     </div>`; }).join('')}</div>` : '';
   // The hub's condition and the ticker's cards here (ticker.mjs), each a square with its icon (ticker-icons.mjs); the rest
   // on hover. A card's border says up or down (a crew's run red), its bottom edge the time left; a rare card wears a
-  // star on one corner, a bulk order its count on the other.
+  // star on one corner, a bulk order its count on the other. The ticker keeps three up at once (ticker.mjs TICK.max).
   const condDoes = Object.entries(cond.mult).map(([w, m], i) => `of ${w === 'salvage' ? 'components' : WARES[w].name}${i ? '' : ' here'} by ${m}`).join(' and ');
   const condSq = `<span class="tk-sq cond" tabindex="0" title="${esc(`${cond.name}: Multiplies the price ${condDoes}.\n${cond.about}`)}" data-tt-kind="${esc(`${FX[f].short} · Hub condition`)}">${condIcon(HUB_CONDITION[f])}</span>`;
-  const tags = cards.map((c) => `<span class="tk-sq mk-card ${c.crew ? 'crew' : c.mult > 1 ? 'up' : 'down'}${c.rare ? ' rare' : ''}" tabindex="0" title="${esc(tickerTip(c))}" data-tt-kind="${esc(tickerKind(c))}">${cardIcon(c.crew || c.card)}<i style="width:${Math.round(Math.max(0, Math.min(1, c.left / (c.ms || c.left))) * 100)}%"></i>${c.rare ? '<b class="tk-star">★</b>' : ''}${c.order ? `<b class="tk-ord">${c.order.left}</b>` : ''}</span>`).join('');
+  const square = (c) => `<span class="tk-sq mk-card ${c.crew ? 'crew' : c.mult > 1 ? 'up' : 'down'}${c.rare ? ' rare' : ''}" tabindex="0" title="${esc(tickerTip(c))}" data-tt-kind="${esc(tickerKind(c))}">${cardIcon(c.crew || c.card)}<i style="width:${Math.round(Math.max(0, Math.min(1, c.left / (c.ms || c.left))) * 100)}%"></i>${c.rare ? '<b class="tk-star">★</b>' : ''}${c.order ? `<b class="tk-ord">${c.order.left}</b>` : ''}</span>`;
+  // Grouped, a gap between each: the condition, the cards that raise prices, then those that lower them.
+  const up = cards.filter((c) => !c.crew && c.mult > 1), down = cards.filter((c) => !up.includes(c));
+  const tags = [up, down].filter((g) => g.length).map((g) => `<span class="tk-group">${g.map(square).join('')}</span>`).join('');
   return `<div class="mk-tags">${condSq}${tags}<span class="tag dim" title="File transfer">⇄ ${min} min</span>${shockTag(s, f)}</div>
     <div class="mk-table mk-wares">${head}${rows}</div>${flying}`;
 }

@@ -1,5 +1,5 @@
 // The ticker (docs/ticker.md): market cards. Every 20–40 minutes of logged-on time a hub's owner (or the City Treasury,
-// or Pellucid Payroll) moves prices for a while and says why in its own voice. Several can run at once; nothing moves
+// or Pellucid Payroll) moves prices for a while and says why in its own voice. Three at most run at once; nothing moves
 // while you're logged off. market.mjs multiplies tickerMult into every price (and runners read it); view.mjs shows a
 // card as the market window's tag and on the hub's map chip; its line goes to the Log (comms.mjs 'ticker').
 //
@@ -34,6 +34,7 @@ export const TICK = {
   corner: { mult: 1.4, ms: 10 * 60000 }, // a runner's corner on one code at their hub
   rare: 0.1, // while the network holds a rare card, one deal in ten is one
   leakMs: 5 * 60000, // Leaked: on the Log this long before it moves anything
+  max: 3, // cards up on the net at once, a crew's run among them: a card due while it's full waits for a free slot
 };
 // A modifier: its minutes ×ms and its distance from ×1 ×big.
 export const MODS = {
@@ -165,7 +166,7 @@ export function tickTicker(s, dt) {
   if (!markets(s).length) return;
   if (d.next == null) d.next = between(s, TICK.everyMs);
   d.next -= dt;
-  if (d.next > 0) return;
+  if (d.next > 0 || upCount(s) >= TICK.max) return; // due, and waiting for a free slot
   d.next = between(s, TICK.everyMs);
   dealTicker(s);
 }
@@ -173,6 +174,8 @@ export function tickTicker(s, dt) {
 // Where a card could go now: two buyers' rival pairs with both hubs found; a corner's runners on the net whose hub is.
 const pairs = (hubs) => RIVALS.filter((p) => p.every((f) => hubs.includes(f)));
 const cornerers = (s, hubs) => castOf(s).filter((r) => hubs.includes(r.faction));
+// Cards up on the net now: the live ones (a leaked one waiting too) and a crew's run.
+const upCount = (s) => liveCards(s).length + (s.events || []).filter((e) => e.card === 'outbreak' && crewRun(e.family)?.ware).length;
 // A card that can be dealt now: not up already, and its poster's hub found (a rare card: the network's, not dealt yet).
 function fits(s, k, hubs) {
   const def = defOf(k);

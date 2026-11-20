@@ -2092,10 +2092,10 @@ hubs.
   | NULL CHOIR | Scrap economy | components ×0.6, Cipher ×1.15 |
 
 - **The ticker** (`ticker.mjs`, docs/ticker.md): a market card every 20–40 minutes of logged-on time, from the hubs on,
-  on dice of its own; several can run at once, and nothing moves while you're logged off. A card moves prices for its
-  minutes (20 unless it says) and says why in its owner's voice: a Log line, *Kestrel: Rack 4 will close…*. A card
-  needs its poster's hub found. In the hub's market window it's a square with its own icon, after the hub's
-  condition's (amber): green up, pink down, red for a crew's run, its bottom edge the time left; its name, what it
+  on dice of its own; three at most at once (a crew's run among them; one due while three are up waits for a slot),
+  and nothing moves while you're logged off. A card moves prices for its minutes (20 unless it says) and says why in
+  its owner's voice: a Log line, *Kestrel: Rack 4 will close…*. A card needs its poster's hub found. In the hub's market window it's a square with its own icon, after the hub's
+  condition's (amber), those raising prices before those lowering them: green up, pink down, red for a crew's run, its bottom edge the time left; its name, what it
   does and its line on hover. Every price it touches names it in its tooltip, and the hub's map chip shows the strongest.
 
   | Owner | Card | Does |

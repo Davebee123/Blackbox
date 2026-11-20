@@ -5090,7 +5090,8 @@ input, textarea, [contenteditable], .mbody, .ch-lines, .page-error pre { -webkit
 .mk-want { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; font: 600 10px var(--mono); color: var(--amber); border: 1px solid var(--amber-deep); border-radius: 3px; padding: 0 4px; cursor: help; white-space: nowrap; }
 .mk-want .glyph { width: 10px; height: 10px; margin: 0; }
 /* The hub's condition and its cards as squares (view.mjs marketMarkup): the icon centred, the rest on hover. */
-.mk-tags:has(.tk-sq) { align-items: center; }
+.mk-tags:has(.tk-sq) { align-items: center; column-gap: 14px; }
+.tk-group { display: inline-flex; gap: 6px; }
 .tk-sq { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none; width: 30px; height: 30px; border: 1px solid currentColor; border-radius: 4px; cursor: help; }
 .tk-sq .tk-ico { display: block; width: 17px; height: 17px; margin: 0; }
 .tk-sq > i { position: absolute; left: 0; bottom: 0; height: 2px; background: currentColor; opacity: 0.8; }

@@ -10,7 +10,8 @@ wall-clock world event and the Market shock are gone. Outposts (outposts.md) are
 ## 1. The rule
 
 - **A card every 20–40 logged-on minutes**, on the director's own dice (never counted toward the two-event limit).
-  Several can run at once. Nothing moves while you're logged off.
+  Three at most are up at once, a crew's run among them; one due while three are up waits for a slot. Nothing moves
+  while you're logged off.
 - **A card moves prices at a hub** for its minutes, and says why in its owner's voice (lore.md 8.2): a Log line, and
   the reason in every price tooltip it touches.
 - **Seeded per network:** two **favoured** cards come up 2.5 times as often, and a **style** weights the modifiers.
@@ -60,6 +61,7 @@ The card's line goes to the Log. In the hub's market window, its head is a row o
 icon centred in a 30px square, everything else on hover (WoW grammar: name, kind, what it does, the line):
 
 - **The hub's condition** first, in amber, no time edge.
+- **Grouped,** a gap between each group: the condition, the cards that raise prices, then those that lower them.
 - **Each live card:** its own icon (one per card, crew's run and rare card); the border green up, pink down, red for a
   crew's run; its bottom edge the time left. A rare card wears a star on its top-left corner, a bulk order its count on
   the top-right. The order's ware wears a crate and the count beside its name, so the prices stay in their column.

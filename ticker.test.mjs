@@ -88,6 +88,7 @@ test('a card every 20–40 minutes of logged-on time, several at once; nothing m
   const t = world(5), most = [];
   for (let m = 0; m < 12 * 60; m++) { tickEvents(t, MIN); most.push(t.ticker.live.length); }
   assert.ok(Math.max(...most) >= 2, 'two cards up at once');
+  assert.ok(Math.max(...most) <= TICK.max, `never more than ${TICK.max}`);
   // Nothing before the hubs open.
   const u = fresh();
   for (let m = 0; m < 120; m++) tickEvents(u, MIN);
@@ -348,4 +349,25 @@ test('a crew\'s run: the director\'s Outbreak, its code ×0.8 everywhere while i
   tickChannel(t, 0);
   const run = { ransomware: 'TOLLGATE', wiper: 'TOLLGATE', logicbomb: 'TOLLGATE', worm: 'SWARMLINE', botnet: 'SWARMLINE', ghostroot: 'PALEMASK' }[ev.family];
   if (run) assert.ok(channelOf(t).lines.some((l) => l.kind === 'crew' && l.from === run), channelOf(t).lines.map((l) => l.text).join(' | '));
+});
+
+test('three up at once at most, a crew\'s run among them; the window groups them: the condition, up, then down', () => {
+  assert.equal(TICK.max, 3);
+  const s = world();
+  dealTicker(s, 'rack', null); dealTicker(s, 'smallprint', null);
+  s.ticker.next = 0;
+  s.events = [{ id: 1, card: 'outbreak', family: 'worm', left: 30 * MIN }];
+  const n = s.ticker.n;
+  tickTicker(s, MIN);
+  assert.equal(s.ticker.n, n, 'full: the due card waits');
+  s.events = [];
+  tickTicker(s, MIN);
+  assert.equal(s.ticker.n, n + 1, 'dealt as a slot frees');
+  // The squares: condition, then the cards that raise prices, then those that lower them, each group apart.
+  const t = world();
+  dealTicker(t, 'smallprint', null); dealTicker(t, 'premium', null); dealTicker(t, 'tax', null);
+  t.events = [{ id: 2, card: 'outbreak', family: 'ransomware', left: 30 * MIN }];
+  const head = hubTerminalMarkup(t, 'halcyon', hubBanner(t, 'halcyon'), 'market').match(/<div class="mk-tags">[\s\S]*?<\/div>/)[0];
+  const order = [...head.matchAll(/class="(tk-group|tk-sq [^"]*)"/g)].map((m) => m[1].replace(' mk-card', ''));
+  assert.deepEqual(order, ['tk-sq cond', 'tk-group', 'tk-sq up', 'tk-sq up', 'tk-group', 'tk-sq down', 'tk-sq crew']);
 });
