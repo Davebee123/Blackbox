@@ -34,6 +34,7 @@ export const RUN_CARDS = {
 // third each; an escort's went into its item's rarity (docs/pays.md).
 export const cardCredits = (L) => 40 + 12 * L;
 export const waveParts = (L) => asComponents(cardCredits(L) / RUNCARD.surge.waves);
+export const wavePay = (s) => waveParts(levelOf(s)); // this visit's, for its card
 
 const say = (s, text, type = 'rooms') => { const R = s.rooms; R.log.push(text); if (R.log.length > 60) R.log.shift(); return emit(s, type, text); };
 const ask = (fn, ...a) => (WORLD[fn] ? WORLD[fn](...a) : undefined);

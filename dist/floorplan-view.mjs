@@ -50,7 +50,7 @@ import { AUTHORS } from './authors.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
 import { familyName, ROOM_RULES, FAMILY_ICON } from './families.mjs';
 import { GLYPHS } from './glyphs.mjs';
-import { RUNCARD, RUN_CARDS, cardOf as runCardOf, surgeAt, surgeFill, escortOf, escortRoute, packOf, packRoute, packRooms } from './runcards.mjs';
+import { RUNCARD, RUN_CARDS, wavePay, cardOf as runCardOf, surgeAt, surgeFill, escortOf, escortRoute, packOf, packRoute, packRooms } from './runcards.mjs';
 import { rivalP, COUNTERS, READS, rivalOf, routeOf, raceOf, lineupOf, memoryOf, wickLine, crewName, crewColour, rivalSays, rivalLine } from './rivals.mjs';
 import { GENES } from './genes.mjs';
 import { meetingOf, meetingsOf, deadOf, runnerOf } from './runners.mjs';
@@ -817,7 +817,7 @@ function hereCard(s) {
     acts = btn('engage', 'Fight it', { primary: true }) + btn('slip', 'Slip past', { tip: slipTip(s) });
   } else if (sc?.kind === 'virus' && sc.as === 'surge') {
     const c = surgeAt(s, room.id);
-    body = holder(iconOf(s, room), sc.name, c?.guardian ? 'Guardian · elite' : `Wave ${(c?.kills || 0) + 1} of ${RUNCARD.surge.waves}`, c ? cardTip(s, c) : '') + note(`<i class="fp-cardbar" style="--f:${c ? surgeFill(c) : 0}"></i> ${c?.guardian ? 'Beat it and the surge ends.' : 'Each kill drops a cache into your pack.'}`);
+    body = holder(iconOf(s, room), sc.name, c?.guardian ? 'Guardian · elite' : `Wave ${(c?.kills || 0) + 1} of ${RUNCARD.surge.waves}`, c ? cardTip(s, c) : '') + note(`<i class="fp-cardbar" style="--f:${c ? surgeFill(c) : 0}"></i> ${c?.guardian ? 'Beat it and the surge ends.' : `<span class="fp-wavepay" title="${wavePay(s)} components a wave">${glyph('salvage')}<b>+${wavePay(s)}</b></span>`}`);
     acts = btn('engage', 'Engage', { primary: true });
   } else if (sc?.kind === 'virus') {
     const k = whoOf(s, room), G = room.kind === 'guard' ? GUARDS[room.guard] : null;

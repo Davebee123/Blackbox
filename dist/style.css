@@ -5105,3 +5105,4 @@ input, textarea, [contenteditable], .mbody, .ch-lines, .page-error pre { -webkit
 .tk-sq > .tk-star { left: -7px; font-family: var(--sans, sans-serif); font-size: 10px; padding: 1px 2px; } /* a rare card: its own colour */
 .tk-sq.up > .tk-star { background: #8fd46b; }
 .tk-sq.down > .tk-star { background: #ff6f91; }
+.fp-wavepay { display: inline-flex; align-items: center; gap: 4px; font: 600 12px var(--mono); color: var(--text); } .fp-wavepay .glyph { width: 13px; height: 13px; margin: 0; color: var(--amber); } /* a surge wave's components */
