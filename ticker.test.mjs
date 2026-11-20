@@ -208,8 +208,8 @@ test('on the screen: the market window\'s tag, the price tooltips, the hub\'s ch
   const c = s.ticker.live[0], html = hubTerminalMarkup(s, 'kestrel', hubBanner(s, 'kestrel'), 'market');
   const head = html.match(/<div class="mk-tags">[\s\S]*?<\/div>/)[0];
   // The condition and each card a square: its icon; the name, what it does and the line on hover.
-  assert.match(head, /^<div class="mk-tags"><span class="tk-sq cond" tabindex="0" title="Overheating racks: Multiplies the price of Kernel code here by 1\.8 and of components by 1\.25\.\n[^"]+" data-tt-kind="Kestrel · Hub condition"><svg class="glyph tk-ico"/);
-  assert.match(head, new RegExp(`<span class="tk-sq mk-card ${c.moves[0].mult > 1 ? 'up' : 'down'}" tabindex="0" title="Rack closure: Multiplies the price of components here by ${c.moves[0].mult}\\. Ends in ${c.ms / MIN} minutes\\.\\n“Rack 4 will close at the end of this cycle\\. Please collect your belongings\\.”" data-tt-kind="Kestrel · Market card[^"]*"><svg class="glyph tk-ico"[^>]*>.*?</svg><i style="width:100%"></i></span>`));
+  assert.match(head, /^<div class="mk-tags"><span class="tk-sq cond" tabindex="0" title="Overheating racks: Multiplies the price of Kernel code here by 1\.8 and of components by 1\.25\.\n▸ [^"]+" data-tt-kind="Kestrel · Hub condition"><svg class="glyph tk-ico"/);
+  assert.match(head, new RegExp(`<span class="tk-sq mk-card ${c.moves[0].mult > 1 ? 'up' : 'down'}" tabindex="0" title="Rack closure: Multiplies the price of components here by ${c.moves[0].mult}\\. Ends in ${c.ms / MIN} minutes\\.\\n▸ “Rack 4 will close at the end of this cycle\\. Please collect your belongings\\.”" data-tt-kind="Kestrel · Market card[^"]*"><svg class="glyph tk-ico"[^>]*>.*?</svg><i style="width:100%"></i></span>`));
   assert.match(head, /title="Tax run: [^"]*"/, 'the city\'s card at every hub');
   assert.doesNotMatch(head, /Quiet market|Ransomware outbreak/, 'no world event');
   const tips = [...html.matchAll(/class="mk-d [^"]*" title="([^"]*)"/g)].map((m) => m[1]);

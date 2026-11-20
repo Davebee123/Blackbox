@@ -295,11 +295,11 @@ export function tickerAt(s, f, w = null) {
 // The card driving a hub's ware hardest (runners.mjs: why they took a job), or null.
 export const tickerName = (s, f, w) => tickerAt(s, f, w)[0]?.name || null;
 export const minutesLeft = (c) => Math.max(1, Math.ceil(c.left / 60000));
-// Its tooltip, WoW grammar: the name, what it does here and when it ends, then its owner's line. Its kind line is
-// tickerKind.
+// Its tooltip, WoW grammar: the name, what it does here and when it ends, then its owner's line, muted (▸). Its kind
+// line is tickerKind.
 const does = (x) => (x.ware === '*' ? `Multiplies every price here by ${x.mult}.` : `Multiplies the price of ${WARE_NAME[x.ware]} here by ${x.mult}.`);
 const wants = (o) => (o ? ` Wants ${o.left} more ${WARE_NAME[o.ware]}; selling into the order doesn't lower the price.` : '');
-export const tickerTip = (c) => `${c.name}: ${c.moves.map(does).join(' ')}${wants(c.order)} Ends in ${minutesLeft(c)} minute${minutesLeft(c) > 1 ? 's' : ''}.\n“${c.line}”`;
+export const tickerTip = (c) => `${c.name}: ${c.moves.map(does).join(' ')}${wants(c.order)} Ends in ${minutesLeft(c)} minute${minutesLeft(c) > 1 ? 's' : ''}.\n▸ “${c.line}”`;
 export const tickerKind = (c) => [c.owner, c.crew ? 'Crew run' : c.rare ? 'Rare market card' : 'Market card', c.mod && MODS[c.mod].name].filter(Boolean).join(' · ');
 // A bulk order's tooltip (the chip on its ware's price): its name, kind, what it does.
 export const orderTip = (c) => `Bulk order: ${FACTIONS[c.order.hub]?.short} buys ${c.order.left} more ${WARE_NAME[c.order.ware]} at this price. Selling into it doesn't lower the price. Ends with ${c.name} in ${minutesLeft(c)} minute${minutesLeft(c) > 1 ? 's' : ''}.`;
