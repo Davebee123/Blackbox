@@ -267,6 +267,29 @@ export function tickerMult(s, f, w) {
   for (const c of moving(s)) for (const x of c.moves) if (hits(x, f, w)) m *= x.mult;
   return Math.min(TICK.clamp[1], Math.max(TICK.clamp[0], m));
 }
+// ---------- reacting (docs/pays.md P3) ----------
+// The wares a card wants: one ware it raises at some hub (not a card on every ware, nor a leaked one still waiting).
+// While one is wanted, what pays it is dealt REACT times as often, each on its own dice, by weight (never a re-roll):
+// the director's fights lean to the family whose code it is (events.mjs), a surge's room to it (runcards.mjs); the surge
+// among run cards for components (events.mjs runCardRoll), the Exfil's roll for Exploits (netrooms.mjs), the sites'
+// clock and the kind that pays (sites.mjs). With none wanted every deal is as before.
+export const REACT = 2;
+export function wanted(s) {
+  const out = new Set();
+  for (const c of liveCards(s)) if (!(c.wait > 0)) for (const x of c.moves) if (x.ware && x.ware !== '*' && x.mult > 1) out.add(x.ware);
+  return out;
+}
+// A family's lean while its code is wanted (events.mjs fam, network.mjs leanOf): REACT, else 1.
+export const reactOf = (s) => { const w = wanted(s); return w.size ? (f) => (w.has(codeOf(f)) ? REACT : 1) : null; };
+// What pays each ware, for a price's tooltip (view.mjs): [glyph, name, what it is].
+const FIGHTS = (fam) => [['upload', 'Courier', `A courier event, ${fam}`], ['bounty', 'Bounty', `A bounty, ${fam}`], ['spider', 'Outbreak', `A ${fam} outbreak: its kills drop double code`], ['kill', 'Bounty hunt', `A bounty hunt, ${fam}`]];
+export const PAYERS = {
+  cipher: FIGHTS('ransomware'),
+  worm: FIGHTS('worm'),
+  kernel: [...FIGHTS('ghostroot'), ['echo', 'Hollow Choir', 'A ghostroot boss event']],
+  exploit: [['lock', 'Settlement run', 'A quest site: break the lock for Exploits'], ['capture', 'Exfil', 'A loot mob on a rogue server: its archive pays Exploits']],
+  salvage: [['target', 'Surge room', 'A run card: each wave pays components'], ['cold', 'Rack pull', "A quest site: the cage holds Kessler's hardware"]],
+};
 // A live bulk order for a hub's ware: how many units it still wants (market.mjs: those press nothing). 0 for none.
 export const orderLeft = (s, f, w) => liveCards(s).filter((c) => !(c.wait > 0) && c.order?.hub === f && c.order.ware === w).reduce((n, c) => n + c.order.left, 0);
 // Units sold into it (market.mjs trade): the oldest order first.

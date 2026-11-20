@@ -30,6 +30,7 @@ import { gainComponents } from './salvage.mjs';
 import { runnerOf, knownOf, stateOf, raiseStanding, standingOf, tierOf, runnersOf, STANDING } from './runners.mjs';
 import { CODEBASE_SHOPS, knowsCodebase, learnCodebase } from './sockets.mjs';
 import { openNext } from './hidden.mjs';
+import { wanted, REACT } from './ticker.mjs';
 
 export const SITE = {
   from: 5, // class level the first site can mount at
@@ -163,9 +164,13 @@ export function dealRunner(s) {
 export const runnerPay = (s, x) => ({ tier: tierOf(Math.min(100, standingOf(s, x.handle) + STANDING.help)), codebase: (CODEBASE_SHOPS[x.faction] || []).map(([id]) => id).find((id) => !knowsCodebase(s, id)) || null });
 const DEAL = { rig: dealRig, rack: dealRack, runner: dealRunner };
 // The next kind in turn (the other one from the last), else whichever fits.
+// While a market card wants what a kind pays (PAYS: the rig's Exploits, the rack's components), that kind goes first.
+export const PAYS = { rig: 'exploit', rack: 'salvage' };
+const paying = (s) => SITE.kinds.filter((k) => wanted(s).has(PAYS[k]));
 export function dealSite(s, kind = null) {
   if (kind) return DEAL[kind]?.(s) || null;
-  const last = s.sites?.last, order = SITE.kinds.filter((k) => k !== last).concat(last && SITE.kinds.includes(last) ? [last] : []);
+  const last = s.sites?.last, turn = SITE.kinds.filter((k) => k !== last).concat(last && SITE.kinds.includes(last) ? [last] : []), first = paying(s);
+  const order = [...first, ...turn.filter((k) => !first.includes(k))];
   for (const k of order) { const loc = DEAL[k](s); if (loc) return loc; }
   return null;
 }
@@ -240,7 +245,7 @@ export function tickSites(s, dt) {
   }
   if (hackerLevel(s) < SITE.from || clocked(s).length) return;
   if (d.next == null) d.next = between(s, SITE.firstMs);
-  d.next -= dt;
+  d.next -= dt * (paying(s).length ? REACT : 1); // twice as soon while a market card wants what one pays
   if (d.next > 0) return;
   const loc = dealSite(s);
   if (loc) d.next = between(s, loc.site.kind === 'runner' ? SITE.firstMs : SITE.everyMs); // a runner's trade stands beside the clocked ones: the next clocked one sooner

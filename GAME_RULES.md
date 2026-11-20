@@ -2120,6 +2120,16 @@ hubs.
 - **Bulk orders:** three price cards in ten carry one on the price they raise: 20–60 code, 40–120 components or 2–6
   Exploits. Until it's filled or the card ends, a unit sold into it takes nothing off the price. A crate and its count
   sit beside the ware's name.
+- **Reacting:** while a card raises one ware's price at a hub (*wanted*), what pays that ware is dealt twice as often,
+  each on its own dice. Ignoring it costs nothing.
+
+  | Ware | What pays it, twice as often while wanted |
+  |---|---|
+  | A code | The director's fights and outbreaks lean to its family (Kernel: ghostroot, the Hollow Choir too; Cipher: REPO MAN too); a surge's room that family's |
+  | Exploits | The Exfil's roll; the Settlement run: the sites' clock runs twice as fast and it comes next |
+  | Components | The surge among run cards; the Rack pull, as Exploits' |
+
+  A price's tooltip shows what pays its ware as icons, ×2 on each while it's wanted.
 - **Rare cards:** each network holds two of five, each dealt once a playthrough (one deal in ten while one fits). A star
   on its square.
 
@@ -2396,7 +2406,8 @@ first.
 
 The net isn't a storyline: things happen on it. From level 3 an **event director** deals one now and then (first 4–8
 minutes of logged-on time after level 3, then every 15–30 minutes, never the same kind twice running, at most two up).
-Each goes to the pager and to #net; missing one costs nothing. The director rolls its own dice.
+Each goes to the pager and to #net; missing one costs nothing. The director rolls its own dice. While a market card
+wants a code, its family comes up twice as often (*Markets*, Reacting).
 
 | Event | Where | Lasts | What it is | What you get |
 |---|---|---|---|---|

@@ -14,7 +14,8 @@
 //
 // card: { kind, seed, state: 'on' | 'won' | 'lost' | 'gone', ... }; how it ended goes to the director's history.
 import { emit, addItem, classOf } from './combat.mjs';
-import { rollItem, seeded } from './gear.mjs';
+import { rollItem, seeded, codeOf } from './gear.mjs';
+import { wanted, REACT } from './ticker.mjs';
 import { distances, pathTo, neighbours, WORLD } from './floorplan.mjs';
 import { asComponents } from './pays.mjs';
 import { gainComponents } from './salvage.mjs';
@@ -51,7 +52,11 @@ export function dealCard(s, kind, seed) {
   let card = null;
   if (kind === 'surge') {
     const xs = rooms.filter((x) => x.kind === 'process' && x.family && d[x.id] >= 2);
-    if (xs.length) card = { room: pick(r, xs.sort((a, b) => (a.id < b.id ? -1 : 1))).id, kills: 0, guardian: false };
+    // A room whose family's code a market card wants: REACT times as likely (ticker.mjs), on the card's one roll.
+    const want = wanted(s), w = (x) => (want.has(codeOf(x.family)) ? REACT : 1);
+    xs.sort((a, b) => (a.id < b.id ? -1 : 1));
+    let x = r() * xs.reduce((n, y) => n + w(y), 0);
+    if (xs.length) card = { room: (xs.find((y) => (x -= w(y)) < 0) || xs.at(-1)).id, kills: 0, guardian: false };
   } else if (kind === 'escort') {
     const ok = rooms.filter((x) => x.kind !== 'den'), far = Math.max(0, ...ok.map((x) => d[x.id]));
     const xs = ok.filter((x) => d[x.id] === far && far >= RUNCARD.escort.min).sort((a, b) => (a.id < b.id ? -1 : 1));

@@ -179,7 +179,7 @@ comment saying what it does.
 | `dist/supply.mjs` | Supply orders: each faction's standing order for one ware, its pay and the clock to the next. |
 | `dist/ticker-icons.mjs` | The ticker's icons: one per market card and hub condition, drawn as the market window's squares. |
 | `dist/pays.mjs` | What pays what (docs/pays.md): the wares' worth in credits, for moving an activity's pay between them at its value. |
-| `dist/ticker.mjs` | The ticker: market cards on logged-on time that move hub prices in their owners' voices; seeded per network (favoured cards, a modifier style, two rare cards), bulk orders, two buyers, runners' corners, crews' runs off the Outbreak; clamped, on dice of its own. |
+| `dist/ticker.mjs` | The ticker: market cards on logged-on time that move hub prices in their owners' voices; seeded per network (favoured cards, a modifier style, two rare cards), bulk orders, two buyers, runners' corners, crews' runs off the Outbreak; clamped, on dice of its own; `wanted` (the wares a card raises), which the director, run cards, the Exfil and sites read to deal what pays them twice as often. |
 | `dist/table.mjs` | INIT's table: the count (`s.table`), what fills and empties it, the two bands' multipliers, the orphans' share, the header meter's tooltip (its rows; view.mjs `tableMore` draws the bar and chips). |
 | `dist/consortium.mjs` | Consortium: simulated members who merged servers with yours. |
 

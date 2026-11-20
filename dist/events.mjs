@@ -48,7 +48,7 @@ import { invasionsLive, scoutNext, SCOUTED } from './invasion.mjs';
 import { gainPart, pieceOf } from './faction-gear.mjs';
 import { addrsOf } from './address.mjs';
 import { castOf, hired, personFor, HANDLES } from './runners.mjs';
-import { tickTicker } from './ticker.mjs';
+import { tickTicker, wanted, reactOf, REACT } from './ticker.mjs';
 import { codeCredits } from './pays.mjs';
 
 export const DIRECTOR = {
@@ -354,7 +354,10 @@ const hunters = (s) => (hubFound(s, 'kestrel') && hubsOf(s).length ? 'kestrel' :
 export const huntPay = (ev) => Math.round(bountyPay(ev.level) * HUNT.mult[ev.hop || 0]);
 const placeName = (s, id) => (s.locations || []).find((l) => l.id === id)?.name || 'the net';
 // A family for an event on your network: its lean (network.mjs), on the director's own dice.
-const fam = (s) => leanPick(s, 'you', roll(s));
+// While a market card wants a code, its family comes up REACT times as often (ticker.mjs reactOf): one roll either way.
+const fam = (s) => leanPick(s, 'you', roll(s), null, reactOf(s));
+// The cards whose fight is one family whatever the roll: twice as often while its code is wanted.
+const FIXED = { choir: () => 'ghostroot', bounty: (s) => (hackerLevel(s) >= 8 ? 'ransomware' : null) };
 const credits = (level) => 40 + 12 * level; // about two ordinary caches
 export const courierPay = credits; // what a courier carried in credits before it went into the item (a stray cache's half, a run card's cache)
 export const COURIER_RARITY = 'custom'; // a courier's, an escort's and a rival's item: a rarity up for the credits they carried
@@ -436,7 +439,7 @@ function choose(s, card = null, located = false) {
   const spotsOf = (k) => CARDS[k].where(s).filter((l) => (located ? !!l : true) && (!l || !eventsAt(s, l.id).length));
   const ids = (card ? [card] : Object.keys(CARDS).filter((k) => k !== d.last)).filter((k) => CARDS[k] && !up.has(k) && (located ? CARDS[k].fight && !CARDS[k].home : true) && (located ? spotsOf(k).length : CARDS[k].where(s).length));
   if (!ids.length) return null;
-  const w = (k) => CARDS[k].weight * eventMult(s, k); // your network's favoured cards (network.mjs)
+  const want = wanted(s), w = (k) => CARDS[k].weight * eventMult(s, k) * (FIXED[k]?.(s) && want.has(codeOf(FIXED[k](s))) ? REACT : 1); // your network's favoured cards (network.mjs); a fixed family's code wanted
   let r = roll(s) * ids.reduce((n, k) => n + w(k), 0), id = ids[0];
   for (const k of ids) { r -= w(k); if (r < 0) { id = k; break; } }
   const spots = spotsOf(id);
@@ -763,7 +766,10 @@ function croll(s) {
 export function runCardRoll(s, kind = null) {
   const d = (s.director ||= { next: null, n: 0, last: null });
   if (!kind && (hackerLevel(s) < DIRECTOR.from || croll(s) >= RUNCARD_DEAL.chance)) return null;
-  const ks = RUNCARD_DEAL.kinds.filter((x) => x !== d.lastCard), k = kind || ks[Math.floor(croll(s) * ks.length)]; // never the same kind twice running
+  // never the same kind twice running; the surge REACT times as often while a market card wants components, its pay (ticker.mjs)
+  const ks = RUNCARD_DEAL.kinds.filter((x) => x !== d.lastCard), parts = wanted(s).has('salvage'), wt = (x) => (parts && x === 'surge' ? REACT : 1);
+  let k = kind;
+  if (!k) { let x = croll(s) * ks.reduce((n, y) => n + wt(y), 0); k = ks.find((y) => (x -= wt(y)) < 0) || ks.at(-1); }
   return { kind: k, seed: Math.floor(croll(s) * 4294967296) >>> 0 };
 }
 // Dealt, and how it ended: the history's line (name and icon from runcards.mjs).

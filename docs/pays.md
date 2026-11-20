@@ -1,6 +1,6 @@
 # What pays what
 
-**Status.** P1 and P2 built (November 2026; `dist/pays.mjs`, GAME_RULES.md *Events*). P4 not built. Replaces
+**Status.** P1–P3 built (November 2026; `dist/pays.mjs`, GAME_RULES.md *Events*). P4 not built. Replaces
 market.md's section of the same name; quest sites (docs/sites.md) follow it.
 
 ## The rules
@@ -83,7 +83,7 @@ changes.
 2. **P2: the pay changes** (the map's last column) and each card leading with its own thing. Built: a courier's, an
    escort's and a rival's item is a Custom; a feud's win +10 standing; the Exfil's credits as Exploits (one at level
    20); elites drop Exploits 8%, guard posts 12%.
-3. **P3: reacting**, now that the ticker is built (docs/ticker.md).
+3. **P3: reacting**. Built (GAME_RULES.md *Markets*, Reacting; ticker.mjs `wanted`).
 4. **P4: patches** (economy.md 2), the long goal.
 
 Quest sites are built (docs/sites.md). Supply orders and the pay changes are economy work: one session after the other.
