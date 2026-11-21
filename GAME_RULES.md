@@ -2611,12 +2611,12 @@ one is on its way), the invasion with
 
 ### Invasions
 
-The servers you've connected to send **invasions** at HOME, **one at a time**, online or off (`invasion.mjs`;
+The servers you've connected to send **invasions** at HOME, **one at a time**, on logged-on time only (`invasion.mjs`;
 docs/invasions.md). Nothing stops one but you. On the map it moves in from its server; its card and the top bar say what
 it is and what it pays (`invasions` in the terminal).
 
 - **When.** The first sets out 3 minutes after you first connect to a server; the next 20–30 minutes after the last is
-  dealt with. Logged off, one every 2–4 hours.
+  dealt with.
 - **Who.** Half the time your strongest server sends it, otherwise any, a Volatile server counted twice and a Stable
   one half. A virus of that server's family **at its level** (Volatile and an Amplifier +2, a Lockdown −2) and floor
   grade, maybe a strain, maybe mutated (from level 4). The very first is a plain raider.
@@ -2649,8 +2649,8 @@ it is and what it pays (`invasions` in the terminal).
 
 ### While you're logged off
 
-Played out a minute at a time when you come back, up to a day: invasions come every 2–4 hours and chip you to 1 at
-worst; in a consortium a member sometimes stops one.
+Nothing invades, travels or chips: an invader on its road or at HOME waits where it was. Every minute away banks
+**Rested**.
 
 ### Daemons (daemons.mjs)
 
@@ -3176,21 +3176,22 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 - **A paused fight holds no clock.** Timers on invasions wait while you fight them, but only while the fight runs; a
   paused fight, or one left open over a reload (it comes back paused), holds nothing.
-- **Away is played out**, a minute at a time, up to a day: invasions every 2–4 hours, each chipping HOME down to 1 at
-  worst. Programs make nothing on their own, so nothing raids them.
+- **Nothing happens while you're away** but Rested. Programs make nothing on their own, so nothing raids them.
 - **No shop-to-market loop.** Code, Exploits and components are only market wares; a round trip at one hub never
   profits.
 - **The game saves when the tab closes**, and every roll comes from the save's seed: reloading replays the same result.
 
 ## Saves
 
-The save is `SAVE_VERSION` 65 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 66 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
 - **The wall goes** (no version of its own): the firewall's tiers come back as what they cost at your base now (an
   older climbed wall, its climb), held and carried filters as the components they scrapped for, and an invasion of a
   kind that's gone (a scout, a thief) is a raider at HOME (`firewall.mjs wallRestore`, `invasion.mjs wallgoneRestore`,
   keyed on the fields).
+- **v66** nothing invades while you're logged off: the away clock (`s.net.awayNext`) and an invader's away helper go;
+  an invader left at HOME stays and chips only on logged-on time (`invasion.mjs awayRestore`, keyed on the fields).
 - **v65** one bar: `s.signal` (null: full) becomes `s.server.integrity`, its max your power
   and gear's; `s.degraded` and an occupied home (`s.occupation`) go (`combat.mjs healthRestore`, keyed on the fields). A
   run carries its connect snap (`s.run.snap`, visit.mjs); a run saved before it disconnects the old way.

@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, part, restore, syncServer, tickServices, serverLevel, active, SAVE_VERSION } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
-import { tickNetwork, travelMs, chipRate } from './dist/invasion.mjs';
+import { tickNetwork, travelMs, chipRate, awayRestore } from './dist/invasion.mjs';
 import { CONFIG } from './dist/data.mjs';
 
 CONFIG.baseCrit = 0;
@@ -41,7 +41,7 @@ function atWall(s) {
 }
 const types = (events) => events.map((e) => e.type);
 
-test('invaders only come from servers you have connected to; the network plays on while you are away', () => {
+test('invaders only come from servers you have connected to; nothing moves while you are away', () => {
   const s = fresh();
   s.clock = 0;
   tickNetwork(s, 0);
@@ -57,9 +57,18 @@ test('invaders only come from servers you have connected to; the network plays o
   const ev = wait(s, 5000);
   assert.ok(types(ev).includes('invader'), 'the first one sets out 3 logged-on minutes after the first connection');
   assert.equal(s.invasion.state, 'travel');
+  const left = s.invasion.left;
   s.clock += 60 * MIN; // the game was closed for an hour
   tickNetwork(s, s.clock);
-  assert.ok(s.logs.some((e) => e.type === 'wall-breach'), 'it reached HOME while you were away');
+  assert.ok(!s.logs.some((e) => e.type === 'wall-breach'), 'nothing moves while you are logged off');
+  assert.ok(s.invasion.left >= left - 10000, 'its road counts only logged-on time');
+});
+
+test('a save from the away clock loses its fields; an invader at HOME stays (awayRestore, safe twice)', () => {
+  const s = { net: { awayNext: 5000, next: 1000 }, invasion: { id: 'inv1', state: 'breach', helper: null, helpLeft: 180000 } };
+  awayRestore(s); awayRestore(s);
+  assert.deepEqual(s.net, { next: 1000 });
+  assert.deepEqual(s.invasion, { id: 'inv1', state: 'breach' });
 });
 
 test('travel: 2 minutes from layer 1, a minute more per layer', () => {
@@ -174,15 +183,14 @@ test('a chip stops at 1: a breach never takes the last point, online or away, an
   assert.ok(!types(ev).includes('crashed'));
   assert.equal(s.invasion, inv, 'it stays at HOME until you deal with it');
   assert.equal(s.degraded, undefined);
-  // Away: a day of breaches played out a minute at a time.
+  // Away: a day logged off with one at HOME chips nothing.
   const a = world();
   atWall(a);
   a.server.integrity = 2;
   a.clock += 24 * 60 * MIN;
   const away = tickNetwork(a, a.clock);
-  assert.equal(a.server.integrity, 1);
+  assert.equal(a.server.integrity, 2, 'nothing chips while you are logged off');
   assert.ok(!types(away).includes('crashed'));
-  assert.equal(a.occupation, undefined, 'nothing moves into your server');
   // On a run the chip takes the run's bar, never below 1 either.
   const r = world();
   atWall(r);

@@ -171,8 +171,8 @@ test('the crew strip: linked crew follow you, split crew wander, link follows th
 
 // Helpers: always / never does a member step in.
 const helping = (k, f) => { const was = CONSORTIUM.help; CONSORTIUM.help = k; try { f(); } finally { CONSORTIUM.help = was; } };
-test('away, in a consortium: an invasion chips you to 1 and no lower; nothing crashes, nothing moves in', () => {
-  helping(0, () => {
+test('away, in a consortium: no invasion comes and nothing chips; nothing crashes, nothing moves in', () => {
+  helping(1, () => {
     const s = world();
     found(s, 'ransomware');
     play(s, 'consortium create LOWLIGHT'); play(s, 'consortium invite nyx');
@@ -180,20 +180,21 @@ test('away, in a consortium: an invasion chips you to 1 and no lower; nothing cr
     tickNetwork(s, T0);
     s.server.integrity = 5;
     for (let h = 1; h <= 24; h++) tickNetwork(s, T0 + h * 1800000);
-    assert.ok(s.logs.some((e) => e.type === 'invader'), 'invaders came');
-    assert.ok(s.server.integrity >= 1, 'never below 1');
+    assert.ok(!s.logs.some((e) => e.type === 'invader'), 'no invader came');
+    assert.ok(!s.logs.some((e) => /while you were away/.test(e.text || '')), 'no member stops one for you');
+    assert.equal(s.server.integrity, 5);
     assert.ok(!s.logs.some((e) => e.type === 'crashed'));
     assert.equal(s.occupation, undefined);
   });
 });
 
-test('away, solo too: the network plays on, and nothing crashes', () => {
+test('away: nothing invades while you are logged off, and nothing crashes', () => {
   const T0 = 1_800_000_000_000;
   const s = world();
   found(s, 'ransomware');
   tickNetwork(s, T0);
   tickNetwork(s, T0 + 8 * 3600000);
-  assert.ok(s.logs.some((e) => e.type === 'invader'), 'invaders came while you were away');
+  assert.ok(!s.logs.some((e) => e.type === 'invader'), 'no invader comes while you are away');
   assert.ok(!s.logs.some((e) => e.type === 'crashed'), 'nothing crashes');
   assert.ok(s.server.integrity >= 1);
 });

@@ -5,7 +5,7 @@
 // once it reaches HOME it chips your Integrity (1% of max a minute, never below 1) until you intercept it, and its
 // bounty (its family's code) grows while it sits there. Left alone 15 minutes, it leaves, unpaid. Invasions are the only thing that drops daemons (daemons.mjs).
 import { tickEvents } from './events.mjs';
-import { tickConsortium, consortiumOf, memberHelp } from './consortium.mjs';
+import { tickConsortium, consortiumOf } from './consortium.mjs';
 import { isLive } from './memory.mjs';
 import { wallRestore, baseOf } from './firewall.mjs';
 import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, QUIRKS, quirkOf, createVirus, line, variantFor, gradeFor, codeUnit, DAEMON_DROP, restedGain, restedCap } from './data.mjs';
@@ -28,7 +28,7 @@ export const INVADER = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: '
 // ---------- what comes ----------
 // w: its weight in the roll. from: the sending server's level it needs. bounty: points, each paying a unit of its
 // family's code at its level (data.mjs codeUnit; a pack's is per virus). lvl: levels over its server it comes at.
-// travel: × the usual travel time. online: never rolled while you're away (you couldn't answer it).
+// travel: × the usual travel time.
 export const KINDS = {
   raider: { name: 'Raider', w: 30, from: 1, bounty: 2 },
   pack: { name: 'Pack', w: 16, from: 3, bounty: 1, size: 3 },
@@ -103,12 +103,8 @@ export function tellOf(s, inv = s.invasion) {
 export const labelOf = (inv) => (inv ? kindOf(inv).name + (inv.kind === 'pack' && inv.queue?.length ? ` ×${inv.queue.length + 1}` : '') : '');
 
 // ---------- the network clock ----------
-// Call about once a second with the real time. Only logged-on time counts for invasions: a gap
-// (closed game, sleeping laptop) counts as a few seconds. The gap is played out too (away): invaders
-// keep coming, at AWAY.pace, and chip HOME; in a consortium members sometimes stop one.
-// Away: a long passive clock of its own. One invasion every 2–4 hours while you're logged off
-export const AWAY = { everyMs: [2 * 3600000, 4 * 3600000], slow: 0.25, stepMs: 60000, maxMs: 24 * 3600000, helpMs: 3 * 60000 };
-const awayGap = (s) => { const [lo, hi] = AWAY.everyMs; return Math.round(lo + rand(s) * (hi - lo)); };
+// Call about once a second with the real time. Only logged-on time counts: a gap (closed game, sleeping laptop)
+// counts as a few seconds, and the rest of it only banks Rested. Nothing invades while you're logged off.
 export function tickNetwork(s, now = Date.now()) {
   const first = s.serial;
   const net = (s.net ||= { wall: null, next: null });
@@ -116,7 +112,7 @@ export function tickNetwork(s, now = Date.now()) {
   net.wall = now;
   unsabotage(s); // a saboteur that's gone gives your service back
   const gap = Math.max(0, now - prev), dt = Math.min(gap, I().maxTickMs);
-  if (gap > dt) away(s, prev, now - dt); // logged off: the network plays on
+  rest(s, gap - dt); // logged off: every minute banks Rested
   tickEvents(s, dt); // the event director deals what happens on the net
   if (tickTable(s, dt)) emit(s, 'table-cancel', 'LANTERN runs a cancel round. The process table drops eight points.'); // INIT's table (table.mjs): logged-on time fills it
   tickConsortium(s, dt, now); // the dividend, sieges, raids, the travelling virus, invites (consortium.mjs)
@@ -132,30 +128,18 @@ function rest(s, ms) {
   const L = hackerLevel(s), cap = restedCap(L);
   if ((s.rested || 0) < cap) s.rested = Math.min(cap, (s.rested || 0) + restedGain(L, ms));
 }
-// The time you were logged off, a minute at a time (up to a day; Rested banks for all of it).
-function away(s, from, to) {
-  const start = Math.max(from, to - AWAY.maxMs);
-  rest(s, start - from); // past a day: nothing is played out
-  for (let t = start + AWAY.stepMs; t <= to; t += AWAY.stepMs) {
-    stepInvasion(s, AWAY.stepMs, t);
-    unsabotage(s);
-    // Rested: every minute away banks its share of 5% of a level every 8 hours, up to 1.5 levels.
-    rest(s, AWAY.stepMs);
-  }
+// The away clock is gone (SAVE_VERSION). Keyed on the fields it leaves (net.awayNext, an invader's away helper), so it's safe to
+// run twice; a save left with an invader at HOME keeps it, and it chips only on logged-on time.
+export function awayRestore(s) {
+  if (s.net) delete s.net.awayNext;
+  if (s.invasion) { delete s.invasion.helper; delete s.invasion.helpLeft; }
 }
 
-// The invader: setting out, on its way, then at HOME. at: the time, while away.
-function stepInvasion(s, dt, at = null) {
+// The invader: setting out, on its way, then at HOME.
+function stepInvasion(s, dt) {
   const net = s.net, inv = s.invasion;
   if (!inv) {
     if (!(s.locations || []).some(connectedTo)) return; // nothing sends one until you've connected to a server
-    if (at != null) {
-      // Away: the long passive clock.
-      if (net.awayNext == null) net.awayNext = awayGap(s);
-      net.awayNext -= dt;
-      if (net.awayNext <= 0) { net.awayNext = awayGap(s); depart(s, { away: true }); }
-      return;
-    }
     if (net.next == null) net.next = I().firstMs;
     net.next -= dt;
     if (net.next <= 0) depart(s);
@@ -174,11 +158,6 @@ function stepInvasion(s, dt, at = null) {
   // The bounty grows while it sits at HOME.
   const base = inv.bounty ?? kindOf(inv).bounty;
   inv.grown = Math.min(base * BOUNTY.cap, (inv.grown || 0) + base * BOUNTY.grow * (dt / 60000));
-  // Away, a member may come and deal with it.
-  if (at != null) {
-    if (inv.helper === undefined) { inv.helper = memberHelp(s); inv.helpLeft = AWAY.helpMs; }
-    if (inv.helper && (inv.helpLeft -= dt) <= 0) { endInvasion(s, `${inv.helper} stopped ${inv.name} at HOME while you were away.`); return unsabotage(s); }
-  }
   // The chip takes your Integrity where it is (a run's own bar while you're out), never below 1.
   const bar = s.run || s.server;
   inv.chipAcc = (inv.chipAcc || 0) + ((bar.max * chipRate()) / 100) * (dt / 60000);
@@ -230,9 +209,9 @@ function serviceTarget(s) {
 }
 // Which kind comes: weighted, by what the sending server's level allows and what you have for it to go after.
 // r: the dice (the game's; a killed scout's own, scoutNext).
-function rollKind(s, loc, awayRoll, r0 = () => rand(s)) {
+function rollKind(s, loc, r0 = () => rand(s)) {
   if (!s.net.seq) return 'raider'; // the first one is plain
-  const ok = Object.entries(KINDS).filter(([k, K]) => (loc.level || 1) >= K.from && !(awayRoll && K.online)
+  const ok = Object.entries(KINDS).filter(([k, K]) => (loc.level || 1) >= K.from
     && (k !== 'pair' || tame(s).length >= 2) && (k !== 'saboteur' || serviceTarget(s)));
   const roll = () => { let r = r0() * ok.reduce((n, [, K]) => n + K.w, 0); for (const [k, K] of ok) { r -= K.w; if (r < 0) return k; } return ok.at(-1)[0]; };
   let k = roll();
@@ -246,21 +225,21 @@ export function scoutNext(s, r) {
   const net = (s.net ||= { wall: null, next: null }), all = tame(s);
   if (!all.length) return null;
   const loc = r() < 0.5 ? [...all].sort((a, b) => (b.level || 1) - (a.level || 1))[0] : pickSender(all, r()); // half the time your strongest, as ever
-  const kind = rollKind(s, loc, false, r);
+  const kind = rollKind(s, loc, r);
   net.scouted = { levels: SCOUTED.levels, from: loc.id, kind };
   return { name: KINDS[kind].name, from: loc.name, kind };
 }
 
 // One invasion sets out from a location you've found, at that location's level.
 // Sometimes it comes from a server you haven't found, through the one it hangs off.
-// want: { kind, away } (developer invade <kind>, the away clock).
+// want: { kind } (developer invade <kind>).
 function depart(s, want = {}) {
   // Scouted (scoutNext): from that server, of that kind, and weaker. A server since detached: just weaker.
   const sc = s.net?.scouted || null;
   if (sc) {
     s.net.scouted = null;
     const from = !want.from && !want.kind && tame(s).find((l) => l.id === sc.from);
-    if (from) want = { ...want, from, ...(want.away && KINDS[sc.kind]?.online ? {} : { kind: sc.kind }) };
+    if (from) want = { ...want, from, kind: sc.kind };
   }
   const weak = sc?.levels || 0;
   let o = want.from ? { loc: want.from } : pickOrigin(s);
@@ -274,7 +253,7 @@ function depart(s, want = {}) {
   let loc = h ? { id: h.via, name: 'an unknown server', family: h.family, level: Math.min(h.level, via?.level || h.level), depth: via?.depth || 1, road: h.depth } : o.loc;
   if (!loc) return null;
   const net = s.net;
-  let kind = want.kind && KINDS[want.kind] ? want.kind : rollKind(s, loc, !!want.away);
+  let kind = want.kind && KINDS[want.kind] ? want.kind : rollKind(s, loc);
   const rolled = want.quirk || (net.seq && QUIRKED.kinds.includes(kind) && rand(s) < QUIRKED.chance ? quirkOf(loc.family) : null); // the first one is plain
   const quirk = ['hoard', 'nest'].includes(rolled) ? rolled : null; // the quirks an invasion carries (Hidden only ever moved it at the wall)
   const service = kind === 'saboteur' ? serviceTarget(s) : null;
@@ -449,7 +428,7 @@ export function invasionRestore(s, was) {
   const inv = s.invasion;
   if (inv) { inv.kind ||= 'raider'; inv.queue ||= []; inv.size ||= 1; inv.bounty ??= KINDS.raider.bounty; inv.grown ||= 0; inv.push ||= 0; }
 }
-// The wall is gone (v66): what was invested in it comes back, and an invasion out of a kind that's gone is a raider.
+// The wall is gone: what was invested in it comes back, and an invasion out of a kind that's gone is a raider.
 // Keyed on the fields (wallRestore, firewall.mjs).
 export function wallgoneRestore(s) {
   wallRestore(s);
