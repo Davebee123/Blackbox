@@ -105,19 +105,19 @@ with its answer; *ends* names where it closes. `{blank}` is filled in. A runner'
 
 *When:* back on the map after the first room you win beside a runner (Help, or pulling one out). *Opens:* hiring.
 
-> **Careful:** That went better with two. I'm {handle}. I run for {faction}, the quieter servers mostly.
-> **Steady:** Thanks for the hand. {handle}, {faction}. I work this floor most days.
-> **Bold:** You hit like you mean it. {handle}, {faction}. Remember the name.
+> **Careful:** Pinging you before you disconnect. That room went better with two of us on it. I'm {handle}, {faction}'s, on the quiet servers mostly.
+> **Steady:** Thanks for the cover back there. {handle}, {faction}. You'll see my handle around this floor.
+> **Bold:** Saw your process take that thing apart. {handle}, {faction}. Save the handle.
 
 1. *What do you want for it?*
-   > **Careful:** To run with you. A fee up front and a cut of what you bank. I'll keep you out of the rooms that bite.
-   > **Steady:** To run with you. A fee up front, a cut of what you bank, and I turn up every time.
-   > **Bold:** To run with you. A fee and a cut. I'm worth both, ask anyone.
+   > **Careful:** Patch me into your runs. A fee up front and a cut of what you bank. I'll keep you off the routes that bite.
+   > **Steady:** Put me on your crew. A fee up front, a cut of what you bank, and I connect every time you do.
+   > **Bold:** Put me on your crew. A fee and a cut. I'm worth both, check my record.
 2. *Run with me.* (ends: their card, **Hire**)
 3. *Another time.*
-   > **Careful:** I'll be on the net a few hours. Then I'll be back.
-   > **Steady:** I'm around. You know where to find me.
-   > **Bold:** Your loss. For now.
+   > **Careful:** I'm on the net a few more hours. Then I log off for a while.
+   > **Steady:** I'll stay on the channel. Ping me.
+   > **Bold:** Your loss. My handle's on #net.
 
 ### First jack out · wick
 
@@ -128,7 +128,7 @@ with its answer; *ends* names where it closes. `{blank}` is filled in. A runner'
 
 1. *What turns up?*
    > a cache in a room you cleared. a rare stray worth the walk.
-   > they spark on the map for a few minutes. miss one and you've lost nothing.
+   > they spark on the map for a few minutes, then they're gone.
 2. *Got it.* (ends)
 
 ### The turf letter · Halcyon Loss Prevention
@@ -149,15 +149,15 @@ with its answer; *ends* names where it closes. `{blank}` is filled in. A runner'
 
 *When:* the first server you map, or take over, whichever comes first. *Opens:* invasions; receipts with a takeover.
 
-> {server}'s on your books. halcyon likes that. so does everything that lives on it.
-> what you hold sends things after you. they walk to HOME and sit on it till you deal with them.
+> {server}'s on your books. halcyon likes that. the strays on it don't.
+> you've been all through it, so they have your address now. some of them follow it back across the net to your box.
 
 1. *What comes?*
-   > strays off your own servers, one at a time. slow enough to see coming.
-   > stop one and it pays in code. leave it and it chews your integrity till it wanders off.
+   > viruses off the servers you've touched, one at a time. you'll see them coming on the map.
+   > the longer one sits on your box, the more it costs you, and the more it's carrying when you finally kill it.
 2. *What's in the vault?*
-   > a receipt, in every one. a trade somebody froze, with the names and the sum on it.
-   > take the server and the receipt's yours to stamp. you pick who gets it.
+   > every vault holds a receipt. it's a trade somebody froze, with who paid and how much.
+   > take the server over and you stamp the receipt. you decide who gets it.
 3. *Fine.* (ends)
 
 ### First vault opened · wick
