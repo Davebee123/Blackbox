@@ -1,9 +1,7 @@
 # The demo: floors 1–2
 
-**Status.** Proposed (21 November 2026); the designer's answers are in the decisions table, and D2, D5 and D6 await
-their OK before Phase 1; D7 is settled. Nothing here is built. It comes from the
-readiness audit of 20 November: a fresh-save playtest (Breaker, desktop and iPhone 13), a content count of floors 1–4
-and a pacing pass. Each phase is one session, started fresh from main, in the order below.
+**Status.** Signed off by the designer (21 November 2026): every decision below is settled. Nothing is built yet;
+Phase 1 is next. The transmissions' words are being drafted in their own session (docs/story-script.md).
 
 ## The demo
 
@@ -18,16 +16,16 @@ hours on the pacing table, likely 8–10 in real play.
   FLOODWALL have two acts; floor 4 has no thread (Later, below).
 - The subclass at 10 and two of its skills (12, 14) fall inside it.
 
-## Decisions to sign off
+## Decisions (signed off)
 
-| # | Decision | The designer (21 Nov) | The plan |
+| # | Decision | The designer (21 Nov) | Settled |
 |---:|---|---|---|
 | D1 | The demo's scope | Floors 1–2 | Capped at level 14, ending on CENTRIFUGE |
-| D2 | Where it lives | itch.io or Steam; not $100 before knowing people play it | **Proposed:** itch.io first (free; a Restricted page for the closed test, Public after). Steam's $100 fee (recouped after $1,000 of sales) waits for the itch numbers in Phase 9 |
+| D2 | Where it lives | itch.io or Steam; not $100 before knowing people play it; approved | itch.io first (free; a Restricted page for the closed test, Public after). Steam's $100 fee (recouped after $1,000 of sales) waits for the itch numbers in Phase 9 |
 | D3 | The first disconnect | SPRAWL-00 reboots like every server | The revert stays everywhere. The run shows what's unbanked, and the tour teaches jack out after the first win |
 | D4 | The guided practice | Could work; to be tested | Phase 2 wires it in behind an offer after the class pick; it lands once the designer has played it, else stays off |
-| D5 | Floor 1's chain boss | PAGE NINE early is fine, but beatable when it comes | **Proposed:** PAGE NINE closes floor 1's chain; its step waits for level 6 and it fights at your level (6–8), so it's never above you. CENTRIFUGE (14) stays the demo's last boss |
-| D6 | Hearing from players | Asked for a recommendation | **Proposed:** a Feedback button that downloads a report and opens a free Discord server (testers attach the file; itch's comments take the public); opt-in telemetry to a Cloudflare Worker (free tier), the only way to measure real play time and where players stop |
+| D5 | Floor 1's chain boss | PAGE NINE early is fine, but beatable when it comes; approved | PAGE NINE closes floor 1's chain; its step waits for level 6 and it fights at your level (6–8), so it's never above you. CENTRIFUGE (14) stays the demo's last boss |
+| D6 | Hearing from players | Asked for a recommendation; approved | A Feedback button that downloads a report and opens a free Discord server (testers attach the file; itch's comments take the public); opt-in telemetry to a Cloudflare Worker (free tier), the only way to measure real play time and where players stop |
 | D7 | What opens when | A hybrid: your kit by level, everything else as you find it or do something; hiring early; more transmissions, event-driven | *What opens when* below; Phase 7 builds it |
 | D8 | The end card | The demo freezes there | The card ends play (XP stopped, the exit shut), with the itch follow and the Discord; a Steam wishlist once a store page exists |
 
@@ -116,7 +114,7 @@ session's scratchpad.
 
 **Session prompt** (the same for each; paste with the phase's number):
 
-> Do Phase N of docs/demo-plan.md, as signed off. Its Lane is what you own; leave its Hands off alone. Lean first
+> Do Phase N of docs/demo-plan.md (signed off). Its Lane is what you own; leave its Hands off alone. Lean first
 > (CLAUDE.md). Where a step names a choice of look, show the designer two or three screenshots before building it. Land
 > with node scripts/land.mjs and log what landed in the plan.
 
