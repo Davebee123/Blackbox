@@ -32,7 +32,19 @@ hours on the pacing table, likely 8–10 in real play.
 
 ## Evidence from the games it resembles
 
-EVIDENCE_TABLE
+| Here | What a shipped game did | Phase |
+|---|---|---|
+| Nothing stops a player at floor 4, and the story runs out | WoW's free trial has stopped at level 20 since 2011 ([Blizzard](https://support.blizzard.com/en/article/3226)); Diablo III's Starter Edition ends at the Skeleton King, capped at 13 ([Blizzard](https://support.blizzard.com/en/article/2730)). Both cap a level and end on a boss | 1, 5 |
+| Most players see only the first hour | Across 130 Steam demos the median play was 14 minutes, and the best performers' medians were 38–65 ([Zukowski](https://howtomarketagame.com/2022/10/26/what-is-a-good-median-play-time-for-a-demo-benchmark/)) | 2 first |
+| The first disconnect takes the kill, the XP and the contract step | WoW dropped EverQuest's XP loss for a ghost's run back and 10% durability ([wiki](https://warcraft.wiki.gg/wiki/Death_(gameplay))); Path of Exile charges no XP for dying before Act 5's Kitava ([wiki](https://www.poewiki.net/wiki/Experience)); Elden Ring lets you walk back once for your runes; Starsector recovers your lost ships with D-mods ([Fractal Softworks](https://fractalsoftworks.com/2017/01/20/ship-recovery)) | 2 (D3) |
+| A cost framed as a penalty | WoW's beta halved XP after a few hours of play; testers hated it, so Blizzard kept the numbers and called the full rate *rested* (Rob Pardo, GDC 2010, [Game Developer](https://www.gamedeveloper.com/game-platforms/gdc-blizzard-s-core-game-design-concepts)) | 2, 6 |
+| Levels 2, 9, 11, 13 bring nothing | WoW cut 120 levels to 60 so every level would mean something, dropping the ones with no new spell or talent ([Blizzard](https://worldofwarcraft.blizzard.com/en-us/news/23187291)); Diablo II gives 5 attribute points and a skill point every level; Diablo III unlocked a skill or rune every level to 60 | 7 |
+| 35 systems by level 10; the practice unreachable | Exile's Reach brings in WoW's features one at a time from 1 to 10 ([Blizzard](https://support.blizzard.com/en/article/296577)); Starsector's new campaign offers a skippable *Start with tutorial!*; Diablo III keeps Elective Mode off until you want it | 2 (D4), 7 (D7) |
+| The Shop undercuts drops | Diablo III closed both auction houses in 2014 because "it ultimately undermines Diablo's core game play: kill monsters to get cool loot" (John Hight, [GamesBeat](https://gamesbeat.com/blizzard-to-close-the-diablo-iii-auction-house)) | 7 |
+| No gear is a wall | Diablo III's Inferno launched gear-gated; patch 1.0.3 cut its damage and health and raised drops ([Tom's Hardware](https://www.tomshardware.com/news/Diablo-3-1.0.3-Patch-download-update,16085.html)). On consoles a green arrow marks an upgrade | 7 |
+| No way to hear from players | Mega Crit collected data on every Slay the Spire run and changed cards and enemies by it through early access ([Game Developer](https://gamedeveloper.com/design/how-i-slay-the-spire-i-s-devs-use-data-to-balance-their-roguelike-deck-builder)); Hades shipped a big update every couple of months, built with its players ([PC Gamer](https://www.pcgamer.com/uk/a-journey-through-early-access-helped-make-hades-a-masterpiece/)) | 1, 8 |
+| Every push to main reaches players, saves and all | Starsector ships numbered builds, each hotfix a new number (0.97a reached RC11 in two weeks), and every release post says whether old saves load ([Fractal Softworks](https://fractalsoftworks.com/tag/release)) | 1 |
+| Who tests it | Five users find most usability problems ([Nielsen](https://www.nngroup.com/articles/why-you-only-need-to-test-with-5-users/)); a Steam demo has had its own page and reviews since July 2024, and wishlist buttons belong in its menus ([Zukowski](https://howtomarketagame.com/2021/06/21/neat-ideas-for-your-games-demo/)) | 8 (D8) |
 
 ## Phases
 
@@ -71,8 +83,8 @@ way to hear from players. No gameplay changes.
 5. **Feedback** (D6). A **Feedback** row in Settings and a button on the page-error card (app.js:2173). It downloads a
    report (version, browser, screen size, level, floor, the last 100 log lines, the save) and opens the channel chosen in
    D6.
-6. **Telemetry** (D6, if kept). Asked once at the end of the first session, off until yes, a toggle in Settings
-   (Slay the Spire's *Upload Data*). A random install id, never the handle. Events: a session's start and length, a
+6. **Telemetry** (D6, if kept). Asked once at the end of the first session, off until yes, a toggle in Settings. A
+   random install id, never the handle. Events: a session's start and length, a
    level reached, a boss fought (its id, won or lost, cycles, Integrity left), a disconnect (where, by what), the demo
    finished, the last screen before closing. Sent to a Cloudflare Worker that stores them.
 7. **A version** (Starsector's numbered builds): *demo 0.1* small on the power-up's corner, in Settings and in every
@@ -204,7 +216,7 @@ tunes to that play, never to pass the bots.
 2. **No dead levels** from 2 to 14. Nothing new arrives at 2 or 9, and 11 and 13 bring little. Candidates: the second
    core skill at 2 (it's Flood for a Breaker, which the class pick already promises), presets at 9, a bases tier at 13.
    The designer picks.
-3. **Upgrades show** (Diablo III's arrow): a protocol in the stash better than what's loaded wears an amber ▲, and so
+3. **Upgrades show**: a protocol in the stash better than what's loaded wears an amber ▲, and so
    does the Loadout tab. With nothing equipped, a level-10 fight wins 17–58% of the time; a player who never opens
    Protocols hits a wall.
 4. **Credits on a real clock.** One bot run made 7.8k credits by level 10 in 1.9 real hours, about 14 times `incomeAt`
@@ -223,7 +235,8 @@ tunes to that play, never to pass the bots.
 2. **Five strangers**, each watched over a screen share with no help for their first hour, then a five-question form:
    where they stopped, what confused them, what they'd do next, which class, would they keep playing.
 3. **One fix session** for what they hit, landed on main and cherry-picked as `demo-0.1.x`.
-4. **Open it**: the end card's link live, the store or itch.io page up.
+4. **Open it**: the end card's link live, the store or itch.io page up, a wishlist button in Settings. Open it ahead of
+   a Steam Next Fest, never first during one (Zukowski).
 
 ## Order and landing
 

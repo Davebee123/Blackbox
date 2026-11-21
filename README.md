@@ -323,6 +323,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`GAME_RULES.md`](GAME_RULES.md) | The rules as built. |
 | [`docs/ui.md`](docs/ui.md), [`docs/style-guide.md`](docs/style-guide.md) | The look (colours, tokens, components); how every line is written. |
 | [`docs/phone-plan.md`](docs/phone-plan.md) | Plan: a phone UI of its own. P1 (shell), P2 (fight) and P3 (maps and sheets) built; P4 (pages) next. |
+| [`docs/demo-plan.md`](docs/demo-plan.md) | Plan: the floors 1–2 demo in eight phases, a session each (proposed, awaiting sign-off). |
 | [`docs/performance-plan.md`](docs/performance-plan.md) | Plan: performance, phones first. The audit's numbers, what ships for everyone and what becomes a Graphics setting, the loading screen, the batches. |
 | [`docs/lore.md`](docs/lore.md) | The world and the story: the machine, the factions' answers, wick (decided, not built). [`docs/story-script.md`](docs/story-script.md): its letters and dialogue, drafted. [`docs/receipts.md`](docs/receipts.md): the vault receipt stamped for a faction at each takeover (built lean; its payoffs wait). [`docs/factions-plan.md`](docs/factions-plan.md): commissions, every hub's board, rep from contracts, receipts, feuds and defence calls, faction sets, the payload cut (1–4 built lean; 5 and 7–10 wait). |
 | [`docs/journals.md`](docs/journals.md) | Journals: dated entries from people across the city, either side of the Cascade, found in vaults. |
