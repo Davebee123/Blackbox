@@ -164,43 +164,43 @@ with its answer; *ends* names where it closes. `{blank}` is filled in. A runner'
 
 *When:* home from the run where you opened your first vault. *Opens:* rivals.
 
-> got the files. somebody else had their eye on those.
-> runners race for vaults on servers nobody holds. next time one might be in there with you.
+> got the files. you weren't the only one after them.
+> runners work vaults for whoever pays them. a server nobody holds is fair game, so next time one may connect while you're on it.
 
-1. *Who are they?*
-   > people like you, paid by somebody else. they head straight for the vault and leave with what's in it.
-   > catch them before they're out and you'll have to fight for it.
+1. *What happens then?*
+   > it's a race to the vault. if your paths cross, you fight for it.
+   > if they get there first and jack out, the files go with them.
 2. *Noted.* (ends)
 
 ### First rival met · the rival
 
 *When:* home after your first rival race ends, won or lost. *Opens:* what rivals want.
 
-> **Careful,** you won: I watched how you did that. Next time I'll bring something for it.
-> **Careful,** they got away: Clean run. The files are already spoken for.
-> **Steady,** you won: Fair enough. The vault's still on my list.
-> **Steady,** they got away: Nothing personal. The vault was on my list.
-> **Bold,** you won: Ha. Good. I was getting bored.
-> **Bold,** they got away: Too slow. Buy me a coffee next time.
+> **Careful,** you won: I logged how you beat me. Next time I'll bring something for it.
+> **Careful,** they got away: Clean run. The files are already sold.
+> **Steady,** you won: Fair fight. There are more vaults on my list.
+> **Steady,** they got away: That vault was on my list. Nothing personal.
+> **Bold,** you won: Ha. Good. I was getting bored of winning.
+> **Bold,** they got away: Too slow. Ping me when you want a rematch.
 
 1. *Who are you working for?*
-   > {handle}, for {faction}. They pay by the file, and they want the receipts before anyone else stamps them.
+   > I'm {handle}. I run for {faction}. They pay by the file, and they want every receipt before someone else stamps it.
 2. *Stay off my servers.*
-   > **Careful:** I don't touch a server someone holds. Take it and I'll keep away.
-   > **Steady:** Hold it and I won't come. Leave it open and I will.
-   > **Bold:** Then take them over. Until then, I'm coming.
+   > **Careful:** I don't touch a server someone holds. Take it over and I'll keep away.
+   > **Steady:** Take it over and I won't connect. Leave it open and I will.
+   > **Bold:** Then take them over. Until you do, I'll keep coming.
 3. *See you.* (ends)
 
 ### Kestrel's hub found · Kestrel
 
 *When:* you first find Kestrel's hub. *Opens:* the Rack pull, Kestrel's supply order.
 
-> Kestrel Underwriting. You're standing in one of our buildings. Most of the net is.
-> We keep a standing order for Kernel code. Bring a full lot and we pay above market.
+> Kestrel Underwriting. The rack you're connected through belongs to us. So do most of the others.
+> We keep a standing order for Kernel code. Deliver a full lot and we pay half again over market.
 
 1. *What else do you have?*
-   > Now and then we bring one of Kessler's old racks out of cold storage, for one cycle.
-   > Whatever is in its cage is unclaimed until we take it back.
+   > Now and then we bring one of Kessler's old racks out of cold storage and mount it for one cycle.
+   > Whatever is in its cage is unclaimed until we pull it back.
 2. *Kessler?*
    > The builders. They went bankrupt and paid us in hardware. We have a great deal of hardware.
 3. *Good to know.* (ends)
@@ -210,13 +210,13 @@ with its answer; *ends* names where it closes. `{blank}` is filled in. A runner'
 *When:* you first find GLASSJAW's hub. *Opens:* listings, feuds, GLASSJAW's supply order.
 
 > GLASSJAW. Everything on this net has a price, and I keep the list.
-> I'll take Exploits off you on a standing order. Above market, no questions.
+> I'll take Exploits off you on a standing order, above market.
 
 1. *What's on the list?*
-   > Things from other networks, now and then. You'll hear the hour one goes up.
-   > And work that never touches Halcyon's books. It pays better.
+   > Gear from other networks, now and then. I'll page you when a piece goes up, and it won't stay up long.
+   > Work that stays off Halcyon's books, too. It pays better.
 2. *Who buys from you?*
-   > Everyone, from each other. When two of them fight over a server, I'll tell you who pays more for a side.
+   > Everyone, mostly from each other. When two factions fight over a server you've traced, I'll tell you who's winning, and you can pick a side.
 3. *I'll be back.* (ends)
 
 ### A runner reaches Known · that runner
