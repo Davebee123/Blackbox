@@ -1,6 +1,7 @@
 # The demo: floors 1–2
 
-**Status.** Proposed (21 November 2026), awaiting the designer's sign-off; nothing here is built. It comes from the
+**Status.** Proposed (21 November 2026); the designer's answers are in the decisions table, and D2, D5 and D6 await
+their OK before Phase 1. Nothing here is built. It comes from the
 readiness audit of 20 November: a fresh-save playtest (Breaker, desktop and iPhone 13), a content count of floors 1–4
 and a pacing pass. Each phase is one session, started fresh from main, in the order below.
 
@@ -19,16 +20,44 @@ hours on the pacing table, likely 8–10 in real play.
 
 ## Decisions to sign off
 
-| # | Decision | Recommended | Other options |
+| # | Decision | The designer (21 Nov) | The plan |
 |---:|---|---|---|
-| D1 | The demo's scope | Floors 1–2, capped at level 14 | Floors 1–4 (adds the Later list) |
-| D2 | Where it lives | A `demo` branch deployed by its own workflow to its own Cloudflare Pages project (you run `site/` there) | A path on the GitHub Pages site; itch.io |
-| D3 | The first disconnect | SPRAWL-00 visits keep what they paid; elsewhere the revert stays, and the run shows what's unbanked | No revert under level 5; keep the revert and only teach jack out |
-| D4 | The guided practice (tutorial.mjs, unreachable now) | Offered once after the class pick, skippable | Delete it and its test |
-| D5 | Floor 1's chain boss | Build PAGE NINE (designed: elite 8, story-script.md) | Make RELAY-KING the chain's boss for good |
-| D6 | Hearing from players | A Feedback button that packs a report, sent where you choose; opt-in milestone telemetry to a Cloudflare Worker | The report only; nothing |
-| D7 | What levels 1–14 hide until it matters | Phase 7's list | Show everything as now |
-| D8 | The end card's call to action | Wishlist / store page once it exists; a mailing list or Discord until then | Feedback only |
+| D1 | The demo's scope | Floors 1–2 | Capped at level 14, ending on CENTRIFUGE |
+| D2 | Where it lives | itch.io or Steam; not $100 before knowing people play it | **Proposed:** itch.io first (free; a Restricted page for the closed test, Public after). Steam's $100 fee (recouped after $1,000 of sales) waits for the itch numbers in Phase 8 |
+| D3 | The first disconnect | SPRAWL-00 reboots like every server | The revert stays everywhere. The run shows what's unbanked, and the tour teaches jack out after the first win |
+| D4 | The guided practice | Could work; to be tested | Phase 2 wires it in behind an offer after the class pick; it lands once the designer has played it, else stays off |
+| D5 | Floor 1's chain boss | PAGE NINE early is fine, but beatable when it comes | **Proposed:** PAGE NINE closes floor 1's chain; its step waits for level 6 and it fights at your level (6–8), so it's never above you. CENTRIFUGE (14) stays the demo's last boss |
+| D6 | Hearing from players | Asked for a recommendation | **Proposed:** a Feedback button that downloads a report and opens a free Discord server (testers attach the file; itch's comments take the public); opt-in telemetry to a Cloudflare Worker (free tier), the only way to measure real play time and where players stop |
+| D7 | What levels 1–14 hide until it matters | Brainstorm the paths first | D7 paths below; Phase 7 opens with the brainstorm |
+| D8 | The end card | The demo freezes there | The card ends play (XP stopped, the exit shut), with the itch follow and the Discord; a Steam wishlist once a store page exists |
+
+**The demo's bosses, in order:** RELAY-KING (SPRAWL-00's Core, from 3) → PAGE NINE (floor 1's chain, 6–8) → the floor 2
+lair and SHAKEDOWN's Pit (7–14) → CENTRIFUGE (*Carrier*'s end, 14). Diablo III's Starter Edition ends the same way, on
+an act's last boss.
+
+### D7 paths
+
+Three ways a system can wait, to brainstorm before Phase 7 (prototype the picked one per CLAUDE.md):
+
+- **A · By level** (WoW's talents at 10): the Firmware update names what opened. Predictable; arbitrary for systems
+  with no tie to power.
+- **B · By a letter** (Exile's Reach): a contact brings it in (wick the market, LANTERN the scanner). It gives each a
+  reason and fits Phase 5's transmissions; it costs writing, and a player who skips Mail misses it.
+- **C · By the place** (discovery): it shows the first time you stand where it lives. Nothing is on screen before it
+  matters; some players meet a system late.
+
+| System | Shows now | A · level | C · the first time you… |
+|---|---|---|---|
+| INIT's table (header) | Minute one, no tip | 8 | break an orphan |
+| Rivals | Any traced server, 20% of visits | 6 | open a vault |
+| Invasions and daemons | 3 min after the first connect | 3 | take a server over |
+| Events, blips, run cards | 3 | 4 | jack out with a full pack |
+| A hub's market, ticker, supply order | With the hub | 5 | sell at that hub |
+| Quest sites | 5 | 8 | finish floor 1's chain |
+| Hiring runners | 5 | 7 | help one in a room |
+| Factions' rep and commission | Halcyon's from the start | 5 | reach a second hub |
+| Receipts, Root, sockets | First takeover | — | (already by place) |
+| Rig: casing, terminal, house | Always | — | earn the first achievement |
 
 ## Evidence from the games it resembles
 
@@ -36,7 +65,7 @@ hours on the pacing table, likely 8–10 in real play.
 |---|---|---|
 | Nothing stops a player at floor 4, and the story runs out | WoW's free trial has stopped at level 20 since 2011 ([Blizzard](https://support.blizzard.com/en/article/3226)); Diablo III's Starter Edition ends at the Skeleton King, capped at 13 ([Blizzard](https://support.blizzard.com/en/article/2730)). Both cap a level and end on a boss | 1, 5 |
 | Most players see only the first hour | Across 130 Steam demos the median play was 14 minutes, and the best performers' medians were 38–65 ([Zukowski](https://howtomarketagame.com/2022/10/26/what-is-a-good-median-play-time-for-a-demo-benchmark/)) | 2 first |
-| The first disconnect takes the kill, the XP and the contract step | WoW dropped EverQuest's XP loss for a ghost's run back and 10% durability ([wiki](https://warcraft.wiki.gg/wiki/Death_(gameplay))); Path of Exile charges no XP for dying before Act 5's Kitava ([wiki](https://www.poewiki.net/wiki/Experience)); Elden Ring lets you walk back once for your runes; Starsector recovers your lost ships with D-mods ([Fractal Softworks](https://fractalsoftworks.com/2017/01/20/ship-recovery)) | 2 (D3) |
+| The first disconnect takes the kill, the XP and the contract step, unannounced | Elden Ring keeps the runes you carry on screen and lets you walk back once for them; WoW dropped EverQuest's XP loss for a ghost's run back and 10% durability ([wiki](https://warcraft.wiki.gg/wiki/Death_(gameplay))); Path of Exile charges no XP for dying before Act 5's Kitava ([wiki](https://www.poewiki.net/wiki/Experience)); Starsector recovers your lost ships with D-mods ([Fractal Softworks](https://fractalsoftworks.com/2017/01/20/ship-recovery)) | 2 (D3) |
 | A cost framed as a penalty | WoW's beta halved XP after a few hours of play; testers hated it, so Blizzard kept the numbers and called the full rate *rested* (Rob Pardo, GDC 2010, [Game Developer](https://www.gamedeveloper.com/game-platforms/gdc-blizzard-s-core-game-design-concepts)) | 2, 6 |
 | Levels 2, 9, 11, 13 bring nothing | WoW cut 120 levels to 60 so every level would mean something, dropping the ones with no new spell or talent ([Blizzard](https://worldofwarcraft.blizzard.com/en-us/news/23187291)); Diablo II gives 5 attribute points and a skill point every level; Diablo III unlocked a skill or rune every level to 60 | 7 |
 | 35 systems by level 10; the practice unreachable | Exile's Reach brings in WoW's features one at a time from 1 to 10 ([Blizzard](https://support.blizzard.com/en/article/296577)); Starsector's new campaign offers a skippable *Start with tutorial!*; Diablo III keeps Elective Mode off until you want it | 2 (D4), 7 (D7) |
@@ -66,7 +95,7 @@ way to hear from players. No gameplay changes.
 
 - **Lane:** scripts/build.mjs, a new `dist/demo.mjs`, app.js (boot, save, Settings), bench-key.mjs, floors.mjs (the
   exit's card), the level-up's floor line, soundtrack.mjs and coldopen.mjs loading, `.github/workflows/`, GAME_RULES.md
-  *Saves* and *Developer tools*, README.md.
+  *Saves* and *Developer tools*, README.md, a new `tools/telemetry/` (the Worker and its page).
 - **Hands off:** fights, tips, the XP curve's numbers, content.
 
 1. **The switch.** `dist/demo.mjs` exports `DEMO`: `null` in the game, `{ floor: 2, level: 14, version: '0.1' }` in a
@@ -81,23 +110,29 @@ way to hear from players. No gameplay changes.
    through `restore`, asks, and reloads; it refuses a save from a newer `SAVE_VERSION`. After the class pick the game
    asks the browser to keep its storage (`navigator.storage.persist()`), once.
 5. **Feedback** (D6). A **Feedback** row in Settings and a button on the page-error card (app.js:2173). It downloads a
-   report (version, browser, screen size, level, floor, the last 100 log lines, the save) and opens the channel chosen in
-   D6.
-6. **Telemetry** (D6, if kept). Asked once at the end of the first session, off until yes, a toggle in Settings. A
-   random install id, never the handle. Events: a session's start and length, a
+   report (version, browser, screen size, level, floor, the last 100 log lines, the save) and opens the Discord's
+   feedback channel (D6).
+6. **Telemetry** (D6). Asked once, after your first jack out, off until yes; a toggle in Settings. A random install id, never the handle. Events: a session's start and length, a
    level reached, a boss fought (its id, won or lost, cycles, Integrity left), a disconnect (where, by what), the demo
-   finished, the last screen before closing. Sent to a Cloudflare Worker that stores them.
+   finished, the last screen before closing. Sent to a Cloudflare Worker that stores them (the designer's account, free
+   tier), with a page that reads them back: median play time, hours to 5, 10 and 14, where players stop, which bosses
+   win.
 7. **A version** (Starsector's numbered builds): *demo 0.1* small on the power-up's corner, in Settings and in every
    report.
-8. **Deploy** (D2). A `demo` branch with its own workflow and address; main keeps deploying the dev build as now. A
-   release is a tag (`demo-0.1`), a hotfix `demo-0.1.1`, cherry-picked from main. Both deploy workflows retry once on
-   the artifact lookup that fails now and then (4 of the last 30).
-9. **The end-of-demo card**, as a frame: it opens when the *Carrier* chain's Boss step is delivered, with your time
-   played, level, bosses down and uniques found, **Feedback** and the call to action (D8). Its words come in Phase 5.
-10. **Loading.** The cold open's crowd (`sfx/coldopen/crowd.mp3`, 1.5 MB) loads after the first key; soundtrack.mjs
+8. **Deploy** (D2). A `demo` branch whose workflow builds with `--demo` and pushes to itch.io with butler (an
+   `ITCH_API_KEY` secret the designer adds; the itch page, Restricted, the designer makes). main keeps deploying the
+   dev build to Pages. A release is a tag (`demo-0.1`), a hotfix `demo-0.1.1`, cherry-picked from main. The Pages
+   workflow retries once on the artifact lookup that fails now and then (4 of the last 30).
+9. **itch's frame.** itch runs a browser game in an iframe on its own domain, so: the embed launches full screen (the
+   monitor needs most of the screen); the save survives a reload and a new upload in Chrome, Firefox and Safari on
+   itch's page (export is the fallback, and the way a demo save reaches the full game); the save's size is measured
+   against the 5 MB a domain gets.
+10. **The end-of-demo card**, as a frame: it opens when the *Carrier* chain's Boss step is delivered, with your time
+    played, level, bosses down and uniques found, **Feedback** and the call to action (D8). Its words come in Phase 5.
+11. **Loading.** The cold open's crowd (`sfx/coldopen/crowd.mp3`, 1.5 MB) loads after the first key; soundtrack.mjs
     stops asking for the four files that don't exist (`music/home.mp3`, `run.mp3`, `fight.ogg`, `fight.mp3`); a sample
     is fetched once (the keys' `key-*.wav` and `relay-*.wav` come twice).
-11. **Docs drift.** GAME_RULES.md's loop still sends invasions past a firewall; *Levels* still gives a talent point
+12. **Docs drift.** GAME_RULES.md's loop still sends invasions past a firewall; *Levels* still gives a talent point
     every other level. Fix both.
 
 **Done when:** tests on `DEMO` (the cap, the exit, nothing dealt below floor 2) and on export → import round-tripping a
@@ -109,13 +144,14 @@ A stranger reaches the first kill in about 4 minutes, then loses it without know
 hour teach what it costs.
 
 - **Lane:** tips.mjs, app.js (the part click, the loss card, where a tip sits), view.mjs (the class pick), runners.mjs
-  `sprawlSpot`, visit.mjs (only for D3), floorplan.css (the rooms map's labels), phone.css, tutorial.mjs (D4).
+  `sprawlSpot`, the run's strip (floorplan-view.mjs, reading visit.mjs's snap), floorplan.css (the rooms map's
+  labels), phone.css, tutorial.mjs (D4).
 - **Hands off:** fight numbers, the XP curve, bosses, the demo switch.
 
-1. **The first disconnect** (D3). SPRAWL-00 is the starter server and GAME_RULES says a kill there pays at once: its
-   visits take no snap (visit.mjs `snapVisit`, `loc.zone`), so a disconnect there keeps the kills, XP and contract
-   counts. Everywhere else the revert stays, and the run's strip shows what's unbanked (XP, files, contract steps since
-   connect) as icons, so the stake is on screen before it's lost.
+1. **The stake on screen** (D3). Every server reboots as now, SPRAWL-00 included. The run's strip shows what's
+   unbanked since you connected (XP, files, contract steps) as icons beside **Jack out**, and the No carrier card lists
+   the same as what went: a risk shown and chosen (the standing rules). GAME_RULES's *A kill pays at once* in SPRAWL-00
+   is corrected to match.
 2. **The tour teaches banking.** `tour-jackout` follows the first win whatever came before it (drop its
    `after: ['tour-engage']`, tips.mjs:44); `tour-engage` counts **Help** too. SPRAWL-00's first ring holds no runner
    until the tour's done (runners.mjs `sprawlSpot`): the playtest's first room offered only Help, and the tour stopped.
@@ -136,7 +172,8 @@ hour teach what it costs.
 9. **Phone.** After a win the spoils card is off-screen (its stage panel collapses to 8 px; the only way out is ··· →
    Run). The Wait / Jack out pill sits under the log line, MATERIALS is clipped in the top bar, and the class pick's
    Start is below the fold with the drawer open.
-10. **The guided practice** (D4): offered once after the class pick, skippable, on its training virus.
+10. **The guided practice** (D4): offered once after the class pick, skippable, on its training virus. The designer
+    plays it in this session; it lands on, or stays off.
 
 **Done when:** a scripted fresh-save pass (desktop 1440×900, iPhone SE, iPhone 13) reaches the first kill, a jack out,
 level 2 and the first traced server's Connect with no tip over its target and no reverted kill, in under 15 minutes of
@@ -156,7 +193,9 @@ RELAY-KING opens at level 3 in SPRAWL-00's Core and stands in for floor 1's chai
 2. **PAGE NINE** (D5), floor 1's chain boss as written (story-script.md): an elite at 8, *Premium Paid* (one part
    Insured a cycle, shown a cycle ahead, in a fixed order) and *Filed Early* (its tells a cycle sooner), in three acts,
    with its art and its challenge and fall lines. The Boss step finds it by name (arcs.mjs `namedBoss`) and RELAY-KING
-   stops standing in. Its loot is the chain's Custom pick of three; its own uniques wait.
+   stops standing in. Its letter waits for level 6, and it fights at your level from 6 to 8 (as lairs keep up inside
+   their band), so it's never above you when it comes. Its loot is the chain's Custom pick of three; its own uniques
+   wait.
 
 **Done when:** the designer has played both; each act runs 15–20 cycles; the boss tests pass.
 
@@ -190,7 +229,7 @@ and an end.
    two extra letters (wick after step 1, Halcyon Claims after step 3; drafted).
 2. **A closing transmission** as CENTRIFUGE falls (new; drafted for the designer first, by the prose rules). It picks
    up the chain's closing line (the schedule is signed by a pricing model; the count says 81%) and points below floor 2.
-3. **The end card's words** (Phase 1's frame), and its call to action (D8).
+3. **The end card's words** (Phase 1's frame): the demo stops here (D8), with the itch follow and the Discord.
 
 **Done when:** the designer has approved every line; each plays from the editor's *Play from here*.
 
@@ -210,9 +249,9 @@ tunes to that play, never to pass the bots.
   roll (netrooms.mjs), store.mjs prices, the stash view, docs/BALANCE.md.
 - **Hands off:** bosses, story, the demo switch.
 
-1. **What waits** (D7). About 35 systems are on screen by level 10, in clumps at 3–4, 5–6, 8 and 10. Proposed: INIT's
-   table in the header from level 8, with its first tip (from minute one now, untipped); rivals from 6, with tells
-   (no gate now); a hub's ticker squares from your first sale there; quest sites from 8 (5 now). The designer picks.
+1. **What waits** (D7). About 35 systems are on screen by level 10, in clumps at 3–4, 5–6, 8 and 10. The session opens
+   with the brainstorm on the D7 paths, prototypes the picked path as scratchpad applets, and builds it once the
+   designer has picked.
 2. **No dead levels** from 2 to 14. Nothing new arrives at 2 or 9, and 11 and 13 bring little. Candidates: the second
    core skill at 2 (it's Flood for a Breaker, which the class pick already promises), presets at 9, a bases tier at 13.
    The designer picks.
@@ -231,12 +270,16 @@ tunes to that play, never to pass the bots.
 
 ### Phase 8 · Closed test, then the demo
 
-1. **Freeze.** Tag `demo-0.1` on the demo branch and deploy it.
-2. **Five strangers**, each watched over a screen share with no help for their first hour, then a five-question form:
-   where they stopped, what confused them, what they'd do next, which class, would they keep playing.
+1. **Freeze.** Tag `demo-0.1` on the demo branch; it goes to the Restricted itch page.
+2. **Five strangers**, each sent the Restricted page, watched over a screen share with no help for their first hour,
+   then five questions: where they stopped, what confused them, what they'd do next, which class, would they keep
+   playing.
 3. **One fix session** for what they hit, landed on main and cherry-picked as `demo-0.1.x`.
-4. **Open it**: the end card's link live, the store or itch.io page up, a wishlist button in Settings. Open it ahead of
-   a Steam Next Fest, never first during one (Zukowski).
+4. **Open it**: the itch page Public, the Discord linked from the end card.
+5. **The Steam call** (D2), after two weeks public, from telemetry and itch's own numbers: the median play time against
+   Zukowski's benchmark (14 minutes across 130 Steam demos, 38–65 for the best), the share who finish, the follows. A
+   Steam page then gets the demo as its own store page, a wishlist button in Settings, and opens ahead of a Next Fest,
+   never first during one (Zukowski).
 
 ## Order and landing
 
