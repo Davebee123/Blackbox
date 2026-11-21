@@ -1,7 +1,7 @@
 # The demo: floors 1–2
 
 **Status.** Proposed (21 November 2026); the designer's answers are in the decisions table, and D2, D5 and D6 await
-their OK before Phase 1. Nothing here is built. It comes from the
+their OK before Phase 1; D7 is settled. Nothing here is built. It comes from the
 readiness audit of 20 November: a fresh-save playtest (Breaker, desktop and iPhone 13), a content count of floors 1–4
 and a pacing pass. Each phase is one session, started fresh from main, in the order below.
 
@@ -23,41 +23,73 @@ hours on the pacing table, likely 8–10 in real play.
 | # | Decision | The designer (21 Nov) | The plan |
 |---:|---|---|---|
 | D1 | The demo's scope | Floors 1–2 | Capped at level 14, ending on CENTRIFUGE |
-| D2 | Where it lives | itch.io or Steam; not $100 before knowing people play it | **Proposed:** itch.io first (free; a Restricted page for the closed test, Public after). Steam's $100 fee (recouped after $1,000 of sales) waits for the itch numbers in Phase 8 |
+| D2 | Where it lives | itch.io or Steam; not $100 before knowing people play it | **Proposed:** itch.io first (free; a Restricted page for the closed test, Public after). Steam's $100 fee (recouped after $1,000 of sales) waits for the itch numbers in Phase 9 |
 | D3 | The first disconnect | SPRAWL-00 reboots like every server | The revert stays everywhere. The run shows what's unbanked, and the tour teaches jack out after the first win |
 | D4 | The guided practice | Could work; to be tested | Phase 2 wires it in behind an offer after the class pick; it lands once the designer has played it, else stays off |
 | D5 | Floor 1's chain boss | PAGE NINE early is fine, but beatable when it comes | **Proposed:** PAGE NINE closes floor 1's chain; its step waits for level 6 and it fights at your level (6–8), so it's never above you. CENTRIFUGE (14) stays the demo's last boss |
 | D6 | Hearing from players | Asked for a recommendation | **Proposed:** a Feedback button that downloads a report and opens a free Discord server (testers attach the file; itch's comments take the public); opt-in telemetry to a Cloudflare Worker (free tier), the only way to measure real play time and where players stop |
-| D7 | What levels 1–14 hide until it matters | Brainstorm the paths first | D7 paths below; Phase 7 opens with the brainstorm |
+| D7 | What opens when | A hybrid: your kit by level, everything else as you find it or do something; hiring early; more transmissions, event-driven | *What opens when* below; Phase 7 builds it |
 | D8 | The end card | The demo freezes there | The card ends play (XP stopped, the exit shut), with the itch follow and the Discord; a Steam wishlist once a store page exists |
 
 **The demo's bosses, in order:** RELAY-KING (SPRAWL-00's Core, from 3) → PAGE NINE (floor 1's chain, 6–8) → the floor 2
 lair and SHAKEDOWN's Pit (7–14) → CENTRIFUGE (*Carrier*'s end, 14). Diablo III's Starter Edition ends the same way, on
 an act's last boss.
 
-### D7 paths
+### What opens when (D7)
 
-Three ways a system can wait, to brainstorm before Phase 7 (prototype the picked one per CLAUDE.md):
+Your kit opens by level; enemies by the level of the server you're on, shown in WoW's colours before you connect;
+everything else when you do something. An older save keeps everything it has; a new character meets these triggers.
 
-- **A · By level** (WoW's talents at 10): the Firmware update names what opened. Predictable; arbitrary for systems
-  with no tie to power.
-- **B · By a letter** (Exile's Reach): a contact brings it in (wick the market, LANTERN the scanner). It gives each a
-  reason and fits Phase 5's transmissions; it costs writing, and a player who skips Mail misses it.
-- **C · By the place** (discovery): it shows the first time you stand where it lives. Nothing is on screen before it
-  matters; some players meet a system late.
+**By your level (your kit):** core skills at 1, 3, 5 and 7; the kit talent and routines at 5; the subclass, SIGINT and
+talents at 10; subclass skills at 12 and 14.
 
-| System | Shows now | A · level | C · the first time you… |
-|---|---|---|---|
-| INIT's table (header) | Minute one, no tip | 8 | break an orphan |
-| Rivals | Any traced server, 20% of visits | 6 | open a vault |
-| Invasions and daemons | 3 min after the first connect | 3 | take a server over |
-| Events, blips, run cards | 3 | 4 | jack out with a full pack |
-| A hub's market, ticker, supply order | With the hub | 5 | sell at that hub |
-| Quest sites | 5 | 8 | finish floor 1's chain |
-| Hiring runners | 5 | 7 | help one in a room |
-| Factions' rep and commission | Halcyon's from the start | 5 | reach a second hub |
-| Receipts, Root, sockets | First takeover | — | (already by place) |
-| Rig: casing, terminal, house | Always | — | earn the first achievement |
+**By the enemy's level:** mutations from a server level of 4; tells, levers and objectives from 6; champions from 8, a
+part's second tell from 17. RELAY-KING's Core is always open, its level on its card. Floor 2, KESSLER-FARM-00 and
+GLASSJAW's hub open as you trace your way to them. The director deals REPO MAN and the Hollow Choir on a traced server
+near their level.
+
+**By what you do:**
+
+| System | Opens when you… | Now |
+|---|---|---|
+| Hiring runners | help a runner in SPRAWL-00 the first time: they offer to join (about level 2–3) | level 5 |
+| Invasions and daemons | map your first server or take one over | 3 min after the first connect |
+| Blips | jack out the first time | level 3 |
+| The board, Shops, events | get the turf letter | level 3 (events) |
+| Run cards | run a traced server other than SPRAWL-00 | level 3 |
+| A hub's market and ticker; its faction's rep | find that hub | as now |
+| A hub's supply order | first sell at that hub | with the hub |
+| Receipts, Root, sockets | take a server over; walk into a socket room | as now |
+| Rivals | open your first vault | from the start |
+| Quest sites | each when its owner shows up: the Rack pull at Kestrel's hub found, the Settlement run after your first takeover, a runner's trade when a runner reaches Known | level 5 |
+| INIT's table, Orphans contracts | read *Carrier*'s schedule page (*process table at 81%*); orphans go unmarked until then | minute one; contracts at 6 |
+| The Rig | earn your first achievement | always |
+
+### Transmissions
+
+Event-driven, in the quest window's *Transmission*: each plays once, on the event, never mid-fight, at least 10
+minutes of play after the last, waiting its turn if another is up. Each brings in what its event opens, so that
+system's tip can shrink. Two or three exchanges and a choice or two (floor 5's format). Phase 5 drafts every one's
+words for the designer; the designer approves each line.
+
+| Event | From | What it carries |
+|---|---|---|
+| First login (built) | wick | LOWLIGHT, Halcyon, the first job |
+| First server located (built) | wick | servers, the vault, **Show me** |
+| First runner helped | that runner (their bust) | who they are; they'd run with you: hiring |
+| First jack out | wick | the pack banked; the net keeps moving: blips |
+| The turf letter | Halcyon Loss Prevention | the board, the retainer, the work no one asks about |
+| First server mapped or taken over | wick | it's yours now; things come for what you hold: invasions, receipts |
+| First vault opened | wick | someone else wanted that file: rivals |
+| First rival met | the rival | why they want your vault |
+| Kestrel's hub found | Kestrel | the racks, a standing order: the Rack pull, supply orders |
+| GLASSJAW's hub found | GLASSJAW | the broker's terms: listings, feuds |
+| A runner reaches Known | that runner | a trade they'd make: a runner's trade |
+| PAGE NINE falls | wick | the dead account closed; the ledger points at floor 2 |
+| Floor 2 reached | LANTERN | *Four. Nine. Nine.* (drafted) |
+| *Carrier*'s schedule page read | LANTERN | the count: INIT's table |
+| The subclass picked | wick | a line on what you chose |
+| CENTRIFUGE falls | LANTERN, then wick | the schedule's signer; what's under floor 2; the demo's end |
 
 ## Evidence from the games it resembles
 
@@ -67,13 +99,13 @@ Three ways a system can wait, to brainstorm before Phase 7 (prototype the picked
 | Most players see only the first hour | Across 130 Steam demos the median play was 14 minutes, and the best performers' medians were 38–65 ([Zukowski](https://howtomarketagame.com/2022/10/26/what-is-a-good-median-play-time-for-a-demo-benchmark/)) | 2 first |
 | The first disconnect takes the kill, the XP and the contract step, unannounced | Elden Ring keeps the runes you carry on screen and lets you walk back once for them; WoW dropped EverQuest's XP loss for a ghost's run back and 10% durability ([wiki](https://warcraft.wiki.gg/wiki/Death_(gameplay))); Path of Exile charges no XP for dying before Act 5's Kitava ([wiki](https://www.poewiki.net/wiki/Experience)); Starsector recovers your lost ships with D-mods ([Fractal Softworks](https://fractalsoftworks.com/2017/01/20/ship-recovery)) | 2 (D3) |
 | A cost framed as a penalty | WoW's beta halved XP after a few hours of play; testers hated it, so Blizzard kept the numbers and called the full rate *rested* (Rob Pardo, GDC 2010, [Game Developer](https://www.gamedeveloper.com/game-platforms/gdc-blizzard-s-core-game-design-concepts)) | 2, 6 |
-| Levels 2, 9, 11, 13 bring nothing | WoW cut 120 levels to 60 so every level would mean something, dropping the ones with no new spell or talent ([Blizzard](https://worldofwarcraft.blizzard.com/en-us/news/23187291)); Diablo II gives 5 attribute points and a skill point every level; Diablo III unlocked a skill or rune every level to 60 | 7 |
+| Levels 2, 9, 11, 13 bring nothing | WoW cut 120 levels to 60 so every level would mean something, dropping the ones with no new spell or talent ([Blizzard](https://worldofwarcraft.blizzard.com/en-us/news/23187291)); Diablo II gives 5 attribute points and a skill point every level; Diablo III unlocked a skill or rune every level to 60 | 8 |
 | 35 systems by level 10; the practice unreachable | Exile's Reach brings in WoW's features one at a time from 1 to 10 ([Blizzard](https://support.blizzard.com/en/article/296577)); Starsector's new campaign offers a skippable *Start with tutorial!*; Diablo III keeps Elective Mode off until you want it | 2 (D4), 7 (D7) |
-| The Shop undercuts drops | Diablo III closed both auction houses in 2014 because "it ultimately undermines Diablo's core game play: kill monsters to get cool loot" (John Hight, [GamesBeat](https://gamesbeat.com/blizzard-to-close-the-diablo-iii-auction-house)) | 7 |
-| No gear is a wall | Diablo III's Inferno launched gear-gated; patch 1.0.3 cut its damage and health and raised drops ([Tom's Hardware](https://www.tomshardware.com/news/Diablo-3-1.0.3-Patch-download-update,16085.html)). On consoles a green arrow marks an upgrade | 7 |
-| No way to hear from players | Mega Crit collected data on every Slay the Spire run and changed cards and enemies by it through early access ([Game Developer](https://gamedeveloper.com/design/how-i-slay-the-spire-i-s-devs-use-data-to-balance-their-roguelike-deck-builder)); Hades shipped a big update every couple of months, built with its players ([PC Gamer](https://www.pcgamer.com/uk/a-journey-through-early-access-helped-make-hades-a-masterpiece/)) | 1, 8 |
+| The Shop undercuts drops | Diablo III closed both auction houses in 2014 because "it ultimately undermines Diablo's core game play: kill monsters to get cool loot" (John Hight, [GamesBeat](https://gamesbeat.com/blizzard-to-close-the-diablo-iii-auction-house)) | 8 |
+| No gear is a wall | Diablo III's Inferno launched gear-gated; patch 1.0.3 cut its damage and health and raised drops ([Tom's Hardware](https://www.tomshardware.com/news/Diablo-3-1.0.3-Patch-download-update,16085.html)). On consoles a green arrow marks an upgrade | 8 |
+| No way to hear from players | Mega Crit collected data on every Slay the Spire run and changed cards and enemies by it through early access ([Game Developer](https://gamedeveloper.com/design/how-i-slay-the-spire-i-s-devs-use-data-to-balance-their-roguelike-deck-builder)); Hades shipped a big update every couple of months, built with its players ([PC Gamer](https://www.pcgamer.com/uk/a-journey-through-early-access-helped-make-hades-a-masterpiece/)) | 1, 9 |
 | Every push to main reaches players, saves and all | Starsector ships numbered builds, each hotfix a new number (0.97a reached RC11 in two weeks), and every release post says whether old saves load ([Fractal Softworks](https://fractalsoftworks.com/tag/release)) | 1 |
-| Who tests it | Five users find most usability problems ([Nielsen](https://www.nngroup.com/articles/why-you-only-need-to-test-with-5-users/)); a Steam demo has had its own page and reviews since July 2024, and wishlist buttons belong in its menus ([Zukowski](https://howtomarketagame.com/2021/06/21/neat-ideas-for-your-games-demo/)) | 8 (D8) |
+| Who tests it | Five users find most usability problems ([Nielsen](https://www.nngroup.com/articles/why-you-only-need-to-test-with-5-users/)); a Steam demo has had its own page and reviews since July 2024, and wishlist buttons belong in its menus ([Zukowski](https://howtomarketagame.com/2021/06/21/neat-ideas-for-your-games-demo/)) | 9 (D8) |
 
 ## Phases
 
@@ -230,6 +262,9 @@ and an end.
 2. **A closing transmission** as CENTRIFUGE falls (new; drafted for the designer first, by the prose rules). It picks
    up the chain's closing line (the schedule is signed by a pricing model; the count says 81%) and points below floor 2.
 3. **The end card's words** (Phase 1's frame): the demo stops here (D8), with the itch follow and the Discord.
+4. **Every transmission's words** in the *Transmissions* table, drafted for the designer. The ones on events that need
+   no new trigger (PAGE NINE and CENTRIFUGE falling, floor 2 reached, a hub found, the subclass) are wired here; the
+   rest go in with Phase 7's triggers.
 
 **Done when:** the designer has approved every line; each plays from the editor's *Play from here*.
 
@@ -240,35 +275,46 @@ away banks rested XP; the consortium's away help goes; GAME_RULES.md *While you'
 the tests (wick's `server-wall` tip went with the wall); a save left occupied migrates. `SAVE_VERSION` +1 on landing.
 A returning player comes back to a bonus and nothing lost (WoW's rested XP).
 
-### Phase 7 · Levels 1–14: what opens when, and what it pays
+### Phase 7 · What opens when
+
+- **Lane:** a trigger table in progression.mjs (each system's level or event, read by the level-up, the tips and the
+  system), the gates in data.mjs, tips.mjs, table.mjs (the header), the rivals' roll (netrooms.mjs), invasion.mjs's
+  start, runners.mjs (the offer to join), sites.mjs, scenes.mjs (the event transmissions).
+- **Hands off:** bosses, prices, the demo switch.
+
+1. **The triggers** in *What opens when*, in one table; a system's first appearance plays its transmission or tip.
+2. **The event transmissions** Phase 5 wrote, wired to their triggers, with the 10-minute spacing.
+3. **Older saves** keep what they have (a test on a level-20 save: nothing hides).
+
+**Done when:** a scripted fresh save meets each system on its trigger and none before; the designer has played to
+level 7; the tests pass.
+
+### Phase 8 · Levels 1–14: what it pays
 
 **Gate:** the designer plays the demo build from level 1 to 14 on one class first, with notes in the Log. This phase
 tunes to that play, never to pass the bots.
 
-- **Lane:** progression.mjs `levelGains`, the level gates in data.mjs and tips.mjs, table.mjs (the header), the rivals'
-  roll (netrooms.mjs), store.mjs prices, the stash view, docs/BALANCE.md.
-- **Hands off:** bosses, story, the demo switch.
+- **Lane:** progression.mjs `levelGains`, store.mjs prices, the stash view, docs/BALANCE.md.
+- **Hands off:** bosses, story, the triggers, the demo switch.
 
-1. **What waits** (D7). About 35 systems are on screen by level 10, in clumps at 3–4, 5–6, 8 and 10. The session opens
-   with the brainstorm on the D7 paths, prototypes the picked path as scratchpad applets, and builds it once the
-   designer has picked.
-2. **No dead levels** from 2 to 14. Nothing new arrives at 2 or 9, and 11 and 13 bring little. Candidates: the second
+1. **No empty stretch** from 2 to 14. With the world opening by events, check where play still feels flat (8–9, 11, 13).
+   Candidates: the second
    core skill at 2 (it's Flood for a Breaker, which the class pick already promises), presets at 9, a bases tier at 13.
    The designer picks.
-3. **Upgrades show**: a protocol in the stash better than what's loaded wears an amber ▲, and so
+2. **Upgrades show**: a protocol in the stash better than what's loaded wears an amber ▲, and so
    does the Loadout tab. With nothing equipped, a level-10 fight wins 17–58% of the time; a player who never opens
    Protocols hits a wall.
-4. **Credits on a real clock.** One bot run made 7.8k credits by level 10 in 1.9 real hours, about 14 times `incomeAt`
+3. **Credits on a real clock.** One bot run made 7.8k credits by level 10 in 1.9 real hours, about 14 times `incomeAt`
    (store.mjs:43), so a shelf blue costs 13 minutes and undercuts drops. Measure the designer's credits an hour (`s.pace`)
    and set `incomeAt` to it, so the shelf costs the hours it was meant to (store.mjs:9). Components get a buyer before
    level 12 or stay banked (the designer's call).
-5. **Difficulty**, from the designer's notes: the friction band at 1, 10 and 14 (balance.test.mjs todo), the Breaker at
+4. **Difficulty**, from the designer's notes: the friction band at 1, 10 and 14 (balance.test.mjs todo), the Breaker at
    10 (37–40% lost, 58% of solo bosses won), the Herder (16% lost).
-6. **docs/BALANCE.md** regenerated (`node balance.mjs`): it still says 4% a level and *Signal*.
+5. **docs/BALANCE.md** regenerated (`node balance.mjs`): it still says 4% a level and *Signal*.
 
 **Done when:** the designer's second pass; hours to 5, 10 and 14 measured on the designer's clock; the full suite green.
 
-### Phase 8 · Closed test, then the demo
+### Phase 9 · Closed test, then the demo
 
 1. **Freeze.** Tag `demo-0.1` on the demo branch; it goes to the Restricted itch page.
 2. **Five strangers**, each sent the Restricted page, watched over a screen share with no help for their first hour,
@@ -291,8 +337,9 @@ tunes to that play, never to pass the bots.
 | 4 The Resident, floor 2 in band | 3 (both change combat rules) | 5 |
 | 5 Story and its end | 1 (the card) | 4 |
 | 6 Logged off is safe | 2 (both touch the visit and the save) | — |
-| 7 Levels 1–14 | 2–6, and the designer's play | — |
-| 8 Closed test | 7 | — |
+| 7 What opens when | 5 (its words) and 6 | — |
+| 8 What it pays | 7, and the designer's play | — |
+| 9 Closed test | 8 | — |
 
 Side by side, the earlier phase lands first and the later one merges main before its last test run.
 
