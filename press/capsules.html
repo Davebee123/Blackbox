@@ -205,13 +205,23 @@ for (const [n, [w, h]] of Object.entries(DISCORD)) {
   d.innerHTML = cityCap(w, h, PLAN[n], seed);
   document.body.append(d);
 }
-// The Discord server icon: the small mark (the favicon's box on its line) at 512, inside the circle Discord crops it to
+// The Discord server icon: the small mark (the favicon's box on its line) at 512, with 1s and 0s in the dark, thickest
+// along the line; all inside the circle Discord crops it to
 {
-  const S = 512, B = 196, Y = S / 2;
+  const S = 512, B = 198, Y = S / 2, C = 56, R = 32, L = (S - C * CW) / 2, hr = 16; // the line on row 16's top edge
+  const inBox = (x, y) => x >= 16 && x <= 39 && y >= 9 && y <= 22;
+  const inCircle = (x, y) => Math.hypot(L + x * CW + 4.5 - S / 2, y * RH + 8 - S / 2) < S / 2 - 14;
+  const r = rng(11), g = Array.from({ length: R }, () => Array(C).fill(null));
+  for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) {
+    const near = 1 - Math.min(1, Math.abs(y + 0.5 - hr) / 14);
+    if (inBox(x, y) || !inCircle(x, y) || r() > 0.05 + 0.3 * near ** 2 || g[y][x - 1]) continue; // never two side by side
+    g[y][x] = { ch: r() < 0.5 ? '0' : '1', a: Math.round((0.12 + 0.4 * near ** 2) * 100) / 100 };
+  }
+  const html = g.map((row) => row.map((c) => (c ? `<span style="color:rgba(${AMBER},${c.a})">${c.ch}</span>` : ' ')).join('')).join('\n');
   const d = document.createElement('div');
   d.className = 'cap'; d.dataset.file = 'discord-icon'; d.style.width = S + 'px'; d.style.height = S + 'px';
-  d.innerHTML = `<div class="haze" style="top:0;height:${S}px;background:radial-gradient(circle closest-side,rgba(241,185,47,.3) 30%,transparent)"></div>`
-    + `<div class="hz" style="top:${Y}px"></div>`
+  d.innerHTML = `<pre class="ascii" style="left:${L}px;top:0">${html}</pre>`
+    + `<div class="hz" style="top:${Y - 1}px;height:2px"></div>`
     + `<div class="box" style="left:${(S - B) / 2}px;top:${Y - B / 2}px;width:${B}px;height:${B}px;--blur:${B / 16}px"><b></b></div>`;
   document.body.append(d);
 }
