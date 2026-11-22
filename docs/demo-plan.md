@@ -367,3 +367,8 @@ Side by side, the earlier phase lands first and the later one merges main before
 - **Phase 1, deploy** (22 Nov): the itch page is up (matzahboy.itch.io/blackbox, Restricted, html5 channel; the `demo`
   branch pushes it with butler, its target written into the workflow), and the designer has played it there. The
   Discord is made (#announcements and #patch-notes read-only); its invite and the telemetry Worker are still to come.
+- **Phase 3, RELAY-KING** (22 Nov): retuned for its level 5 and for gear (`bar` 0.7, `dmg` 1.1; below 6 its Replicator
+  wears one ◆ and hatches every 6); the planner breaks the Relay under Flood (act 3's endless fragments). The reader in
+  blues wins 25% at 4 and 73% at 5, yellows 22% at 3; the blind bot 0–19% in whites and blues. Its sheet in
+  docs/boss-guide.md. The designer: "this should be good". PAGE NINE is built on `claude/demo-phase3-bosses` and lands
+  after the designer plays it.
