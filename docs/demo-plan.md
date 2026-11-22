@@ -381,7 +381,11 @@ Side by side, the earlier phase lands first and the later one merges main before
   360 px); the practice wired behind an offer after the class pick, **off** until the designer has played it
   (`?practice`; tutorial.mjs `PRACTICE.offer`). Perf before and after (rooms idle, a boss fight; phone and desk): no
   change. The scripted pass (1440×900, iPhone SE, iPhone 13) reaches the first kill and a jack out in about a minute,
-  every tip clear of its target; it stops short of level 2 and the first traced server.
+  every tip clear of its target. The full pass (desktop, a bot that hits the part attacking soonest and banks every
+  win, as the tour teaches): first kill 71 s, first jack out 76 s, level 2 at 7.4 min (from wick's first contract), the
+  first traced server's Connect at 23.6 min after 11 kills, 17 tips, none over its target, no errors. It misses the
+  15-minute mark: each level-1 fight costs about 60% of Integrity (a minute's rest at home after each) and 4 of 15 were
+  lost. That's fight numbers and pacing (Phase 8), left alone here.
 - **Phase 3, RELAY-KING** (22 Nov): retuned for its level 5 and for gear (`bar` 0.7, `dmg` 1.1; below 6 its Replicator
   wears one ◆ and hatches every 6); the planner breaks the Relay under Flood (act 3's endless fragments). The reader in
   blues wins 25% at 4 and 73% at 5, yellows 22% at 3; the blind bot 0–19% in whites and blues. Its sheet in
