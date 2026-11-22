@@ -32,7 +32,7 @@ first transmission comes in over the map (Transmissions).
 4. Walk the server's rooms, take the vault's key from its guard, open the vault, and beat the **Resident** in the
    Core to take the server over.
 5. Each floor has an exit (▼) down to the next, deeper and higher in level.
-6. `jack out` to bank your pack. Home sees a fight only when an **invasion** gets past your **firewall** (Home).
+6. `jack out` to bank your pack. **Invasions** come at HOME and chip its Integrity until you intercept them (Home).
 7. **Mail** gives it all a reason: LOWLIGHT's storyline, contracts from Halcyon Mutual and the factions, each floor's
    job chain, and the Shops (Mail and contracts).
 
@@ -1330,7 +1330,8 @@ a favoured card once it has come up twice, its rich code once it leans your way;
 | 1 | Key 1 and your first core skill |
 | 3, 5, 7 | Your second, third and fourth core skills |
 | 5 | Your kit talent; routines (Routines) |
-| 10 | Your subclass (and its edge and first skill), SIGINT, talent points (one every other level: 21 by 50) |
+| 10 | Your subclass (and its edge and first skill), SIGINT, the first talent tier (Talents) |
+| 16–40 | A talent tier at 16, 22, 28, 34 and 40 |
 | 12–38 | Your subclass's line, a skill at 12, 14, 16, 18, 20, 22, 26, 30, 34 and 38 |
 | 15, 30 | An Implant slot each |
 | 22, 30 | An eighth and ninth skill key |
@@ -3134,7 +3135,19 @@ an achievement's reward; the stock look is the default and nothing changes how t
 
 ## Developer tools
 
-Developer commands work only in tests, playtest pages, a test bench and with `?dev` in the address.
+Developer commands work only in tests, playtest pages, a test bench and with `?dev` in the address, never in the demo.
+
+- **The demo build** (`node scripts/build.mjs build --demo`, `demo.mjs`; docs/demo-plan.md): floors 1–2. XP stops at
+  level 14 (the bar stays full, its tooltip says the demo ends there) and level 13's floor line names the full game;
+  floor 2's exit card has **The full game** in place of Go down. Contracts, events, sites, runners and members' servers
+  are dealt on floor 2 at most (`dealFloor`). Its own save (`blackbox-demo`); `?dev`, `?bench` and `?playtest` do
+  nothing, and the bench, the Arena and the effects playtest stay out of its bundle. *demo 0.1* sits in the power-up's
+  corner, on Settings' Save card and in every report. Delivering floor 2's chain (*Carrier*) opens the **end card**
+  (time played, level, bosses down, uniques found, Feedback, the itch follow and the Discord), which ends play.
+- **Telemetry** (the demo only, `telemetry.mjs`): asked once after your first jack out, off until yes, a toggle on
+  Settings' Save card. A random install id, never the handle. Sessions (start, length, the last screen), levels
+  reached, bosses fought (won or lost, cycles, Integrity left), disconnects (where, by what) and the demo finished go
+  to the designer's Cloudflare Worker (`tools/telemetry/`), whose page reads them back.
 
 - **Test bench** (`bench.mjs`): `/?bench=<name>` is a save of its own (`blackbox-bench-<name>`) that never touches the
   real one. `bench <subclass|class> <level>` makes a ready character (talents, blue gear with its subclass's stats, its
@@ -3186,6 +3199,13 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 The save is `SAVE_VERSION` 66 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
+
+- **Backup** (Settings → Save, `backup.mjs`): **Export save** downloads `blackbox-<handle>-<date>.json`; **Import save**
+  reads one through `restore`, asks (*Replace this game with …?*) and reloads onto it. A save from a newer
+  `SAVE_VERSION` is refused. It is how a demo save reaches the full game. After the class pick the game asks the
+  browser once to keep its storage (`navigator.storage.persist()`).
+- **Feedback** (Settings → Save, the page-error card, the demo's end card) downloads a report (the build, the browser,
+  the screen, your level and floor, the last 100 log lines and the save) and opens the Discord (`demo.mjs LINKS`).
 
 - **The wall goes** (no version of its own): the firewall's tiers come back as what they cost at your base now (an
   older climbed wall, its climb), held and carried filters as the components they scrapped for, and an invasion of a

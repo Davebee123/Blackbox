@@ -17,6 +17,7 @@
 //
 // The first time you're home at SUBCLASS.from with no pick, app.js brings you to this page once (subPromptDue,
 // combat.mjs subPrompted).
+import { DEMO } from './demo.mjs';
 import { ABILITIES, ARCHETYPES, LOADOUT, SUBCLASS, SUBS, SYNC, CONFIG, STATUSES, TREE, barSlots, cantripsOf, isRunSkill, lineOf, unlockLevel, xpToNext } from './data.mjs';
 import { active, capPickOf, capState, capstonePoints, classOf, cooldownOf, equippedSkills, followOf, freeTiers, hackerLevel, hackerOf, kitTalent, knownSkills, picked, presetKeys, presetsOf, specRule, subOf, subWaiting, tiersOf, tierState } from './combat.mjs';
 import { glyph } from './glyphs.mjs';
@@ -163,7 +164,7 @@ export function skillsTabMarkup(s, view) {
   const free = kit ? freeTiers(s, id) : LOADOUT.tiers.filter((l) => lvl >= l).length, spent = kit ? tiersOf(s, id).some(picked) || picked(capPickOf(s, id)) : false;
   const pts = free && !p.early ? `<span class="cls-pts" title="${esc(`Talent tiers: A tier opens at each of levels ${LOADOUT.tiers.slice(0, -1).join(', ')} and ${LOADOUT.tiers.at(-1)}. Pick one of its three talents.`)}"><b>${free}</b> ${free === 1 ? 'tier to pick' : 'tiers to pick'}</span>` : '';
   const reset = spent && !p.busy ? `<button type="button" class="btn small" data-command="talent reset ${id}" title="Reset: takes back every pick. Free at home.">Reset</button>` : '';
-  const top = `<header class="cls-top"><div class="cls-lv"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="cls-xp" title="${fmt(hk.xp)} / ${fmt(next)} XP"><i style="width:${pct.toFixed(1)}%"></i></span>` : '<small>max level</small>'}</div><span class="cls-sp"></span>${pts}${reset}<button type="button" class="btn cls-toolkit" data-toolkit="${id}" title="Toolkit: Your abilities and your bar. Drag an ability onto a key.">${ico('command')}Toolkit<kbd>T</kbd></button></header>`;
+  const top = `<header class="cls-top"><div class="cls-lv"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="cls-xp" title="${fmt(hk.xp)} / ${fmt(next)} XP"><i style="width:${pct.toFixed(1)}%"></i></span>` : `<small${DEMO ? ` title="The demo ends at level ${DEMO.level}."` : ''}>max level</small>`}</div><span class="cls-sp"></span>${pts}${reset}<button type="button" class="btn cls-toolkit" data-toolkit="${id}" title="Toolkit: Your abilities and your bar. Drag an ability onto a key.">${ico('command')}Toolkit<kbd>T</kbd></button></header>`;
   const ban = p.early ? `<p class="cls-ban dim">Subclass at level ${SUBCLASS.from}</p>` : p.waiting ? '<p class="cls-ban">Choose a subclass</p>' : '';
   const yours = kit, other = kit ? (kit.id === A.id ? B : A) : null;
   const cols = yours ? `${subCol(p, yours)}${midCol(p)}${foldCol(p, other)}` : `${subCol(p, A)}${midCol(p)}${subCol(p, B)}`;

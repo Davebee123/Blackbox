@@ -33,6 +33,7 @@ export function gainItem(g, e, keys = []) {
   if (/^a protocol slot \(Implant\)/.test(g)) return { kind: 'slot', label: 'Implant slot', value: '+1', n: 1, tip: 'Implant slot: You load one more protocol, an Implant. Implants start to drop.' };
   if (g === 'a protocol slot') return { kind: 'slot', label: 'Protocol slot', value: '+1', n: 1, tip: 'Protocol slot: You load one more protocol.' };
   if ((m = g.match(/^new protocol bases: (.+)$/))) { const names = m[1].split(', '); return { kind: 'bases', label: 'Protocol bases', value: `+${names.length}`, n: names.length, names, tip: basesTip(names) }; }
+  if ((m = g.match(/^The full game \(floor (\d+)\)$/))) return { kind: 'floor', label: 'The full game', value: `floor ${m[1]}`, tip: `The full game: Floor ${m[1]} and below. The demo ends on floor ${m[1] - 1}.` };
   if ((m = g.match(/^(.+) \(floor (\d+)\)$/))) { const f = FLOORS[Number(m[2]) - 1]; return { kind: 'floor', label: m[1], value: `floor ${m[2]}`, tip: `${m[1]}: Floor ${m[2]}. Its viruses are level ${f?.band[0]} to ${f?.band[1]}.` }; }
   if ((m = g.match(/^(.+) in your kit$/))) return { kind: 'kit', label: m[1], value: 'kit', tip: `${m[1]}: ${specRule(kitTalent(arch))} Part of your kit.` };
   if (g === 'a daemon slot') return { kind: 'daemon', label: 'Daemon slot', value: '+1', n: 1, tip: 'Daemon slot: One more daemon runs on your server.' };

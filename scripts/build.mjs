@@ -7,6 +7,8 @@
 // - index.html's stylesheets, in their order → one style-<hash>.css (minified; url()s left as written: every sheet sits
 //   at dist/'s root).
 // - Every other file but the code and the editor (dev only) is copied as it is: samples, music, ui/, the favicon.
+// - --demo (docs/demo-plan.md Phase 1): the demo build. demo.mjs's BUILD becomes DEMO_BUILD (floors 1–2, level 14), and
+//   the developer pages' modules (the bench, the arena, the effects playtest) stay out of the bundle.
 import { build, transform } from 'esbuild';
 import { readFile, writeFile, mkdir, rm, readdir, copyFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -17,17 +19,26 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'dist');
 const CODE = new Set(['.mjs', '.js', '.css']);
 const SKIP = new Set(['editor.html']);
-// app.js's import('./x.mjs') → Promise.resolve(the module, imported statically).
-export const EAGER = { name: 'eager', setup(b) {
+// app.js's import('./x.mjs') → Promise.resolve(the module, imported statically). The demo leaves out the dev-only ones.
+export const DEV_ONLY = ['./bench.mjs', './abilityfx-playtest.mjs'];
+export const eager = (demo = false) => ({ name: 'eager', setup(b) {
   b.onLoad({ filter: /[\\/]dist[\\/]app\.js$/ }, async ({ path }) => {
     const src = await readFile(path, 'utf8'), mods = [];
-    const code = src.replace(/\bimport\('(\.\/[\w-]+\.mjs)'\)/g, (_, m) => `Promise.resolve(__eager${mods.push(m) - 1})`);
+    const code = src.replace(/\bimport\('(\.\/[\w-]+\.mjs)'\)/g, (_, m) => (demo && DEV_ONLY.includes(m) ? 'Promise.resolve(null)' : `Promise.resolve(__eager${mods.push(m) - 1})`));
     return { contents: code + mods.map((m, i) => `\nimport * as __eager${i} from '${m}';`).join(''), loader: 'js' }; // last: they evaluate after app.js's own imports, as before
   });
-} };
+  // The demo's switch: demo.mjs's BUILD line becomes the demo.
+  if (demo) b.onLoad({ filter: /[\\/]dist[\\/]demo\.mjs$/ }, async ({ path }) => {
+    const src = await readFile(path, 'utf8'), line = 'const BUILD = null;';
+    if (!src.includes(line)) throw new Error(`demo.mjs: no "${line}" line`);
+    const v = process.env.DEMO_VERSION; // a release tag's number (demo-0.1.1 → 0.1.1: .github/workflows/demo.yml)
+    return { contents: src.replace(line, v ? `const BUILD = { ...DEMO_BUILD, version: ${JSON.stringify(v)} };` : 'const BUILD = DEMO_BUILD;'), loader: 'js' };
+  });
+} });
+export const EAGER = eager();
 const hash = (s) => createHash('sha256').update(s).digest('hex').slice(0, 10);
 
-export async function buildGame(out = join(ROOT, 'build')) {
+export async function buildGame(out = join(ROOT, 'build'), { demo = false } = {}) {
   out = resolve(out);
   await rm(out, { recursive: true, force: true });
   await mkdir(out, { recursive: true });
@@ -35,7 +46,7 @@ export async function buildGame(out = join(ROOT, 'build')) {
   const js = await build({
     entryPoints: { app: join(SRC, 'app.js') }, bundle: true, format: 'esm', target: 'esnext',
     minify: true, sourcemap: 'linked', outdir: out, entryNames: '[name]-[hash]',
-    legalComments: 'none', charset: 'utf8', metafile: true, logLevel: 'warning', plugins: [EAGER],
+    legalComments: 'none', charset: 'utf8', metafile: true, logLevel: 'warning', plugins: [eager(demo)],
   });
   const entry = Object.entries(js.metafile.outputs).find(([, o]) => o.entryPoint)[0];
   const script = relative(out, resolve(ROOT, entry));
@@ -63,11 +74,12 @@ export async function buildGame(out = join(ROOT, 'build')) {
     }
   };
   await copy(SRC);
-  return { out, script, style, sheets: sheets.length, outputs: js.metafile.outputs };
+  return { out, script, style, sheets: sheets.length, outputs: js.metafile.outputs, inputs: Object.keys(js.metafile.inputs), demo };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const r = await buildGame(process.argv[2]);
+  const args = process.argv.slice(2), demo = args.includes('--demo'), dir = args.find((a) => !a.startsWith('--'));
+  const r = await buildGame(dir, { demo });
   const kb = (f) => ((r.outputs[relative(ROOT, join(r.out, f))]?.bytes ?? 0) / 1024).toFixed(0);
-  console.log(`${relative(ROOT, r.out)}/: ${r.script} (${kb(r.script)} KB), ${r.style} (${r.sheets} sheets)`);
+  console.log(`${relative(ROOT, r.out)}/: ${r.script} (${kb(r.script)} KB), ${r.style} (${r.sheets} sheets)${demo ? ', the demo' : ''}`);
 }

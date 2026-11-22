@@ -1,0 +1,10 @@
+# The demo's telemetry Worker (README.md "Telemetry"). database_id: the one `npx wrangler d1 create blackbox-telemetry`
+# prints. STATS_KEY (optional, `npx wrangler secret put STATS_KEY`): the page and /stats then need ?key=.
+name = "blackbox-telemetry"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "blackbox-telemetry"
+database_id = "PASTE-THE-DATABASE-ID-HERE"

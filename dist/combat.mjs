@@ -2365,6 +2365,7 @@ export function finish(s, result) {
   s.reports.push(structuredClone(e.metrics));
   if (s.reports.length > 50) s.reports.shift();
   fightOver(s, e, result); // what the fight did toward an achievement (achievements.mjs): counts and one-fight feats, nothing else
+  hooks.fightOver?.(s, e, result, d.integrity); // the page's own note of it (app.js: the demo's telemetry)
   // A server room (floorplan.mjs, the rooms playtest): the kill's XP here. Progress, loot and the pack are the room's.
   if (e.rooms) {
     if (result === 'escaped') emit(s, 'escaped', 'Upload complete. The archive is gone.', { mode: 'rooms', cycles: e.cycle }); // a runner got away (the Exfil: its upload completed)

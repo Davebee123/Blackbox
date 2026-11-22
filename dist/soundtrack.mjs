@@ -15,11 +15,12 @@
 import { FIGHT_THEMES, playTheme } from './fightmusic.mjs';
 import { outputOf } from './mixout.mjs';
 
-const HOME = ['music/home.ogg', 'music/home.mp3'];
+// Only the files that ship (dist/music): a fight plays the home track under its theme.
+const HOME = ['music/home.ogg'];
 export const MUSIC = {
   home: HOME,
-  run: ['music/run.ogg', 'music/run.mp3', ...HOME],
-  fight: ['music/fight.ogg', 'music/fight.mp3', ...HOME],
+  run: ['music/run.ogg', ...HOME],
+  fight: HOME,
 };
 export const MUSIC_VOLUME = { home: 0.32, run: 0.28, fight: 0.3 };
 export const RADIO_EVERY = { home: [22, 55], run: [14, 38], fight: [40, 90] }; // seconds between transmissions

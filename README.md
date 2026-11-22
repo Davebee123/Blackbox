@@ -23,6 +23,16 @@ Open http://127.0.0.1:4173. The content editor is at `/editor.html`.
 (`app-<hash>.js`, esbuild, its dynamic imports made static) and one stylesheet (`index.html`'s sheets in order), every
 other file copied but the editor. The Pages workflow (`.github/workflows/pages.yml`) builds it and deploys `build/`.
 
+**The demo** (docs/demo-plan.md). `node scripts/build.mjs build --demo` builds floors 1–2, capped at 14 (`dist/demo.mjs`).
+The `demo` branch and `demo-*` tags deploy it to itch.io with butler (`.github/workflows/demo.yml`; a tag's number is
+the build's). A release is a tag (`demo-0.1`), a hotfix the next one (`demo-0.1.1`), cherry-picked from main. The
+designer's links (the Discord, the telemetry Worker, the itch page) live in `LINKS` in `dist/demo.mjs`.
+
+**Telemetry** (`tools/telemetry/`): a Cloudflare Worker (free tier) with a D1 database. Once: `cd tools/telemetry`,
+`npx wrangler login`, `npx wrangler d1 create blackbox-telemetry` (its id into `wrangler.toml`), `npx wrangler d1 execute
+blackbox-telemetry --remote --file schema.sql`, `npx wrangler deploy`; optionally `npx wrangler secret put STATS_KEY`.
+The Worker's URL goes in `LINKS.telemetry`; the same URL (with `?key=`) is the page that reads the numbers back.
+
 ## How a session goes
 
 - **SPRAWL-00** is where you start: a starter server laid out as a plus (netrooms.mjs `sprawlGraph`): twelve
@@ -284,6 +294,11 @@ comment saying what it does.
 | `dist/legends.mjs` | The 27 legends (docs/legends.md), bench only: none drops, and none changes a fight until `registerLegends` runs (only the legends simulation calls it). |
 | `dist/bench.mjs`, `dist/bench-key.mjs` | The test bench and the Dev drawer (loaded only on a bench or with `?dev`); `build()` is shared with the simulations. The save keys. |
 | `dist/arena.mjs` | The Arena: every fightable thing from the data tables, and `developer fight`. |
+| `dist/demo.mjs` | The demo switch (`DEMO`, null in the game), its caps and the designer's links. |
+| `dist/backup.mjs` | Export and import of the save, and the feedback report. |
+| `dist/telemetry.mjs` | The demo's opt-in telemetry: the queue and what's tracked (app.js sends it). |
+| `dist/demo-view.mjs` | The demo's cards: the telemetry question and the end card. |
+| `tools/telemetry/` | The telemetry Worker (`worker.js`), its numbers (`stats.js`), D1 schema and `wrangler.toml`. |
 
 ### Root: server, scripts and simulations
 
@@ -292,7 +307,7 @@ comment saying what it does.
 | `serve.mjs` | The local server, and the editor's save endpoint. Listens on 127.0.0.1 only. |
 | `scripts/test.mjs` | The test runner: fast files, plus slow simulations whose imports changed. |
 | `scripts/land.mjs` | Lands a branch on main, tested against the main it lands on. |
-| `scripts/build.mjs` | The hosted game: `dist/` bundled into one minified script and stylesheet, in `build/`. |
+| `scripts/build.mjs` | The hosted game: `dist/` bundled into one minified script and stylesheet, in `build/`; `--demo` for the demo. |
 | `balance.mjs` | Class balance by level → [`docs/BALANCE.md`](docs/BALANCE.md). |
 | `bot.mjs` | A scripted player from a fresh save to a level, through the real commands. |
 | `pacing.mjs` | Hours of real play to each level, against the targets. |
@@ -360,5 +375,6 @@ and `style.test.mjs` the tooltip grammar.
 `design/` holds the specs and reviews of the previous UI pass: history, not instructions.
 
 `press/` holds the Steam capsules (header 920×430, main 1232×706, small 462×174, vertical 748×896, library
-600×900), the logo (the box and the name on transparent ground, 1280×720) and their generator: `capsules.html` draws
-them, `node press/render.mjs` saves them.
+600×900), the Discord art (server icon 512, banner 960×540, invite splash 1920×1080, welcome header 1200×400), the logo
+(the box and the name on transparent ground, 1280×720) and their generator: `capsules.html` draws them,
+`node press/render.mjs` saves them.
