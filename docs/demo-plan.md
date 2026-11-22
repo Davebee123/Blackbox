@@ -364,3 +364,6 @@ Side by side, the earlier phase lands first and the later one merges main before
   loop's firewall and *Levels*' talents fixed. A level-14 bot save is 374 KB against itch's 5 MB. Waiting on the
   designer: the itch page (Restricted, full-screen embed), `ITCH_API_KEY` and `ITCH_TARGET`, the Discord invite, the
   Worker deployed; then the save across a reload and a new upload on itch in Chrome, Firefox and Safari.
+- **Phase 1, deploy** (22 Nov): the itch page is up (matzahboy.itch.io/blackbox, Restricted, html5 channel; the `demo`
+  branch pushes it with butler, its target written into the workflow), and the designer has played it there. The
+  Discord is made (#announcements and #patch-notes read-only); its invite and the telemetry Worker are still to come.
