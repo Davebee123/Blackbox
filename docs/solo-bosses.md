@@ -131,9 +131,9 @@ called off, the big key on the beat) something specific.
    act that ended: 18.8 / 17.6 / 18.0.
    Retuned for its level (demo Phase 3, November 22): it fights at 5 in SPRAWL-00's Core, so below 6 a Replicator with
    one ◆ hatching every 6 (`trim`); the planner breaks the Relay under Flood. Then sized to depend on gear (the
-   designer): `bar` 1.0, `dmg` 1.2. Level-5 boss, four classes, the reader at 5: whites 13%, blues 21%, yellows 83%
-   (acts 16.2 / 17.0 / 16.1); at 6 whites 58%, blues 75%, yellows 83%; at 4 only yellows (50%); at 3 nobody. The blind
-   bot wins 0–8% in whites and blues, 50% in yellows at 5.
+   designer: a reader in blues wins about half the time at 5): `bar` 0.85, `dmg` 1.25. Level-5 boss, four classes,
+   8 seeds, the reader at 5: whites 34%, blues 53% (acts about 18 / 19 / 20), yellows 78%; at 6 63%, 72%, 78%; at 4
+   only yellows (41%); at 3 nobody. The blind bot: 0% in whites and blues at 5, 69% in yellows.
 3. Floor 2: DEADBOLT, BACK ORIFICE, PATCH TUESDAY, SLEEPWALKER, MIRRORSHADE, CENTRIFUGE (built November 14,
    nativeacts.mjs). Their acts for the planner (won fights, level 10, 12 seeds): DEADBOLT 18.1 / 18.8 / 15.1 (`bar`
    1.1), BACK ORIFICE 15.8 / 19.9 / 14.7 (1.0), PATCH TUESDAY 16.1 / 17.7 / 17.9 (0.8), SLEEPWALKER 16.8 / 15.5 / 15.2
