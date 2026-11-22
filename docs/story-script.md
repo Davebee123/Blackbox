@@ -94,6 +94,214 @@ Only two change.
 
 ---
 
+## The demo's transmissions
+
+**Status.** Approved by the designer (22 November 2026); not built (Phase 5 wires them, Phase 7 their triggers). Words for the unbuilt rows of docs/demo-plan.md's *Transmissions*
+(the two built ones, wick's welcome and the first server, stay as they are). Each plays once in the quest window's
+*Transmission*, on its event, never mid-fight. Lines are the speaker's; numbered choices are the player's (teal), each
+with its answer; *ends* names where it closes. `{blank}` is filled in. A runner's or a rival's has a line per temperament.
+
+### First runner helped · that runner (their bust)
+
+*When:* back on the map after the first room you win beside a runner (Help, or pulling one out). *Opens:* hiring.
+
+> **Careful:** Pinging you before you disconnect. That room went better with two of us on it. I'm {handle}, {faction}'s, on the quiet servers mostly.
+> **Steady:** Thanks for the cover back there. {handle}, {faction}. You'll see my handle around this floor.
+> **Bold:** Saw your process take that thing apart. {handle}, {faction}. Save the handle.
+
+1. *What do you want for it?*
+   > **Careful:** Patch me into your runs. A fee up front and a cut of what you bank. I'll keep you off the routes that bite.
+   > **Steady:** Put me on your crew. A fee up front, a cut of what you bank, and I connect every time you do.
+   > **Bold:** Put me on your crew. A fee and a cut. I'm worth both, check my record.
+2. *Run with me.* (ends: their card, **Hire**)
+3. *Another time.*
+   > **Careful:** I'm on the net a few more hours. Then I log off for a while.
+   > **Steady:** I'll stay on the channel. Ping me.
+   > **Bold:** Your loss. My handle's on #net.
+
+### First jack out · wick
+
+*When:* home from the first jack out, after the pack banks. *Opens:* blips.
+
+> pack's banked. that's yours now, whatever happens next.
+> the net keeps moving while you're out of it. small things turn up and go again.
+
+1. *What turns up?*
+   > a cache in a room you cleared. a rare stray worth the walk.
+   > they spark on the map for a few minutes, then they're gone.
+2. *Got it.* (ends)
+
+### The turf letter · Halcyon Loss Prevention
+
+*When:* the turf letter arrives (the storyline's fourth). *Opens:* the board, the retainer.
+
+> This is Halcyon Loss Prevention. Your handler's crew is now on our approved list.
+> Our board is open to you. We pay on delivery, and we do not ask how the work was done.
+
+1. *What's on the board?*
+   > Work from our clients, and some from parties we do not discuss. Offers arrive often and do not wait.
+2. *What's the retainer?*
+   > A payment every half hour, including while you are away. It rises as our confidence in you does.
+3. *Open the board.* (ends: the board)
+4. *Understood.* (ends)
+
+### First server mapped or taken over · wick
+
+*When:* the first server you map, or take over, whichever comes first. *Opens:* invasions; receipts with a takeover.
+
+> {server}'s on your books. halcyon likes that. the strays on it don't.
+> you've been all through it, so they have your address now. some of them follow it back across the net to your box.
+
+1. *What comes?*
+   > viruses off the servers you've touched, one at a time. you'll see them coming on the map.
+   > the longer one sits on your box, the more it costs you, and the more it's carrying when you finally kill it.
+2. *What's in the vault?*
+   > every vault holds a receipt. it's a trade somebody froze, with who paid and how much.
+   > take the server over and you stamp the receipt. you decide who gets it.
+3. *Fine.* (ends)
+
+### First vault opened · wick
+
+*When:* home from the run where you opened your first vault. *Opens:* rivals.
+
+> got the files. you weren't the only one after them.
+> runners work vaults for whoever pays them. a server nobody holds is fair game, so next time one may connect while you're on it.
+
+1. *What happens then?*
+   > it's a race to the vault. if your paths cross, you fight for it.
+   > if they get there first and jack out, the files go with them.
+2. *Noted.* (ends)
+
+### First rival met · the rival
+
+*When:* home after your first rival race ends, won or lost. *Opens:* what rivals want.
+
+> **Careful,** you won: I logged how you beat me. Next time I'll bring something for it.
+> **Careful,** they got away: Clean run. The files are already sold.
+> **Steady,** you won: Fair fight. There are more vaults on my list.
+> **Steady,** they got away: That vault was on my list. Nothing personal.
+> **Bold,** you won: Ha. Good. I was getting bored of winning.
+> **Bold,** they got away: Too slow. Ping me when you want a rematch.
+
+1. *Who are you working for?*
+   > I'm {handle}. I run for {faction}. They pay by the file, and they want every receipt before someone else stamps it.
+2. *Stay off my servers.*
+   > **Careful:** I don't touch a server someone holds. Take it over and I'll keep away.
+   > **Steady:** Take it over and I won't connect. Leave it open and I will.
+   > **Bold:** Then take them over. Until you do, I'll keep coming.
+3. *See you.* (ends)
+
+### Kestrel's hub found · Kestrel
+
+*When:* you first find Kestrel's hub. *Opens:* the Rack pull, Kestrel's supply order.
+
+> Kestrel Underwriting. The rack you're connected through belongs to us. So do most of the others.
+> We keep a standing order for Kernel code. Deliver a full lot and we pay half again over market.
+
+1. *What else do you have?*
+   > Now and then we bring one of Kessler's old racks out of cold storage and mount it for one cycle.
+   > Whatever is in its cage is unclaimed until we pull it back.
+2. *Kessler?*
+   > The builders. They went bankrupt and paid us in hardware. We have a great deal of hardware.
+3. *Good to know.* (ends)
+
+### GLASSJAW's hub found · GLASSJAW
+
+*When:* you first find GLASSJAW's hub. *Opens:* listings, feuds, GLASSJAW's supply order.
+
+> GLASSJAW. Everything on this net has a price, and I keep the list.
+> I'll take Exploits off you on a standing order, above market.
+
+1. *What's on the list?*
+   > Gear from other networks, now and then. I'll page you when a piece goes up, and it won't stay up long.
+   > Work that stays off Halcyon's books, too. It pays better.
+2. *Who buys from you?*
+   > Everyone, mostly from each other. When two factions fight over a server you've traced, I'll tell you who's winning, and you can pick a side.
+3. *I'll be back.* (ends)
+
+### A runner reaches Known · that runner
+
+*When:* a runner's standing reaches Known. *Opens:* a runner's trade. `{payer}`, `{payee}`, `{sum}` and `{era}` are
+their trade's, as on its receipt.
+
+> **Careful:** You've seen me fight, so I'm asking you. I've been tracing a frozen trade for a long time: {payer} to {payee}, {sum}, since {era}. I've found the server it's on.
+> **Steady:** I have a trade stuck on a server near one of yours: {payer} to {payee}, {sum}. It has waited long enough, and I could use a hand.
+> **Bold:** I found my trade: {payer} to {payee}, {sum}, frozen since {era}. I'm going after the Resident that holds it. Are you coming?
+
+1. *Whose money is it?*
+   > **Careful:** It was my family's. It has been frozen longer than I've been alive.
+   > **Steady:** It belongs to someone who wants it settled, and so do I.
+   > **Bold:** It doesn't matter whose. It's owed.
+2. *Show me.* (ends: the trade's server on the map)
+3. *Later.*
+   > **Careful:** It has waited this long. It can wait a little longer.
+   > **Steady:** It isn't going anywhere, and I'll be on the net for a few more hours.
+   > **Bold:** Don't take too long.
+
+### PAGE NINE falls · wick
+
+*When:* home after PAGE NINE falls. *Opens:* the way to floor 2.
+
+> page nine is switched off. the account is closed.
+> it was running on a schedule, and that schedule came from somewhere deeper. some people on floor 2 listen for it.
+
+1. *Who?*
+   > lantern. they're old kessler staff and their kids. they listen to the backhaul and sell what they hear, one page at a time.
+   > i'll tell them you're coming.
+2. *Where is deeper?*
+   > the backhaul, floor 2. it's an older layer, and its strays are older too. keep tracing servers and you'll reach it.
+3. *Good.* (ends)
+
+### Floor 2 reached · LANTERN
+
+*When:* you first reach the Backhaul. *Opens:* *Carrier*. The first line is the drafted arrival.
+
+> Four. Nine. Nine. This is LANTERN. The strays on the Backhaul come up from below. Something down there is counting them, and so are we.
+
+1. *What are they counting?*
+   > That's what we sell. You'll get it one page at a time.
+2. *wick sent me.*
+   > We know. He used to read the same numbers we do.
+3. *Open my mail.* (ends: Mail)
+
+### *Carrier*'s schedule page read · LANTERN
+
+*When:* you first read `sched.0412` (*process table at 81%*). *Opens:* INIT's table, Orphans contracts.
+
+> Four. Nine. Nine. You've read the bottom of the page. It says eighty-one percent.
+> The machine keeps a table of every process running on it. A trade that never finishes keeps its place in that table, so the table keeps filling.
+
+1. *What happens at a hundred?*
+   > Nothing new can start. That has happened once, at 2:14 in the morning.
+2. *How does it come down?*
+   > Every orphan you break cleanly frees a place in the table. From now on we'll mark the orphans for you and show you the count.
+   > If the count climbs too high, we cancel a round of trades ourselves. We don't like doing it.
+3. *Over.* (ends)
+
+### CENTRIFUGE falls · LANTERN, then wick
+
+*When:* home after CENTRIFUGE falls. *Opens:* the demo's end card, after wick.
+
+**LANTERN**
+
+> Four. Nine. Nine. The line is clear.
+> Every page of the schedule is signed at the bottom, and it's the same signature on every page.
+
+1. *Who signed it?*
+   > A pricing model. It chooses which trades are cancelled, and it signs for Halcyon.
+2. *What's below the Backhaul?*
+   > The Stacks. It's an older layer with older trades, and the count is louder there.
+3. *Over.* (ends; wick follows)
+
+**wick**
+
+> so halcyon's model signs the schedule, and halcyon pays us. you can see the shape of it.
+> floor 3 is next. i'll be here when you get there.
+
+1. *See you down there.* (ends: the end card)
+
+---
+
 ## Floor 3 · The Stacks · *Underwriting* · Halcyon Claims
 
 *Reason:* Halcyon's Claims desk wants the Stacks tidied up. It doesn't say why.
