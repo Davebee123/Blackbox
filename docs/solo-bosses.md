@@ -129,6 +129,9 @@ called off, the big key on the beat) something specific.
    10): Resident worm 15.3 / 15.8 / 15.3 (`bar` 0.6), ransomware 16.2 / 18.7 / 17.7 (1.2), REPO MAN 15.8 / 16.0 / 15.4
    (2.2), HOLLOW CHOIR 16.0 / 17.7 / 14.5 (3.85). RELAY-KING (0.85) is won 3 times in 48, so its acts are read over every
    act that ended: 18.8 / 17.6 / 18.0.
+   Retuned for its level (demo Phase 3, November 22): it fights at 5 in SPRAWL-00's Core, so `bar` 0.7 and, below 6,
+   a Replicator with one ◆ hatching every 6 (`trim`); the planner breaks the Relay under Flood. Level-5 boss, four
+   classes, 8 seeds: the reader wins 13% at 3, 72% at 5 (acts 16.4 / 17.7 / 16.7), 91% at 6; the blind bot 0–9%.
 3. Floor 2: DEADBOLT, BACK ORIFICE, PATCH TUESDAY, SLEEPWALKER, MIRRORSHADE, CENTRIFUGE (built November 14,
    nativeacts.mjs). Their acts for the planner (won fights, level 10, 12 seeds): DEADBOLT 18.1 / 18.8 / 15.1 (`bar`
    1.1), BACK ORIFICE 15.8 / 19.9 / 14.7 (1.0), PATCH TUESDAY 16.1 / 17.7 / 17.9 (0.8), SLEEPWALKER 16.8 / 15.5 / 15.2
