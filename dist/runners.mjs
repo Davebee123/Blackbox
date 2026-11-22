@@ -17,7 +17,7 @@
 // Jobs are picked at the hub (chooseJob): what each server near their level pays them on the market now, against the
 // risk their temperament takes. A pick is kept on the save (s.runners.jobs), since prices move.
 import { hackerLevel, hooks } from './combat.mjs';
-import { ARCHETYPES, CONFIG, FLOORS, floorFor } from './data.mjs';
+import { ARCHETYPES, CONFIG, dealFloor, lastFloor } from './data.mjs';
 import { codeOf } from './gear.mjs';
 import { zoneRooms } from './zone.mjs';
 import { marketRead } from './market.mjs'; // called at play, never at load (market.mjs reaches back here through events.mjs)
@@ -155,7 +155,7 @@ const chance = (r, L, server) => Math.max(RUNNERS.odds.min, Math.min(RUNNERS.odd
 // Their loop at logged-on time t, before the job: level, cycle (k) and how far into it (u), floor, its graph, their base.
 function loopAt(s, r, t) {
   const L = levelOf(s, r), x = t + r.phase, k = Math.floor(x / r.cycle), u = (x % r.cycle) / r.cycle;
-  const fl = floorFor(L), g = graphOf(s, fl);
+  const fl = dealFloor(L), g = graphOf(s, fl);
   return { L, k, u, fl, g, base: g.hubs[r.faction] || g.entry };
 }
 const serversNear = (g, L) => Object.values(g.nodes).filter((n) => n.kind === 'server').sort((a, b) => Math.abs(a.level - L) - Math.abs(b.level - L) || (a.id < b.id ? -1 : 1));
@@ -222,7 +222,7 @@ export function stateOf(s, r, t = clockOf(s)) {
 // How far along their trade (frozen one to three floors below where they work): a new one each time they reach the last.
 export function tradeOf(r, k, fl) {
   const n = k + r.tradeAt, i = Math.floor(n / r.need);
-  return { what: TRADES[Math.floor(hash(r.handle, 900 + i) * TRADES.length)], floor: Math.min(FLOORS.length, fl + 1 + Math.floor(hash(r.handle, 950 + i) * 3)), part: (n % r.need) / r.need, n: i };
+  return { what: TRADES[Math.floor(hash(r.handle, 900 + i) * TRADES.length)], floor: Math.min(lastFloor(), fl + 1 + Math.floor(hash(r.handle, 950 + i) * 3)), part: (n % r.need) / r.need, n: i };
 }
 // Where on the floor: a node and, travelling, how far toward the next. { at, next, f, passed }.
 function posOf(st) {

@@ -15,7 +15,8 @@ const BOX_AT = 1100, GLOW_AT = 1500; // ms: the box shows (the outline draws fro
 const LEAK = 1000; // ms from the light leaking out to the prompt
 const EDGE_MS = 160; // ms for the outline to draw one whole side
 
-export function powerOn({ sound = () => {}, reducedMotion = () => false, warm = null } = {}) {
+// version: the build's number, small in the corner (the demo's, demo.mjs), or none.
+export function powerOn({ sound = () => {}, reducedMotion = () => false, warm = null, version = '' } = {}) {
   const still = reducedMotion();
   const tap = matchMedia('(pointer: coarse)').matches;
   const el = document.createElement('div');
@@ -30,7 +31,7 @@ export function powerOn({ sound = () => {}, reducedMotion = () => false, warm = 
       <h1 class="po-word">BLACKBOX</h1>
       <p class="po-sub">Model 7 · OS 0.9.4</p>
       <p class="po-press">${tap ? 'Tap to start' : 'Press any key'}</p>
-    </div>`;
+    </div>${version ? `<p class="po-ver">${version}</p>` : ''}`;
   document.body.appendChild(el);
   const t0 = performance.now();
   // The outline: each side's share of the progress, drawn in order (a side waits for the one before it).

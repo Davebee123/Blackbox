@@ -5,6 +5,7 @@
 // Everything that moves is skipped when Motion is off; `shell plain` turns it all off.
 
 import { powerOn } from './poweron.mjs';
+import { DEMO } from './demo.mjs';
 import { warmGame } from './warm.mjs';
 import { bootScript } from './boots.mjs';
 import { bootOf } from './terminal.mjs';
@@ -30,7 +31,7 @@ export function createShell({ getState, isOn, canMove, tick, sound, tear }) {
     // The monitor comes on first (poweron.mjs); the boot lines run once a key starts it.
     $('boot').hidden = false;
     booting = true; // tips and the like hold off from the power-up on
-    powerOn({ sound, reducedMotion: () => !canMove(), warm: (progress) => warmGame({ audio: !!getState()?.settings?.sound, progress }) }).then(() => bootLinesRun(bootOf(getState())));
+    powerOn({ sound, reducedMotion: () => !canMove(), warm: (progress) => warmGame({ audio: !!getState()?.settings?.sound, progress }), version: DEMO ? `demo ${DEMO.version}` : '' }).then(() => bootLinesRun(bootOf(getState())));
   }
   // A look played on its own (System → Terminal's Preview): no power-up first. Motion off shows it still, all at once.
   function preview(id) {

@@ -15,7 +15,7 @@
 // - Leaving (or being kicked) cuts the trunk line. You lose nothing of your own.
 // Pure: state in, events out. run.mjs routes the `consortium` command (and `guild`, the old name).
 import { emit, warn, rand, hooks, hackerLevel, selectEncounter, command, gainCode, gainXp, xpFor, active, holding } from './combat.mjs';
-import { createLocation, SERVER, FAMILIES, variantFor, BOSSES } from './data.mjs';
+import { createLocation, SERVER, FAMILIES, variantFor, BOSSES, dealFloor } from './data.mjs';
 import { seeded, codeOf, MATERIALS } from './gear.mjs';
 import { profileOf, PRESENCE, online, simOn } from './presence.mjs';
 import { ROGUE, rogueSpawns } from './rogue.mjs';
@@ -91,7 +91,7 @@ function buildNet(s, h) {
   for (let i = 0; i < n; i++) {
     let seed = strSeed(h, 10 + i) % 100000;
     const family = leanPick(s, h, r()); // their network's lean (network.mjs)
-    const floor = SERVER.floorFor(L); // a member's servers sit on their own floors (GAME_RULES.md "Consortium")
+    const floor = dealFloor(L); // a member's servers sit on their own floors (GAME_RULES.md "Consortium")
     let loc = createLocation(family, seed, floor);
     while (taken.has(loc.id)) loc = createLocation(family, ++seed, floor);
     taken.add(loc.id);

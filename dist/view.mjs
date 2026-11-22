@@ -74,6 +74,8 @@ import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, 
 import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { youMarks, junkKey } from './mechanics.mjs';
 import { cantripsOf, TELL, lifted, own, lift, line } from './data.mjs';
+import { lastFloor } from './data.mjs';
+import { DEMO, version } from './demo.mjs';
 import { usable, hooks, watchdogIn } from './combat.mjs';
 import { EXE } from './exe.mjs';
 import { sigintWindows, sigintCharges, plannedTells } from './tells.mjs';
@@ -2729,7 +2731,8 @@ function floorCard(s, node) {
       <div class="fl-row"><span class="fl-k">▲ Floor ${n - 1}</span><span class="fl-v">${esc(floorName(n - 1))} · ${bandLine(s, n - 1)}</span><button type="button" class="btn small" data-floor="${n - 1}">Go up</button></div></section>`;
   }
   const to = node.to, been = to <= floorsOf(s).reached;
-  const go = been ? `<button type="button" class="btn primary" data-floor="${to}">Go down</button>`
+  const go = to > lastFloor() ? `<button type="button" class="btn primary" disabled title="${esc(`The full game\nFloor ${to} and below\nThe demo ends on floor ${to - 1}.`)}">The full game</button>` // the demo's last floor (demo.mjs)
+    : been ? `<button type="button" class="btn primary" data-floor="${to}">Go down</button>`
     : `<button type="button" class="btn primary" data-command="descend" ${node.open && !active(s) ? '' : `disabled title="${active(s) ? 'Finish the fight first' : 'Locate a server it hangs off'}"`}>Go down</button>`;
   return `<section class="card floor-card"><h2>Exit · floor ${to - 1}</h2><h1>Floor ${to}${been ? ` · ${esc(floorName(to))}` : ''}</h1><p class="tagline">${bandLine(s, to)}</p><div class="row">${go}</div></section>`;
 }
@@ -3028,13 +3031,22 @@ function optionsCard(s) {
     </div>
     <div class="row"><button type="button" class="btn" data-run="tips replay">Replay tips</button></div></section>`;
 }
-export function systemMarkup(s, { coop = false, dev = false, tab = 'settings', phone = false } = {}) {
+// The save: a file out and back in (backup.mjs), Feedback (a report and the Discord), the demo's telemetry, a new game.
+// importing: a save read from a file, waiting for yes ({ who: { handle, level, cls } }).
+function saveCard(s, importing) {
+  const ask = importing ? `<p class="svc-line">Replace this game with <b>${esc(importing.who.handle)}</b> · Lv ${importing.who.level} ${esc(importing.who.cls)}?</p>
+    <div class="row"><button type="button" class="btn primary" data-backup="load">Load it</button><button type="button" class="btn" data-backup="cancel">Cancel</button></div>` : '';
+  const tm = DEMO ? `<div class="set-checks">${checkRow('data-backup="telemetry"', 'Share play data', s.telemetry?.on === true, { tip: 'Share play data: When you play, how far you get and which bosses win, sent without your handle.\n▸ It helps tune the demo.', kind: 'Setting' })}</div>` : '';
+  return `<section class="card save-card"><h2>Save <small class="save-ver">${esc(version())}</small></h2>
+    <div class="row"><button type="button" class="btn" data-backup="export"${tipAttrs('Export save: Download your save as a file, to keep or to carry into the full game.', 'Save')}>Export save</button><button type="button" class="btn" data-backup="import"${tipAttrs('Import save: Load a save from a file. It replaces this game.', 'Save')}>Import save</button><button type="button" class="btn" data-backup="feedback"${tipAttrs('Feedback: Download a report (this build, your screen, the last log lines and your save) and open the Discord to send it.', 'Help')}>Feedback</button></div>
+    ${ask}${tm}<div class="row"><button type="button" class="btn" data-run="reset game">Reset game</button></div></section>`;
+}
+export function systemMarkup(s, { coop = false, dev = false, tab = 'settings', phone = false, importing = null } = {}) {
   if (tab !== 'dev' || !dev) tab = 'settings';
   const head = systemTabs(tab, dev);
   if (tab === 'dev') return head + devMarkup(s, coop);
   return `${head}<div class="page-grid settings-page"><div style="display:grid;gap:12px;align-content:start">${volumeCard(s)}${optionsCard(s)}</div>
-    <div style="display:grid;gap:12px;align-content:start">${graphicsCard(s, phone)}
-    <section class="card"><h2>New game</h2><div class="row"><button type="button" class="btn" data-run="reset game">Reset game</button></div></section></div></div>`;
+    <div style="display:grid;gap:12px;align-content:start">${graphicsCard(s, phone)}${saveCard(s, importing)}</div></div>`;
 }
 
 // What a won fight gave you, as rows for the card over the virus picture.

@@ -10,6 +10,7 @@ import { GENES, partGenes, compatible, MECH_GENES, CLASHES } from './genes.mjs';
 import { PARTS, rollParts, roleOf, ratchetSpan, along as alongParts, echoOn } from './parts.mjs';
 import { rollExe, makeExe, EXE, EXE_ROLL } from './exe.mjs';
 import { crewOf, buildAuthor, bossAuthor } from './authors.mjs';
+import { levelCap, floorCap } from './demo.mjs';
 
 export const CONFIG = {
   // Heals you cast keep this share of the level line's growth (levelLine) and all of the lift above it, off your own
@@ -1791,6 +1792,10 @@ const fl = (floor) => FLOORS[Math.min(FLOORS.length, Math.max(1, floor || 1)) - 
 export const bandOf = (floor) => fl(floor).band;
 // Your floor: the deepest one whose band your level has reached (it replaced "your layer").
 export const floorFor = (level) => FLOORS.reduce((d, f, i) => (level >= f.band[0] ? i + 1 : d), 1);
+// The deepest floor content is dealt on (the demo's last), and the floor your level deals content on: contracts, events,
+// sites, runners and members' servers never land below it.
+export const lastFloor = () => floorCap(FLOORS.length);
+export const dealFloor = (level) => Math.min(lastFloor(), floorFor(level));
 // Kestrel's Idle Timer (docs/parts-plan.md P2): from floor 3 (PARTS.kestrel), half the guard posts and ICE bring one
 // (combat.mjs encounterVirus, by their seed). It watches the guard's signature part, as a virus's does.
 for (const g of Object.values(GUARDS)) g.parts.push({ ...GENES.idletimer.parts.ransomware, gene: 'idletimer', plan: 2, kestrel: true, from: bandOf(PARTS.kestrel.floor)[0] });
@@ -1830,7 +1835,8 @@ export const SERVER = {
 // kit: from level 5 (specFrom) one of a class's two first-row talents (ARCHETYPES[cls].spec) is part of its base kit, specRanks
 // free ranks: the level-5 specialty pick is gone. The Infiltrator's is Recon: two ranks of Heap Spray took a blue Payload from
 // 34% to 21% of its Integrity a fight at level 10 (docs/progression.md), far past the few percent the others add.
-export const LOADOUT = { equipSlots: 9, bar: [[1, 7], [22, 8], [30, 9]], keys: ['2', '3', '4', '5', '6', '7', '8', '9', '0'], maxLevel: 50, talentFrom: 10, tiers: [10, 16, 22, 28, 34, 40], capstoneAt: [45, 50], trialUntil: 5, specFrom: 5, specRanks: 2, kit: { breaker: 'overclocked', bastion: 'patch-notes', infiltrator: 'recon', operator: 'thread-pool' } }; // trialUntil: until a class reaches it, switching carries your level over
+export const LOADOUT = { equipSlots: 9, bar: [[1, 7], [22, 8], [30, 9]], keys: ['2', '3', '4', '5', '6', '7', '8', '9', '0'], get maxLevel() { return levelCap(50); }, // the demo stops at its level (demo.mjs)
+  talentFrom: 10, tiers: [10, 16, 22, 28, 34, 40], capstoneAt: [45, 50], trialUntil: 5, specFrom: 5, specRanks: 2, kit: { breaker: 'overclocked', bastion: 'patch-notes', infiltrator: 'recon', operator: 'thread-pool' } }; // trialUntil: until a class reaches it, switching carries your level over
 // What unlocks at each hacker level (same shape for every class; `order` fills the skill steps).
 export const UNLOCKS = [
   { level: 1, what: 'spike' }, { level: 1, what: 0 }, { level: 3, what: 1 }, { level: 5, what: 2 },

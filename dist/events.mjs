@@ -36,7 +36,7 @@
 //
 // Pure: state in, events out.
 import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique, setDrop, WORLD_SOURCES, hooks, gainCode } from './combat.mjs';
-import { FAMILIES, CONFIG, floorFor } from './data.mjs';
+import { FAMILIES, CONFIG, dealFloor } from './data.mjs';
 import { floorOfSlot } from './floors.mjs';
 import { rollItem, seeded, codeOf, vaultCode, MATERIALS } from './gear.mjs';
 import { openFarm } from './rogue.mjs';
@@ -386,7 +386,7 @@ const between = (s, [lo, hi]) => lo + Math.floor(roll(s) * (hi - lo));
 const traced = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member);
 const floorAt = (l) => floorOfSlot(l.slot) || l.depth || 1;
 const places = (s) => {
-  const all = traced(s), L = hackerLevel(s), mine = all.filter((l) => floorAt(l) === floorFor(L));
+  const all = traced(s), L = hackerLevel(s), mine = all.filter((l) => floorAt(l) === dealFloor(L));
   if (!mine.length) return all;
   const near = mine.filter((l) => (l.level || 1) <= L + 2);
   return near.length ? near : [mine.reduce((a, b) => ((b.level || 1) < (a.level || 1) ? b : a))];

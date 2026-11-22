@@ -18,7 +18,7 @@
 // server lives there, off s.locations, as a thread's temporary server does: no invasions, no tracing, no takeover. Its
 // rooms come through netrooms.mjs (the rig's lock, the rack's cage); the map and card: sites-view.mjs.
 import { hooks, emit, hackerLevel, findLocation, active, materialsOf } from './combat.mjs';
-import { createLocation, floorFor, CONFIG } from './data.mjs';
+import { createLocation, dealFloor, CONFIG } from './data.mjs';
 import * as FP from './floorplan.mjs';
 import { graphOf, floorOfSlot, holderOf } from './floors.mjs';
 import { changeRep } from './factions.mjs';
@@ -75,7 +75,7 @@ const pick = (s, xs) => xs[Math.floor(roll(s) * xs.length)];
 // Where a site can mount: beside a server you've located on your floor (never a rogue one, a member's or a lair), at
 // your level + 2 or under and among the three nearest your level, else the floor's lowest. It takes that server's level.
 function targets(s) {
-  const L = hackerLevel(s), floor = floorFor(L);
+  const L = hackerLevel(s), floor = dealFloor(L);
   const mine = (s.locations || []).filter((l) => !l.rogue && !l.member && !l.lair && !l.farm && !l.zone && l.slot && (floorOfSlot(l.slot) || l.depth || 1) === floor);
   const near = mine.filter((l) => (l.level || 1) <= L + 2).sort((a, b) => Math.abs((a.level || 1) - L) - Math.abs((b.level || 1) - L)).slice(0, 3);
   return near.length ? near : mine.length ? [mine.reduce((a, b) => ((b.level || 1) < (a.level || 1) ? b : a))] : [];

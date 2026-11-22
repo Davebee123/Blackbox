@@ -1,4 +1,4 @@
-// Saves the Steam capsules and the logo (press/capsules.html) as PNGs at their exact sizes, beside it or in the
+// Saves the Steam capsules, the Discord art and the logo (press/capsules.html) as PNGs at their exact sizes, beside it or in the
 // folder given.
 //   node press/render.mjs [out dir] [seed]
 // Needs Playwright's Chromium and the network (the fonts load from Google Fonts).
@@ -18,7 +18,8 @@ const loaded = await page.evaluate(async () => {
 });
 if (!loaded) { console.error('render: the fonts did not load (is Google Fonts reachable?)'); process.exit(1); }
 for (const cap of await page.$$('.cap')) {
-  const file = path.join(out, `blackbox-capsule-${await cap.getAttribute('data-size')}.png`);
+  const name = (await cap.getAttribute('data-file')) || `capsule-${await cap.getAttribute('data-size')}`;
+  const file = path.join(out, `blackbox-${name}.png`);
   await cap.screenshot({ path: file });
   console.log(file);
 }
@@ -27,4 +28,11 @@ await page.evaluate(() => { document.body.style.background = 'transparent'; });
 const logo = path.join(out, 'blackbox-logo.png');
 await (await page.$('.logo')).screenshot({ path: logo, omitBackground: true });
 console.log(logo);
+// Discord's invite splash: the banner at 2x (1920x1080)
+const hi = await browser.newPage({ viewport: { width: 1400, height: 900 }, deviceScaleFactor: 2 });
+await hi.goto(`file://${path.join(here, 'capsules.html')}${seed ? `?seed=${seed}` : ''}`);
+await hi.evaluate(() => document.fonts.ready);
+const splash = path.join(out, 'blackbox-discord-splash.png');
+await (await hi.$('[data-file="discord-banner"]')).screenshot({ path: splash });
+console.log(splash);
 await browser.close();

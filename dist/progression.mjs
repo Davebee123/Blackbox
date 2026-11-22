@@ -10,7 +10,7 @@
 //                Zero-day source the Zero-day (craftRestore).
 import { emit, materialsOf, daemonLevel, UNIQUES, gainsTalent, kitTalent, serverLevel, addItem } from './combat.mjs';
 import { versionLevel } from './daemons.mjs';
-import { LOADOUT, SERVER, FLOORS, ARCHETYPES, xpToNext, v41XpToNext } from './data.mjs';
+import { LOADOUT, SERVER, FLOORS, ARCHETYPES, xpToNext, v41XpToNext, lastFloor } from './data.mjs';
 import { BASES, PROTOCOL_SLOTS, MATERIALS, primaries, uniqueItem, seeded, RULES, ruleValue, RARITIES, ZERO_DAYS, rollItem } from './gear.mjs';
 import { MEMORY } from './memory.mjs';
 import { gainComponents } from './salvage.mjs';
@@ -28,7 +28,7 @@ export function levelGains(arch, L, top = 0) {
   const bases = Object.values(BASES).filter((b) => b.level === L && L > 1 && !b.uniqueOnly);
   if (bases.length) out.push(`new protocol bases: ${bases.map((b) => b.name).join(', ')}`);
   const floor = FLOORS.findIndex((f) => f.band[0] === L);
-  if (floor > 0) out.push(`${FLOORS[floor].name} (floor ${floor + 1})`);
+  if (floor > 0) out.push(`${floor + 1 > lastFloor() ? 'The full game' : FLOORS[floor].name} (floor ${floor + 1})`); // past the demo's last floor (demo.mjs)
   if (L === LOADOUT.specFrom) out.push(`${kitTalent(arch).name} in your kit`);
   if (L > top) {
     if (SERVER.daemonSlotsAt.includes(L)) out.push('a daemon slot');
