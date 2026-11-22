@@ -9,7 +9,7 @@ export const benchKey = (name) => BENCH_PREFIX + benchName(name);
 // The page's save: { key, bench }. A bench never reads or writes the real save. A playtest page has no bench (it is
 // never saved at all). The demo has its own save and no benches.
 export function pageSave(search, demo = null) {
-  if (demo) return { key: DEMO_KEY, bench: null };
+  if (demo && typeof demo === 'object') return { key: DEMO_KEY, bench: null }; // demo: demo.mjs's DEMO
   const p = new URLSearchParams(search), playtest = p.get('playtest');
   const bench = playtest ? null : benchName(p.get('bench'));
   return bench ? { key: benchKey(bench), bench } : { key: SAVE_KEY, bench: null };

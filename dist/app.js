@@ -2379,8 +2379,8 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && thPrev.o
 // (nocarrier.mjs), though the fight itself is already gone from the state.
 let lossHold = false;
 function render(force = false) {
-  if (tmAskDue) tmAsk(); // the demo's telemetry question, once the screen is calm
   if (lossHold) return;
+  if (tmAskDue) tmAsk(); // the demo's telemetry question, once the screen is calm
   // A step into the next room: a hop on the traceroute (floorplan-view.mjs) and, on the rooms page, you travel its trace
   // as code (travelfx.mjs). The hunter's step travels its trace too, in red, when you see it before or after it. A step that starts a fight goes straight to the fight; Screen effects off
   // or Motion off, no travel.
