@@ -10,7 +10,7 @@ export const setDemo = (d) => { DEMO = d || null; }; // tests only: the demo's r
 export const LINKS = {
   discord: '', // the Discord server's feedback channel invite (https://discord.gg/…): the Feedback button opens it
   telemetry: '', // the telemetry Worker's URL (https://blackbox-telemetry.<account>.workers.dev): tools/telemetry/
-  itch: '', // the itch.io page (https://<user>.itch.io/blackbox): the end card's follow
+  itch: 'https://matzahboy.itch.io/blackbox', // the itch.io page: the end card's follow
 };
 
 export const version = () => (DEMO ? `demo ${DEMO.version}` : 'dev');
