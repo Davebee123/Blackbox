@@ -1,6 +1,6 @@
-# Boss guide: floors 2 to 8
+# Boss guide: floors 1 to 8
 
-**Status.** Floors 2 to 5 built (floor 5's ACTUARY and PARASITE not yet) (floorbosses.mjs; the numbers below are the prototypes', GAME_RULES.md has the built ones); the rest designed, not built: how each boss in docs/solo-bosses.md plays, written as a raid guide (what it is, its
+**Status.** Floors 1 to 5 built (floor 5's ACTUARY and PARASITE not yet) (floorbosses.mjs; the numbers below are the prototypes', GAME_RULES.md has the built ones); the rest designed, not built: how each boss in docs/solo-bosses.md plays, written as a raid guide (what it is, its
 abilities, each phase, how you die). docs/solo-bosses.md holds the rules; where the two differ, it wins. Prototyped as
 applets with a board a phase (November 2026). Phases are acts, each a fresh board, the next as the last part of one breaks (act bars, docs/solo-bosses.md); INIT's as its table
 crosses 90, 83, 76 and 68. The numbers are the prototypes' placeholders; the boss sessions set the real ones.
@@ -8,6 +8,40 @@ crosses 90, 83, 76 and 68. The numbers are the prototypes' placeholders; the bos
 Terms: a **charge** is a big attack shown ahead that you can call off. A **cast** builds something on the virus, and
 you interrupt it. **Cutting** means taking a part across a tick on the cycle its move is due, which cancels the move.
 **SIGINT** is your one interrupt. **◆** is armor: a hit on armor breaks one ◆ and deals no damage.
+
+---
+
+## Floor 1
+
+### RELAY-KING · SPRAWL-00's Core · level 5, open from level 3
+
+**Overview.** A worm crowned on a relay. Its Broadcast grows with every fragment on the board, so the fight is how fast
+you clear what the Replicator hatches, and when you stop clearing and break the Relay.
+
+**Abilities**
+- **Replicate** (Replicator ♛, every 6 cycles): hatches a fragment that gnaws you every cycle. At most 3 at once. At its
+  level the Replicator wears one ◆.
+- **Broadcast** (Relay, every 4): hits harder by its base for each fragment on the board. A cut or a ◆ on you softens it.
+- **Surge** (Pulse Node, every 4) and the third part's hit (a Mirror's Splice at level 5).
+- **Tells:** Mass Mailer and Overcharge, charges on the Pulse Node.
+
+**Act 1 · Broadcast**
+- *Strategy:* break the Pulse Node, then clear the fragments in the cycle before each Broadcast, then the rest.
+- *How you die:* a Broadcast lands on three fragments.
+
+**Act 2 · Crown Hop**
+- *What happens:* as the ♛ crosses its 50% tick it hops to the healthiest other part, and the two swap how full they
+  are. Once an act.
+- *Strategy:* bring the other parts down before you take the ♛ across half, so there's nowhere healthy to hop to.
+- *How you die:* tunnelling the ♛ and watching it hop onto a full part.
+
+**Act 3 · Flood**
+- *What happens:* each Broadcast that lands hatches a fragment on every part, up to the cap.
+- *Strategy:* break the Relay first. With it gone nothing broadcasts and nothing floods. Cut a Broadcast you can't stop.
+- *How you die:* killing a fragment a cycle while three more hatch every four.
+
+**Tips.** It comes back 30 minutes after it falls. It wants gear: in blues a reader wins a quarter of the time at 4
+and most of the time at 5. At 3 only yellows give you a chance.
 
 ---
 
