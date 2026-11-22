@@ -6,13 +6,15 @@
 // L (your level), ...its own fields }. The kinds: start, close (len: this session's play ms, screen: the last page),
 // level, boss (boss: its id, won, cycles, hp: Integrity left), disconnect (where, by), done (the demo finished).
 import { hackerLevel } from './combat.mjs';
-import { DEMO, version } from './demo.mjs';
+import { DEMO, LINKS, version } from './demo.mjs';
 
 export const FLUSH_AT = 20; // events queued before a send
 const queue = [];
 const rid = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join('');
 export const telemetryOf = (s) => (s.telemetry ||= { on: null, id: null });
-export const askable = (s) => !!DEMO && telemetryOf(s).on == null;
+// Asked, and offered in Settings, only in the demo and only with a Worker to send to (LINKS.telemetry).
+export const offered = () => !!DEMO && !!LINKS.telemetry;
+export const askable = (s) => offered() && telemetryOf(s).on == null;
 export const isOn = (s) => !!DEMO && telemetryOf(s).on === true;
 export function setTelemetry(s, on) {
   const t = telemetryOf(s);

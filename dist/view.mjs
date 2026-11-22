@@ -75,7 +75,7 @@ import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { youMarks, junkKey } from './mechanics.mjs';
 import { cantripsOf, TELL, lifted, own, lift, line } from './data.mjs';
 import { lastFloor } from './data.mjs';
-import { DEMO, version } from './demo.mjs';
+import { DEMO, LINKS, version } from './demo.mjs';
 import { usable, hooks, watchdogIn } from './combat.mjs';
 import { EXE } from './exe.mjs';
 import { sigintWindows, sigintCharges, plannedTells } from './tells.mjs';
@@ -3036,7 +3036,7 @@ function optionsCard(s) {
 function saveCard(s, importing) {
   const ask = importing ? `<p class="svc-line">Replace this game with <b>${esc(importing.who.handle)}</b> · Lv ${importing.who.level} ${esc(importing.who.cls)}?</p>
     <div class="row"><button type="button" class="btn primary" data-backup="load">Load it</button><button type="button" class="btn" data-backup="cancel">Cancel</button></div>` : '';
-  const tm = DEMO ? `<div class="set-checks">${checkRow('data-backup="telemetry"', 'Share play data', s.telemetry?.on === true, { tip: 'Share play data: When you play, how far you get and which bosses win, sent without your handle.\n▸ It helps tune the demo.', kind: 'Setting' })}</div>` : '';
+  const tm = DEMO && LINKS.telemetry ? `<div class="set-checks">${checkRow('data-backup="telemetry"', 'Share play data', s.telemetry?.on === true, { tip: 'Share play data: When you play, how far you get and which bosses win, sent without your handle.\n▸ It helps tune the demo.', kind: 'Setting' })}</div>` : '';
   return `<section class="card save-card"><h2>Save <small class="save-ver">${esc(version())}</small></h2>
     <div class="row"><button type="button" class="btn" data-backup="export"${tipAttrs('Export save: Download your save as a file, to keep or to carry into the full game.', 'Save')}>Export save</button><button type="button" class="btn" data-backup="import"${tipAttrs('Import save: Load a save from a file. It replaces this game.', 'Save')}>Import save</button><button type="button" class="btn" data-backup="feedback"${tipAttrs('Feedback: Download a report (this build, your screen, the last log lines and your save) and open the Discord to send it.', 'Help')}>Feedback</button></div>
     ${ask}${tm}<div class="row"><button type="button" class="btn" data-run="reset game">Reset game</button></div></section>`;

@@ -1,7 +1,7 @@
 # The demo: floors 1–2
 
 **Status.** Signed off by the designer (21 November 2026): every decision below is settled. Nothing is built yet;
-Phase 1 is next. The transmissions' words are being drafted in their own session (docs/story-script.md).
+Phase 1 is next. The transmissions' words are approved (docs/story-script.md, *The demo's transmissions*).
 
 ## The demo
 
@@ -86,7 +86,6 @@ words for the designer; the designer approves each line.
 | PAGE NINE falls | wick | the dead account closed; the ledger points at floor 2 |
 | Floor 2 reached | LANTERN | *Four. Nine. Nine.* (drafted) |
 | *Carrier*'s schedule page read | LANTERN | the count: INIT's table |
-| The subclass picked | wick | a line on what you chose |
 | CENTRIFUGE falls | LANTERN, then wick | the schedule's signer; what's under floor 2; the demo's end |
 
 ## Evidence from the games it resembles
@@ -367,6 +366,9 @@ Side by side, the earlier phase lands first and the later one merges main before
 - **Phase 1, deploy** (22 Nov): the itch page is up (matzahboy.itch.io/blackbox, Restricted, html5 channel; the `demo`
   branch pushes it with butler, its target written into the workflow), and the designer has played it there. The
   Discord is made (#announcements and #patch-notes read-only); its invite and the telemetry Worker are still to come.
+- **Telemetry deferred** (22 Nov): the designer skips Cloudflare for now; with `LINKS.telemetry` empty the demo never
+  asks and Settings shows no toggle (`telemetry.offered`). The Worker stays in `tools/telemetry/` for later. The
+  Discord's channel link isn't an invite; the Feedback button waits for one.
 - **Phase 3, RELAY-KING** (22 Nov): retuned for its level 5 and for gear (`bar` 0.7, `dmg` 1.1; below 6 its Replicator
   wears one ◆ and hatches every 6); the planner breaks the Relay under Flood (act 3's endless fragments). The reader in
   blues wins 25% at 4 and 73% at 5, yellows 22% at 3; the blind bot 0–19% in whites and blues. Its sheet in

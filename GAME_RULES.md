@@ -3144,7 +3144,7 @@ Developer commands work only in tests, playtest pages, a test bench and with `?d
   nothing, and the bench, the Arena and the effects playtest stay out of its bundle. *demo 0.1* sits in the power-up's
   corner, on Settings' Save card and in every report. Delivering floor 2's chain (*Carrier*) opens the **end card**
   (time played, level, bosses down, uniques found, Feedback, the itch follow and the Discord), which ends play.
-- **Telemetry** (the demo only, `telemetry.mjs`): asked once after your first jack out, off until yes, a toggle on
+- **Telemetry** (the demo only, `telemetry.mjs`; off while `LINKS.telemetry` is empty: no question, no toggle): asked once after your first jack out, off until yes, a toggle on
   Settings' Save card. A random install id, never the handle. Sessions (start, length, the last screen), levels
   reached, bosses fought (won or lost, cycles, Integrity left), disconnects (where, by what) and the demo finished go
   to the designer's Cloudflare Worker (`tools/telemetry/`), whose page reads them back.
