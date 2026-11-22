@@ -1,7 +1,7 @@
 # The demo (docs/demo-plan.md Phase 1): every push to the demo branch, and every demo-* tag, builds with --demo and
 # pushes it to the itch.io page with butler. A release is a tag (demo-0.1), a hotfix the next (demo-0.1.1), cherry-picked
 # from main; the tag's number is the build's (DEMO_VERSION). Needs the ITCH_API_KEY secret and the ITCH_TARGET variable
-# (<itch user>/<game>, e.g. someone/blackbox); without them the build runs and the push is skipped.
+# (<itch user>/<game>; matzahboy/blackbox when unset); without the key the build runs and the push is skipped.
 name: Deploy the demo to itch.io
 on:
   push:
@@ -40,8 +40,8 @@ jobs:
             echo 'Add the ITCH_API_KEY secret and the ITCH_TARGET variable (Settings → Secrets and variables → Actions).' >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          # butler from itch's broth, on either of its two hosts (each has failed now and then)
-          for host in broth.itch.ovh broth.itch.zone broth.itch.ovh; do curl -sSfL --retry 2 -o butler.zip "https://$host/butler/linux-amd64/LATEST/archive/default" && break; sleep 5; done
+          # butler from itch's broth (broth.itch.ovh no longer resolves; it stays as a fallback)
+          for host in broth.itch.zone broth.itch.ovh broth.itch.zone; do curl -sSfL --retry 2 -o butler.zip "https://$host/butler/linux-amd64/LATEST/archive/default" && break; sleep 5; done
           unzip -q butler.zip -d butler && chmod +x butler/butler
           BUTLER_API_KEY="$ITCH_API_KEY" ./butler/butler push build "$ITCH_TARGET:html5" --userversion "$USERVERSION"
           echo "### Pushed $USERVERSION to $ITCH_TARGET:html5" >> "$GITHUB_STEP_SUMMARY"
