@@ -1081,8 +1081,8 @@ export const BOSSES = {
   // part (acts.mjs), and a mechanic an act, from its ♛ part's ticks (combat.mjs bossPhases).
   // RELAY-KING (run.mjs): a worm boss in SPRAWL-00's /net from level 3, back every half hour. Its Relay's Broadcast grows
   // for each fragment on the board (a Fan-in's lift). Act 2: at its 50% tick the ♛ hops (combat.mjs crownHop). Act 3: each
-  // Broadcast that lands hatches a fragment on every part. At its level (5) its Replicator wears one ◆ and hatches every 6. Sized so a reader in blues wins about half the time at 5.
-  relayking: { long: { hp: 1.05, dmg: 1.6, enrageAt: 36 }, name: 'RELAY-KING', bar: 0.85, trim: { below: 6, part: 'replicator', armor: 1, interval: 6 }, family: 'worm', hp: 1.25, dmg: 1.25, enrageAt: 16, acts: { beat: 'broadcast' }, work: { share: 0.45 },
+  // Broadcast that lands hatches a fragment on every part. At its level (5) its Replicator wears one ◆ and hatches every 6. Sized so a reader in blues wins about a quarter of the time at 4.
+  relayking: { long: { hp: 1.05, dmg: 1.6, enrageAt: 36 }, name: 'RELAY-KING', bar: 0.7, trim: { below: 6, part: 'replicator', armor: 1, interval: 6 }, family: 'worm', hp: 1.25, dmg: 1.1, enrageAt: 16, acts: { beat: 'broadcast' }, work: { share: 0.45 },
     extra: [{ id: 'relay', name: 'Relay', integrity: 30, armor: 1, loot: 'Crown Relay', fanin: 1, broadcast: true, attack: { name: 'Broadcast', effect: 'damage', amount: 3, interval: 4, first: 5 } }],
     signature: { name: 'Broadcast', rule: 'The Relay\'s Broadcast hits harder for each fragment on the board.' },
     phases: [{ at: 0.5, do: ['hop'], name: 'Crown Hop', emote: 'Rerouting. You were hitting the old address.', say: 'RELAY-KING reroutes. When its ♛ crosses half, it hops to the healthiest part, and the two swap how full they are.' }, { at: 0.25, do: ['flood'], name: 'Flood', emote: 'Opening every port. Let the segment flood.', say: 'RELAY-KING floods the network. Each Broadcast that lands hatches a fragment on every part.' }] },
