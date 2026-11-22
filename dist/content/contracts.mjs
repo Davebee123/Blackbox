@@ -84,7 +84,9 @@ export default {
         },
         {
           "kind": "boss",
-          "at": "sprawl",
+          "at": "road",
+          "k": 3,
+          "lv": 6,
           "subject": "the account",
           "boss": "PAGE NINE",
           "challenge": "PREMIUM RECEIVED. CLAIM FILED. PREMIUM RECEIVED. CLAIM FILED.",

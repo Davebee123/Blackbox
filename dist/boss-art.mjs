@@ -8,7 +8,7 @@
 
 // Which body a boss wears. The Resident's is by its server's family: the oldest orphan there.
 export const BOSS_SHAPE = {
-  relayking: 'crownmast', repoman: 'towhook', choir: 'organ', foreman: 'hardhat', heatsink: 'fins', coldwallet: 'vault',
+  relayking: 'crownmast', pagenine: 'ledger', repoman: 'towhook', choir: 'organ', foreman: 'hardhat', heatsink: 'fins', coldwallet: 'vault',
   centrifuge: 'centrifuge', shakedown: 'ransomclock', shouldersurfer: 'lurker', recursion: 'stack', nightdesk: 'desk', byzantine: 'domes', camswarm: 'cameras', graceperiod: 'hourglass', exitnode: 'shells',
   'nb-deadbolt': 'deadbolt', 'nb-tripmine': 'mine', 'nb-hashlord': 'crowncube', 'nb-backorifice': 'skull', 'nb-patchday': 'quilt', 'nb-floodwall': 'dam',
   'nb-mirrorshade': 'shades', 'nb-sleepwalker': 'walker', 'nb-echolalia': 'horn',
@@ -19,6 +19,7 @@ export const bossShape = (v) => (v?.boss === 'resident' ? RESIDENT_SHAPE[v.art] 
 // How each body attacks (virus-art.mjs STRIKES): its plain parts' move, and its special part's.
 export const BOSS_STRIKES = {
   crownmast: { core: 'strike', limb: 'shock' }, // the worm darts; the crown broadcasts
+  ledger: { core: 'headbutt', limb: 'pulse' }, // the stamp comes down; the page throbs
   towhook: { core: 'volley', limb: 'lash' }, // the case spits; the hook swings
   organ: { core: 'shock', limb: 'beam' }, // the pipes sound; the voices pour out
   hardhat: { core: 'headbutt', limb: 'rake' }, // the hat comes down; the fists drag
@@ -68,6 +69,22 @@ export const BOSS_BUILD = {
     for (let i = 0; i < 5; i++) { const th = (i / 5) * TAU, x = Math.cos(th), z = Math.sin(th); tube([x * 31, -16, z * 31], [x * 37, -43, z * 37], 7.5, 0.6, 'relay', crown); orb(x * 37, -44, z * 37, 4, 4, 4, 'relay', crown, 0.6); }
     for (let i = 0; i < 2; i++) loop(0, -10, 0, 64 + i * 30, 1.2, 'relay', anim({ k: 'ripple', c: [0, -10, 0], amp: 0.1, speed: 2.4, phase: i * 1.6 }));
     for (let n = 1; n <= 3; n++) orb(70, 42 - n * 9, 0, 7, 6, 7, 'frag' + n, orbit([0, 0, 0], 0.5 + n * 0.14, 0), 0.5);
+  },
+
+  // PAGE NINE: an open claims ledger (the Policy), a stack of premium coins on its left page, the Claims stamp over its
+  // right, inking the same line again.
+  ledger(k) {
+    const { tube, box, flat, anim } = k;
+    for (const sx of [-1, 1]) box(sx * 34, 20, 0, 32, 2.5, 26, 'policy', 0, 4.6); // the pages
+    tube([0, 20, -26], [0, 20, 26], 3.5, 3.5, 'policy'); // the spine
+    for (let i = 0; i < 6; i++) box(36, 17.4, -18 + i * 7, 22, 0.6, 1, 'policy', 0, 2.4); // its lines
+    box(36, 17.2, -18 + 2 * 7, 24, 0.8, 2.4, 'policy', anim({ k: 'breathe', c: [36, 17, -4], amp: 0.2, speed: 2.2 }), 2.8); // page nine's line
+    const clink = anim({ k: 'bob', amp: 0.6, speed: 1.1 });
+    for (let i = 0; i < 6; i++) flat(-38 + (i % 2) * 1.5, 16 - i * 4, 0, 11, 'premium', i > 3 ? clink : 0, 3.6); // the premium, coin on coin
+    const stamp = anim({ k: 'bob', amp: 4, speed: 1.4 });
+    box(36, -6, -4, 16, 5, 12, 'claims', stamp, 4.4); // the stamp's block
+    tube([36, -9, -4], [36, -30, -4], 3, 3, 'claims', stamp);
+    k.orb(36, -36, -4, 8, 7, 8, 'claims', stamp, 0.4); // its handle
   },
 
   // REPO MAN: a tow hook on its jib, and the ledger case it has come to take. Liens hang off the jib.

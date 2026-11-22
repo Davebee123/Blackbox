@@ -176,27 +176,42 @@ test('a puzzle step counts a board won after it was posted, a lair step its boss
   assert.ok(ready(s, c), 'one won since does');
 });
 
-test('a Boss step: the script’s boss in the letter, the stand-in in the title, its challenge on the Core and its fall line', () => {
+const atLevel = (s, L) => { s.hackers = { ...(s.hackers || {}), [s.loadout.archetype]: { level: L, xp: 0 } }; };
+test('a Boss step: PAGE NINE’s letter waits for level 6, then it holds a road server’s Core, with its challenge and fall line', () => {
   const s = boarded();
+  atLevel(s, 5);
   for (let k = 0; k < CHAINS[1].steps.length - 1; k++) { const c = finish(s, 1); command(s, `mail deliver ${c.id}`); }
+  assert.equal(chainJob(s, 1), undefined, 'no letter below level 6');
+  assert.equal(arcsOf(s)[1].wait, CHAINS[1].steps.length - 1);
+  atLevel(s, 6); T += 1000; tickMail(s, T);
   const c = chainJob(s, 1);
   assert.equal(c.type, 'boss');
   assert.equal(c.named, 'PAGE NINE');
+  assert.equal(namedBoss(c.named), 'pagenine');
   assert.match(c.body.join(' '), /page nine/, 'the letter names the script’s boss');
-  assert.match(c.body.join(' '), /Core of SPRAWL-00/);
-  assert.equal(title(s, c), 'Beat RELAY-KING on SPRAWL-00', 'RELAY-KING stands in on floor 1');
-  const z = zoneOf(s);
-  assert.equal(arcChallenge(s, z, { path0: '/net/relay' }), CHAINS[1].steps.at(-1).challenge, 'its challenge on SPRAWL-00’s Core');
-  assert.equal(arcChallenge(s, z, { path0: '/var' }), '', 'only there');
-  z.spawns['/net/relay'] = { alive: false, respawnAt: c.at - 1 + CONFIG.zone.bossRespawnMs };
-  T += 1000; tickMail(s, T);
-  assert.equal(ready(s, c), false, 'beaten before it was posted doesn’t count');
-  z.spawns['/net/relay'] = { alive: false, respawnAt: T + CONFIG.zone.bossRespawnMs };
-  T += 1000; tickMail(s, T);
-  assert.ok(ready(s, c), 'beaten since');
+  assert.ok(c.slot, 'a server on the road');
+  const loc = locate(s, c.slot); T += 1000; tickMail(s, T);
+  assert.match(title(s, c), /^Beat PAGE NINE on /);
+  assert.equal(jobBossAt(s, loc), 'pagenine', 'its Core holds PAGE NINE');
+  assert.equal(arcChallenge(s, loc, { path0: '/core' }), CHAINS[1].steps.at(-1).challenge, 'its challenge on the Core');
+  assert.equal(arcChallenge(s, zoneOf(s), { path0: '/net/relay' }), '', 'RELAY-KING no longer stands in');
+  loc.jobFell = T; T += 1000; tickMail(s, T);
+  assert.ok(ready(s, c), 'beaten');
   assert.ok(s.logs.some((e) => e.type === 'arc-fall' && e.message === CHAINS[1].steps.at(-1).fall), 'its fall line');
   command(s, `mail deliver ${c.id}`);
   assert.ok(arcsOf(s)[1].done, 'floor 1 ends on its Boss step');
+});
+
+test('a save’s Boss step posted while RELAY-KING stood in moves to PAGE NINE’s server from level 6', () => {
+  const s = boarded();
+  atLevel(s, 6);
+  for (let k = 0; k < CHAINS[1].steps.length - 1; k++) { const c = finish(s, 1); command(s, `mail deliver ${c.id}`); }
+  const c = chainJob(s, 1), slot = c.slot;
+  delete c.slot; delete c.loc; c.ok = true; // as posted before PAGE NINE was built
+  atLevel(s, 5); T += 1000; tickMail(s, T);
+  assert.equal(c.slot, undefined, 'below its level RELAY-KING still stands in');
+  atLevel(s, 6); T += 1000; tickMail(s, T);
+  assert.equal(c.slot, slot, 'then its server');
 });
 
 test('an extra letter comes from its sender when its step is delivered, with no job', () => {

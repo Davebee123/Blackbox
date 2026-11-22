@@ -4,11 +4,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, livingParts, attackers, hit, addItem, loaded, UNIQUES, defender, lairPick, bossTable as lootTable } from './dist/combat.mjs';
-import { CONFIG, BOSSES, ABILITIES } from './dist/data.mjs';
+import { CONFIG, BOSSES, ABILITIES, TELL } from './dist/data.mjs';
 import { tellsOf } from './dist/tells.mjs';
 import { boardMarkup } from './dist/view.mjs';
 import { uniqueItem, seeded } from './dist/gear.mjs';
-import { FB, topFrame, dumpOf, fbVerb, fbPower } from './dist/floorbosses.mjs';
+import { FB, topFrame, dumpOf, fbVerb, fbPower, insuredAt } from './dist/floorbosses.mjs';
 const fbPowerOf = fbPower;
 import { throneOf, rogueSpawns } from './dist/rogue.mjs';
 import { createLocation } from './dist/data.mjs';
@@ -553,4 +553,40 @@ test('the act break\'s sound, the Tritone: the break on the act sign as the tick
   assert.equal(SIGNS.act.voice, 'actbreak');
   assert.equal(typeof VOICES.actbreak, 'function');
   assert.equal(typeof VOICES.actdrone, 'function');
+});
+
+test("PAGE NINE's Premium Paid: one part Insured a cycle in board order, the next shown; it can't break and gets back what it took; Claim and Double indemnity; Filed Early", () => {
+  const s = boss('pagenine'), v = s.encounter.virus, e = s.encounter;
+  assert.deepEqual(v.parts.map((p) => p.id), ['policy', 'premium', 'claims']);
+  assert.equal(livingParts(s).find((p) => p.core).id, 'policy', 'its ♛');
+  const ins = () => livingParts(s).filter((p) => insuredAt(s).includes(p)).map((p) => p.id);
+  assert.deepEqual(ins(), ['policy']);
+  assert.deepEqual(insuredAt(s, 1).map((p) => p.id), ['premium'], 'the next one shown');
+  assert.match(boardMarkup(s), /insured/, 'its mark on the board');
+  const p = of(s, 'policy'); p.armor = 0;
+  hit(s, p, p.max * 3, { mine: true });
+  assert.equal(p.integrity, 1, 'an Insured part can\'t break');
+  const was = defender(s).integrity;
+  hold(s);
+  assert.equal(p.integrity, p.max, 'what it took comes back at the cycle\'s end');
+  assert.equal(defender(s).integrity, was, 'act 1 files no claim');
+  assert.deepEqual(ins(), ['premium'], 'cover moves on');
+  v.prem.claim = true; // act 2's Claim
+  const q = of(s, 'premium'); q.armor = 0;
+  hit(s, q, 20, { mine: true });
+  const evs = hold(s), back = evs.find((x) => x.insured)?.amount;
+  assert.ok(back > 0);
+  const claim = evs.find((x) => x.claim)?.amount;
+  assert.ok(claim > 0 && claim <= Math.round(back * FB.prem.claim), `Claim: what comes back hits you (${claim} of ${back}, through your defences)`);
+  v.prem.n = 2; // act 3's Double indemnity
+  assert.equal(insuredAt(s).length, 2);
+  of(s, 'claims').integrity = 0;
+  assert.equal(insuredAt(s).length, 1, 'never the last part standing');
+  // Filed Early: a charge is said a cycle sooner than the attack it rode.
+  const t = fresh(); FP.outfit(t, { cls: 'breaker', level: 6 });
+  selectEncounter(t, 'random', 7, { level: 6, mutation: null, family: 'ransomware', boss: 'pagenine' }); command(t, 'engage');
+  for (let i = 0; i < 12 && !tellsOf(t).list.some((x) => x.told); i++) hold(t);
+  const told = tellsOf(t).list.find((x) => x.told);
+  assert.ok(told, 'a charge is said');
+  assert.equal(told.next - t.encounter.cycle, TELL.tiers[1].lead - 1, 'with a cycle less notice than anyone\'s');
 });

@@ -334,7 +334,8 @@ WORLD_hook('fight', (s, room, as) => {
     if (hasSpecial(loc, 'guarded') && !loc.temp) { const name = `ELITE · ${loc.name}`; return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: loc.family, elite: true, mutation: armoredAt(loc) ? 'armored' : null, name, author: R.author }, size: 'elite', name, level, family: loc.family, elite: true, author: R.author }; }
     // A floor job's boss (arcs.mjs jobBossAt): it holds this Core in the Resident's place.
     const job = !loc.temp && jobBossAt(s, loc);
-    if (job) { const B = BOSSES[job], lv = Math.max(level, B.floor || 1); return { key: 'random', seed, opts: { mode: 'run', room: room.path, level: lv, family: B.family, boss: job, mutation: null, name: B.name }, size: 'boss', name: B.name, level: lv, family: B.family, boss: job, author: B.author || R.author }; }
+    if (job) { const B = BOSSES[job], lv = B.band ? Math.min(B.band[1], Math.max(B.band[0], hackerLevel(s))) : Math.max(level, B.floor || 1); // band: at your level inside it (PAGE NINE, 6 to 8)
+      return { key: 'random', seed, opts: { mode: 'run', room: room.path, level: lv, family: B.family, boss: job, mutation: null, name: B.name }, size: 'boss', name: B.name, level: lv, family: B.family, boss: job, author: B.author || R.author }; }
     const name = `${loc.temp ? 'KILL SWITCH' : 'RESIDENT'} · ${loc.name}`;
     return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: loc.family, boss: 'resident', ...(loc.starter ? { bossHp: RESIDENT.starterHp } : {}), mutation: armoredAt(loc) ? 'armored' : null, name, author: R.author }, size: 'boss', name, level, family: loc.family, author: R.author };
   }

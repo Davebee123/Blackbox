@@ -1108,6 +1108,20 @@ export const BOSSES = {
   // The floor 2 and 3 bosses (docs/solo-bosses.md "Proposed: floors 2–8", floorbosses.mjs): own parts only (own), a
   // crown (♛) carrying its signature rule, their beat on a part of their own (acts 'part'), and a verb an act.
   // throne: the rogue server kind and floor whose last room it holds (rogue.mjs); the others, a floor job's Core (arcs.mjs).
+  // PAGE NINE: floor 1's floor job (arcs.mjs), a dead firm's account still paying its premium. Premium Paid: one part
+  // Insured a cycle, in board order, the next shown; what it takes that cycle comes back at the cycle's end. Filed
+  // Early: its charges land a cycle before the attack they ride. It fights at your level from 6 to 8 (band).
+  pagenine: { long: { hp: 1, dmg: 0.45, enrageAt: 36 }, name: 'PAGE NINE', bar: 1.1, family: 'ransomware', author: '', own: true, crown: 'policy', floor: 6, band: [6, 8], early: true, hp: 0.6, dmg: 1, enrageAt: 18, acts: { beat: 'none' },
+    extra: [{ id: 'policy', name: 'Policy', integrity: 60, armor: 1, loot: 'Policy Number', special: true, attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 3 } },
+      { id: 'premium', name: 'Premium', integrity: 40, armor: 1, loot: 'Premium Stub', attack: { name: 'Debit', effect: 'encrypt', amount: 3, interval: 6, first: 4 } },
+      { id: 'claims', name: 'Claims', integrity: 44, armor: 1, loot: 'Claim Form', attack: { name: 'Claim', effect: 'damage', amount: 13, interval: 5, first: 4 } }],
+    guide: { open: [['Premium Paid', 'One part is Insured each cycle, in order: Policy, Premium, Claims. The next one is shown. Damage on the Insured part comes back at the end of the cycle, and it can\'t break.'],
+      ['Filed Early', 'Its charges land a cycle before the attack they ride was due.'],
+      ['Debit', 'The Premium encrypts you every 6 cycles. Breaking it clears the stack.']],
+      phases: [[['Claim', 'Damage the Insured part gives back also hits you.']], [['Double indemnity', 'Two parts are Insured each cycle, never the last one standing.']]] },
+    signature: { name: 'Premium Paid', rule: 'One part is Insured each cycle, in a fixed order, the next shown a cycle ahead. Damage on it comes back at the end of the cycle.' },
+    about: 'A dead firm\'s account, paying its premium and filing claims a day early. Hit what isn\'t insured.',
+    phases: [{ at: 0.5, do: ['claim'], name: 'Claim', emote: 'CLAIM FILED. DAMAGE TO INSURED PROPERTY IS RECOVERABLE.', say: 'PAGE NINE files a claim. Damage the Insured part gives back also hits you.' }, { at: 0.25, do: ['indemnity'], name: 'Double indemnity', emote: 'POLICY RENEWED. DOUBLE INDEMNITY.', say: 'PAGE NINE doubles its cover. Two parts are Insured each cycle.' }] },
   // CENTRIFUGE: floor 2's floor job (arcs.mjs), GLASSJAW's. Bidding on the Gavel; its buyers join from its sales.
   centrifuge: { long: { hp: 1, dmg: 0.36, enrageAt: 36 }, name: 'CENTRIFUGE', bar: 1.1, family: 'ransomware', author: 'glassjaw', own: true, crown: 'rotor', floor: 14, hp: 0.91, dmg: 1, enrageAt: 18, acts: { beat: 'none' }, // no beat: withdrawing the Gavel is the answer, so nothing holds its ♛ ticks
     extra: [{ id: 'rotor', name: 'Rotor', integrity: 62, armor: 1, loot: 'Rotor Bearing', special: true, attack: { name: 'Encrypt', effect: 'encrypt', amount: 4, interval: 7, first: 5 } },
@@ -1450,6 +1464,7 @@ export const TELL_SETS = {
   'nb-backorifice': ['spamrun', 'selfupdate', 'overcharge', 'resync'],
   'nb-mirrorshade': ['glasscut', 'persistence', 'godark'], // its charge is a plain one now: the Mimic is its one feedback amplifier
   'nb-hashlord': ['difficultybomb', 'blockreward', 'keyrotation'],
+  pagenine: ['overcharge'], // floor 1's: one charge, filed early (floorbosses.mjs)
   // The floor 2 and 3 bosses (docs/genome.md 7.4): a charge, a cast and a third, an act each.
   centrifuge: ['fulldisk', 'extortion', 'keyrotation'],
   shakedown: ['overcharge', 'extortion', 'keyrotation'],
