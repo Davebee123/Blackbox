@@ -1782,12 +1782,13 @@ function nestPay(s, room) {
 export const xpTotal = (s) => { const h = hackerOf(s); let n = h.xp; for (let l = 1; l < h.level; l++) n += xpToNext(l); return n; };
 export const xpEarned = (s) => xpTotal(s) - (s.rooms?.xpStart ?? xpTotal(s));
 // What this visit holds, unsaved until you jack out (visit.mjs): the rooms you beat or used, the XP, the files in the
-// pack. null off a network visit.
+// pack, the contract steps. null off a network visit.
 // XP counts from the snap (visit.mjs): a first run's XP is yours either way.
 export function visitOf(s) {
   const R = s.rooms;
   if (!R?.world || !R.at || !R.visit || !s.run) return null;
-  return { rooms: Object.keys(R.visit.won || {}).length, xp: Math.max(0, xpTotal(s) - (s.run.snap?.xp ?? R.visit.xp0 ?? xpTotal(s))), files: (s.run.pack || []).filter((f) => f.kind !== 'payload').length };
+  const steps = (s.run.snap?.jobs || []).reduce((n, j) => n + Math.max(0, ((s.mail?.jobs || []).find((c) => c.id === j.id)?.got || 0) - (j.got || 0)), 0); // contract steps since the connect
+  return { rooms: Object.keys(R.visit.won || {}).length, xp: Math.max(0, xpTotal(s) - (s.run.snap?.xp ?? R.visit.xp0 ?? xpTotal(s))), files: (s.run.pack || []).filter((f) => f.kind !== 'payload').length, steps };
 }
 const won = (R, room) => { if (R.visit && R.world) (R.visit.won ||= {})[room.id] = true; };
 hooks.visitOf = visitOf; // combat.mjs disconnect: the card lists what the visit lost

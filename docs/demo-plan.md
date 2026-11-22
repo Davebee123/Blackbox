@@ -369,3 +369,16 @@ Side by side, the earlier phase lands first and the later one merges main before
 - **Telemetry deferred** (22 Nov): the designer skips Cloudflare for now; with `LINKS.telemetry` empty the demo never
   asks and Settings shows no toggle (`telemetry.offered`). The Worker stays in `tools/telemetry/` for later. The
   Discord's channel link isn't an invite; the Feedback button waits for one.
+- **Phase 2** (22 Nov): the stake beside Jack out (the visit's XP, contract steps and Pack; the No carrier card strikes
+  the same through, steps included) and SPRAWL-00's *pays at once* corrected; the tour's jack-out step after the first
+  win whatever came before, Help counting as engage, and no runner in SPRAWL-00's first ring until the tour's done; a
+  click fires (a skill then a part, or a part then a skill), `fight-keys` says so; tips placed clear of their target,
+  the buttons they name (`clear`) and a phone's tab bar, with no face on a phone; the text fixes (*Starts with* is the
+  basic hit and the first core skill, 6% to level 6, no elite blue, no memory, a rest room only where there is one);
+  `fight-wasted` from the second fight; No carrier's clock live and rounded up; the rooms map on a desktop the *Fit*
+  (the designer's pick over *Tags*); on a phone the spoils card full screen (the stage's transform held it), Start
+  sticky on the class pick, the capsule over the log line, the top bar fitted (Materials a crate, credits a coin under
+  360 px); the practice wired behind an offer after the class pick, **off** until the designer has played it
+  (`?practice`; tutorial.mjs `PRACTICE.offer`). Perf before and after (rooms idle, a boss fight; phone and desk): no
+  change. The scripted pass (1440×900, iPhone SE, iPhone 13) reaches the first kill and a jack out in about a minute,
+  every tip clear of its target; it stops short of level 2 and the first traced server.

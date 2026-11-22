@@ -57,11 +57,11 @@ import { nextTip, markSeen, TOUR, skipTour, seenOf, tourDone } from './dist/tips
 // "Is it on screen": the selector's last part (less any :not()) is in the room page's markup.
 const shows = (s) => {
   const html = roomsMarkup(s);
-  return (sel) => {
+  return (list) => list.split(',').some((sel) => {
     const last = sel.trim().split(/\s+/).at(-1).replace(/:not\([^)]*\)/g, '');
     const bits = [...last.matchAll(/\.([\w-]+)|\[([\w-]+)="([^"]+)"\]|#([\w-]+)/g)];
     return bits.length > 0 && bits.every(([, cls, attr, val, id]) => (cls ? new RegExp(`class="[^"]*\\b${cls}\\b`).test(html) : attr ? html.includes(`${attr}="${val}"`) : html.includes(`id="${id}"`)));
-  };
+  });
 };
 const tour = (s) => { const t = nextTip(s, 'rooms', shows(s)); return t?.tour ? t : null; };
 const winRoom = (s) => { s.encounter.virus.parts.forEach((p) => { p.integrity = 0; }); finish(s, 'victory'); FP.settle(s); };
@@ -208,4 +208,22 @@ test('a server map teaches its vault, Core, elite, a rival and low Integrity, on
   s.rooms.signal = Math.floor(s.rooms.max * 0.2);
   assert.deepEqual(tipsHere(), ['run-signal'], 'low Integrity: the warning, once');
   assert.deepEqual(tipsHere(), []);
+});
+
+test('the tour teaches banking after the first win, whatever came before it: Help counts as the engage step', () => {
+  const s = newPlayer();
+  play(s, 'connect sprawl');
+  closePop(s);
+  markSeen(s, 'tour-walk');
+  FP.act(s, 'go', FP.exits(s)[0].id);
+  FP.act(s, 'engage'); // the engage step never shown
+  winRoom(s);
+  assert.equal(tour(s)?.id, 'tour-jackout');
+  assert.match(TOUR.find((t) => t.id === 'tour-engage').at, /data-rooms="assist"/, 'a runner\'s Help is the engage step too');
+});
+
+test('the practice: off until the designer keeps it, and its keys cover every lesson (docs/demo-plan.md D4)', async () => {
+  const { PRACTICE, PRACTICE_KEYS } = await import('./dist/tutorial.mjs');
+  assert.equal(PRACTICE.offer, false, 'offered only with ?practice for now');
+  for (const L of LESSONS) assert.ok(PRACTICE_KEYS.includes(L.command.split(' ')[0]), L.command);
 });

@@ -59,6 +59,7 @@
 .fp-packbtn .glyph { width: 16px; height: 16px; }
 .fp-packbtn:hover, .fp-packbtn.open { background: #ffd85c; border-color: #ffd85c; }
 .fp-packpop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 240px; max-width: min(320px, calc(100vw - 32px)); padding: var(--s3) 0; background: var(--panel, #0e0b07); border: 1px solid var(--amber); border-radius: 2px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.6); cursor: default; }
+.fp-stake .fp-packpop { left: auto; right: 0; } /* beside Jack out, at the strip's right: it opens leftward */
 .fp-packpop header { display: flex; align-items: baseline; justify-content: space-between; padding: var(--s2) var(--s4) var(--s3); border-bottom: 1px solid var(--line); }
 .fp-packpop header b { font: 600 13px var(--mono); letter-spacing: 1px; color: var(--amber); }
 .fp-packpop header small { font: 600 10px var(--mono); letter-spacing: 1px; color: var(--dim); }
@@ -79,6 +80,8 @@
 /* Wait and Jack out (Connect at home): the strip's last thing on a wide screen, beside the server's name on a phone */
 .fp-acts { display: inline-flex; gap: var(--s3); flex: none; }
 .fp-acts .btn { white-space: nowrap; }
+.fp-stake { display: inline-flex; align-items: center; gap: var(--s4); margin-right: var(--s2); }
+.fp-stake .fp-stat b { color: var(--amber); }
 
 /* ---- the map: Schematic HD (floorplan-view.mjs). Rooms are chips, links are traces; teal is only ever you, red a live
    threat, amber loot and structure, gray cleared or used. ---- */

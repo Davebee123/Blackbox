@@ -120,8 +120,8 @@ export function restoreMarkup(e, max, now = Date.now()) {
   const v = e.visit || {}, n = (k, one, many) => `${(v[k] || 0).toLocaleString('en-US')} ${v[k] === 1 ? one : many}`;
   const pc = Math.max(0, Math.min(100, Math.round((im.integrity / Math.max(1, max)) * 100)));
   const when = im.at ? new Date(im.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '';
-  const tip = `Restored: your server is back to the image taken when you connected${when ? ` at ${when}` : ''}. Integrity ${im.integrity}/${max}; the visit's rooms, XP, files and drops are undone.`;
-  const chips = [n('rooms', 'room', 'rooms'), n('xp', 'XP', 'XP'), n('files', 'file', 'files')].map((x) => `<s>${esc(x)}</s>`).join('');
+  const tip = `Restored: your server is back to the image taken when you connected${when ? ` at ${when}` : ''}. Integrity ${im.integrity}/${max}; the visit's rooms, XP, files, drops and contract steps are undone.`;
+  const chips = [n('rooms', 'room', 'rooms'), n('xp', 'XP', 'XP'), n('files', 'file', 'files'), ...(v.steps ? [n('steps', 'contract step', 'contract steps')] : [])].map((x) => `<s>${esc(x)}</s>`).join('');
   const passed = im.at ? sinceLabel(now - im.at) : '';
   return `<div class="rs" title="${esc(tip)}"><div class="rs-top">${glyph('snapshot')}Restored${when ? `<time>image ${esc(when)}</time>` : ''}</div>
     <div class="rs-row"><span class="rs-bar"><i style="width:${pc}%"></i></span><span class="rs-pc">${pc}%</span></div><div class="rs-undone">${chips}</div></div>${passed ? `

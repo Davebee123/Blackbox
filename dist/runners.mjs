@@ -325,8 +325,12 @@ export function placeOf(s, r, t = clockOf(s)) {
 // stand at the entry. { folder, fighting }.
 const SPRAWL_CORE = '/net/relay'; // run.mjs KING_ROOM
 const strayUp = (s, folder) => { const sp = s.zone?.spawns?.[folder]; return !sp || sp.alive || !(sp.respawnAt > (hooks.now?.() ?? Date.now())); };
+// The rooms beside the entry (netrooms.mjs SPRAWL_ARMS, ring 1): no runner fights there until the rooms tour is done, so
+// the tour's first room has an Engage and its first win teaches jack out (docs/demo-plan.md Phase 2).
+export const SPRAWL_RING1 = ['/net', '/var', '/home', '/dev'];
+const toured = (s) => !!s.tour?.['tour-jackout'] || s.settings?.tips === false;
 export function sprawlSpot(s, r, st = stateOf(s, r)) {
-  const rooms = zoneRooms().filter((p) => p !== SPRAWL_CORE), folder = rooms[Math.floor(hash(r.handle, st.k * 7 + 9) * rooms.length)];
+  const rooms = zoneRooms().filter((p) => p !== SPRAWL_CORE && (toured(s) || !SPRAWL_RING1.includes(p))), folder = rooms[Math.floor(hash(r.handle, st.k * 7 + 9) * rooms.length)];
   const fighting = st.stage === 'hub' && st.base === st.g.entry && !hired(s, r.handle) && entryOf(s, r.handle)?.helped !== st.k && strayUp(s, folder);
   return fighting ? { folder, fighting } : { folder: '/', fighting: false };
 }

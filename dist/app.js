@@ -97,6 +97,7 @@ import { postFound } from './scanner.mjs';
 import { createScanner, postBanner, postOptions, postTerminalMarkup, POST } from './scanner-view.mjs';
 import * as GX from './graphics.mjs';
 import { runBorder } from './pickfx.mjs';
+import { beginTutorial, submitTutorial, tickTutorial, continueTutorial, LESSONS, PRACTICE, PRACTICE_KEYS } from './tutorial.mjs';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -652,7 +653,7 @@ function firstLogin() {
   powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove(), warm: (progress) => warmGame({ audio: !!campaign.settings.sound, progress }), version: DEMO ? `demo ${DEMO.version}` : '' }).then(playColdOpen).then(() => intro.run()).then(({ handle, pwLen }) => {
     campaign.profile = { ...campaign.profile, handle, pwLen, since: Date.now() };
     return pickClass();
-  }).then(() => {
+  }).then(() => (PRACTICE.offer || params.has('practice') ? practice() : null)).then(() => {
     introOn = false;
     if (!campaign.settings.persisted) { campaign.settings.persisted = true; navigator.storage?.persist?.().catch(() => {}); } // ask the browser to keep the save's storage, once
     save();
@@ -715,6 +716,58 @@ function pickClass() {
     addEventListener('keydown', keys, true);
     el.addEventListener('click', (e) => { if (e.target.closest('.pk-go')) return start(); if (e.target.closest('.pk-drawer')) return; const c = e.target.closest('[data-pick-class]'); if (c) choose(c.dataset.pickClass); });
     el.addEventListener('dblclick', (e) => { const c = e.target.closest('.pk-sq')?.parentElement; if (!c) return; if (pick !== c.dataset.pickClass) choose(c.dataset.pickClass); start(); }); // its two clicks opened and closed it
+  });
+}
+// The guided practice (tutorial.mjs, docs/demo-plan.md D4): offered once after the class pick, skippable. A training
+// virus on its own state, never the save: four lessons, each a command (typed, or a key then a part), then a review.
+function practice() {
+  return new Promise((done) => {
+    const el = document.createElement('div');
+    el.className = 'class-pick pr-root';
+    el.innerHTML = `<div class="pk-scene pr-offer" role="dialog" aria-label="Practice"><header class="pk-head"><span class="bb-logo pk-logo" aria-hidden="true"></span><h2>Practice</h2><p title="A training virus on its own server: nothing you do there counts.">${LESSONS.length} steps · a training virus</p></header>
+      <footer class="pk-foot pr-acts"><button type="button" class="btn primary pk-go" data-practice="go"><span class="pk-cmd"><span class="pk-dim">&gt;</span> practice<i class="pk-cur"></i></span></button><button type="button" class="btn" data-practice="skip">Skip</button></footer></div>`;
+    document.body.append(el);
+    let t = null, pick = null, raf = 0, last = 0, drawn = '', stepped = hooks.stepped;
+    const end = () => { hooks.stepped = stepped; cancelAnimationFrame(raf); removeEventListener('keydown', keys, true); el.remove(); done(); };
+    const draw = () => {
+      const L = LESSONS[t.index], text = t.error || (t.phase === 'review' || t.phase === 'complete' ? t.result : L.explain);
+      const html = `<div class="pr-scene" role="dialog" aria-label="Practice"><header class="pr-head"><span class="pk-k">Practice · ${t.index + 1}/${LESSONS.length}</span><b>${V.esc(L.title)}</b><button type="button" class="tip-off" data-practice="skip">Skip</button></header>
+        <div class="hud pr-hud">${V.hudMarkup(t.state, { party: false })}</div>
+        <section class="board panel pr-board">${V.boardMarkup(t.state, null)}</section>
+        <p class="pr-text${t.error ? ' bad' : ''}">${V.esc(text)}</p>
+        <div class="pr-row">${t.phase === 'review' ? '<button type="button" class="btn primary" data-practice="next">Continue <kbd>Enter</kbd></button>' : t.phase === 'complete' ? '<button type="button" class="btn primary" data-practice="done">Done <kbd>Enter</kbd></button>' : PRACTICE_KEYS.map((k) => `<button type="button" class="btn${pick === k ? ' primary' : ''}" data-pr-key="${k}">${k}</button>`).join('') + `<input class="pr-in" aria-label="Command" placeholder="${V.esc(L.command)}" autocomplete="off" spellcheck="false">`}</div></div>`;
+      if (html === drawn) return;
+      const typed = el.querySelector('.pr-in')?.value || '', focus = document.activeElement?.classList.contains('pr-in');
+      el.innerHTML = drawn = html;
+      const inp = el.querySelector('.pr-in');
+      if (inp) { inp.value = typed; if (focus || !F.isPhone()) inp.focus(); }
+    };
+    const send = (cmd) => { submitTutorial(t, cmd); pick = null; feel.key('char'); draw(); tick(); };
+    const tick = () => {
+      cancelAnimationFrame(raf);
+      if (!['running', 'live'].includes(t.phase)) return;
+      raf = requestAnimationFrame((now) => { tickTutorial(t, last ? Math.min(250, now - last) : 16); last = now; draw(); tick(); }); // runs only while the training virus is live
+    };
+    const keys = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); return end(); }
+      if (e.key !== 'Enter' || !t) return;
+      e.preventDefault(); e.stopPropagation();
+      if (t.phase === 'review') { continueTutorial(t); draw(); return; }
+      if (t.phase === 'complete') return end();
+      const inp = el.querySelector('.pr-in');
+      if (inp?.value.trim()) send(inp.value);
+    };
+    addEventListener('keydown', keys, true);
+    el.addEventListener('click', (e) => {
+      const a = e.target.closest('[data-practice]')?.dataset.practice;
+      if (a === 'skip' || a === 'done') return end();
+      if (a === 'go') { t = beginTutorial(campaign.settings); stepped = hooks.stepped; hooks.stepped = false; el.classList.add('on'); last = 0; return draw(); } // its cycles resolve whole (no staged strikes here)
+      if (a === 'next') { continueTutorial(t); return draw(); }
+      const k = e.target.closest('[data-pr-key]')?.dataset.prKey;
+      if (k) { pick = pick === k ? null : k; feel.key('click'); return draw(); }
+      const part = e.target.closest('[data-target]')?.dataset.target;
+      if (part && t && pick) send(`${pick} ${part}`); // a key, then a part: it fires
+    });
   });
 }
 // Screen effects (screenfx.mjs): light on the glass around the game (the backdrop, the tube's edge, the lamps, the
@@ -1232,7 +1285,7 @@ function receiptCard(e, events) {
 // Losing a run, folded (recap.mjs): the image you're back to (visit.mjs: the visit undone, struck through) and how long
 // the net ran on; what took you out as one row that opens on the death recap; and when you can go back.
 function lossCard(e) {
-  const clock = (ms) => `${Math.floor(ms / 60000)}:${String(Math.ceil((ms % 60000) / 1000) % 60).padStart(2, '0')}`;
+  const clock = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; }; // rounded up: 59.5 s reads 1:00
   const max = maxSignal(campaign), sig = signalNow(campaign), need = Math.ceil(max * CONFIG.zone.minSignal);
   const fold = foldMarkup(e.recap, e.by);
   const rows = [
@@ -1245,6 +1298,10 @@ function lossCard(e) {
   if (wait > 0) rows.push({ kind: 'time', label: 'Reconnection possible in', qty: clock(wait), text: `Reconnection possible in ${clock(wait)}` });
   showGain(e.reverted ? 'No carrier' : 'Disconnected', e.where || '', rows, false, restoreMarkup(e, max, hooks.now?.() ?? Date.now()) + fold);
   $('gain').classList.add('loss');
+  // The clock counts down while the card is up, and stops with it.
+  const until = Date.now() + wait, cell = wait > 0 && $('gain').querySelector('.sp-row.k-time .sp-qty');
+  if (!cell) return;
+  const tick = setInterval(() => { if ($('gain').hidden || !cell.isConnected) return clearInterval(tick); cell.textContent = clock(until - Date.now()); }, 250);
 }
 function hideGain() { clearTimeout(gainTimer); const el = $('gain'); if (el && !el.hidden) { el.hidden = true; el.innerHTML = ''; } const next = gainQueue.shift(); if (next) setTimeout(() => showGain(...next), 120); }
 const gainOpen = () => { const el = $('gain'); return el && !el.hidden && !el.classList.contains('toast'); };
@@ -1555,9 +1612,9 @@ function notice(text, bad = false, suggest = null, sticky = false) {
   if (suggest) { const b = document.createElement('button'); b.type = 'button'; b.className = 'tok act suggest'; b.dataset.prefill = suggest; b.textContent = suggest.trim(); el.append(' ', b); }
   el.classList.toggle('bad', bad);
   el.classList.toggle('sticky', !!sticky);
-  el.hidden = !text;
+  noticeUp(!!text);
   clearTimeout(noticeTimer);
-  if (text && !sticky) noticeTimer = setTimeout(() => (el.hidden = true), 4000); // sticky (help): stays until the next notice or command
+  if (text && !sticky) noticeTimer = setTimeout(() => noticeUp(false), 4000); // sticky (help): stays until the next notice or command
 }
 
 // A card as the notice (a scan on a server's rooms): sticky, so it stays until the next command or a click.
@@ -1566,9 +1623,11 @@ function noticeCard(html) {
   el.innerHTML = html;
   el.classList.remove('bad');
   el.classList.add('sticky');
-  el.hidden = false;
+  noticeUp(true);
   clearTimeout(noticeTimer);
 }
+// The notice up or down; the body says which (a phone's Wait / Jack out capsule rises over it: phone.css).
+function noticeUp(on) { $('notice').hidden = !on; document.body.classList.toggle('noticed', on); }
 
 // ---------- commands ----------
 const NAV = ['map', 'combat', 'net', 'loadout', 'daemons', 'codex', 'rig', 'system'];
@@ -1857,6 +1916,8 @@ function prepare(abilityId) {
   if (a.target === 'schedule') text += ' 2 ';
   if (a.target === 'part') text += selected && alive(part(s, selected)) ? ` ${partKey(s, part(s, selected))}` : ' ';
   if (a.target === 'attack') text += selected && part(s, selected)?.attack && alive(part(s, selected)) ? ` ${partKey(s, part(s, selected))}` : '';
+  // A part picked first (a click, or [ ]): the skill fires at it.
+  if (active(campaign) && s === campaign && ['part', 'attack'].includes(a.target) && /\S \S/.test(text.trim())) { input.value = ''; run(text); focusPrompt(); markDirty(); return; }
   input.value = text;
   focusPrompt();
   updateSuggestions();
@@ -2913,6 +2974,10 @@ function advanceTip() {
   }
   hideTip(true);
 }
+// Where it sits: the first spot that covers neither its thing nor what the tip names (its `clear`), else the one that
+// covers least, the thing itself above all. Spots: under or over its container (`under`, the board), under or over the
+// thing, beside it, then the screen's corners.
+const area = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
 function placeTip() {
   if (!tip) return;
   const el = shownEl(tip.cur.at);
@@ -2920,19 +2985,31 @@ function placeTip() {
   document.querySelectorAll('.tip-target').forEach((x) => { if (x !== el) x.classList.remove('tip-target'); });
   el.classList.add('tip-target');
   const box = $('tip'), r = el.getBoundingClientRect(), z = Z(), w = box.offsetWidth * z, h = box.offsetHeight * z; // it zooms with the screen (style.css)
-  // Under a container (the board): the thing it explains stays in view; the arrow still points at it.
   const u = (tip.cur.under && document.querySelector(tip.cur.under)?.getBoundingClientRect()) || r;
+  const clear = tip.cur.clear ? [...document.querySelectorAll(tip.cur.clear)].filter(shownRect).map((x) => x.getBoundingClientRect()) : [];
   // Keep it on the screen: inside the monitor's picture when it sits in its casing, else the window.
   const scr = document.body.classList.contains('cased') ? document.querySelector('.app')?.getBoundingClientRect() : null;
   const pad = scr ? 28 : 12; // clear of the tube's darker edges
-  const L = (scr ? scr.left : 0) + pad - 12, R = (scr ? scr.right : innerWidth) - pad + 12, T = (scr ? scr.top : 0) + pad - 12, B = scr ? scr.bottom : innerHeight;
-  const below = u.bottom + 14 + h < B - 8;
-  const cx = r.left + Math.min(r.width, 240) / 2;
-  const left = Math.max(L + 12, Math.min(R - w - 12, cx - w / 2));
-  box.style.left = left / z + 'px';
-  box.style.top = (below ? u.bottom + 14 : Math.max(T + 12, u.top - h - 14)) / z + 'px';
-  box.classList.toggle('above', !below);
-  box.style.setProperty('--arrow', Math.max(16, Math.min(w - 16, cx - left)) / z + 'px');
+  const tabs = document.querySelector('.ph-tabs')?.getBoundingClientRect(); // a phone's tab bar: never under the tip
+  const L = (scr ? scr.left : 0) + pad, R = (scr ? scr.right : innerWidth) - pad, T = (scr ? scr.top : 0) + pad, B = Math.min(scr ? scr.bottom : innerHeight, tabs?.height ? tabs.top : Infinity) - 8;
+  const cx = r.left + Math.min(r.width, 240) / 2, cy = r.top + r.height / 2;
+  const fitX = (x) => Math.max(L, Math.min(R - w, x)), fitY = (y) => Math.max(T, Math.min(B - h, y));
+  const spots = [
+    [fitX(cx - w / 2), u.bottom + 14, 'below'], [fitX(cx - w / 2), u.top - h - 14, 'above'],
+    [fitX(cx - w / 2), r.bottom + 14, 'below'], [fitX(cx - w / 2), r.top - h - 14, 'above'],
+    [r.right + 14, fitY(cy - h / 2), 'right'], [r.left - w - 14, fitY(cy - h / 2), 'left'],
+    [L, B - h, ''], [R - w, B - h, ''], [R - w, T, ''], [L, T, ''],
+  ].map(([x, y, side]) => {
+    const fits = x >= L - 1 && x + w <= R + 1 && y >= T - 1 && y + h <= B + 1;
+    const b = { left: x, top: y, right: x + w, bottom: y + h };
+    return { x, y, side, cost: (fits ? 0 : 1e9) + area(b, r) * 1000 + clear.reduce((n, c) => n + area(b, c), 0) * 10 + (u === r ? 0 : area(b, u)) };
+  });
+  const best = spots.reduce((a, b) => (b.cost < a.cost ? b : a));
+  box.style.left = best.x / z + 'px';
+  box.style.top = best.y / z + 'px';
+  for (const c of ['above', 'right', 'left', 'free']) box.classList.toggle(c, best.side === c || (c === 'free' && !best.side));
+  if (best.side === 'left' || best.side === 'right') box.style.setProperty('--arrow-y', Math.max(16, Math.min(h - 16, cy - best.y)) / z + 'px');
+  else box.style.setProperty('--arrow', Math.max(16, Math.min(w - 16, cx - best.x)) / z + 'px');
 }
 function hideTip(seen) {
   if (!tip) return;
@@ -3350,9 +3427,11 @@ document.addEventListener('click', (e) => {
   }
   const target = e.target.closest('[data-target]');
   if (target && !target.disabled) {
-    selected = selected === target.dataset.target ? null : target.dataset.target;
     const input = $('command-input');
     const [word] = input.value.trim().split(' ');
+    // A skill picked: the click fires it at the part. Else the part is picked, for the next skill.
+    if (active(campaign) && ['part', 'attack'].includes(ABILITIES[word]?.target)) { selected = target.dataset.target; input.value = ''; run(`${word} ${partKey(campaign, part(campaign, selected))}`); phPicked(); focusPrompt(); markDirty(); return; }
+    selected = selected === target.dataset.target ? null : target.dataset.target;
     if (selected && ABILITIES[word] && ABILITIES[word].target !== 'none') input.value = `${word} ${partKey(campaign, part(campaign, selected))}`;
     focusPrompt();
     markDirty();
@@ -3634,7 +3713,7 @@ function phTicker() {
   if (t.dataset.html !== html) { t.dataset.html = html; t.innerHTML = html; t.className = `ph-ticker ${last?.className || ''}`; }
   if (sheetKey() === 'log') { const b = sheetBody(); if (b && b.dataset.n !== String(campaign.logs.length)) { b.dataset.n = campaign.logs.length; b.innerHTML = `<ol class="log-lines ph-log">${V.logMarkup(shown())}</ol>`; b.scrollTop = b.scrollHeight; } }
 }
-$('notice').addEventListener('click', () => { if (F.isPhone() && phFight() && $('notice').textContent) openSheet(`<p class="ph-note">${V.esc($('notice').textContent)}</p>`, { height: 'peek', label: 'Notice', id: 'notice' }); }); // one line over the ticker: a tap shows it whole
+$('notice').addEventListener('click', () => { if (F.isPhone() && (phFight() || document.body.classList.contains('ph-rooms')) && $('notice').textContent) openSheet(`<p class="ph-note">${V.esc($('notice').textContent)}</p>`, { height: 'peek', label: 'Notice', id: 'notice' }); }); // one line over the ticker: a tap shows it whole
 $('ph-ticker').addEventListener('click', () => {
   const b = openSheet(`<ol class="log-lines ph-log">${V.logMarkup(shown())}</ol>`, { height: 'half', label: 'Combat log', id: 'log' });
   requestAnimationFrame(() => { b.scrollTop = b.scrollHeight; }); // the latest line in view

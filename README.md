@@ -209,7 +209,7 @@ comment saying what it does.
 | `dist/intro.mjs` | First launch: the login, then Halcyon's transmission. |
 | `dist/scenes.mjs`, `dist/scenes-view.mjs`, `dist/scenes.css`, `dist/content/scenes.mjs` | Transmissions: conversations with a contact over the map, their window and their words. |
 | `dist/tips.mjs` | First-time tips, the game's only tutorial text. |
-| `dist/tutorial.mjs` | Guided practice on an isolated training virus. |
+| `dist/tutorial.mjs` | Guided practice on an isolated training virus, offered after the class pick (app.js `practice`; `?practice` until `PRACTICE.offer`). |
 | `dist/lore.mjs` | Skill descriptions and flavour lines for the library. |
 | `dist/editor.html`, `dist/editor.mjs`, `dist/editor.css` | The content editor; saves into `dist/content/` through `serve.mjs`. |
 

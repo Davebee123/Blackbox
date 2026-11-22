@@ -289,7 +289,7 @@ function aboutOf(s, room) {
           : room.kind === 'nest' ? `Optional. A kill pays ${ROOMS.nest.parts} components.`
           : room.kind === 'secret' ? 'Optional. It fills again two hours after you take it.'
           : room.queue && R.kind === 'Mailhub' && fightKind(room) ? 'A Spam Flood joins its fights.'
-            : room.kind === 'elite' ? `Enrages from cycle ${ROOM_RULES.enrage.elite}. Drops a blue or better.`
+            : room.kind === 'elite' ? `Enrages from cycle ${ROOM_RULES.enrage.elite}.`
               : room.kind === 'core' && !coreOpen(s) ? sealedLine(s)
                 : room.kind === 'cache' && !room.mirror ? 'One in four is bait: you see which when you walk in.'
                   : room.kind === 'vault' && room.id === g.vaults[0] && !opened(s, room) ? 'Opening it unseals the Core.'
@@ -448,7 +448,13 @@ function mapSvg(s, tall) {
   ctx.pp = (room) => (R.world && WORLD.people ? (WORLD.people(s, room) || []).filter((h) => runnerOf(s, h)) : []); // runners standing in a room (SPRAWL-00)
   const rooms = roomList(s).filter((r) => shown(r.id)).map((room) => roomSvg(s, room, at(room), ctx)).join('');
   const bits = here ? bitsSvg(at(g.rooms[here]), G, here) : '';
-  const vw = width + 2 * PAD, vh = height + 2 * PAD, vb = `${-PAD} ${-PAD} ${vw} ${vh}`;
+  // Fit (a desktop, the designer's pick): the view fits the rooms you've found, so it starts close and widens as you
+  // walk; a phone's tall map keeps the whole grid.
+  const fit = tall ? [] : roomList(s).filter((r) => shown(r.id) && found(r.id)).map(at);
+  const fx = G.nw / 2 + 80, fy = G.nh / 2 + 80, box = fit.length
+    ? [Math.max(-PAD, Math.min(...fit.map((p) => p.x)) - fx), Math.max(-PAD, Math.min(...fit.map((p) => p.y)) - fy), Math.min(width + PAD, Math.max(...fit.map((p) => p.x)) + fx), Math.min(height + PAD, Math.max(...fit.map((p) => p.y)) + fy)]
+    : [-PAD, -PAD, width + PAD, height + PAD];
+  const vw = n1(box[2] - box[0]), vh = n1(box[3] - box[1]), vb = `${n1(box[0])} ${n1(box[1])} ${vw} ${vh}`;
   // The floor's material under it all (ground.mjs), clear of every room and link shown.
   const ground = groundSvg(R.floor, { id: tall ? 't' : 'w', rooms: roomList(s).filter((r) => shown(r.id)).map(at), links: linksOf(g).filter(([a, b]) => shown(a) && shown(b)).map(([a, b]) => [at(g.rooms[a]), at(g.rooms[b])]),
     box: { w: G.nw + 26, h: G.nh + 26, link: 24 }, cx: width / 2, cy: height / 2, rx: width / 2 + G.w * 0.9, ry: height / 2 + G.h * 0.9 });
@@ -672,7 +678,7 @@ function hudMarkup(s) {
   const packed = R.world ? (s.run?.pack || []).map((f) => net(s, 'packLine', f)) : R.pack.map((id) => itemLabel(stashItem(s, id) || { name: '?' }));
   // The visit (visit.mjs): the Warm cache's ladder and what it adds, then the Pack, unsaved until you jack out.
   const v = visitOf(s);
-  const pack = v ? warmBox(s) + `<span class="fp-packwrap">${packButton(s)}${packUi.open ? packPop(s) : ''}</span>`
+  const pack = v ? warmBox(s)
     : packed.length ? `<span class="fp-stat fp-packstat" title="${esc(`Pack: ${packed.join(', ')}.\nBanks when you jack out. Lost if your Integrity hits 0.`)}"><span class="lbl">Pack</span><b>${packed.length}</b></span>` : '';
   // Contracts on this server, and how far along each is. The tip draws them as the map's tracker does, a row each.
   const jobs = net(s, 'jobs') || [], tracked = jobs.length ? trackedJobs(s).filter((t) => jobs.some((j) => j.id === t.id)) : [];
@@ -680,10 +686,13 @@ function hudMarkup(s) {
   const rule = ['a', 'b', 'c'].map((k) => `<button type="button" class="fp-rule${R.bossRule === k ? ' on' : ''}" data-rooms="bossrule" data-arg="${k}" aria-pressed="${R.bossRule === k}" title="${esc(`Boss rule ${k}: ${BOSS_RULES[k].name}.\n${BOSS_RULES[k].text}`)}">${k}</button>`).join('');
   // Wait and Jack out (Connect at home), always in reach at the strip's right.
   const c = connectOf(s);
-  const acts = R.at
+  // The stake (docs/demo-plan.md D3): what jack out banks and a disconnect undoes, beside Jack out: the visit's XP, its
+  // contract steps, the Pack.
+  const stake = v ? `<span class="fp-stake">${v.xp ? `<span class="fp-stat fp-unxp" title="${esc(`Unbanked XP: ${v.xp.toLocaleString('en-US')}.\nJack out to keep it. A disconnect takes it back.`)}">${glyph('xp')}<b>${v.xp.toLocaleString('en-US')}</b></span>` : ''}${v.steps ? `<span class="fp-stat fp-unsteps" title="${esc(`Unbanked contract steps: ${v.steps}.\nJack out to keep them. A disconnect takes them back.`)}">${ic('contract')}<b>${v.steps}</b></span>` : ''}<span class="fp-packwrap">${packButton(s)}${packUi.open ? packPop(s) : ''}</span></span>` : '';
+  const acts = stake + (R.at
     ? btn('wait', 'Wait', { small: true, disabled: held(R) || active(s), tip: held(R) ? 'Wait: finish what is in front of you first.' : `Wait: the hunter takes its step${filesHere(s).length ? ', and the file you carry' : ''}. Costs nothing.` })
       + btn('jackout', 'Jack out', { small: true, hot: true, disabled: active(s), tip: R.world ? 'Jack out: saves this visit and banks your pack. Integrity rests at home.' : 'Jack out: banks your pack. Integrity rests at home.' })
-    : btn('connect', 'Connect', { small: true, primary: true, disabled: !c.can, tip: c.can ? `Connect to ${R.name}.` : c.wait > 0 ? `${R.name} takes you back in ${fmtLeft(c.wait)}.` : `You need ${c.need} Integrity to connect.` });
+    : btn('connect', 'Connect', { small: true, primary: true, disabled: !c.can, tip: c.can ? `Connect to ${R.name}.` : c.wait > 0 ? `${R.name} takes you back in ${fmtLeft(c.wait)}.` : `You need ${c.need} Integrity to connect.` }));
   return `<header class="fp-hud" aria-label="The server">
     <span class="fp-id" title="${esc(net(s, 'idTip') ?? `${R.name}: ${author} ${kindName(R.kind)}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`)}"><span class="ico" ${icon('server')}></span><b>${esc(R.name)}</b><small>${esc(net(s, 'idLine') ?? `${kindName(R.kind)} · lv ${R.level} · ${K.rule}`)}</small></span>
     <div class="fp-sig ${lvl}" title="${esc(`Integrity: your health, carried from fight to fight and rested back at home.\nA room's first step each visit costs ${step}, or ${stepNew} into one you've never been in.`)}"><span class="lbl">Integrity</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small></div>
@@ -832,7 +841,7 @@ function hereCard(s) {
     const ob = objOf(s, room); // its objective (objectives.mjs), and what it pays met
     if (ob) notes.push(`<span class="fp-tag-inline next fp-obj">${ic(OBJ_ICON[ob])}${OBJECTIVES[ob].name}</span> ${esc(objectiveLine(ob))}<span class="fp-obj-pay">${objBonus()}</span>`);
     if (room.kind === 'guard' && room.key && !R.opened[room.key]) notes.push(esc(`Carries the ${g.rooms[room.key].path} key.`));
-    if (room.kind === 'elite') notes.push(`Enrages from cycle ${ROOM_RULES.enrage.elite}. Drops a blue or better.`);
+    if (room.kind === 'elite') notes.push(`Enrages from cycle ${ROOM_RULES.enrage.elite}.`);
     if (room.kind === 'nest') notes.push(esc(`Optional. A kill pays ${ROOMS.nest.parts} components.`));
     if (room.kind === 'core' && !R.world) notes.push(esc(`Boss rule ${R.bossRule}: ${BOSS_RULES[R.bossRule].name}.`));
     if (R.world) { const extra = net(s, 'fightNote', room); if (extra) notes.push(esc(extra)); }

@@ -73,7 +73,7 @@ import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, name
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState, freeTiers, blastOf, livingParts, keptItem } from './combat.mjs';
 import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { youMarks, junkKey } from './mechanics.mjs';
-import { cantripsOf, TELL, lifted, own, lift, line } from './data.mjs';
+import { cantripsOf, spikeOf, TELL, lifted, own, lift, line } from './data.mjs';
 import { lastFloor } from './data.mjs';
 import { DEMO, LINKS, version } from './demo.mjs';
 import { usable, hooks, watchdogIn } from './combat.mjs';
@@ -3522,7 +3522,7 @@ export function classPickMarkup() {
   const cards = Object.entries(ARCHETYPES).map(([k, a], i) => {
     const traits = pkRow(glyph('damage'), `<small class="pk-lb">Passive</small><b>${esc(a.passive.name)}</b>`, '', pkTip(a.passive.name, a.passive.rule, 'Passive'), ' gl')
       + pkRow(glyph('sync'), `<small class="pk-lb">Sync</small><b>${ruleHtml(SYNC[k].tag)}</b>`, '', pkTip('Sync bonus', `Fired in a Sync Window, your command deals ${Math.round(CONFIG.sync.bonus * 100)}% more damage and ${SYNC[k].rule.replace(/^./, (c) => c.toLowerCase())}`, 'Sync bonus'), ' gl');
-    const skills = a.skills.slice(0, 2).map((x) => { const ab = ABILITIES[x.id] || {}; return pkRow(pkIco(ab.icon || 'command'), `<b>${esc(x.name)}</b>`, `<small>${ruleHtml(ab.short || '')}</small>`, pkTip(x.name, x.rule || '', `${PK_KIND[ab.verb] || 'Utility'} · ${ab.cooldown || 0} cycle cooldown`)); }).join('');
+    const skills = [{ id: 'spike', name: spikeOf(k).name, rule: spikeOf(k).rule }, ...a.skills.filter((x) => unlockLevel(k, x.id) <= 1)].map((x) => { const ab = ABILITIES[x.id] || {}; return pkRow(pkIco(ab.icon || 'command'), `<b>${esc(x.name)}</b>`, `<small>${ruleHtml(ab.short || '')}</small>`, pkTip(x.name, x.rule || '', `${PK_KIND[ab.verb] || 'Utility'} · ${ab.cooldown || 0} cycle cooldown`)); }).join('');
     const subs = Object.entries(a.subs || {}).map(([id, x]) => pkRow(pkIco(`sub-${id}`), `<b>${esc(x.name)}</b>`, `<small>${esc(x.role.join(' · '))}</small>`, pkTip(x.name, x.solo, `Subclass · Level ${SUBCLASS.from}`), ' gl')).join('');
     return `<div class="pk-card" data-pick-class="${k}" role="radio" aria-checked="false" tabindex="0">
       <span class="pk-fx" aria-hidden="true">${'<i></i>'.repeat(14)}</span>

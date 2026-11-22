@@ -73,6 +73,7 @@ test('tips are paced: a calm tip once a screen visit and a while apart, an openi
   assert.notEqual(nextTip(s, 'combat', onPage(html), { told: true })?.id, 'fight-timeline', 'one opening tip a fight');
   s.encounter.paused = false;
   s.encounter.metrics.wasted = 1;
+  s.pace = { kills: 1, ms: 0 }; // not your first fight
   assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .ptick.spent', { told: true, quiet: true })?.id, 'fight-wasted', 'what lands mid-fight still pauses it');
   assert.equal(paceOf(TIPS.find((t) => t.id === 'fight-wasted'), 'combat'), 'mid');
   assert.equal(paceOf(TIPS.find((t) => t.id === 'tour-walk'), 'rooms'), 'free', 'the rooms tour is never held back');
@@ -96,6 +97,8 @@ test('fight tips pause the fight and wait for what they explain', () => {
   // A tick crossed with nothing due gets its own tip.
   assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .ptick.spent'), null, 'a tick spent on a cut is no mistake');
   s.encounter.metrics.wasted = 1;
+  assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .ptick.spent'), null, 'never in your first fight: Overload on the bare part is its obvious play');
+  s.pace = { kills: 1, ms: 0 };
   assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .ptick.spent')?.id, 'fight-wasted');
 });
 

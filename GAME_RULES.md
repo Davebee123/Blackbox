@@ -15,16 +15,19 @@ while it's coming on lands the picture at once; the prompt waits for the outline
 filling until the frame sticks and NETWORK OFFLINE, then a colder machine recovering. Then a bare terminal:
 `blackbox login:` asks for a handle (2–16 letters, numbers, dots, dashes or underscores) and a password (4+
 characters, never stored). An encrypted transmission from Halcyon Mutual's Office of Loss Prevention says the terminal
-was set up for you and that wick of LOWLIGHT will write. Then you pick a class (Classes and loadout), and wick's
-first transmission comes in over the map (Transmissions).
+was set up for you and that wick of LOWLIGHT will write. Then you pick a class (Classes and loadout): its drawer lists
+what level 1 starts with (the basic hit and the first core skill), and on a phone Start stays at the screen's foot. With
+`?practice` a **Practice** offer follows, skippable: a training virus on its own state (tutorial.mjs, four lessons: type
+the command, or pick a key and click a part; Continue after each), never the save. It is off until the designer keeps it
+(`PRACTICE.offer`). Then wick's first transmission comes in over the map (Transmissions).
 
 ### The loop
 
 1. `connect sprawl`: **SPRAWL-00**, the starter server, a plus of twelve stray rooms, an arm of three each way
    from the entry, a level a ring (1 beside the entry, then 2, then 3; `ZONE_BAND`), RELAY-KING's Core at the top
    arm's tip. An older save's SPRAWL-00 is laid out again on load. Walk into a room and `engage`. Your first two kills there hit at 60%
-   (`CONFIG.zone.starterHit`). A kill pays at once, and the room fills again 90 seconds later. Its Core opens from
-   level 3.
+   (`CONFIG.zone.starterHit`). It reboots like every server: a kill's pay is the visit's until you jack out (Visits),
+   and the room fills again 90 seconds later. Its Core opens from level 3.
 2. The network is a stack of eight **floors**; SPRAWL-00 is floor 1's entry. The servers linked to what you know show
    as **?**: kills and first clears **trace** them, and at 100% one is located (Floors, The hidden network).
 3. `connect <server>` starts a run. Out on the net your health is **Integrity** (100 × your power, plus gear). It carries
@@ -70,7 +73,7 @@ factor (`length.drawn`). Adds (fragments, Packages, Droppers), breaches and crew
 | Patch | A part with no chits left patches one back 5 cycles later (`CONFIG.patchDelay`), unless it breaks first. The timeline shows the patch (◆ patch). |
 | Veiled | Ghostroot and the Sentinel hide a part's timers while it still has armor. Strip it, or Tag it, to see them. |
 | Stakes | Damage is the only threat: your Integrity (0 on a run: a disconnect, the visit undone; at home it stops at 1: Home). Nothing takes your credits or files. Ransomware encrypts (a stack that hits you every cycle until the Encryptor breaks), Worm spawns fragments that gnaw every cycle, Ghostroot's Scrambler hits and scrambles you. |
-| Time | One command a cycle; entering it turns the cycle at once. Typed nothing, a cycle lasts 12 s (`speed relaxed`; normal 8 s, fast 5 s; the top bar's button). Enter on an empty line or `now` resolves it now. One entry a turn: until the last turn has played out (the virus's answer, its numbers landed: 0.45–1.5 s), another order or empty Enter is dropped, and the prompt and its key give a short shake. Rules count cycles, so speed never changes balance. No attack lands on cycle 1. |
+| Time | One command a cycle; entering it turns the cycle at once. A command is typed, or clicked: a skill (its key or number), then a part fires it, and a part picked first fires the skill picked after. Typed nothing, a cycle lasts 12 s (`speed relaxed`; normal 8 s, fast 5 s; the top bar's button). Enter on an empty line or `now` resolves it now. One entry a turn: until the last turn has played out (the virus's answer, its numbers landed: 0.45–1.5 s), another order or empty Enter is dropped, and the prompt and its key give a short shake. Rules count cycles, so speed never changes balance. No attack lands on cycle 1. |
 | Order | Your command (or your routine's) → your daemons → burns → helpers → heals over time → encryption → attacks due → patches. |
 | Crits | Any hit you land that does damage can crit for +50% (5% base, plus Crit and Crit Damage). Enemy damage attacks crit 10% of the time from enemy level 3. Timeline numbers show the normal hit, after your Block. |
 | Misses | Your damaging skills miss 5% of the time against a same-level enemy, +1% a level it's above you, −1% a level below, less your Accuracy; the HUD shows *you miss N%*. A miss spends the cooldown. Enemy attacks miss you the same way, plus your Evasion (up to 20%). Burns, helpers and utility skills never miss. |
@@ -206,7 +209,8 @@ arrived since you last opened them.
 holds on the hit for 0.8 s, drops to static with **NO CARRIER** and the server's name, then clears onto the map: your
 signal runs home, HOME's outline draws itself round, and HOME lights with its bar back at the image's Integrity, the
 image's time under it (bootfx.mjs `playReboot`; a key skips each). Then the **No carrier** card: **Restored**, the
-image's time, its Integrity as a teal bar, the visit's rooms, XP and files struck through, and how long the net ran on.
+image's time, its Integrity as a teal bar, the visit's rooms, XP, files and contract steps struck through, and how long
+the net ran on; **Reconnection possible in** counts down live, rounded up.
 What took you out is one red row with what you took; open it for the **death recap** of the last 6 cycles (recap.mjs):
 your Integrity as a bar a cycle, the hits that did it (biggest first, at most 4, the last hit tagged **Last**), and
 **Taken**, **Healed** and **Shielded**; hover any of it for the sentence. A loss at home leaves you at 1 (Home).
@@ -831,7 +835,8 @@ bends your commands on its beat.
 Every `connect` plays a server as a graph of rooms (`netrooms.mjs` on the rooms engine, `floorplan.mjs`), kept on the
 server for good: what you've cleared, seen, opened and taken stays across visits and saves. The **Run** tab shows the
 strip (the server, its kind, level and rule, your Integrity, **Rooms n/N**, your keys, the hunter, your pack, **Wait** and
-**Jack out**), the room map, and each room's pop-up card. `?playtest=rooms` builds a throwaway server to try (README).
+**Jack out**), the room map, and each room's pop-up card. On a desktop the map's view fits the rooms you've found
+(the *Fit*: it starts close and widens as you walk); a phone's shows the whole grid. `?playtest=rooms` builds a throwaway server to try (README).
 
 ### Rooms
 
@@ -961,8 +966,8 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
   room's kill, an elite's three times and the Core's four, times the deed scale: about 40 kills of your level on a
   medium server; `mappedShare`). A first clear pays no XP of its own. Caches, puzzle rooms, thread rooms and quirk
   rooms never count.
-- **Wild servers** (SPRAWL-00, a lair, the farm) can't be taken over: each room is a fight, and kills pay straight
-  into your bank. Each room fills again on its own timer (SPRAWL-00's 90 seconds, RELAY-KING's 30 minutes, a rogue
+- **Wild servers** (SPRAWL-00, a lair, the farm) can't be taken over: each room is a fight, and kills pay into the
+  visit, banked when you jack out. Each room fills again on its own timer (SPRAWL-00's 90 seconds, RELAY-KING's 30 minutes, a rogue
   server's 3–5 minutes). The story's named target holds its room until it falls.
 
 ### Visits
@@ -970,8 +975,9 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
 - **Integrity** (Home) walks in as it is, spent by moves, fights, forcing a vault and bait; an invasion's chip takes it
   too, never below 1. A fight never leaves you with more than you walked into it with. You need a quarter to connect.
 - **Jack out saves the visit** (`jack out`, or the strip's button): from any room it banks your **pack** (cache credits
-  and code, the vault's files, kill drops; a **Banked** card) and sends you home. The strip's amber **Pack** button
-  counts its rows (credits summed, each code summed, each item its own) and opens the list, *UNSAVED*; a room won this
+  and code, the vault's files, kill drops; a **Banked** card) and sends you home. Beside Jack out the strip shows the
+  **stake**, what the visit holds unbanked: its XP and contract steps (each only once there is some), then the amber
+  **Pack** button, which counts its rows (credits summed, each code summed, each item its own) and opens the list, *UNSAVED*; a room won this
   visit reads **UNSAVED** on the map until you jack out.
 - **Warm cache** (`visit.mjs` `WARM`): each room you win on a visit adds a stack, up to 10. Each gives **+10% XP** and
   **+5 Scavenge** to everything after it on that visit (room fights, kills, deeds), paid as you go. Every connect starts
@@ -983,7 +989,7 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
   (cleared, opened, its spawns and Root) go back to the connect. A first run's XP, paid as you connect, stays: it's
   paid once. What keeps moving: the market and the director, mail and contracts received, invasions, runners, the
   consortium, achievements, your profile, INIT's table, settings, clocks, servers and leads found. The **NO CARRIER**
-  card strikes through what the visit lost.
+  card strikes through what the visit lost, the stake the strip showed.
 - **Reconnect wait.** A server you leave takes you back after 30 s (`CONFIG.relockMs`), +15 s for each disconnect on
   its run, 2 min at most (`CONFIG.deathWait`). A jack out mid-fight waits like a disconnect but still saves the visit;
   any other jack out resets the count. Connect counts it down, with ☠ and the count. Deadman's Switch counts as a jack
@@ -2921,17 +2927,21 @@ Screens carry names, numbers and state, never how-to text. Rules live in **hover
 mutation and wall band shows its rule, in WoW's tooltip grammar) and in **first-time tips**: the first time something
 is on screen, a small tip points at it and says how it works, once, one at a time. **wick** narrates every tip in his
 own lowercase, in a small Transmission: his face, *INCOMING · LOWLIGHT*, his line. The
-opening map has one tip: click SPRAWL-00, then Connect. Connecting reads it, shown or not. Your server's tip waits for the first intrusion, a ?'s for the first trace on one.
+opening map has one tip: click SPRAWL-00, then Connect. Connecting reads it, shown or not. A tip never covers what it
+points at or the button it names (app.js `placeTip`: under or over its thing, beside it, then a corner; a tip's `clear`
+lists the buttons), nor a phone's tab bar; on a phone it drops wick's face. Your server's tip waits for the first intrusion, a ?'s for the first trace on one.
 
 **Pacing** (tips.mjs `paceOf`). A map, room or menu tip shows at most once a screen visit, and 2 minutes after the last
 one closed. A fight tip about what the fight opened with shows only while it's paused (a room fight opens paused until
 your first order), one a fight; your first fight's is one tip you step through (the timeline, your skills, the
-interrupt's ticks, armor, the Sync Window). What lands mid-fight (a spent tick, a patch, a miss) pauses it. A part's, a virus's, a mutation's or a quirk's own rule gets no tip: its tag's hover teaches it.
+interrupt's ticks, armor, the Sync Window). What lands mid-fight (a spent tick from your second fight on, a patch, a
+miss) pauses it. A part's, a virus's, a mutation's or a quirk's own rule gets no tip: its tag's hover teaches it.
 The rooms tour skips the pacing. **Turn tips off** on any tip or the Settings page; **Replay tips** shows
 them again.
 
-Your first server's room map gets a short **rooms tour**, a step at a time (walk, engage, jack out; a cache, the
-hunter, the rest room and SCAN as you meet them). Later tips meet the vault, the Core, an elite room, a thread, a
+Your first server's room map gets a short **rooms tour**, a step at a time (walk, engage or Help, jack out after the
+first win whatever came before; a cache, the hunter, the rest room and SCAN as you meet them). Until it's done no
+runner fights in a room beside SPRAWL-00's entry (runners.mjs `SPRAWL_RING1`), so its first room has an Engage. Later tips meet the vault, the Core, an elite room, a thread, a
 rival, your Integrity running low, a boss's ♛, an elite's clash, a fight's lever (from level 6), an objective and your
 program (level 5).
 The log and terminal still say what happened, in a line; they don't teach.
@@ -2994,7 +3004,7 @@ test, the wire, fight reports and the log (`logs` opens it).
 - **UI scale** (Settings, `ui scale <auto|80–200>`, 100% by default) draws the whole screen larger or smaller;
   it grows only while the screen stays 1700px wide in its own pixels. **Auto** sizes it to 1800px.
 - **On a phone** (up to 600 px wide, or 500 px tall on a touch screen) the top bar is one strip (the pager's lamp and
-  its count, Integrity, credits; none in a fight) and the pages are a tab bar at the bottom: Map (a fight, run
+  its count, Integrity, the process table, credits, Materials as a crate; under 360 px credits as a coin; none in a fight) and the pages are a tab bar at the bottom: Map (a fight, run
   or breach in its place while there is one, a red dot while you're away), Mail, Loadout, Server, **More** (your Net
   ID card, Codex, Rig, Settings, the command line). The prompt shows only from More's **>_**; in a fight it never takes
   the focus. A tap on anything with a rule shows its card in a sheet; a long press on a button shows its card without
@@ -3006,7 +3016,8 @@ test, the wire, fight reports and the log (`logs` opens it).
   tap opens the list. A tap on a server brings up its name, level and main button; ▴ opens its whole card. On a server,
   the header is one line (its name, Integrity, rooms cleared, the hunter's countdown; a tap on the name shows the rest),
   one tap walks, and a room's choice comes up with both buttons by your thumb. Wait and Jack out float at the map's
-  bottom right. With no strip there, the pager is in More.
+  bottom right, the stake at their left, and rise over the log's line while it shows (one line; a tap shows it whole).
+  After a win the spoils card takes the whole screen. With no strip there, the pager is in More.
 - **Pop-ups on a phone** all come up as one sheet from the bottom: a server's card, a room's, Comms, a daemon's panel, an item's datasheet, a journal, a quest's dialogue and its reward, the level-up.
   Drag it down or tap outside it to close.
 - **A fight on a phone** fits one screen: the HUD is one line, your bar and its number on the left (a crewmate as a
