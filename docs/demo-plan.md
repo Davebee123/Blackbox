@@ -86,7 +86,6 @@ words for the designer; the designer approves each line.
 | PAGE NINE falls | wick | the dead account closed; the ledger points at floor 2 |
 | Floor 2 reached | LANTERN | *Four. Nine. Nine.* (drafted) |
 | *Carrier*'s schedule page read | LANTERN | the count: INIT's table |
-| The subclass picked | wick | a line on what you chose |
 | CENTRIFUGE falls | LANTERN, then wick | the schedule's signer; what's under floor 2; the demo's end |
 
 ## Evidence from the games it resembles

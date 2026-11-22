@@ -96,7 +96,7 @@ Only two change.
 
 ## The demo's transmissions
 
-**Status.** Drafted, awaiting the designer. Words for the fourteen unbuilt rows of docs/demo-plan.md's *Transmissions*
+**Status.** Drafted, awaiting the designer. Words for the unbuilt rows of docs/demo-plan.md's *Transmissions*
 (the two built ones, wick's welcome and the first server, stay as they are). Each plays once in the quest window's
 *Transmission*, on its event, never mid-fight. Lines are the speaker's; numbered choices are the player's (teal), each
 with its answer; *ends* names where it closes. `{blank}` is filled in. A runner's or a rival's has a line per temperament.
@@ -277,25 +277,6 @@ their trade's, as on its receipt.
    > Every orphan you break cleanly frees a place in the table. From now on we'll mark the orphans for you and show you the count.
    > If the count climbs too high, we cancel a round of trades ourselves. We don't like doing it.
 3. *Over.* (ends)
-
-### The subclass picked · wick
-
-*When:* home after you first pick a subclass. *Opens:* nothing; a line on the pick.
-
-> you picked {subclass}.
-
-| Subclass | wick |
-|---|---|
-| Demolitionist | good. when something breaks, make sure the next thing breaks with it. |
-| Overclocker | you'll hit harder and take more damage. pick your moments. |
-| Warden | you'll remember whatever hit you last. make it regret that. |
-| Sysop | you'll heal past what you need, and the extra won't go to waste. |
-| Payload | set one part burning, and the fire will spread to the next. |
-| Phantom | your first hit on anything lands where it hurts, so spread your first hits around. |
-| Herder | your helpers take one more swing on their way out, so keep a few running. |
-| Hijacker | once you jam something, everyone hits it harder, and you hit it hardest. |
-
-1. *Thanks, wick.* (ends)
 
 ### CENTRIFUGE falls · LANTERN, then wick
 
