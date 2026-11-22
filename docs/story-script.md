@@ -224,9 +224,9 @@ with its answer; *ends* names where it closes. `{blank}` is filled in. A runner'
 *When:* a runner's standing reaches Known. *Opens:* a runner's trade. `{payer}`, `{payee}`, `{sum}` and `{era}` are
 their trade's, as on its receipt.
 
-> **Careful:** I've been tracing something for a long time. {sum}, {payer} to {payee}, frozen since {era}. I found the server it sits on.
-> **Steady:** There's a trade of mine stuck on a server near you. {payer} to {payee}, {sum}. It's waited long enough.
-> **Bold:** Found it. {sum}, {payer} to {payee}, sitting on a server since {era}. I'm taking its Resident.
+> **Careful:** Pinging you because you've seen me fight. I've been tracing a trade for a long time: {sum}, {payer} to {payee}, frozen since {era}. I've found the server it sits on.
+> **Steady:** Got a minute on the channel? A trade of mine is stuck on a server near one of yours. {payer} to {payee}, {sum}. It's waited long enough.
+> **Bold:** Found it. {sum}, {payer} to {payee}, frozen on a server since {era}. I'm going after its Resident. You in?
 
 1. *Whose money is it?*
    > **Careful:** My family's. It's been on the books longer than I have.
@@ -235,21 +235,21 @@ their trade's, as on its receipt.
 2. *Show me.* (ends: the trade's server on the map)
 3. *Later.*
    > **Careful:** It's waited this long. It can wait for you.
-   > **Steady:** It isn't going anywhere.
+   > **Steady:** It isn't going anywhere. Neither am I, for a few hours.
    > **Bold:** Don't take too long.
 
 ### PAGE NINE falls · wick
 
 *When:* home after PAGE NINE falls. *Opens:* the way to floor 2.
 
-> page nine's off. the account's closed.
+> page nine's switched off, and the account's closed.
 > it ran on a schedule, and the schedule came from somewhere deeper. there are people on floor 2 who listen to that line.
 
 1. *Who?*
-   > lantern. old kessler staff, and their kids. they sell what they hear by the page.
+   > lantern. old kessler staff and their kids. they listen to the backhaul and sell what they hear, a page at a time.
    > i'll tell them you're coming.
 2. *Deeper?*
-   > backhaul. floor 2. an older layer, older strays. trace your way down.
+   > backhaul, floor 2. an older layer with older strays. keep tracing and you'll reach it.
 3. *Good.* (ends)
 
 ### Floor 2 reached · LANTERN
@@ -268,13 +268,13 @@ their trade's, as on its receipt.
 
 *When:* you first read `sched.0412` (*process table at 81%*). *Opens:* INIT's table, Orphans contracts.
 
-> Four. Nine. Nine. You read the foot of the page. Eighty-one percent.
+> Four. Nine. Nine. You've read the foot of the page. Eighty-one percent.
 > The machine keeps a table of everything running on it. A trade that never finishes keeps its place there, and the table fills.
 
 1. *And at a hundred?*
    > Nothing new can start. It happened once, at fourteen minutes past two in the morning.
 2. *What brings it down?*
-   > Orphans, broken clean. Each one gives the machine a place back. We'll mark them for you now.
+   > Orphans, broken clean. Each one gives the machine its place back. We'll mark them for you, and keep the count in front of you.
    > When the count runs too high, we cancel a round ourselves. Nobody enjoys it.
 3. *Over.* (ends)
 
