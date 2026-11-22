@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ITCH_API_KEY: ${{ secrets.ITCH_API_KEY }}
-      ITCH_TARGET: ${{ vars.ITCH_TARGET }}
+      ITCH_TARGET: ${{ vars.ITCH_TARGET || 'matzahboy/blackbox' }} # the itch page (matzahboy.itch.io/blackbox); a repository variable overrides it
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
