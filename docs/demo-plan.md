@@ -1,7 +1,7 @@
 # The demo: floors 1–2
 
 **Status.** Signed off by the designer (21 November 2026): every decision below is settled. Nothing is built yet;
-Phase 1 is next. The transmissions' words are being drafted in their own session (docs/story-script.md).
+Phase 1 is next. The transmissions' words are approved (docs/story-script.md, *The demo's transmissions*).
 
 ## The demo
 

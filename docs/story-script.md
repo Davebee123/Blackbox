@@ -96,7 +96,7 @@ Only two change.
 
 ## The demo's transmissions
 
-**Status.** Drafted, awaiting the designer. Words for the unbuilt rows of docs/demo-plan.md's *Transmissions*
+**Status.** Approved by the designer (22 November 2026); not built (Phase 5 wires them, Phase 7 their triggers). Words for the unbuilt rows of docs/demo-plan.md's *Transmissions*
 (the two built ones, wick's welcome and the first server, stay as they are). Each plays once in the quest window's
 *Transmission*, on its event, never mid-fight. Lines are the speaker's; numbered choices are the player's (teal), each
 with its answer; *ends* names where it closes. `{blank}` is filled in. A runner's or a rival's has a line per temperament.
