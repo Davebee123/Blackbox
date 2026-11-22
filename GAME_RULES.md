@@ -593,7 +593,8 @@ last round's, compounding (×1.4 by round 5, ×1.85 by round 9), its enrage on t
 | HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.33× | cycle 40 |
 
 Each plays in acts (below) with a part and a rule of its own, and a mechanic an act (docs/solo-bosses.md). RELAY-KING's
-and REPO MAN's ♛ holds 45% of each act's board, taken from its other parts (`BOSSES` work.share).
+and REPO MAN's ♛ holds 45% of each act's board, taken from its other parts (`BOSSES` work.share). Below level 6 (its
+own 5) RELAY-KING's Replicator wears one ◆ and hatches every 6 cycles (`trim`).
 
 | Boss | Its part | Act 1 | Act 2 | Act 3 |
 |---|---|---|---|---|

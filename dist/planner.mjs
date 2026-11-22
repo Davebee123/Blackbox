@@ -419,9 +419,11 @@ function play(s) {
   const lever = leverNow(s), pick = (alive(prefer) && prefer) || lever;
   // RELAY-KING's Broadcast (a part's attack that grows by each fragment): clear the fragments in the cycle before it lands.
   const frag = answers() && livingParts(s).some((p) => p.broadcast && p.attack && p.attack.due - s.encounter.cycle <= 1) ? livingParts(s).filter((p) => p.kind === 'fragment').sort((a, b) => a.integrity - b.integrity)[0] : null;
+  // RELAY-KING's Flood (act 3: each Broadcast that lands hatches on every part): break the Relay, or the fragments never stop.
+  const relay = answers() && s.encounter.virus.flood ? livingParts(s).find((p) => p.broadcast) : null;
   // HOLLOW CHOIR's second voice: break the weaker Mimic, so the Round sings with one voice.
   const voices = answers() ? livingParts(s).filter((p) => p.mimic) : [], voice = voices.length > 1 ? voices.sort((a, b) => a.integrity - b.integrity)[0] : null;
-  let t0 = (alive(focus) && focus) || raidFocus(s) || tellFocus(s) || frag || voice || pick || open || crownNow(s) || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
+  let t0 = (alive(focus) && focus) || raidFocus(s) || tellFocus(s) || relay || frag || voice || pick || open || crownNow(s) || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
   if (shunned(s, t0)) t0 = livingParts(s).filter((p) => !shunned(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t0;
   // A Trojan's Loader (families.mjs): the part to break, its family's answer (the Courier only ever redeploys while it
   // stands, and every Package it delivers unpacks on a hit). Since fight length (data.mjs CONFIG.length) the Courier
