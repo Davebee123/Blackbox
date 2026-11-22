@@ -31,7 +31,7 @@ designer's links (the Discord, the telemetry Worker, the itch page) live in `LIN
 **Telemetry** (`tools/telemetry/`): a Cloudflare Worker (free tier) with a D1 database. Once: `cd tools/telemetry`,
 `npx wrangler login`, `npx wrangler d1 create blackbox-telemetry` (its id into `wrangler.toml`), `npx wrangler d1 execute
 blackbox-telemetry --remote --file schema.sql`, `npx wrangler deploy`; optionally `npx wrangler secret put STATS_KEY`.
-The Worker's URL goes in `LINKS.telemetry`; the same URL (with `?key=`) is the page that reads the numbers back.
+The Worker's URL goes in `LINKS.telemetry` (empty: the demo never asks); the same URL (with `?key=`) is the page that reads the numbers back.
 
 ## How a session goes
 

@@ -367,3 +367,6 @@ Side by side, the earlier phase lands first and the later one merges main before
 - **Phase 1, deploy** (22 Nov): the itch page is up (matzahboy.itch.io/blackbox, Restricted, html5 channel; the `demo`
   branch pushes it with butler, its target written into the workflow), and the designer has played it there. The
   Discord is made (#announcements and #patch-notes read-only); its invite and the telemetry Worker are still to come.
+- **Telemetry deferred** (22 Nov): the designer skips Cloudflare for now; with `LINKS.telemetry` empty the demo never
+  asks and Settings shows no toggle (`telemetry.offered`). The Worker stays in `tools/telemetry/` for later. The
+  Discord's channel link isn't an invite; the Feedback button waits for one.

@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fresh, command, hackerOf, gainXp, addLocation, SAVE_VERSION } from './dist/combat.mjs';
 import { LOADOUT, FLOORS, floorFor, dealFloor, lastFloor } from './dist/data.mjs';
-import { DEMO_BUILD, setDemo, version } from './dist/demo.mjs';
+import { DEMO_BUILD, LINKS, setDemo, version } from './dist/demo.mjs';
 import { graphOf, canDescend, floorsOf } from './dist/floors.mjs';
 import { mapMarkup, systemMarkup } from './dist/view.mjs';
 import { levelGains } from './dist/progression.mjs';
@@ -107,6 +107,9 @@ test('the feedback report: build, device, level, floor, the last 100 log lines a
 test('telemetry: off until yes, a random id never the handle, only in the demo', () => {
   const s = mk(3);
   assert.equal(TM.askable(s), false, 'never asked outside the demo');
+  demo(() => assert.equal(TM.askable(s), false, 'never asked with no Worker to send to'));
+  const was = LINKS.telemetry;
+  LINKS.telemetry = 'https://telemetry.test';
   demo(() => {
     assert.equal(TM.askable(s), true);
     assert.equal(TM.track(s, 'start'), null, 'nothing before yes');
@@ -127,6 +130,7 @@ test('telemetry: off until yes, a random id never the handle, only in the demo',
     TM.track(s, 'start');
     assert.equal(TM.drain(s), null);
   });
+  LINKS.telemetry = was;
 });
 
 test("the Worker's numbers: median play, hours to 5/10/14, where players stop, bosses", () => {
