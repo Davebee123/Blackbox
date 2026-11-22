@@ -45,6 +45,40 @@ and most of the time at 5. At 3 only yellows give you a chance.
 
 ---
 
+### PAGE NINE · floor 1's floor job · your level, 6 to 8
+
+**Overview.** A dead firm's account, still paying its premium and filing claims a day early. One part is always
+insured, and the insurance moves in a fixed order you can read a cycle ahead. It's floor 1's lesson: read the tags, hit
+what isn't covered.
+
+**Abilities**
+- **Premium Paid**: each cycle one part is Insured, in board order (Policy ♛, Premium, Claims), the next tagged a cycle
+  ahead. The Insured part can't break, and what it took that cycle comes back at the cycle's end. A ◆ broken on it
+  stays broken. Never the last part standing.
+- **Filed Early**: its charge (Overcharge, on the Claims) lands a cycle before the attack it rides, so it shows 2 cycles
+  ahead, not 3.
+- **Surge** (Policy ♛, every 4), **Claim** (Claims, every 5), **Debit** (Premium, every 6): encrypts you, stacking,
+  until the Premium breaks.
+
+**Act 1 · Premium Paid**
+- *Strategy:* hit the part that was just Insured: it stays open for the next two cycles. Strip ◆ on the Insured part if
+  you must; that sticks. Break the Premium early to stop the Debit.
+- *How you die:* hitting whatever's biggest, a third of your damage refunded, while the Debit stacks.
+
+**Act 2 · Claim**
+- *What happens:* what an Insured part gets back also hits you.
+- *Strategy:* never put damage on the Insured part. Hold, strip or shield on a cycle where nothing else is worth hitting.
+- *How you die:* one big hit on the Insured part comes straight back at you.
+
+**Act 3 · Double indemnity**
+- *What happens:* two parts are Insured each cycle, so only one is open.
+- *Strategy:* the open part changes every cycle; follow it. Once one part breaks, only one of the two left is covered.
+- *How you die:* chasing one part through its covered cycles.
+
+**Tips.** A burn ticking on the Insured part comes back too, and in act 2 it hits you. Its own uniques aren't in yet; it pays the chain's pick of three.
+
+---
+
 ## Floor 2
 
 ### CENTRIFUGE · floor 2's floor job · level 14
