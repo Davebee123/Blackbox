@@ -1,6 +1,6 @@
 <!doctype html>
-<!-- The Steam capsules: the black box on the Horizon line over an ASCII city and its reflection. Open it to see every
-     size; `node press/render.mjs` saves them as the PNGs beside it. ?seed=N draws another skyline (21 is the kept one). -->
+<!-- The Steam capsules and the Discord art: the black box on the Horizon line over an ASCII city and its reflection.
+     Open it to see every size; `node press/render.mjs` saves them as the PNGs beside it. ?seed=N draws another skyline (21 is the kept one). -->
 <meta charset="utf-8">
 <title>BLACKBOX capsules</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=Inter+Tight:wght@400&display=block">
@@ -25,6 +25,8 @@
 <script>
 const CW = 9, RH = 16; // the cell
 const SIZES = { header: [920, 430], main: [1232, 706], small: [462, 174], vertical: [748, 896], library: [600, 900] };
+// Discord: the server banner (rendered again at 2x as the 1920x1080 invite splash) and the welcome header
+const DISCORD = { banner: [960, 540], welcome: [1200, 400] };
 // Per size: the horizon's row (from the top), the box's width in cells, the name's size, tracking and gap under the box
 // (a share of the box's height), and the clearing house's column rows, place (its tower from the box) and width.
 const PLAN = {
@@ -33,6 +35,8 @@ const PLAN = {
   small:    { hr: 4,  gap: 0.52, box: 6,  word: 23, track: 0.42 },
   vertical: { hr: 31, bank: 7, bankAt: 0, box: 18, word: 58, track: 0.4 },
   library:  { hr: 31, bank: 7, bankAt: 0, bankW: 13, box: 16, word: 48, track: 0.4 },
+  banner:   { hr: 17, bank: 4, gap: 0.45, box: 14, word: 46, track: 0.5 },
+  welcome:  { hr: 13, bank: 3, gap: 0.45, box: 12, word: 38, track: 0.5 }, // box: even, so the towers keep to the grid
 };
 function rng(seed) { let x = seed >>> 0 || 1; return () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296); }
 const AMBER = '241,185,47', GOLD = '255,216,92', PAPER = '255,242,200';
@@ -193,6 +197,32 @@ for (const [n, [w, h]] of Object.entries(SIZES)) {
   const d = document.createElement('div');
   d.className = 'cap'; d.dataset.size = n; d.style.width = w + 'px'; d.style.height = h + 'px';
   d.innerHTML = cityCap(w, h, PLAN[n], seed);
+  document.body.append(d);
+}
+for (const [n, [w, h]] of Object.entries(DISCORD)) {
+  const d = document.createElement('div');
+  d.className = 'cap'; d.dataset.file = `discord-${n}`; d.style.width = w + 'px'; d.style.height = h + 'px';
+  d.innerHTML = cityCap(w, h, PLAN[n], seed);
+  document.body.append(d);
+}
+// The Discord server icon: the small mark (the favicon's box on its line) at 512, with 1s and 0s in the dark, thickest
+// along the line; all inside the circle Discord crops it to
+{
+  const S = 512, B = 198, Y = S / 2, C = 56, R = 32, L = (S - C * CW) / 2, hr = 16; // the line on row 16's top edge
+  const inBox = (x, y) => x >= 16 && x <= 39 && y >= 9 && y <= 22;
+  const inCircle = (x, y) => Math.hypot(L + x * CW + 4.5 - S / 2, y * RH + 8 - S / 2) < S / 2 - 14;
+  const r = rng(11), g = Array.from({ length: R }, () => Array(C).fill(null));
+  for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) {
+    const near = 1 - Math.min(1, Math.abs(y + 0.5 - hr) / 14);
+    if (inBox(x, y) || !inCircle(x, y) || r() > 0.05 + 0.3 * near ** 2 || g[y][x - 1]) continue; // never two side by side
+    g[y][x] = { ch: r() < 0.5 ? '0' : '1', a: Math.round((0.12 + 0.4 * near ** 2) * 100) / 100 };
+  }
+  const html = g.map((row) => row.map((c) => (c ? `<span style="color:rgba(${AMBER},${c.a})">${c.ch}</span>` : ' ')).join('')).join('\n');
+  const d = document.createElement('div');
+  d.className = 'cap'; d.dataset.file = 'discord-icon'; d.style.width = S + 'px'; d.style.height = S + 'px';
+  d.innerHTML = `<pre class="ascii" style="left:${L}px;top:0">${html}</pre>`
+    + `<div class="hz" style="top:${Y - 1}px;height:2px"></div>`
+    + `<div class="box" style="left:${(S - B) / 2}px;top:${Y - B / 2}px;width:${B}px;height:${B}px;--blur:${B / 16}px"><b></b></div>`;
   document.body.append(d);
 }
 
