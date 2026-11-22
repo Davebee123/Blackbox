@@ -40,7 +40,8 @@ you clear what the Replicator hatches, and when you stop clearing and break the 
 - *Strategy:* break the Relay first. With it gone nothing broadcasts and nothing floods. Cut a Broadcast you can't stop.
 - *How you die:* killing a fragment a cycle while three more hatch every four.
 
-**Tips.** It comes back 30 minutes after it falls. At level 3 it's a reach, at 5 a fair fight.
+**Tips.** It comes back 30 minutes after it falls. It wants gear: at 5 yellows win it, whites and blues mostly lose
+until 6. At 3 it's out of reach.
 
 ---
 
