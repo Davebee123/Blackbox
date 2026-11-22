@@ -224,32 +224,32 @@ with its answer; *ends* names where it closes. `{blank}` is filled in. A runner'
 *When:* a runner's standing reaches Known. *Opens:* a runner's trade. `{payer}`, `{payee}`, `{sum}` and `{era}` are
 their trade's, as on its receipt.
 
-> **Careful:** Pinging you because you've seen me fight. I've been tracing a trade for a long time: {sum}, {payer} to {payee}, frozen since {era}. I've found the server it sits on.
-> **Steady:** Got a minute on the channel? A trade of mine is stuck on a server near one of yours. {payer} to {payee}, {sum}. It's waited long enough.
-> **Bold:** Found it. {sum}, {payer} to {payee}, frozen on a server since {era}. I'm going after its Resident. You in?
+> **Careful:** You've seen me fight, so I'm asking you. I've been tracing a frozen trade for a long time: {payer} to {payee}, {sum}, since {era}. I've found the server it's on.
+> **Steady:** I have a trade stuck on a server near one of yours: {payer} to {payee}, {sum}. It has waited long enough, and I could use a hand.
+> **Bold:** I found my trade: {payer} to {payee}, {sum}, frozen since {era}. I'm going after the Resident that holds it. Are you coming?
 
 1. *Whose money is it?*
-   > **Careful:** My family's. It's been on the books longer than I have.
-   > **Steady:** Someone who'd like it settled. So would I.
-   > **Bold:** Doesn't matter. It's owed.
+   > **Careful:** It was my family's. It has been frozen longer than I've been alive.
+   > **Steady:** It belongs to someone who wants it settled, and so do I.
+   > **Bold:** It doesn't matter whose. It's owed.
 2. *Show me.* (ends: the trade's server on the map)
 3. *Later.*
-   > **Careful:** It's waited this long. It can wait for you.
-   > **Steady:** It isn't going anywhere. Neither am I, for a few hours.
+   > **Careful:** It has waited this long. It can wait a little longer.
+   > **Steady:** It isn't going anywhere, and I'll be on the net for a few more hours.
    > **Bold:** Don't take too long.
 
 ### PAGE NINE falls · wick
 
 *When:* home after PAGE NINE falls. *Opens:* the way to floor 2.
 
-> page nine's switched off, and the account's closed.
-> it ran on a schedule, and the schedule came from somewhere deeper. there are people on floor 2 who listen to that line.
+> page nine is switched off. the account is closed.
+> it was running on a schedule, and that schedule came from somewhere deeper. some people on floor 2 listen for it.
 
 1. *Who?*
-   > lantern. old kessler staff and their kids. they listen to the backhaul and sell what they hear, a page at a time.
+   > lantern. they're old kessler staff and their kids. they listen to the backhaul and sell what they hear, one page at a time.
    > i'll tell them you're coming.
-2. *Deeper?*
-   > backhaul, floor 2. an older layer with older strays. keep tracing and you'll reach it.
+2. *Where is deeper?*
+   > the backhaul, floor 2. it's an older layer, and its strays are older too. keep tracing servers and you'll reach it.
 3. *Good.* (ends)
 
 ### Floor 2 reached · LANTERN
@@ -258,24 +258,24 @@ their trade's, as on its receipt.
 
 > Four. Nine. Nine. This is LANTERN. The strays on the Backhaul come up from below. Something down there is counting them, and so are we.
 
-1. *Counting what?*
-   > We'll sell you that. Page by page.
+1. *What are they counting?*
+   > That's what we sell. You'll get it one page at a time.
 2. *wick sent me.*
-   > We know. He used to read the same numbers.
+   > We know. He used to read the same numbers we do.
 3. *Open my mail.* (ends: Mail)
 
 ### *Carrier*'s schedule page read · LANTERN
 
 *When:* you first read `sched.0412` (*process table at 81%*). *Opens:* INIT's table, Orphans contracts.
 
-> Four. Nine. Nine. You've read the foot of the page. Eighty-one percent.
-> The machine keeps a table of everything running on it. A trade that never finishes keeps its place there, and the table fills.
+> Four. Nine. Nine. You've read the bottom of the page. It says eighty-one percent.
+> The machine keeps a table of every process running on it. A trade that never finishes keeps its place in that table, so the table keeps filling.
 
-1. *And at a hundred?*
-   > Nothing new can start. It happened once, at fourteen minutes past two in the morning.
-2. *What brings it down?*
-   > Orphans, broken clean. Each one gives the machine its place back. We'll mark them for you, and keep the count in front of you.
-   > When the count runs too high, we cancel a round ourselves. Nobody enjoys it.
+1. *What happens at a hundred?*
+   > Nothing new can start. That has happened once, at 2:14 in the morning.
+2. *How does it come down?*
+   > Every orphan you break cleanly frees a place in the table. From now on we'll mark the orphans for you and show you the count.
+   > If the count climbs too high, we cancel a round of trades ourselves. We don't like doing it.
 3. *Over.* (ends)
 
 ### The subclass picked · wick
