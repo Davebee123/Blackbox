@@ -286,14 +286,14 @@ their trade's, as on its receipt.
 
 | Subclass | wick |
 |---|---|
-| Demolitionist | whatever's left over goes into the next part. nothing wasted. |
-| Overclocker | you'll hit harder and bleed faster. pick your moments. |
-| Warden | whatever hit you last, you remember. hold the grudge. |
-| Sysop | you'll heal past what you need. keep the extra. |
-| Payload | set one part burning and watch the next one catch. |
-| Phantom | your first hit on anything lands where it hurts. spread them around. |
-| Herder | your helpers swing once more on the way out. keep a few running. |
-| Hijacker | jam it and everyone hits it harder. you most of all. |
+| Demolitionist | good. when something breaks, make sure the next thing breaks with it. |
+| Overclocker | you'll hit harder and take more damage. pick your moments. |
+| Warden | you'll remember whatever hit you last. make it regret that. |
+| Sysop | you'll heal past what you need, and the extra won't go to waste. |
+| Payload | set one part burning, and the fire will spread to the next. |
+| Phantom | your first hit on anything lands where it hurts, so spread your first hits around. |
+| Herder | your helpers take one more swing on their way out, so keep a few running. |
+| Hijacker | once you jam something, everyone hits it harder, and you hit it hardest. |
 
 1. *Thanks, wick.* (ends)
 
@@ -304,17 +304,17 @@ their trade's, as on its receipt.
 **LANTERN**
 
 > Four. Nine. Nine. The line is clear.
-> Every page of the schedule is signed at the foot. The same signature, every page.
+> Every page of the schedule is signed at the bottom, and it's the same signature on every page.
 
 1. *Who signed it?*
-   > A pricing model. It picks which trades are cancelled, and it signs for Halcyon.
+   > A pricing model. It chooses which trades are cancelled, and it signs for Halcyon.
 2. *What's below the Backhaul?*
-   > The Stacks. An older layer, with older trades. The count is louder there.
+   > The Stacks. It's an older layer with older trades, and the count is louder there.
 3. *Over.* (ends; wick follows)
 
 **wick**
 
-> halcyon's model signs the schedule. halcyon pays us. you can see the shape of it.
+> so halcyon's model signs the schedule, and halcyon pays us. you can see the shape of it.
 > floor 3 is next. i'll be here when you get there.
 
 1. *See you down there.* (ends: the end card)
