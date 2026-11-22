@@ -2,6 +2,10 @@
 // own, three acts as act bars (acts.mjs: each act a fresh board, the next when its last part breaks), and its beat on
 // its own part (acts.mjs beat 'part').
 //
+//   PAGE NINE       Premium Paid: one part Insured a cycle, in board order (the next shown a cycle ahead), never the last
+//                   standing. It can't break, and what it took that cycle comes back at the cycle's end. Filed Early:
+//                   its charges land a cycle before the attack they ride (tells.mjs). Act 2 (Claim): what comes back
+//                   also hits you. Act 3 (Double indemnity): two parts Insured a cycle.
 //   CENTRIFUGE      Bidding: each Surge the Gavel lands spins it faster (every 4, 3, 2); a delay or Throttle on it
 //                   withdraws it to every 4. A Surge at every 2 sells: the buyer named on the Gavel joins as a part with
 //                   its crew's rule (TOLLGATE a Lockbox warding the Rotor, SWARMLINE a Mirror twinned with the Gavel,
@@ -55,7 +59,7 @@
 //                   (Cold image): every restore returns to the image taken as Backup v6 broke. The Core is never
 //                   restored past its ♛'s last spent tick, so ground you took stays taken.
 //
-// The rules' state rides on the virus (v.bid, v.ransom, v.surf, v.stack, v.desk, v.vote, v.swarm, v.grace, v.roll); combat.mjs calls in at engage (fbStart), at a
+// The rules' state rides on the virus (v.prem, v.bid, v.ransom, v.surf, v.stack, v.desk, v.vote, v.swarm, v.grace, v.roll); combat.mjs calls in at engage (fbStart), at a
 // landing (fbPower, fbLanded), a delay or Throttle (fbSlowed), a break (fbBroke), your command (fbAim, fbCommand,
 // fbLogged), a phase's verbs (fbVerb) and the cycle's end (fbCycle). Their uniques (content/items.mjs) hook in here too.
 import { emit, alive, part, livingParts, hit, takeDamage, strikeWith, defender, fxOn, attackAmount } from './combat.mjs';
@@ -63,6 +67,7 @@ import { BOSSES, CONFIG } from './data.mjs';
 import { mimicHit, copyKind, forceCharge, tellsOf, callOff, tellNext } from './tells.mjs';
 
 export const FB = {
+  prem: { claim: 1 }, // claim: what an Insured part gives back that lands on you in act 2, of it
   bid: { slow: 4, fast: 2, after: 4, sold: 0.3, heal: 0.1, buyers: ['tollgate', 'swarmline', 'palemask'] }, // sold: each sale makes the Gavel's Surge that much harder, for the act; heal: what each sale gives the Rotor ♛ back, of its max
   ransom: { clock: 14, restart: 7, pay: 3, leak: 0.35, grow: 0.15, most: 0.65, lever: 0.1 }, // lever: the most the Collector ♛ loses a cycle while a Demand stands, of its max; a leak takes 35% of your max, 15 more each leak after in an act, up to 65%
   surf: { log: 2, again: 4, echo: 0.4, grow: 0.5 }, // grow: each Dump that lands makes the next one that much bigger, for the act; // echo: an Again note's share of its hit (40%: at half, a burst sung back took 95% of a reader's bar in three cycles)
@@ -75,7 +80,7 @@ export const FB = {
   swarm: { sweep: 5, soonest: 2, grows: 3, cams: 4, limit: 0.15, gnaw: 2, back: 0.3 }, // back: what a part the Botnet re-infects returns with, of a Camera's max; // soonest: each fragment a sweep hatches brings the next sweep a cycle sooner, down to this; limit: the most one hit takes off a part, of its max // grows: cycles a fragment lives before it is a Camera; cams: Cameras at once
 };
 export const BUYER = { tollgate: 'TOLLGATE', swarmline: 'SWARMLINE', palemask: 'PALEMASK' };
-export const FB_VERBS = new Set(['reserve', 'lot2', 'demand2', 'notice', 'again', 'top', 'return', 'overflow', 'nightshift', 'margincall', 'traitor', 'hardfork', 'botnet', 'lockout', 'reinstate', 'accelerate', 'keptcharges', 'coldimage']);
+export const FB_VERBS = new Set(['claim', 'indemnity', 'reserve', 'lot2', 'demand2', 'notice', 'again', 'top', 'return', 'overflow', 'nightshift', 'margincall', 'traitor', 'hardfork', 'botnet', 'lockout', 'reinstate', 'accelerate', 'keptcharges', 'coldimage']);
 const cyc = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
 const fx = (s, what) => (s.encounter ? fxOn(s, what) : null);
 const fxVal = (x) => Number(x?.fx?.value) || 0;
@@ -92,6 +97,7 @@ export function fbStart(s, again = false) {
   if (!v?.boss || !BOSSES[v.boss]) return;
   const late = fx(s, 'late'); // Escrow: a boss's enrage and its countdowns come later
   if (late && v.enrageAt) v.enrageAt += fxVal(late);
+  if (v.boss === 'pagenine') v.prem = { k: 0, n: 1, claim: false };
   if (v.boss === 'centrifuge') v.bid = { k: (e.seed >>> 0) % FB.bid.buyers.length, sold: 0, lots: 1, reserve: false };
   if (v.boss === 'shakedown') v.ransom = { left: FB.ransom.clock + fxVal(late), paid: 0, leaks: 0, notice: false };
   if (v.boss === 'shouldersurfer') v.surf = { again: null, top: false };
@@ -106,6 +112,38 @@ export function fbStart(s, again = false) {
   if (v.boss === 'graceperiod') { v.grace = { days: FB.grace.days, reinstate: false }; v.parts.forEach((p, i) => { p.grace = FB.grace.days + i; }); } // staggered: left alone, one lapses at a time
   if (v.boss === 'exitnode') { v.roll = { at: e.cycle + FB.roll.every - 1, images: {}, cold: null, coldOn: false, kept: false, keep: [] }; v.roll.images[e.cycle - 1] = image(v); }
   if (v.boss === 'recursion') v.stack = { callAt: e.cycle + FB.stack.call - 1, n: v.parts.filter((p) => p.frame != null).length, ret: false, overflow: false };
+}
+
+// ---------- PAGE NINE: Premium Paid ----------
+// The parts it insures, in board order, and which are Insured k cycles from now: n of them (act 3: two), never every
+// part still standing.
+const policyParts = (s) => livingParts(s).filter((p) => p.kind === 'system');
+export function insuredAt(s, k = 0) {
+  const v = s.encounter?.virus, ps = v?.prem ? policyParts(s) : [];
+  if (ps.length < 2) return [];
+  return Array.from({ length: Math.min(v.prem.n, ps.length - 1) }, (_, i) => ps[(v.prem.k + k + i) % ps.length]);
+}
+export const insured = (s, p) => !!p && insuredAt(s).includes(p);
+// A hit on the Insured part: it can't take it under 1, and what it takes is booked to come back at the cycle's end.
+function premiumCap(s, p, dealt, notes) {
+  const got = Math.min(dealt, Math.max(0, p.integrity - 1)), e = s.encounter;
+  p.claim = (p.claimAt === e.cycle ? p.claim : 0) + got; p.claimAt = e.cycle;
+  notes.push('insured');
+  return got;
+}
+// The cycle's end: each Insured part gets back what it took (act 2: and it lands on you too), and cover moves on.
+function premiumPaid(s) {
+  const e = s.encounter, v = e.virus;
+  for (const p of insuredAt(s)) {
+    const n = p.claimAt === e.cycle ? Math.min(p.claim, p.max - p.integrity) : 0;
+    p.claim = 0;
+    if (n <= 0) continue;
+    p.integrity += n;
+    emit(s, 'heal', `PREMIUM PAID. The ${p.name} was Insured: +${n}.`, { source: p.id, target: p.id, amount: n, insured: true });
+    if (v.prem.claim) { const d = takeDamage(s, Math.max(1, Math.round(n * FB.prem.claim)), p.id, 'Claim'); emit(s, 'server-hit', `CLAIM FILED: −${d}.`, { source: p.id, amount: d, claim: true }); if (defender(s).integrity <= 0) return 'crashed'; }
+  }
+  v.prem.k++;
+  return null;
 }
 
 // ---------- CENTRIFUGE: Bidding ----------
@@ -177,6 +215,7 @@ export function leverLeft(s, p) {
 }
 // A hit on it (combat.mjs hit, with the Limiter's cap): what gets through. The rest is lost.
 export function fbCap(s, p, dealt, notes) {
+  if (dealt > 0 && insured(s, p)) return premiumCap(s, p, dealt, notes); // PAGE NINE's Premium Paid
   const left = dealt > 0 ? leverLeft(s, p) : null;
   if (left == null) return dealt;
   const got = Math.min(dealt, left);
@@ -532,6 +571,8 @@ export function fbTaken(s, d, amount) {
 // A phase's verbs (combat.mjs bossPhases).
 export function fbVerb(s, act) {
   const e = s.encounter, v = e.virus;
+  if (act === 'claim' && v.prem) v.prem.claim = true;
+  if (act === 'indemnity' && v.prem) v.prem.n = 2;
   if (act === 'reserve' && v.bid) v.bid.reserve = true;
   if (act === 'lot2' && v.bid) v.bid.lots = 2;
   if (act === 'demand2') {
@@ -601,6 +642,7 @@ export function fbCycle(s) {
   if (fx(s, 'shield-hit') && (e.shield || 0) > (e.shieldWas || 0)) e.preAuth = true;
   e.shieldWas = e.shield || 0;
   if (e.turnedAt === e.cycle) return null; // an act began at this cycle's end (acts.mjs barsTurn): its rules start with its first cycle
+  if (v.prem && premiumPaid(s)) return 'crashed';
   if (v.ransom && livingParts(s).some((x) => x.core)) { // the Collector ♛ runs the clock: break it and the clock stops
     const R = v.ransom;
     R.left--;

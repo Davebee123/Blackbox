@@ -6,7 +6,7 @@ import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
 import { actInfo, actBar } from './acts.mjs';
 import { robinOpen, robinIn, dozer } from './nativeacts.mjs';
-import { FB, BUYER, nextBuyer, dumpOf, topFrame, canCall, frames, leakOf, depthOf, pendingOf, tradeOf, voteOf, forkOf, nodesOf, camerasOf, hatchers, parentOf, leverLeft, rollTo } from './floorbosses.mjs';
+import { FB, BUYER, nextBuyer, insuredAt, dumpOf, topFrame, canCall, frames, leakOf, depthOf, pendingOf, tradeOf, voteOf, forkOf, nodesOf, camerasOf, hatchers, parentOf, leverLeft, rollTo } from './floorbosses.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './memory.mjs';
 // The server whose Connect is waiting on a yes (app.js): its card shows the memory it takes.
@@ -763,6 +763,12 @@ export function statusSpans(s) {
 function floorTags(s, p) {
   const e = s.encounter, v = e.virus, out = [], when = (n) => (n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`);
   const tag = (cls, tip, body) => out.push(`<span class="tag ${cls}" title="${esc(tip)}">${body}</span>`);
+  // PAGE NINE: Insured now, and next.
+  if (v.prem) {
+    const now = insuredAt(s).includes(p), next = !now && insuredAt(s, 1).includes(p);
+    if (now) tag('hot insured', `Insured\nBoss rule\nDamage on the ${p.name} comes back at the end of this cycle, and it can't break.${v.prem.claim ? ' What comes back hits you too.' : ''}${answerLine('Hit a part that isn\'t Insured.')}`, 'insured');
+    if (next) tag('insured', `Insured next\nBoss rule\nThe ${p.name} is Insured next cycle. Cover moves in order: Policy, Premium, Claims.`, 'next');
+  }
   if (p.gavel && p.attack && v.bid) {
     const k = p.attack.interval, who = BUYER[nextBuyer(v)], spec = BOSSES[v.boss].buyers[nextBuyer(v)];
     tag(k <= FB.bid.fast ? 'hot bid' : 'bid', `Bidding\nBoss rule\nThe ${p.name}'s Surge comes every ${k} cycles, and each one that lands spins it faster. A Surge at every 2 sells to ${who}: its ${spec.name} joins the fight${v.bid.lots > 1 ? ', with a second buyer' : ''}. ${v.bid.reserve ? 'A delay or Throttle steps it back one.' : 'A delay or Throttle takes it back to every 4.'} Each sale heals the Rotor ${Math.round(FB.bid.heal * 100)}% of its max and makes the Surge ${Math.round(FB.bid.sold * 100)}% harder for the act${v.bid.sold ? ` (${v.bid.sold} so far)` : ''}. Each command you aim at the Gavel while the Rotor stands is a bid: it spins one faster.${answerLine('Leave the Gavel for last. Delay, Throttle or SIGINT it at every 2.')}`, `${glyph('clock')}${k} · ${esc(who)}`);
