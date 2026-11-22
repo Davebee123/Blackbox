@@ -5106,3 +5106,17 @@ input, textarea, [contenteditable], .mbody, .ch-lines, .page-error pre { -webkit
 .tk-sq.up > .tk-star { background: #8fd46b; }
 .tk-sq.down > .tk-star { background: #ff6f91; }
 .fp-wavepay { display: inline-flex; align-items: center; gap: 4px; font: 600 12px var(--mono); color: var(--text); } .fp-wavepay .glyph { width: 13px; height: 13px; margin: 0; color: var(--amber); } /* a surge wave's components */
+
+/* The demo's cards (demo-view.mjs): the play-data question, a small card low on the screen; the end card, over a dark
+   screen that takes every key (app.js demoEnd). The save card's build number (view.mjs saveCard). */
+.demo-wrap { position: fixed; z-index: 66; }
+.tm-ask-wrap { left: 50%; bottom: 24px; transform: translateX(-50%); width: min(420px, calc(100vw - 32px)); }
+.demo-end-wrap { inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(5, 3, 2, 0.94); }
+.demo-end { width: min(520px, 100%); }
+.de-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0 16px; }
+.de-stat { display: grid; gap: 2px; text-align: center; }
+.de-stat b { font: 600 22px var(--mono); color: var(--amber); }
+.de-stat small { color: var(--dim); }
+.demo-end .row { flex-wrap: wrap; }
+.save-ver, .po-ver { font: 400 11px var(--mono); color: var(--dim); letter-spacing: 0.08em; }
+.po-ver { position: absolute; right: 16px; bottom: 12px; margin: 0; }

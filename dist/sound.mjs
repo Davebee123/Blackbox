@@ -340,7 +340,8 @@ export const CLIPS = { 'win-power-cut': 'wins/win-power-cut.ogg', 'win-blackout'
 const CLIP_GAIN = 0.5; // the level a family's one-shot plays at (places.mjs LEVEL.shot)
 const banks = new WeakMap(); // AudioContext → { ready, buffers: Map(name → AudioBuffer[]), clips: Map(name → AudioBuffer), got, total, on }
 const BANK_FILES = Object.values(BANK).reduce((a, n) => a + n, 0);
-function loadBank(ctx, base = new URL('./sfx/', import.meta.url)) {
+// The bank on this context, fetched once (the cold open plays its keys and relays from it too).
+export function loadBank(ctx, base = new URL('./sfx/', import.meta.url)) {
   if (banks.has(ctx)) return banks.get(ctx).loading;
   const bank = { ready: false, buffers: new Map(), clips: new Map(), got: 0, total: BANK_FILES, on: new Set() }; // got/on: files settled, and who's told (the loading screen)
   for (const [name, file] of Object.entries(CLIPS)) fetch(new URL(file, base)).then((r) => (r.ok ? r.arrayBuffer() : null)).then((b) => b && ctx.decodeAudioData(b)).then((buf) => buf && bank.clips.set(name, buf)).catch(() => { /* its synth stand-in plays */ });

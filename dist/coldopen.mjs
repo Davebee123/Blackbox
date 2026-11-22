@@ -5,6 +5,7 @@
 // coldOpen({ audio, reducedMotion }) → Promise that resolves when it ends or is skipped.
 //   audio() → { ctx, out } or null: feel.scene(), an output at the effects volume (null with Sound off).
 // SCRIPT: the steps with when each starts (ms), TOTAL and the sound cues (for tests).
+import { loadBank } from './sound.mjs';
 
 // ---------- the skyline: three banks at street level; later the city grows up behind and on top of them ----------
 const BANK = [
@@ -88,11 +89,12 @@ function master(ctx, dest) {
 export function chopTimes(t0, t1) { const out = []; for (let x = t0, per = 0.12; x < t1; x += per, per = Math.max(0.028, per * 0.9)) out.push([x, Math.min(per, t1 - x)]); return out; }
 const CROWD = 0.12; // the crowd's level in the hall: well under the hum
 const SFX = new URL('./sfx/', import.meta.url);
-// The samples: the game's keys and relays, the sub drop, and the crowd (sfx/coldopen/crowd.mp3, CREDITS.md).
+// The samples: the game's keys and relays and the sub drop, from the sample bank the power-up warmed (sound.mjs, fetched
+// once), and the crowd (sfx/coldopen/crowd.mp3, CREDITS.md), fetched only now, after the first key.
 async function load(ctx) {
-  const get = async (f) => { try { const r = await fetch(new URL(f, SFX)); return r.ok ? await ctx.decodeAudioData(await r.arrayBuffer()) : null; } catch { return null; } };
-  const [subdrop, relay, relay2, crowd, ...keys] = await Promise.all(['subdrop-0.wav', 'relay-0.wav', 'relay-3.wav', 'coldopen/crowd.mp3', ...Array.from({ length: 12 }, (_, i) => `key-${i}.wav`)].map(get));
-  return { subdrop, relay, relay2, crowd, keys: keys.filter(Boolean) };
+  const crowd = fetch(new URL('coldopen/crowd.mp3', SFX)).then((r) => (r.ok ? r.arrayBuffer() : null)).then((b) => (b ? ctx.decodeAudioData(b) : null)).catch(() => null);
+  const bank = await loadBank(ctx).catch(() => null), take = (name, i) => bank?.buffers.get(name)?.[i] || null;
+  return { subdrop: take('subdrop', 0), relay: take('relay', 0), relay2: take('relay', 3), crowd: await crowd, keys: (bank?.buffers.get('key') || []).filter(Boolean) };
 }
 const SOUNDS = {
   // NETWORK OFFLINE: the power goes. A breaker's relay clunks, the sub drops away under it.

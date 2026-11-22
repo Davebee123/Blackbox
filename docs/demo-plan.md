@@ -355,3 +355,12 @@ Side by side, the earlier phase lands first and the later one merges main before
 ## Log
 
 *One line per phase as it lands: what landed, the commit, and what the designer said.*
+
+- **Phase 1** (22 Nov): the switch (`dist/demo.mjs`, `build.mjs --demo`), the cap at 14 and floor 2's exit to *The full
+  game*, content dealt on floor 2 at most (`dealFloor`), the `blackbox-demo` save with dev pages off and out of the
+  bundle, Export/Import save and Feedback (Settings' Save card, the page-error card), opt-in telemetry and its Worker
+  and page (`tools/telemetry/`), *demo 0.1* on the power-up, the demo workflow (butler) and the Pages retry, the end
+  card's frame, the cold open's samples from the shared bank (fetched once) and the soundtrack's missing files gone, the
+  loop's firewall and *Levels*' talents fixed. A level-14 bot save is 374 KB against itch's 5 MB. Waiting on the
+  designer: the itch page (Restricted, full-screen embed), `ITCH_API_KEY` and `ITCH_TARGET`, the Discord invite, the
+  Worker deployed; then the save across a reload and a new upload on itch in Chrome, Firefox and Safari.

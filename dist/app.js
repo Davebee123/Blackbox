@@ -69,6 +69,10 @@ import { casingLook, decalMarkup, districtOf, propsLook, propMarkup, stickerSpot
 import { promptLabel, cursorOf, bootOf, bootIds, BOOT_LOOKS, lookOpen } from './terminal.mjs';
 import * as HOUSE from './house.mjs';
 import * as BK from './bench-key.mjs';
+import { DEMO, LINKS } from './demo.mjs';
+import * as BU from './backup.mjs';
+import * as TM from './telemetry.mjs';
+import { askMarkup as tmAskMarkup, endMarkup as demoEndMarkup } from './demo-view.mjs';
 import * as F from './form.mjs';
 import * as PH from './phone-shell.mjs';
 import { openSheet, closeSheet, sheetKey, sheetBody } from './sheet.mjs';
@@ -96,11 +100,12 @@ import { runBorder } from './pickfx.mjs';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
-const playtest = params.get('playtest');
+// The demo build (demo.mjs): its own save, and ?dev, ?bench and ?playtest do nothing.
+const playtest = DEMO ? null : params.get('playtest');
 // A test bench (bench.mjs, ?bench=<name>): its own save under blackbox-bench-<name>, developer mode on. The real save
 // is never read, written or reset from a bench.
-const { key: KEY, bench: BENCH } = BK.pageSave(location.search);
-const DEV = params.has('dev') || !!BENCH; // developer commands (and window.__bb, for tests)
+const { key: KEY, bench: BENCH } = BK.pageSave(location.search, DEMO);
+const DEV = !DEMO && (params.has('dev') || !!BENCH); // developer commands (and window.__bb, for tests)
 // The bench itself (bench.mjs) loads only on a bench or with ?dev.
 const BN = BENCH || DEV ? await import('./bench.mjs') : null;
 if (BENCH) { const c = BK.benchCurve(location.search); if (c != null) CONFIG.powerPerLevel = c; } // ?curve=8: the level curve at 8% on this bench (bench.mjs)
@@ -247,9 +252,9 @@ function newRng() { return (Math.random() * 2 ** 32) >>> 0; }
 let realSave = null;
 const own = () => realSave || campaign;
 let coop = null; // the Co-op panel and session (coop-ui.mjs), with ?dev: set up below, once the page's functions exist
-let saveTimer = 0;
+let saveTimer = 0, swapping = false; // swapping: an imported save is going in, and the page reloads onto it
 function save() {
-  if (playtest) return;
+  if (playtest || swapping) return;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     try { localStorage.setItem(KEY, JSON.stringify(own())); } catch { /* storage unavailable: play continues unsaved */ }
@@ -257,7 +262,88 @@ function save() {
 }
 
 // Closing the tab saves at once: nothing in flight is lost (or undone) with the page.
-addEventListener('pagehide', () => { if (playtest) return; clearTimeout(saveTimer); try { localStorage.setItem(KEY, JSON.stringify(own())); } catch { /* storage unavailable */ } });
+addEventListener('pagehide', () => { tmClose(); if (playtest || swapping) return; clearTimeout(saveTimer); try { localStorage.setItem(KEY, JSON.stringify(own())); } catch { /* storage unavailable */ } });
+
+// ---------- the save as a file, feedback, the demo (backup.mjs, telemetry.mjs, demo-view.mjs) ----------
+let importing = null; // a save read from a file, waiting for Load it on the Settings page
+function download(name, text) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' })), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function pickSave() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json,application/json';
+  input.addEventListener('change', () => {
+    const f = input.files?.[0];
+    if (!f) return;
+    f.text().then((text) => {
+      const r = BU.readSave(text);
+      if (!r.ok) { importing = null; notice(r.why, true); } else importing = r;
+      go('system');
+    });
+  });
+  input.click();
+}
+function feedback() {
+  download(BU.reportName(own()), JSON.stringify(BU.reportOf(own(), { browser: navigator.userAgent, screen: `${screen.width}×${screen.height} @${devicePixelRatio}x, window ${innerWidth}×${innerHeight}` })));
+  if (LINKS.discord) open(LINKS.discord, '_blank', 'noopener'); else notice('Report downloaded. The Discord isn\'t linked yet.');
+}
+function backupClick(what) {
+  feel.key('click');
+  if (what === 'export') return download(BU.exportName(own()), BU.exportText(own()));
+  if (what === 'import') return pickSave();
+  if (what === 'feedback') return feedback();
+  if (what === 'cancel') { importing = null; return markDirty(); }
+  if (what === 'load' && importing) {
+    swapping = true; clearTimeout(saveTimer);
+    try { localStorage.setItem(KEY, JSON.stringify(importing.raw)); } catch { swapping = false; return notice('The browser refused the save (its storage is full or blocked).', true); }
+    return location.reload();
+  }
+  if (what === 'telemetry') { TM.setTelemetry(campaign, !TM.isOn(campaign)); if (TM.isOn(campaign)) TM.track(campaign, 'start'); save(); return markDirty(); }
+}
+// Telemetry's sends: when the queue fills, and as the page hides (a beacon survives the page closing).
+const tmStart = campaign.pace?.ms || 0;
+function tmSend() {
+  const b = TM.drain(campaign);
+  if (!b || !LINKS.telemetry) return;
+  const body = new Blob([JSON.stringify(b)], { type: 'text/plain' }); // plain text: no preflight
+  try { if (navigator.sendBeacon?.(LINKS.telemetry, body)) return; } catch { /* fall through */ }
+  fetch(LINKS.telemetry, { method: 'POST', body, keepalive: true, mode: 'no-cors' }).catch(() => {});
+}
+function tmClose() { if (!TM.isOn(campaign)) return; TM.track(campaign, 'close', { len: Math.round((campaign.pace?.ms || 0) - tmStart), screen: module }); tmSend(); }
+addEventListener('visibilitychange', () => { if (document.hidden) tmSend(); });
+hooks.fightOver = (s, e, result, hp) => { if (s === campaign) TM.bossOver(s, e, result, hp); };
+if (TM.isOn(campaign)) TM.track(campaign, 'start');
+// The demo's question (after your first jack out, once the screen is calm) and its end card (ends play).
+let tmAskDue = false;
+function demoCard(cls, html) {
+  document.querySelector(`.${cls}-wrap`)?.remove();
+  const el = document.createElement('div');
+  el.className = `demo-wrap ${cls}-wrap`;
+  el.innerHTML = html;
+  document.body.append(el);
+  return el;
+}
+function tmAsk() {
+  if (!tmAskDue || !TM.askable(campaign) || active(campaign) || ended || introOn || connecting() || !$('tip').hidden || document.querySelector('.tm-ask-wrap')) return;
+  tmAskDue = false;
+  const el = demoCard('tm-ask', tmAskMarkup());
+  el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tm]');
+    if (!b) return;
+    TM.setTelemetry(campaign, b.dataset.tm === 'yes');
+    if (TM.isOn(campaign)) TM.track(campaign, 'start');
+    el.remove(); feel.key('click'); save(); markDirty();
+  });
+}
+function demoEnd() {
+  if (!DEMO || !campaign.demoDone) return;
+  const el = demoCard('demo-end', demoEndMarkup(campaign));
+  el.addEventListener('click', (e) => { const b = e.target.closest('[data-backup]'); if (b) backupClick(b.dataset.backup); });
+}
+// While the end card is up, the game takes no keys.
+addEventListener('keydown', (e) => { if (DEMO && campaign.demoDone && !e.target.closest?.('.demo-end')) { e.preventDefault(); e.stopPropagation(); } }, true);
 
 const shown = () => campaign;
 
@@ -563,11 +649,12 @@ function coverUp() {
 function firstLogin() {
   introOn = true;
   const uncover = coverUp();
-  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove(), warm: (progress) => warmGame({ audio: !!campaign.settings.sound, progress }) }).then(playColdOpen).then(() => intro.run()).then(({ handle, pwLen }) => {
+  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove(), warm: (progress) => warmGame({ audio: !!campaign.settings.sound, progress }), version: DEMO ? `demo ${DEMO.version}` : '' }).then(playColdOpen).then(() => intro.run()).then(({ handle, pwLen }) => {
     campaign.profile = { ...campaign.profile, handle, pwLen, since: Date.now() };
     return pickClass();
   }).then(() => {
     introOn = false;
+    if (!campaign.settings.persisted) { campaign.settings.persisted = true; navigator.storage?.persist?.().catch(() => {}); } // ask the browser to keep the save's storage, once
     save();
     markDirty();
     cache.clear();
@@ -903,7 +990,7 @@ function showSpoils(events) {
   const gained = events.filter((x) => x.type === 'xp').reduce((n, x) => n + x.amount, 0);
   const leveled = events.some((x) => x.type === 'level-up');
   const h = hackerOf(campaign), need = xpToNext(h.level);
-  const to = need ? Math.min(1, h.xp / need) : 1;
+  const to = need && h.level < LOADOUT.maxLevel ? Math.min(1, h.xp / need) : 1; // at the cap the bar stays full
   const xp = { level: h.level, from: leveled ? 0 : Math.max(0, (h.xp - gained) / (need || 1)), to };
   const head = { name: e.virus.name, level: e.virus.level, family: FAMILY_NAMES[e.virus.family] || '', cycles: e.cycle, damage: e.metrics.attackDamage, clean: !e.metrics.attackDamage };
   el.innerHTML = V.spoilsMarkup(head, rows, xp, ended === 'rooms' ? (FP.goesOffline(campaign) ? 'Jack out' : 'Back to the server') : ended === 'run' && campaign.run ? 'Back to the run' : 'Back to the map');
@@ -1190,6 +1277,10 @@ function roomFxBack() {
 }
 function react(events) {
   if (events.some((e) => e.type === 'resolved')) turnedAt = performance.now(); // a turn on the timer counts too (turnLocked)
+  TM.observe(campaign, events);
+  if (events.some((e) => e.type === 'jacked-out') && TM.askable(campaign)) tmAskDue = true;
+  if (DEMO && !campaign.demoDone && events.some((e) => e.type === 'arc-done' && e.chain === DEMO.floor)) { campaign.demoDone = Date.now(); TM.track(campaign, 'done'); tmSend(); save(); setTimeout(demoEnd, 2500); } // the last floor's chain delivered: the demo ends (D8)
+  if (TM.due()) tmSend();
   const won = events.find((e) => e.type === 'victory');
   const last = module === 'combat' ? winningBreak(events) : null; // the break that wins the fight: slow motion
   // The wall stopping a weak invasion is quiet: a log line and a pager entry, no sound or float (invasion.mjs).
@@ -2024,14 +2115,15 @@ function renderMeters() {
   const h = hackerOf(campaign), cls = classOf(campaign);
   $('level-label').textContent = V.className(cls);
   $('level-value').textContent = 'Lv ' + h.level;
-  $('level-fill').style.width = (h.level >= 50 ? 100 : (h.xp / V.xpNeeded(h.level)) * 100) + '%';
-  $('meter-level').title = `${V.className(cls)} level ${h.level} of 50${h.level < 50 ? ` · ${h.xp}/${V.xpNeeded(h.level)} XP to level ${h.level + 1}` : ' (max)'}. Each class levels on its own; every level adds 4% power.`;
+  const top = h.level >= LOADOUT.maxLevel, capped = top && DEMO ? ` The demo ends at level ${DEMO.level}.` : ''; // the demo's cap (demo.mjs): the bar stays full
+  $('level-fill').style.width = (top ? 100 : (h.xp / V.xpNeeded(h.level)) * 100) + '%';
+  $('meter-level').title = `${V.className(cls)} level ${h.level} of ${LOADOUT.maxLevel}${!top ? ` · ${h.xp}/${V.xpNeeded(h.level)} XP to level ${h.level + 1}` : ' (max)'}. Each class levels on its own; every level adds 4% power.${capped}`;
   // Top centre: who you are (handle · class · level), the class's XP as a thin bar under it.
   $('who-handle').textContent = campaign.profile?.handle || 'rookie';
   $('who-class').textContent = V.className(cls);
   $('who-lv').textContent = h.level;
-  $('who-fill').style.width = (h.level >= 50 ? 100 : (h.xp / V.xpNeeded(h.level)) * 100) + '%';
-  $('whoami').title = h.level >= 50 ? 'max' : `${h.xp}/${V.xpNeeded(h.level)} XP`;
+  $('who-fill').style.width = (top ? 100 : (h.xp / V.xpNeeded(h.level)) * 100) + '%';
+  $('whoami').title = top ? (capped.trim() || 'max') : `${h.xp}/${V.xpNeeded(h.level)} XP`;
   // Integrity: your one health bar (combat.mjs serverMax), the server tower. On a run, the run's own; at home it rests
   // back, with a clock to full (to connecting, while too low for it), and the + pays for the rest now.
   const run = campaign.run, hp = run ? run.integrity : signalNow(campaign), max = run ? run.max : maxSignal(campaign);
@@ -2176,7 +2268,7 @@ function pageOrError(draw) {
     console.error(err);
     const text = `${module}: ${err?.message || err}\n${String(err?.stack || '').split('\n').slice(1, 6).join('\n')}`;
     const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-    return `<section class="card page-error"><h2>This page hit an error</h2><p class="svc-line">The rest of the game still works. Send this text with your bug report.</p><pre>${esc(text)}</pre><div class="row"><button type="button" class="btn primary" data-module="map">Back to the map</button></div></section>`;
+    return `<section class="card page-error"><h2>This page hit an error</h2><p class="svc-line">The rest of the game still works. Send this text with your bug report.</p><pre>${esc(text)}</pre><div class="row"><button type="button" class="btn primary" data-module="map">Back to the map</button><button type="button" class="btn" data-backup="feedback">Feedback</button></div></section>`;
   }
 }
 // The fight log scrolls to its newest line once the frame has laid out (a ResizeObserver: observing fires once), not by
@@ -2287,6 +2379,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && thPrev.o
 // (nocarrier.mjs), though the fight itself is already gone from the state.
 let lossHold = false;
 function render(force = false) {
+  if (tmAskDue) tmAsk(); // the demo's telemetry question, once the screen is calm
   if (lossHold) return;
   // A step into the next room: a hop on the traceroute (floorplan-view.mjs) and, on the rooms page, you travel its trace
   // as code (travelfx.mjs). The hunter's step travels its trace too, in red, when you see it before or after it. A step that starts a fight goes straight to the fight; Screen effects off
@@ -2372,7 +2465,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, runnersAt: mapRunnersAt, railShut, phone: F.isPhone() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab, phone: F.isPhone() }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi, house: houseUi, casing: casingSec }) };
+    const pages = { rooms: (x) => roomsMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, runnersAt: mapRunnersAt, railShut, phone: F.isPhone() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab, phone: F.isPhone(), importing }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi, house: houseUi, casing: casingSec }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
     const findAt = module === 'codex' && document.activeElement?.id === 'lg-find' ? document.activeElement.selectionStart : null; // the log's search keeps its focus and caret
@@ -3216,6 +3309,8 @@ document.addEventListener('click', (e) => {
   if (snd) { feel.preview(snd.dataset.sound); return; }
   const tog = e.target.closest('[data-toggle]');
   if (tog) { $(tog.dataset.toggle).click(); return; }
+  const bk = e.target.closest('[data-backup]');
+  if (bk) { e.preventDefault(); backupClick(bk.dataset.backup); return; }
   // Log sweep: light up an address (click again to clear), or filter the log.
   const flag = e.target.closest('[data-sweep-flag]');
   if (flag) {
@@ -3463,7 +3558,7 @@ function phoneUi() {
 }
 function phMoreMarkup() {
   const h = hackerOf(campaign);
-  return PH.moreMarkup(campaign, { who: { handle: campaign.profile?.handle || 'rookie', cls: V.className(classOf(campaign)), level: h.level, xp: h.level >= 50 ? 1 : h.xp / V.xpNeeded(h.level) }, consortium: !$('tab-consortium').hidden, count: Number($('con-count').textContent) || 0, people: !$('people').hidden, pager: document.body.classList.contains('ph-rooms') ? PGV.lampMarkup(campaign).replace(/^<button[^>]*>|<\/button>$/g, '') : '' });
+  return PH.moreMarkup(campaign, { who: { handle: campaign.profile?.handle || 'rookie', cls: V.className(classOf(campaign)), level: h.level, xp: h.level >= LOADOUT.maxLevel ? 1 : h.xp / V.xpNeeded(h.level) }, consortium: !$('tab-consortium').hidden, count: Number($('con-count').textContent) || 0, people: !$('people').hidden, pager: document.body.classList.contains('ph-rooms') ? PGV.lampMarkup(campaign).replace(/^<button[^>]*>|<\/button>$/g, '') : '' });
 }
 function phMoreOpen(open) {
   if (open === phMore) return;
@@ -4031,6 +4126,7 @@ if (campaign.encounter?.phase === 'alert' && campaign.encounter.mode === 'home' 
 if (!campaign.roomsPlay) { const done = [...tickNetwork(campaign, Date.now()), ...tickServices(campaign, Date.now())]; if (done.length) { react(done); save(); } } // installs that finished (or Degraded mode that ran out) while you were away
 // A new game has no handle yet (the profile card's empty profile doesn't count: profile.mjs myProfile).
 if (!playtest) { if (!campaign.profile?.handle) firstLogin(); else shell.boot(); }
+demoEnd(); // a finished demo opens on its end card
 loop = 1; requestAnimationFrame(frame);
 window.blackbox = { get state() { return campaign; }, run, places: () => feel.placesNow() }; // places: what the place layer plays (places.mjs)
 

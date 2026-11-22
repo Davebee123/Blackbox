@@ -23,7 +23,7 @@
 // waypoint; at: the one the map shows; land: each floor's landing server, its waypoint).
 // A location on a floor: loc.depth is its floor, loc.slot its slot's id. v41 moves an older save's layers onto floors
 // (floorsRestore).
-import { FLOORS, SERVER, CONFIG, TEMPLATES, FAMILIES, bandOf, BOSSES } from './data.mjs';
+import { FLOORS, SERVER, CONFIG, TEMPLATES, FAMILIES, bandOf, BOSSES, lastFloor } from './data.mjs';
 import { seeded } from './gear.mjs';
 import { emit, warn, hackerLevel, addLocation, active } from './combat.mjs';
 import { signature, makeLair, lairBoss, leanOf } from './network.mjs';
@@ -355,7 +355,7 @@ export const floorName = (n) => FLOORS[n - 1]?.name || '';
 export const serverSlot = (node) => !!node && (node.kind === 'server' || node.kind === 'lair');
 // An exit is yours to take once a server it hangs off is located.
 export const exitOpen = (s, id) => neighbours(s, id).some((x) => locAt(s, x));
-export const canDescend = (s) => { const f = reached(s); return f < FLOORS.length && graphOf(s, f).exits.some((x) => exitOpen(s, x)); };
+export const canDescend = (s) => { const f = reached(s); return f < lastFloor() && graphOf(s, f).exits.some((x) => exitOpen(s, x)); };
 
 // A floor's entry, once you've reached it: its neighbours show as ?. Floor 1's are SPRAWL-00's: traced by its strays.
 function openEntry(s, n, via = n === 1 ? CONFIG.zone.id : null) {
@@ -431,6 +431,7 @@ export function descend(s) {
   const F = floorsOf(s), f = F.reached;
   if (active(s)) return warn(s, 'Finish the fight first.');
   if (f >= FLOORS.length) return warn(s, `${floorName(f)}. Nothing below.`);
+  if (f >= lastFloor()) return warn(s, `Floor ${f + 1} and below are in the full game.`); // the demo's last floor (demo.mjs)
   if (!canDescend(s)) return warn(s, `No way down yet. The exit on floor ${f} hangs off a server you haven't located.`);
   F.reached = f + 1; F.at = f + 1;
   const g = graphOf(s, f + 1), [lo, hi] = bandOf(f + 1);

@@ -39,7 +39,7 @@ test('a bench saves under its own key: never the real save\'s, whatever the name
     assert.notEqual(k, B.SAVE_KEY); assert.notEqual(k, CAMPAIGN_KEY);
   }
   // app.js reads, writes and wipes its save only through KEY, which pageSave picks.
-  assert.match(app, /const \{ key: KEY, bench: BENCH \} = BK\.pageSave\(location\.search\);/);
+  assert.match(app, /const \{ key: KEY, bench: BENCH \} = BK\.pageSave\(location\.search, DEMO\);/); // the demo's own save (demo.test.mjs)
   assert.ok(!app.includes("'blackbox-v6'"), 'the real key is named only in bench.mjs');
   const saves = app.match(/localStorage\.(getItem|setItem|removeItem)\(([^,)]+)/g).filter((x) => !/'bb-/.test(x));
   assert.ok(saves.length >= 4);
@@ -157,7 +157,7 @@ test('outside a bench, bench <sub> <level> is refused with a short warning and c
   assert.equal(hackerLevel(s), 1); assert.equal(classOf(s), 'breaker');
   // app.js sends bench commands here, and keeps developer commands to ?dev, a playtest and a bench.
   assert.match(app, /if \(\/\^bench\( \|\$\)\/\.test\(text\)\) return benchRun\(text\);/);
-  assert.match(app, /const DEV = params\.has\('dev'\) \|\| !!BENCH;/);
+  assert.match(app, /const DEV = !DEMO && \(params\.has\('dev'\) \|\| !!BENCH\);/); // never in the demo
   assert.match(app, /&& !DEV && !playtest &&/);
 });
 
