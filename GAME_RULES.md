@@ -210,7 +210,7 @@ arrived since you last opened them.
 onto the map: your signal runs home, HOME's outline draws itself round, and HOME lights with its bar at your Integrity
 (bootfx.mjs `playReboot`; a key skips each). Then the **No carrier** card: the Warm cache's stacks and bonus struck
 through (none, nothing struck); **Reconnection possible in** counts down live, rounded up; short of what a connect
-needs, a **Top up** button with its credits fills your Integrity there (`top up`, as the top bar's **+**).
+needs, a **Restore** button with its credits fills your Integrity there (`restore`, as the top bar's **+**).
 What took you out is one red row with what you took; open it for the **death recap** of the last 6 cycles (recap.mjs):
 your Integrity as a bar a cycle, the hits that did it (biggest first, at most 4, the last hit tagged **Last**), and
 **Taken**, **Healed** and **Shielded**; hover any of it for the sentence. A loss at home leaves you at 1 (Home).
@@ -2025,7 +2025,7 @@ kills. `node econ.mjs` measures it.
 
 - **Health is the everyday sink.** Integrity rests back 20% of max a minute at home (half that while an invasion is
   contested or breaching), offline too. Or pay now: a full bar costs 8 + 1.5 × your level; less missing costs less. Click
-  the meter's **+**, or `top up [n]` (`repair` is the same). Short of credits, you get what they buy. On a run a Shop's
+  the meter's **+**, or `restore [n]` (`repair` and `top up` are the same). Short of credits, you get what they buy. On a run a Shop's
   Integrity patch fills it.
 - **Building:** programs and codebases (Sockets and programs). **Gear:** the Shops' shelves and chase lines.
 
@@ -2609,10 +2609,10 @@ pad in a window beside it), **[2] recordings** (the tape), **[3] log**, **[0] di
 `serverMax`). Runs spend it, fights at home spend it, invasions chip it, and it rests back at home, 20% of its max a
 minute (half that while an invasion is at HOME), offline too. Home never takes the last point: a chip stops at 1, and
 losing a home fight leaves you at 1 with the invader still at HOME, as worn as you left it. The top bar's meter (the
-server tower) shows it, with a clock to full; its **+** (`top up`, or `repair`) pays for the rest. HOME has no page of
+server tower) shows it, with a clock to full; its **+** (`restore`) pays for the rest. HOME has no page of
 its own: its card on the map is its ring (Integrity inside; an amber arc while an invasion is at HOME, a red road while
 one is on its way), the invasion with
-**Intercept**, and **Top up**. The top bar's **Materials** button opens your Code and Components.
+**Intercept**, and **Restore**. The top bar's **Materials** button opens your Code and Components.
 
 ### Invasions
 

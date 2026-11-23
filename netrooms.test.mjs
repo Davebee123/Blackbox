@@ -421,7 +421,7 @@ test('disconnected by a lost fight: home at 1 Integrity, that server waits 45 s,
   assert.equal(loc.deaths, 1);
   assert.equal(s.logs.findLast((e) => e.type === 'disconnected').relockMs, 45000, 'the loss card counts the same wait');
   s.server.credits = 10000;
-  play(s, 'top up');
+  play(s, 'restore');
   assert.equal(signalNow(s), maxSignal(s), 'topped up');
   clock += 44000;
   play(s, 'connect ' + loc.id);

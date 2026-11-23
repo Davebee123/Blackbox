@@ -628,7 +628,7 @@ test('top up: pay to fill Integrity now (repair is the same); less missing costs
   s.server.integrity = s.server.max;
   say(s, 'connect sprawl');
   s.run.integrity = 10;
-  assert.match(say(s, 'top up').at(-1).message, /Top up at home/);
+  assert.match(say(s, 'restore').at(-1).message, /Restore at home/);
 });
 
 test('typos during a guard fight stay on the fight screen, out of the run terminal', async () => {

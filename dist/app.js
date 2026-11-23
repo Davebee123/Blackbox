@@ -1289,18 +1289,18 @@ function lossCard(e) {
   const clock = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; }; // rounded up: 59.5 s reads 1:00
   const max = maxSignal(campaign), need = Math.ceil(max * CONFIG.zone.minSignal), t0 = Date.now();
   // One clock: you can go back once both the reconnect wait and your Integrity allow it, so the later of the two. A
-  // top up (the card's button) cuts the second at once.
+  // restore (the card's button) cuts the second at once.
   const waitNow = () => { const sig = signalNow(campaign); return Math.max((e.relockMs || 0) - (Date.now() - t0), sig < need ? ((need - sig) / (CONFIG.signalRest * max)) * 60000 : 0); };
   const fold = foldMarkup(e.recap, e.by);
   const rows = fold ? [] : [{ kind: 'lost', label: e.by ? `Taken out by ${e.by}` : (e.reason || 'Integrity lost'), qty: '', text: 'Integrity lost' }];
   const wait = waitNow();
   if (wait > 0) rows.push({ kind: 'time', label: 'Reconnection possible in', qty: clock(wait), text: `Reconnection possible in ${clock(wait)}` });
-  // Top up: credits for Integrity now (combat.mjs topUp), while you're short of what a connect needs.
+  // Restore: credits for Integrity now (combat.mjs topUp), while you're short of what a connect needs.
   const cost = () => topUpCost(campaign), short = () => signalNow(campaign) < need && cost() > 0 && campaign.server.credits > 0;
-  const buy = short() ? `<button type="button" class="btn sp-topup" data-command="top up" title="Top up: Fills your Integrity now, for credits. Resting fills it for free.">Top up ${glyph('credits')}<b>${cost()}</b></button>` : '';
+  const buy = short() ? `<button type="button" class="btn sp-topup" data-command="restore" title="Restore: Rebuilds your server's Integrity now, for credits. Resting rebuilds it for free.">Restore ${glyph('credits')}<b>${cost()}</b></button>` : '';
   showGain('No carrier', e.where || '', rows, false, warmLostMarkup(e) + fold + buy);
   $('gain').classList.add('loss');
-  // The clock counts down while the card is up, and stops with it; a top up redraws it and the button.
+  // The clock counts down while the card is up, and stops with it; a restore redraws it and the button.
   const cell = $('gain').querySelector('.sp-row.k-time .sp-qty'), btn = $('gain').querySelector('.sp-topup');
   if (!cell && !btn) return;
   const tick = setInterval(() => {
@@ -1718,7 +1718,7 @@ function run(raw) {
   if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); markDirty(); return notice(`Window ${text.slice(7)}.`); }
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();
-  if (text === 'help') return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload and deconstruct. For your server, use top up and intercept. On the net, use connect, relay, detach and mail. The pages are map, mail, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
+  if (text === 'help') return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload and deconstruct. For your server, use restore and intercept. On the net, use connect, relay, detach and mail. The pages are map, mail, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
 
   if (fighting && !realSave && turnLocked() && isOrder(text)) return refused(toIntent(campaign, text.split(';')[0].trim(), false).ability); // one entry a turn (turnLocked)
   // A co-op guest: a fight command goes to the host, a loadout change to their own save (and on to the host).
@@ -2220,7 +2220,7 @@ function renderMeters() {
     eta.hidden = !resting;
     if (resting) eta.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
     $('meter-integrity').classList.toggle('resting', resting);
-    meterBuy($('meter-integrity'), 'top up', run ? 0 : topUpCost(campaign),
+    meterBuy($('meter-integrity'), 'restore', run ? 0 : topUpCost(campaign),
       `Integrity ${hp}/${max}\nYour health. It regenerates slowly at home${resting ? ` (${f < toConnect ? `${Math.ceil(max * toConnect)} to connect` : 'full'} in ${eta.textContent})` : ''}.`);
   }
   $('vault-value').textContent = srv.credits;
@@ -4248,7 +4248,7 @@ document.querySelector('.brand')?.addEventListener('click', (ev) => {
   ev.preventDefault();
   go('map');
 });
-// The meters that take a click (top up, repair) take Enter and Space too.
+// The meters that take a click (restore) take Enter and Space too.
 document.addEventListener('keydown', (e) => {
   const m = e.target.closest?.('.meter[data-command]');
   if (m && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); m.click(); }

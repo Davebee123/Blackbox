@@ -674,7 +674,7 @@ function unlock(s, rest) {
 // An Integrity booster: half your Integrity back, on the spot.
 function boost(s) {
   const n = s.items?.booster || 0;
-  if (!n) return err(s, 'boost: no Integrity boosters left. Top up with credits at home.');
+  if (!n) return err(s, 'boost: no Integrity boosters left. Restore it with credits at home.');
   if (s.run.integrity >= s.run.max) return out(s, 'Integrity is already full.');
   s.items.booster = n - 1;
   const gain = Math.min(s.run.max - s.run.integrity, Math.ceil(s.run.max * CONFIG.booster.restore));

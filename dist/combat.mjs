@@ -2670,7 +2670,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     const had = new Set(s.locations.map((l) => l.id));
     addLocation(s, text.split(' ')[2], Math.min(reached(s), SERVER.floorFor(hackerLevel(s)))); // the next ? of that family on your floor (floors.mjs pickSlot)
     for (const l of s.locations) if (!had.has(l.id) && l.fresh && joinCost(s, l).fits) memoryCommand(s, 'attach', l.id); // developer finds join your network
-  } else if (/^(repair|top ?up( signal| integrity)?)( \d+)?$/.test(text)) { // repair: the same top-up
+  } else if (/^(restore|repair|top ?up( signal| integrity)?)( \d+)?$/.test(text)) { // restore (repair and top up: the old words)
     const n = text.match(/(\d+)$/);
     topUp(s, n ? Number(n[1]) : null);
   } else if (/^encounter [a-z]+( \d+)?$/.test(text) && (FIXTURES[text.split(' ')[1]] || STRAINS[text.split(' ')[1]] || text.split(' ')[1] === 'random')) {
@@ -2761,7 +2761,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (text.startsWith('outpost ') || /^build( |$)/.test(text)) {
     warn(s, 'Outposts are gone. Build in a server\'s socket rooms: connect, clear a socket, and build there.');
   } else if (/^craft( booster)?$/.test(text)) {
-    warn(s, 'Integrity boosters are gone. Top up your Integrity with credits at home.');
+    warn(s, 'Integrity boosters are gone. Restore your Integrity with credits at home.');
   } else if (/^relay \S+$/.test(text)) {
     installRelay(s, text.split(' ')[1]);
   } else if (/^use /.test(text)) {
@@ -2876,7 +2876,7 @@ export function topUpCost(s, points = null) {
 }
 function topUp(s, wanted = null) {
   if (active(s)) return warn(s, 'Finish the fight first.');
-  if (s.run) return warn(s, 'Top up at home. On a run, use an Integrity patch from the store.');
+  if (s.run) return warn(s, 'Restore at home. On a run, use an Integrity patch from the store.');
   syncServer(s);
   const max = s.server.max, now = s.server.integrity;
   let n = Math.min(max - now, wanted ?? max);
@@ -2887,7 +2887,7 @@ function topUp(s, wanted = null) {
   s.server.credits -= cost;
   s.server.integrity += n;
   s.server.regenAcc = 0;
-  emit(s, 'repair', `Integrity topped up: +${n} for ${cost} credits. Integrity ${s.server.integrity}/${max}.`, { credits: cost });
+  emit(s, 'repair', `Integrity restored: +${n} for ${cost} credits. Integrity ${s.server.integrity}/${max}.`, { credits: cost });
 }
 // v65 (the landing session sets the number): Signal and the server's Integrity become one bar, and crashes go
 // (GAME_RULES.md "Saves"). Keyed on the fields it converts, so it's safe to run twice: s.signal (null: full) becomes
@@ -5439,7 +5439,7 @@ export function suggestions(s, input = '') {
   }
   const base = active(s)
     ? [...usable(s).map((id) => (id === 'spike' ? spikeWord(s) : id)), 'hold', 'pause', 'resume', 'cancel', 'status', 'scan', ...living.filter((p) => p.kind !== 'fragment').map((p) => `inspect ${packed(s, s.encounter.virus, p) ? partKey(s, p) : p.id}`)]
-    : ['engage', 'intercept', 'mail', 'repair', 'top up', 'protocols', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
+    : ['engage', 'intercept', 'mail', 'restore', 'protocols', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
   return base.filter((x) => x.startsWith(text));
 }
 

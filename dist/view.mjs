@@ -2789,7 +2789,7 @@ function mapSide(s, sel, node) {
   if (!node || node.kind === 'server') {
     const r = s.reports.findLast((x) => x.mode !== 'run');
     const upkeep = [];
-    if (!busy && topUpCost(s) && srv.credits > 0) upkeep.push(btn('top up', `Top up (${topUpCost(s)}c)`));
+    if (!busy && topUpCost(s) && srv.credits > 0) upkeep.push(btn('restore', `Restore (${topUpCost(s)}c)`));
     const runCard = s.run ? `<section class="card lesson"><h2>On a run</h2><h1>${esc(currentLocation(s).name)}</h1><p>Integrity ${s.run.integrity}/${s.run.max} · ${s.run.pack.length} unbanked.</p><div class="row">${btn('net', 'Back to the run', true)}</div></section>` : '';
     return `${runCard}${alertCard()}
       <section class="card srv-card"><h2>Your server</h2>

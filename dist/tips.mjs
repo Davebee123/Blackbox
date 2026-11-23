@@ -60,7 +60,7 @@ export const TIPS = [
   { id: 'protocol-tab', page: 'loadout', at: '[data-ltab="protocols"][aria-selected="false"]', when: (s) => spare(s), text: 'your protocols are on this tab.' },
   { id: 'protocol-home', page: 'loadout', at: '.inv-btn.load[disabled]', when: (s) => !!s.run || s.encounter?.phase === 'active', text: 'you can only equip at home. jack out, finish any fight, then come back and hit load.' },
   { id: 'protocol-load', page: 'loadout', at: '.inv-btn.load:not([disabled])', text: 'hit load. every protocol you load adds its stats to yours, every fight.' },
-  { id: 'top-up', page: '*', at: '#meter-integrity .meter-buy', text: 'integrity refills on its own at home, and the clock says how long. hit + to buy it back now with credits.' },
+  { id: 'top-up', page: '*', at: '#meter-integrity .meter-buy', text: 'integrity refills on its own at home, and the clock says how long. hit + to restore it now with credits.' },
   { id: 'routines', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && hackerLevel(s) >= 5, text: 'from level 5, when the timer runs out, your program moves for you. set it up on loadout → program.' },
   { id: 'level', page: '*', at: '#whoami', when: (s) => hackerLevel(s) >= 2, text: 'that\'s you: your handle, your class and its level. each level to 6 makes you 6% stronger. past that your gear carries you, and some levels unlock new skills.' },
 

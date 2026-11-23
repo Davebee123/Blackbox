@@ -59,7 +59,7 @@ test('app.js: a disconnect plays NO CARRIER, holds the screen on the board, and 
   assert.match(app, /onSwap: \(\) => \{ lossHold = false; go\('map'\); \}, onDone: \(\) => reboot\(e\)/);
   assert.match(app, /function reboot\(e\) \{\n  if \(!dialFx\(\) \|\| module !== 'map'\) return lossCard\(e\);/, 'your server reboots on the map, then the card; no effects: the card at once');
   assert.match(app, /playReboot\([^\n]*\(\) => lossCard\(e\)\);/);
-  assert.match(app, /class="btn sp-topup" data-command="top up"/, 'the card buys Integrity while you are short of a connect');
+  assert.match(app, /class="btn sp-topup" data-command="restore"/, 'the card buys Integrity while you are short of a connect');
   assert.match(app, /function render\(force = false\) \{\n  if \(lossHold\) return;/);
   assert.doesNotMatch(app, /e\.type === 'disconnected'\) && !campaign\.roomsPlay\) go\('map'/, 'roomsDone must not jump to the map on a disconnect');
   assert.match(readFileSync('dist/index.html', 'utf8'), /href="nocarrier\.css"/);
