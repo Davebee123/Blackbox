@@ -209,7 +209,8 @@ arrived since you last opened them.
 (Visits). The screen holds on the hit for 0.8 s, drops to static with **NO CARRIER** and the server's name, then clears
 onto the map: your signal runs home, HOME's outline draws itself round, and HOME lights with its bar at your Integrity
 (bootfx.mjs `playReboot`; a key skips each). Then the **No carrier** card: the Warm cache's stacks and bonus struck
-through (none, nothing struck); **Reconnection possible in** counts down live, rounded up.
+through (none, nothing struck); **Reconnection possible in** counts down live, rounded up; short of what a connect
+needs, a **Top up** button with its credits fills your Integrity there (`top up`, as the top bar's **+**).
 What took you out is one red row with what you took; open it for the **death recap** of the last 6 cycles (recap.mjs):
 your Integrity as a bar a cycle, the hits that did it (biggest first, at most 4, the last hit tagged **Last**), and
 **Taken**, **Healed** and **Shielded**; hover any of it for the sentence. A loss at home leaves you at 1 (Home).
@@ -988,7 +989,9 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
   through.
 - **Reconnect wait.** A server you leave takes you back after 30 s (`CONFIG.relockMs`), +15 s for each disconnect on
   its run, 2 min at most (`CONFIG.deathWait`). A jack out mid-fight waits like a disconnect; any other jack out resets
-  the count. Connect counts it down, with ☠ and the count. Deadman's Switch counts as a jack out.
+  the count. Connect counts it down, with ☠ and the count. **Deadman's Switch** (a unique, every 90 minutes) turns a
+  disconnect into a clean jack out: home at 1, no longer wait, and the Warm cache kept for your next
+  visit to that server.
 - **Home while out:** an invasion that wants you waits until you're back.
 - **Contracts ready:** a yellow ✓ by Mail on the top bar.
 

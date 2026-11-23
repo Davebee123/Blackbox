@@ -3246,6 +3246,9 @@ details.map-pick { pointer-events: auto; }
 .rs-undone { display: flex; flex-wrap: wrap; gap: 6px; }
 .rs-undone s { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; font: 600 12px var(--mono); color: var(--gray); border: 1px solid var(--line); border-radius: 2px; }
 .rs-undone .glyph { width: 13px; height: 13px; flex: none; }
+.sp-topup { display: inline-flex; align-items: center; gap: 5px; justify-self: start; margin: 0 0 10px; color: var(--amber); border-color: var(--amber); }
+.sp-topup .glyph { width: 13px; height: 13px; }
+.sp-topup[hidden] { display: none; }
 .rc-fold { margin: 0 0 6px; }
 .rc-fold > summary { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-left: 2px solid var(--hot); background: rgba(255, 91, 61, 0.06); font: 600 12px var(--mono); color: var(--text); cursor: pointer; list-style: none; }
 .rc-fold > summary::-webkit-details-marker { display: none; }

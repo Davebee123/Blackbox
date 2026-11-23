@@ -1018,7 +1018,8 @@ export function enter(s, now = nowOf(), { keys = [] } = {}) {
   R.fightFrom = null; // in with the Integrity you connected with, never a fight's from an earlier visit
   R.at = R.graph.entry;
   R.inSince = now;
-  R.visit = { n: R.visits, walked: { [R.graph.entry]: true }, keys: [...keys], rested: false, moves: 0, hunter: newHunter(s), slips: 0, back: null, xp0: xpTotal(s), warm: 0 };
+  R.visit = { n: R.visits, walked: { [R.graph.entry]: true }, keys: [...keys], rested: false, moves: 0, hunter: newHunter(s), slips: 0, back: null, xp0: xpTotal(s), warm: R.warmCarry || 0 }; // Deadman's Switch kept the last visit's Warm cache (combat.mjs disconnect)
+  delete R.warmCarry;
   R.screen = null;
   look(s);
   const fresh = clear(s, R.graph.rooms[R.graph.entry], true);

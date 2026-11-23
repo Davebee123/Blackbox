@@ -8,6 +8,7 @@ import { luCalm } from './levelup-view.mjs';
 import { createLevelUpUi } from './levelup-ui.mjs';
 import { SHAPES, render as ascii3d } from './ascii3d.mjs';
 import { glyphMotion } from './protocol-glyphs.mjs';
+import { glyph } from './glyphs.mjs';
 import { createArt } from './virus-art.mjs';
 import { createStage } from './stage.mjs';
 import * as BFX from './boardfx.mjs';
@@ -1286,20 +1287,27 @@ function receiptCard(e, events) {
 // as one row that opens on the death recap; and when you can go back.
 function lossCard(e) {
   const clock = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; }; // rounded up: 59.5 s reads 1:00
-  const max = maxSignal(campaign), sig = signalNow(campaign), need = Math.ceil(max * CONFIG.zone.minSignal);
+  const max = maxSignal(campaign), need = Math.ceil(max * CONFIG.zone.minSignal), t0 = Date.now();
+  // One clock: you can go back once both the reconnect wait and your Integrity allow it, so the later of the two. A
+  // top up (the card's button) cuts the second at once.
+  const waitNow = () => { const sig = signalNow(campaign); return Math.max((e.relockMs || 0) - (Date.now() - t0), sig < need ? ((need - sig) / (CONFIG.signalRest * max)) * 60000 : 0); };
   const fold = foldMarkup(e.recap, e.by);
-  const rows = [
-    ...(fold ? [] : [{ kind: 'lost', label: e.by ? `Taken out by ${e.by}` : (e.reason || 'Integrity lost'), qty: '', text: 'Integrity lost' }]),
-  ];
-  // One clock: you can go back once both the reconnect wait and your Integrity allow it, so the later of the two.
-  const wait = Math.max(e.relockMs || 0, sig < need ? ((need - sig) / (CONFIG.signalRest * max)) * 60000 : 0);
+  const rows = fold ? [] : [{ kind: 'lost', label: e.by ? `Taken out by ${e.by}` : (e.reason || 'Integrity lost'), qty: '', text: 'Integrity lost' }];
+  const wait = waitNow();
   if (wait > 0) rows.push({ kind: 'time', label: 'Reconnection possible in', qty: clock(wait), text: `Reconnection possible in ${clock(wait)}` });
-  showGain('No carrier', e.where || '', rows, false, warmLostMarkup(e) + fold);
+  // Top up: credits for Integrity now (combat.mjs topUp), while you're short of what a connect needs.
+  const cost = () => topUpCost(campaign), short = () => signalNow(campaign) < need && cost() > 0 && campaign.server.credits > 0;
+  const buy = short() ? `<button type="button" class="btn sp-topup" data-command="top up" title="Top up: Fills your Integrity now, for credits. Resting fills it for free.">Top up ${glyph('credits')}<b>${cost()}</b></button>` : '';
+  showGain('No carrier', e.where || '', rows, false, warmLostMarkup(e) + fold + buy);
   $('gain').classList.add('loss');
-  // The clock counts down while the card is up, and stops with it.
-  const until = Date.now() + wait, cell = wait > 0 && $('gain').querySelector('.sp-row.k-time .sp-qty');
-  if (!cell) return;
-  const tick = setInterval(() => { if ($('gain').hidden || !cell.isConnected) return clearInterval(tick); cell.textContent = clock(until - Date.now()); }, 250);
+  // The clock counts down while the card is up, and stops with it; a top up redraws it and the button.
+  const cell = $('gain').querySelector('.sp-row.k-time .sp-qty'), btn = $('gain').querySelector('.sp-topup');
+  if (!cell && !btn) return;
+  const tick = setInterval(() => {
+    if ($('gain').hidden || !(cell || btn).isConnected) return clearInterval(tick);
+    if (cell) cell.textContent = clock(waitNow());
+    if (btn) { btn.hidden = !short(); btn.querySelector('b').textContent = cost(); }
+  }, 250);
 }
 function hideGain() { clearTimeout(gainTimer); const el = $('gain'); if (el && !el.hidden) { el.hidden = true; el.innerHTML = ''; } const next = gainQueue.shift(); if (next) setTimeout(() => showGain(...next), 120); }
 const gainOpen = () => { const el = $('gain'); return el && !el.hidden && !el.classList.contains('toast'); };

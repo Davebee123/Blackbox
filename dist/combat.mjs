@@ -2159,10 +2159,13 @@ export const relockWait = (deaths = 0) => Math.min(CONFIG.deathWait.cap, CONFIG.
 export function disconnect(s, reason) {
   const run = s.run;
   if (!run) return;
-  // Deadman's Switch: jack out instead (then it rearms on a real-time cooldown).
+  // Deadman's Switch: a clean jack out instead, the Warm cache kept for your next visit to that server (floorplan.mjs
+  // enter); then it rearms on a real-time cooldown.
   const dead = hooks.jackOut && fxFire(s, 'disconnect', { do: 'jackout' })[0];
   if (dead) {
-    emit(s, 'net-good', `Your Integrity is gone, but ${dead.it.name} trips. You jack out.`);
+    const warm = hooks.visitOf?.(s)?.warm || 0;
+    if (warm && s.rooms?.world) s.rooms.warmCarry = warm;
+    emit(s, 'net-good', `Your Integrity is gone, but ${dead.it.name} trips. You jack out${warm ? ', your Warm cache kept' : ''}.`, { warm });
     run.integrity = 0;
     if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
     return hooks.jackOut(s);

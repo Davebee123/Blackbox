@@ -438,3 +438,6 @@ Side by side, the earlier phase lands first and the later one merges main before
   line are gone (an old run's `s.run.snap` drops on load); the *Reboot* plays as picked, HOME's bar at your Integrity.
   The stake beside Jack out is the Warm box and the Pack; No carrier strikes the Warm cache through. A co-op guest keeps
   their visit the same way. Waits on the designer dying once on purpose.
+- **Phase 6, after** (23 Nov, the designer): the No carrier card has a **Top up** button with its credits while you're
+  short of a connect (its clock drops as you pay); Deadman's Switch reworked: a clean jack out that keeps the Warm
+  cache for your next visit to that server, every 90 minutes.
