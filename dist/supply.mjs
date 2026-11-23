@@ -4,6 +4,7 @@
 // ripples, as any rep). The next comes an hour of play after you deliver (s.pace.ms, so nothing turns over while you're
 // away). The main sink for code, components and Exploits. Saved: s.supply[faction] = { next, done }, the play time its
 // next order opens and how many you've filled; made on the first delivery.
+import { isOpen } from './progression.mjs';
 import { emit, warn, materialsOf, hackerLevel } from './combat.mjs';
 import { FACTIONS, changeRep, hubFound, hubsOf } from './factions.mjs';
 import { WARES, priceOf } from './market.mjs';
@@ -23,7 +24,7 @@ export const stockOf = (s, w) => (w === 'salvage' ? componentsOf(s) : materialsO
 // ready (you hold enough), leftMs (play time until it opens; 0 when it's open), done }.
 export function supplyOf(s, f) {
   const w = SUPPLY.wants[f];
-  if (!w || !hubsOf(s).length || !hubFound(s, f)) return null;
+  if (!w || !hubsOf(s).length || !hubFound(s, f) || !isOpen(s, `supply:${f}`)) return null; // a new character: after a first sale there
   const o = s.supply?.[f] || {}, n = SUPPLY.amount(w, hackerLevel(s)), have = stockOf(s, w), leftMs = Math.max(0, (o.next || 0) - playMs(s));
   return { f, ware: w, name: WARES[w].name, n, have, credits: Math.round(n * priceOf(s, f, w) * SUPPLY.pay), rep: SUPPLY.rep, ready: !leftMs && have >= n, leftMs, done: o.done || 0 };
 }
@@ -34,6 +35,7 @@ export function deliver(s, f) {
   if (!hubsOf(s).length) return warn(s, 'Supply orders open with the faction hubs.');
   if (!hubFound(s, f)) return warn(s, `You haven't located ${FACTIONS[f].short}'s hub yet.`);
   const o = supplyOf(s, f);
+  if (!o) return warn(s, `Sell at ${FACTIONS[f].short}'s market first.`);
   if (o.leftMs) return warn(s, `${FACTIONS[f].short}'s next order comes in ${Math.ceil(o.leftMs / 60000)} min of play.`);
   if (o.have < o.n) return warn(s, `${FACTIONS[f].short} wants ${o.n} ${o.name}. You have ${o.have}.`);
   if (o.ware === 'salvage') spend(s, o.n); else materialsOf(s)[o.ware] -= o.n;

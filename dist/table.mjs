@@ -27,6 +27,7 @@ export const clear = (s) => ramp(countOf(s), TABLE.clear);
 export const bandOf = (s) => (full(s) > 0 ? 'full' : clear(s) > 0 ? 'clear' : 'between');
 // Moves the count by d (clamped); true when it reached 95% and a cancel round took its 8 off.
 export function moveTable(s, d) {
+  if (s?.opens && !s.opens.table) return false; // a new character's table stays put until Carrier's schedule page (progression.mjs)
   s.table = clamp(countOf(s) + d);
   if (s.table < TABLE.max) return false;
   s.table = clamp(s.table - TABLE.cancel);

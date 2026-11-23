@@ -124,7 +124,7 @@ comment saying what it does.
 | `dist/raid.mjs` | Crew bosses: phases and mechanics for KESSLER-FARM-00's three. |
 | `dist/planner.mjs` | The scripted fight player for every class, used by the simulations and bot crewmates. |
 | `dist/research.mjs` | Part research: what you know of a part grows with what you do to it. |
-| `dist/progression.mjs` | What each level brings on every track, the play clock, and old saves' progression migrations. |
+| `dist/progression.mjs` | What each level brings on every track, what opens when (`OPENS`: a new character's event triggers; `opens.test.mjs`), the play clock, and old saves' progression migrations. |
 | `dist/mastery.mjs` | Ability mastery: use evolves an ability's effect through three tiers. Cosmetic only. |
 
 ### Gear, loot and daemons
@@ -207,7 +207,7 @@ comment saying what it does.
 | `dist/portraits.mjs` | Backlit ASCII busts: the quest window's speaker (the cast's own or one from their name) and a runner's on their card (from the handle alone). |
 | `dist/coldopen.mjs` | First launch: the cold open (KESSLER's clearing house crashing), its own sound mix through `feel.scene()`. |
 | `dist/intro.mjs` | First launch: the login, then Halcyon's transmission. |
-| `dist/scenes.mjs`, `dist/scenes-view.mjs`, `dist/scenes.css`, `dist/content/scenes.mjs` | Transmissions: conversations with a contact over the map, their window and their words. |
+| `dist/scenes.mjs`, `dist/scenes-view.mjs`, `dist/scenes.css`, `dist/content/scenes.mjs` | Transmissions: conversations with a contact over the map, their window and their words; the event ones spaced 10 minutes of play apart. |
 | `dist/tips.mjs` | First-time tips, the game's only tutorial text. |
 | `dist/tutorial.mjs` | Guided practice on an isolated training virus, offered after the class pick (app.js `practice`; `?practice` until `PRACTICE.offer`). |
 | `dist/lore.mjs` | Skill descriptions and flavour lines for the library. |

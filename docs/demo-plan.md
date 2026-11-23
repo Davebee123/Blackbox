@@ -441,3 +441,16 @@ Side by side, the earlier phase lands first and the later one merges main before
 - **Phase 6, after** (23 Nov, the designer): the No carrier card has a **Restore** button with its credits (the word for buying Integrity, `restore`) while you're
   short of a connect (its clock drops as you pay); Deadman's Switch reworked: a clean jack out that keeps the Warm
   cache for your next visit to that server, every 90 minutes.
+- **Phase 7** (23 Nov): one trigger table, `progression.mjs OPENS`, kept as `s.opens` on a new character only (no save
+  bump: a save without it is older and keeps every system on its old level gates; `opens.test.mjs` loads a level-20
+  save and finds nothing hidden). Hiring opens on the first room won beside a runner; invasions on a server mapped or
+  taken over; blips on the first jack out; the director's events on the turf letter; run cards on a traced run; rivals
+  on the first vault; a hub's supply order on a first sale there; the Settlement run, the Rack pull and a runner's trade
+  on a takeover, Kestrel's hub and Known; INIT's table (its header, orphans, Orphans contracts) on *Carrier*'s
+  `sched.0412`; the Rig tab on the first achievement. The kit and enemy levels already matched D7. Eight approved
+  transmissions wired, verbatim (runner helped, first jack out, turf, a server held, first vault, rival met, a
+  runner's trade, the schedule page), 10 minutes of play apart (`scenes.mjs GAP_MS`), a runner's and a rival's by
+  temperament. **Waiting on Phase 5** (its own wiring, no new trigger): Kestrel's and GLASSJAW's hub found (the Rack
+  pull and supply orders open meanwhile with no transmission), PAGE NINE falls, floor 2 reached, CENTRIFUGE falls.
+  No new look (the *Transmission* as picked; the Rig and the table's count just appear). Waits on the designer playing
+  a new character to level 7.

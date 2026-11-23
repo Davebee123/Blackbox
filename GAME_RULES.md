@@ -2234,12 +2234,40 @@ A **transmission** is a conversation over the map with a contact (`scenes.mjs`; 
 the quest window's look: **Incoming**, their portrait beside the conversation, your answers in teal, numbered choices
 under it (click, or press 1–9). A question you've asked is gone from the next choices; an answer can end it somewhere
 (Mail, a server on the map). Esc or × ends it. Each plays once, never mid-fight; one that comes while another plays
-waits its turn.
+waits its turn. The event ones wait 10 minutes of play after the last closed (`GAP_MS`), and play only for a new
+character (What opens when). A runner's or a rival's speaks by their temperament.
 
 | Scene | When |
 |---|---|
 | wick's welcome | Your first login, after you pick a class: who LOWLIGHT is, what Halcyon wants, where to start (your first job in Mail). |
 | Your first server | Your first server located: what a server is, getting in, the vault; **Show me** opens it on the map. Only on a save that heard the welcome. |
+| The runner you helped | Your first room won beside a runner: they'd join (**Run with me** opens their card). |
+| wick, first jack out | The pack banked; blips. |
+| Halcyon Loss Prevention | The turf letter: the board, the retainer. |
+| wick, a server held | Your first server mapped or taken over: invasions, receipts. |
+| wick, first vault | Your first vault opened: rivals. |
+| The rival | Your first rival race over, won or lost. |
+| The runner's trade | Your first runner's trade mounts (**Show me** opens its server). |
+| LANTERN, the schedule | *Carrier*'s schedule page delivered: INIT's table. |
+
+### What opens when
+
+`progression.mjs OPENS`. Your kit opens by your level and the enemy's rules by the server's level, as above; the rest
+opens when you first do something. A new character keeps `s.opens` (what opened, when); a save without it is older and
+keeps every system it had, on its old level gates.
+
+| System | Opens when you… |
+|---|---|
+| Hiring runners | win a room beside a runner (Help, or pulling one out) |
+| Invasions (and so daemons) | map a server or take one over |
+| Blips | jack out |
+| The director's events (the board and Shops: the same letter) | get the turf letter |
+| Run cards | run a traced server |
+| Rivals | open a vault |
+| A hub's supply order | sell at that hub's market |
+| Settlement run · Rack pull · a runner's trade | take a server over · find Kestrel's hub · bring a runner to Known |
+| INIT's table, its count, orphans and Orphans contracts | deliver *Carrier*'s schedule page (`sched.0412`) |
+| The Rig | earn an achievement |
 
 ### Commission
 
@@ -2410,7 +2438,7 @@ first.
 
 ## Events (events.mjs)
 
-The net isn't a storyline: things happen on it. From level 3 an **event director** deals one now and then (first 4–8
+The net isn't a storyline: things happen on it. From level 3 (a new character: from the turf letter) an **event director** deals one now and then (first 4–8
 minutes of logged-on time after level 3, then every 15–30 minutes, never the same kind twice running, at most two up).
 Each goes to the pager and to #net; missing one costs nothing. The director rolls its own dice. While a market card
 wants a code, its family comes up twice as often (*Markets*, Reacting).
@@ -2455,7 +2483,7 @@ and pager line carry a chain-link mark. Ignoring a card never starts a chain.
 
 ### Blips
 
-Small, quick and cheap (docs/director.md 3): one about every 4–6 minutes of logged-on time from level 3, never the same
+Small, quick and cheap (docs/director.md 3): one about every 4–6 minutes of logged-on time from level 3 (a new character: from the first jack out), never the same
 kind twice running, at most two up, beside the events (not in their slots), on dice of their own. A blip shows as a
 violet spark on its server or room (its line on hover) and a quiet pager line that goes with it. Missing one costs
 nothing. `developer blip [cache|flicker|rumour|sighting]`.
@@ -2470,7 +2498,7 @@ nothing. `developer blip [cache|flicker|rumour|sighting]`.
 ### Run cards
 
 When you connect to a traced server (not SPRAWL-00, a rogue server, a lair, the farm or a temporary server), the director
-deals a **run card** into the run one time in four, from level 3, never the same kind twice running and never beside a
+deals a **run card** into the run one time in four, from level 3 (a new character: from the first such run), never the same kind twice running and never beside a
 rival, on dice of its own (docs/director.md 4, `runcards.mjs`). Its rooms show through the fog; the strip shows how it's
 going. Jack out and it ends; missing one costs nothing. `developer runcard [surge|escort|pack]`.
 
@@ -2485,7 +2513,7 @@ The history (below) lists each, ending *won*, *taken* (a surge you fought in, le
 ### Quest sites (sites.mjs)
 
 Short-lived servers the director mounts on your floor (docs/sites.md): one up at a time, the first 20–40 minutes of
-logged-on time after level 5, the next 50–70 minutes after one ends, on dice of their own. A site lives off your
+logged-on time after level 5 (a new character: each kind once its trigger has happened, What opens when), the next 50–70 minutes after one ends, on dice of their own. A site lives off your
 network: no invasions, no tracing, no takeover. Gear drops on it as anywhere. Built: the Settlement run, the Rack pull
 and a runner's trade, in turn. A runner's trade has no clock and stands beside the others, one at a time.
 
@@ -2531,7 +2559,8 @@ The director's last 20 (events, follow-ups and blips) and how each ended (*up*, 
 
 One count a save, *process table at N%*, 70 to 95, starting at 84 (docs/init-table.md). Time logged on fills it, 2 an
 hour; nothing moves while you're logged off. Your play empties it: an orphan broken 0.08, a server Mapped 1, an Orphans
-contract delivered 2. At 95 LANTERN runs a cancel round: 8 off, a Log line. It never moves a price.
+contract delivered 2. At 95 LANTERN runs a cancel round: 8 off, a Log line. It never moves a price. A new character's
+table, its header count and its orphans wait for *Carrier*'s schedule page (What opens when).
 
 **Orphans** (◌ on the name and the room): a plain fight room's respawn on any server, 1 in 8 between the bands, toward
 1 in 3 across Full and 1 in 20 across Clear. **Orphans contracts** (from level 6): break N of them.
@@ -2620,7 +2649,7 @@ The servers you've connected to send **invasions** at HOME, **one at a time**, o
 docs/invasions.md). Nothing stops one but you. On the map it moves in from its server; its card and the top bar say what
 it is and what it pays (`invasions` in the terminal).
 
-- **When.** The first sets out 3 minutes after you first connect to a server; the next 20–30 minutes after the last is
+- **When.** The first sets out 3 minutes after you first connect to a server (a new character: once a server is mapped or taken over); the next 20–30 minutes after the last is
   dealt with.
 - **Who.** Half the time your strongest server sends it, otherwise any, a Volatile server counted twice and a Stable
   one half. A virus of that server's family **at its level** (Volatile and an Amplifier +2, a Lockdown −2) and floor
@@ -2746,7 +2775,7 @@ no attaching, detaching or memory pips.
   handle, class and level, and the Tier bar; hovering a diamond shows the Badge alone. Then Traits (temperament first), Now (→ a server and its time, or
   Busy with when they're free), After (their trade); their latest #net line; **Hire**, off with the reason (or the
   clock) until you can.
-- **Hiring** (`hire <runner> [preset]`, anyone on your net, from level 5, three at most): the crew card shows Pay as two
+- **Hiring** (`hire <runner> [preset]`, anyone on your net, three at most; a new character once a runner you helped has offered, an older save from level 5): the crew card shows Pay as two
   icons, a fee once (20 credits a level, a quarter more a trait and a ★; a Stranger ×2, Known ×1.5, Friend ×1, Close
   ×0.75) and a cut of the credits each run banks (10%; Haggler
   half, ★ a quarter), and their bar as preset tiles (their subclass's shipped presets). Hired, they're crew (violet),

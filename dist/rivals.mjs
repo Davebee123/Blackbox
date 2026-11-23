@@ -17,6 +17,7 @@
 //                their standing rises (runners.mjs). Lose and they're gone with both, and they're hunting you (red on
 //                the map and the Rail) until you beat them.
 //   memory       s.rivals.by[handle]: meetings, your record against them, how it last ended.
+import { onEvent } from './progression.mjs';
 import { emit, encounterVirus, hackerLevel, addItem, classOf, hooks } from './combat.mjs';
 import { GENES } from './genes.mjs';
 import { FACTIONS } from './factions.mjs';
@@ -171,11 +172,17 @@ export function rivalMove(s) {
   look(s);
   return false;
 }
+// Your first race over, won or lost: the rival's transmission (scenes.mjs; a new character only).
+function raceOver(s, v, how) {
+  const t = String(v.temper || 'Steady').toLowerCase();
+  onEvent(s, 'rival-met', { handle: v.id, faction: FACTIONS[v.faction]?.name || v.faction, v: t, v2: `${t}-${how}` });
+}
 // It jacks out: with the vault's files, if it opened it.
 function getaway(s, v) {
   const P = rivalP(v);
   v.state = 'gone';
   if (v.vault) { ask('vaultGone', s); memoryOf(s, v.id).away++; memoryOf(s, v.id).last = 'away'; }
+  raceOver(s, v, 'lost');
   say(s, v.vault ? `${P.name} jacks out with the vault's files.` : `${P.name} jacks out.`, v.vault ? 'rooms-bad' : 'rooms');
 }
 // You leave first: it finishes the job (the files go with it if it has them).
@@ -282,6 +289,7 @@ export function rivalWon(s, room, e) {
   }
   v.state = 'down'; v.next = null;
   m.won++; m.last = 'won';
+  raceOver(s, v, 'won');
   spoils(s, room, v);
   raiseStanding(s, v.id, STANDING.help, `You beat them racing you to a vault on ${R.name}.`); // a rival you beat: you've met
   return true;
@@ -305,6 +313,7 @@ export function rivalLost(s) {
   const m = memoryOf(s, v.id);
   v.state = 'gone'; v.next = null;
   m.lost++; m.last = 'lost';
+  raceOver(s, v, 'lost');
   if (v.vault) ask('vaultGone', s);
 }
 // wick's line for a moment: the challenge, between fights, the win.

@@ -49,6 +49,7 @@
 // Fights are ordinary run fights (combat.mjs selectEncounter, mode 'run') flagged e.rooms: combat.mjs finish hands the
 // end back here (hooks.roomEnd), and families.mjs and interrupt.mjs play the room rules (attack sets, the new bodies,
 // the interrupt). The Resident is DEADBOLT, under the boss rule the playtest switches (interrupt.mjs BOSS_RULES).
+import { openUp, isOpen } from './progression.mjs';
 import { warmUp, warmOf } from './visit.mjs';
 import { CREW } from './crew.mjs';
 import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, gainXp, gainCode, xpFor, deedXpFor, rollDrop, fxPct, puzzleUnique } from './combat.mjs';
@@ -1368,6 +1369,7 @@ function openVault(s, room, force) {
   else { R.visit.keys.splice(has, 1); ev = say(s, 'The key opens the vault.', 'rooms-good'); }
   ev.fx = { kind: 'vault', room: room.id }; // the Dial on the map (roomfx.mjs), its files counted below
   R.opened[room.id] = nowOf();
+  if (R.world) openUp(s, 'rivals'); // your first vault: rivals from now on (progression.mjs)
   const v = room.loot || { kind: 'gear', rarity: 'tuned' };
   if (R.world && ask('vault', s, room)) { /* the server's own vault: its files go in the pack (netrooms.mjs) */ }
   else { const it = addItem(s, rollItem(rnd(R, 5), { level: R.level, rarity: v.rarity, cls: classOf(s) }), 'Vault: '); if (it) { if (R.world) ask('packItem', s, it); else R.pack.push(it.id); say(s, `${itemLabel(it)} goes in your pack.`, 'rooms-good'); } }
@@ -1756,7 +1758,7 @@ hooks.roomEnd = (s, result) => {
   // One respawn in 25 is a rare spawn (ROOMS.rare): it waits until you kill it (a held server's Root 5, a Legacy server's twice).
   R.rare[room.id] = FIGHTS.includes(room.kind) && !['core', 'boss', 'socket', 'nest'].includes(room.kind) && !room.wild && rnd(R, 31)() < ROOMS.rare * ((R.world && ask('rare', s)) || 1) * (R.world ? rareMult(s) : 1); // INIT's table, Clear: twice as often at its end
   // An orphan (INIT's table): a plain room's respawn, at the table's share (its own seed, so the room's dice stay as they were).
-  if (R.world && room.kind === 'process' && !room.wild) (R.orphan ||= {})[room.id] = !R.rare[room.id] && seeded(((room.seed ^ 0x0f0f0f) + R.spawns[room.id] * 7919) >>> 0)() < orphanShare(s);
+  if (R.world && room.kind === 'process' && !room.wild && isOpen(s, 'table')) (R.orphan ||= {})[room.id] = !R.rare[room.id] && seeded(((room.seed ^ 0x0f0f0f) + R.spawns[room.id] * 7919) >>> 0)() < orphanShare(s);
   if (R.world && e.orphan) { moveTable(s, -TABLE.orphan); contractDid(s, 'orphans'); } // it frees a slot, and counts for an Orphans contract
   programsPay(s, room, e);
   // First clear: progress toward Mapped (its XP comes in Mapped's lump).

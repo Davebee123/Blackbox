@@ -25,6 +25,7 @@
 // State: s.arcs = { [floor]: { step, at, done, doneAt, titles }, offers: [{ floor, step, items }] }. A chain done before
 // it gained a step opens again at that step (regrown). The jobs themselves
 // are mail jobs (s.mail.jobs) marked chain: <floor>, step: <k>, slot: <the target's slot>.
+import { openUp } from './progression.mjs';
 import { emit, warn, hackerLevel, hooks, addItem, classOf, subOf } from './combat.mjs';
 import { BOSSES, SUBS, defaultSub, CONFIG } from './data.mjs';
 import { seeded, rollItem, itemLabel } from './gear.mjs';
@@ -255,11 +256,14 @@ export function arcProgress(s, c) {
 }
 export const arcReady = (s, c) => ARC.own.includes(c.type) && !!c.got;
 
+// The page whose foot reads *process table at 81%* (Carrier, content/contracts.mjs): delivering it opens INIT's table.
+export const TABLE_PAGE = 'sched.0412';
 // Delivered (mail.mjs mailCommand): the step's title kept for the chain's page, its pick of three, and the next step.
 export function arcDelivered(s, c, at = nowOf()) {
   const A = arcsOf(s), n = c.chain, ch = chainOf(n), st = (A[n] ||= { step: c.step, at, titles: [] });
   (st.titles ||= [])[c.step] = title(s, c);
   const step = ch?.steps[c.step];
+  if (step?.file === TABLE_PAGE) openUp(s, 'table'); // Carrier's schedule page read: INIT's table (progression.mjs)
   const last = !ch || c.step >= ch.steps.length - 1;
   if (step?.reward?.pick) {
     A.offers.push({ floor: n, step: c.step, last, items: pickOf(s, n, c.step, last) });

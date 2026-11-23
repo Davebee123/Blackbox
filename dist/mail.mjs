@@ -44,6 +44,7 @@ import { fill } from './content.mjs';
 import { FACTIONS, changeRep, rep, rivalServers, hubsOf, hubFound, commissionOf } from './factions.mjs';
 import { addrsOf, sweepRooms } from './address.mjs';
 import { takeReceipt } from './receipts.mjs';
+import { openUp, isOpen } from './progression.mjs';
 import { arcTick, arcTitle, arcProgress, arcReady, arcDelivered, arcTake } from './arcs.mjs';
 
 export const MAIL = {
@@ -208,7 +209,7 @@ function postStory(s, at = now(), force = false) {
     l.job = j.id;
     arm(s, j);
   }
-  if (beat.opensBoard && !m.boardOpen) { m.boardOpen = true; for (let i = 0; i < 3; i++) offer(s, at); m.nextOfferAt = at + gap(s); }
+  if (beat.opensBoard && !m.boardOpen) { m.boardOpen = true; for (let i = 0; i < 3; i++) offer(s, at); m.nextOfferAt = at + gap(s); openUp(s, 'events'); } // and the director's events (progression.mjs)
   // A letter with no job doesn't hold the story up: the next beat is on its way.
   if (!job) m.waiting = STORY.some((b) => !m.posted.includes(b.id)) ? 'armed' : false, m.waitFrom = at;
   return l;
@@ -310,7 +311,7 @@ export function offer(s, at = now()) {
   const bountyAt = bountyTarget(s); // a live elite or ★ rare spawn on a traced server near your level
   const roomsAt = roomsTarget(s), mapAt = mapTarget(s);
   const rootAt = rootTarget(s), logs = unswept(s);
-  const acts = Object.keys(ACTIVITY).filter((k) => L >= ACTIVITY[k].from && (k !== 'root' || rootAt) && (k !== 'sweeps' || logs.length) && (k !== 'hold' || tracedOf(s).length) && (k !== 'orphans' || tracedOf(s).length));
+  const acts = Object.keys(ACTIVITY).filter((k) => L >= ACTIVITY[k].from && (k !== 'root' || rootAt) && (k !== 'sweeps' || logs.length) && (k !== 'hold' || tracedOf(s).length) && (k !== 'orphans' || (tracedOf(s).length && isOpen(s, 'table'))));
   const kinds = (['kill', 'kill', 'bounty', 'bounty', 'materials', 'takeover', 'item', 'item', 'rooms', 'rooms', 'map', ...acts]).filter((k) => (k !== 'takeover' || target) && (k !== 'item' || vaultFound) && (k !== 'bounty' || bountyAt) && (k !== 'rooms' || roomsAt) && (k !== 'map' || mapAt));
   // Strain contracts (RuneScape Slayer): once strains are open at your level, a quarter of the board.
   const strainsOpen = Object.keys(STRAINS).filter((k) => STRAINS[k].from <= L && L >= CONFIG.zone.maxLevel + 2);
@@ -645,6 +646,7 @@ export function contractKill(s, { family, zone, bounty: tag, level = null, strai
 export function contractTakeover(s, loc) {
   if (loc.takenOver) return;
   loc.takenOver = true;
+  openUp(s, 'invasions', { server: loc.name }); openUp(s, 'settlement'); // progression.mjs
   gainXp(s, deedXpFor(s, loc.level || 1, 1.5), `${loc.name} taken over`, 'breakin');
   const receipt = takeReceipt(s, loc); // its vault's receipt, to stamp on the takeover card (receipts.mjs)
   emit(s, 'takeover', `${loc.name} TAKEN OVER. ${CREWS[loc.family] || loc.owner} just lost a server.`, { location: loc.id, receipt: receipt?.id || null });
@@ -938,6 +940,7 @@ export function tickMail(s, at = now()) {
     if (!stuck || at - stuck.at < MAIL.boardAfterMs) return;
     m.boardOpen = true;
     emit(s, 'mail', 'Halcyon opened its board to you, with other work while you finish this one.');
+    openUp(s, 'events');
   }
   if (m.offers.some((o) => o.type === 'side') || m.jobs.some((j) => j.type === 'side')) { m.offers = m.offers.filter((o) => o.type !== 'side'); m.jobs = m.jobs.filter((j) => j.type !== 'side'); } // the Side contract is gone (docs/factions-plan.md 2)
   // Offers nobody took run out.

@@ -14,6 +14,7 @@
 // Saved on s.achievements = { got: { id: when earned }, n: { counters }, flags: { feat ids done }, pins: [ids],
 // seen (the last log serial read) }. An older save gets everything it has already done on load (achievementsRestore):
 // every title and sticker it holds keeps its achievement, quietly, and one pager line says how many.
+import { openUp } from './progression.mjs';
 import { emit, warn, hooks, defender, classOf, UNIQUES } from './combat.mjs';
 import { ARCHETYPES, BOSSES, SUBS, DAEMONS, FLOORS } from './data.mjs';
 import { FACTIONS, FACTION_IDS, REP_TIERS, hubFound } from './factions.mjs';
@@ -242,6 +243,7 @@ function grant(s, list, when) {
   for (const a of list) {
     if (S.got[a.id]) continue;
     S.got[a.id] = when;
+    openUp(s, 'rig'); // the first one opens the Rig (progression.mjs)
     const r = a.reward || {};
     if (r.title && !p.titles.includes(r.title)) p.titles.push(r.title);
   }

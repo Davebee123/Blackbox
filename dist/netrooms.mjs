@@ -47,6 +47,7 @@ import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
 import { traceNear, openNext, HIDDEN } from './hidden.mjs';
 import { vaultItem, zoneSpawns, kingOpen, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn } from './run.mjs';
+import { isOpen, openUp } from './progression.mjs';
 import { blipStood, blipRooms, runCardRoll, runCardUp, runCardEnd } from './events.mjs';
 import { RUN_CARDS } from './runcards.mjs';
 import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
@@ -469,7 +470,7 @@ WORLD_hook('exfil', (s, t) => {
 // seed, or 0.
 WORLD_hook('rival', (s, t) => {
   const loc = locOf(s), R = s.rooms, vault = R?.graph.vaults[0];
-  if (!loc || R.type !== 'server' || !vault || R.opened[vault] || owned(loc) || loc.member || loc.zone || loc.farm || loc.lair || loc.temp || !s.run) return 0;
+  if (!loc || R.type !== 'server' || !vault || R.opened[vault] || owned(loc) || loc.member || loc.zone || loc.farm || loc.lair || loc.temp || !s.run || !isOpen(s, 'rivals')) return 0; // a new character: from the first vault (progression.mjs)
   return rivalRoll(s, (loc.seed || 1) + R.visits * 40503, t);
 });
 // A rival that got away with the vault: its files are gone.
@@ -652,6 +653,7 @@ WORLD_hook('mapped', (s) => {
   const loc = locOf(s);
   if (!loc) return;
   contractMapped(s, loc);
+  if (!loc.zone && !loc.member) openUp(s, 'invasions', { server: loc.name }); // things come for what you hold (progression.mjs)
   if (!loc.zone && !loc.member) moveTable(s, -TABLE.mapped); // INIT's table: a Mapped server frees a slot
   if (!s.rooms.mappedRest) earnEvent(s, { kind: 'map-norest', floor: loc.depth || 1 }); // No Rest's count (earned.mjs)
   // Mapped: one ? linked to it is traced the rest of the way (floors.mjs), so a floor opens outward one server at a time.

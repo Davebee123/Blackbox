@@ -25,9 +25,10 @@ import { changeRep } from './factions.mjs';
 import { moveTable } from './table.mjs';
 import { AUTHORS } from './authors.mjs';
 import { codeOf } from './gear.mjs';
-import { receiptOf, receiptsOf, STAMPS } from './receipts.mjs';
+import { receiptOf, receiptsOf, STAMPS, sumText } from './receipts.mjs';
 import { gainComponents } from './salvage.mjs';
-import { runnerOf, knownOf, stateOf, raiseStanding, standingOf, tierOf, runnersOf, STANDING } from './runners.mjs';
+import { isOpen, onEvent } from './progression.mjs';
+import { runnerOf, knownOf, stateOf, voiceOf, raiseStanding, standingOf, tierOf, runnersOf, STANDING } from './runners.mjs';
 import { CODEBASE_SHOPS, knowsCodebase, learnCodebase } from './sockets.mjs';
 import { openNext } from './hidden.mjs';
 import { wanted, REACT } from './ticker.mjs';
@@ -157,19 +158,23 @@ export function dealRunner(s) {
   const loc = Object.assign(createLocation(host.family || 'worm', seed, floor), { id: nameOf(seed).toLowerCase(), name: nameOf(seed), level, depth: floor, template: 'relay', special: null, quirk: null, runs: 0,
     site: { kind: 'runner', state: 'up', handle: r.handle, faction: r.faction, what: trade.what, n: trade.n, receipt: { ...rc, server: nameOf(seed) }, host: host.id, at: spotBeside(s, host) } });
   mount(s, loc, { kind: 'Relay', level, floor, author: holderOf(s, floor), family: host.family || 'worm', seed });
+  onEvent(s, 'runner-known', { ...voiceOf(r), payer: rc.payer, payee: rc.payee, sum: sumText(rc.sum), era: rc.date.split(' ').pop(), id: loc.id }); // their transmission, the first time (scenes.mjs)
   emit(s, 'site', `Floor ${floor}: ${r.handle} found their trade on ${loc.name}.`, { location: loc.id, floor, kind: 'runner', phase: 'up', handle: r.handle, faction: r.faction, what: trade.what, name: loc.name });
   return loc;
 }
 // What it pays, named: the tier they'd reach, the codebase they'd give (their faction's, the first you don't know).
 export const runnerPay = (s, x) => ({ tier: tierOf(Math.min(100, standingOf(s, x.handle) + STANDING.help)), codebase: (CODEBASE_SHOPS[x.faction] || []).map(([id]) => id).find((id) => !knowsCodebase(s, id)) || null });
 const DEAL = { rig: dealRig, rack: dealRack, runner: dealRunner };
+// What opens each kind on a new character (progression.mjs OPENS): the Settlement run your first takeover, the Rack
+// pull Kestrel's hub found, a runner's trade a runner at Known.
+export const KIND_OPENS = { rig: 'settlement', rack: 'rack', runner: 'trade' };
 // The next kind in turn (the other one from the last), else whichever fits.
 // While a market card wants what a kind pays (PAYS: the rig's Exploits, the rack's components), that kind goes first.
 export const PAYS = { rig: 'exploit', rack: 'salvage' };
 const paying = (s) => SITE.kinds.filter((k) => wanted(s).has(PAYS[k]));
 export function dealSite(s, kind = null) {
   if (kind) return DEAL[kind]?.(s) || null;
-  const last = s.sites?.last, turn = SITE.kinds.filter((k) => k !== last).concat(last && SITE.kinds.includes(last) ? [last] : []), first = paying(s);
+  const last = s.sites?.last, turn = SITE.kinds.filter((k) => k !== last).concat(last && SITE.kinds.includes(last) ? [last] : []).filter((k) => isOpen(s, KIND_OPENS[k])), first = paying(s).filter((k) => turn.includes(k));
   const order = [...first, ...turn.filter((k) => !first.includes(k))];
   for (const k of order) { const loc = DEAL[k](s); if (loc) return loc; }
   return null;
@@ -243,7 +248,7 @@ export function tickSites(s, dt) {
     d.up.splice(d.up.indexOf(loc), 1);
     emit(s, 'site-gone', `${loc.name} unmounts.`, { location: loc.id });
   }
-  if (hackerLevel(s) < SITE.from || clocked(s).length) return;
+  if ((!s.opens && hackerLevel(s) < SITE.from) || clocked(s).length) return; // a new character: each kind on its own trigger (KIND_OPENS)
   if (d.next == null) d.next = between(s, SITE.firstMs);
   d.next -= dt * (paying(s).length ? REACT : 1); // twice as soon while a market card wants what one pays
   if (d.next > 0) return;

@@ -52,7 +52,7 @@ import { voices as voicesOf, todayOf } from './virusvoice.mjs';
 import { online, listed, peopleOn } from './presence.mjs';
 import { runnerFloor, runnerBadge } from './runners-view.mjs';
 import { matesOf } from './crew.mjs';
-import { tickPlay } from './progression.mjs';
+import { tickPlay, newCharacter, isOpen } from './progression.mjs';
 import * as FP from './floorplan.mjs';
 import { spawnRival } from './rivals.mjs';
 import { RUN_CARDS, dealCard } from './runcards.mjs';
@@ -235,7 +235,7 @@ function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY));
     const s = restore(raw);
-    if (!raw) { s.rng = newRng(); s.netSeed = newRng() || 1; } // crits and drops differ from game to game, and every network has its own signature (network.mjs)
+    if (!raw) { s.rng = newRng(); s.netSeed = newRng() || 1; if (!BENCH) newCharacter(s); } // what opens when (progression.mjs); crits and drops differ from game to game, and every network has its own signature (network.mjs)
     // A bench with no save yet, opened as ?bench=<name>&as=<subclass|class>&level=<n>: that character, ready (bench.mjs).
     // ?bench=arena: the Arena's bench, built as &as at &level (a subclass at 10 if none), again whenever they change (bench.mjs arenaBuild).
     const as = BENCH === 'arena' ? BN.arenaBuild(s, raw, params.get('as'), params.get('level')) : params.get('as');
@@ -1790,7 +1790,7 @@ function resetGame() {
   lu.reset();
   ended = null;
   const settings = campaign.settings;
-  campaign = fresh();
+  campaign = newCharacter(fresh()); // what opens when applies (progression.mjs)
   campaign.settings = settings;
   campaign.rng = newRng();
   campaign.netSeed = newRng() || 1; // a new game, a new network
@@ -2234,6 +2234,7 @@ function renderMeters() {
   $('tab-net').hidden = !campaign.run || !!campaign.run.rooms;
   document.body.classList.toggle('rooms-page', !!campaign.rooms && module === 'rooms'); // its notices pop up mid-screen
   $('tab-rooms').hidden = !campaign.rooms;
+  { const rig = document.querySelector('.modules [data-module="rig"]'), on = isOpen(campaign, 'rig'); if (rig && rig.hidden === on) rig.hidden = !on; } // a new character: from the first achievement (progression.mjs)
   $('tab-rooms').textContent = campaign.roomsPlay ? 'Server' : 'Run'; // on the network a server's rooms are your run (the Server tab is your home server)
   $('tab-rooms').dataset.tt = campaign.roomsPlay ? "Server: The rooms of the server you're connected to." : 'Run: The rooms of your run.';
   document.body.classList.toggle('rooms-mode', !!campaign.roomsPlay); // the rooms playtest: the old game's tabs and meters step aside
@@ -4049,8 +4050,9 @@ $('profile').addEventListener('submit', (e) => {
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && profileOn) { profileOn = null; profileUi(); } });
 // INIT's table in the header (table.mjs): the count, its tooltip what the band does now. Written only when it moves.
 function tableMeter() {
-  const el = $('meter-table'), n = shownCount(campaign);
-  if (+el.dataset.n === n) return;
+  const el = $('meter-table'), n = shownCount(campaign), on = isOpen(campaign, 'table');
+  if (el.hidden === on) el.hidden = !on; // a new character: from Carrier's schedule page (progression.mjs)
+  if (!on || +el.dataset.n === n) return;
   el.dataset.n = n; $('table-value').textContent = `${n}%`; el.dataset.ttKind = `INIT's table · ${tableKind(campaign)}`;
   if (el.dataset.tt == null) el.title = tableTip(); // the hover moves it to data-tt; the rows below change, the line doesn't
   let more = el.querySelector(':scope > template.tt-more');
@@ -4107,6 +4109,7 @@ function goTo(target) {
   const [where, what, sub] = target.split(':');
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
   else if (where === 'store') go('store');
+  else if (where === 'runner') { mapRunner = what; mapRunnersAt = null; runnerMode = 'runner'; const fl = runnerFloor(campaign, what); if (fl && fl <= (campaign.floors?.reached || 1)) mapFloor = fl; go('map'); } // a runner's transmission: their card (Hire)
   else if (where === 'server') { mapSel = 'server'; go('map'); }
   else if (where === 'hub') { openHub(what); if (sub) pickHub(sub); } // hub:<faction>:<window> opens straight to it (a market shock's tile)
   else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what?.startsWith('con=')) { mapView = 'consortium'; mapSel = what.slice(4); } else if (what) { mapSel = what; mapPop = true; } go('map'); }

@@ -23,6 +23,7 @@ import { developerTicker } from './ticker.mjs';
 import { RUN_CARDS, dealCard } from './runcards.mjs';
 import { crewCommand } from './crew.mjs';
 import { runnerOf, cutOf } from './runners.mjs';
+import { openUp } from './progression.mjs';
 import { presenceCommand, at, peopleOn, PRESENCE, online } from './presence.mjs';
 import { profileCommand } from './profile.mjs';
 import { achieveCommand, developerAchieve } from './achievements.mjs';
@@ -733,6 +734,7 @@ export function bank(s, loc, why = '', lost = false) {
   const banked = [...(credits ? [packGain({ kind: 'credits' }, credits)] : []), ...pack.filter((f) => f.kind !== 'credits' && f.kind !== 'code').map((f) => packGain(f)), ...Object.entries(code).map(([material, amount]) => packGain({ kind: 'code', material, amount }))];
   const said = [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'filter').map((f) => f.filter.name), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ');
   if (!lost) emit(s, 'jacked-out', `${why ? why + ' ' : ''}JACKED OUT of ${loc.name}. Banked: ${pack.length ? said : 'nothing'}.`, { gains: banked, out: loc.id });
+  if (!lost) openUp(s, 'blips'); // the first jack out (progression.mjs)
   else if (pack.length) emit(s, 'info', `Banked: ${said}.`, { gains: banked, out: loc.id });
   if (clean) { emit(s, 'clean-job', `Clean job: in and out at ${Math.round(r0.trace || 0)}% trace.`); gainXp(s, deedXpFor(s, levelOf(loc), TRACE.cleanXp), 'clean job', 'breakin'); }
   gainCode(s, code, 'Banked: ');

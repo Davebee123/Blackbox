@@ -9,21 +9,37 @@ export { SCENES };
 
 const T = (s) => (s.scenes ||= { seen: [], queue: [], now: null });
 export const fill = (text, args = {}) => String(text).replace(/\{(\w+)\}/g, (m, k) => (args[k] != null ? String(args[k]) : m));
+// A line: a string, or one per speaker ({ careful, steady, bold }: args.v; a rival's 'careful-won': args.v2).
+const say = (l, args) => fill(typeof l === 'string' ? l : l[args.v2] ?? l[args.v] ?? Object.values(l)[0], args);
+// Who's talking: the scene's who, filled (a runner's handle).
+export const whoOf = (def, args = {}) => fill(def.who, args);
+// The event transmissions wait their turn: one at least GAP_MS of play (s.pace.ms) after the last closed. The two
+// that open the game (soon: welcome, first-server) play at once.
+export const GAP_MS = 10 * 60_000;
+const SOON = new Set(['welcome', 'first-server']);
+const playMs = (s) => s.pace?.ms || 0;
 export const sceneNow = (s) => s.scenes?.now || null;
 export const heardWelcome = (s) => !!s.scenes && (s.scenes.seen.includes('welcome') || s.scenes.now?.id === 'welcome');
 
 function open(s, q) {
   const def = SCENES[q.id];
   const now = { id: q.id, args: q.args || {}, node: 'start', heard: ['start'], said: [], step: 0 };
-  for (const l of def.nodes.start.lines || []) now.said.push({ who: def.who, text: fill(l, now.args), step: 0 });
+  for (const l of def.nodes.start.lines || []) now.said.push({ who: whoOf(def, now.args), text: say(l, now.args), step: 0 });
   T(s).now = now;
 }
 // Start a scene (once ever), or queue it behind the one playing. Returns whether it was taken.
 export function queueScene(s, id, args = {}) {
   const t = T(s);
   if (!SCENES[id] || t.seen.includes(id) || t.now?.id === id || t.queue.some((q) => q.id === id)) return false;
-  if (t.now) t.queue.push({ id, args }); else open(s, { id, args });
+  if (t.now || !due(s, id)) t.queue.push({ id, args }); else open(s, { id, args });
   return true;
+}
+const due = (s, id) => SOON.has(id) || s.scenes?.lastAt == null || playMs(s) - s.scenes.lastAt >= GAP_MS;
+// The play clock's tick (app.js, the bot): the next queued transmission once the gap has run.
+export function tickScenes(s) {
+  const t = s.scenes;
+  const k = t && !t.now ? t.queue.findIndex((q) => due(s, q.id)) : -1;
+  if (k >= 0) open(s, t.queue.splice(k, 1)[0]);
 }
 // The choices on screen now: { n, label, end }, in order (a node you've heard is gone).
 export function choicesOf(s) {
@@ -37,7 +53,8 @@ function finish(s) {
   const t = T(s);
   if (t.now && !t.seen.includes(t.now.id)) t.seen.push(t.now.id);
   t.now = null;
-  if (t.queue.length) open(s, t.queue.shift());
+  t.lastAt = playMs(s);
+  tickScenes(s);
 }
 // Answer with choice n (1-based). Returns { go } when the answer ends the scene somewhere (a page), {} when it ends
 // it, the scene going on otherwise; null for no such choice.
@@ -48,7 +65,7 @@ export function choose(s, n) {
   if (node.end) { const go = node.end === true ? null : fill(node.end, now.args); finish(s); return go ? { go } : {}; }
   now.step++;
   now.said.push({ who: 'you', text: c.label, step: now.step });
-  for (const l of node.lines || []) now.said.push({ who: def.who, text: fill(l, now.args), step: now.step });
+  for (const l of node.lines || []) now.said.push({ who: whoOf(def, now.args), text: say(l, now.args), step: now.step });
   now.node = c.id;
   now.heard.push(c.id);
   return { more: true };

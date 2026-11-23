@@ -12,6 +12,7 @@ import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, QUIRKS, quirkOf, createVir
 import { gainDaemon, rollDaemon } from './daemons.mjs';
 import { SERVICES, codeOf, uniqueItem, MATERIALS } from './gear.mjs';
 import { pickOrigin, connectedTo } from './hidden.mjs';
+import { isOpen } from './progression.mjs';
 import { emit, warn, rand, active, holding, selectEncounter, endInvasion, command, hackerLevel, syncServer, addItem, UNIQUES, listenBoost } from './combat.mjs';
 import { nativeStrain } from './network.mjs';
 import { sendShift, sendTravel, pickSender, hasSpecial } from './specials.mjs';
@@ -114,7 +115,7 @@ export function tickNetwork(s, now = Date.now()) {
   const gap = Math.max(0, now - prev), dt = Math.min(gap, I().maxTickMs);
   rest(s, gap - dt); // logged off: every minute banks Rested
   tickEvents(s, dt); // the event director deals what happens on the net
-  if (tickTable(s, dt)) emit(s, 'table-cancel', 'LANTERN runs a cancel round. The process table drops eight points.'); // INIT's table (table.mjs): logged-on time fills it
+  if (isOpen(s, 'table') && tickTable(s, dt)) emit(s, 'table-cancel', 'LANTERN runs a cancel round. The process table drops eight points.'); // INIT's table (table.mjs): logged-on time fills it
   tickConsortium(s, dt, now); // the dividend, sieges, raids, the travelling virus, invites (consortium.mjs)
   tickProfile(s); // deeds from the log, and a title just earned (profile.mjs)
   tickChannel(s, dt); // #net, the public channel: news, contacts and who's chatting (channel.mjs)
@@ -140,6 +141,7 @@ function stepInvasion(s, dt) {
   const net = s.net, inv = s.invasion;
   if (!inv) {
     if (!(s.locations || []).some(connectedTo)) return; // nothing sends one until you've connected to a server
+    if (!isOpen(s, 'invasions')) return; // a new character: until a server is mapped or taken over (progression.mjs)
     if (net.next == null) net.next = I().firstMs;
     net.next -= dt;
     if (net.next <= 0) depart(s);

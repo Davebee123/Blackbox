@@ -23,6 +23,7 @@ import { zoneRooms } from './zone.mjs';
 import { marketRead } from './market.mjs'; // called at play, never at load (market.mjs reaches back here through events.mjs)
 import { FACTIONS, FACTION_IDS, hubsOf } from './factions.mjs';
 import { graphOf, locAt, floorsOf, exitOpen } from './floors.mjs';
+import { isOpen, openUp } from './progression.mjs';
 
 export const RUNNERS = {
   cast: 8, // runners on a network at once (few enough that a floor's map stays quiet)
@@ -349,7 +350,7 @@ export const HIRE = {
   cut: 0.1, // of the credits each run banks, while they're with you
   haggler: 0.5, // Haggler: half the cut
   recoverMs: 10 * 60000, // logged-on time from 0 Integrity back to full
-  from: 5, // your level
+  from: 5, // your level, on an older save (a new character: the first runner you help; progression.mjs OPENS)
   sig: [0.35, 0.85], // a runner's Integrity in a room you find them fighting in
 };
 const entryOf = (s, h) => s.runners?.known?.[h] || null;
@@ -374,6 +375,7 @@ export function raiseStanding(s, h, n, met = '') {
   k.standing = Math.min(100, standingOf(s, h) + gainOf(r, n));
   if (met && !k.met) k.met = met;
   const after = tierOf(k.standing);
+  if (after.i >= 1) openUp(s, 'trade'); // Known: their trade can turn up (sites.mjs; progression.mjs)
   return after.i > before ? after : null;
 }
 
@@ -475,6 +477,7 @@ export function pulledOut(s, roomId) {
   const tier = raiseStanding(s, v.h, STANDING.help, `You pulled them out of a crash on ${loc?.name || 'a server'}.`);
   if (loc?.slot && s.runners?.down) delete s.runners.down[loc.slot];
   s.rooms.visit.dead = null;
+  openUp(s, 'hire', voiceOf(runnerOf(s, v.h))); // the first runner you help offers to join (progression.mjs)
   return { h: v.h, standing: standingOf(s, v.h), tier };
 }
 // A room you helped them win: standing up, and they leave the room (helped on this job).
@@ -485,14 +488,18 @@ export function helped(s, h) {
   const tier = raiseStanding(s, h, STANDING.help, `You helped them clear a room on ${loc?.name || 'a server'}.`);
   runnersOf(s).known[h].helped = st.k;
   if (m?.h === h) s.rooms.visit.runner = null;
+  openUp(s, 'hire', voiceOf(r)); // the first runner you help offers to join (progression.mjs)
   return { standing: standingOf(s, h), tier };
 }
+
+// A runner's words in a transmission (scenes.mjs): their handle, faction and temperament.
+export const voiceOf = (r) => ({ handle: r.handle, faction: FACTIONS[r.faction]?.name || r.faction, v: String(r.temper).toLowerCase() });
 
 // ---------- hiring ----------
 // What stands between you and hiring them: a reason, or null.
 export function cantHire(s, r) {
   if (hired(s, r.handle)) return 'already in your crew';
-  if (hackerLevel(s) < HIRE.from) return `from level ${HIRE.from}`;
+  if (!isOpen(s, 'hire', hackerLevel(s) >= HIRE.from)) return s.opens ? 'help a runner first' : `from level ${HIRE.from}`; // what opens when (progression.mjs)
   const b = busyOf(s, r);
   if (b) return b.why === 'recovering' ? 'recovering' : 'crashed out';
   if ((s.crewSim || []).length >= 3) return 'crew full';
