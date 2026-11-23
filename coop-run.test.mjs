@@ -183,10 +183,10 @@ test('co-op: the host going down sits out the fight while the guest stands, and 
   assert.equal(P.host.run.integrity, Math.round(P.host.run.max * 0.25), 'back at 25%');
 });
 
-test('co-op: every player down is a disconnect for everyone, each visit undone on its own save; a jack out keeps it, and so does the host dropping', () => {
+test('co-op: every player down is a disconnect for everyone, each keeping what their visit paid; a jack out keeps it, and so does the host dropping', () => {
   const P = pairUp();
   play(P.host, 'connect ' + traced(P.host).id); P.tick();
-  const xp0 = JSON.stringify(P.guest.hackers), int0 = P.guest.server.integrity;
+  const xp0 = JSON.stringify(P.guest.hackers);
   fightIn(P); win(P);
   assert.notEqual(JSON.stringify(P.guest.hackers), xp0, 'the guest earned XP on the visit');
   fightIn(P);
@@ -194,8 +194,8 @@ test('co-op: every player down is a disconnect for everyone, each visit undone o
   for (let i = 0; i < 60 && active(P.host); i++) { P.host.run.integrity = 0; command(P.host, 'now'); }
   P.tick();
   assert.equal(P.host.run, null, 'everyone down: the host disconnects');
-  assert.equal(JSON.stringify(P.guest.hackers), xp0, 'and the guest\'s visit is undone');
-  assert.equal(P.guest.server.integrity, int0);
+  assert.notEqual(JSON.stringify(P.guest.hackers), xp0, 'and the guest keeps their visit');
+  assert.equal(P.guest.server.integrity, 1, 'home at 1, as a disconnect');
   // A jack out keeps it.
   const loc = traced(P.host); loc.lockUntil = 0; loc.floorplan.reconnectAt = 0;
   P.host.server.integrity = P.host.server.max;

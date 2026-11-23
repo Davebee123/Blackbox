@@ -15,7 +15,7 @@ import { matesOf, mateUp, mateSignal, CREW } from './crew.mjs';
 import { currentLocation } from './run.mjs';
 import { ROOMS } from './floorplan.mjs';
 import { XP, GUARDS, ELITE, layerOf } from './data.mjs';
-import { warmOf, snapSave, revertSave } from './visit.mjs';
+import { warmOf } from './visit.mjs';
 
 export const COOP = {
   v: 1,
@@ -279,7 +279,7 @@ function roomShares(H) {
 }
 
 // The end of the host's run, to each guest: 'out' (the host jacked out: everyone's visit is saved, and each writes back
-// the Integrity they carry) or 'lost' (every player went down: a disconnect, each visit undone on its own save).
+// the Integrity they carry) or 'lost' (every player went down: a disconnect, each keeping what their visit paid).
 function visitEnd(H) {
   const s = H.s, id = String(H.runKey).replace(/:\d+$/, ''), R = (s.locations || []).find((l) => l.id === id)?.floorplan || s.rooms;
   const end = R?.last?.result === 'lost' ? 'lost' : 'out';
@@ -298,9 +298,9 @@ export function guestGame(G) {
   G.hears = (m) => {
     if (m.t === 'visit') return guestVisitEnd(G, m.end, m.integrity);
     if (m.t !== 'snap') return;
-    // The guest's own save, snapped as they join the host's run (visit.mjs snapSave): a wipe puts it back.
+    // The host's visit this guest is on (its end, guestVisitEnd, settles it once).
     const key = m.run ? `${m.run.loc}:${m.loc?.floorplan?.visits ?? 0}` : null;
-    if (key && key !== G.runKey) { G.runKey = key; G.visit = snapSave(G.save); }
+    if (key && key !== G.runKey) { G.runKey = key; G.visit = true; }
     Object.assign(G.chars, m.chars || {});
     const paid = (m.rewards || []).flatMap((r) => payReward(G.save, r));
     const fresh = [...remap(m.logs || [], m.host, m.you), ...paid.map((e) => ({ ...e }))].map((e) => ({ ...e, id: ++G.serial }));
@@ -322,13 +322,13 @@ export function guestGame(G) {
   G.sendChar = () => { if (G.joined && !G.closed) G.link.send({ t: 'char', char: characterOf(G.save) }); };
   return G;
 }
-// The host's run over, on the guest's save: 'out' keeps what the visit paid and writes back the Integrity they carry
-// (integrity: the host's count; without it, the last snapshot's); 'lost' undoes the visit (revertSave).
+// The host's run over, on the guest's save: either way it keeps what the visit paid. 'out' writes back the Integrity
+// they carry (integrity: the host's count; without it, the last snapshot's); 'lost' comes home at 1, as a disconnect.
 function guestVisitEnd(G, end, integrity) {
-  const s = G.save, snap = G.visit;
+  const s = G.save, on = G.visit;
   G.visit = null; G.runKey = null;
-  if (!snap) return;
-  if (end === 'lost') { revertSave(s, snap); note(G, 'visit-lost', 'Every player went down. Your visit is undone.', { end }); }
+  if (!on) return;
+  if (end === 'lost') { s.server.integrity = 1; note(G, 'visit-lost', 'Every player went down. You keep what the visit paid.', { end }); }
   else {
     const me = G.snap?.party?.find((p) => p.who === G.snap.you), max = maxSignal(s);
     const n = integrity ?? (me ? (me.enc ? me.run.integrity : me.sig) : null);

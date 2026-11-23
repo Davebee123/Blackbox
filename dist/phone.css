@@ -338,7 +338,7 @@
 [data-form='phone'] body.ph-rooms #page-view .fp-acts .btn:disabled { opacity: 0.4; }
 [data-form='phone'] body.ph-rooms.noticed #page-view .fp-acts { bottom: calc(var(--ph-bar) + 48px); } /* over the log line, never under it */
 [data-form='phone'] body.ph-rooms .command-dock #notice { max-height: 36px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } /* one line; a tap shows it whole */
-/* The stake (Phase 2): the visit's XP, contract steps and Pack at the capsule's left end */
+/* The stake (Phase 6): the Warm cache and the Pack at the capsule's left end */
 [data-form='phone'] body.ph-rooms #page-view .fp-acts .fp-stake { gap: 8px; margin: 0; padding: 0 4px 0 12px; border-right: 1px solid var(--line-strong); }
 [data-form='phone'] body.ph-rooms #page-view .fp-acts .fp-stake b { font: 600 var(--ph-small) var(--mono); }
 [data-form='phone'] body.ph-map .map-pick summary { display: flex; align-items: center; }

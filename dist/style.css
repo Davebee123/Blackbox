@@ -3243,16 +3243,9 @@ details.map-pick { pointer-events: auto; }
 /* The No carrier card (recap.mjs restoreMarkup, foldMarkup): the image you're back to, its Integrity a teal bar (you), the
    visit struck through, the net's time in a muted line; what took you out folded on one red row over the recap. */
 .rs { display: grid; gap: 7px; margin: 4px 0 10px; cursor: help; }
-.rs-top { display: flex; align-items: center; gap: 8px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--you); }
-.rs-top .glyph, .rs-net .glyph { width: 13px; height: 13px; flex: none; }
-.rs-top time { margin-left: auto; font: 600 11px var(--mono); letter-spacing: 1px; color: var(--muted); }
-.rs-row { display: flex; align-items: center; gap: 8px; }
-.rs-bar { position: relative; flex: 1; height: 6px; border: 1px solid rgba(127, 209, 199, 0.5); background: rgba(127, 209, 199, 0.06); }
-.rs-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--you); }
-.rs-pc { font: 600 11px var(--mono); color: var(--you); font-variant-numeric: tabular-nums; }
 .rs-undone { display: flex; flex-wrap: wrap; gap: 6px; }
-.rs-undone s { padding: 2px 8px; font: 600 12px var(--mono); color: var(--gray); border: 1px solid var(--line); border-radius: 2px; }
-.rs-net { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font: 11px var(--mono); color: var(--muted); cursor: help; }
+.rs-undone s { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; font: 600 12px var(--mono); color: var(--gray); border: 1px solid var(--line); border-radius: 2px; }
+.rs-undone .glyph { width: 13px; height: 13px; flex: none; }
 .rc-fold { margin: 0 0 6px; }
 .rc-fold > summary { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-left: 2px solid var(--hot); background: rgba(255, 91, 61, 0.06); font: 600 12px var(--mono); color: var(--text); cursor: pointer; list-style: none; }
 .rc-fold > summary::-webkit-details-marker { display: none; }

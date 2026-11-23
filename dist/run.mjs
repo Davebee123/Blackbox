@@ -39,7 +39,6 @@ import { biasCode, netOf } from './network.mjs';
 import { showCard } from './genome.mjs';
 import { owned, procIn, procOf, rootFileInfo, rootFiles, rootOf, CACHE_FILE, STASH_DIR, STASH_FILE } from './root.mjs';
 import { enterRooms, roomsFor } from './netrooms.mjs';
-import { snapVisit } from './visit.mjs';
 import { roomsCommand, jackOut as roomsJackOut, settle as roomsSettle, hereOf, FIGHTS, roomList, neighbours, isUp, coreOpen, walkToRoom, seenOf, fightOf, offlineLeft, WORLD as ROOMS_WORLD, xpTotal } from './floorplan.mjs';
 import { threadCommand, developerThread, isDark } from './threads.mjs';
 export { zoneOf, zoneRooms };
@@ -441,7 +440,6 @@ export function connect(s, id) {
       emit(s, 'run-start', `CONNECTED to ${loc.name}${zone ? ', a rogue server' : loc.member ? `, ${loc.member}'s server` : loc.rogue ? `, a rogue server (${ROGUE.kinds[loc.rogue.kind].name})` : ''}.${rooms}${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}`, { location: loc.id, rooms: true });
     }
     if (firstVisit) gainXp(s, deedXpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`, 'breakin');
-    snapVisit(s, loc, hooks.now?.() ?? Date.now(), xpTotal(s)); // jack out keeps the visit, a disconnect puts this back (visit.mjs)
     return since(s, first);
   }
   return since(s, first);
@@ -689,7 +687,9 @@ export function jackOut(s) {
   return bank(s, currentLocation(s));
 }
 // Bank the run's pack and go home (a jack out, on rooms or the old file system). why: a line before the message.
-export function bank(s, loc, why = '') {
+// lost: a disconnect (combat.mjs disconnect): the pack banks the same, and disconnect does the rest (Integrity, the
+// wait, its card).
+export function bank(s, loc, why = '', lost = false) {
   const r0 = s.run;
   // A contract's item you carried (mail.mjs, an Install job): back in your stash for the next run, not banked loot.
   for (const f of s.run.pack.filter((x) => x.kind === 'payload')) payloadHome(s, f);
@@ -709,27 +709,31 @@ export function bank(s, loc, why = '') {
   // Scavenge: more credits from what you bank.
   credits = Math.round(credits * (1 + scavengeOf(s) / 100));
   // A clean job: the vault opened and the trace still low.
-  const clean = !!s.run.cracked && !s.run.hunter && (s.run.trace || 0) < TRACE.clean;
+  const clean = !lost && !!s.run.cracked && !s.run.hunter && (s.run.trace || 0) < TRACE.clean;
   if (clean) credits += Math.round(credits * TRACE.cleanCredits);
   // Hired runners take their cut (runners.mjs cutOf), each of what the run banks.
   const cuts = (s.crewSim || []).filter((x) => x.runner && runnerOf(s, x.name)).map((x) => [x.name, Math.round(credits * cutOf(runnerOf(s, x.name)))]).filter(([, n]) => n > 0);
   for (const [h, n] of cuts) { credits -= n; emit(s, 'info', `${h}'s cut: ${n} credits.`, { runner: h, cut: n }); }
   s.server.credits += credits;
   const items = pack.filter((f) => f.kind === 'item').map((f) => f.item);
-  s.server.integrity = Math.max(1, s.run.integrity);
-  s.server.max = s.run.max;
   s.run = null;
-  if (r0.fled) loc.lockUntil = clock() + relockWait((loc.deaths = (loc.deaths || 0) + 1)); // out mid-fight: a disconnect's wait
-  else {
-    if (relocks(loc)) loc.lockUntil = clock() + ROGUE.relockMs;
-    delete loc.deaths; // a clean jack out: the next disconnect waits the plain 30 seconds again (combat.mjs relockWait)
+  if (!lost) {
+    s.server.integrity = Math.max(1, r0.integrity);
+    s.server.max = r0.max;
+    if (r0.fled) loc.lockUntil = clock() + relockWait((loc.deaths = (loc.deaths || 0) + 1)); // out mid-fight: a disconnect's wait
+    else {
+      if (relocks(loc)) loc.lockUntil = clock() + ROGUE.relockMs;
+      delete loc.deaths; // a clean jack out: the next disconnect waits the plain 30 seconds again (combat.mjs relockWait)
+    }
+    if (s.encounter?.mode === 'run') s.encounter = null;
+    if (s.parked) { s.encounter = s.parked; s.parked = null; }
+    if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
   }
-  if (s.encounter?.mode === 'run') s.encounter = null;
-  if (s.parked) { s.encounter = s.parked; s.parked = null; }
-  if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
   // The card: credits as one row (after Scavenge), everything else as it came.
   const banked = [...(credits ? [packGain({ kind: 'credits' }, credits)] : []), ...pack.filter((f) => f.kind !== 'credits' && f.kind !== 'code').map((f) => packGain(f)), ...Object.entries(code).map(([material, amount]) => packGain({ kind: 'code', material, amount }))];
-  emit(s, 'jacked-out', `${why ? why + ' ' : ''}JACKED OUT of ${loc.name}. Banked: ${pack.length ? [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'filter').map((f) => f.filter.name), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ') : 'nothing'}.`, { gains: banked, out: loc.id });
+  const said = [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'filter').map((f) => f.filter.name), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ');
+  if (!lost) emit(s, 'jacked-out', `${why ? why + ' ' : ''}JACKED OUT of ${loc.name}. Banked: ${pack.length ? said : 'nothing'}.`, { gains: banked, out: loc.id });
+  else if (pack.length) emit(s, 'info', `Banked: ${said}.`, { gains: banked, out: loc.id });
   if (clean) { emit(s, 'clean-job', `Clean job: in and out at ${Math.round(r0.trace || 0)}% trace.`); gainXp(s, deedXpFor(s, levelOf(loc), TRACE.cleanXp), 'clean job', 'breakin'); }
   gainCode(s, code, 'Banked: ');
   for (const f of gear) addItem(s, f.item, 'Banked: ');
@@ -1089,6 +1093,7 @@ export { guarded, locked };
 // A server's open folders, for who's where on the consortium's ground (presence.mjs).
 hooks.foldersOf = (l) => Object.keys(layoutOf(l)).filter((p) => p !== '/' && !layoutOf(l)[p].locked);
 hooks.jackOut = (s) => jackOut(s); // Deadman's Switch (combat.mjs)
+hooks.bank = bank; // a disconnect banks the pack too (combat.mjs disconnect)
 hooks.flee = (s) => {
   if (!s.run) return;
   s.run.fled = true; // the reconnect wait counts it as a disconnect (bank, floorplan.mjs jackOut)

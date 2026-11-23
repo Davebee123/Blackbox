@@ -157,7 +157,7 @@ test('jack out banks the pack; a pulled signal file leads deeper', () => {
   assert.ok(loc.state.taken['/relay/cache.dat']);
 });
 
-test('losing all Integrity disconnects you, loses the pack and spares the server', () => {
+test('losing all Integrity disconnects you at 1 Integrity, banks the pack and spares the server', () => {
   const s = onRun();
   say(s, 'cd relay');
   command(s, 'engage');
@@ -166,8 +166,8 @@ test('losing all Integrity disconnects you, loses the pack and spares the server
   s.encounter.cycle = part(s, 'sentry').attack.due;
   resolveCycle(s);
   assert.equal(s.run, null);
-  assert.equal(s.server.integrity, 100);
-  assert.equal(s.server.credits, CONFIG.startingCredits);
+  assert.equal(s.server.integrity, 1);
+  assert.ok(s.server.credits >= CONFIG.startingCredits + 99, 'the pack banked');
   assert.ok(s.logs.some((e) => e.type === 'disconnected'));
 });
 

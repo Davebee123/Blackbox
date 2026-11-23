@@ -5,7 +5,6 @@ import { rep } from './dist/factions.mjs';
 import { priceOf } from './dist/market.mjs';
 import { SUPPLY, supplyOf } from './dist/supply.mjs';
 import { hubOptions, hubTerminalMarkup } from './dist/view.mjs';
-import { snapVisit, revertVisit } from './dist/visit.mjs';
 
 const open = () => { const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; return s; };
 const at = (s, L) => { hackerOf(s).level = L; return s; };
@@ -88,17 +87,3 @@ test("the hub's menu line shows the ware and what you hold, lit once you hold en
   assert.match(hubTerminalMarkup(s, 'lantern', [], 'order'), /The next order comes in 60 min of play\./);
 });
 
-test('a disconnect undoes a delivery made on the run: the ware, the credits, the rep and the order', () => {
-  const s = at(open(), 10);
-  materialsOf(s).kernel = 15;
-  const c0 = s.server.credits, k0 = rep(s, 'kestrel');
-  s.run = {};
-  snapVisit(s, null);
-  command(s, 'deliver kestrel');
-  assert.equal(materialsOf(s).kernel, 0);
-  revertVisit(s, s.run.snap, null);
-  assert.equal(materialsOf(s).kernel, 15);
-  assert.equal(s.server.credits, c0);
-  assert.equal(rep(s, 'kestrel'), k0);
-  assert.ok(supplyOf(s, 'kestrel').ready, 'the order is open again');
-});

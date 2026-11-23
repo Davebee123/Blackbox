@@ -151,7 +151,7 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/run.mjs` | Runs: connecting, the pack, banking at jack out, the run commands on rooms. |
-| `dist/visit.mjs` | A visit: the snap of your progress taken at connect, the revert a disconnect plays (an allowlist of what goes back), a co-op guest's own snap, and the Warm cache. |
+| `dist/visit.mjs` | A visit's Warm cache (all a disconnect loses) and the migration that drops an old run's snap. |
 | `dist/floorplan.mjs` | A server as a graph of rooms: moving, fights, caches, the hunter, the vault and the Core; the server kinds, a Router's one-way links among them; the reboot (a traced server's fight rooms come back together once all have fallen; a Mapped one goes offline for it: offlineLeft). |
 | `dist/objectives.mjs` | A room fight's objective (`e.objective`): Priority, Uptime, Backup, Clean run and the Exfil's upload, their roll, rules, board text and bonus. |
 | `dist/netrooms.mjs` | Every server on the real save as a room graph, kept on its location; takeover and Root rooms. |
@@ -235,7 +235,7 @@ comment saying what it does.
 | `dist/casing.mjs`, `dist/casing-view.mjs`, `dist/casing.css` | Casing cosmetics: the monitor color and plate, stickers anywhere on its plastic, props on the desk or on top. Rig → Casing is a rail of sections beside the open one's pane. |
 | `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on Rig → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |
 | `dist/house.mjs`, `dist/house-view.mjs`, `dist/house.css`, `dist/content/furniture.mjs` | Your house on Rig → **House**: floors opened by achievement points, furniture from achievements, placed by click. |
-| `dist/recap.mjs` | The No carrier card's restore line and the death recap folded under it. |
+| `dist/recap.mjs` | The No carrier card's struck Warm cache and the death recap folded under it. |
 | `dist/uiscale.mjs` | UI scale: the whole screen drawn larger or smaller. |
 | `dist/form.mjs`, `dist/phone-shell.mjs`, `dist/sheet.mjs`, `dist/phone.css` | The phone: the one "is this a phone" answer (`<html data-form>`), its tab bar and More, the one bottom sheet (every pop-up on a phone: app.js `phPops` lifts each into it), every phone rule, the fight on one screen, the maps full bleed (docs/phone-plan.md). |
 
@@ -244,7 +244,7 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/crew.mjs` | Crewmates in your fights (hired runners, `crew sim` bots, a runner you help), played by the planner. |
-| `dist/coop.mjs` | Peer-to-peer co-op sessions: the host runs the world, a guest sends commands; the run's end saves or undoes each player's visit. |
+| `dist/coop.mjs` | Peer-to-peer co-op sessions: the host runs the world, a guest sends commands; the run's end settles each player's visit on their own save. |
 | `dist/coop-net.mjs` | Co-op transports: in memory, BroadcastChannel, WebRTC. |
 | `dist/coop-char.mjs` | The character a guest sends the host. |
 | `dist/coop-ui.mjs`, `dist/coop.css` | The Co-op panel. Developer mode only. |

@@ -41,7 +41,7 @@
 .fp-hunt .fp-ic, .fp-hunt b { color: var(--hot); }
 .fp-reboot.on b { color: var(--hot); } /* the rooms are coming back */
 .fp-hunt.out .fp-ic, .fp-hunt.out b { color: var(--gray); }
-/* This visit (visit.mjs): what you've won since you connected, unsaved until you jack out. A dashed box, amber numbers. */
+/* This visit (visit.mjs): the Warm cache beside Jack out, all a disconnect loses. A dashed box, amber numbers. */
 .fp-visit { gap: var(--s4); padding: 2px var(--s4); border: 1px dashed var(--line-strong); border-radius: 2px; }
 .fp-visit b { color: var(--amber); }
 .fp-visit b small { margin-left: 3px; font: 600 10px var(--mono); letter-spacing: 1px; color: var(--dim); text-transform: uppercase; }
@@ -69,7 +69,6 @@
 .fp-packpop li small { color: var(--muted); font: 12px var(--mono); }
 .fp-packpop li .glyph { flex: none; width: 15px; height: 15px; }
 .fp-packpop li.none { color: var(--dim); }
-.fp-unsaved { font: 600 9px var(--mono); letter-spacing: 1px; fill: var(--amber); pointer-events: none; }
 .fp-exfilstat .fp-ic, .fp-exfilstat b { color: var(--next); }
 .fp-tools { margin-left: auto; display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s4) var(--s5); min-width: 0; }
 .fp-rules { display: inline-flex; align-items: center; gap: var(--s2); }

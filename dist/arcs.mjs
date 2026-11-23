@@ -176,8 +176,8 @@ function setup(s, c) {
 export function arcTick(s, at = nowOf()) {
   if (!s.mail?.jobs || !s.mail.list || !boardOpen(s)) return; // a mail state with no letters (a test's) has nowhere to post
   const A = arcsOf(s);
-  // A death rolls s.arcs back to the connect (visit.mjs PROGRESS) while mail received meanwhile stays: a step posted
-  // during the visit is held, so its chain is under way. A save that posted it twice drops the copy.
+  // A chain whose step is in your mail is under way, whatever s.arcs says (a save from when a death rolled s.arcs back
+  // to the connect); a step posted twice drops the copy.
   const held = {};
   for (const c of openContracts(s).filter((x) => x.chain)) {
     const k = `${c.chain}:${c.step}`;

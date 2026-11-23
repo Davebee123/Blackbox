@@ -551,20 +551,6 @@ export function payloadHome(s, f) {
   const c = openContracts(s).find((x) => x.id === f.contract);
   if (c && !c.got) { c.carry = 'stash'; emit(s, 'info', `${cap(c.label)} goes back in your stash for next time.`, { contract: c.id }); }
 }
-// Disconnected (combat.mjs disconnect, past Deadman's Switch): an item in the pack is lost, and its job fails. It can
-// come round again later.
-// Returns the failed jobs' titles (the Disconnected card lists them).
-export function contractPackLost(s, run) {
-  const failed = [];
-  for (const f of (run?.pack || []).filter((x) => x.kind === 'payload')) {
-    const c = openContracts(s).find((x) => x.id === f.contract);
-    if (!c) continue;
-    s.mail.jobs.splice(s.mail.jobs.indexOf(c), 1);
-    failed.push(title(s, c));
-    emit(s, 'warning', `Contract failed: ${title(s, c)}. ${cap(c.label)} went down with your Integrity.`, { contract: c.id, failed: true });
-  }
-  return failed;
-}
 // `install` (or `plant`) in a room on a server you carry an item for: undefined if you carry none for this server or
 // you named a program (install <program> builds); true when it's said its piece.
 export function contractInstall(s, loc, room, arg = null) {

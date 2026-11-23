@@ -43,7 +43,7 @@ import { PICKED as SOUND_STYLE, hasSound } from './abilitysound.mjs';
 import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, idOfName, winningBreak, slowAt, SLOW, levelOf as afxLevel } from './abilityfx.mjs';
 import { tierOf as masteryTier } from './mastery.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
-import { restoreMarkup, foldMarkup } from './recap.mjs';
+import { warmLostMarkup, foldMarkup } from './recap.mjs';
 import { createLash, shakeOf, SHAKE } from './lash.mjs';
 import { createChipFx, chipStrike, chipTheme, STRIKES, STRIKE_PLAN } from './chipfx.mjs';
 import { ATTACKS, OWN_PLAN } from './virussound.mjs';
@@ -1282,21 +1282,19 @@ function receiptCard(e, events) {
   const name = campaign.locations?.find((l) => l.id === e.location)?.name || '';
   showGain(`${name} · Taken over`, '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code'].includes(x.type) && x.id > e.id - 6)), false, V.receiptLead(campaign, e.receipt), false);
 }
-// Losing a run, folded (recap.mjs): the image you're back to (visit.mjs: the visit undone, struck through) and how long
-// the net ran on; what took you out as one row that opens on the death recap; and when you can go back.
+// Losing a run, folded (recap.mjs): the Warm cache struck through (visit.mjs: all a disconnect loses); what took you out
+// as one row that opens on the death recap; and when you can go back.
 function lossCard(e) {
   const clock = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; }; // rounded up: 59.5 s reads 1:00
   const max = maxSignal(campaign), sig = signalNow(campaign), need = Math.ceil(max * CONFIG.zone.minSignal);
   const fold = foldMarkup(e.recap, e.by);
   const rows = [
     ...(fold ? [] : [{ kind: 'lost', label: e.by ? `Taken out by ${e.by}` : (e.reason || 'Integrity lost'), qty: '', text: 'Integrity lost' }]),
-    ...(e.lost ? [{ kind: 'lost', label: 'Unbanked files', qty: `−${e.lost}`, text: `${e.lost} files lost` }] : []),
-    ...(e.failed || []).map((t) => ({ kind: 'lost', label: `Contract failed: ${t}`, qty: '', text: `Contract failed: ${t}` })), // an Install job's item went with the pack (mail.mjs)
   ];
   // One clock: you can go back once both the reconnect wait and your Integrity allow it, so the later of the two.
   const wait = Math.max(e.relockMs || 0, sig < need ? ((need - sig) / (CONFIG.signalRest * max)) * 60000 : 0);
   if (wait > 0) rows.push({ kind: 'time', label: 'Reconnection possible in', qty: clock(wait), text: `Reconnection possible in ${clock(wait)}` });
-  showGain(e.reverted ? 'No carrier' : 'Disconnected', e.where || '', rows, false, restoreMarkup(e, max, hooks.now?.() ?? Date.now()) + fold);
+  showGain('No carrier', e.where || '', rows, false, warmLostMarkup(e) + fold);
   $('gain').classList.add('loss');
   // The clock counts down while the card is up, and stops with it.
   const until = Date.now() + wait, cell = wait > 0 && $('gain').querySelector('.sp-row.k-time .sp-qty');
@@ -1869,13 +1867,12 @@ function connectTo(e) {
 // Jacking out (bootfx.mjs, the Carrier backwards): from the rooms page your room locks teal and the rooms close in a
 // circle onto the server's node on the map; your signal runs home along a teal line. Screen effects off or Motion off:
 // straight to the map.
-// A disconnect, after NO CARRIER (bootfx.mjs playReboot): your server reboots from its image on the map, then the
-// card. Screen effects off or Motion off, or not on the map: the card at once.
+// A disconnect, after NO CARRIER (bootfx.mjs playReboot): your server reboots on the map, HOME's bar at the Integrity
+// you came home with, then the card. Screen effects off or Motion off, or not on the map: the card at once.
 function reboot(e) {
-  if (!dialFx() || module !== 'map' || !e.reverted) return lossCard(e);
+  if (!dialFx() || module !== 'map') return lossCard(e);
   const sel = e.out && `[data-select="${CSS.escape(e.out)}"]`, shown = (q) => [...$('page-view').querySelectorAll(q)].find((g) => g.getBoundingClientRect().width);
-  const when = e.image?.at ? new Date(e.image.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '';
-  playReboot($('app'), () => (sel ? shown(`${sel} .core`) || shown(sel) : null), when, (e.image?.integrity || 0) / Math.max(1, maxSignal(campaign)), () => lossCard(e));
+  playReboot($('app'), () => (sel ? shown(`${sel} .core`) || shown(sel) : null), '', campaign.server.integrity / Math.max(1, maxSignal(campaign)), () => lossCard(e));
 }
 function hangUp(events) {
   const e = events.findLast((x) => x.type === 'jacked-out'), shown = (q) => [...$('page-view').querySelectorAll(q)].find((g) => g.getBoundingClientRect().width);

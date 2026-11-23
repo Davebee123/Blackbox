@@ -7,6 +7,7 @@
 // is kept. Only yours: a crewmate's events (who) don't count. Pure.
 import { floatOf } from './dmgfx.mjs';
 import { glyph } from './glyphs.mjs';
+import { WARM } from './visit.mjs';
 
 export const RECAP = { cycles: 6, rows: 4 };
 // A tell's icon, as its chip on the board wears it (view.mjs tellChip), and its answer in one short line.
@@ -111,26 +112,14 @@ export function recapMarkup(r) {
     <div class="rc-tots">${tile('took', 'Taken', r.took, `Damage you took over the last ${span}.`)}${tile('healed', 'Healed', r.healed, `Integrity you healed over the last ${span}.`)}${tile('shielded', 'Shielded', r.shielded, `Damage your shields absorbed over the last ${span}.`)}</div></div>`;
 }
 
-// The No carrier card's top (app.js lossCard): the image you're back to, its time and Integrity as a teal bar, what the
-// visit won struck through, and how long the net ran on meanwhile. e: the disconnected event (combat.mjs: image, visit),
-// max: your max Integrity, now: the clock. '' when the visit wasn't undone (a save from before the snap).
-export function restoreMarkup(e, max, now = Date.now()) {
-  const im = e?.reverted && e.image;
-  if (!im) return '';
-  const v = e.visit || {}, n = (k, one, many) => `${(v[k] || 0).toLocaleString('en-US')} ${v[k] === 1 ? one : many}`;
-  const pc = Math.max(0, Math.min(100, Math.round((im.integrity / Math.max(1, max)) * 100)));
-  const when = im.at ? new Date(im.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '';
-  const tip = `Restored: your server is back to the image taken when you connected${when ? ` at ${when}` : ''}. Integrity ${im.integrity}/${max}; the visit's rooms, XP, files, drops and contract steps are undone.`;
-  const chips = [n('rooms', 'room', 'rooms'), n('xp', 'XP', 'XP'), n('files', 'file', 'files'), ...(v.steps ? [n('steps', 'contract step', 'contract steps')] : [])].map((x) => `<s>${esc(x)}</s>`).join('');
-  const passed = im.at ? sinceLabel(now - im.at) : '';
-  return `<div class="rs" title="${esc(tip)}"><div class="rs-top">${glyph('snapshot')}Restored${when ? `<time>image ${esc(when)}</time>` : ''}</div>
-    <div class="rs-row"><span class="rs-bar"><i style="width:${pc}%"></i></span><span class="rs-pc">${pc}%</span></div><div class="rs-undone">${chips}</div></div>${passed ? `
-    <p class="rs-net" title="${esc('The net kept its time: prices, mail, invasions and runners moved on while you were in.')}">${glyph('clock')}${esc(passed)} passed</p>` : ''}`;
-}
-// How long, as the card says it: "1 min", "17 min", "1 h 5 min".
-export function sinceLabel(ms) {
-  const m = Math.max(1, Math.round(ms / 60000)), h = Math.floor(m / 60);
-  return h ? `${h} h${m % 60 ? ` ${m % 60} min` : ''}` : `${m} min`;
+// The No carrier card's top (app.js lossCard): the Warm cache's stacks and their bonus, struck through, all a
+// disconnect loses (visit.mjs). e: the disconnected event (combat.mjs: warm). '' with no stacks.
+export function warmLostMarkup(e) {
+  const n = Math.min(WARM.max, e?.warm || 0);
+  if (!n) return '';
+  const xp = Math.round(WARM.xp * 100 * n), sc = WARM.scavenge * n;
+  const tip = `Warm cache: Lost with the disconnect. Your next visit starts cold.\n▸ ${n} room${n === 1 ? '' : 's'}: +${xp}% XP, +${sc} Scavenge.`;
+  return `<div class="rs" data-tt-kind="Visit bonus" title="${esc(tip)}"><div class="rs-undone"><s>Warm ×${n}</s><s>${glyph('xp')}+${xp}%</s><s>${glyph('scavenge')}+${sc}</s></div></div>`;
 }
 // The death recap folded behind one row: what took you out and what you took; open it for the cycles and the hits.
 export function foldMarkup(r, by) {

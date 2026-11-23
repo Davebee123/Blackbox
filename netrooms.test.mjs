@@ -157,7 +157,7 @@ test('the network map draws a server as its kind\'s glyph (the kind\'s rule on h
   assert.match(mapMarkup(s, loc.id, 'net'), /<svg class="map-svg[^>]*><defs><pattern id="mchart" width="\d+" height="\d+" patternUnits="userSpaceOnUse">.*<\/defs><rect class="mchart"[^>]*fill="url\(#mchart\)"\/>/s);
 });
 
-// The visit (visit.mjs): a disconnect puts you back as you were at connect; jack out keeps it all.
+// The visit (visit.mjs): a disconnect and a jack out both keep what it paid; a disconnect loses the Warm cache.
 const visitWins = (s) => {
   const R = s.rooms;
   const first = FP.roomList(s).find((r) => FP.isUp(s, r) && r.kind === 'process');
@@ -165,46 +165,45 @@ const visitWins = (s) => {
   R.visit.keys.push(R.graph.vaults[0]); enterRoom(s, R.graph.vaults[0]); play(s, 'open');
   return first;
 };
-const progressNow = (s, loc) => JSON.parse(JSON.stringify({ hackers: s.hackers, stash: s.stash, credits: s.server.credits, materials: s.materials, cleared: loc.floorplan.cleared, down: loc.floorplan.down, opened: loc.floorplan.opened, taken: loc.floorplan.taken }));
 
-test('a disconnect undoes the visit: XP, rooms, items, credits, code, the pack and Integrity as they were at connect; mail and the market keep moving', () => {
+test('a disconnect keeps the visit: XP, rooms, contract steps and the pack banked; the Warm cache is lost and Integrity comes home at 1', () => {
   const { s, loc } = traced();
-  play(s, 'connect ' + loc.id); play(s, 'jack out'); clock += 60000; // a visit saved before, so there is progress to keep
-  s.server.integrity = s.server.max - 7;
   play(s, 'connect ' + loc.id);
-  const at = progressNow(s, loc), hp = s.run.integrity;
+  const credits = s.server.credits, job = { id: 'phase6', type: 'kill', got: 0, need: 3 };
+  (s.mail.jobs ||= []).push(job);
   const first = visitWins(s);
-  assert.ok(s.run.pack.length > 0, 'files in the pack');
-  assert.ok(s.rooms.visit.won[first.id], 'a room won this visit');
-  assert.notDeepEqual(progressNow(s, loc).hackers, at.hackers, 'XP gained');
-  // The world moves meanwhile: a letter arrives, the market shifts.
-  const letters = s.mail.list.length;
-  s.mail.list.push({ id: 9999, at: clock, read: false, from: 'wick', subject: 'news', body: ['x'] });
-  s.market = { ...(s.market || {}), moved: clock };
+  job.got = 2; // a contract step on the visit
+  const files = s.run.pack.length, warm = s.rooms.visit.warm, xp = JSON.stringify(s.hackers);
+  assert.ok(files > 0 && warm > 0, 'files in the pack, the Warm cache up');
   loseFight(s);
   assert.equal(s.run, null, 'disconnected');
-  assert.deepEqual(progressNow(s, loc), at, 'XP, items, credits, code and the rooms are back to the connect');
-  assert.equal(s.server.integrity, hp, 'Integrity too');
-  assert.ok(!loc.floorplan.opened[loc.floorplan.graph.vaults[0]], 'the vault shut again');
-  assert.ok(FP.isUp({ ...s, rooms: loc.floorplan }, first) || loc.floorplan.down[first.id] == null, 'the room it cleared fills up again');
-  assert.equal(s.mail.list.length, letters + 1, 'mail received stays');
-  assert.equal(s.market.moved, clock, 'the market keeps its move');
+  assert.equal(JSON.stringify(s.hackers), xp, 'XP kept');
+  assert.ok(loc.floorplan.cleared[first.id], 'the room stays cleared');
+  assert.ok(loc.floorplan.opened[loc.floorplan.graph.vaults[0]], 'the vault stays open');
+  assert.equal(job.got, 2, 'the contract step stays');
+  assert.ok(s.server.credits > credits || s.logs.some((e) => e.type === 'info' && e.gains?.length), 'the pack banked');
+  assert.equal(s.server.integrity, 1, 'home at 1 Integrity');
   const e = s.logs.findLast((x) => x.type === 'disconnected');
-  assert.ok(e.reverted && e.visit.rooms >= 1 && e.visit.xp > 0 && e.visit.files > 0, 'the card lists what the visit lost');
+  assert.equal(e.warm, warm, 'the card strikes the Warm cache through');
   assert.equal(loc.deaths, 1, 'the reconnect wait still grows');
+  loc.lockUntil = 0; loc.floorplan.reconnectAt = 0; s.server.integrity = s.server.max;
+  play(s, 'connect ' + loc.id);
+  assert.equal(s.rooms.visit.warm, 0, 'the next visit starts cold');
+  // A save from before carries a snap on its run: it goes on load.
+  s.run.snap = { at: 1 };
+  assert.ok(!('snap' in restore(JSON.parse(JSON.stringify({ ...s, version: SAVE_VERSION }))).run), 'the snap dropped');
 });
 
-test('jack out keeps the visit: XP, rooms and the pack banked, and the snap goes', () => {
+test('jack out keeps the visit: XP, rooms and the pack banked', () => {
   const { s, loc } = traced();
   play(s, 'connect ' + loc.id);
-  assert.ok(s.run.snap, 'connect snaps your progress');
-  const at = progressNow(s, loc);
+  const cleared = Object.keys(loc.floorplan.cleared).length;
   visitWins(s);
   const xp = JSON.stringify(s.hackers), files = s.run.pack.length;
   play(s, 'jack out');
   assert.equal(s.run, null);
   assert.equal(JSON.stringify(s.hackers), xp, 'XP kept');
-  assert.ok(Object.keys(loc.floorplan.cleared).length > Object.keys(at.cleared).length, 'rooms kept');
+  assert.ok(Object.keys(loc.floorplan.cleared).length > cleared, 'rooms kept');
   assert.ok(loc.floorplan.opened[loc.floorplan.graph.vaults[0]], 'the vault stays open');
   assert.ok(files > 0 && s.logs.some((e) => e.type === 'jacked-out' && e.gains.length), 'the pack banked');
 });
@@ -410,14 +409,14 @@ test('jack out: your Integrity carries home and rests back (or you top it up); t
   assert.equal(signalNow(s), max, 'topped up to full');
   assert.ok(s.server.credits < 1000 && 1000 - s.server.credits <= topUpPrice(s));
 });
-test('disconnected by a lost fight: home with the Integrity you connected with, that server waits 45 s, and a top-up sends you back in at full', async () => {
+test('disconnected by a lost fight: home at 1 Integrity, that server waits 45 s, and a top-up sends you back in at full', async () => {
   const { maxSignal } = await import('./dist/combat.mjs'), { signalNow } = await import('./dist/run.mjs'), { relockLeft } = await import('./dist/rogue.mjs');
   const { s, loc } = traced();
   s.server.integrity = Math.round(s.server.max * 0.6);
   play(s, 'connect ' + loc.id);
   loseFight(s);
   assert.equal(s.run, null, 'disconnected');
-  assert.equal(signalNow(s), Math.round(s.server.max * 0.6), 'home as you connected');
+  assert.equal(signalNow(s), 1, 'home at 1');
   assert.equal(relockLeft(loc), 45, '30 s and 15 s for the disconnect');
   assert.equal(loc.deaths, 1);
   assert.equal(s.logs.findLast((e) => e.type === 'disconnected').relockMs, 45000, 'the loss card counts the same wait');

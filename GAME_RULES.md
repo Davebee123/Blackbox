@@ -72,7 +72,7 @@ factor (`length.drawn`). Adds (fragments, Packages, Droppers), breaches and crew
 | Armor | Chits on a part (◆; a part wearing 2 or more wears half again: 2 → 3, 3 → 5). A hit on an armored part does no damage and breaks one chit; a heavy hit from your command (40+ base, `CONFIG.heavyHit`) breaks two, and Kill Process always breaks two. Burn ticks, helper hits and each target of a spread hit break one each. Armor-piercing hits (Backdoor and the like) go straight through. A hit spent on ◆ logs as absorbed and floats *◆ ABSORBED*, never MISS; the tray turns a key's icon steel when armor would absorb its hit. |
 | Patch | A part with no chits left patches one back 5 cycles later (`CONFIG.patchDelay`), unless it breaks first. The timeline shows the patch (◆ patch). |
 | Veiled | Ghostroot and the Sentinel hide a part's timers while it still has armor. Strip it, or Tag it, to see them. |
-| Stakes | Damage is the only threat: your Integrity (0 on a run: a disconnect, the visit undone; at home it stops at 1: Home). Nothing takes your credits or files. Ransomware encrypts (a stack that hits you every cycle until the Encryptor breaks), Worm spawns fragments that gnaw every cycle, Ghostroot's Scrambler hits and scrambles you. |
+| Stakes | Damage is the only threat: your Integrity (0 on a run: a disconnect, home at 1 with the Warm cache lost; at home it stops at 1: Home). Nothing takes your credits or files. Ransomware encrypts (a stack that hits you every cycle until the Encryptor breaks), Worm spawns fragments that gnaw every cycle, Ghostroot's Scrambler hits and scrambles you. |
 | Time | One command a cycle; entering it turns the cycle at once. A command is typed, or clicked: a skill (its key or number), then a part fires it, and a part picked first fires the skill picked after. Typed nothing, a cycle lasts 12 s (`speed relaxed`; normal 8 s, fast 5 s; the top bar's button). Enter on an empty line or `now` resolves it now. One entry a turn: until the last turn has played out (the virus's answer, its numbers landed: 0.45–1.5 s), another order or empty Enter is dropped, and the prompt and its key give a short shake. Rules count cycles, so speed never changes balance. No attack lands on cycle 1. |
 | Order | Your command (or your routine's) → your daemons → burns → helpers → heals over time → encryption → attacks due → patches. |
 | Crits | Any hit you land that does damage can crit for +50% (5% base, plus Crit and Crit Damage). Enemy damage attacks crit 10% of the time from enemy level 3. Timeline numbers show the normal hit, after your Block. |
@@ -205,12 +205,11 @@ empty line goes back. **Fast kills:** each class keeps your usual pace (cycles p
 with it, a win at least a quarter faster pays **+25% XP** (*Fast kill*). Loadout and Daemons carry a teal count of what's
 arrived since you last opened them.
 
-**Disconnect.** At 0 Integrity on a run your server reboots from the image taken when you connected (Visits). The screen
-holds on the hit for 0.8 s, drops to static with **NO CARRIER** and the server's name, then clears onto the map: your
-signal runs home, HOME's outline draws itself round, and HOME lights with its bar back at the image's Integrity, the
-image's time under it (bootfx.mjs `playReboot`; a key skips each). Then the **No carrier** card: **Restored**, the
-image's time, its Integrity as a teal bar, the visit's rooms, XP, files and contract steps struck through, and how long
-the net ran on; **Reconnection possible in** counts down live, rounded up.
+**Disconnect.** At 0 Integrity on a run you go home at 1 with everything the visit paid; the Warm cache is lost
+(Visits). The screen holds on the hit for 0.8 s, drops to static with **NO CARRIER** and the server's name, then clears
+onto the map: your signal runs home, HOME's outline draws itself round, and HOME lights with its bar at your Integrity
+(bootfx.mjs `playReboot`; a key skips each). Then the **No carrier** card: the Warm cache's stacks and bonus struck
+through (none, nothing struck); **Reconnection possible in** counts down live, rounded up.
 What took you out is one red row with what you took; open it for the **death recap** of the last 6 cycles (recap.mjs):
 your Integrity as a bar a cycle, the hits that did it (biggest first, at most 4, the last hit tagged **Last**), and
 **Taken**, **Healed** and **Shielded**; hover any of it for the sentence. A loss at home leaves you at 1 (Home).
@@ -975,26 +974,21 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
 
 - **Integrity** (Home) walks in as it is, spent by moves, fights, forcing a vault and bait; an invasion's chip takes it
   too, never below 1. A fight never leaves you with more than you walked into it with. You need a quarter to connect.
-- **Jack out saves the visit** (`jack out`, or the strip's button): from any room it banks your **pack** (cache credits
-  and code, the vault's files, kill drops; a **Banked** card) and sends you home. Beside Jack out the strip shows the
-  **stake**, what the visit holds unbanked: its XP and contract steps (each only once there is some), then the amber
-  **Pack** button, which counts its rows (credits summed, each code summed, each item its own) and opens the list, *UNSAVED*; a room won this
-  visit reads **UNSAVED** on the map until you jack out.
+- **Jack out** (`jack out`, or the strip's button): from any room it banks your **pack** (cache credits and code, the
+  vault's files, kill drops; a **Banked** card) and sends you home. Beside Jack out the strip shows the **stake**, the
+  Warm cache, then the amber **Pack** button, which counts its rows (credits summed, each code summed, each item its
+  own) and opens the list.
 - **Warm cache** (`visit.mjs` `WARM`): each room you win on a visit adds a stack, up to 10. Each gives **+10% XP** and
   **+5 Scavenge** to everything after it on that visit (room fights, kills, deeds), paid as you go. Every connect starts
-  cold; a disconnect takes the stacks with the rest. The strip's dashed **Warm** box: a ladder of ten bars, lit as
+  cold; a disconnect loses the stacks. The strip's dashed **Warm** box beside Jack out: a ladder of ten bars, lit as
   rooms are won, then the XP and Scavenge it adds.
-- **A disconnect undoes it** (Integrity 0 on a run, `visit.mjs`): you're back exactly as you were when you connected,
-  Integrity included. Your XP and levels, items, credits, code, components, the Codex, research and mastery, drop luck,
-  rep, supply orders, floor jobs, contract counts (an Install job's item back in your stash) and the server's rooms
-  (cleared, opened, its spawns and Root) go back to the connect. A first run's XP, paid as you connect, stays: it's
-  paid once. What keeps moving: the market and the director, mail and contracts received, invasions, runners, the
-  consortium, achievements, your profile, INIT's table, settings, clocks, servers and leads found. The **NO CARRIER**
-  card strikes through what the visit lost, the stake the strip showed.
+- **A disconnect** (Integrity 0 on a run, combat.mjs `disconnect`): home at 1 Integrity with everything the visit paid,
+  the pack banked as a jack out banks it (an Install job's item back in your stash). XP, items, credits, code, contract
+  steps, rooms cleared and rep all stay. The Warm cache is the one thing lost; the **No carrier** card strikes it
+  through.
 - **Reconnect wait.** A server you leave takes you back after 30 s (`CONFIG.relockMs`), +15 s for each disconnect on
-  its run, 2 min at most (`CONFIG.deathWait`). A jack out mid-fight waits like a disconnect but still saves the visit;
-  any other jack out resets the count. Connect counts it down, with ☠ and the count. Deadman's Switch counts as a jack
-  out, so it saves the visit.
+  its run, 2 min at most (`CONFIG.deathWait`). A jack out mid-fight waits like a disconnect; any other jack out resets
+  the count. Connect counts it down, with ☠ and the count. Deadman's Switch counts as a jack out.
 - **Home while out:** an invasion that wants you waits until you're back.
 - **Contracts ready:** a yellow ✓ by Mail on the top bar.
 
@@ -2306,7 +2300,7 @@ minutes after you take it.
 
 | Room contract | Done when | From | Pays |
 |---|---|---:|---|
-| Install | Carry the giver's item (a tap, a patch script, or its own: a canary, a rack meter) to a named room on a traced server (*at C2 on MERIDIAN-MX-14*) and `install` it there. It rides in your pack on that server; a disconnect puts it back in your stash | 5 | 55 + 9L, +7, a protocol one time in three |
+| Install | Carry the giver's item (a tap, a patch script, or its own: a canary, a rack meter) to a named room on a traced server (*at C2 on MERIDIAN-MX-14*) and `install` it there. It rides in your pack on that server; going home puts it back in your stash | 5 | 55 + 9L, +7, a protocol one time in three |
 | Break Encryptors | Break N Encryptors (3, 4 from 20) before they land an Encrypt | 4 | 40 + 7L, +6 |
 | Catch an Exfil | Recover an Exfil's archive, on any rogue server | 6 | 45 + 7L, +6 |
 | Map without resting | One visit to a named small or medium server: stand in every room but the Core with nothing live in it, and never rest | 8 | 70 + 11L (×1.3 medium), +8, a protocol |
@@ -2912,9 +2906,9 @@ Two players, two saves, no server; developer mode while it's a prototype (docs/c
 - **Rewards:** each player's game pays them on their own save. A guest who drops is played by the planner to the end of
   that fight; a host who drops sends the guest home.
 - **Down:** no battle rez. A player at 0 sits out the rest of the fight and comes back at 25% for the next, the host too.
-  The fight and the run end only when every player is down: a disconnect for everyone, each visit undone on its own
-  save (each game snaps its own save as it joins the run).
-- **The visit:** the host's jack out saves everyone's; a host who drops counts as a jack out for the guest. Each player
+  The fight and the run end only when every player is down: a disconnect for everyone, each player home at 1 with what
+  their visit paid.
+- **The visit:** the host's jack out ends everyone's; a host who drops counts as a jack out for the guest. Each player
   brings their own Integrity and writes it back to their own server on jack out. **Warm cache:** one count for the
   crew; each player gets its bonus on their own XP and drop rolls. The Pack is personal.
 
@@ -3201,6 +3195,7 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 - **A paused fight holds no clock.** Timers on invasions wait while you fight them, but only while the fight runs; a
   paused fight, or one left open over a reload (it comes back paused), holds nothing.
+- **A disconnect keeps what you won.** It costs the visit's Warm cache and a longer reconnect wait (Visits).
 - **Nothing happens while you're away** but Rested. Programs make nothing on their own, so nothing raids them.
 - **No shop-to-market loop.** Code, Exploits and components are only market wares; a round trip at one hub never
   profits.
@@ -3208,7 +3203,7 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 66 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 67 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
 - **Backup** (Settings → Save, `backup.mjs`): **Export save** downloads `blackbox-<handle>-<date>.json`; **Import save**
@@ -3222,11 +3217,12 @@ so it is safe to run twice; nothing a save held is lost.
   older climbed wall, its climb), held and carried filters as the components they scrapped for, and an invasion of a
   kind that's gone (a scout, a thief) is a raider at HOME (`firewall.mjs wallRestore`, `invasion.mjs wallgoneRestore`,
   keyed on the fields).
+- **v67** a disconnect keeps the visit: a run's connect snap (`s.run.snap`) goes (`visit.mjs snapRestore`, keyed on the
+  field).
 - **v66** nothing invades while you're logged off: the away clock (`s.net.awayNext`) and an invader's away helper go;
   an invader left at HOME stays and chips only on logged-on time (`invasion.mjs awayRestore`, keyed on the fields).
 - **v65** one bar: `s.signal` (null: full) becomes `s.server.integrity`, its max your power
-  and gear's; `s.degraded` and an occupied home (`s.occupation`) go (`combat.mjs healthRestore`, keyed on the fields). A
-  run carries its connect snap (`s.run.snap`, visit.mjs); a run saved before it disconnects the old way.
+  and gear's; `s.degraded` and an occupied home (`s.occupation`) go (`combat.mjs healthRestore`, keyed on the fields).
 - **Earned pieces** (no version of their own): `s.earned` (each count) and `s.pins`, made on first use (`earned.mjs`). A
   piece you had found stays found.
 - **v64** a board recovery (held or offered) aimed at an unknown server moves to a server you've found, its letter

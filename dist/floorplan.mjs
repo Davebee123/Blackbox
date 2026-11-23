@@ -42,13 +42,14 @@
 //               of XP: mappedShare). Caches and puzzle rooms refill in two hours, so they never count (counted).
 //   visits      connect at the entry, jack out from any room (the pack banks, the visit is saved), rest at home
 //               (Integrity back at CONFIG.signalRest a minute), reconnect after ROOMS.reconnect. Lose a fight and you're
-//               disconnected: on the network the visit is undone (visit.mjs), and CONFIG.deathWait.each more on the wait
+//               disconnected: on the network you keep what the visit paid but its Warm cache (visit.mjs), and
+//               CONFIG.deathWait.each more on the wait
 //               for each disconnect since your last clean jack out, up to its cap.
 //
 // Fights are ordinary run fights (combat.mjs selectEncounter, mode 'run') flagged e.rooms: combat.mjs finish hands the
 // end back here (hooks.roomEnd), and families.mjs and interrupt.mjs play the room rules (attack sets, the new bodies,
 // the interrupt). The Resident is DEADBOLT, under the boss rule the playtest switches (interrupt.mjs BOSS_RULES).
-import { warmUp } from './visit.mjs';
+import { warmUp, warmOf } from './visit.mjs';
 import { CREW } from './crew.mjs';
 import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, gainXp, gainCode, xpFor, deedXpFor, rollDrop, fxPct, puzzleUnique } from './combat.mjs';
 import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, CONFIG, ELITE, ROLLED_MUTATIONS, SERVER, xpToNext, spreadOf } from './data.mjs';
@@ -1067,13 +1068,13 @@ function goHome(s, R = s.rooms) {
   R.at = null; R.screen = null; R.homeAt = now; R.reconnectAt = now + (R.world ? ROOMS.reconnect : Math.min(CONFIG.deathWait.cap, ROOMS.reconnect + (R.deaths || 0) * CONFIG.deathWait.each)) / R.speed;
   R.visit = { ...R.visit, hunter: null, exfil: R.visit?.exfil?.state === 'loose' ? { ...R.visit.exfil, state: 'gone' } : R.visit?.exfil || null }; // an Exfil you left is gone
 }
-// Lost a fight: disconnected. On the network the visit is undone (combat.mjs disconnect); in the playtest the
-// unbanked pack is lost, XP and banked gear stay.
+// Lost a fight: disconnected. On the network you keep what the visit paid, the pack banked (combat.mjs disconnect); in
+// the playtest the unbanked pack is lost, XP and banked gear stay.
 function disconnected(s, why) {
   const R = s.rooms, lost = [], rc = s.encounter?.metrics ? deathRecap(s) : null, recap = rc ? { recap: rc } : {}; // the fight's last cycles (recap.mjs)
   if (R.world) {
-    // The run's end is combat.mjs disconnect (the pack lost; Deadman's Switch jacks you out with it instead).
-    R.last = { result: 'lost', why, lost: (s.run?.pack || []).map((f) => f.label || f.name), xp: xpTotal(s) - (R.visit?.xp0 ?? xpTotal(s)), visit: R.visit?.n, ...(s.run?.snap ? { undone: visitOf(s) } : {}), ...recap };
+    // The run's end is combat.mjs disconnect (the pack banked, the Warm cache lost; Deadman's Switch jacks you out).
+    R.last = { result: 'lost', why, banked: (s.run?.pack || []).length, xp: xpTotal(s) - (R.visit?.xp0 ?? xpTotal(s)), visit: R.visit?.n, warm: R.visit?.warm || 0, ...recap };
     if (R.at) keysBack(s);
     ask('leave', s, 'lost', why); // Deadman's Switch jacks you out instead (jackOut, home with the pack)
     if (R.at) goHome(s, R);
@@ -1781,17 +1782,15 @@ function nestPay(s, room) {
 // count is the difference since you started.
 export const xpTotal = (s) => { const h = hackerOf(s); let n = h.xp; for (let l = 1; l < h.level; l++) n += xpToNext(l); return n; };
 export const xpEarned = (s) => xpTotal(s) - (s.rooms?.xpStart ?? xpTotal(s));
-// What this visit holds, unsaved until you jack out (visit.mjs): the rooms you beat or used, the XP, the files in the
-// pack, the contract steps. null off a network visit.
-// XP counts from the snap (visit.mjs): a first run's XP is yours either way.
+// This network visit (visit.mjs): the rooms you beat or used, the XP since the connect, the files in the pack, the
+// Warm cache's stacks. null off a network visit.
 export function visitOf(s) {
   const R = s.rooms;
   if (!R?.world || !R.at || !R.visit || !s.run) return null;
-  const steps = (s.run.snap?.jobs || []).reduce((n, j) => n + Math.max(0, ((s.mail?.jobs || []).find((c) => c.id === j.id)?.got || 0) - (j.got || 0)), 0); // contract steps since the connect
-  return { rooms: Object.keys(R.visit.won || {}).length, xp: Math.max(0, xpTotal(s) - (s.run.snap?.xp ?? R.visit.xp0 ?? xpTotal(s))), files: (s.run.pack || []).filter((f) => f.kind !== 'payload').length, steps };
+  return { rooms: Object.keys(R.visit.won || {}).length, xp: Math.max(0, xpTotal(s) - (R.visit.xp0 ?? xpTotal(s))), files: (s.run.pack || []).filter((f) => f.kind !== 'payload').length, warm: warmOf(s) };
 }
 const won = (R, room) => { if (R.visit && R.world) (R.visit.won ||= {})[room.id] = true; };
-hooks.visitOf = visitOf; // combat.mjs disconnect: the card lists what the visit lost
+hooks.visitOf = visitOf; // combat.mjs disconnect: the card strikes the Warm cache through
 // What a kill in a fight room pays besides its own drops: an elite's one more component, a Harvester's one more (each
 // once a part that drops them broke), a Code Siphon's 3 of the server's code (into the pack on the network).
 function programsPay(s, room, e) {

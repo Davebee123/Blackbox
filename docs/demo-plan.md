@@ -433,3 +433,8 @@ Side by side, the earlier phase lands first and the later one merges main before
   every minute away. The old Phase 6 is done.
 - **Decisions, 23 Nov** (the loops analysis): D9, no revert on a disconnect, only the Warm cache lost (the new Phase
   6); D10, currencies stay; the XP curve, drops and goals tracker into Phase 8.
+- **Phase 6** (23 Nov, `SAVE_VERSION` 67): a disconnect banks the pack and keeps XP, items, contract steps, rooms and
+  rep; it comes home at 1 Integrity, and the Warm cache is all it loses. The snap, the revert and the card's restore
+  line are gone (an old run's `s.run.snap` drops on load); the *Reboot* plays as picked, HOME's bar at your Integrity.
+  The stake beside Jack out is the Warm box and the Pack; No carrier strikes the Warm cache through. A co-op guest keeps
+  their visit the same way. Waits on the designer dying once on purpose.
