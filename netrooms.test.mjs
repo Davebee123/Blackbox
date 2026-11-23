@@ -191,7 +191,7 @@ test('a disconnect keeps the visit: XP, rooms, contract steps and the pack banke
   assert.equal(s.rooms.visit.warm, 0, 'the next visit starts cold');
   // A save from before carries a snap on its run: it goes on load.
   s.run.snap = { at: 1 };
-  assert.ok(!('snap' in restore(JSON.parse(JSON.stringify({ ...s, version: SAVE_VERSION }))).run), 'the snap dropped');
+  assert.ok(!('snap' in restore(JSON.parse(JSON.stringify({ ...s, version: SAVE_VERSION - 1 }))).run), 'a v66 save loads, the snap dropped');
 });
 
 test('jack out keeps the visit: XP, rooms and the pack banked', () => {
