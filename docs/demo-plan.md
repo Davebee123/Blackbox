@@ -454,3 +454,11 @@ Side by side, the earlier phase lands first and the later one merges main before
   pull and supply orders open meanwhile with no transmission), PAGE NINE falls, floor 2 reached, CENTRIFUGE falls.
   No new look (the *Transmission* as picked; the Rig and the table's count just appear). Waits on the designer playing
   a new character to level 7.
+- **Phase 8, before the designer's play** (23 Nov; only the steps the plan already numbers): `CLIMB` 1–14 a straight
+  line (on the pacing table 3 minutes at level 1 to 45 at 14, about 5 hours to 14 as before; 20 and up unchanged;
+  `PACE_TARGET` 0.5 h to 5, 2.4 to 10); whites 6.5% a trash roll, a blue about every 45 kills (`LOOT`; the loot sim
+  finds 1 in 36 at levels 1–10, quests and bosses included); the amber **▲** on a stash protocol that beats its slot
+  and on the Loadout tab (`isUpgrade`); `goals.mjs` lists the goals nearest done, pins first. Its look waits on the
+  designer: *Rows*, *Bars* or *Compact*, shown as screenshots. The finish card waits behind it. BALANCE.md regenerated with its
+  prose fixed (6% a level, Integrity). kits-crew's crew claim went `todo`: the new odds re-deal the sim's dice
+  (Herder 69% to the Demolitionist's 92%). Steps 4, 6 and 7 wait on the designer's notes.

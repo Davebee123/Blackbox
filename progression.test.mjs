@@ -51,14 +51,14 @@ test('one level: your server is at your highest class level, with no XP of its o
 
 test('the long climb: a level is CLIMB.kills kills of your level (straight between its points), always longer than the last; one-off deeds keep their share of a level', () => {
   for (const [L, k] of CLIMB.kills) assert.equal(xpToNext(L), Math.round(killXp(L) * k), `level ${L}`);
-  const [[a, x], [b, y]] = [CLIMB.kills.find((p) => p[0] === 10), CLIMB.kills.find((p) => p[0] === 15)];
-  assert.equal(killsToNext(12), x + ((y - x) * (12 - a)) / (b - a), 'straight between 10 and 15');
+  const [[a, x], [b, y]] = [CLIMB.kills.find((p) => p[0] === 1), CLIMB.kills.find((p) => p[0] === 14)];
+  assert.equal(killsToNext(9), x + ((y - x) * (9 - a)) / (b - a), 'straight between 1 and 14');
   for (let L = 2; L < LOADOUT.maxLevel; L++) assert.ok(xpToNext(L) > xpToNext(L - 1), `level ${L} takes more than ${L - 1}`);
   for (let L = 2; L < LOADOUT.maxLevel; L++) assert.ok(levelMinutes(L) >= levelMinutes(L - 1), `the pace table at ${L}`);
   // About 100 hours of real play to 50 (CLIMB.minutes), front-loaded: a farmer's pace (pacing.mjs FARM_TARGET); one who
   // works contracts earns about 1.5x the XP an hour (PACE_TARGET, the table loop.test.mjs holds the bot to).
   const hours = (to) => { let m = 0; for (let L = 1; L < to; L++) m += levelMinutes(L); return m / 60; };
-  for (const [L, h] of [[5, 1], [10, 4], [20, 15], [30, 35], [40, 65], [50, 100]]) assert.ok(Math.abs(hours(L) - h) / h < 0.1, `level ${L}: ${hours(L).toFixed(1)} hours of targets`);
+  for (const [L, h] of [[5, 0.8], [10, 3.6], [20, 15], [30, 35], [40, 65], [50, 100]]) assert.ok(Math.abs(hours(L) - h) / h < 0.1, `level ${L}: ${hours(L).toFixed(1)} hours of targets`);
   assert.ok(levelMinutes(1) <= 5, 'the first level comes in minutes');
   // A deed (Mapped, takeover, Root) is its old share of a kill times DEED.share of how much longer the level is than it
   // was, never less than a kill's share. A decode, a puzzle board and a log sweep are a kill each, unscaled.
