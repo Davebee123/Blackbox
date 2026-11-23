@@ -1430,6 +1430,10 @@ const loadBlock = (s, it, busy) => (busy ? 'At home only' : !meetsReq(s, it, hac
   : (it.zeroDay && zeroDay(s, it.zeroDay)) || (it.unique && loaded(s).some((x) => x.unique === it.unique)) ? 'You already run this one' : '');
 // How much loading it gains against what its slot runs now: each stat's change in its budget points (STATS base), so
 // Damage and Crit weigh alike. One with no slot open yet sorts last.
+// An upgrade (the amber ▲, on its stash row and the Loadout tab): a protocol you could load now (busy or not) that beats
+// what its slot runs, summed over its stats as shares of each stat's base (upScore), or fills an empty slot.
+export const isUpgrade = (s, it) => loadedOn(s, it.id) !== classOf(s) && !loadBlock(s, it, false) && upScore(s, it) > 0;
+export const upgradeCount = (s) => (s.stash || []).filter((it) => isUpgrade(s, it)).length;
 function upScore(s, it) {
   if (loadSlot(s, it) < 0) return -1e9;
   const out = loadOut(s, it);
@@ -1522,7 +1526,7 @@ function stashTile(s, it, pick, busy) {
     return `<span class="silk-st${v < 0 ? ' neg' : ''}">${glyph(k)}<b>${v < 0 ? '−' : '+'}${fmtStat(k, Math.abs(v))}</b><span class="sr-only"> ${esc(STATS[k].name)}</span>${vs && Math.abs(d) > 1e-9 ? `<i class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}</i>` : ''}</span>`;
   }).join('');
   const go = why ? `aria-disabled="true" title="${esc(why)}"` : `data-command="load ${it.id}" aria-label="${esc(`${out ? 'Swap' : 'Load'} ${itemLabel(it)} into ${SLOT_REFS[at]}`)}"`;
-  return `<li class="silk-tile ${rarityClass(it)}${fit ? ' fit' : ''}" data-kind="${groupOf(it)}" data-pdetail="${esc(it.id)}"><button type="button" class="silk-pick" ${go}>${glyphMarkup(it, 'sm')}<span class="silk-text"><b class="iname ${rarityClass(it)}">${esc(itemLabel(it))}${where ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}</b><span class="silk-sts">${stats}</span></span><span class="pg-lv"><b>Lv ${it.level}</b><small>${esc(SLOTS[groupOf(it)]?.name || '')}</small></span></button><span class="inv-acts">${loadButton(s, it, busy)}${scrapButton(s, it, busy)}</span></li>`;
+  return `<li class="silk-tile ${rarityClass(it)}${fit ? ' fit' : ''}" data-kind="${groupOf(it)}" data-pdetail="${esc(it.id)}"><button type="button" class="silk-pick" ${go}>${glyphMarkup(it, 'sm')}<span class="silk-text"><b class="iname ${rarityClass(it)}">${isUpgrade(s, it) ? `<i class="silk-up" title="${esc(`Upgrade\nBetter than what ${out ? SLOT_REFS[at] : 'its slot'} runs now.`)}">▲</i> ` : ''}${esc(itemLabel(it))}${where ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}</b><span class="silk-sts">${stats}</span></span><span class="pg-lv"><b>Lv ${it.level}</b><small>${esc(SLOTS[groupOf(it)]?.name || '')}</small></span></button><span class="inv-acts">${loadButton(s, it, busy)}${scrapButton(s, it, busy)}</span></li>`;
 }
 
 // Protocols you run, for the class in use (the Loadout's Protocols tab): the board, the stash, then the set bonuses

@@ -1847,17 +1847,20 @@ export const UNLOCKS = [
 // XP: a kill is worth 20 + 10 per enemy level. The climb is long: about 100 hours of real play to 50 at
 // LOOT.killsPerHour (150 kills an hour), front-loaded (an hour to 5, 4 to 10, 15 to 20, 35 to 30, 65 to 40): a sandbox,
 // not a storyline. CLIMB.kills is what level L to L+1 takes, in kills of your own level (straight between its points):
-// 23 at level 1 (minutes), 160 at 4, 172 at 10, 523 at 20, 818 at 30, 1,000 at 40, 1,137 at 49: about 31,000 to 50 on
+// 22 at level 1, 324 at 14, 523 at 20, 818 at 30, 1,000 at 40, 1,137 at 49: about 31,000 to 50 on
 // paper. The pacing bot earns about 2 kills of XP a fight (rooms pay 1.25, elites, Mapped servers,
 // contracts), so it fights about 15,000 times on the way (pacing.mjs). The points were cut 10-23% when a Mapped or held
 // server's rooms began to respawn in minutes (docs/progression.md 7): the bot farms them, which pays less a fight than
 // exploring did, and the climb ran 11-33% long. CLIMB.minutes is the real play a level should
-// take (5 at level 1, 48 at 10, 95 at 20, 160 at 30, 200 at 40, 220 at 49): its sum is the pacing table (pacing.mjs
+// take (4.5 at level 1, 67.5 at 14, 95 at 20, 160 at 30, 200 at 40, 220 at 49): its sum is the pacing table (pacing.mjs
 // PACE_TARGET, a player who works contracts).
 // Before save v42 a level took 5 + 1.2 × L kills (V41_KILLS): about 1,700 to 50, 7 hours of real play.
 export const CLIMB = {
-  kills: [[1, 23], [2, 62], [3, 130], [4, 160], [5, 170], [10, 172], [15, 366], [20, 523], [25, 673], [30, 818], [35, 909], [40, 1000], [45, 1068], [49, 1137]],
-  minutes: [[1, 5], [4, 27], [5, 28], [9, 44], [10, 48], [19, 84], [20, 95], [29, 145], [30, 160], [39, 200], [49, 220]],
+  // 1–14 (the demo, docs/demo-plan.md Phase 8): a straight line, each level a little longer than the last (12–15% in the
+  // middle): on the pacing table (a contract worker, 1.5× a farmer's XP) 3 minutes at level 1, 45 at 14, about 5 hours
+  // to 14, as before; kills at 4.8 a farmer's minute.
+  kills: [[1, 22], [14, 324], [15, 366], [20, 523], [25, 673], [30, 818], [35, 909], [40, 1000], [45, 1068], [49, 1137]],
+  minutes: [[1, 4.5], [14, 67.5], [19, 84], [20, 95], [29, 145], [30, 160], [39, 200], [49, 220]],
 };
 export const along = (pts, L) => {
   if (L <= pts[0][0]) return pts[0][1];

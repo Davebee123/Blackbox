@@ -2261,6 +2261,7 @@ function renderMeters() {
     el.textContent = n;
     el.title = `${n} new`;
   }
+  { const up = V.upgradeCount(campaign) > 0; if ($('up-loadout').hidden === up) $('up-loadout').hidden = !up; } // an upgrade in the stash (view.mjs isUpgrade)
   $('sound').textContent = 'Sound';
   $('sound').setAttribute('aria-pressed', String(campaign.settings.sound));
   feel.ambience(!!campaign.settings.sound && !coldOn);

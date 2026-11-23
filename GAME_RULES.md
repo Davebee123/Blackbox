@@ -1344,9 +1344,10 @@ a favoured card once it has come up twice, its rich code once it leans your way;
 
 - **A kill** is worth 20 + 10 × the enemy's level: a home kill 1×, a guard 0.8×, a room kill 1.25×. An enemy above you
   pays up to 25% more; each level below you takes 10% off (ten below pays nothing).
-- **The climb is long** (`CLIMB`): level L to L+1 takes 23 kills of your level at 1, 160 at 4, 172 at 10, 523 at 20,
-  818 at 30, 1,000 at 40, 1,137 at 49. The real-play table (`PACE_TARGET`, a contract worker at about 150 kills an
-  hour) is 0.7 hours to level 5, 2.7 to 10, 10 to 20, 23 to 30, 43 to 40 and 67 to 50; a farmer takes about half again.
+- **The climb is long** (`CLIMB`): level L to L+1 takes 22 kills of your level at 1, rising in a straight line to 324
+  at 14 (each level a little longer than the last), then 523 at 20, 818 at 30, 1,000 at 40, 1,137 at 49. The real-play
+  table (`PACE_TARGET`, a contract worker at about 150 kills an hour) is 3 minutes for level 1 and 45 for level 14,
+  0.5 hours to level 5, 2.4 to 10, about 5 to 14, 10 to 20, 23 to 30, 43 to 40 and 67 to 50; a farmer takes about half again.
 - **Contracts** pay a fixed amount set when they're posted (Mail and contracts).
 - **Deeds** pay shares of a kill grown with the climb (`deedScale`: `DEED.share` of how much longer your level is than a
   kill-only climb; about 4 to 8 kills on the long climb): a vault 1.5, your first run on a server 0.7, a takeover 1.5,
@@ -1556,6 +1557,8 @@ its own from 10; Loadout → **Program** edits it.
 Everything you equip is software: code, tools and access, never hardware. Protocols you run live on the Loadout page's
 **Protocols** tab (`protocols`): your rig drawn as a board, its slots around it, the **stash** beside it (each row its
 glyph, name in its rarity colour, three biggest stats with ▲ ▼ against what its slot runs now), and your stat sheet.
+A protocol you could load that beats what its slot runs (or fills an empty one) wears an amber **▲** before its name,
+and so does the Loadout tab while one waits (`isUpgrade`).
 Clicking a slot lists the stash items that fit, sorted **▲ Best**, **Lv** or **Rarity**. Hover a row or slot for its
 **datasheet**: name, rarity, kind, level, stats one a line against the slot's (▲ gains, ▼ losses, and any effect you'd
 give up), effect, set lines and flavour. Every protocol has its own ASCII **glyph** (its kind picks the shape, its main
@@ -1779,13 +1782,13 @@ unique** leans to a class or subclass: three times as likely for it, twice for t
 Trash pays code and components and only now and then an item; elites and rare spawns drop better; a boss always drops
 one item; quests pay what they say (`LOOT` in gear.mjs, `BOSS_LOOT` in data.mjs; WoW's green is our blue, its blue our
 yellow, its epic our gold). Targets, at about 150 kills an hour of real play (`LOOT.killsPerHour`): a blue about every
-85 kills, a yellow about every 500, a gold outside bosses under 1 in 4,500. Boss uniques are the way to gold.
+45 kills (WoW's greens), a yellow about every 500, a gold outside bosses under 1 in 4,500. Boss uniques are the way to gold.
 
 | Source | One roll's odds (white · blue · yellow · gold) |
 |---|---|
-| **Trash**: a process, a SPRAWL-00 stray, a home invader | 4% · 0.12% · 0.01% · 0.0005% |
-| **Elites**: an elite room, a Pit elite, a guard, a mirror | 15% · 0.5% · 0.06% · 0.005% (a gold is any world unique up to its level) |
-| **★ Rare spawns** | 60% · 12% · 3% · 0.05% |
+| **Trash**: a process, a SPRAWL-00 stray, a home invader | 6.5% · 0.23% · 0.01% · 0.0005% |
+| **Elites**: an elite room, a Pit elite, a guard, a mirror | 15% · 0.95% · 0.06% · 0.005% (a gold is any world unique up to its level) |
+| **★ Rare spawns** | 60% · 23% · 3% · 0.05% |
 | **Bosses** | one item every kill (a blue, a yellow one in four), then its uniques |
 | **Crew bosses** | a yellow every kill, its uniques at 30% +10% a miss, 10% a world unique |
 | **Quests** (a contract's bonus, the storyline) | a blue, a yellow one time in ten |
@@ -1794,7 +1797,7 @@ yellow, its epic our gold). Targets, at about 150 kills an hour of real play (`L
 - **One roll each.** A guard rolls once; the story's named target twice, keeping the best. Reading every tell adds a
   roll; a Pit rolls again after the kill. Deeper layers add 25% a layer to blue and yellow odds.
 - **The Resident** rolls like an elite (no sure item) and for its two uniques once each.
-- **Vaults:** half hold a protocol (`kit.bin`; your first server's always), white 94 · blue 6 · yellow 0.4 · gold 0.03
+- **Vaults:** half hold a protocol (`kit.bin`; your first server's always), white 88.6 · blue 11 · yellow 0.4 · gold 0.03
   (a unique that drops from vaults that deep). A second vault holds a protocol at a vault's rarity.
 - **Pace:** Settings → **Dev** (with `?dev`) shows your kills an hour of active play. Odds are set a kill at a
   time, so a faster or slower player sees the same drops a kill.

@@ -1419,6 +1419,7 @@ body.grain-off #crt::after, [data-form='phone'] body:not(.grain-on) #crt::after 
 }
 @media (max-width: 900px) { .mail-page { grid-template-columns: 1fr; } }
 .modules .count.new { background: var(--you); }
+.modules .tab-up { margin-left: 4px; color: var(--amber); font-size: 10px; vertical-align: middle; } /* an upgrade in the stash (view.mjs isUpgrade) */
 .modules .count { display: inline-block; min-width: 16px; padding: 0 4px; margin-left: 6px; border-radius: 8px; background: var(--amber); color: var(--bg); font: 600 10px/16px var(--mono); text-align: center; vertical-align: middle; }
 .mnode.hidden .qmark { fill: var(--muted); font: 600 13px var(--mono); }
 .mnode.hidden .marc-bg.lead { stroke: rgba(241, 185, 47, 0.3); }
@@ -2127,6 +2128,7 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .pg-lv b { font: 600 12px var(--mono); color: var(--text); white-space: nowrap; }
 .pg-lv small { font: 10px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; color: var(--dim); }
 .silk-sts { display: flex; flex-wrap: wrap; gap: 0 12px; }
+.silk-up { color: var(--amber); font-style: normal; } /* an upgrade over its slot (view.mjs isUpgrade) */
 .silk-st { display: flex; align-items: center; gap: 3px; font-size: 12px; color: var(--muted); }
 .silk-st .glyph { width: 0.95em; height: 0.95em; margin: 0; color: var(--muted); }
 .silk-st b { font: 600 12px var(--mono); color: var(--text); }
