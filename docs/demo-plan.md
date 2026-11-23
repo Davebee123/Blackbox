@@ -1,6 +1,6 @@
 # The demo: floors 1–2
 
-**Status.** Signed off by the designer (21 November 2026): every decision below is settled. Nothing is built yet;
+**Status.** Signed off by the designer (21 November 2026): every decision below is settled (amended 23 November: D9, D10 and the notes under the table). Nothing is built yet;
 Phase 1 is next. The transmissions' words are approved (docs/story-script.md, *The demo's transmissions*).
 
 ## The demo
@@ -22,12 +22,24 @@ hours on the pacing table, likely 8–10 in real play.
 |---:|---|---|---|
 | D1 | The demo's scope | Floors 1–2 | Capped at level 14, ending on CENTRIFUGE |
 | D2 | Where it lives | itch.io or Steam; not $100 before knowing people play it; approved | itch.io first (free; a Restricted page for the closed test, Public after). Steam's $100 fee (recouped after $1,000 of sales) waits for the itch numbers in Phase 9 |
-| D3 | The first disconnect | SPRAWL-00 reboots like every server | The revert stays everywhere. The run shows what's unbanked, and the tour teaches jack out after the first win |
+| D3 | The first disconnect | SPRAWL-00 reboots like every server; then (23 Nov) no revert at all | Superseded by D9 |
 | D4 | The guided practice | Could work; to be tested | Phase 2 wires it in behind an offer after the class pick; it lands once the designer has played it, else stays off |
 | D5 | Floor 1's chain boss | PAGE NINE early is fine, but beatable when it comes; approved | PAGE NINE closes floor 1's chain; its step waits for level 6 and it fights at your level (6–8), so it's never above you. CENTRIFUGE (14) stays the demo's last boss |
 | D6 | Hearing from players | Asked for a recommendation; approved | A Feedback button that downloads a report and opens a free Discord server (testers attach the file; itch's comments take the public); opt-in telemetry to a Cloudflare Worker (free tier), the only way to measure real play time and where players stop |
 | D7 | What opens when | A hybrid: your kit by level, everything else as you find it or do something; hiring early; more transmissions, event-driven | *What opens when* below; Phase 7 builds it |
+| D9 | The disconnect (23 Nov) | No revert: you keep everything and lose only the Warm cache | Phase 6. No loss at all, only a bonus that a jack out keeps |
+| D10 | Currencies (23 Nov) | Keep them as they are | Credits, code, Exploits and components stay; markets, the ticker and supply orders stay |
 | D8 | The end card | The demo freezes there | The card ends play (XP stopped, the exit shut), with the itch follow and the Discord; a Steam wishlist once a store page exists |
+
+**The designer's notes (23 Nov), from the loops analysis:**
+
+- About 24 seconds a fight is right; fights go faster as a player learns a virus. Pacing stays on that baseline.
+- A normal fight that a blind player wins is fine (WoW's mobs, Slay the Spire's): it chips Integrity and makes gear
+  matter. Tension comes from some viruses' patterns being harder, never from every fight, so players don't burn out.
+- Board offers that turn over are fine as long as similar ones keep coming (Starsector's bar).
+- A session ends on a big finish: a server mapped, a boss, a quest, an achievement. The long achievements that pay set
+  pieces and uniques should be easy to see.
+- The XP curve should rise smoothly; whites drop more often (6–7%), and blues a little more often, like WoW's greens.
 
 **The demo's bosses, in order:** RELAY-KING (SPRAWL-00's Core, from 3) → PAGE NINE (floor 1's chain, 6–8) → the floor 2
 lair and SHAKEDOWN's Pit (7–14) → CENTRIFUGE (*Carrier*'s end, 14). Diablo III's Starter Edition ends the same way, on
@@ -94,7 +106,7 @@ words for the designer; the designer approves each line.
 |---|---|---|
 | Nothing stops a player at floor 4, and the story runs out | WoW's free trial has stopped at level 20 since 2011 ([Blizzard](https://support.blizzard.com/en/article/3226)); Diablo III's Starter Edition ends at the Skeleton King, capped at 13 ([Blizzard](https://support.blizzard.com/en/article/2730)). Both cap a level and end on a boss | 1, 5 |
 | Most players see only the first hour | Across 130 Steam demos the median play was 14 minutes, and the best performers' medians were 38–65 ([Zukowski](https://howtomarketagame.com/2022/10/26/what-is-a-good-median-play-time-for-a-demo-benchmark/)) | 2 first |
-| The first disconnect takes the kill, the XP and the contract step, unannounced | Elden Ring keeps the runes you carry on screen and lets you walk back once for them; WoW dropped EverQuest's XP loss for a ghost's run back and 10% durability ([wiki](https://warcraft.wiki.gg/wiki/Death_(gameplay))); Path of Exile charges no XP for dying before Act 5's Kitava ([wiki](https://www.poewiki.net/wiki/Experience)); Starsector recovers your lost ships with D-mods ([Fractal Softworks](https://fractalsoftworks.com/2017/01/20/ship-recovery)) | 2 (D3) |
+| The first disconnect takes the kill, the XP and the contract step, unannounced (D9: no revert now) | Elden Ring keeps the runes you carry on screen and lets you walk back once for them; WoW dropped EverQuest's XP loss for a ghost's run back and 10% durability ([wiki](https://warcraft.wiki.gg/wiki/Death_(gameplay))); Path of Exile charges no XP for dying before Act 5's Kitava ([wiki](https://www.poewiki.net/wiki/Experience)); Starsector recovers your lost ships with D-mods ([Fractal Softworks](https://fractalsoftworks.com/2017/01/20/ship-recovery)) | 6 (D9) |
 | A cost framed as a penalty | WoW's beta halved XP after a few hours of play; testers hated it, so Blizzard kept the numbers and called the full rate *rested* (Rob Pardo, GDC 2010, [Game Developer](https://www.gamedeveloper.com/game-platforms/gdc-blizzard-s-core-game-design-concepts)) | 2, 6 |
 | Levels 2, 9, 11, 13 bring nothing | WoW cut 120 levels to 60 so every level would mean something, dropping the ones with no new spell or talent ([Blizzard](https://worldofwarcraft.blizzard.com/en-us/news/23187291)); Diablo II gives 5 attribute points and a skill point every level; Diablo III unlocked a skill or rune every level to 60 | 8 |
 | 35 systems by level 10; the practice unreachable | Exile's Reach brings in WoW's features one at a time from 1 to 10 ([Blizzard](https://support.blizzard.com/en/article/296577)); Starsector's new campaign offers a skippable *Start with tutorial!*; Diablo III keeps Elective Mode off until you want it | 2 (D4), 7 (D7) |
@@ -102,6 +114,7 @@ words for the designer; the designer approves each line.
 | No gear is a wall | Diablo III's Inferno launched gear-gated; patch 1.0.3 cut its damage and health and raised drops ([Tom's Hardware](https://www.tomshardware.com/news/Diablo-3-1.0.3-Patch-download-update,16085.html)). On consoles a green arrow marks an upgrade | 8 |
 | No way to hear from players | Mega Crit collected data on every Slay the Spire run and changed cards and enemies by it through early access ([Game Developer](https://gamedeveloper.com/design/how-i-slay-the-spire-i-s-devs-use-data-to-balance-their-roguelike-deck-builder)); Hades shipped a big update every couple of months, built with its players ([PC Gamer](https://www.pcgamer.com/uk/a-journey-through-early-access-helped-make-hades-a-masterpiece/)) | 1, 9 |
 | Every push to main reaches players, saves and all | Starsector ships numbered builds, each hotfix a new number (0.97a reached RC11 in two weeks), and every release post says whether old saves load ([Fractal Softworks](https://fractalsoftworks.com/tag/release)) | 1 |
+| Sessions run on with no end | A goal in sight pulls people toward it: they speed up as it nears (Kivetz, Urminsky and Zheng, *Journal of Marketing Research*, 2006); WoW tracks the achievements you pick in its objective list | 8 |
 | Who tests it | Five users find most usability problems ([Nielsen](https://www.nngroup.com/articles/why-you-only-need-to-test-with-5-users/)); a Steam demo has had its own page and reviews since July 2024, and wishlist buttons belong in its menus ([Zukowski](https://howtomarketagame.com/2021/06/21/neat-ideas-for-your-games-demo/)) | 9 (D8) |
 
 ## Phases
@@ -265,12 +278,26 @@ and an end.
 
 **Done when:** the designer has approved every line; each plays from the editor's *Play from here*.
 
-### Phase 6 · Logged off is safe
+### Phase 6 · The disconnect keeps what you won
 
-The backlog's item as written in CLAUDE.md, run alone (it's pacing work): no invasions while logged off; every minute
-away banks rested XP; the consortium's away help goes; GAME_RULES.md *While you're logged off* and *Away is played out*;
-the tests (wick's `server-wall` tip went with the wall); a save left occupied migrates. `SAVE_VERSION` +1 on landing.
-A returning player comes back to a bonus and nothing lost (WoW's rested XP).
+*Logged off is safe* (the old Phase 6) landed from another session (`SAVE_VERSION` 66: nothing invades while you're
+away, and every minute away banks Rested). This phase takes its place (D9).
+
+- **Lane:** visit.mjs (the snap and the revert), run.mjs, combat.mjs `disconnect`, the stake beside Jack out and the No
+  carrier card (Phase 2's), recap.mjs, coop.mjs (each player's visit), the save migration, GAME_RULES.md *Visits*.
+- **Hands off:** fights, bosses, the triggers, prices.
+
+1. **Nothing reverts.** At 0 Integrity you go home with everything the visit paid: XP, levels, the Pack, items, code,
+   credits, contract steps, rooms cleared, rep. The Warm cache's stacks are the only thing lost. The reconnect wait
+   stays.
+2. **The stake shows the Warm cache only**: its stacks and their bonus beside Jack out (Phase 2's icons), struck
+   through on the No carrier card. The card's restore line and the visit's snap go; the *Reboot* plays as picked.
+3. **Co-op:** a guest keeps their own visit the same way.
+4. **The save:** a run saved with a snap (`s.run.snap`) drops it on load, keyed on the field. `SAVE_VERSION` +1 when
+   landing.
+
+**Done when:** a disconnect mid-visit keeps the XP, Pack and contract steps and clears the Warm cache (a test); the
+designer has died once on purpose and seen the card.
 
 ### Phase 7 · What opens when
 
@@ -291,23 +318,34 @@ level 7; the tests pass.
 **Gate:** the designer plays the demo build from level 1 to 14 on one class first, with notes in the Log. This phase
 tunes to that play, never to pass the bots.
 
-- **Lane:** progression.mjs `levelGains`, store.mjs prices, the stash view, docs/BALANCE.md.
+- **Lane:** data.mjs `CLIMB` and the drop odds (gear.mjs `LOOT`), progression.mjs `levelGains`, store.mjs prices, the
+  stash view, the map's left column (the goals tracker), earned.mjs and achievements.mjs (read only), docs/BALANCE.md.
 - **Hands off:** bosses, story, the triggers, the demo switch.
 
-1. **No empty stretch** from 2 to 14. With the world opening by events, check where play still feels flat (8–9, 11, 13).
+1. **A smooth XP curve.** Kills to the next level jump sevenfold from 1 to 4 (23 → 160), sit flat from 5 to 10
+   (170–172), then climb (data.mjs `CLIMB`). Each level should take a little longer than the last, about 12–15%: near 3
+   minutes for level 1, near 45 for level 14, about 5 hours to 14, on the designer's 24-second fight.
+2. **Drops.** Whites from 4% to 6–7% a roll; blues about every 40–50 kills (every 85 now), the regular upgrade WoW's
+   greens are; yellows as they are.
+3. **Goals in sight.** A goals tracker under Contracts on the map: the two or three earned pieces and achievements
+   nearest done, each its reward's icon and a bar, filled in on its own (WoW's tracked achievements); and a card after
+   a big finish (a server mapped, a boss, a chain, a goal) with what you banked and what's nearest next. People speed
+   up as a goal they can see nears (Kivetz, Urminsky and Zheng 2006).
+4. **No empty stretch** from 2 to 14. With the world opening by events, check where play still feels flat (8–9, 11, 13).
    Candidates: the second
    core skill at 2 (it's Flood for a Breaker, which the class pick already promises), presets at 9, a bases tier at 13.
    The designer picks.
-2. **Upgrades show**: a protocol in the stash better than what's loaded wears an amber ▲, and so
+5. **Upgrades show**: a protocol in the stash better than what's loaded wears an amber ▲, and so
    does the Loadout tab. With nothing equipped, a level-10 fight wins 17–58% of the time; a player who never opens
    Protocols hits a wall.
-3. **Credits on a real clock.** One bot run made 7.8k credits by level 10 in 1.9 real hours, about 14 times `incomeAt`
+6. **Credits on a real clock.** One bot run made 7.8k credits by level 10 in 1.9 real hours, about 14 times `incomeAt`
    (store.mjs:43), so a shelf blue costs 13 minutes and undercuts drops. Measure the designer's credits an hour (`s.pace`)
    and set `incomeAt` to it, so the shelf costs the hours it was meant to (store.mjs:9). Components get a buyer before
    level 12 or stay banked (the designer's call).
-4. **Difficulty**, from the designer's notes: the friction band at 1, 10 and 14 (balance.test.mjs todo), the Breaker at
-   10 (37–40% lost, 58% of solo bosses won), the Herder (16% lost).
-5. **docs/BALANCE.md** regenerated (`node balance.mjs`): it still says 4% a level and *Signal*.
+7. **Difficulty**, from the designer's notes. Phase 2's pass found a level-1 fight costs about 60% of Integrity, with 4
+   of 15 lost: too steep for the first hour. A normal fight may be won blind and should chip, not drain; some viruses'
+   patterns carry the tension. Also the Breaker at 10 (37–40% lost, 58% of solo bosses won) and the Herder (16% lost).
+8. **docs/BALANCE.md** regenerated (`node balance.mjs`): it still says 4% a level and *Signal*.
 
 **Done when:** the designer's second pass; hours to 5, 10 and 14 measured on the designer's clock; the full suite green.
 
@@ -333,7 +371,7 @@ tunes to that play, never to pass the bots.
 | 3 Floor 1's bosses | 1 | 1 |
 | 4 The Resident, floor 2 in band | 3 (both change combat rules) | 5 |
 | 5 Story and its end | 1 (the card) | 4 |
-| 6 Logged off is safe | 2 (both touch the visit and the save) | — |
+| 6 The disconnect keeps what you won | 2 (the stake's icons) | 3, 5 |
 | 7 What opens when | 5 (its words) and 6 | — |
 | 8 What it pays | 7, and the designer's play | — |
 | 9 Closed test | 8 | — |
@@ -391,3 +429,7 @@ Side by side, the earlier phase lands first and the later one merges main before
   blues wins 25% at 4 and 73% at 5, yellows 22% at 3; the blind bot 0–19% in whites and blues. Its sheet in
   docs/boss-guide.md. The designer: "this should be good". PAGE NINE is built on `claude/demo-phase3-bosses` and lands
   after the designer plays it.
+- **Logged off is safe** (from another session, `SAVE_VERSION` 66): nothing invades while you're away; Rested banks
+  every minute away. The old Phase 6 is done.
+- **Decisions, 23 Nov** (the loops analysis): D9, no revert on a disconnect, only the Warm cache lost (the new Phase
+  6); D10, currencies stay; the XP curve, drops and goals tracker into Phase 8.
