@@ -1110,8 +1110,9 @@ export const BOSSES = {
   // throne: the rogue server kind and floor whose last room it holds (rogue.mjs); the others, a floor job's Core (arcs.mjs).
   // PAGE NINE: floor 1's floor job (arcs.mjs), a dead firm's account still paying its premium. Premium Paid: one part
   // Insured a cycle, in board order, the next shown; what it takes that cycle comes back at the cycle's end. Filed
-  // Early: its charges land a cycle before the attack they ride. It fights at your level from 6 to 8 (band).
-  pagenine: { long: { hp: 1, dmg: 0.45, enrageAt: 36 }, name: 'PAGE NINE', bar: 1.1, family: 'ransomware', author: '', own: true, crown: 'policy', floor: 6, band: [6, 8], early: true, noUniques: true, // its uniques wait (docs/demo-plan.md Phase 3)
+  // Early: its charges land a cycle before the attack they ride. It fights at your level from 6 to 8 (band). Sized for
+  // whites and blues a level behind you (the designer).
+  pagenine: { long: { hp: 1, dmg: 0.3, enrageAt: 36 }, name: 'PAGE NINE', bar: 0.9, family: 'ransomware', author: '', own: true, crown: 'policy', floor: 6, band: [6, 8], early: true, noUniques: true, // its uniques wait (docs/demo-plan.md Phase 3)
     hp: 0.6, dmg: 1, enrageAt: 18, acts: { beat: 'none' },
     extra: [{ id: 'policy', name: 'Policy', integrity: 60, armor: 1, loot: 'Policy Number', special: true, attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 3 } },
       { id: 'premium', name: 'Premium', integrity: 40, armor: 1, loot: 'Premium Stub', attack: { name: 'Debit', effect: 'encrypt', amount: 3, interval: 6, first: 4 } },

@@ -374,3 +374,11 @@ Side by side, the earlier phase lands first and the later one merges main before
   blues wins 25% at 4 and 73% at 5, yellows 22% at 3; the blind bot 0–19% in whites and blues. Its sheet in
   docs/boss-guide.md. The designer: "this should be good". PAGE NINE is built on `claude/demo-phase3-bosses` and lands
   after the designer plays it.
+- **Phase 3, PAGE NINE** (24 Nov): floor 1's chain boss in the Boss step's road server's Core, its letter at level 6, at
+  your level from 6 to 8. *Premium Paid* (one part Insured a cycle in board order, the next shown; it can't break and
+  gets back what it took), *Filed Early* (its charge lands a cycle before its attack), act 2 *Claim* (what comes back
+  hits you), act 3 *Double indemnity* (two Insured); its ledger art; its uniques wait (`noUniques`). Sized for whites and
+  blues a level behind (`long.dmg` 0.3, `bar` 0.9): the reader wins 59% at 6 and 19–38% at 7, where gear steps up at
+  item level 7. A save holding the step from RELAY-KING's stand-in moves to PAGE NINE's server from level 6. The
+  designer: "assume greens and whites a level behind, land pagenine". Filed Early's reading and acts 2 and 3 are my
+  calls, unplayed.

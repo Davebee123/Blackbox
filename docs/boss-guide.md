@@ -75,7 +75,9 @@ what isn't covered.
 - *Strategy:* the open part changes every cycle; follow it. Once one part breaks, only one of the two left is covered.
 - *How you die:* chasing one part through its covered cycles.
 
-**Tips.** A burn ticking on the Insured part comes back too, and in act 2 it hits you. Its own uniques aren't in yet; it pays the chain's pick of three.
+**Tips.** A burn ticking on the Insured part comes back too, and in act 2 it hits you. It's sized for whites and blues a
+level behind you; at 7 that gear is short (it steps up at item level 7). Its own uniques aren't in yet; it pays the
+chain's pick of three.
 
 ---
 
