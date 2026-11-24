@@ -485,3 +485,5 @@ Side by side, the earlier phase lands first and the later one merges main before
   item level 7. A save holding the step from RELAY-KING's stand-in moves to PAGE NINE's server from level 6. The
   designer: "assume greens and whites a level behind, land pagenine". Filed Early's reading and acts 2 and 3 are my
   calls, unplayed.
+- **Discord linked** (24 Nov): `LINKS.discord` is the invite (discord.gg/KyBUKuDRF); the Feedback button and the end
+  card open it.
