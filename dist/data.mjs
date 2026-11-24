@@ -64,13 +64,13 @@ export const CONFIG = {
   damageRef: 25,
   tickRef: 50,
   dotRef: 28,
-  // Reshaped with the floor tiers: more at a floor's first levels where gear carries little (7), less by the late floors' tops.
   gearReq: 3, // an item loads from this many levels under its own (gear.mjs reqLevel)
-  gearFill: [[6, 1], [7, 2.2], [12, 1.45], [15, 1.75], [25, 1.95], [30, 1.66], [37, 1.6], [42, 1.35], [50, 1.25]],
-  // Floors as tiers (docs/scaling.md step 4): a mob takes its floor's step on top of its level, mob a floor, compounding
-  // (mobPower). Gear takes a bigger step, gear a floor, and its fill drifts down drift a level inside its floor
-  // (gearTier), so a floor's first drops outclass the last floor's best and its own gear has aged by the floor's top.
-  floorStep: { mob: 0.15, gear: 0.25, drift: 0.06 },
+  // Smooth, no step at a floor's edge (WoW's way: the last floor's best carries you into the next): each floor's middle
+  // keeps the share of a mob it had on average under the floor tiers (save v68 refills on it).
+  gearFill: [[6, 1], [9.5, 1.96], [15.5, 2.3], [21.5, 3.14], [27.5, 3.79], [33.5, 4.27], [39.5, 4.84], [45.5, 5.35], [50, 5.73]],
+  // Depth: mobs take mob a floor on top of power, compounding, spread smoothly over the levels (mobPower): none to
+  // level 6, one step by floor 2's middle (9.5), then a sixth of a step a level.
+  floorStep: { mob: 0.15 },
   // Enemy parts are tougher than one or two of your hits: fights run long enough that attacks
   // land, so gear and planning are what keep you standing.
   partToughness: 1.7,
@@ -968,15 +968,13 @@ export const lifted = (n, level) => Math.max(1, Math.round(n * lift(level)));
 // Your own line (CONFIG.ownPerLevel): what your level alone gives you.
 export const own = (level) => { const L = Math.max(1, level), F = Math.max(1, CONFIG.ownFrom || 1); return power(Math.min(L, F)) * (1 + CONFIG.ownPerLevel * Math.max(0, L - F)); };
 // Gear's fill at an item level (CONFIG.gearFill), and a flat item number lifted and filled.
-// The floor tier of gear at an item level (CONFIG.floorStep): its floor's step (floorFor), less the drift for each level
-// past the floor's first. Floor 1's gear is as it was (the first levels' tuning).
-export const gearTier = (level) => { const L = Math.max(1, level), f = floorFor(L), F = CONFIG.floorStep; return f < 2 ? 1 : (1 + F.gear) ** (f - 1) * (1 - F.drift) ** (L - bandOf(f)[0]); };
-export const gearFill = (level) => runLate(level, CONFIG.gearFill) * gearTier(level);
+export const gearFill = (level) => runLate(level, CONFIG.gearFill);
 export const filled = (n, level) => Math.max(1, Math.round(n * lift(level) * gearFill(level)));
-// Enemies match you level for level (no soft start: the first fights should cost something), and take their floor's
-// step (CONFIG.floorStep.mob): the floor they're on when it's known, else the one their level is on. A breach's fights
-// (overrides.short) keep their own pace without it, as they skip fight length.
-export const mobPower = (level, floor = floorFor(level)) => power(level) * (1 + CONFIG.floorStep.mob) ** (Math.min(FLOORS.length, Math.max(1, floor || 1)) - 1);
+// Enemies match you level for level (no soft start: the first fights should cost something), and take the depth step
+// (CONFIG.floorStep.mob) smoothly by level, the same on any floor: nothing jumps at a floor's edge. A breach's fights
+// (short) keep their own pace without it, as they skip fight length.
+const depthOf = (L) => (L <= 6 ? 0 : L < 9.5 ? (L - 6) / 3.5 : (L - 3.5) / 6);
+export const mobPower = (level, short = false) => power(level) * (short ? 1 : (1 + CONFIG.floorStep.mob) ** depthOf(Math.max(1, level)));
 
 // ---------- crew bosses (raid.mjs) ----------
 // Each phase gives every role a job (docs/bosses.md has the review sheet). Mechanic kinds and their fields
@@ -1608,7 +1606,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   if (strain && mutation && MUTATIONS[mutation] && clashes(MUTATIONS[mutation].gene)) mutation = null;
   const unlinked = !!strain && grade >= 2 && clashes('linked');
   const long = !!overrides.run && !overrides.short && !BOSSES[overrides.boss]?.raid; // fight length (CONFIG.length)
-  const scale = mobPower(level, overrides.short ? 1 : overrides.tier ?? overrides.floor) * (mutation === 'hasty' ? 0.9 : 1) * (overrides.run ? CONFIG.runHp * (overrides.boss || overrides.elite ? 1 : runLate(level, CONFIG.runLateHp)) : 1) * (long ? runLate(level, CONFIG.length.hp) : 1);
+  const scale = mobPower(level, !!overrides.short) * (mutation === 'hasty' ? 0.9 : 1) * (overrides.run ? CONFIG.runHp * (overrides.boss || overrides.elite ? 1 : runLate(level, CONFIG.runLateHp)) : 1) * (long ? runLate(level, CONFIG.length.hp) : 1);
 
   // Tougher viruses wear more armor and strike sooner (see THREAT_STEPS).
   const extra = (spec) => (mutation === 'armored' ? 1 : 0) + THREAT_STEPS.armor.filter((x) => threat >= x.threat && (x.part === 'any' || (x.part === 'special') === !!spec.special)).length;
@@ -1666,7 +1664,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // "Viruses"), shared out by role (shareProfile).
   if (rolled2) shareProfile(familyId, family, specs, parts, rolled2, level);
   const step = overrides.run ? (CONFIG.runEarly[level - 1] ?? 1) * (overrides.boss || overrides.elite ? 1 : runLate(level)) : 1;
-  const dmgScale = mobPower(level, overrides.short ? 1 : overrides.tier ?? overrides.floor) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1) * (long ? runLate(level, CONFIG.length.dmg) : 1);
+  const dmgScale = mobPower(level, !!overrides.short) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1) * (long ? runLate(level, CONFIG.length.dmg) : 1);
   // Encryption stacks, so it skips the early-game and late steps (they would compound).
   for (const p of parts) if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * dmgScale / (p.attack.effect === 'encrypt' || p.hash || p.twinrig ? step : 1))); // a Rig's Hash climbs like encryption: it skips them too
   for (const p of parts) if (p.attack?.effect === 'heal') p.attack.amount = Math.max(1, Math.round(p.attack.amount * scale * g.hp));

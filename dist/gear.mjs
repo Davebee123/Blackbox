@@ -5,7 +5,7 @@
 // like Corepunk. Loot and salvage build you.
 // Your server runs no services any more (R2): the home fight is the firewall's job (filters, tiers) and the daemons',
 // and a server's programs (sockets.mjs) are the building. Code builds them, and the wall.
-import { CONFIG, power, line, lift, lifted, filled, gearFill, runLate } from './data.mjs';
+import { CONFIG, power, line, lift, lifted, filled, gearFill, runLate, floorFor, bandOf } from './data.mjs';
 import SET_TEXT from './content/sets.mjs';
 
 // Slots by class level: 4 to start, 5 at 15, 6 at 30. Each slot takes one kind of item (SLOTS).
@@ -514,19 +514,25 @@ export function statsRestore(s, was) {
 // field: s.curve marks a save whose items are on the curve (fresh saves start with it).
 // The fill before the floor tiers (save v56: s.curve 3 refills an item filled on it, × the new fill over this).
 const FILL_V55 = [[6, 1], [10, 1.46], [15, 1.67], [25, 1.77], [30, 1.66], [40, 1.6], [50, 1.52]];
+// The floor tiers' fill (v56 to v67): a step a floor, drifting down inside it. Save v68 (s.curve 4) refills on the smooth one.
+const FILL_V56 = [[6, 1], [7, 2.2], [12, 1.45], [15, 1.75], [25, 1.95], [30, 1.66], [37, 1.6], [42, 1.35], [50, 1.25]];
+const tierV56 = (L) => { const f = floorFor(L); return f < 2 ? 1 : 1.25 ** (f - 1) * 0.94 ** (L - bandOf(f)[0]); };
+const fillV56 = (L) => runLate(L, FILL_V56) * tierV56(L);
 const refill = (L) => gearFill(L) / runLate(L, FILL_V55);
+const smooth = (L) => gearFill(L) / fillV56(L);
 export function curveRestore(s) {
-  if (s.curve >= 3) return;
+  if (s.curve >= 4) return;
   const was = s.curve || 0;
   const seen = new Set();
   const walk = (x) => {
     if (!x || typeof x !== 'object' || seen.has(x)) return;
     seen.add(x);
-    if (x.kind === 'protocol' && x.stats && typeof x.stats === 'object') return void (was >= 2 ? fillItem(x, refill) : was ? fillItem(x) : liftItem(x)); // filled already (v55): refilled on the tiers; lifted (v54): filled
+    // filled on the tiers (v56): refilled smooth; filled (v55): refilled smooth from there; lifted (v54): filled
+    if (x.kind === 'protocol' && x.stats && typeof x.stats === 'object') return void (was >= 3 ? fillItem(x, smooth) : was >= 2 ? fillItem(x, refill) : was ? fillItem(x) : liftItem(x));
     for (const v of Array.isArray(x) ? x : Object.values(x)) walk(v);
   };
   walk(s);
-  s.curve = 3;
+  s.curve = 4;
 }
 
 // "+6% Damage · +2% Crit"
