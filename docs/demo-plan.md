@@ -468,3 +468,10 @@ Side by side, the earlier phase lands first and the later one merges main before
   10% are left out. A click on the header folds it; on hover a row's pin pins it and an auto row's × dismisses it
   (the next takes its place; `goals.mjs`). The finish card (`finish.mjs`): a server mapped or taken over, a boss, a
   floor job or a tracked goal brings a card once you're off the run, with what it paid and the next goal.
+- **Phase 5** (24 Nov): the five waiting transmissions wired verbatim through Phase 7's path, no new trigger system:
+  Kestrel's hub (`OPENS.rack`), GLASSJAW's hub (`hubTrace`), floor 2 reached (`descend`: LANTERN's arrival), and a floor
+  job's Boss step falling (`progression.mjs FALLS`: PAGE NINE brings wick's; CENTRIFUGE brings LANTERN's, then wick's at
+  once, no gap). wick's goodbye opens the end card: the demo ends once *Carrier* is delivered and both are heard. The
+  designer approved *Carrier*'s two extra letters (wick after step 1, Halcyon Claims after step 3; built) and the end
+  card's line, *Floor 3 and below are in the full game.* The editor lists every transmission with **Play from here**
+  (`?playtest=scene&id=`). Only the bosses' fall is hooked; their content waits on Phase 3.

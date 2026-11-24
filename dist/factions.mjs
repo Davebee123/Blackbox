@@ -6,7 +6,7 @@
 // own way. Nothing drives it under 1, so no hub ever shuts. It comes from two things only: the
 // contracts a faction posts, and the receipts you stamp for it (receipts.mjs). You hold one
 // commission (s.commission, absent = Halcyon): the faction whose retainer you draw, and your stance.
-import { openUp } from './progression.mjs';
+import { openUp, onEvent } from './progression.mjs';
 import { emit, warn, rand, hackerLevel, hooks, active } from './combat.mjs';
 import { buyAt } from './store.mjs';
 import { seeded } from './gear.mjs';
@@ -117,6 +117,7 @@ export function hubTrace(s, f, amount, why = '') {
   if (n < 100) return emit(s, 'lead', `${why}${FACTIONS[f].short} hub trace ${n}%.`, { faction: f });
   (s.hubFound ||= {})[f] = true;
   if (f === 'kestrel') openUp(s, 'rack'); // the Rack pull (sites.mjs; progression.mjs)
+  if (f === 'glassjaw') onEvent(s, 'glassjaw-hub'); // the broker's terms (scenes.mjs)
   emit(s, 'located', `HUB LOCATED: ${FACTIONS[f].hub.name}. ${FACTIONS[f].short} is on your map.`, { faction: f, hub: true });
 }
 export function hubsOf(s) {

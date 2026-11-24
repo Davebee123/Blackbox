@@ -2236,8 +2236,8 @@ A **transmission** is a conversation over the map with a contact (`scenes.mjs`; 
 the quest window's look: **Incoming**, their portrait beside the conversation, your answers in teal, numbered choices
 under it (click, or press 1–9). A question you've asked is gone from the next choices; an answer can end it somewhere
 (Mail, a server on the map). Esc or × ends it. Each plays once, never mid-fight; one that comes while another plays
-waits its turn. The event ones wait 10 minutes of play after the last closed (`GAP_MS`), and play only for a new
-character (What opens when). A runner's or a rival's speaks by their temperament.
+waits its turn. The event ones wait 10 minutes of play after the last closed (`GAP_MS`; CENTRIFUGE's two play at once),
+and play only for a new character (What opens when). A runner's or a rival's speaks by their temperament.
 
 | Scene | When |
 |---|---|
@@ -2251,6 +2251,11 @@ character (What opens when). A runner's or a rival's speaks by their temperament
 | The rival | Your first rival race over, won or lost. |
 | The runner's trade | Your first runner's trade mounts (**Show me** opens its server). |
 | LANTERN, the schedule | *Carrier*'s schedule page delivered: INIT's table. |
+| Kestrel | Kestrel's hub found: its standing order, the Rack pull. |
+| GLASSJAW | GLASSJAW's hub found: the list, feuds. |
+| wick, PAGE NINE | PAGE NINE falls (floor 1's Boss step): the schedule came from deeper; LANTERN. |
+| LANTERN's arrival | Floor 2 reached: *Four. Nine. Nine.* |
+| LANTERN, then wick | CENTRIFUGE falls (floor 2's Boss step): the schedule's signer, the Stacks below; wick's goodbye opens the demo's end card. |
 
 ### What opens when
 
@@ -2390,7 +2395,7 @@ don't count toward your six. The words are in `dist/content/contracts.mjs` (`flo
 | Floor | Chain | From | Steps | Extra letter (after step) |
 |---|---|---|---|---|
 | 1 The Sprawl | Page nine | wick | named process in SPRAWL-00 · Map · Recover a file · puzzle board · Boss PAGE NINE | — |
-| 2 Backhaul | Carrier | LANTERN | Install · Rooms · Past the Tracker · Map without resting · Boss CENTRIFUGE | — |
+| 2 Backhaul | Carrier | LANTERN | Install · Rooms · Past the Tracker · Map without resting · Boss CENTRIFUGE | wick (1), Halcyon Claims (3) |
 | 3 The Stacks | Underwriting | Halcyon Claims | Map · Recover a file · Takeover · puzzle board · Boss SHOULDER SURFER | NULL CHOIR (2) |
 | 4 Coldline | Cold storage | Kestrel | Rooms · Install · Past the Tracker · Map without resting · Boss NIGHT DESK | wick (2) |
 | 5 Deep Core | Static | NULL CHOIR | puzzle board · Recover a file · Rooms · Install · Boss EXIT NODE | wick (2) |
@@ -3194,8 +3199,8 @@ Developer commands work only in tests, playtest pages, a test bench and with `?d
   floor 2's exit card has **The full game** in place of Go down. Contracts, events, sites, runners and members' servers
   are dealt on floor 2 at most (`dealFloor`). Its own save (`blackbox-demo`); `?dev`, `?bench` and `?playtest` do
   nothing, and the bench, the Arena and the effects playtest stay out of its bundle. *demo 0.1* sits in the power-up's
-  corner, on Settings' Save card and in every report. Delivering floor 2's chain (*Carrier*) opens the **end card**
-  (time played, level, bosses down, uniques found, Feedback, the itch follow and the Discord), which ends play.
+  corner, on Settings' Save card and in every report. Delivering floor 2's chain (*Carrier*), with CENTRIFUGE's transmissions heard, opens the **end card**
+  (*Floor 3 and below are in the full game.*, time played, level, bosses down, uniques found, Feedback, the itch follow and the Discord), which ends play.
 - **Telemetry** (the demo only, `telemetry.mjs`; off while `LINKS.telemetry` is empty: no question, no toggle): asked once after your first jack out, off until yes, a toggle on
   Settings' Save card. A random install id, never the handle. Sessions (start, length, the last screen), levels
   reached, bosses fought (won or lost, cycles, Integrity left), disconnects (where, by what) and the demo finished go

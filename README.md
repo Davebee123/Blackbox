@@ -65,6 +65,7 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 | `/?playtest=run` | Connected to a fresh server. `&family=worm\|ghostroot`, `&template=mailhub\|mirror\|archive\|lab` (its rooms' kind), `&depth=<floor>`. |
 | `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&card=surge\|escort\|pack` (a run card), `&seed=`, `&puzzle=<board>` (its room, and you in it), `&seen` (every room discovered). |
 | `/?playtest=story&beat=<id>` | A test save at a story beat (the editor's *Play from here*). |
+| `/?playtest=scene&id=<id>` | A transmission on a test save, over the map (the editor's *Transmissions*, *Play from here*). |
 | `/?shell=plain`, `/?tod=night\|dawn\|day\|dusk` | No CRT shell; another time of day outside the window. |
 | Co-op | Two benches in two tabs, then `coop host` and `coop join <code>`: [`docs/coop.md`](docs/coop.md). |
 

@@ -26,7 +26,7 @@
 // it gained a step opens again at that step (regrown). The jobs themselves
 // are mail jobs (s.mail.jobs) marked chain: <floor>, step: <k>, slot: <the target's slot>.
 import { noteFinish } from './finish.mjs';
-import { openUp } from './progression.mjs';
+import { openUp, onEvent, FALLS } from './progression.mjs';
 import { emit, warn, hackerLevel, hooks, addItem, classOf, subOf } from './combat.mjs';
 import { BOSSES, SUBS, defaultSub, CONFIG } from './data.mjs';
 import { seeded, rollItem, itemLabel } from './gear.mjs';
@@ -200,6 +200,7 @@ export function arcTick(s, at = nowOf()) {
     if (c.type === 'puzzle' ? puzzleWon(s, c) : c.type === 'boss' && !c.slot ? kingDown(s, c) : c.type === 'boss' && namedBoss(c.named) ? jobDown(s, c) : lairDown(s, c)) {
       c.got = 1;
       if (c.fall) emit(s, 'arc-fall', c.fall, { contract: c.id, chain: c.chain });
+      if (c.type === 'boss') for (const sc of FALLS[c.chain] || []) onEvent(s, sc); // its transmission (scenes.mjs)
       emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
     }
   }

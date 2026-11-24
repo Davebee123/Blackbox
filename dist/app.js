@@ -173,6 +173,15 @@ function load() {
     play(s, 'connect ' + s.locations[0].id);
     return s;
   }
+  // From the content editor: a transmission on a test save (editor.html, "Play from here"), over the map.
+  if (playtest === 'scene') {
+    const s = fresh();
+    s.tutorialCompleted = true;
+    s.profile = { handle: params.get('handle') || 'tester', pwLen: 6, since: Date.now() };
+    newCharacter(s);
+    SC.replay(s, params.get('id'));
+    return s;
+  }
   // From the content editor: a test save at a story beat (editor.html, "Play from here").
   if (playtest === 'story') {
     const s = fresh();
@@ -345,6 +354,14 @@ function demoEnd() {
   if (!DEMO || !campaign.demoDone) return;
   const el = demoCard('demo-end', demoEndMarkup(campaign));
   el.addEventListener('click', (e) => { const b = e.target.closest('[data-backup]'); if (b) backupClick(b.dataset.backup); });
+}
+// The demo ends (D8) once the last floor's chain is delivered and CENTRIFUGE's transmissions are heard (wick's goodbye
+// goes to the end card; scenes.mjs).
+function demoFinish() {
+  if (!DEMO || campaign.demoDone || !campaign.arcs?.[DEMO.floor]?.done) return;
+  const sc = campaign.scenes;
+  if ([sc?.now, ...(sc?.queue || [])].some((q) => q?.id?.startsWith('centrifuge'))) return; // still to play
+  campaign.demoDone = Date.now(); TM.track(campaign, 'done'); tmSend(); save(); setTimeout(demoEnd, 2500);
 }
 // While the end card is up, the game takes no keys.
 addEventListener('keydown', (e) => { if (DEMO && campaign.demoDone && !e.target.closest?.('.demo-end')) { e.preventDefault(); e.stopPropagation(); } }, true);
@@ -1344,7 +1361,7 @@ function react(events) {
   if (events.some((e) => e.type === 'resolved')) turnedAt = performance.now(); // a turn on the timer counts too (turnLocked)
   TM.observe(campaign, events);
   if (events.some((e) => e.type === 'jacked-out') && TM.askable(campaign)) tmAskDue = true;
-  if (DEMO && !campaign.demoDone && events.some((e) => e.type === 'arc-done' && e.chain === DEMO.floor)) { campaign.demoDone = Date.now(); TM.track(campaign, 'done'); tmSend(); save(); setTimeout(demoEnd, 2500); } // the last floor's chain delivered: the demo ends (D8)
+  if (DEMO && events.some((e) => e.type === 'arc-done' && e.chain === DEMO.floor)) demoFinish(); // the last floor's chain delivered: the demo ends (D8)
   if (TM.due()) tmSend();
   const won = events.find((e) => e.type === 'victory');
   const last = module === 'combat' ? winningBreak(events) : null; // the break that wins the fight: slow motion
@@ -2438,12 +2455,12 @@ function sceneAnswer(n) {
 $('scene').addEventListener('click', (e) => {
   const p = e.target.closest('[data-scene-pick]');
   if (p) { e.stopPropagation(); return sceneAnswer(Number(p.dataset.scenePick)); }
-  if (e.target.closest('[data-scene-skip]')) { e.stopPropagation(); SC.skip(campaign); feel.key('click'); save(); markDirty(); }
+  if (e.target.closest('[data-scene-skip]')) { e.stopPropagation(); SC.skip(campaign); demoFinish(); feel.key('click'); save(); markDirty(); }
 });
 document.addEventListener('keydown', (e) => {
   if ($('scene').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
   if (/^[1-9]$/.test(e.key)) { e.preventDefault(); e.stopImmediatePropagation(); sceneAnswer(Number(e.key)); }
-  else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); SC.skip(campaign); save(); markDirty(); }
+  else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); SC.skip(campaign); demoFinish(); save(); markDirty(); }
 }, true);
 function renderPreview() {
   const el = $('th-preview');
@@ -4132,6 +4149,7 @@ document.fonts?.ready.then(() => { fitKey = ''; fitTopbar(); });
 function goTo(target) {
   const [where, what, sub] = target.split(':');
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
+  else if (where === 'demo-end') demoFinish(); // wick's goodbye as CENTRIFUGE falls
   else if (where === 'store') go('store');
   else if (where === 'runner') { mapRunner = what; mapRunnersAt = null; runnerMode = 'runner'; const fl = runnerFloor(campaign, what); if (fl && fl <= (campaign.floors?.reached || 1)) mapFloor = fl; go('map'); } // a runner's transmission: their card (Hire)
   else if (where === 'server') { mapSel = 'server'; go('map'); }

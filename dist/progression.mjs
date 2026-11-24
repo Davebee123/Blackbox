@@ -28,12 +28,14 @@ export const OPENS = {
   runcards: { on: 'a run on a traced server' },
   rivals: { on: 'your first vault opened', scene: 'first-vault' },
   settlement: { on: 'your first takeover' }, // the Settlement run (sites.mjs)
-  rack: { on: "Kestrel's hub found" }, // the Rack pull (sites.mjs)
+  rack: { on: "Kestrel's hub found", scene: 'kestrel-hub' }, // the Rack pull (sites.mjs)
   trade: { on: 'a runner at Known' }, // a runner's trade (sites.mjs); its transmission plays as the first one mounts
   table: { on: "Carrier's schedule page read", scene: 'schedule' }, // INIT's table, its count, Orphans contracts
   rig: { on: 'your first achievement' },
   // supply:<faction>: that hub's supply order, on your first sale at its market (supply.mjs).
 };
+// A floor job's Boss step falling (arcs.mjs): its transmissions, in order. Floor 2's ends on the demo's end card.
+export const FALLS = { 1: ['pagenine-falls'], 2: ['centrifuge', 'centrifuge-wick'] };
 // Open on a new character once it happened; on an older save (or a bench, a test), as it always opened: legacy.
 export const isOpen = (s, id, legacy = true) => (s?.opens ? !!s.opens[id] : legacy);
 // It happened: open id (once), and play its transmission. args fill the scene's words. Returns whether it opened.
