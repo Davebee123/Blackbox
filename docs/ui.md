@@ -248,7 +248,7 @@ short vibration on phones that have it.
 - **HOME's card** (the map's server card, view.mjs `mapSide`): the old Server page's ring is the card (`homeRing`:
   sixteen whole blocks round the core, Integrity the inner ring, an amber arc while an invasion is at HOME, a red road and
   marker while one is on its way), then the invasion with **Intercept**,
-  and **Top up**. There's no Server page; Code and Components sit behind the top bar's **Materials** (`storesMarkup`).
+  and **Restore**. There's no Server page; Code and Components sit behind the top bar's **Materials** (`storesMarkup`).
 - **The invasion's card:** its name and tags, then rows like HOME's (From, Arrives or At HOME, Bounty, Daemon), then
   **Intercept**.
 - **The quest window** (the *Transmission*, quest-view.mjs): a thread or floor job read as an intercepted message,

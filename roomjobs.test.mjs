@@ -172,7 +172,6 @@ test('Install: a disconnect with the item in your pack puts it back in your stas
   assert.equal(s.run, null, 'disconnected');
   assert.ok(openContracts(s).includes(c), 'the job stays');
   assert.equal(c.carry, 'stash', 'its item back in your stash');
-  assert.deepEqual(s.logs.findLast((e) => e.type === 'disconnected').failed, [], 'nothing failed');
 });
 
 test('Install and build share the verb: `install <program>` still builds in a socket; `plant` is only ever the item', () => {

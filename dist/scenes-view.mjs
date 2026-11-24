@@ -4,12 +4,12 @@
 // in on the first. Esc or × closes it.
 import { esc } from './view.mjs';
 import { portraitMarkup } from './portraits.mjs';
-import { SCENES, sceneNow, choicesOf } from './scenes.mjs';
+import { SCENES, sceneNow, choicesOf, whoOf, fill } from './scenes.mjs';
 
 export function sceneMarkup(s) {
   const now = sceneNow(s);
   if (!now) return '';
-  const def = SCENES[now.id];
+  const def = SCENES[now.id], who = whoOf(def, now.args);
   let k = 0;
   const lines = now.said.map((l) => {
     const fresh = l.step === now.step, i = fresh ? k++ : 0;
@@ -17,8 +17,8 @@ export function sceneMarkup(s) {
   }).join('');
   const ch = choicesOf(s), n = ch.length;
   const choices = ch.map((c) => `<button type="button" class="btn th-choice" data-scene-pick="${c.n}"><kbd>${c.n}</kbd><span>${esc(c.label)}</span></button>`).join('');
-  return `<section class="pz-card q-card sc-card${now.step ? '' : ' sc-first'}" id="sc-card" role="dialog" aria-label="${esc(def.who)}" style="--n:${k}">
-    <header class="pz-head qa-head"><p class="pz-kick">Incoming · <span class="pz-at">encrypted · ${esc(def.from || '')}</span></p><h1><span>${esc(def.who)}</span></h1><button type="button" class="btn small pz-x" data-scene-skip title="Later (Esc)" aria-label="Later">×</button></header>
-    <div class="q-talk">${portraitMarkup(def.who, def.icon || 'npc')}<div class="qa-lines sc-log">${lines}</div></div>
+  return `<section class="pz-card q-card sc-card${now.step ? '' : ' sc-first'}" id="sc-card" role="dialog" aria-label="${esc(who)}" style="--n:${k}">
+    <header class="pz-head qa-head"><p class="pz-kick">Incoming · <span class="pz-at">encrypted · ${esc(fill(def.from || '', now.args))}</span></p><h1><span>${esc(who)}</span></h1><button type="button" class="btn small pz-x" data-scene-skip title="Later (Esc)" aria-label="Later">×</button></header>
+    <div class="q-talk">${portraitMarkup(who, def.icon || 'npc')}<div class="qa-lines sc-log">${lines}</div></div>
     <div class="th-choices sc-choices">${choices}</div><p class="sc-foot"><span>${n ? `1${n > 1 ? `–${n}` : ''} to answer` : ''}</span><span>Esc · later</span></p></section>`;
 }

@@ -154,7 +154,7 @@ test('uniques: fixed name and stats, scaled up from their own level; drop odds b
   // The loot model (WoW's): trash rarely drops an item, an elite better, a rare spawn better still, at every rarity.
   const [trash, elite, rare] = ['trash', 'elite', 'rare'].map(lootOdds);
   for (const r of ['stock', 'tuned', 'custom', 'zeroday']) assert.ok(trash[r] < elite[r] && elite[r] < rare[r], r);
-  assert.ok(trash.stock + trash.tuned + trash.custom < 0.05, 'most trash drops no item');
+  assert.ok(trash.stock + trash.tuned + trash.custom < 0.08, 'most trash drops no item');
   assert.ok(rare.stock + rare.tuned + rare.custom > 0.5, 'a rare spawn usually drops one');
   assert.ok(trash.zeroday < 1 / LOOT.per.zeroday && elite.zeroday < 1 / LOOT.per.zeroday, 'a world gold is very rare');
   assert.equal(lootOdds('nonsense'), trash);

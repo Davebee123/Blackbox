@@ -1,6 +1,6 @@
 /* The phone's shell (docs/phone-plan.md P1). Every rule sits under [data-form=phone] (form.mjs): a desktop, or a
    600–900 px window, never reads one of them. The tab bar and the prompt's × don't exist off a phone. */
-:root:not([data-form='phone']) .ph-tabs, :root:not([data-form='phone']) .ph-prompt-x { display: none; }
+:root:not([data-form='phone']) :is(.ph-tabs, .ph-prompt-x, .ph-ico) { display: none; }
 
 /* ---- Tokens: a 44 px target, the type ramp (body 15 px, nothing under 11 px), the safe areas, the tab bar ---- */
 [data-form='phone'] {
@@ -26,6 +26,16 @@
 [data-form='phone'] .topbar .meter strong { font-size: var(--ph-body); }
 [data-form='phone'] .topbar .meter-note, [data-form='phone'] .topbar .sig-eta { font-size: var(--ph-tiny); }
 [data-form='phone'] .topbar .meters > .meter:last-child { margin-left: auto; }
+/* All of it in 390 px: Process table on two lines, Materials its crate */
+[data-form='phone'] .topbar .meter-table .meter-label { width: 52px; white-space: normal; line-height: 1.15; }
+[data-form='phone'] .topbar .meter-stores .meter-label { display: none; }
+[data-form='phone'] .topbar .ph-ico { width: 18px; height: 18px; margin: 0; color: var(--amber); }
+[data-form='phone'] .topbar .ph-narrow { display: none; }
+@media (max-width: 359px) { /* a 320 px phone: Credits its coin too */
+  [data-form='phone'] .topbar, [data-form='phone'] .topbar > .meters { column-gap: 8px; }
+  [data-form='phone'] .topbar .ph-narrow { display: block; }
+  [data-form='phone'] .topbar .ph-narrow + .meter-label { display: none; }
+}
 [data-form='phone'] .topbar .pager { order: -1; height: 34px; min-height: 0; padding: 0 2px; }
 [data-form='phone'] .topbar .pg-lamp { gap: 6px; min-width: var(--tap); height: var(--tap); margin: -5px 0; justify-content: center; }
 [data-form='phone'] .pg-lamp .pg-n { color: var(--amber); font: 600 var(--ph-small) var(--mono); }
@@ -134,7 +144,7 @@
 [data-form='phone'] body.ph-fight.ph-out .combat > .stage { transform: translate(var(--ph-dx, 0), var(--ph-dy, 0)); }
 [data-form='phone'] body.ph-fight.ph-out .hud::after { content: ''; position: absolute; inset: auto; top: 4px; right: 6px; bottom: auto; left: auto; background: none; transform: none; width: 40px; height: 40px; border: 1px dashed var(--line-strong); border-radius: 4px; }
 [data-form='phone'] body.ph-fight.no-motion .combat > .stage { transition: none; transform: none; }
-[data-form='phone'] body.ph-fight.fight-over .combat > .stage { position: static; width: auto; height: auto; }
+[data-form='phone'] body.ph-fight.fight-over .combat > .stage { position: static; width: auto; height: auto; transform: none; } /* a transform would hold the spoils card (fixed) inside the strip */
 
 /* The board: Now, +1 and +2 in the height left, the rows sharing it; the whose-half chip in its header; chips with
    no icons. */
@@ -293,7 +303,7 @@
 [data-form='phone'] body.ph-rooms .fp { display: flex; flex-direction: column; gap: 0; height: calc(100dvh - var(--ph-bar) - var(--safe-t)); }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud { position: static; display: flex; flex: none; flex-wrap: nowrap; align-items: center; gap: 12px; height: var(--tap); padding: 0 12px; background: var(--bg); border: 0; border-bottom: 1px solid var(--line-strong); border-radius: 0; box-shadow: none; overflow: hidden; }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud::before, [data-form='phone'] body.ph-rooms #page-view .fp-hud::after { display: none; }
-[data-form='phone'] body.ph-rooms #page-view .fp-hud > :not(.fp-id, .fp-sig, .fp-visit, .fp-packwrap, .fp-prog, .fp-hunt, .fp-tools) { display: none; }
+[data-form='phone'] body.ph-rooms #page-view .fp-hud > :not(.fp-id, .fp-sig, .fp-visit, .fp-prog, .fp-hunt, .fp-tools) { display: none; }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud :is(.lbl, .fp-id small, .fp-id .ico, .fp-sig small, .sigbar, .pbar, .fp-mapped, .fp-rules) { display: none; }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud .fp-tools { display: contents; }
 [data-form='phone'] body.ph-rooms #page-view .fp-hud .fp-in { display: none; }
@@ -326,8 +336,22 @@
 [data-form='phone'] body.ph-rooms #page-view .fp-acts .btn.hot-btn { color: var(--hot); }
 [data-form='phone'] body.ph-rooms #page-view .fp-acts .btn.primary { color: var(--amber); }
 [data-form='phone'] body.ph-rooms #page-view .fp-acts .btn:disabled { opacity: 0.4; }
+[data-form='phone'] body.ph-rooms.noticed #page-view .fp-acts { bottom: calc(var(--ph-bar) + 48px); } /* over the log line, never under it */
+[data-form='phone'] body.ph-rooms .command-dock #notice { max-height: 36px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } /* one line; a tap shows it whole */
+/* The stake (Phase 6): the Warm cache and the Pack at the capsule's left end */
+[data-form='phone'] body.ph-rooms #page-view .fp-acts .fp-stake { gap: 8px; margin: 0; padding: 0 4px 0 12px; border-right: 1px solid var(--line-strong); }
+[data-form='phone'] body.ph-rooms #page-view .fp-acts .fp-stake b { font: 600 var(--ph-small) var(--mono); }
 [data-form='phone'] body.ph-map .map-pick summary { display: flex; align-items: center; }
 [data-form='phone'] #sheet .pg-detail { padding: 0 0 0 12px; background: none; border-width: 0 0 0 3px; border-radius: 0; box-shadow: none; }
 [data-form='phone'] #sheet .pg-acts { display: flex; gap: 8px; margin-top: 4px; }
 [data-form='phone'] #sheet .pg-acts .btn { flex: 1; }
 [data-form='phone'] .rcard { position: absolute; left: 8px; right: 8px; bottom: 8px; width: auto; visibility: visible; max-height: 70%; overflow: auto; }
+
+/* The class pick: Start stays on screen at the bottom while a drawer is open (docs/demo-plan.md Phase 2). */
+[data-form='phone'] .pk-foot { position: sticky; bottom: 0; z-index: 2; margin: 0 -16px; padding: 16px 16px calc(12px + var(--safe-b)); background: linear-gradient(rgba(4, 3, 2, 0), #040302 40%); }
+
+/* wick's tips: his line only (no face), so a tip leaves the board and the button it names in view */
+[data-form='phone'] .tip.wick .tip-face { display: none; }
+[data-form='phone'] .tip.wick .tip-body { grid-template-columns: minmax(0, 1fr); margin-bottom: 8px; }
+[data-form='phone'] .tip.wick .tip-from { flex-direction: row; gap: 8px; align-items: baseline; }
+[data-form='phone'] .tip { padding: 10px 12px 8px; }

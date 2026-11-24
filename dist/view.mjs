@@ -73,9 +73,9 @@ import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, name
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState, freeTiers, blastOf, livingParts, keptItem } from './combat.mjs';
 import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { youMarks, junkKey } from './mechanics.mjs';
-import { cantripsOf, TELL, lifted, own, lift, line } from './data.mjs';
+import { cantripsOf, spikeOf, TELL, lifted, own, lift, line } from './data.mjs';
 import { lastFloor } from './data.mjs';
-import { DEMO, version } from './demo.mjs';
+import { DEMO, LINKS, version } from './demo.mjs';
 import { usable, hooks, watchdogIn } from './combat.mjs';
 import { EXE } from './exe.mjs';
 import { sigintWindows, sigintCharges, plannedTells } from './tells.mjs';
@@ -95,6 +95,8 @@ import { terminalPageMarkup } from './terminal-view.mjs';
 import { housePageMarkup } from './house-view.mjs';
 import { objectiveText, objectiveTip, backupAims } from './objectives.mjs';
 import { pointsOf } from './achievements.mjs';
+import { goalsOf } from './goals.mjs';
+import { FINISH, finishOf } from './finish.mjs';
 import { flowSvg } from './flowfx.mjs';
 import { ORPHAN_TIP, TABLE, countOf, bandOf as tableBand, tableRows, tableMoves } from './table.mjs';
 export { toolkitMarkup, subPromptDue } from './skills-view.mjs';
@@ -1430,6 +1432,10 @@ const loadBlock = (s, it, busy) => (busy ? 'At home only' : !meetsReq(s, it, hac
   : (it.zeroDay && zeroDay(s, it.zeroDay)) || (it.unique && loaded(s).some((x) => x.unique === it.unique)) ? 'You already run this one' : '');
 // How much loading it gains against what its slot runs now: each stat's change in its budget points (STATS base), so
 // Damage and Crit weigh alike. One with no slot open yet sorts last.
+// An upgrade (the amber ▲, on its stash row and the Loadout tab): a protocol you could load now (busy or not) that beats
+// what its slot runs, summed over its stats as shares of each stat's base (upScore), or fills an empty slot.
+export const isUpgrade = (s, it) => loadedOn(s, it.id) !== classOf(s) && !loadBlock(s, it, false) && upScore(s, it) > 0;
+export const upgradeCount = (s) => (s.stash || []).filter((it) => isUpgrade(s, it)).length;
 function upScore(s, it) {
   if (loadSlot(s, it) < 0) return -1e9;
   const out = loadOut(s, it);
@@ -1522,7 +1528,7 @@ function stashTile(s, it, pick, busy) {
     return `<span class="silk-st${v < 0 ? ' neg' : ''}">${glyph(k)}<b>${v < 0 ? '−' : '+'}${fmtStat(k, Math.abs(v))}</b><span class="sr-only"> ${esc(STATS[k].name)}</span>${vs && Math.abs(d) > 1e-9 ? `<i class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}</i>` : ''}</span>`;
   }).join('');
   const go = why ? `aria-disabled="true" title="${esc(why)}"` : `data-command="load ${it.id}" aria-label="${esc(`${out ? 'Swap' : 'Load'} ${itemLabel(it)} into ${SLOT_REFS[at]}`)}"`;
-  return `<li class="silk-tile ${rarityClass(it)}${fit ? ' fit' : ''}" data-kind="${groupOf(it)}" data-pdetail="${esc(it.id)}"><button type="button" class="silk-pick" ${go}>${glyphMarkup(it, 'sm')}<span class="silk-text"><b class="iname ${rarityClass(it)}">${esc(itemLabel(it))}${where ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}</b><span class="silk-sts">${stats}</span></span><span class="pg-lv"><b>Lv ${it.level}</b><small>${esc(SLOTS[groupOf(it)]?.name || '')}</small></span></button><span class="inv-acts">${loadButton(s, it, busy)}${scrapButton(s, it, busy)}</span></li>`;
+  return `<li class="silk-tile ${rarityClass(it)}${fit ? ' fit' : ''}" data-kind="${groupOf(it)}" data-pdetail="${esc(it.id)}"><button type="button" class="silk-pick" ${go}>${glyphMarkup(it, 'sm')}<span class="silk-text"><b class="iname ${rarityClass(it)}">${isUpgrade(s, it) ? `<i class="silk-up" title="${esc(`Upgrade\nBetter than what ${out ? SLOT_REFS[at] : 'its slot'} runs now.`)}">▲</i> ` : ''}${esc(itemLabel(it))}${where ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}</b><span class="silk-sts">${stats}</span></span><span class="pg-lv"><b>Lv ${it.level}</b><small>${esc(SLOTS[groupOf(it)]?.name || '')}</small></span></button><span class="inv-acts">${loadButton(s, it, busy)}${scrapButton(s, it, busy)}</span></li>`;
 }
 
 // Protocols you run, for the class in use (the Loadout's Protocols tab): the board, the stash, then the set bonuses
@@ -2260,24 +2266,46 @@ export function earnTip(s, id) {
   const kind = set ? `${slot} from the ${set.name} set` : `Unique ${slot.toLowerCase()}`;
   return `${u.name}: ${kind}, level ${u.level}.${p.got ? '' : `\n▸ ${p.open ? '' : `From level ${p.from}: `}${p.todo}.`}`;
 }
-// The map's Pinned section (earned.mjs pins, up to three): a tracker row a piece, set green's edge for a set piece and
-// amber's for a unique, its set's name (or Floor feat) over its name, then its cells and its goal in words with n/N
-// (the Ledger's wording), on its own line when it doesn't fit beside them. A click opens its Ledger entry.
-function pinnedTracker(s) {
-  const ids = pinsOf(s);
-  if (!ids.length) return '';
-  const rows = ids.map((id) => {
-    const u = UNIQUES[id], p = earnedOf(s, id), over = setOf(id)?.name || (u.sources?.[0]?.floor ? 'Floor feat' : 'Feat');
-    return `<button type="button" class="ct-row pin-row${p.set ? ' set' : ''}" data-go="${esc(logGo(homeOfUnique(id)))}" title="${esc(earnTip(s, id))}">${glyph(SLOT_GLYPH[BASES[u.base]?.slot] || 'item')}<span class="ct-txt"><small class="ct-for">${esc(over)}</small><b>${esc(u.name)}</b></span><span class="ct-prog">${earnCells(p)}<small class="pin-goal">${esc(p.text)} ${p.n}/${p.of}</small></span></button>`;
-  }).join('');
-  return `<section class="ctrack pins" aria-label="Pinned"><h3 class="ct-head">${glyph('pin')}Pinned<small>${ids.length}/${PIN_MAX}</small></h3>${rows}</section>`;
+// The map's Goals (goals.mjs, three rows: your pins, then the goals nearest done): a tracker row each, in the Ledger's
+// wording. An earned piece: set green's edge for a set piece, amber's for a unique, its set's name (or Feat) over its
+// name, its cells and its goal with n/N. An achievement: its name, its rule with n/N. A click opens its Ledger entry or
+// its achievement; on hover, its pin pins or unpins it and an auto row's × dismisses it. A click on the header folds the
+// section to its count (s.goals.shut).
+// A goal's tracker row (the map's Goals, the finish card's Next): a click opens its Ledger entry or its achievement.
+function goalButton(s, g) {
+  if (g.kind === 'piece') {
+    const u = UNIQUES[g.id], p = earnedOf(s, g.id), over = setOf(g.id)?.name || (u.sources?.[0]?.floor ? 'Floor feat' : 'Feat');
+    return `<button type="button" class="ct-row pin-row${p.set ? ' set' : ''}" data-go="${esc(logGo(homeOfUnique(g.id)))}" title="${esc(earnTip(s, g.id))}">${glyph(SLOT_GLYPH[BASES[u.base]?.slot] || 'item')}<span class="ct-txt"><small class="ct-for">${esc(over)}</small><b>${esc(u.name)}</b></span><span class="ct-prog">${earnCells(p)}<small class="pin-goal">${esc(p.text)} ${p.n}/${p.of}</small></span></button>`;
+  }
+  return `<button type="button" class="ct-row pin-row" data-go="achieve:${esc(g.id)}" title="${esc(`${g.name}\nAchievement\n${g.what}${g.reward ? `\n${g.reward}` : ''}`)}">${glyph('medal')}<span class="ct-txt"><small class="ct-for">Achievement</small><b>${esc(g.name)}</b></span><span class="ct-prog"><small class="pin-goal">${esc(g.what)} <b>${g.n}/${g.of}</b></small></span></button>`;
+}
+// The finish card (finish.mjs) over the map: what finished, what it paid as icons, and the goal nearest done next.
+export function finishMarkup(s) {
+  const f = finishOf(s);
+  if (!f) return '';
+  const next = goalsOf(s)[0];
+  const pays = f.pays.length ? `<p class="fin-pays">${f.pays.map(([g, n]) => `<span class="fin-pay" title="${esc(STATS[g]?.name || (g === 'credits' ? 'Credits' : g))}">${glyph(g)}+${n.toLocaleString('en-US')}</span>`).join('')}</p>` : '';
+  return `<section class="pz-card fin-card" id="fin-card" role="dialog" aria-label="${esc(`${FINISH[f.kind]}: ${f.name}`)}">
+    <header class="pz-head"><p class="pz-kick">${esc(FINISH[f.kind])}</p><h1>${esc(f.name)}</h1></header>${pays}
+    ${next ? `<div class="fin-next"><p class="pz-kick">Next</p>${goalButton(s, next)}</div>` : ''}
+    <div class="jr-acts"><button type="button" class="btn primary" data-fin-done>Continue <kbd>Enter</kbd></button></div></section>`;
+}
+function goalsTracker(s) {
+  const gs = goalsOf(s);
+  if (!gs.length) return '';
+  const shut = !!s.goals?.shut;
+  const row = (g) => {
+    const pin = `<span class="goal-acts"><button type="button" class="goal-pin${g.pinned ? ' on' : ''}" data-goal-pin="${esc(g.key)}" title="${esc(g.pinned ? 'Unpin' : 'Pin')}" aria-label="${esc(`${g.pinned ? 'Unpin' : 'Pin'} ${g.name}`)}" aria-pressed="${g.pinned}">${glyph('pin')}</button>${g.pinned ? '' : `<button type="button" class="goal-x" data-goal-x="${esc(g.key)}" title="Dismiss" aria-label="${esc(`Dismiss ${g.name}`)}">×</button>`}</span>`;
+    return `<div class="goal-row">${pin}${goalButton(s, g)}</div>`;
+  };
+  return `<section class="ctrack pins goals${shut ? ' shut' : ''}" aria-label="Goals"><h3 class="ct-head goals-head" data-goals-fold role="button" tabindex="0" aria-expanded="${!shut}"><span class="goals-caret" aria-hidden="true">${shut ? '▸' : '▾'}</span>${glyph('target')}Goals<small>${gs.length}</small></h3>${shut ? '' : gs.map(row).join('')}</section>`;
 }
 const SLOT_GLYPH = { exploit: 'exploit', proxy: 'relay', shell: 'module', script: 'cipher', implant: 'injector' };
 // The map's left column: the threat rail, then the contract tracker under it (the selected server's contract lit), then
-// the pinned earned pieces, then the ping log (pings.mjs). The Runners are on the map itself (a phone still lists them
+// the Goals (goals.mjs), then the ping log (pings.mjs). The Runners are on the map itself (a phone still lists them
 // in the sheet: mapRail).
 function mapLeft(s, sel) {
-  const col = threatRail(s) + contractTracker(s, sel) + pinnedTracker(s) + pingsMarkup(s);
+  const col = threatRail(s) + contractTracker(s, sel) + goalsTracker(s) + pingsMarkup(s);
   return col ? `<div class="map-lcol">${col}</div>` : '';
 }
 // A server's map (floorplan-view.mjs): the contract tracker in its top-left corner.
@@ -2292,12 +2320,12 @@ export function mapChips(s, pick = null) {
     th.length ? `<button type="button" class="ph-chip hot" data-phone="threats" aria-label="${th.length} threat${th.length > 1 ? 's' : ''} and timers">${glyph('kill')}<b>${th.length}</b>${soon ? `<small data-chip-t>${fmtTime(soon.left)}</small>` : ''}</button>` : '',
     open || (rr && !ready) ? `<button type="button" class="ph-chip job" data-phone="jobs" aria-label="${open} contract${open === 1 ? '' : 's'} under way">${glyph('contract')}${open ? `<b>${open}</b><small>contract${open === 1 ? '' : 's'}</small>` : '<small>Runners</small>'}</button>` : '',
     ready ? `<button type="button" class="ph-chip ok" data-phone="jobs" aria-label="${ready} contract${ready === 1 ? '' : 's'} ready to turn in"><b>✓ ${ready}</b><small>ready</small></button>` : '',
-    pinsOf(s).length ? `<button type="button" class="ph-chip pin" data-phone="pins" aria-label="${pinsOf(s).length} pinned">${glyph('pin')}<b>${pinsOf(s).length}</b><small>pinned</small></button>` : '',
+    goalsOf(s).length ? `<button type="button" class="ph-chip pin" data-phone="pins" aria-label="${goalsOf(s).length} goal${goalsOf(s).length > 1 ? 's' : ''}">${glyph('target')}<b>${goalsOf(s).length}</b><small>goal${goalsOf(s).length > 1 ? 's' : ''}</small></button>` : '',
   ].join('');
   return chips ? `<div class="ph-chips" role="group" aria-label="Threats and contracts">${chips}</div>` : '';
 }
 // A chip's list, for the sheet: the threat rail, or the contract tracker with the Runners under it.
-export const mapRail = (s, which, sel = null, runner = null) => (which === 'threats' ? threatRail(s) : which === 'pins' ? pinnedTracker(s) : contractTracker(s, sel) + runnerRail(s, runner));
+export const mapRail = (s, which, sel = null, runner = null) => (which === 'threats' ? threatRail(s) : which === 'pins' ? goalsTracker(s) : contractTracker(s, sel) + runnerRail(s, runner));
 function threatRail(s) {
   const list = threatsOf(s);
   if (!list.length) return '';
@@ -2789,7 +2817,7 @@ function mapSide(s, sel, node) {
   if (!node || node.kind === 'server') {
     const r = s.reports.findLast((x) => x.mode !== 'run');
     const upkeep = [];
-    if (!busy && topUpCost(s) && srv.credits > 0) upkeep.push(btn('top up', `Top up (${topUpCost(s)}c)`));
+    if (!busy && topUpCost(s) && srv.credits > 0) upkeep.push(btn('restore', `Restore (${topUpCost(s)}c)`));
     const runCard = s.run ? `<section class="card lesson"><h2>On a run</h2><h1>${esc(currentLocation(s).name)}</h1><p>Integrity ${s.run.integrity}/${s.run.max} · ${s.run.pack.length} unbanked.</p><div class="row">${btn('net', 'Back to the run', true)}</div></section>` : '';
     return `${runCard}${alertCard()}
       <section class="card srv-card"><h2>Your server</h2>
@@ -3036,7 +3064,7 @@ function optionsCard(s) {
 function saveCard(s, importing) {
   const ask = importing ? `<p class="svc-line">Replace this game with <b>${esc(importing.who.handle)}</b> · Lv ${importing.who.level} ${esc(importing.who.cls)}?</p>
     <div class="row"><button type="button" class="btn primary" data-backup="load">Load it</button><button type="button" class="btn" data-backup="cancel">Cancel</button></div>` : '';
-  const tm = DEMO ? `<div class="set-checks">${checkRow('data-backup="telemetry"', 'Share play data', s.telemetry?.on === true, { tip: 'Share play data: When you play, how far you get and which bosses win, sent without your handle.\n▸ It helps tune the demo.', kind: 'Setting' })}</div>` : '';
+  const tm = DEMO && LINKS.telemetry ? `<div class="set-checks">${checkRow('data-backup="telemetry"', 'Share play data', s.telemetry?.on === true, { tip: 'Share play data: When you play, how far you get and which bosses win, sent without your handle.\n▸ It helps tune the demo.', kind: 'Setting' })}</div>` : '';
   return `<section class="card save-card"><h2>Save <small class="save-ver">${esc(version())}</small></h2>
     <div class="row"><button type="button" class="btn" data-backup="export"${tipAttrs('Export save: Download your save as a file, to keep or to carry into the full game.', 'Save')}>Export save</button><button type="button" class="btn" data-backup="import"${tipAttrs('Import save: Load a save from a file. It replaces this game.', 'Save')}>Import save</button><button type="button" class="btn" data-backup="feedback"${tipAttrs('Feedback: Download a report (this build, your screen, the last log lines and your save) and open the Discord to send it.', 'Help')}>Feedback</button></div>
     ${ask}${tm}<div class="row"><button type="button" class="btn" data-run="reset game">Reset game</button></div></section>`;
@@ -3522,7 +3550,7 @@ export function classPickMarkup() {
   const cards = Object.entries(ARCHETYPES).map(([k, a], i) => {
     const traits = pkRow(glyph('damage'), `<small class="pk-lb">Passive</small><b>${esc(a.passive.name)}</b>`, '', pkTip(a.passive.name, a.passive.rule, 'Passive'), ' gl')
       + pkRow(glyph('sync'), `<small class="pk-lb">Sync</small><b>${ruleHtml(SYNC[k].tag)}</b>`, '', pkTip('Sync bonus', `Fired in a Sync Window, your command deals ${Math.round(CONFIG.sync.bonus * 100)}% more damage and ${SYNC[k].rule.replace(/^./, (c) => c.toLowerCase())}`, 'Sync bonus'), ' gl');
-    const skills = a.skills.slice(0, 2).map((x) => { const ab = ABILITIES[x.id] || {}; return pkRow(pkIco(ab.icon || 'command'), `<b>${esc(x.name)}</b>`, `<small>${ruleHtml(ab.short || '')}</small>`, pkTip(x.name, x.rule || '', `${PK_KIND[ab.verb] || 'Utility'} · ${ab.cooldown || 0} cycle cooldown`)); }).join('');
+    const skills = [{ id: 'spike', name: spikeOf(k).name, rule: spikeOf(k).rule }, ...a.skills.filter((x) => unlockLevel(k, x.id) <= 1)].map((x) => { const ab = ABILITIES[x.id] || {}; return pkRow(pkIco(ab.icon || 'command'), `<b>${esc(x.name)}</b>`, `<small>${ruleHtml(ab.short || '')}</small>`, pkTip(x.name, x.rule || '', `${PK_KIND[ab.verb] || 'Utility'} · ${ab.cooldown || 0} cycle cooldown`)); }).join('');
     const subs = Object.entries(a.subs || {}).map(([id, x]) => pkRow(pkIco(`sub-${id}`), `<b>${esc(x.name)}</b>`, `<small>${esc(x.role.join(' · '))}</small>`, pkTip(x.name, x.solo, `Subclass · Level ${SUBCLASS.from}`), ' gl')).join('');
     return `<div class="pk-card" data-pick-class="${k}" role="radio" aria-checked="false" tabindex="0">
       <span class="pk-fx" aria-hidden="true">${'<i></i>'.repeat(14)}</span>

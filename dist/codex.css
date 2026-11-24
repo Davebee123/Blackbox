@@ -310,6 +310,12 @@ button.jr-line:hover { background: var(--amber-wash); }
 .gain.jr-wrap { z-index: 41; animation: none; }
 .gain.jr-wrap .pz-card.jr-card { width: min(640px, 100%); gap: var(--s5); }
 .jr-card .jr-sheet { max-height: min(52vh, 460px); overflow-y: auto; }
+/* The finish card (finish.mjs): what finished, what it paid, the goal nearest done next. */
+.gain.jr-wrap .pz-card.fin-card { width: min(420px, 100%); gap: var(--s4); }
+.fin-pays { display: flex; flex-wrap: wrap; gap: var(--s4); margin: 0; font: 600 14px var(--mono); color: var(--amber); }
+.fin-pay { display: inline-flex; align-items: center; gap: 4px; }
+.fin-pay .glyph { width: 14px; height: 14px; }
+.fin-next { display: grid; gap: var(--s2); }
 .jr-acts { display: flex; gap: var(--s4); }
 .jr-acts kbd { margin-left: var(--s3); font: 10px var(--mono); color: var(--dim); }
 @media (max-width: 640px) {

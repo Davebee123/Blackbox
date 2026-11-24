@@ -2834,7 +2834,7 @@ export default {
           "layer": 3
         }
       ],
-      "flavour": "If I go down, I'm taking my bag."
+      "flavour": "If I go down, I go down warm."
     },
     {
       "id": "zero-cool",

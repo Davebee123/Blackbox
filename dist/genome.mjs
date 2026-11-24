@@ -9,6 +9,7 @@
 //            (research.mjs). A tell's: you answered it once. A mutation's or a whole-virus rule's (decode 'kills'):
 //            you beat two viruses that carry it (the Codex's mutation page)
 // State lives in s.geneCodex ({ id: { seen, decoded, kills, by } }) for what isn't a part's, and s.research for a part's.
+import { noteFinish } from './finish.mjs';
 import { GENES, CATS, AXES, partGenes } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { FAMILIES, ROOM_FAMILIES, STRAINS, GUARDS, genomeOf } from './data.mjs';
@@ -98,7 +99,7 @@ export function logWin(s, v) {
   if (!v || s.who) return;
   const d = dexOf(s);
   if (v.strain || v.family) bump(d.kills ||= {}, v.strain || v.family);
-  if (v.boss) bump(d.won ||= {}, v.boss);
+  if (v.boss) { bump(d.won ||= {}, v.boss); noteFinish(s, 'boss', v.name); } // the finish card (finish.mjs)
 }
 // A tell was said in your fight (tells.mjs say).
 export function logTell(s, t) {

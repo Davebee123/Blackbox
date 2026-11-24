@@ -25,6 +25,8 @@
 // State: s.arcs = { [floor]: { step, at, done, doneAt, titles }, offers: [{ floor, step, items }] }. A chain done before
 // it gained a step opens again at that step (regrown). The jobs themselves
 // are mail jobs (s.mail.jobs) marked chain: <floor>, step: <k>, slot: <the target's slot>.
+import { noteFinish } from './finish.mjs';
+import { openUp, onEvent, FALLS } from './progression.mjs';
 import { emit, warn, hackerLevel, hooks, addItem, classOf, subOf } from './combat.mjs';
 import { BOSSES, SUBS, defaultSub, CONFIG } from './data.mjs';
 import { seeded, rollItem, itemLabel } from './gear.mjs';
@@ -176,8 +178,8 @@ function setup(s, c) {
 export function arcTick(s, at = nowOf()) {
   if (!s.mail?.jobs || !s.mail.list || !boardOpen(s)) return; // a mail state with no letters (a test's) has nowhere to post
   const A = arcsOf(s);
-  // A death rolls s.arcs back to the connect (visit.mjs PROGRESS) while mail received meanwhile stays: a step posted
-  // during the visit is held, so its chain is under way. A save that posted it twice drops the copy.
+  // A chain whose step is in your mail is under way, whatever s.arcs says (a save from when a death rolled s.arcs back
+  // to the connect); a step posted twice drops the copy.
   const held = {};
   for (const c of openContracts(s).filter((x) => x.chain)) {
     const k = `${c.chain}:${c.step}`;
@@ -198,6 +200,7 @@ export function arcTick(s, at = nowOf()) {
     if (c.type === 'puzzle' ? puzzleWon(s, c) : c.type === 'boss' && !c.slot ? kingDown(s, c) : c.type === 'boss' && namedBoss(c.named) ? jobDown(s, c) : lairDown(s, c)) {
       c.got = 1;
       if (c.fall) emit(s, 'arc-fall', c.fall, { contract: c.id, chain: c.chain });
+      if (c.type === 'boss') for (const sc of FALLS[c.chain] || []) onEvent(s, sc); // its transmission (scenes.mjs)
       emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
     }
   }
@@ -255,11 +258,14 @@ export function arcProgress(s, c) {
 }
 export const arcReady = (s, c) => ARC.own.includes(c.type) && !!c.got;
 
+// The page whose foot reads *process table at 81%* (Carrier, content/contracts.mjs): delivering it opens INIT's table.
+export const TABLE_PAGE = 'sched.0412';
 // Delivered (mail.mjs mailCommand): the step's title kept for the chain's page, its pick of three, and the next step.
 export function arcDelivered(s, c, at = nowOf()) {
   const A = arcsOf(s), n = c.chain, ch = chainOf(n), st = (A[n] ||= { step: c.step, at, titles: [] });
   (st.titles ||= [])[c.step] = title(s, c);
   const step = ch?.steps[c.step];
+  if (step?.file === TABLE_PAGE) openUp(s, 'table'); // Carrier's schedule page read: INIT's table (progression.mjs)
   const last = !ch || c.step >= ch.steps.length - 1;
   if (step?.reward?.pick) {
     A.offers.push({ floor: n, step: c.step, last, items: pickOf(s, n, c.step, last) });
@@ -272,6 +278,7 @@ export function arcDelivered(s, c, at = nowOf()) {
   if (last) {
     st.done = true; st.doneAt = at;
     emit(s, 'arc-done', `${ch?.title || 'Floor job'}, done. ${ch?.lore || ''}`.trim(), { chain: n });
+    noteFinish(s, 'chain', ch?.title || 'Floor job'); // the finish card (finish.mjs)
     return null;
   }
   const l = post(s, n, c.step + 1, at);

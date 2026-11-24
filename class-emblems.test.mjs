@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EMBLEMS, asymmetric } from './dist/class-emblems.mjs';
-import { ARCHETYPES, SUBCLASS } from './dist/data.mjs';
+import { ARCHETYPES, SUBCLASS, spikeOf, unlockLevel } from './dist/data.mjs';
 import { classPickMarkup } from './dist/view.mjs';
 
 test('every class has an emblem, 19 by 8, mirror-symmetric', () => {
@@ -20,7 +20,9 @@ test('the class picker shows each class with its emblem, its archetype and its s
     assert.ok(html.includes(`data-pick-class="${k}"`), k);
     for (const line of [a.does, a.idea, a.solo, a.crew]) assert.ok(!html.includes(line.replace(/'/g, '&#39;')), `${k}: no slogan or description (${line})`);
     for (const r of a.role) assert.ok(html.includes(`<span>${r}</span>`), `${k}: archetype ${r}`);
-    for (const x of a.skills.slice(0, 2)) assert.ok(html.includes(x.name), `${k}: ${x.name}`);
+    const card = html.slice(html.indexOf(`data-pick-class="${k}"`)).split('data-pick-class=')[1];
+    for (const x of [spikeOf(k), ...a.skills.filter((y) => unlockLevel(k, y.id) <= 1)]) assert.ok(card.includes(x.name), `${k}: starts with ${x.name}`);
+    for (const x of a.skills.filter((y) => unlockLevel(k, y.id) > 1)) assert.ok(!card.includes(`<b>${x.name}</b>`), `${k}: ${x.name} opens later`);
   }
   assert.ok(html.includes('class="btn primary pk-go" disabled'));
   assert.ok(html.includes(`>Subclass · Lv ${SUBCLASS.from}</span>`), 'the subclass column is named Subclass, with its level');

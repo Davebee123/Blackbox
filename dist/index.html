@@ -42,7 +42,7 @@
       <button data-module="rooms" id="tab-rooms" data-tt="Server: The rooms of the server you're connected to." class="ctx" hidden>Server</button>
       <button data-module="store" id="tab-store" data-tt="Store: Halcyon's shop." hidden>Store</button>
       <button data-module="consortium" id="tab-consortium" data-tt="Consortium: The hackers you've merged servers with, and their networks." hidden>Consortium<span id="con-count" class="count" hidden></span></button>
-      <button data-module="loadout" data-tt="Loadout: Your class, protocols, daemons, program, skills and talents.">Loadout<span id="new-loadout" class="count new" hidden></span></button>
+      <button data-module="loadout" data-tt="Loadout: Your class, protocols, daemons, program, skills and talents.">Loadout<span id="up-loadout" class="tab-up" title="A protocol in your stash beats what you run." hidden>▲</span><span id="new-loadout" class="count new" hidden></span></button>
       <button data-module="codex" data-tt="Codex: What you've learned about viruses, and your collection log.">Codex</button>
       <button data-module="rig" data-tt="Rig: Your achievements, casing, terminal and house.">Rig</button>
       <button data-module="system" data-tt="Settings: Sound, display and game options.">Settings</button>
@@ -69,10 +69,12 @@
         <strong id="table-value">84%</strong>
       </div>
       <div class="meter" title="Credits: for compiling, topping up and hub shops.">
+        <svg class="glyph ph-ico ph-narrow" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M10 5.8A2.6 2.6 0 0 0 8 5c-1.4 0-2.5 1.3-2.5 3S6.6 11 8 11a2.6 2.6 0 0 0 2-.8M8 3.5v1.5M8 11v1.5"/></svg>
         <span class="meter-label">Credits</span>
         <strong id="vault-value">0</strong>
       </div>
       <button type="button" class="meter meter-stores" id="meter-stores" aria-expanded="false" aria-controls="stores-panel" title="Materials: your Code and Components">
+        <svg class="glyph ph-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 14 4.8v6.4L8 14.5 2 11.2V4.8z"/><path d="M2 4.8 8 8l6-3.2M8 8v6.5"/></svg>
         <span class="meter-label">Materials</span>
         <strong aria-hidden="true">▾</strong>
       </button>
@@ -117,6 +119,7 @@
   <div id="pg-ask" class="gain pg-ask-wrap" hidden></div>
   <div id="scene" class="gain sc-wrap" hidden></div>
   <div id="jr-find" class="gain jr-wrap" hidden></div>
+  <div id="fin-find" class="gain jr-wrap" hidden></div>
 
   <footer class="command-dock">
     <!-- The ping log off the Map page (pings.mjs); on the Map it sits in the map's left rail. -->

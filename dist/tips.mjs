@@ -5,7 +5,8 @@
 //
 // Each tip: id · page (a module, or '*' for any) · at (a CSS selector; the tip waits until it's
 // on screen) · when (optional: state it needs) · text · pause (fight tips) · under (optional:
-// sit below this container instead, so the thing it explains stays in view).
+// sit clear of this container, so the thing it explains stays in view) · clear (optional: what else it never covers,
+// the buttons it names; app.js placeTip).
 import { keyMap } from './combat.mjs';
 import { ARCHETYPES, SYNC } from './data.mjs';
 import { GENES } from './genes.mjs';
@@ -29,10 +30,10 @@ const visitOf = (s) => (s.rooms?.at ? s.rooms : null);
 const hereKind = (s) => s.rooms?.at && s.rooms.graph.rooms[s.rooms.at]?.kind;
 const movesOf = (s) => s.rooms?.stats?.moves || 0;
 const TOUR_STEPS = [
-  { id: 'tour-walk', at: '.fp-room.reach', when: (s) => !!visitOf(s) && !s.rooms.screen, mark: movesOf, done: (s, m) => movesOf(s) > m,
+  { id: 'tour-walk', at: '.fp-room.reach', clear: '.fp-room.reach, .fp-room.here', when: (s) => !!visitOf(s) && !s.rooms.screen, mark: movesOf, done: (s, m) => movesOf(s) > m,
     text: 'click a room beside yours to walk there. the number on its corner is the integrity it costs.' },
-  { id: 'tour-engage', at: '#fp-pop [data-rooms="engage"]', also: '.fp-room.reach', after: ['tour-walk'], when: (s) => s.rooms?.screen?.kind === 'virus', done: (s) => s.rooms?.screen?.kind !== 'virus',
-    text: 'something\'s living in there. engage, or click the room you came from to back out.' },
+  { id: 'tour-engage', at: '#fp-pop [data-rooms="engage"], #fp-pop [data-rooms="assist"]', also: '.fp-room.reach', after: ['tour-walk'], when: (s) => s.rooms?.screen?.kind === 'virus', done: (s) => s.rooms?.screen?.kind !== 'virus',
+    text: 'something\'s living in there. engage (or help, beside a runner), or click the room you came from to back out.' },
   { id: 'tour-cache', at: '#fp-pop [data-rooms="pull"]', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'cache' && !s.rooms.screen,
     mark: (s) => `${s.rooms.at}:${s.rooms.taken[s.rooms.at] ?? ''}`, done: (s, m) => `${s.rooms?.at}:${s.rooms?.taken[s.rooms?.at] ?? ''}` !== m,
     text: 'that\'s a cache of credits and code. one in four is bait, and its card says which.' },
@@ -41,7 +42,7 @@ const TOUR_STEPS = [
   { id: 'tour-rest', at: '#fp-pop [data-rooms="rest"]:not([disabled])', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'rest',
     mark: (s) => s.rooms.at, done: (s, m) => !!s.rooms?.visit?.rested || s.rooms?.at !== m,
     text: 'rest here once a visit for some integrity back. the hunter never comes in.' },
-  { id: 'tour-jackout', at: '.fp-acts [data-rooms="jackout"]:not([disabled])', after: ['tour-engage'], when: (s) => !!visitOf(s) && !s.rooms.screen && (s.rooms.stats?.won || 0) > 0, done: (s) => !s.rooms?.at,
+  { id: 'tour-jackout', at: '.fp-acts [data-rooms="jackout"]:not([disabled])', when: (s) => !!visitOf(s) && !s.rooms.screen && (s.rooms.stats?.won || 0) > 0, done: (s) => !s.rooms?.at,
     text: 'you collect items while navigating new servers. jacking out saves the visit and banks them. lose all your integrity first and the visit is undone.' },
 ];
 export const TOUR = TOUR_STEPS.map((t) => ({ ...t, page: 'rooms', tour: true }));
@@ -59,13 +60,13 @@ export const TIPS = [
   { id: 'protocol-tab', page: 'loadout', at: '[data-ltab="protocols"][aria-selected="false"]', when: (s) => spare(s), text: 'your protocols are on this tab.' },
   { id: 'protocol-home', page: 'loadout', at: '.inv-btn.load[disabled]', when: (s) => !!s.run || s.encounter?.phase === 'active', text: 'you can only equip at home. jack out, finish any fight, then come back and hit load.' },
   { id: 'protocol-load', page: 'loadout', at: '.inv-btn.load:not([disabled])', text: 'hit load. every protocol you load adds its stats to yours, every fight.' },
-  { id: 'top-up', page: '*', at: '#meter-integrity .meter-buy', text: 'integrity refills on its own at home, and the clock says how long. hit + to buy it back now with credits.' },
+  { id: 'top-up', page: '*', at: '#meter-integrity .meter-buy', text: 'integrity refills on its own at home, and the clock says how long. hit + to restore it now with credits.' },
   { id: 'routines', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && hackerLevel(s) >= 5, text: 'from level 5, when the timer runs out, your program moves for you. set it up on loadout → program.' },
-  { id: 'level', page: '*', at: '#whoami', when: (s) => hackerLevel(s) >= 2, text: 'that\'s you: your handle, your class and its level. each level makes you 4% stronger, and some unlock new skills.' },
+  { id: 'level', page: '*', at: '#whoami', when: (s) => hackerLevel(s) >= 2, text: 'that\'s you: your handle, your class and its level. each level to 6 makes you 6% stronger. past that your gear carries you, and some levels unlock new skills.' },
 
   // ---------- map ----------
   // Your first move: the one tip on the opening map. It stays until you connect.
-  { id: 'map-start', page: 'map', at: '.mnode.zone .mhex', when: (s) => !s.rooms, done: (s) => !!s.rooms, text: 'that\'s sprawl-00. nobody owns it, and strays roam all over it. click it and connect.' },
+  { id: 'map-start', page: 'map', at: '.mnode.zone .mhex', clear: '.map-pop', when: (s) => !s.rooms, done: (s) => !!s.rooms, text: 'that\'s sprawl-00. nobody owns it, and strays roam all over it. click it and connect.' },
   // Your server and its gate wait for the first intrusion; the ? servers, for the first trace on one.
   { id: 'map-server', page: 'map', at: '.mnode.server', when: atGate, joins: ['map-intrusion'], text: 'that\'s your server. it sits above the net, and anything attacking it shows up beside it.' },
   // ---------- the rooms (the Run tab) ----------
@@ -73,9 +74,9 @@ export const TIPS = [
   // A server's takeover path, the first time you see each step: the vault, its key, the sealed Core.
   { id: 'room-vault', page: 'rooms', at: '.fp-room.k-vault', text: 'this is the vault, where the server keeps its files. the elite on the guard post has the key, or you force it and pay in integrity.' },
   { id: 'room-core', page: 'rooms', at: '.fp-room.k-core', text: 'this is the core, where the resident lives. it stays sealed till the vault\'s open. beat it and the server\'s yours.' },
-  { id: 'room-elite', page: 'rooms', at: '.fp-room.k-elite', text: `this is an elite room. its virus is tougher and has one more tell, and it enrages from cycle ${ROOM_RULES.enrage.elite}. it drops a blue or better.` },
+  { id: 'room-elite', page: 'rooms', at: '.fp-room.k-elite', text: `this is an elite room. its virus is tougher and has one more tell, and it enrages from cycle ${ROOM_RULES.enrage.elite}.` },
   { id: 'room-thread', page: 'rooms', at: '.fp-quest.m-start', text: 'someone in here has work for you. walk in and talk. threads you take are tracked in mail.' },
-  { id: 'run-signal', page: 'rooms', at: '.fp-sig.mid, .fp-sig.low', after: ['tour-walk'], text: 'your integrity\'s getting thin. at 0 you\'re home and this visit is undone. find a rest room or jack out.' },
+  { id: 'run-signal', page: 'rooms', at: '.fp-sig.mid, .fp-sig.low', after: ['tour-walk'], text: 'your integrity\'s getting thin. at 0 you\'re home and this visit is undone.', more: (s) => (Object.values(s.rooms?.graph?.rooms || {}).some((r) => r.kind === 'rest') ? 'find a rest room or jack out.' : 'jack out to keep what you carry.') },
   { id: 'run-rival', page: 'rooms', at: '.fp-rvstat', lead: (s) => (rivalOf(s) ? wickLine(s, rivalOf(s)) : ''), text: 'they\'re racing you to the vault. if they reach you, you fight the lot. beat them and their pack is yours.' },
   { id: 'exfil', page: 'rooms', at: '.fp-exfil', text: 'an exfil\'s uploading a stolen archive off this server, and it runs from you. corner it and break its uplink before the upload finishes.' },
   // A puzzle room's board, the first time you see each one (puzzle-view.mjs). One go a board: played to its end, it refills in two hours.
@@ -85,7 +86,7 @@ export const TIPS = [
   { id: 'pz-sweep', page: 'rooms', at: '.pz-panel.k-sweep .pz-well', text: 'a ping says how many steps to the cache, counting across and down. the faint ring is every cell at that distance. dig where the rings cross.' },
   { id: 'map-intrusion', page: 'map', at: '.mnode.intrusion', text: 'something\'s waiting at your gate. select it and hit engage when you\'re ready. it sits there till you do.' },
   { id: 'map-exit', page: 'map', at: '.mnode.exit', text: 'this is the way down to the next floor. it sits beside a server you located. go down from that server\'s card. the floor below runs higher-level servers.' },
-  { id: 'map-origin', page: 'map', at: '.mnode.loc', text: 'you found a server. select it and connect. it takes memory while it\'s on your network, and its ring fills as you explore it.' },
+  { id: 'map-origin', page: 'map', at: '.mnode.loc', text: 'you found a server. select it and connect. its ring fills as you explore it.' },
   { id: 'map-memory', page: 'map', at: '.mem-join', text: 'these pips are your free memory: how many more servers your network holds. the blinking one is what this server would take. detach a server to free one.' },
   { id: 'map-invader', page: 'map', at: '.mnode.invader[data-select="invader"]', text: 'an invasion\'s heading home. once it gets there it eats your integrity until you intercept it. the longer it sits, the bigger its bounty.' },
   { id: 'map-breach', page: 'map', at: '.mnode.invader.breach', text: 'a breach eats integrity every minute. jack in and fight it yourself, and it counts as a full kill.' },
@@ -121,10 +122,11 @@ export const TIPS = [
   // clicked through as steps of one tip, each pointing at its own thing; each still shows alone
   // if it turns up later.
   { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-ticks', 'fight-armor', 'sync'], text: 'this is the combat console halcyon installed to fight viruses. it shows their structure and attacks. the "now" column shows what happens during this cycle. each column to the right is a cycle in the future. you move first, and then the virus attacks back.' },
-  { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', text: 'to attack, type a skill and then a part. you can also press its number and click the part. if the timer runs out, you will auto attack the last part you targeted.' },
+  { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', text: 'to attack, pick a skill (its number or a click), then click a part. or type it: the skill, then the part. if the timer runs out, you hit the last part you targeted again.' },
   // The interrupt (interrupt.mjs): the ticks, and a tick spent for nothing.
   { id: 'fight-ticks', page: 'combat', pause: true, at: '.board .ptick', under: '#board', when: (s) => s.encounter?.phase === 'active', text: 'notice these ticks on the virus parts? push a part past one during the current cycle and the part\'s attack is canceled. each mark works once.' },
-  { id: 'fight-wasted', page: 'combat', pause: true, at: '.board .ptick.spent', under: '#board', when: (s) => (s.encounter?.metrics?.wasted || 0) > 0, text: 'you crossed that tick with no attack due, so it\'s spent for nothing. save the big hits for the cycle an attack lands.' },
+  // From your second fight: Overload on the bare part is the first fight's obvious play.
+  { id: 'fight-wasted', page: 'combat', pause: true, at: '.board .ptick.spent', under: '#board', when: (s) => s.encounter?.phase === 'active' && (s.encounter.metrics?.wasted || 0) > 0 && (s.pace?.kills || 0) > 0, text: 'you crossed that tick with no attack due, so it\'s spent for nothing. save the big hits for the cycle an attack lands.' },
   { id: 'fight-armor', page: 'combat', pause: true, at: '.board .chits', under: '#board', text: 'see the ◆? that\'s armor. each hit knocks one off and does nothing else. chip it bare with the small stuff, then hit it hard.' },
   { id: 'sync', page: 'combat', at: '#sync-win', pause: true, text: 'the bar under now fills as the cycle runs. hit enter inside the bright window and you deal 10% more.', more: (s) => `as ${/^[AEIOU]/.test(ARCHETYPES[classOf(s)].name) ? 'an' : 'a'} ${ARCHETYPES[classOf(s)].name.toLowerCase()}, it also ${SYNC[classOf(s)].rule.replace(/^./, (c) => c.toLowerCase())}` },
   { id: 'fight-patch', page: 'combat', pause: true, at: '.board .intent.patch', under: '#board', text: 'a part with no ◆ left grows one back five cycles later, unless you break it first.' },

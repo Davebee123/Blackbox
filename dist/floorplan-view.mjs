@@ -289,7 +289,7 @@ function aboutOf(s, room) {
           : room.kind === 'nest' ? `Optional. A kill pays ${ROOMS.nest.parts} components.`
           : room.kind === 'secret' ? 'Optional. It fills again two hours after you take it.'
           : room.queue && R.kind === 'Mailhub' && fightKind(room) ? 'A Spam Flood joins its fights.'
-            : room.kind === 'elite' ? `Enrages from cycle ${ROOM_RULES.enrage.elite}. Drops a blue or better.`
+            : room.kind === 'elite' ? `Enrages from cycle ${ROOM_RULES.enrage.elite}.`
               : room.kind === 'core' && !coreOpen(s) ? sealedLine(s)
                 : room.kind === 'cache' && !room.mirror ? 'One in four is bait: you see which when you walk in.'
                   : room.kind === 'vault' && room.id === g.vaults[0] && !opened(s, room) ? 'Opening it unseals the Core.'
@@ -448,7 +448,13 @@ function mapSvg(s, tall) {
   ctx.pp = (room) => (R.world && WORLD.people ? (WORLD.people(s, room) || []).filter((h) => runnerOf(s, h)) : []); // runners standing in a room (SPRAWL-00)
   const rooms = roomList(s).filter((r) => shown(r.id)).map((room) => roomSvg(s, room, at(room), ctx)).join('');
   const bits = here ? bitsSvg(at(g.rooms[here]), G, here) : '';
-  const vw = width + 2 * PAD, vh = height + 2 * PAD, vb = `${-PAD} ${-PAD} ${vw} ${vh}`;
+  // Fit (a desktop, the designer's pick): the view fits the rooms you've found, so it starts close and widens as you
+  // walk; a phone's tall map keeps the whole grid.
+  const fit = tall ? [] : roomList(s).filter((r) => shown(r.id) && found(r.id)).map(at);
+  const fx = G.nw / 2 + 80, fy = G.nh / 2 + 80, box = fit.length
+    ? [Math.max(-PAD, Math.min(...fit.map((p) => p.x)) - fx), Math.max(-PAD, Math.min(...fit.map((p) => p.y)) - fy), Math.min(width + PAD, Math.max(...fit.map((p) => p.x)) + fx), Math.min(height + PAD, Math.max(...fit.map((p) => p.y)) + fy)]
+    : [-PAD, -PAD, width + PAD, height + PAD];
+  const vw = n1(box[2] - box[0]), vh = n1(box[3] - box[1]), vb = `${n1(box[0])} ${n1(box[1])} ${vw} ${vh}`;
   // The floor's material under it all (ground.mjs), clear of every room and link shown.
   const ground = groundSvg(R.floor, { id: tall ? 't' : 'w', rooms: roomList(s).filter((r) => shown(r.id)).map(at), links: linksOf(g).filter(([a, b]) => shown(a) && shown(b)).map(([a, b]) => [at(g.rooms[a]), at(g.rooms[b])]),
     box: { w: G.nw + 26, h: G.nh + 26, link: 24 }, cx: width / 2, cy: height / 2, rx: width / 2 + G.w * 0.9, ry: height / 2 + G.h * 0.9 });
@@ -650,8 +656,6 @@ function roomSvg(s, room, p, { reach, next, near, G, marks, th = {}, bl = {}, fi
   }
   // A thread's file in this room: its badge and Integrity on the chip's bottom edge.
   for (const f of files) if (f.at === room.id) out += fileSvg(s, p.x + G.nw * 0.2, y0 + G.nh + 8, f.t, G.nw > 100 ? 1.25 : 1.1); // under the chip, clear of its plate
-  // Won this visit and not jacked out yet (visit.mjs): UNSAVED under the chip, amber.
-  if (R.world && R.at && R.visit?.won?.[room.id]) out += `<text class="fp-unsaved" x="${p.x}" y="${n1(y0 + G.nh + 13)}" text-anchor="middle">UNSAVED</text>`;
   return out + '</g>';
 }
 
@@ -670,9 +674,9 @@ function hudMarkup(s) {
   const reboot = rb ? `<span class="fp-stat fp-reboot${rb.pending ? ' on' : ''}" title="${esc(`Reboot\nFallen fight rooms stay down until every one has fallen. Then ${R.name} reboots, and ${fmtLeft(rb.ms)} later they all come back.\n${rb.pending ? 'Rebooting now.' : `${rb.up} ${rb.up === 1 ? 'fight room is' : 'fight rooms are'} still up.`}`)}"><span class="lbl">Reboot</span><b>${rb.pending ? `<span data-at="${rb.at}"></span>` : `${rb.up} up`}</b></span>` : '';
   const keys = R.at && R.visit?.keys.length ? `<span class="fp-stat fp-keys" title="Keys: each opens its vault, this visit only. Jack out and it goes back to the elite that held it.">${ic('key')}<b>${R.visit.keys.length}</b></span>` : '';
   const packed = R.world ? (s.run?.pack || []).map((f) => net(s, 'packLine', f)) : R.pack.map((id) => itemLabel(stashItem(s, id) || { name: '?' }));
-  // The visit (visit.mjs): the Warm cache's ladder and what it adds, then the Pack, unsaved until you jack out.
+  // A network visit (visit.mjs): the Warm cache and the Pack sit beside Jack out (the stake, below).
   const v = visitOf(s);
-  const pack = v ? warmBox(s) + `<span class="fp-packwrap">${packButton(s)}${packUi.open ? packPop(s) : ''}</span>`
+  const pack = v ? ''
     : packed.length ? `<span class="fp-stat fp-packstat" title="${esc(`Pack: ${packed.join(', ')}.\nBanks when you jack out. Lost if your Integrity hits 0.`)}"><span class="lbl">Pack</span><b>${packed.length}</b></span>` : '';
   // Contracts on this server, and how far along each is. The tip draws them as the map's tracker does, a row each.
   const jobs = net(s, 'jobs') || [], tracked = jobs.length ? trackedJobs(s).filter((t) => jobs.some((j) => j.id === t.id)) : [];
@@ -680,10 +684,12 @@ function hudMarkup(s) {
   const rule = ['a', 'b', 'c'].map((k) => `<button type="button" class="fp-rule${R.bossRule === k ? ' on' : ''}" data-rooms="bossrule" data-arg="${k}" aria-pressed="${R.bossRule === k}" title="${esc(`Boss rule ${k}: ${BOSS_RULES[k].name}.\n${BOSS_RULES[k].text}`)}">${k}</button>`).join('');
   // Wait and Jack out (Connect at home), always in reach at the strip's right.
   const c = connectOf(s);
-  const acts = R.at
+  // The stake (docs/demo-plan.md D9): the Warm cache, all a disconnect loses, beside Jack out; then the Pack.
+  const stake = v ? `<span class="fp-stake">${warmBox(s)}<span class="fp-packwrap">${packButton(s)}${packUi.open ? packPop(s) : ''}</span></span>` : '';
+  const acts = stake + (R.at
     ? btn('wait', 'Wait', { small: true, disabled: held(R) || active(s), tip: held(R) ? 'Wait: finish what is in front of you first.' : `Wait: the hunter takes its step${filesHere(s).length ? ', and the file you carry' : ''}. Costs nothing.` })
-      + btn('jackout', 'Jack out', { small: true, hot: true, disabled: active(s), tip: R.world ? 'Jack out: saves this visit and banks your pack. Integrity rests at home.' : 'Jack out: banks your pack. Integrity rests at home.' })
-    : btn('connect', 'Connect', { small: true, primary: true, disabled: !c.can, tip: c.can ? `Connect to ${R.name}.` : c.wait > 0 ? `${R.name} takes you back in ${fmtLeft(c.wait)}.` : `You need ${c.need} Integrity to connect.` });
+      + btn('jackout', 'Jack out', { small: true, hot: true, disabled: active(s), tip: 'Jack out: banks your pack. Integrity rests at home.' })
+    : btn('connect', 'Connect', { small: true, primary: true, disabled: !c.can, tip: c.can ? `Connect to ${R.name}.` : c.wait > 0 ? `${R.name} takes you back in ${fmtLeft(c.wait)}.` : `You need ${c.need} Integrity to connect.` }));
   return `<header class="fp-hud" aria-label="The server">
     <span class="fp-id" title="${esc(net(s, 'idTip') ?? `${R.name}: ${author} ${kindName(R.kind)}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`)}"><span class="ico" ${icon('server')}></span><b>${esc(R.name)}</b><small>${esc(net(s, 'idLine') ?? `${kindName(R.kind)} · lv ${R.level} · ${K.rule}`)}</small></span>
     <div class="fp-sig ${lvl}" title="${esc(`Integrity: your health, carried from fight to fight and rested back at home.\nA room's first step each visit costs ${step}, or ${stepNew} into one you've never been in.`)}"><span class="lbl">Integrity</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small></div>
@@ -697,7 +703,7 @@ function hudMarkup(s) {
 function warmBox(s) {
   const n = warmOf(s), xp = Math.round(WARM.xp * 100 * n), sc = WARM.scavenge * n;
   const bars = Array.from({ length: WARM.max }, (_, i) => `<i class="${i < n ? 'on' : ''}" style="height:${4 + Math.round((i * 9) / (WARM.max - 1))}px"></i>`).join('');
-  const tip = `Warm cache: Each room you win on this visit adds +${WARM.xp * 100}% XP and +${WARM.scavenge} Scavenge to the rooms after it, up to ${WARM.max}. It starts cold on every visit.\n▸ ${n} room${n === 1 ? '' : 's'}: +${xp}% XP, +${sc} Scavenge.`;
+  const tip = `Warm cache: Each room you win on this visit adds +${WARM.xp * 100}% XP and +${WARM.scavenge} Scavenge to the rooms after it, up to ${WARM.max}. It starts cold on every visit, and a disconnect loses it.\n▸ ${n} room${n === 1 ? '' : 's'}: +${xp}% XP, +${sc} Scavenge.`;
   return `<span class="fp-stat fp-visit fp-warm${n ? '' : ' empty'}" data-tt-kind="Visit bonus" title="${esc(tip)}"><span class="lbl">Warm</span><span class="fp-ladder" aria-hidden="true">${bars}</span><b>${glyph('xp')}+${xp}%</b><b>${glyph('scavenge')}+${sc}</b></span>`;
 }
 // The Pack: what you carry on this visit, a row per thing (credits summed, each code summed, each item its own).
@@ -715,11 +721,11 @@ function packRows(s) {
 }
 function packButton(s) {
   const n = packRows(s).length;
-  return `<button type="button" class="fp-packbtn fp-packstat${packUi.open ? ' open' : ''}" data-fp-pack aria-expanded="${packUi.open}"${packUi.open ? ' aria-label="Pack"' : ' title="Pack: What you carry. Jack out to keep it."'}>${glyph('pack')}<b>${n}</b></button>`;
+  return `<button type="button" class="fp-packbtn fp-packstat${packUi.open ? ' open' : ''}" data-fp-pack aria-expanded="${packUi.open}"${packUi.open ? ' aria-label="Pack"' : ' title="Pack: What you carry. It banks when you go home."'}>${glyph('pack')}<b>${n}</b></button>`;
 }
 function packPop(s) {
   const rows = packRows(s);
-  return `<div class="fp-packpop" role="dialog" aria-label="Pack"><header><b>Pack</b><small>UNSAVED</small></header><ul>${rows.join('') || '<li class="none"><span>Empty</span></li>'}</ul></div>`;
+  return `<div class="fp-packpop" role="dialog" aria-label="Pack"><header><b>Pack</b></header><ul>${rows.join('') || '<li class="none"><span>Empty</span></li>'}</ul></div>`;
 }
 // Whether you can connect from home: Integrity enough, and the reconnect wait over.
 function connectOf(s) {
@@ -832,7 +838,7 @@ function hereCard(s) {
     const ob = objOf(s, room); // its objective (objectives.mjs), and what it pays met
     if (ob) notes.push(`<span class="fp-tag-inline next fp-obj">${ic(OBJ_ICON[ob])}${OBJECTIVES[ob].name}</span> ${esc(objectiveLine(ob))}<span class="fp-obj-pay">${objBonus()}</span>`);
     if (room.kind === 'guard' && room.key && !R.opened[room.key]) notes.push(esc(`Carries the ${g.rooms[room.key].path} key.`));
-    if (room.kind === 'elite') notes.push(`Enrages from cycle ${ROOM_RULES.enrage.elite}. Drops a blue or better.`);
+    if (room.kind === 'elite') notes.push(`Enrages from cycle ${ROOM_RULES.enrage.elite}.`);
     if (room.kind === 'nest') notes.push(esc(`Optional. A kill pays ${ROOMS.nest.parts} components.`));
     if (room.kind === 'core' && !R.world) notes.push(esc(`Boss rule ${R.bossRule}: ${BOSS_RULES[R.bossRule].name}.`));
     if (R.world) { const extra = net(s, 'fightNote', room); if (extra) notes.push(esc(extra)); }
@@ -967,8 +973,10 @@ function unknownCard(s, room) {
 function homeCard(s) {
   const R = s.rooms, t = now(), { sig, wait, need, can } = connectOf(s), full = t + Math.max(0, Math.ceil(((R.max - sig) / (R.max * 0.2 * R.speed)) * 60000));
   const L = R.last;
-  const undone = L?.undone ? `<li class="hot"><span class="lbl">undone</span><span>${esc(`${L.why} Back to when you connected: ${L.undone.rooms} ${L.undone.rooms === 1 ? 'room' : 'rooms'}, ${L.undone.xp.toLocaleString('en-US')} XP, ${L.undone.files} ${L.undone.files === 1 ? 'file' : 'files'} undone.`)}</span></li>` : '';
-  const last = undone ? `<ul class="fp-lines">${undone}</ul>` : L ? `<ul class="fp-lines">${L.result === 'lost' ? `<li class="hot"><span class="lbl">lost</span><span>${esc(`${L.why} ${L.lost?.length ? `${L.lost.length} unbanked ${L.lost.length === 1 ? 'item' : 'items'} lost: ${L.lost.join(', ')}.` : 'Nothing unbanked was lost.'}`)}</span></li>` : `<li><span class="lbl">banked</span><span>${L.banked} ${L.banked === 1 ? 'item' : 'items'}</span></li>`}<li><span class="lbl">xp</span><span>+${(L.xp || 0).toLocaleString('en-US')}</span></li></ul>` : '';
+  // A network disconnect banks the pack and loses the Warm cache (L.banked); the playtest's loses the pack (L.lost).
+  const banked = L?.banked != null ? `<li><span class="lbl">banked</span><span>${L.banked} ${L.banked === 1 ? 'item' : 'items'}</span></li>` : '';
+  const lost = L?.result === 'lost' ? `<li class="hot"><span class="lbl">lost</span><span>${esc(L.lost ? `${L.why} ${L.lost.length ? `${L.lost.length} unbanked ${L.lost.length === 1 ? 'item' : 'items'} lost: ${L.lost.join(', ')}.` : 'Nothing unbanked was lost.'}` : `${L.why}${L.warm ? ' Warm cache lost.' : ''}`)}</span></li>` : '';
+  const last = L ? `<ul class="fp-lines">${lost}${banked}<li><span class="lbl">xp</span><span>+${(L.xp || 0).toLocaleString('en-US')}</span></li></ul>` : '';
   const items = R.banked.map((id) => stashItem(s, id)).filter(Boolean);
   const loot = items.length ? `<h3 class="fp-sec">Banked <small>${items.length}</small></h3><ul class="fp-items">${items.slice(-6).map((it) => `<li data-ptip="${esc(it.id)}"><b class="iname r-${shownRarity(it)}">${esc(itemLabel(it))}</b><small class="fp-stats">${Object.keys(it.stats || {}).map((k) => statLine({ [k]: it.stats[k] })).filter(Boolean).map((x) => `<span>${esc(x)}</span>`).join('')}</small></li>`).join('')}</ul>` : '';
   const lines = [sig < R.max ? `Full in ${clock(full)}.` : '', wait > 0 ? `Reconnect in ${clock(R.reconnectAt)}. ${deathMark(R.deaths || 0)}` : '', sig < need ? esc(`You need ${need} Integrity to connect.`) : ''].filter(Boolean).join(' ');

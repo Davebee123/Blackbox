@@ -8,6 +8,7 @@ import { luCalm } from './levelup-view.mjs';
 import { createLevelUpUi } from './levelup-ui.mjs';
 import { SHAPES, render as ascii3d } from './ascii3d.mjs';
 import { glyphMotion } from './protocol-glyphs.mjs';
+import { glyph } from './glyphs.mjs';
 import { createArt } from './virus-art.mjs';
 import { createStage } from './stage.mjs';
 import * as BFX from './boardfx.mjs';
@@ -43,7 +44,7 @@ import { PICKED as SOUND_STYLE, hasSound } from './abilitysound.mjs';
 import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, idOfName, winningBreak, slowAt, SLOW, levelOf as afxLevel } from './abilityfx.mjs';
 import { tierOf as masteryTier } from './mastery.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
-import { restoreMarkup, foldMarkup } from './recap.mjs';
+import { warmLostMarkup, foldMarkup } from './recap.mjs';
 import { createLash, shakeOf, SHAKE } from './lash.mjs';
 import { createChipFx, chipStrike, chipTheme, STRIKES, STRIKE_PLAN } from './chipfx.mjs';
 import { ATTACKS, OWN_PLAN } from './virussound.mjs';
@@ -51,7 +52,9 @@ import { voices as voicesOf, todayOf } from './virusvoice.mjs';
 import { online, listed, peopleOn } from './presence.mjs';
 import { runnerFloor, runnerBadge } from './runners-view.mjs';
 import { matesOf } from './crew.mjs';
-import { tickPlay } from './progression.mjs';
+import { tickPlay, newCharacter, isOpen } from './progression.mjs';
+import * as GO from './goals.mjs';
+import * as FN from './finish.mjs';
 import * as FP from './floorplan.mjs';
 import { spawnRival } from './rivals.mjs';
 import { RUN_CARDS, dealCard } from './runcards.mjs';
@@ -97,6 +100,7 @@ import { postFound } from './scanner.mjs';
 import { createScanner, postBanner, postOptions, postTerminalMarkup, POST } from './scanner-view.mjs';
 import * as GX from './graphics.mjs';
 import { runBorder } from './pickfx.mjs';
+import { beginTutorial, submitTutorial, tickTutorial, continueTutorial, LESSONS, PRACTICE, PRACTICE_KEYS } from './tutorial.mjs';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -169,6 +173,15 @@ function load() {
     play(s, 'connect ' + s.locations[0].id);
     return s;
   }
+  // From the content editor: a transmission on a test save (editor.html, "Play from here"), over the map.
+  if (playtest === 'scene') {
+    const s = fresh();
+    s.tutorialCompleted = true;
+    s.profile = { handle: params.get('handle') || 'tester', pwLen: 6, since: Date.now() };
+    newCharacter(s);
+    SC.replay(s, params.get('id'));
+    return s;
+  }
   // From the content editor: a test save at a story beat (editor.html, "Play from here").
   if (playtest === 'story') {
     const s = fresh();
@@ -233,7 +246,7 @@ function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY));
     const s = restore(raw);
-    if (!raw) { s.rng = newRng(); s.netSeed = newRng() || 1; } // crits and drops differ from game to game, and every network has its own signature (network.mjs)
+    if (!raw) { s.rng = newRng(); s.netSeed = newRng() || 1; if (!BENCH) newCharacter(s); } // what opens when (progression.mjs); crits and drops differ from game to game, and every network has its own signature (network.mjs)
     // A bench with no save yet, opened as ?bench=<name>&as=<subclass|class>&level=<n>: that character, ready (bench.mjs).
     // ?bench=arena: the Arena's bench, built as &as at &level (a subclass at 10 if none), again whenever they change (bench.mjs arenaBuild).
     const as = BENCH === 'arena' ? BN.arenaBuild(s, raw, params.get('as'), params.get('level')) : params.get('as');
@@ -341,6 +354,14 @@ function demoEnd() {
   if (!DEMO || !campaign.demoDone) return;
   const el = demoCard('demo-end', demoEndMarkup(campaign));
   el.addEventListener('click', (e) => { const b = e.target.closest('[data-backup]'); if (b) backupClick(b.dataset.backup); });
+}
+// The demo ends (D8) once the last floor's chain is delivered and CENTRIFUGE's transmissions are heard (wick's goodbye
+// goes to the end card; scenes.mjs).
+function demoFinish() {
+  if (!DEMO || campaign.demoDone || !campaign.arcs?.[DEMO.floor]?.done) return;
+  const sc = campaign.scenes;
+  if ([sc?.now, ...(sc?.queue || [])].some((q) => q?.id?.startsWith('centrifuge'))) return; // still to play
+  campaign.demoDone = Date.now(); TM.track(campaign, 'done'); tmSend(); save(); setTimeout(demoEnd, 2500);
 }
 // While the end card is up, the game takes no keys.
 addEventListener('keydown', (e) => { if (DEMO && campaign.demoDone && !e.target.closest?.('.demo-end')) { e.preventDefault(); e.stopPropagation(); } }, true);
@@ -652,7 +673,7 @@ function firstLogin() {
   powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove(), warm: (progress) => warmGame({ audio: !!campaign.settings.sound, progress }), version: DEMO ? `demo ${DEMO.version}` : '' }).then(playColdOpen).then(() => intro.run()).then(({ handle, pwLen }) => {
     campaign.profile = { ...campaign.profile, handle, pwLen, since: Date.now() };
     return pickClass();
-  }).then(() => {
+  }).then(() => (PRACTICE.offer || params.has('practice') ? practice() : null)).then(() => {
     introOn = false;
     if (!campaign.settings.persisted) { campaign.settings.persisted = true; navigator.storage?.persist?.().catch(() => {}); } // ask the browser to keep the save's storage, once
     save();
@@ -715,6 +736,58 @@ function pickClass() {
     addEventListener('keydown', keys, true);
     el.addEventListener('click', (e) => { if (e.target.closest('.pk-go')) return start(); if (e.target.closest('.pk-drawer')) return; const c = e.target.closest('[data-pick-class]'); if (c) choose(c.dataset.pickClass); });
     el.addEventListener('dblclick', (e) => { const c = e.target.closest('.pk-sq')?.parentElement; if (!c) return; if (pick !== c.dataset.pickClass) choose(c.dataset.pickClass); start(); }); // its two clicks opened and closed it
+  });
+}
+// The guided practice (tutorial.mjs, docs/demo-plan.md D4): offered once after the class pick, skippable. A training
+// virus on its own state, never the save: four lessons, each a command (typed, or a key then a part), then a review.
+function practice() {
+  return new Promise((done) => {
+    const el = document.createElement('div');
+    el.className = 'class-pick pr-root';
+    el.innerHTML = `<div class="pk-scene pr-offer" role="dialog" aria-label="Practice"><header class="pk-head"><span class="bb-logo pk-logo" aria-hidden="true"></span><h2>Practice</h2><p title="A training virus on its own server: nothing you do there counts.">${LESSONS.length} steps · a training virus</p></header>
+      <footer class="pk-foot pr-acts"><button type="button" class="btn primary pk-go" data-practice="go"><span class="pk-cmd"><span class="pk-dim">&gt;</span> practice<i class="pk-cur"></i></span></button><button type="button" class="btn" data-practice="skip">Skip</button></footer></div>`;
+    document.body.append(el);
+    let t = null, pick = null, raf = 0, last = 0, drawn = '', stepped = hooks.stepped;
+    const end = () => { hooks.stepped = stepped; cancelAnimationFrame(raf); removeEventListener('keydown', keys, true); el.remove(); done(); };
+    const draw = () => {
+      const L = LESSONS[t.index], text = t.error || (t.phase === 'review' || t.phase === 'complete' ? t.result : L.explain);
+      const html = `<div class="pr-scene" role="dialog" aria-label="Practice"><header class="pr-head"><span class="pk-k">Practice · ${t.index + 1}/${LESSONS.length}</span><b>${V.esc(L.title)}</b><button type="button" class="tip-off" data-practice="skip">Skip</button></header>
+        <div class="hud pr-hud">${V.hudMarkup(t.state, { party: false })}</div>
+        <section class="board panel pr-board">${V.boardMarkup(t.state, null)}</section>
+        <p class="pr-text${t.error ? ' bad' : ''}">${V.esc(text)}</p>
+        <div class="pr-row">${t.phase === 'review' ? '<button type="button" class="btn primary" data-practice="next">Continue <kbd>Enter</kbd></button>' : t.phase === 'complete' ? '<button type="button" class="btn primary" data-practice="done">Done <kbd>Enter</kbd></button>' : PRACTICE_KEYS.map((k) => `<button type="button" class="btn${pick === k ? ' primary' : ''}" data-pr-key="${k}">${k}</button>`).join('') + `<input class="pr-in" aria-label="Command" placeholder="${V.esc(L.command)}" autocomplete="off" spellcheck="false">`}</div></div>`;
+      if (html === drawn) return;
+      const typed = el.querySelector('.pr-in')?.value || '', focus = document.activeElement?.classList.contains('pr-in');
+      el.innerHTML = drawn = html;
+      const inp = el.querySelector('.pr-in');
+      if (inp) { inp.value = typed; if (focus || !F.isPhone()) inp.focus(); }
+    };
+    const send = (cmd) => { submitTutorial(t, cmd); pick = null; feel.key('char'); draw(); tick(); };
+    const tick = () => {
+      cancelAnimationFrame(raf);
+      if (!['running', 'live'].includes(t.phase)) return;
+      raf = requestAnimationFrame((now) => { tickTutorial(t, last ? Math.min(250, now - last) : 16); last = now; draw(); tick(); }); // runs only while the training virus is live
+    };
+    const keys = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); return end(); }
+      if (e.key !== 'Enter' || !t) return;
+      e.preventDefault(); e.stopPropagation();
+      if (t.phase === 'review') { continueTutorial(t); draw(); return; }
+      if (t.phase === 'complete') return end();
+      const inp = el.querySelector('.pr-in');
+      if (inp?.value.trim()) send(inp.value);
+    };
+    addEventListener('keydown', keys, true);
+    el.addEventListener('click', (e) => {
+      const a = e.target.closest('[data-practice]')?.dataset.practice;
+      if (a === 'skip' || a === 'done') return end();
+      if (a === 'go') { t = beginTutorial(campaign.settings); stepped = hooks.stepped; hooks.stepped = false; el.classList.add('on'); last = 0; return draw(); } // its cycles resolve whole (no staged strikes here)
+      if (a === 'next') { continueTutorial(t); return draw(); }
+      const k = e.target.closest('[data-pr-key]')?.dataset.prKey;
+      if (k) { pick = pick === k ? null : k; feel.key('click'); return draw(); }
+      const part = e.target.closest('[data-target]')?.dataset.target;
+      if (part && t && pick) send(`${pick} ${part}`); // a key, then a part: it fires
+    });
   });
 }
 // Screen effects (screenfx.mjs): light on the glass around the game (the backdrop, the tube's edge, the lamps, the
@@ -1229,22 +1302,31 @@ function receiptCard(e, events) {
   const name = campaign.locations?.find((l) => l.id === e.location)?.name || '';
   showGain(`${name} · Taken over`, '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code'].includes(x.type) && x.id > e.id - 6)), false, V.receiptLead(campaign, e.receipt), false);
 }
-// Losing a run, folded (recap.mjs): the image you're back to (visit.mjs: the visit undone, struck through) and how long
-// the net ran on; what took you out as one row that opens on the death recap; and when you can go back.
+// Losing a run, folded (recap.mjs): the Warm cache struck through (visit.mjs: all a disconnect loses); what took you out
+// as one row that opens on the death recap; and when you can go back.
 function lossCard(e) {
-  const clock = (ms) => `${Math.floor(ms / 60000)}:${String(Math.ceil((ms % 60000) / 1000) % 60).padStart(2, '0')}`;
-  const max = maxSignal(campaign), sig = signalNow(campaign), need = Math.ceil(max * CONFIG.zone.minSignal);
+  const clock = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; }; // rounded up: 59.5 s reads 1:00
+  const max = maxSignal(campaign), need = Math.ceil(max * CONFIG.zone.minSignal), t0 = Date.now();
+  // One clock: you can go back once both the reconnect wait and your Integrity allow it, so the later of the two. A
+  // restore (the card's button) cuts the second at once.
+  const waitNow = () => { const sig = signalNow(campaign); return Math.max((e.relockMs || 0) - (Date.now() - t0), sig < need ? ((need - sig) / (CONFIG.signalRest * max)) * 60000 : 0); };
   const fold = foldMarkup(e.recap, e.by);
-  const rows = [
-    ...(fold ? [] : [{ kind: 'lost', label: e.by ? `Taken out by ${e.by}` : (e.reason || 'Integrity lost'), qty: '', text: 'Integrity lost' }]),
-    ...(e.lost ? [{ kind: 'lost', label: 'Unbanked files', qty: `−${e.lost}`, text: `${e.lost} files lost` }] : []),
-    ...(e.failed || []).map((t) => ({ kind: 'lost', label: `Contract failed: ${t}`, qty: '', text: `Contract failed: ${t}` })), // an Install job's item went with the pack (mail.mjs)
-  ];
-  // One clock: you can go back once both the reconnect wait and your Integrity allow it, so the later of the two.
-  const wait = Math.max(e.relockMs || 0, sig < need ? ((need - sig) / (CONFIG.signalRest * max)) * 60000 : 0);
+  const rows = fold ? [] : [{ kind: 'lost', label: e.by ? `Taken out by ${e.by}` : (e.reason || 'Integrity lost'), qty: '', text: 'Integrity lost' }];
+  const wait = waitNow();
   if (wait > 0) rows.push({ kind: 'time', label: 'Reconnection possible in', qty: clock(wait), text: `Reconnection possible in ${clock(wait)}` });
-  showGain(e.reverted ? 'No carrier' : 'Disconnected', e.where || '', rows, false, restoreMarkup(e, max, hooks.now?.() ?? Date.now()) + fold);
+  // Restore: credits for Integrity now (combat.mjs topUp), while you're short of what a connect needs.
+  const cost = () => topUpCost(campaign), short = () => signalNow(campaign) < need && cost() > 0 && campaign.server.credits > 0;
+  const buy = short() ? `<button type="button" class="btn sp-topup" data-command="restore" title="Restore: Rebuilds your server's Integrity now, for credits. Resting rebuilds it for free.">Restore ${glyph('credits')}<b>${cost()}</b></button>` : '';
+  showGain('No carrier', e.where || '', rows, false, warmLostMarkup(e) + fold + buy);
   $('gain').classList.add('loss');
+  // The clock counts down while the card is up, and stops with it; a restore redraws it and the button.
+  const cell = $('gain').querySelector('.sp-row.k-time .sp-qty'), btn = $('gain').querySelector('.sp-topup');
+  if (!cell && !btn) return;
+  const tick = setInterval(() => {
+    if ($('gain').hidden || !(cell || btn).isConnected) return clearInterval(tick);
+    if (cell) cell.textContent = clock(waitNow());
+    if (btn) { btn.hidden = !short(); btn.querySelector('b').textContent = cost(); }
+  }, 250);
 }
 function hideGain() { clearTimeout(gainTimer); const el = $('gain'); if (el && !el.hidden) { el.hidden = true; el.innerHTML = ''; } const next = gainQueue.shift(); if (next) setTimeout(() => showGain(...next), 120); }
 const gainOpen = () => { const el = $('gain'); return el && !el.hidden && !el.classList.contains('toast'); };
@@ -1279,7 +1361,7 @@ function react(events) {
   if (events.some((e) => e.type === 'resolved')) turnedAt = performance.now(); // a turn on the timer counts too (turnLocked)
   TM.observe(campaign, events);
   if (events.some((e) => e.type === 'jacked-out') && TM.askable(campaign)) tmAskDue = true;
-  if (DEMO && !campaign.demoDone && events.some((e) => e.type === 'arc-done' && e.chain === DEMO.floor)) { campaign.demoDone = Date.now(); TM.track(campaign, 'done'); tmSend(); save(); setTimeout(demoEnd, 2500); } // the last floor's chain delivered: the demo ends (D8)
+  if (DEMO && events.some((e) => e.type === 'arc-done' && e.chain === DEMO.floor)) demoFinish(); // the last floor's chain delivered: the demo ends (D8)
   if (TM.due()) tmSend();
   const won = events.find((e) => e.type === 'victory');
   const last = module === 'combat' ? winningBreak(events) : null; // the break that wins the fight: slow motion
@@ -1555,9 +1637,9 @@ function notice(text, bad = false, suggest = null, sticky = false) {
   if (suggest) { const b = document.createElement('button'); b.type = 'button'; b.className = 'tok act suggest'; b.dataset.prefill = suggest; b.textContent = suggest.trim(); el.append(' ', b); }
   el.classList.toggle('bad', bad);
   el.classList.toggle('sticky', !!sticky);
-  el.hidden = !text;
+  noticeUp(!!text);
   clearTimeout(noticeTimer);
-  if (text && !sticky) noticeTimer = setTimeout(() => (el.hidden = true), 4000); // sticky (help): stays until the next notice or command
+  if (text && !sticky) noticeTimer = setTimeout(() => noticeUp(false), 4000); // sticky (help): stays until the next notice or command
 }
 
 // A card as the notice (a scan on a server's rooms): sticky, so it stays until the next command or a click.
@@ -1566,9 +1648,11 @@ function noticeCard(html) {
   el.innerHTML = html;
   el.classList.remove('bad');
   el.classList.add('sticky');
-  el.hidden = false;
+  noticeUp(true);
   clearTimeout(noticeTimer);
 }
+// The notice up or down; the body says which (a phone's Wait / Jack out capsule rises over it: phone.css).
+function noticeUp(on) { $('notice').hidden = !on; document.body.classList.toggle('noticed', on); }
 
 // ---------- commands ----------
 const NAV = ['map', 'combat', 'net', 'loadout', 'daemons', 'codex', 'rig', 'system'];
@@ -1653,7 +1737,7 @@ function run(raw) {
   if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); markDirty(); return notice(`Window ${text.slice(7)}.`); }
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();
-  if (text === 'help') return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload and deconstruct. For your server, use top up and intercept. On the net, use connect, relay, detach and mail. The pages are map, mail, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
+  if (text === 'help') return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload and deconstruct. For your server, use restore and intercept. On the net, use connect, relay, detach and mail. The pages are map, mail, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
 
   if (fighting && !realSave && turnLocked() && isOrder(text)) return refused(toIntent(campaign, text.split(';')[0].trim(), false).ability); // one entry a turn (turnLocked)
   // A co-op guest: a fight command goes to the host, a loadout change to their own save (and on to the host).
@@ -1725,7 +1809,7 @@ function resetGame() {
   lu.reset();
   ended = null;
   const settings = campaign.settings;
-  campaign = fresh();
+  campaign = newCharacter(fresh()); // what opens when applies (progression.mjs)
   campaign.settings = settings;
   campaign.rng = newRng();
   campaign.netSeed = newRng() || 1; // a new game, a new network
@@ -1758,8 +1842,10 @@ function shellCommand(arg) {
   notice(to === 'plain' ? 'Shell: plain.' : 'Shell: immersive. Type shell plain to turn it off.');
 }
 
+let goalsRun = false; // a run under way, last tick (the Goals pick again as it ends)
 function go(name, quiet = false) {
   aimPreview = null;
+  if (name === 'map' && !campaign.run) GO.refreshGoals(campaign); // the map off a run: the Goals pick again (goals.mjs)
   // Halcyon's store is its hub's Shop now: anything that asks for the store opens that.
   if (name === 'store' && boardOpen(campaign)) { hubSel = 'halcyon'; hubOpen = true; hubLines = [...V.hubBanner(campaign, 'halcyon').slice(0, -1), menuLine]; hubWin = 'shop'; V.setOrder(null); name = 'hub'; }
   if (name === 'daemons') { loadoutTab = 'daemons'; name = 'loadout'; } // a Loadout tab now
@@ -1810,13 +1896,12 @@ function connectTo(e) {
 // Jacking out (bootfx.mjs, the Carrier backwards): from the rooms page your room locks teal and the rooms close in a
 // circle onto the server's node on the map; your signal runs home along a teal line. Screen effects off or Motion off:
 // straight to the map.
-// A disconnect, after NO CARRIER (bootfx.mjs playReboot): your server reboots from its image on the map, then the
-// card. Screen effects off or Motion off, or not on the map: the card at once.
+// A disconnect, after NO CARRIER (bootfx.mjs playReboot): your server reboots on the map, HOME's bar at the Integrity
+// you came home with, then the card. Screen effects off or Motion off, or not on the map: the card at once.
 function reboot(e) {
-  if (!dialFx() || module !== 'map' || !e.reverted) return lossCard(e);
+  if (!dialFx() || module !== 'map') return lossCard(e);
   const sel = e.out && `[data-select="${CSS.escape(e.out)}"]`, shown = (q) => [...$('page-view').querySelectorAll(q)].find((g) => g.getBoundingClientRect().width);
-  const when = e.image?.at ? new Date(e.image.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '';
-  playReboot($('app'), () => (sel ? shown(`${sel} .core`) || shown(sel) : null), when, (e.image?.integrity || 0) / Math.max(1, maxSignal(campaign)), () => lossCard(e));
+  playReboot($('app'), () => (sel ? shown(`${sel} .core`) || shown(sel) : null), '', campaign.server.integrity / Math.max(1, maxSignal(campaign)), () => lossCard(e));
 }
 function hangUp(events) {
   const e = events.findLast((x) => x.type === 'jacked-out'), shown = (q) => [...$('page-view').querySelectorAll(q)].find((g) => g.getBoundingClientRect().width);
@@ -1857,6 +1942,8 @@ function prepare(abilityId) {
   if (a.target === 'schedule') text += ' 2 ';
   if (a.target === 'part') text += selected && alive(part(s, selected)) ? ` ${partKey(s, part(s, selected))}` : ' ';
   if (a.target === 'attack') text += selected && part(s, selected)?.attack && alive(part(s, selected)) ? ` ${partKey(s, part(s, selected))}` : '';
+  // A part picked first (a click, or [ ]): the skill fires at it.
+  if (active(campaign) && s === campaign && ['part', 'attack'].includes(a.target) && /\S \S/.test(text.trim())) { input.value = ''; run(text); focusPrompt(); markDirty(); return; }
   input.value = text;
   focusPrompt();
   updateSuggestions();
@@ -2154,7 +2241,7 @@ function renderMeters() {
     eta.hidden = !resting;
     if (resting) eta.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
     $('meter-integrity').classList.toggle('resting', resting);
-    meterBuy($('meter-integrity'), 'top up', run ? 0 : topUpCost(campaign),
+    meterBuy($('meter-integrity'), 'restore', run ? 0 : topUpCost(campaign),
       `Integrity ${hp}/${max}\nYour health. It regenerates slowly at home${resting ? ` (${f < toConnect ? `${Math.ceil(max * toConnect)} to connect` : 'full'} in ${eta.textContent})` : ''}.`);
   }
   $('vault-value').textContent = srv.credits;
@@ -2168,6 +2255,7 @@ function renderMeters() {
   $('tab-net').hidden = !campaign.run || !!campaign.run.rooms;
   document.body.classList.toggle('rooms-page', !!campaign.rooms && module === 'rooms'); // its notices pop up mid-screen
   $('tab-rooms').hidden = !campaign.rooms;
+  { const rig = document.querySelector('.modules [data-module="rig"]'), on = isOpen(campaign, 'rig'); if (rig && rig.hidden === on) rig.hidden = !on; } // a new character: from the first achievement (progression.mjs)
   $('tab-rooms').textContent = campaign.roomsPlay ? 'Server' : 'Run'; // on the network a server's rooms are your run (the Server tab is your home server)
   $('tab-rooms').dataset.tt = campaign.roomsPlay ? "Server: The rooms of the server you're connected to." : 'Run: The rooms of your run.';
   document.body.classList.toggle('rooms-mode', !!campaign.roomsPlay); // the rooms playtest: the old game's tabs and meters step aside
@@ -2194,6 +2282,7 @@ function renderMeters() {
     el.textContent = n;
     el.title = `${n} new`;
   }
+  { const up = V.upgradeCount(campaign) > 0; if ($('up-loadout').hidden === up) $('up-loadout').hidden = !up; } // an upgrade in the stash (view.mjs isUpgrade)
   $('sound').textContent = 'Sound';
   $('sound').setAttribute('aria-pressed', String(campaign.settings.sound));
   feel.ambience(!!campaign.settings.sound && !coldOn);
@@ -2329,6 +2418,21 @@ function renderJournal() {
   el.hidden = !want;
   if (want) put('jr-find', journalCardMarkup(campaign)); else if (cache.get('jr-find')) { cache.delete('jr-find'); el.innerHTML = ''; }
 }
+// The finish card (finish.mjs): after a big finish, once you're off the run and nothing else is up.
+function renderFinish() {
+  const el = $('fin-find'), want = !!campaign.finish && !campaign.run && !campaign.journalCard && !SC.sceneNow(campaign) && !introOn && module !== 'combat' && !active(campaign) && !gainOpen() && !campaign.roomsPlay;
+  el.hidden = !want;
+  if (want) put('fin-find', V.finishMarkup(campaign)); else if (cache.get('fin-find')) { cache.delete('fin-find'); el.innerHTML = ''; }
+}
+function finishDone() { FN.finishDone(campaign); feel.key('enter'); save(); markDirty(); }
+$('fin-find').addEventListener('click', (e) => {
+  if (e.target.closest('[data-fin-done]')) { e.stopPropagation(); finishDone(); }
+  else if (e.target.closest('[data-go]')) finishDone(); // its Next row: there, and the card goes
+});
+document.addEventListener('keydown', (e) => {
+  if ($('fin-find').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); finishDone(); }
+}, true);
 function journalDone(ledger = false) {
   const id = campaign.journalCard;
   campaign.journalCard = null; feel.key('enter'); save(); markDirty();
@@ -2351,12 +2455,12 @@ function sceneAnswer(n) {
 $('scene').addEventListener('click', (e) => {
   const p = e.target.closest('[data-scene-pick]');
   if (p) { e.stopPropagation(); return sceneAnswer(Number(p.dataset.scenePick)); }
-  if (e.target.closest('[data-scene-skip]')) { e.stopPropagation(); SC.skip(campaign); feel.key('click'); save(); markDirty(); }
+  if (e.target.closest('[data-scene-skip]')) { e.stopPropagation(); SC.skip(campaign); demoFinish(); feel.key('click'); save(); markDirty(); }
 });
 document.addEventListener('keydown', (e) => {
   if ($('scene').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
   if (/^[1-9]$/.test(e.key)) { e.preventDefault(); e.stopImmediatePropagation(); sceneAnswer(Number(e.key)); }
-  else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); SC.skip(campaign); save(); markDirty(); }
+  else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); SC.skip(campaign); demoFinish(); save(); markDirty(); }
 }, true);
 function renderPreview() {
   const el = $('th-preview');
@@ -2402,6 +2506,7 @@ function render(force = false) {
   renderMeters();
   renderScene();
   renderJournal();
+  renderFinish();
   renderOffer();
   renderPreview();
   shell.apply(module);
@@ -2836,6 +2941,8 @@ function services() {
   // host's rooms on the host's game.
   const S = own();
   if (!document.hidden && now - lastInput < 120000 && !playtest) tickPlay(S, dt);
+  if (goalsRun && !campaign.run) { GO.refreshGoals(campaign); markDirty(); } // a run just ended: a calm moment to pick the Goals again (goals.mjs)
+  goalsRun = !!campaign.run;
   const chipped = S.run || S.server, hp = chipped.integrity; // the chip takes the bar where it is (invasion.mjs)
   const events = S.roomsPlay ? [] : [...tickNetwork(S, now), ...tickServices(S, now)]; // the rooms playtest has no network
   if (campaign.rooms && !realSave) { const ev = FP.tick(campaign, now); if (ev.length) react(ev); if (module === 'rooms' || ev.length) markDirty(); } // respawn timers count down on the map
@@ -2913,6 +3020,10 @@ function advanceTip() {
   }
   hideTip(true);
 }
+// Where it sits: the first spot that covers neither its thing nor what the tip names (its `clear`), else the one that
+// covers least, the thing itself above all. Spots: under or over its container (`under`, the board), under or over the
+// thing, beside it, then the screen's corners.
+const area = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
 function placeTip() {
   if (!tip) return;
   const el = shownEl(tip.cur.at);
@@ -2920,19 +3031,31 @@ function placeTip() {
   document.querySelectorAll('.tip-target').forEach((x) => { if (x !== el) x.classList.remove('tip-target'); });
   el.classList.add('tip-target');
   const box = $('tip'), r = el.getBoundingClientRect(), z = Z(), w = box.offsetWidth * z, h = box.offsetHeight * z; // it zooms with the screen (style.css)
-  // Under a container (the board): the thing it explains stays in view; the arrow still points at it.
   const u = (tip.cur.under && document.querySelector(tip.cur.under)?.getBoundingClientRect()) || r;
+  const clear = tip.cur.clear ? [...document.querySelectorAll(tip.cur.clear)].filter(shownRect).map((x) => x.getBoundingClientRect()) : [];
   // Keep it on the screen: inside the monitor's picture when it sits in its casing, else the window.
   const scr = document.body.classList.contains('cased') ? document.querySelector('.app')?.getBoundingClientRect() : null;
   const pad = scr ? 28 : 12; // clear of the tube's darker edges
-  const L = (scr ? scr.left : 0) + pad - 12, R = (scr ? scr.right : innerWidth) - pad + 12, T = (scr ? scr.top : 0) + pad - 12, B = scr ? scr.bottom : innerHeight;
-  const below = u.bottom + 14 + h < B - 8;
-  const cx = r.left + Math.min(r.width, 240) / 2;
-  const left = Math.max(L + 12, Math.min(R - w - 12, cx - w / 2));
-  box.style.left = left / z + 'px';
-  box.style.top = (below ? u.bottom + 14 : Math.max(T + 12, u.top - h - 14)) / z + 'px';
-  box.classList.toggle('above', !below);
-  box.style.setProperty('--arrow', Math.max(16, Math.min(w - 16, cx - left)) / z + 'px');
+  const tabs = document.querySelector('.ph-tabs')?.getBoundingClientRect(); // a phone's tab bar: never under the tip
+  const L = (scr ? scr.left : 0) + pad, R = (scr ? scr.right : innerWidth) - pad, T = (scr ? scr.top : 0) + pad, B = Math.min(scr ? scr.bottom : innerHeight, tabs?.height ? tabs.top : Infinity) - 8;
+  const cx = r.left + Math.min(r.width, 240) / 2, cy = r.top + r.height / 2;
+  const fitX = (x) => Math.max(L, Math.min(R - w, x)), fitY = (y) => Math.max(T, Math.min(B - h, y));
+  const spots = [
+    [fitX(cx - w / 2), u.bottom + 14, 'below'], [fitX(cx - w / 2), u.top - h - 14, 'above'],
+    [fitX(cx - w / 2), r.bottom + 14, 'below'], [fitX(cx - w / 2), r.top - h - 14, 'above'],
+    [r.right + 14, fitY(cy - h / 2), 'right'], [r.left - w - 14, fitY(cy - h / 2), 'left'],
+    [L, B - h, ''], [R - w, B - h, ''], [R - w, T, ''], [L, T, ''],
+  ].map(([x, y, side]) => {
+    const fits = x >= L - 1 && x + w <= R + 1 && y >= T - 1 && y + h <= B + 1;
+    const b = { left: x, top: y, right: x + w, bottom: y + h };
+    return { x, y, side, cost: (fits ? 0 : 1e9) + area(b, r) * 1000 + clear.reduce((n, c) => n + area(b, c), 0) * 10 + (u === r ? 0 : area(b, u)) };
+  });
+  const best = spots.reduce((a, b) => (b.cost < a.cost ? b : a));
+  box.style.left = best.x / z + 'px';
+  box.style.top = best.y / z + 'px';
+  for (const c of ['above', 'right', 'left', 'free']) box.classList.toggle(c, best.side === c || (c === 'free' && !best.side));
+  if (best.side === 'left' || best.side === 'right') box.style.setProperty('--arrow-y', Math.max(16, Math.min(h - 16, cy - best.y)) / z + 'px');
+  else box.style.setProperty('--arrow', Math.max(16, Math.min(w - 16, cx - best.x)) / z + 'px');
 }
 function hideTip(seen) {
   if (!tip) return;
@@ -3350,9 +3473,11 @@ document.addEventListener('click', (e) => {
   }
   const target = e.target.closest('[data-target]');
   if (target && !target.disabled) {
-    selected = selected === target.dataset.target ? null : target.dataset.target;
     const input = $('command-input');
     const [word] = input.value.trim().split(' ');
+    // A skill picked: the click fires it at the part. Else the part is picked, for the next skill.
+    if (active(campaign) && ['part', 'attack'].includes(ABILITIES[word]?.target)) { selected = target.dataset.target; input.value = ''; run(`${word} ${partKey(campaign, part(campaign, selected))}`); phPicked(); focusPrompt(); markDirty(); return; }
+    selected = selected === target.dataset.target ? null : target.dataset.target;
     if (selected && ABILITIES[word] && ABILITIES[word].target !== 'none') input.value = `${word} ${partKey(campaign, part(campaign, selected))}`;
     focusPrompt();
     markDirty();
@@ -3634,7 +3759,7 @@ function phTicker() {
   if (t.dataset.html !== html) { t.dataset.html = html; t.innerHTML = html; t.className = `ph-ticker ${last?.className || ''}`; }
   if (sheetKey() === 'log') { const b = sheetBody(); if (b && b.dataset.n !== String(campaign.logs.length)) { b.dataset.n = campaign.logs.length; b.innerHTML = `<ol class="log-lines ph-log">${V.logMarkup(shown())}</ol>`; b.scrollTop = b.scrollHeight; } }
 }
-$('notice').addEventListener('click', () => { if (F.isPhone() && phFight() && $('notice').textContent) openSheet(`<p class="ph-note">${V.esc($('notice').textContent)}</p>`, { height: 'peek', label: 'Notice', id: 'notice' }); }); // one line over the ticker: a tap shows it whole
+$('notice').addEventListener('click', () => { if (F.isPhone() && (phFight() || document.body.classList.contains('ph-rooms')) && $('notice').textContent) openSheet(`<p class="ph-note">${V.esc($('notice').textContent)}</p>`, { height: 'peek', label: 'Notice', id: 'notice' }); }); // one line over the ticker: a tap shows it whole
 $('ph-ticker').addEventListener('click', () => {
   const b = openSheet(`<ol class="log-lines ph-log">${V.logMarkup(shown())}</ol>`, { height: 'half', label: 'Combat log', id: 'log' });
   requestAnimationFrame(() => { b.scrollTop = b.scrollHeight; }); // the latest line in view
@@ -3690,6 +3815,7 @@ document.addEventListener('click', (e) => {
 // still takes taps (sheet.mjs).
 const PH_POPS = [
   { id: 'journal', host: () => $('jr-find'), label: 'Journal', shut: () => journalDone() },
+  { id: 'finish', host: () => $('fin-find'), label: 'Finish', shut: () => finishDone() },
   { id: 'offer', host: () => $('th-offer'), label: 'Pick your reward', shut: () => { thOffer.later = offerKey(); } },
   { id: 'quest', page: '#th-panel', label: 'Transmission', shut: () => { thUi.closed = campaign.threads?.said?.n ?? null; } },
   { id: 'comms', host: () => $('comms'), height: 'half', label: 'Pager', shut: () => setComms(false) },
@@ -3768,7 +3894,7 @@ function phListMarkup() {
 function phListOpen(which) {
   phList = which; phListHtml = phListMarkup();
   if (!phListHtml) { phList = null; return; }
-  openSheet(phListHtml, { height: 'peek', label: which === 'threats' ? 'Threats and timers' : which === 'jobs' ? 'Contracts' : which === 'pins' ? 'Pinned' : 'The server', id: 'list', closed: () => { phList = null; markDirty(); } });
+  openSheet(phListHtml, { height: 'peek', label: which === 'threats' ? 'Threats and timers' : which === 'jobs' ? 'Contracts' : which === 'pins' ? 'Goals' : 'The server', id: 'list', closed: () => { phList = null; markDirty(); } });
 }
 function phListDraw() {
   if (!phList || sheetKey() !== 'list') return;
@@ -3965,8 +4091,9 @@ $('profile').addEventListener('submit', (e) => {
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && profileOn) { profileOn = null; profileUi(); } });
 // INIT's table in the header (table.mjs): the count, its tooltip what the band does now. Written only when it moves.
 function tableMeter() {
-  const el = $('meter-table'), n = shownCount(campaign);
-  if (+el.dataset.n === n) return;
+  const el = $('meter-table'), n = shownCount(campaign), on = isOpen(campaign, 'table');
+  if (el.hidden === on) el.hidden = !on; // a new character: from Carrier's schedule page (progression.mjs)
+  if (!on || +el.dataset.n === n) return;
   el.dataset.n = n; $('table-value').textContent = `${n}%`; el.dataset.ttKind = `INIT's table · ${tableKind(campaign)}`;
   if (el.dataset.tt == null) el.title = tableTip(); // the hover moves it to data-tt; the rows below change, the line doesn't
   let more = el.querySelector(':scope > template.tt-more');
@@ -4022,7 +4149,9 @@ document.fonts?.ready.then(() => { fitKey = ''; fitTopbar(); });
 function goTo(target) {
   const [where, what, sub] = target.split(':');
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
+  else if (where === 'demo-end') demoFinish(); // wick's goodbye as CENTRIFUGE falls
   else if (where === 'store') go('store');
+  else if (where === 'runner') { mapRunner = what; mapRunnersAt = null; runnerMode = 'runner'; const fl = runnerFloor(campaign, what); if (fl && fl <= (campaign.floors?.reached || 1)) mapFloor = fl; go('map'); } // a runner's transmission: their card (Hire)
   else if (where === 'server') { mapSel = 'server'; go('map'); }
   else if (where === 'hub') { openHub(what); if (sub) pickHub(sub); } // hub:<faction>:<window> opens straight to it (a market shock's tile)
   else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what?.startsWith('con=')) { mapView = 'consortium'; mapSel = what.slice(4); } else if (what) { mapSel = what; mapPop = true; } go('map'); }
@@ -4040,6 +4169,15 @@ function goTo(target) {
     if (a) setTimeout(() => document.querySelector(`[data-ach="${CSS.escape(a.id)}"]`)?.scrollIntoView({ block: 'center' }), 80);
   }
 }
+// The map's Goals (goals.mjs): its header folds it; a row's pin pins or unpins that goal.
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-goals-fold]')) { e.stopPropagation(); GO.foldGoals(campaign); feel.key('click'); save(); markDirty(); return; }
+  const p = e.target.closest('[data-goal-pin]');
+  if (p) { e.stopPropagation(); GO.togglePin(campaign, p.dataset.goalPin); feel.key('click'); save(); markDirty(); return; }
+  const x = e.target.closest('[data-goal-x]');
+  if (x) { e.stopPropagation(); GO.dismissGoal(campaign, x.dataset.goalX); feel.key('click'); save(); markDirty(); }
+}, true);
+document.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('[data-goals-fold]')) { e.preventDefault(); GO.foldGoals(campaign); save(); markDirty(); } });
 document.addEventListener('click', (e) => { const g = !e.target.closest('#comms') && e.target.closest('[data-go]'); if (g) { peopleOpen = false; goTo(g.dataset.go); } });
 document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager, #sheet')) setComms(false); });
 document.addEventListener('click', (e) => {
@@ -4164,7 +4302,7 @@ document.querySelector('.brand')?.addEventListener('click', (ev) => {
   ev.preventDefault();
   go('map');
 });
-// The meters that take a click (top up, repair) take Enter and Space too.
+// The meters that take a click (restore) take Enter and Space too.
 document.addEventListener('keydown', (e) => {
   const m = e.target.closest?.('.meter[data-command]');
   if (m && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); m.click(); }

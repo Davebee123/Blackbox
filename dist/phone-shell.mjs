@@ -1,6 +1,7 @@
 // The phone's shell (docs/phone-plan.md P1): the tab bar at the bottom and the More sheet. Plain markup from state;
 // every control carries a data- command (data-module, data-finger, data-phone), so a tap sends what a click on the
 // desktop's top bar sends. The top strip is the desktop's own meters and pager, restyled by phone.css.
+import { isOpen } from './progression.mjs';
 import { glyph } from './glyphs.mjs';
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -39,7 +40,7 @@ export function moreMarkup(s, { who = {}, consortium = false, count = 0, people 
   return `<nav class="ph-more-list" aria-label="More">${card}
     ${consortium ? row('data-module="consortium"', glyph('uplink'), 'Consortium', count ? `<b class="ph-n">${count}</b>` : '') : ''}
     ${row('data-module="codex"', glyph('blueprint'), 'Codex')}
-    ${row('data-module="rig"', glyph('kernel'), 'Rig')}
+    ${isOpen(s, 'rig') ? row('data-module="rig"', glyph('kernel'), 'Rig') : ''}
     ${row('data-module="system"', glyph('config'), 'Settings')}
     ${people ? row('data-phone="people"', glyph('relay'), 'People') : ''}
     ${pager ? row('data-phone="comms"', pager, 'Pager') : ''}

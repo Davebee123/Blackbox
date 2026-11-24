@@ -2,6 +2,12 @@
 import { fresh, command, selectEncounter, advance, active, part, cycleLength } from './combat.mjs';
 import { CONFIG } from './data.mjs';
 
+// Offered once after the class pick (app.js practice), skippable. Off until the designer keeps it (docs/demo-plan.md D4);
+// ?practice offers it on a fresh save meanwhile.
+export const PRACTICE = { offer: false };
+// The skills its lessons type (a training kit: the Breaker's, whatever class you picked).
+export const PRACTICE_KEYS = ['bash', 'crack', 'overload'];
+
 export const LESSONS = [
   {
     title: 'Break a ◆',

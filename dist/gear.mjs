@@ -298,19 +298,19 @@ export const FOUND_ZERO_DAYS = Object.keys(ZERO_DAYS).filter((z) => !ZERO_DAYS[z
 // the storyline; Mapped and dead drops white or blue) pay what they say. lootsim.mjs checks it against `per`.
 export const LOOT = {
   killsPerHour: 150, // real play: 10–15 seconds a mob and the walk between rooms (the pacing bot's own clock is far slower, about 7 on the long climb; bot.mjs keeps real play beside it); the System page shows yours
-  // The targets over everything you do, a kill at a time: a blue in about 85 kills (30–40 minutes), a yellow in about
+  // The targets over everything you do, a kill at a time: a blue in about 45 kills (about 20 minutes; WoW's greens), a yellow in about
   // 500 (3–4 hours), a gold outside bosses and the farm under 1 in 4,500 (30+ hours).
-  per: { tuned: 85, custom: 500, zeroday: 4500 },
+  per: { tuned: 45, custom: 500, zeroday: 4500 },
   // One roll's odds by what you killed. trash: a plain process, a SPRAWL stray, a home invader. elite: an elite, a guard,
   // a mirror. rare: a ★ rare spawn. A gold is a unique that drops there (an elite's or a rare's: any world unique),
   // else a yellow. Most trash drops no item at all.
   odds: {
-    trash: { stock: 0.04, tuned: 0.0012, custom: 0.0001, zeroday: 0.000005 },
-    elite: { stock: 0.15, tuned: 0.005, custom: 0.0006, zeroday: 0.00005 },
-    rare: { stock: 0.6, tuned: 0.12, custom: 0.03, zeroday: 0.0005 },
+    trash: { stock: 0.065, tuned: 0.0023, custom: 0.0001, zeroday: 0.000005 },
+    elite: { stock: 0.15, tuned: 0.0095, custom: 0.0006, zeroday: 0.00005 },
+    rare: { stock: 0.6, tuned: 0.23, custom: 0.03, zeroday: 0.0005 },
   },
   trophy: 10000, // a strain's own unique: 1 in this many kills of that strain
-  vault: { stock: 94, tuned: 6, custom: 0.4, zeroday: 0.03 }, // a vault's protocol (kit.bin), white or better: a treasure chest
+  vault: { stock: 88.6, tuned: 11, custom: 0.4, zeroday: 0.03 }, // a vault's protocol (kit.bin), white or better: a treasure chest
   vaultKit: 0.5, // share of vaults holding a protocol (kit.bin)
   vaultTokens: 0.5, // share holding spare credits (tokens.dat: where blueprints and codebases were)
   vaultSource: 0.25, // share of layer-2+ vaults holding a Zero-day protocol (its .src)

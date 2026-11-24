@@ -10,7 +10,7 @@ import * as FP from './dist/floorplan.mjs';
 import { xpTotal } from './dist/floorplan.mjs';
 import { tellsOf } from './dist/tells.mjs';
 import { gainMarkup } from './dist/view.mjs';
-import { deathRecap, recapMarkup, RECAP, restoreMarkup, foldMarkup, sinceLabel } from './dist/recap.mjs';
+import { deathRecap, recapMarkup, RECAP, warmLostMarkup, foldMarkup } from './dist/recap.mjs';
 import { maxSignal } from './dist/combat.mjs';
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false;
@@ -99,34 +99,22 @@ test('the card shows it, not explains it: numbers, marks and labels; the sentenc
   assert.equal(recapMarkup(null), '', 'nothing to show, nothing drawn');
 });
 
-test('No carrier, folded: the card opens on the image you are back to; the recap waits behind one row', () => {
+test('No carrier, folded: the card opens on the Warm cache struck through; the recap waits behind one row', () => {
   const s = runFight();
-  const snap = s.run.snap, back = snap.integrity;
-  assert.ok(snap.at > 0, 'the snap notes when it was taken');
+  s.rooms.visit.warm = 3;
+  const xp = xpTotal(s);
   s.run.max = s.run.integrity = 400;
   hold(s);
   const d = s.logs.findLast((x) => x.type === 'disconnected');
-  assert.ok(d.reverted && d.image, 'the event carries the image');
-  assert.equal(d.image.at, snap.at);
-  assert.equal(d.image.integrity, back, 'Integrity back to the connect');
+  assert.equal(d.warm, 3, 'the event carries the Warm cache lost');
   assert.equal(d.out, s.locations[0].id, 'and which server it was, for the map');
-  const max = maxSignal(s), top = restoreMarkup(d, max, snap.at + 17 * 60000), fold = foldMarkup(d.recap, d.by);
-  const pc = Math.round((back / max) * 100);
-  assert.deepEqual(visible(top).slice(0, 3).map((x) => x.toLowerCase()), ['restored', `image ${new Date(snap.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`.toLowerCase(), `${pc}%`]);
-  assert.ok(top.includes(`width:${pc}%`), 'the teal bar at the Integrity you are back to');
-  assert.ok(visible(top).includes('17 min passed'), 'the net kept its time');
+  assert.ok(xpTotal(s) >= xp, 'the XP stays');
+  const top = warmLostMarkup(d), fold = foldMarkup(d.recap, d.by);
+  assert.deepEqual(visible(top), ['Warm ×3', '+30%', '+15'], 'its stacks and their bonus');
+  assert.equal((top.match(/<s>/g) || []).length, 3, 'struck through');
+  assert.equal(warmLostMarkup({ ...d, warm: 0 }), '', 'no stacks: nothing struck');
   assert.match(fold, /^<details class="rc-fold">/, 'the recap folded: closed until opened');
   assert.deepEqual(visible(fold).slice(0, 2), [`Taken out by ${d.by}`, `−${d.recap.took}`]);
   assert.ok(fold.includes(recapMarkup(d.recap)), 'the whole recap inside');
-  assert.equal(restoreMarkup({ ...d, reverted: false }, max), '', 'nothing undone (an old save): no restore');
   assert.equal(foldMarkup(null, d.by), '');
-  // A first run's XP is paid as you connect, before the snap: a disconnect keeps it, the card doesn't strike it, and
-  // the next connect doesn't pay it again.
-  const xp = xpTotal(s);
-  assert.ok(xp > 0 && xp === snap.xp, 'the first run paid, and kept');
-  assert.equal(d.visit.xp, 0, 'nothing struck that the death did not take');
-  const loc = s.locations[0]; loc.lockUntil = 0;
-  play(s, 'connect ' + loc.id);
-  assert.equal(xpTotal(s), xp, 'paid once');
-  assert.deepEqual([sinceLabel(10e3), sinceLabel(17 * 60000), sinceLabel(65 * 60000), sinceLabel(120 * 60000)], ['1 min', '17 min', '1 h 5 min', '2 h']);
 });
