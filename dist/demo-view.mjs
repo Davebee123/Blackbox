@@ -1,6 +1,5 @@
 // The demo's cards (docs/demo-plan.md Phase 1): the telemetry question, asked once after your first jack out, and the
-// end-of-demo card, which opens when the last floor's chain is delivered and ends play. The end card's words come with
-// Phase 5; this is its frame.
+// end-of-demo card, which opens when the last floor's chain is delivered and ends play.
 import { BOSSES } from './data.mjs';
 import { UNIQUES, hackerLevel } from './combat.mjs';
 import { LINKS, version } from './demo.mjs';
@@ -26,7 +25,7 @@ export function endStats(s) {
 export function endMarkup(s) {
   const x = endStats(s);
   const stat = (k, v) => `<div class="de-stat"><b>${esc(v)}</b><small>${k}</small></div>`;
-  return `<section class="card demo-end" role="dialog" aria-label="End of the demo"><h2>End of the demo <small>${esc(version())}</small></h2>
+  return `<section class="card demo-end" role="dialog" aria-label="End of the demo"><h2>End of the demo <small>${esc(version())}</small></h2><p class="svc-line">Floor 3 and below are in the full game.</p>
     <div class="de-stats">${stat('played', clock(x.ms))}${stat('level', x.level)}${stat('bosses down', x.bosses)}${stat('uniques', x.uniques)}</div>
     <div class="row">${link(LINKS.itch, 'Follow on itch.io', 'Follow on itch.io: Hear when the full game opens.')}${link(LINKS.discord, 'Discord', 'Discord: Talk to the developer and other players.')}<button type="button" class="btn" data-backup="feedback" title="Feedback: Download a report and open the Discord to send it.">Feedback</button><button type="button" class="btn" data-backup="export" title="Export save: Keep your save, to carry into the full game.">Export save</button></div></section>`;
 }

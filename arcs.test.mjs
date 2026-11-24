@@ -180,7 +180,7 @@ const atLevel = (s, L) => { s.hackers = { ...(s.hackers || {}), [s.loadout.arche
 test('a Boss step: PAGE NINE’s letter waits for level 6, then it holds a road server’s Core, with its challenge and fall line', () => {
   const s = boarded();
   atLevel(s, 5);
-  for (let k = 0; k < CHAINS[1].steps.length - 1; k++) { const c = finish(s, 1); command(s, `mail deliver ${c.id}`); }
+  for (let k = 0; k < CHAINS[1].steps.length - 1; k++) { const c = finish(s, 1); c.reward.xp = 0; command(s, `mail deliver ${c.id}`); } // no XP: the climb would take it to 6
   assert.equal(chainJob(s, 1), undefined, 'no letter below level 6');
   assert.equal(arcsOf(s)[1].wait, CHAINS[1].steps.length - 1);
   atLevel(s, 6); T += 1000; tickMail(s, T);

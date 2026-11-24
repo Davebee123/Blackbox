@@ -14,8 +14,8 @@ import { cpus } from 'node:os';
 
 // Hours of real play to each level: front-loaded. A farmer's (CLIMB.minutes) is about 100 to 50 (8 floors, 10 to 20 hours
 // each past the first two); a player who works contracts earns about 1.5x the XP an hour, about 67.
-export const FARM_TARGET = { 5: 1, 10: 4, 20: 15, 30: 35, 40: 65, 50: 100 };
-export const PACE_TARGET = { 5: 0.7, 10: 2.7, 20: 10, 30: 23, 40: 43, 50: 67 };
+export const FARM_TARGET = { 5: 0.8, 10: 3.6, 20: 15, 30: 35, 40: 65, 50: 100 };
+export const PACE_TARGET = { 5: 0.5, 10: 2.4, 20: 10, 30: 23, 40: 43, 50: 67 };
 export const MILESTONES = [5, 10, 20, 30, 40, 50];
 export const CLASSES = ['breaker', 'bastion', 'infiltrator', 'operator'];
 // What a climb's XP was, by what earned it (bot.mjs stats.xp's reasons): one-off deeds (deedXpFor), contracts, the rest kills.

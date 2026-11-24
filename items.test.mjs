@@ -63,7 +63,7 @@ test('stat-x2 counts a stat double while its condition holds; break refunds; Enc
   assert.ok(u.encounter.encrypt <= Math.ceil(amount / 2), 'half as fast');
 });
 
-test("Deadman's Switch: Integrity at 0 jacks you out with your pack, then waits 90 minutes", async () => {
+test("Deadman's Switch: Integrity at 0 jacks you out with your pack and keeps the Warm cache for the next visit, then waits 90 minutes", async () => {
   await import('./dist/run.mjs');
   let t = 1_000_000; hooks.now = () => t;
   try {
@@ -73,12 +73,21 @@ test("Deadman's Switch: Integrity at 0 jacks you out with your pack, then waits 
     const { connect } = await import('./dist/run.mjs');
     connect(s, s.locations[0].id);
     s.run.pack.push({ path: '/x', name: 'x.dat', kind: 'item', item: 'Thing' });
-    const before = s.components;
+    const before = s.components, loc = s.locations[0];
+    s.rooms.visit.warm = 4;
     const { disconnect } = await import('./dist/combat.mjs');
     disconnect(s, 'test');
     assert.equal(s.run, null);
     assert.equal(s.components, before + 1, 'the pack was banked');
+    assert.ok(!loc.deaths, 'a clean jack out: the wait does not grow');
     assert.ok(s.fxCooldown['deadmans-switch'] > t, 'rearming');
+    t += 600000; loc.lockUntil = 0; s.server.integrity = s.server.max;
+    connect(s, loc.id);
+    assert.equal(s.rooms.visit.warm, 4, 'the next visit starts warm');
+    s.run.pack = []; const { jackOut } = await import('./dist/run.mjs'); jackOut(s);
+    t += 600000; loc.lockUntil = 0;
+    connect(s, loc.id);
+    assert.equal(s.rooms.visit.warm, 0, 'once');
   } finally { delete hooks.now; }
 });
 

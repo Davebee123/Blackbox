@@ -130,6 +130,13 @@ export default {
               8
             ],
             "rep": 4
+          },
+          "letter": {
+            "from": "wick",
+            "subject": "lantern",
+            "body": [
+              "lantern sells by the page. the count is on the last one."
+            ]
           }
         },
         {
@@ -169,6 +176,13 @@ export default {
             ],
             "rep": 6,
             "pick": true
+          },
+          "letter": {
+            "from": "claims",
+            "subject": "Coverage notice",
+            "body": [
+              "LANTERN’s broadcasts are not covered by your retainer."
+            ]
           }
         },
         {

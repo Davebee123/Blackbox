@@ -35,6 +35,7 @@
 // The ticker's market cards (ticker.mjs) run on the same logged-on clock, on dice of their own, outside the slots.
 //
 // Pure: state in, events out.
+import { isOpen, openUp } from './progression.mjs';
 import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique, setDrop, WORLD_SOURCES, hooks, gainCode } from './combat.mjs';
 import { FAMILIES, CONFIG, dealFloor } from './data.mjs';
 import { floorOfSlot } from './floors.mjs';
@@ -422,8 +423,8 @@ export function tickEvents(s, dt) {
     else { const won = c.timeout?.(s, ev, placeName(s, ev.loc)); end(s, ev, won || (c.gone ? c.gone(ev, placeName(s, ev.loc)) : c.fight ? `${ev.name} left ${placeName(s, ev.loc)}.` : null), won ? 'world-event-won' : 'world-event-end', won ? 'won' : 'gone'); }
   }
   dealDue(s); // and into the slots the cards just freed
-  if (hackerLevel(s) < DIRECTOR.from) return;
-  tickBlips(s, dt);
+  if (isOpen(s, 'blips', hackerLevel(s) >= DIRECTOR.from)) tickBlips(s, dt); // a new character: from the first jack out (progression.mjs)
+  if (!isOpen(s, 'events', hackerLevel(s) >= DIRECTOR.from)) return; // and the events from the turf letter
   if (d.next == null) d.next = between(s, DIRECTOR.firstMs);
   d.next -= dt;
   if (d.next > 0) return;
@@ -765,7 +766,8 @@ function croll(s) {
 }
 export function runCardRoll(s, kind = null) {
   const d = (s.director ||= { next: null, n: 0, last: null });
-  if (!kind && (hackerLevel(s) < DIRECTOR.from || croll(s) >= RUNCARD_DEAL.chance)) return null;
+  openUp(s, 'runcards'); // a run on a traced server opens them (progression.mjs)
+  if (!kind && (!isOpen(s, 'runcards', hackerLevel(s) >= DIRECTOR.from) || croll(s) >= RUNCARD_DEAL.chance)) return null;
   // never the same kind twice running; the surge REACT times as often while a market card wants components, its pay (ticker.mjs)
   const ks = RUNCARD_DEAL.kinds.filter((x) => x !== d.lastCard), parts = wanted(s).has('salvage'), wt = (x) => (parts && x === 'surge' ? REACT : 1);
   let k = kind;

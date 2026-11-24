@@ -120,8 +120,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
     eased, no black screen, no readout), and jacking out plays it backwards (your room locks teal, the rooms close in
     a circle onto the node, the line runs home);
   - a disconnect: the *Reboot* after NO CARRIER (the line runs home, HOME's outline draws itself round, HOME lights
-    with its bar at the image's Integrity), then the No carrier card *Restored* (the image's time and Integrity first,
-    the death recap folded behind one red row); a Resident that beats you no longer grows;
+    with its bar at your Integrity), then the No carrier card (the Warm cache struck through, the death recap folded
+    behind one red row; nothing reverts since D9); a Resident that beats you no longer grows;
   - network map servers: the *Glyph* (each server its kind's glyph, a bar of what's cleared, a ring round a new one);
   - INIT's count: *Plain* in the header (*PROCESS TABLE N%* between Signal and Credits, the band's effects in its
     tooltip; docs/init-table.md); the map's *Readout* was too small to notice;

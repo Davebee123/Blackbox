@@ -14,6 +14,42 @@ import { LOADOUT, SERVER, FLOORS, ARCHETYPES, xpToNext, v41XpToNext, lastFloor }
 import { BASES, PROTOCOL_SLOTS, MATERIALS, primaries, uniqueItem, seeded, RULES, ruleValue, RARITIES, ZERO_DAYS, rollItem } from './gear.mjs';
 import { MEMORY } from './memory.mjs';
 import { gainComponents } from './salvage.mjs';
+import { queueScene, tickScenes } from './scenes.mjs';
+
+// ---------- what opens when (GAME_RULES.md "What opens when"; docs/demo-plan.md D7) ----------
+// Your kit opens by your level and the enemy's rules by the server's (data.mjs, as ever); everything else here, the
+// first time you do something. s.opens (id → the play clock when it opened) is made for a new character only
+// (newCharacter): a save without it is older and has everything open. scene: the transmission it plays (scenes.mjs).
+export const OPENS = {
+  hire: { on: 'a room won beside a runner', scene: 'runner-helped' },
+  invasions: { on: 'your first server mapped or taken over', scene: 'first-held' }, // and daemons, which only they drop
+  blips: { on: 'your first jack out', scene: 'first-jackout' },
+  events: { on: 'the turf letter', scene: 'turf' }, // the director's events; the board and the Shops open with it (mail.mjs boardOpen)
+  runcards: { on: 'a run on a traced server' },
+  rivals: { on: 'your first vault opened', scene: 'first-vault' },
+  settlement: { on: 'your first takeover' }, // the Settlement run (sites.mjs)
+  rack: { on: "Kestrel's hub found", scene: 'kestrel-hub' }, // the Rack pull (sites.mjs)
+  trade: { on: 'a runner at Known' }, // a runner's trade (sites.mjs); its transmission plays as the first one mounts
+  table: { on: "Carrier's schedule page read", scene: 'schedule' }, // INIT's table, its count, Orphans contracts
+  rig: { on: 'your first achievement' },
+  // supply:<faction>: that hub's supply order, on your first sale at its market (supply.mjs).
+};
+// A floor job's Boss step falling (arcs.mjs): its transmissions, in order. Floor 2's ends on the demo's end card.
+export const FALLS = { 1: ['pagenine-falls'], 2: ['centrifuge', 'centrifuge-wick'] };
+// Open on a new character once it happened; on an older save (or a bench, a test), as it always opened: legacy.
+export const isOpen = (s, id, legacy = true) => (s?.opens ? !!s.opens[id] : legacy);
+// It happened: open id (once), and play its transmission. args fill the scene's words. Returns whether it opened.
+export function openUp(s, id, args = {}) {
+  if (!s?.opens || s.opens[id]) return false;
+  s.opens[id] = Math.max(1, s.pace?.ms || 0);
+  const sc = OPENS[id]?.scene;
+  if (sc) queueScene(s, sc, args);
+  return true;
+}
+// A transmission on an event that opens nothing new (a rival met): new characters only, like the rest.
+export function onEvent(s, scene, args = {}) { if (s?.opens) queueScene(s, scene, args); }
+// A brand-new character (app.js: no save yet, or a reset): the triggers apply.
+export function newCharacter(s) { s.opens = {}; return s; }
 
 // ---------- what a level brings ----------
 // The tracks keyed off your level, at level L. top: the highest level your other classes have, so the
@@ -51,6 +87,7 @@ export function nextGains(arch, L, top, skillsAt) {
 export function tickPlay(s, dt) {
   if (!(dt > 0)) return;
   (s.pace ||= { kills: 0, ms: 0 }).ms += dt;
+  tickScenes(s); // a transmission waiting its turn (scenes.mjs GAP_MS)
 }
 
 // ---------- v34: one level, fewer tracks ----------

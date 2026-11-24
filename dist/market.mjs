@@ -7,6 +7,7 @@
 // Trades are file transfers: what you sell leaves your stock now and its credits arrive when the
 // transfer completes; what you buy is paid now and arrives later. Transfer time depends on the hub, and
 // relays on servers you hold shorten it. A transfer can't be lost: the worst case is waiting.
+import { openUp } from './progression.mjs';
 import { emit, warn, materialsOf, hooks, rand, firstTime, addItem } from './combat.mjs';
 import { FACTIONS, hubsOf, repTier, hubFound } from './factions.mjs';
 import { deliverGoods } from './store.mjs';
@@ -91,6 +92,7 @@ export function trade(s, side, f, w, n, at = now()) {
   ((m.pressure[f] ||= {})[w] ||= 0);
   if (side === 'sell') {
     if (have(s, w) < n) return warn(s, `You have ${have(s, w)} ${WARES[w].name}.`);
+    openUp(s, `supply:${f}`); // your first sale here: its supply order (supply.mjs; progression.mjs)
     // The price slides over the lot. Each unit is priced after its own push, so selling a lot
     // exactly undoes buying it (never a profit on the round trip, even with no spread). A unit sold into a ticker
     // card's bulk order (ticker.mjs) pushes nothing: the order holds the price.

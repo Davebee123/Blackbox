@@ -127,7 +127,7 @@ test('the map on a phone: chips for the rail and the tracker, each a tap path; n
   s.invasion = { id: 'i1', name: 'WORM-77', kind: 'raider', family: 'worm', level: 3, state: 'breach', hp: 1 }; // a breach: a hot threat
   const chips = mapChips(s);
   assert.match(chips, /class="ph-chip hot" data-phone="threats"/);
-  for (const b of controls(chips)) assert.match(b, /data-phone="(threats|jobs)"/, b);
+  for (const b of controls(chips)) assert.match(b, /data-phone="(threats|jobs|pins)"/, b); // pins: the Goals (goals.mjs)
   assert.match(mapRail(s, 'threats'), /class="tr-row [^"]*" data-select="invader"/); // the list a chip opens: the desktop's rows
   const phone = mapMarkup(s, null, 'mine', { side: false, phone: true }), desk = mapMarkup(s, null, 'mine', { side: false });
   assert.ok(phone.includes('ph-chips') && !phone.includes('map-lcol'));

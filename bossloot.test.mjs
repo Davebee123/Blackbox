@@ -17,7 +17,7 @@ const drops = (log) => log.filter((e) => e.type === 'drop' && e.item).map((e) =>
 
 test('trash: most kills drop no item, a blue now and then, a yellow rarely', () => {
   const s = at(12), c = sample(s, { kind: 'home' });
-  assert.ok(c.item / 20000 < 0.05, `items ${c.item}`);
+  assert.ok(c.item / 20000 < 0.08, `items ${c.item}`); // whites 6–7% a roll (docs/demo-plan.md Phase 8)
   assert.ok(c.tuned > 0 && c.tuned / 20000 < 0.005, `blues ${c.tuned}`);
   assert.ok(c.custom / 20000 < 0.001, `yellows ${c.custom}`);
 });

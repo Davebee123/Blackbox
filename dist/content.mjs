@@ -219,7 +219,7 @@ export const FX_DO = {
   'restore%': { when: ['struck', 'crit'], label: 'heals you for X% of your max health', value: true },
   'stat-x2': { when: ['always'], label: 'doubles one of your stats', stat: true },
   'skill-cd': { when: ['always'], label: "reduces one skill's cooldown by X cycles (never under 1)", value: true, skill: true },
-  jackout: { when: ['disconnect'], label: 'jacks you out with your pack instead of losing it' },
+  jackout: { when: ['disconnect'], label: 'jacks you out instead, your Warm cache kept for your next visit to that server' },
   'burn-grow': { when: ['custom'], label: 'makes each of your burns deal X more damage every time it ticks', value: true },
   'dot%': { when: ['custom'], label: 'increases the damage of your burns and helpers by X%', value: true },
   'echo-full': { when: ['custom'], label: 'makes your Echoes deal full damage' },

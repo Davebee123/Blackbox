@@ -649,3 +649,17 @@ test('the map\'s runner diamonds keep off what it hands them to avoid', () => {
   const moved = [...svg.matchAll(/<g class="mrun(?! road)[^"]*" data-runners?(?:-at)?="[^"]+"[^>]*transform="translate\(([-\d.]+) ([-\d.]+)\)"/g)].map((m) => ({ x: +m[1], y: +m[2] }));
   for (const p of moved) assert.ok(!block.some((a) => p.x + 7 > a[0] && p.x - 7 < a[2] && p.y + 7 > a[1] && p.y - 7 < a[3]), 'off every box it was told to avoid');
 });
+
+test('SPRAWL-00: until the rooms tour is done, no runner fights in a room beside the entry, so its first room has an Engage', async () => {
+  const { SPRAWL_RING1 } = await import('./dist/runners.mjs');
+  const { SPRAWL_ARMS } = await import('./dist/netrooms.mjs');
+  const { skipTour } = await import('./dist/tips.mjs');
+  assert.deepEqual(SPRAWL_RING1, SPRAWL_ARMS.map(([, , p]) => p[0]), 'ring 1 as netrooms lays it out');
+  const { s, r } = inSprawl();
+  const before = new Set(), after = new Set();
+  for (let k = 0; k < 400; k++) before.add(sprawlSpot(s, r, { ...stateOf(s, r), k }).folder);
+  skipTour(s);
+  for (let k = 0; k < 400; k++) after.add(sprawlSpot(s, r, { ...stateOf(s, r), k }).folder);
+  assert.ok(SPRAWL_RING1.every((p) => !before.has(p)), [...before].join(' '));
+  assert.ok(SPRAWL_RING1.some((p) => after.has(p)), 'the whole plus once the tour is done');
+});

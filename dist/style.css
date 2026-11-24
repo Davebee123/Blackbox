@@ -1124,6 +1124,9 @@ html[data-sfx-floor="7"] .board .brow:not(.bhead) > .bcell:nth-child(2):not(.spa
 .tip-step { color: var(--dim); font-size: 12px; margin-right: auto; font-variant-numeric: tabular-nums; }
 .tip::before { content: ''; position: absolute; left: var(--arrow, 50%); top: -7px; width: 12px; height: 12px; background: var(--panel-2); border-left: 1px solid var(--you); border-top: 1px solid var(--you); transform: translateX(-50%) rotate(45deg); }
 .tip.above::before { top: auto; bottom: -7px; transform: translateX(-50%) rotate(225deg); }
+.tip.right::before { top: var(--arrow-y, 50%); left: -7px; transform: translateY(-50%) rotate(-45deg); }
+.tip.left::before { top: var(--arrow-y, 50%); left: auto; right: -7px; transform: translateY(-50%) rotate(135deg); }
+.tip.free::before { display: none; }
 .tip-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
 .tip-off[hidden] { display: none; }
 .tip-off { background: none; border: 0; color: var(--muted); font: 12px var(--mono); cursor: pointer; padding: 0; }
@@ -1416,6 +1419,7 @@ body.grain-off #crt::after, [data-form='phone'] body:not(.grain-on) #crt::after 
 }
 @media (max-width: 900px) { .mail-page { grid-template-columns: 1fr; } }
 .modules .count.new { background: var(--you); }
+.modules .tab-up { margin-left: 4px; color: var(--amber); font-size: 10px; vertical-align: middle; } /* an upgrade in the stash (view.mjs isUpgrade) */
 .modules .count { display: inline-block; min-width: 16px; padding: 0 4px; margin-left: 6px; border-radius: 8px; background: var(--amber); color: var(--bg); font: 600 10px/16px var(--mono); text-align: center; vertical-align: middle; }
 .mnode.hidden .qmark { fill: var(--muted); font: 600 13px var(--mono); }
 .mnode.hidden .marc-bg.lead { stroke: rgba(241, 185, 47, 0.3); }
@@ -2124,6 +2128,7 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .pg-lv b { font: 600 12px var(--mono); color: var(--text); white-space: nowrap; }
 .pg-lv small { font: 10px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; color: var(--dim); }
 .silk-sts { display: flex; flex-wrap: wrap; gap: 0 12px; }
+.silk-up { color: var(--amber); font-style: normal; } /* an upgrade over its slot (view.mjs isUpgrade) */
 .silk-st { display: flex; align-items: center; gap: 3px; font-size: 12px; color: var(--muted); }
 .silk-st .glyph { width: 0.95em; height: 0.95em; margin: 0; color: var(--muted); }
 .silk-st b { font: 600 12px var(--mono); color: var(--text); }
@@ -3010,6 +3015,19 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ct-row.pin-row.set { border-left-color: var(--r-set); }
 .ct-row.pin-row.set > .glyph { color: var(--r-set); }
 .ct-row.pin-row .ct-prog { flex-wrap: wrap; row-gap: 3px; }
+/* The map's Goals (goals.mjs): the header folds it; a row's pin shows on hover, lit when pinned. */
+.goals-head { cursor: pointer; user-select: none; }
+.goals-head:hover, .goals-head:focus-visible { color: var(--amber-soft); outline: none; }
+.goals-caret { width: 8px; color: var(--muted); }
+.goal-row { position: relative; display: grid; }
+.goal-acts { position: absolute; top: 4px; right: 4px; z-index: 1; display: flex; gap: 2px; opacity: 0; transition: opacity 0.12s; }
+.goal-acts button { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; background: rgba(12, 10, 6, 0.92); border: 1px solid var(--line); color: var(--muted); font: 600 13px/1 var(--mono); cursor: pointer; }
+.goal-acts .glyph { width: 11px; height: 11px; margin: 0; }
+.goal-acts button:hover, .goal-acts button:focus-visible { color: var(--amber); border-color: var(--amber); }
+.goal-row:hover .goal-acts, .goal-acts:focus-within, .goal-acts:has(.goal-pin.on) { opacity: 1; }
+.goal-row:not(:hover) .goal-acts:has(.goal-pin.on) .goal-x { display: none; }
+.goal-pin.on { color: var(--amber); border-color: var(--amber-deep); }
+[data-form='phone'] .goal-acts { opacity: 1; }
 .pin-goal { font: 10px var(--mono); color: var(--muted); white-space: normal; line-height: 1.35; font-variant-numeric: tabular-nums; } /* its goal in words: wraps under the cells, never cut */
 .ct-row > .glyph { width: 14px; height: 14px; color: var(--amber-soft); align-self: start; margin-top: 1px; }
 .ct-txt { display: grid; min-width: 0; }
@@ -3240,16 +3258,12 @@ details.map-pick { pointer-events: auto; }
 /* The No carrier card (recap.mjs restoreMarkup, foldMarkup): the image you're back to, its Integrity a teal bar (you), the
    visit struck through, the net's time in a muted line; what took you out folded on one red row over the recap. */
 .rs { display: grid; gap: 7px; margin: 4px 0 10px; cursor: help; }
-.rs-top { display: flex; align-items: center; gap: 8px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--you); }
-.rs-top .glyph, .rs-net .glyph { width: 13px; height: 13px; flex: none; }
-.rs-top time { margin-left: auto; font: 600 11px var(--mono); letter-spacing: 1px; color: var(--muted); }
-.rs-row { display: flex; align-items: center; gap: 8px; }
-.rs-bar { position: relative; flex: 1; height: 6px; border: 1px solid rgba(127, 209, 199, 0.5); background: rgba(127, 209, 199, 0.06); }
-.rs-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--you); }
-.rs-pc { font: 600 11px var(--mono); color: var(--you); font-variant-numeric: tabular-nums; }
 .rs-undone { display: flex; flex-wrap: wrap; gap: 6px; }
-.rs-undone s { padding: 2px 8px; font: 600 12px var(--mono); color: var(--gray); border: 1px solid var(--line); border-radius: 2px; }
-.rs-net { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font: 11px var(--mono); color: var(--muted); cursor: help; }
+.rs-undone s { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; font: 600 12px var(--mono); color: var(--gray); border: 1px solid var(--line); border-radius: 2px; }
+.rs-undone .glyph { width: 13px; height: 13px; flex: none; }
+.sp-topup { display: inline-flex; align-items: center; gap: 5px; justify-self: start; margin: 0 0 10px; color: var(--amber); border-color: var(--amber); }
+.sp-topup .glyph { width: 13px; height: 13px; }
+.sp-topup[hidden] { display: none; }
 .rc-fold { margin: 0 0 6px; }
 .rc-fold > summary { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-left: 2px solid var(--hot); background: rgba(255, 91, 61, 0.06); font: 600 12px var(--mono); color: var(--text); cursor: pointer; list-style: none; }
 .rc-fold > summary::-webkit-details-marker { display: none; }
@@ -5120,3 +5134,20 @@ input, textarea, [contenteditable], .mbody, .ch-lines, .page-error pre { -webkit
 .demo-end .row { flex-wrap: wrap; }
 .save-ver, .po-ver { font: 400 11px var(--mono); color: var(--dim); letter-spacing: 0.08em; }
 .po-ver { position: absolute; right: 16px; bottom: 12px; margin: 0; }
+
+/* The guided practice (app.js practice, tutorial.mjs): the class pick's backdrop, the offer, then the training virus's
+   board, the lesson's line and its keys. */
+.pr-offer { align-content: center; }
+.pr-acts { gap: var(--s4); }
+.pr-root.on { overflow-y: auto; }
+.pr-scene > * { grid-area: auto; }
+.pr-scene { position: relative; z-index: 1; box-sizing: border-box; width: min(980px, 100%); margin: 0 auto; padding: 4vh 24px; display: grid; gap: var(--s5); }
+.pr-head { display: flex; align-items: baseline; gap: var(--s5); }
+.pr-head b { font: 600 18px var(--mono); color: var(--bright); }
+.pr-head .tip-off { margin-left: auto; }
+.pr-hud { position: static; }
+.pr-board { max-height: none; }
+.pr-text { margin: 0; min-height: 3em; font: 14px/1.55 var(--mono); color: var(--text); }
+.pr-text.bad { color: var(--hot); }
+.pr-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); }
+.pr-in { flex: 1; min-width: 180px; padding: 8px 10px; background: var(--inset); border: 1px solid var(--line-strong); border-radius: var(--r-btn); color: var(--bright); font: 14px var(--mono); }

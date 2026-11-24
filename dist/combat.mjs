@@ -10,8 +10,8 @@ import BASTION_FX from './classes/bastion.mjs';
 import INFILTRATOR_FX from './classes/infiltrator.mjs';
 import OPERATOR_FX from './classes/operator.mjs';
 
-import { contractKill, contractTakeover, mailCommand, tickMail, initMail, openContracts, systemLetter, contractPackLost, contractDefuse, contractLocated, itemRestore } from './mail.mjs';
-import { revertVisit, warmXp, warmScavenge } from './visit.mjs';
+import { contractKill, contractTakeover, mailCommand, tickMail, initMail, openContracts, systemLetter, contractDefuse, contractLocated, itemRestore } from './mail.mjs';
+import { snapRestore, warmXp, warmScavenge } from './visit.mjs';
 import { buy, indemnityRestore, hubsRestore, shopRestore } from './store.mjs';
 import { buyFrom, claimServer, reclaimCheck, clearedFor, strikeServer, setCommission, repRestore } from './factions.mjs';
 import { receiptCommand } from './receipts.mjs';
@@ -67,7 +67,7 @@ import { noteUse } from './mastery.mjs';
 import { nativeVerb, NATIVE_VERBS, nativeCycle, nativeTaken, remHit, hotfixBroke, nativeLand } from './nativeacts.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 66; // v66: nothing invades while you're logged off: the away clock's fields go (invasion.mjs awayRestore, keyed on the fields); v65: one Integrity bar: s.signal, Degraded and your own occupation fold into s.server.integrity (combat.mjs healthRestore, keyed on the fields); v64: a board recovery aimed at an unknown server moves to a found one (mail.mjs itemRestore, keyed on the field); v63: the Graphics settings, s.settings.graphics (graphics.mjs migrateGraphics, keyed on the field); v62: runners, s.runners (runners.mjs runnersOf: made on first use, keyed on the field); v61: every hub's Shop has one shape: the agency stock, premium shelves and hub stock go (store.mjs shopRestore, keyed on the fields); v60: payloads, held hubs and swarms are cut: a held hub is paid out once (store.mjs hubsRestore, keyed on the fields); v59: journals, s.journals (journals.mjs findJournal: made on first use, keyed on the field); v58: one rep scale: rep under 1 comes back as 1 (factions.mjs repRestore, keyed on the value); s.commission and s.receipts are new; v57: the talent tiers: old ranks and two-way picks become tier picks where the talent survives (talents.mjs tiersRestore, keyed on the old fields); v56: floors as tiers: items refilled on the tiers (gear.mjs curveRestore, keyed on s.curve 3); v55: gear carries your power: items filled at their level (gear.mjs curveRestore, keyed on s.curve 2); v54: the compounding curve: items lifted at their level (gear.mjs curveRestore, keyed on s.curve); v53: the cryptogram's key, s.cipher (puzzles.mjs cipherOf: made on first use, keyed on the field); v52: rivals' memory, s.rivals (rivals.mjs rivalsRestore: made on first use, keyed on the field); v51: the scanner's log, s.scanner (scanner.mjs scannerOf: made on first use, keyed on the field); v50: site traits become server specials (specials.mjs specialsRestore); v49: crafting is gone: recipes, plans and their files become credits, Zero-day source the Zero-day (progression.mjs craftRestore); v48: Indemnity retires: an older save's unspent Indemnity becomes credits once, with a letter from Halcyon (store.mjs indemnityRestore); v47: one kind of component: an older save's pile of named pieces (s.salvage) becomes its count, s.components (salvage.mjs componentsRestore); v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, GAME_RULES.md "Saves"); v39: every server is a room graph (netrooms.mjs roomsRestore, GAME_RULES.md "Runs: servers as rooms"); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 67; // v67: a disconnect keeps the visit: a run's snap goes (visit.mjs snapRestore, keyed on the field); v66: nothing invades while you're logged off: the away clock's fields go (invasion.mjs awayRestore, keyed on the fields); v65: one Integrity bar: s.signal, Degraded and your own occupation fold into s.server.integrity (combat.mjs healthRestore, keyed on the fields); v64: a board recovery aimed at an unknown server moves to a found one (mail.mjs itemRestore, keyed on the field); v63: the Graphics settings, s.settings.graphics (graphics.mjs migrateGraphics, keyed on the field); v62: runners, s.runners (runners.mjs runnersOf: made on first use, keyed on the field); v61: every hub's Shop has one shape: the agency stock, premium shelves and hub stock go (store.mjs shopRestore, keyed on the fields); v60: payloads, held hubs and swarms are cut: a held hub is paid out once (store.mjs hubsRestore, keyed on the fields); v59: journals, s.journals (journals.mjs findJournal: made on first use, keyed on the field); v58: one rep scale: rep under 1 comes back as 1 (factions.mjs repRestore, keyed on the value); s.commission and s.receipts are new; v57: the talent tiers: old ranks and two-way picks become tier picks where the talent survives (talents.mjs tiersRestore, keyed on the old fields); v56: floors as tiers: items refilled on the tiers (gear.mjs curveRestore, keyed on s.curve 3); v55: gear carries your power: items filled at their level (gear.mjs curveRestore, keyed on s.curve 2); v54: the compounding curve: items lifted at their level (gear.mjs curveRestore, keyed on s.curve); v53: the cryptogram's key, s.cipher (puzzles.mjs cipherOf: made on first use, keyed on the field); v52: rivals' memory, s.rivals (rivals.mjs rivalsRestore: made on first use, keyed on the field); v51: the scanner's log, s.scanner (scanner.mjs scannerOf: made on first use, keyed on the field); v50: site traits become server specials (specials.mjs specialsRestore); v49: crafting is gone: recipes, plans and their files become credits, Zero-day source the Zero-day (progression.mjs craftRestore); v48: Indemnity retires: an older save's unspent Indemnity becomes credits once, with a letter from Halcyon (store.mjs indemnityRestore); v47: one kind of component: an older save's pile of named pieces (s.salvage) becomes its count, s.components (salvage.mjs componentsRestore); v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, GAME_RULES.md "Saves"); v39: every server is a room graph (netrooms.mjs roomsRestore, GAME_RULES.md "Runs: servers as rooms"); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -589,7 +589,7 @@ export const zeroDay = (s, id) => loaded(s).find((it) => it.zeroDay === id) || n
 export const critChance = (s) => CONFIG.baseCrit + gearStat(s, 'crit', 'hacker');
 // Integrity: your one health bar (GAME_RULES.md "Home"), your server's and yours on a run. Its max is maxSignal (power,
 // gear, talents, sets). At home s.server holds it; a run carries its own copy (s.run.integrity), written back when you
-// jack out (run.mjs bank) and put back as it was at connect on a disconnect (visit.mjs).
+// jack out (run.mjs bank) and set to 1 on a disconnect.
 export const serverMax = (s) => maxSignal(s);
 // Rootkit: your first hit each fight goes through armor.
 export const rootkitReady = (s) => !!zeroDay(s, 'rootkit') && active(s) && !s.encounter.once?.rootkit;
@@ -2154,36 +2154,35 @@ function serviceCommand(s) {
 // How long a server makes you wait to reconnect after a disconnect: CONFIG.relockMs, and CONFIG.deathWait.each more for
 // each disconnect on its run (loc.deaths), up to CONFIG.deathWait.cap.
 export const relockWait = (deaths = 0) => Math.min(CONFIG.deathWait.cap, CONFIG.relockMs + deaths * CONFIG.deathWait.each);
-// Integrity 0 on a run: back home as you were when you connected (visit.mjs: the visit undone, Integrity and all).
-// The server waits a little longer for each disconnect on its run (relockWait).
+// Integrity 0 on a run: home with everything the visit paid (the pack banked: run.mjs bank) at 1 Integrity. The visit's
+// Warm cache is all it loses (visit.mjs). The server waits a little longer for each disconnect on its run (relockWait).
 export function disconnect(s, reason) {
   const run = s.run;
   if (!run) return;
-  // Deadman's Switch: jack out with the pack instead (then it rearms on a real-time cooldown).
+  // Deadman's Switch: a clean jack out instead, the Warm cache kept for your next visit to that server (floorplan.mjs
+  // enter); then it rearms on a real-time cooldown.
   const dead = hooks.jackOut && fxFire(s, 'disconnect', { do: 'jackout' })[0];
   if (dead) {
-    emit(s, 'net-good', `Your Integrity is gone, but ${dead.it.name} trips. You jack out with your pack.`);
+    const warm = hooks.visitOf?.(s)?.warm || 0;
+    if (warm && s.rooms?.world) s.rooms.warmCarry = warm;
+    emit(s, 'net-good', `Your Integrity is gone, but ${dead.it.name} trips. You jack out${warm ? ', your Warm cache kept' : ''}.`, { warm });
     run.integrity = 0;
     if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
     return hooks.jackOut(s);
   }
   const loc = run.loc === CONFIG.zone.id ? s.zone : findLocation(s, run.loc);
-  const visit = hooks.visitOf?.(s) || null; // what the visit held, for the card: undone below
-  // A save from before the snap (visit.mjs): the old rule, the pack lost and an Install job's item with it.
-  const failed = !run.snap && s.mail?.jobs ? contractPackLost(s, run) : [];
-  const lost = run.snap ? 0 : run.pack.length;
+  const warm = hooks.visitOf?.(s)?.warm || 0; // the Warm cache's stacks, lost: the card strikes them through
   const by = s.encounter?.mode === 'run' ? s.encounter.virus?.name : null; // what took you out, for the card
   const recap = s.encounter?.mode === 'run' ? deathRecap(s) : null; // how: the last cycles' Integrity and hits (recap.mjs)
-  const reverted = revertVisit(s, run.snap, loc);
-  if (!reverted) s.server.integrity = 1;
-  const image = reverted ? { at: run.snap.at || null, integrity: s.server.integrity } : null; // what you're back to, for the card
+  if (loc && hooks.bank) hooks.bank(s, loc, '', true); // the pack banked, as a jack out does
+  s.server.integrity = 1;
   s.run = null;
   const wait = loc ? relockWait((loc.deaths = (loc.deaths || 0) + 1)) : 0;
   if (loc) loc.lockUntil = (hooks.now?.() ?? Date.now()) + wait; // every server: see rogue.mjs relocks/relockLeft
   if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
-  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}. ${reverted ? 'Back to when you connected.' : lost ? `${lost} unbanked ${lost === 1 ? 'file' : 'files'} lost.` : ''}`, { by, reason: reason || '', lost, visit, reverted, image, out: loc?.id || null, where: loc?.name || '', relockMs: wait, deaths: loc?.deaths || 0, failed, ...(recap ? { recap } : {}) });
+  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}.${warm ? ` Warm cache lost.` : ''}`, { by, reason: reason || '', warm, out: loc?.id || null, where: loc?.name || '', relockMs: wait, deaths: loc?.deaths || 0, ...(recap ? { recap } : {}) });
 }
 
 function newMetrics(s) {
@@ -2671,7 +2670,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     const had = new Set(s.locations.map((l) => l.id));
     addLocation(s, text.split(' ')[2], Math.min(reached(s), SERVER.floorFor(hackerLevel(s)))); // the next ? of that family on your floor (floors.mjs pickSlot)
     for (const l of s.locations) if (!had.has(l.id) && l.fresh && joinCost(s, l).fits) memoryCommand(s, 'attach', l.id); // developer finds join your network
-  } else if (/^(repair|top ?up( signal| integrity)?)( \d+)?$/.test(text)) { // repair: the same top-up
+  } else if (/^(restore|repair|top ?up( signal| integrity)?)( \d+)?$/.test(text)) { // restore (repair and top up: the old words)
     const n = text.match(/(\d+)$/);
     topUp(s, n ? Number(n[1]) : null);
   } else if (/^encounter [a-z]+( \d+)?$/.test(text) && (FIXTURES[text.split(' ')[1]] || STRAINS[text.split(' ')[1]] || text.split(' ')[1] === 'random')) {
@@ -2762,7 +2761,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (text.startsWith('outpost ') || /^build( |$)/.test(text)) {
     warn(s, 'Outposts are gone. Build in a server\'s socket rooms: connect, clear a socket, and build there.');
   } else if (/^craft( booster)?$/.test(text)) {
-    warn(s, 'Integrity boosters are gone. Top up your Integrity with credits at home.');
+    warn(s, 'Integrity boosters are gone. Restore your Integrity with credits at home.');
   } else if (/^relay \S+$/.test(text)) {
     installRelay(s, text.split(' ')[1]);
   } else if (/^use /.test(text)) {
@@ -2877,7 +2876,7 @@ export function topUpCost(s, points = null) {
 }
 function topUp(s, wanted = null) {
   if (active(s)) return warn(s, 'Finish the fight first.');
-  if (s.run) return warn(s, 'Top up at home. On a run, use an Integrity patch from the store.');
+  if (s.run) return warn(s, 'Restore at home. On a run, use an Integrity patch from the store.');
   syncServer(s);
   const max = s.server.max, now = s.server.integrity;
   let n = Math.min(max - now, wanted ?? max);
@@ -2888,7 +2887,7 @@ function topUp(s, wanted = null) {
   s.server.credits -= cost;
   s.server.integrity += n;
   s.server.regenAcc = 0;
-  emit(s, 'repair', `Integrity topped up: +${n} for ${cost} credits. Integrity ${s.server.integrity}/${max}.`, { credits: cost });
+  emit(s, 'repair', `Integrity restored: +${n} for ${cost} credits. Integrity ${s.server.integrity}/${max}.`, { credits: cost });
 }
 // v65 (the landing session sets the number): Signal and the server's Integrity become one bar, and crashes go
 // (GAME_RULES.md "Saves"). Keyed on the fields it converts, so it's safe to run twice: s.signal (null: full) becomes
@@ -5242,7 +5241,7 @@ export function shuntRestore(s) {
   walk(s, 0);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = bindRooms(structuredClone(raw));
     const was = s.version;
@@ -5403,6 +5402,7 @@ export function restore(raw) {
     repRestore(s); // one rep scale: nothing under 1 (factions.mjs); keyed on the value
     hardenRestore(s); // harden.sh is gone: scripts you held come back as credits (firewall.mjs)
     healthRestore(s); // one Integrity bar, and no crashes; keyed on s.signal, s.degraded, s.occupation
+    snapRestore(s); // a disconnect keeps the visit: a run's snap goes (visit.mjs); keyed on the field
     awayRestore(s); // nothing invades while you're logged off: the away clock's fields go (invasion.mjs); keyed on the fields
     componentsRestore(s); // v47: a pile of named components becomes its count (salvage.mjs); keyed on the field
     wallgoneRestore(s); // v66: the firewall and its filters are gone, refunded (firewall.mjs, invasion.mjs); keyed on the fields
@@ -5439,7 +5439,7 @@ export function suggestions(s, input = '') {
   }
   const base = active(s)
     ? [...usable(s).map((id) => (id === 'spike' ? spikeWord(s) : id)), 'hold', 'pause', 'resume', 'cancel', 'status', 'scan', ...living.filter((p) => p.kind !== 'fragment').map((p) => `inspect ${packed(s, s.encounter.virus, p) ? partKey(s, p) : p.id}`)]
-    : ['engage', 'intercept', 'mail', 'repair', 'top up', 'protocols', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
+    : ['engage', 'intercept', 'mail', 'restore', 'protocols', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
   return base.filter((x) => x.startsWith(text));
 }
 

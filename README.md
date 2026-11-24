@@ -65,6 +65,7 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 | `/?playtest=run` | Connected to a fresh server. `&family=worm\|ghostroot`, `&template=mailhub\|mirror\|archive\|lab` (its rooms' kind), `&depth=<floor>`. |
 | `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&card=surge\|escort\|pack` (a run card), `&seed=`, `&puzzle=<board>` (its room, and you in it), `&seen` (every room discovered). |
 | `/?playtest=story&beat=<id>` | A test save at a story beat (the editor's *Play from here*). |
+| `/?playtest=scene&id=<id>` | A transmission on a test save, over the map (the editor's *Transmissions*, *Play from here*). |
 | `/?shell=plain`, `/?tod=night\|dawn\|day\|dusk` | No CRT shell; another time of day outside the window. |
 | Co-op | Two benches in two tabs, then `coop host` and `coop join <code>`: [`docs/coop.md`](docs/coop.md). |
 
@@ -124,7 +125,9 @@ comment saying what it does.
 | `dist/raid.mjs` | Crew bosses: phases and mechanics for KESSLER-FARM-00's three. |
 | `dist/planner.mjs` | The scripted fight player for every class, used by the simulations and bot crewmates. |
 | `dist/research.mjs` | Part research: what you know of a part grows with what you do to it. |
-| `dist/progression.mjs` | What each level brings on every track, the play clock, and old saves' progression migrations. |
+| `dist/finish.mjs` | The finish card after a big finish: what finished, what it paid, the next goal. |
+| `dist/goals.mjs` | The map's Goals: pins, then the earned pieces and achievements nearest done; picked at calm moments, folded or pinned from the tracker. |
+| `dist/progression.mjs` | What each level brings on every track, what opens when (`OPENS`: a new character's event triggers; `opens.test.mjs`), the play clock, and old saves' progression migrations. |
 | `dist/mastery.mjs` | Ability mastery: use evolves an ability's effect through three tiers. Cosmetic only. |
 
 ### Gear, loot and daemons
@@ -151,7 +154,7 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/run.mjs` | Runs: connecting, the pack, banking at jack out, the run commands on rooms. |
-| `dist/visit.mjs` | A visit: the snap of your progress taken at connect, the revert a disconnect plays (an allowlist of what goes back), a co-op guest's own snap, and the Warm cache. |
+| `dist/visit.mjs` | A visit's Warm cache (all a disconnect loses) and the migration that drops an old run's snap. |
 | `dist/floorplan.mjs` | A server as a graph of rooms: moving, fights, caches, the hunter, the vault and the Core; the server kinds, a Router's one-way links among them; the reboot (a traced server's fight rooms come back together once all have fallen; a Mapped one goes offline for it: offlineLeft). |
 | `dist/objectives.mjs` | A room fight's objective (`e.objective`): Priority, Uptime, Backup, Clean run and the Exfil's upload, their roll, rules, board text and bonus. |
 | `dist/netrooms.mjs` | Every server on the real save as a room graph, kept on its location; takeover and Root rooms. |
@@ -207,9 +210,9 @@ comment saying what it does.
 | `dist/portraits.mjs` | Backlit ASCII busts: the quest window's speaker (the cast's own or one from their name) and a runner's on their card (from the handle alone). |
 | `dist/coldopen.mjs` | First launch: the cold open (KESSLER's clearing house crashing), its own sound mix through `feel.scene()`. |
 | `dist/intro.mjs` | First launch: the login, then Halcyon's transmission. |
-| `dist/scenes.mjs`, `dist/scenes-view.mjs`, `dist/scenes.css`, `dist/content/scenes.mjs` | Transmissions: conversations with a contact over the map, their window and their words. |
+| `dist/scenes.mjs`, `dist/scenes-view.mjs`, `dist/scenes.css`, `dist/content/scenes.mjs` | Transmissions: conversations with a contact over the map, their window and their words; the event ones spaced 10 minutes of play apart. |
 | `dist/tips.mjs` | First-time tips, the game's only tutorial text. |
-| `dist/tutorial.mjs` | Guided practice on an isolated training virus. |
+| `dist/tutorial.mjs` | Guided practice on an isolated training virus, offered after the class pick (app.js `practice`; `?practice` until `PRACTICE.offer`). |
 | `dist/lore.mjs` | Skill descriptions and flavour lines for the library. |
 | `dist/editor.html`, `dist/editor.mjs`, `dist/editor.css` | The content editor; saves into `dist/content/` through `serve.mjs`. |
 
@@ -235,7 +238,7 @@ comment saying what it does.
 | `dist/casing.mjs`, `dist/casing-view.mjs`, `dist/casing.css` | Casing cosmetics: the monitor color and plate, stickers anywhere on its plastic, props on the desk or on top. Rig → Casing is a rail of sections beside the open one's pane. |
 | `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on Rig → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |
 | `dist/house.mjs`, `dist/house-view.mjs`, `dist/house.css`, `dist/content/furniture.mjs` | Your house on Rig → **House**: floors opened by achievement points, furniture from achievements, placed by click. |
-| `dist/recap.mjs` | The No carrier card's restore line and the death recap folded under it. |
+| `dist/recap.mjs` | The No carrier card's struck Warm cache and the death recap folded under it. |
 | `dist/uiscale.mjs` | UI scale: the whole screen drawn larger or smaller. |
 | `dist/form.mjs`, `dist/phone-shell.mjs`, `dist/sheet.mjs`, `dist/phone.css` | The phone: the one "is this a phone" answer (`<html data-form>`), its tab bar and More, the one bottom sheet (every pop-up on a phone: app.js `phPops` lifts each into it), every phone rule, the fight on one screen, the maps full bleed (docs/phone-plan.md). |
 
@@ -244,7 +247,7 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/crew.mjs` | Crewmates in your fights (hired runners, `crew sim` bots, a runner you help), played by the planner. |
-| `dist/coop.mjs` | Peer-to-peer co-op sessions: the host runs the world, a guest sends commands; the run's end saves or undoes each player's visit. |
+| `dist/coop.mjs` | Peer-to-peer co-op sessions: the host runs the world, a guest sends commands; the run's end settles each player's visit on their own save. |
 | `dist/coop-net.mjs` | Co-op transports: in memory, BroadcastChannel, WebRTC. |
 | `dist/coop-char.mjs` | The character a guest sends the host. |
 | `dist/coop-ui.mjs`, `dist/coop.css` | The Co-op panel. Developer mode only. |
