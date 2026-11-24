@@ -145,6 +145,8 @@ function varsOf(s, j) {
 }
 // A step's target located: the plain contract from here (its install room, its file planted, a map already done).
 function setup(s, c) {
+  // A save's Boss step posted while its boss stood in at SPRAWL-00 (PAGE NINE before it was built): its server once you're at its level.
+  if (c.type === 'boss' && !c.slot && namedBoss(c.named)) { const st = chainOf(c.chain)?.steps[c.step]; if (st && st.at !== 'sprawl' && hackerLevel(s) >= (st.lv || 0)) { c.slot = slotFor(s, c.chain, st); c.ok = false; } }
   // A Boss step posted before its boss was built pointed at the lair: its built boss is in its own server's Core.
   // Keyed on the slot, so it runs once.
   if (c.type === 'boss' && c.slot && namedBoss(c.named)) { const at = slotFor(s, c.chain, chainOf(c.chain)?.steps[c.step]); if (at && at !== c.slot) { c.slot = at; delete c.loc; delete c.hidden; c.ok = false; } }
@@ -188,6 +190,12 @@ export function arcTick(s, at = nowOf()) {
   }
   for (let n = 1; n <= reached(s); n++) {
     regrown(s, n, at);
+    const st = A[n], k = st?.wait;
+    if (k != null && hackerLevel(s) >= (chainOf(n)?.steps[k]?.lv || 0) && !openContracts(s).some((x) => x.chain === n)) {
+      delete st.wait;
+      const l = post(s, n, k, at);
+      emit(s, 'mail', `New mail from ${l.from}: ${l.subject}.`, { letter: l.id, from: l.from, subject: l.subject, chain: n });
+    }
     if (!chainOf(n) || A[n]) continue;
     const c = Object.values(held).find((x) => x.chain === n);
     if (c) { A[n] = { step: c.step, at: c.at, titles: [] }; continue; }
@@ -281,6 +289,7 @@ export function arcDelivered(s, c, at = nowOf()) {
     noteFinish(s, 'chain', ch?.title || 'Floor job'); // the finish card (finish.mjs)
     return null;
   }
+  if (ch.steps[c.step + 1]?.lv > hackerLevel(s)) { st.wait = c.step + 1; return null; } // a step that waits for your level (lv): arcTick posts it then
   const l = post(s, n, c.step + 1, at);
   emit(s, 'mail', `New mail from ${l.from}: ${l.subject}.`, { letter: l.id, from: l.from, subject: l.subject, chain: n });
   return l;

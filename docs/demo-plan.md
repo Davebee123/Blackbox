@@ -260,6 +260,8 @@ the workflow.
 
 ### Phase 5 · The story's spine and its end
 
+**Done** (24 November 2026): every line approved and wired, each playable from the editor (the Log).
+
 Only two transmissions exist (the welcome and the first server), and the twist is on floor 5. The demo needs a middle
 and an end.
 
@@ -474,4 +476,12 @@ Side by side, the earlier phase lands first and the later one merges main before
   once, no gap). wick's goodbye opens the end card: the demo ends once *Carrier* is delivered and both are heard. The
   designer approved *Carrier*'s two extra letters (wick after step 1, Halcyon Claims after step 3; built) and the end
   card's line, *Floor 3 and below are in the full game.* The editor lists every transmission with **Play from here**
-  (`?playtest=scene&id=`). Only the bosses' fall is hooked; their content waits on Phase 3.
+  (`?playtest=scene&id=`). Only the bosses' fall is hooked; their content waits on Phase 3. The designer kept the letters' subjects (*lantern*, *Coverage notice*). Done.
+- **Phase 3, PAGE NINE** (24 Nov): floor 1's chain boss in the Boss step's road server's Core, its letter at level 6, at
+  your level from 6 to 8. *Premium Paid* (one part Insured a cycle in board order, the next shown; it can't break and
+  gets back what it took), *Filed Early* (its charge lands a cycle before its attack), act 2 *Claim* (what comes back
+  hits you), act 3 *Double indemnity* (two Insured); its ledger art; its uniques wait (`noUniques`). Sized for whites and
+  blues a level behind (`long.dmg` 0.3, `bar` 0.9): the reader wins 59% at 6 and 19–38% at 7, where gear steps up at
+  item level 7. A save holding the step from RELAY-KING's stand-in moves to PAGE NINE's server from level 6. The
+  designer: "assume greens and whites a level behind, land pagenine". Filed Early's reading and acts 2 and 3 are my
+  calls, unplayed.

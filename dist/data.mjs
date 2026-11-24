@@ -64,13 +64,13 @@ export const CONFIG = {
   damageRef: 25,
   tickRef: 50,
   dotRef: 28,
-  // Reshaped with the floor tiers: more at a floor's first levels where gear carries little (7), less by the late floors' tops.
   gearReq: 3, // an item loads from this many levels under its own (gear.mjs reqLevel)
-  gearFill: [[6, 1], [7, 2.2], [12, 1.45], [15, 1.75], [25, 1.95], [30, 1.66], [37, 1.6], [42, 1.35], [50, 1.25]],
-  // Floors as tiers (docs/scaling.md step 4): a mob takes its floor's step on top of its level, mob a floor, compounding
-  // (mobPower). Gear takes a bigger step, gear a floor, and its fill drifts down drift a level inside its floor
-  // (gearTier), so a floor's first drops outclass the last floor's best and its own gear has aged by the floor's top.
-  floorStep: { mob: 0.15, gear: 0.25, drift: 0.06 },
+  // Smooth, no step at a floor's edge (WoW's way: the last floor's best carries you into the next): each floor's middle
+  // keeps the share of a mob it had on average under the floor tiers (save v68 refills on it).
+  gearFill: [[6, 1], [9.5, 1.96], [15.5, 2.3], [21.5, 3.14], [27.5, 3.79], [33.5, 4.27], [39.5, 4.84], [45.5, 5.35], [50, 5.73]],
+  // Depth: mobs take mob a floor on top of power, compounding, spread smoothly over the levels (mobPower): none to
+  // level 6, one step by floor 2's middle (9.5), then a sixth of a step a level.
+  floorStep: { mob: 0.15 },
   // Enemy parts are tougher than one or two of your hits: fights run long enough that attacks
   // land, so gear and planning are what keep you standing.
   partToughness: 1.7,
@@ -968,15 +968,13 @@ export const lifted = (n, level) => Math.max(1, Math.round(n * lift(level)));
 // Your own line (CONFIG.ownPerLevel): what your level alone gives you.
 export const own = (level) => { const L = Math.max(1, level), F = Math.max(1, CONFIG.ownFrom || 1); return power(Math.min(L, F)) * (1 + CONFIG.ownPerLevel * Math.max(0, L - F)); };
 // Gear's fill at an item level (CONFIG.gearFill), and a flat item number lifted and filled.
-// The floor tier of gear at an item level (CONFIG.floorStep): its floor's step (floorFor), less the drift for each level
-// past the floor's first. Floor 1's gear is as it was (the first levels' tuning).
-export const gearTier = (level) => { const L = Math.max(1, level), f = floorFor(L), F = CONFIG.floorStep; return f < 2 ? 1 : (1 + F.gear) ** (f - 1) * (1 - F.drift) ** (L - bandOf(f)[0]); };
-export const gearFill = (level) => runLate(level, CONFIG.gearFill) * gearTier(level);
+export const gearFill = (level) => runLate(level, CONFIG.gearFill);
 export const filled = (n, level) => Math.max(1, Math.round(n * lift(level) * gearFill(level)));
-// Enemies match you level for level (no soft start: the first fights should cost something), and take their floor's
-// step (CONFIG.floorStep.mob): the floor they're on when it's known, else the one their level is on. A breach's fights
-// (overrides.short) keep their own pace without it, as they skip fight length.
-export const mobPower = (level, floor = floorFor(level)) => power(level) * (1 + CONFIG.floorStep.mob) ** (Math.min(FLOORS.length, Math.max(1, floor || 1)) - 1);
+// Enemies match you level for level (no soft start: the first fights should cost something), and take the depth step
+// (CONFIG.floorStep.mob) smoothly by level, the same on any floor: nothing jumps at a floor's edge. A breach's fights
+// (short) keep their own pace without it, as they skip fight length.
+const depthOf = (L) => (L <= 6 ? 0 : L < 9.5 ? (L - 6) / 3.5 : (L - 3.5) / 6);
+export const mobPower = (level, short = false) => power(level) * (short ? 1 : (1 + CONFIG.floorStep.mob) ** depthOf(Math.max(1, level)));
 
 // ---------- crew bosses (raid.mjs) ----------
 // Each phase gives every role a job (docs/bosses.md has the review sheet). Mechanic kinds and their fields
@@ -1108,6 +1106,22 @@ export const BOSSES = {
   // The floor 2 and 3 bosses (docs/solo-bosses.md "Proposed: floors 2–8", floorbosses.mjs): own parts only (own), a
   // crown (♛) carrying its signature rule, their beat on a part of their own (acts 'part'), and a verb an act.
   // throne: the rogue server kind and floor whose last room it holds (rogue.mjs); the others, a floor job's Core (arcs.mjs).
+  // PAGE NINE: floor 1's floor job (arcs.mjs), a dead firm's account still paying its premium. Premium Paid: one part
+  // Insured a cycle, in board order, the next shown; what it takes that cycle comes back at the cycle's end. Filed
+  // Early: its charges land a cycle before the attack they ride. It fights at your level from 6 to 8 (band). Sized for
+  // whites and blues a level behind you (the designer).
+  pagenine: { long: { hp: 1, dmg: 0.3, enrageAt: 36 }, name: 'PAGE NINE', bar: 0.9, family: 'ransomware', author: '', own: true, crown: 'policy', floor: 6, band: [6, 8], early: true, noUniques: true, // its uniques wait (docs/demo-plan.md Phase 3)
+    hp: 0.6, dmg: 1, enrageAt: 18, acts: { beat: 'none' },
+    extra: [{ id: 'policy', name: 'Policy', integrity: 60, armor: 1, loot: 'Policy Number', special: true, attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 3 } },
+      { id: 'premium', name: 'Premium', integrity: 40, armor: 1, loot: 'Premium Stub', attack: { name: 'Debit', effect: 'encrypt', amount: 3, interval: 6, first: 4 } },
+      { id: 'claims', name: 'Claims', integrity: 44, armor: 1, loot: 'Claim Form', attack: { name: 'Claim', effect: 'damage', amount: 13, interval: 5, first: 4 } }],
+    guide: { open: [['Premium Paid', 'One part is Insured each cycle, in order (Policy, Premium, Claims), and the next one is shown. Damage on the Insured part comes back at the end of the cycle, and it can\'t break.'],
+      ['Filed Early', 'Its charges land a cycle before the attack they ride was due.'],
+      ['Debit', 'The Premium encrypts you every 6 cycles. Breaking it clears the stack.']],
+      phases: [[['Claim', 'Damage the Insured part gives back also hits you.']], [['Double indemnity', 'Two parts are Insured each cycle, never the last one standing.']]] },
+    signature: { name: 'Premium Paid', rule: 'One part is Insured each cycle, in a fixed order, the next shown a cycle ahead. Damage on it comes back at the end of the cycle.' },
+    about: 'A dead firm\'s account, paying its premium and filing claims a day early.',
+    phases: [{ at: 0.5, do: ['claim'], name: 'Claim', emote: 'CLAIM FILED. DAMAGE TO INSURED PROPERTY IS RECOVERABLE.', say: 'PAGE NINE files a claim. Damage the Insured part gives back also hits you.' }, { at: 0.25, do: ['indemnity'], name: 'Double indemnity', emote: 'POLICY RENEWED. DOUBLE INDEMNITY.', say: 'PAGE NINE doubles its cover. Two parts are Insured each cycle.' }] },
   // CENTRIFUGE: floor 2's floor job (arcs.mjs), GLASSJAW's. Bidding on the Gavel; its buyers join from its sales.
   centrifuge: { long: { hp: 1, dmg: 0.36, enrageAt: 36 }, name: 'CENTRIFUGE', bar: 1.1, family: 'ransomware', author: 'glassjaw', own: true, crown: 'rotor', floor: 14, hp: 0.91, dmg: 1, enrageAt: 18, acts: { beat: 'none' }, // no beat: withdrawing the Gavel is the answer, so nothing holds its ♛ ticks
     extra: [{ id: 'rotor', name: 'Rotor', integrity: 62, armor: 1, loot: 'Rotor Bearing', special: true, attack: { name: 'Encrypt', effect: 'encrypt', amount: 4, interval: 7, first: 5 } },
@@ -1450,6 +1464,7 @@ export const TELL_SETS = {
   'nb-backorifice': ['spamrun', 'selfupdate', 'overcharge', 'resync'],
   'nb-mirrorshade': ['glasscut', 'persistence', 'godark'], // its charge is a plain one now: the Mimic is its one feedback amplifier
   'nb-hashlord': ['difficultybomb', 'blockreward', 'keyrotation'],
+  pagenine: ['overcharge'], // floor 1's: one charge, filed early (floorbosses.mjs)
   // The floor 2 and 3 bosses (docs/genome.md 7.4): a charge, a cast and a third, an act each.
   centrifuge: ['fulldisk', 'extortion', 'keyrotation'],
   shakedown: ['overcharge', 'extortion', 'keyrotation'],
@@ -1591,7 +1606,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   if (strain && mutation && MUTATIONS[mutation] && clashes(MUTATIONS[mutation].gene)) mutation = null;
   const unlinked = !!strain && grade >= 2 && clashes('linked');
   const long = !!overrides.run && !overrides.short && !BOSSES[overrides.boss]?.raid; // fight length (CONFIG.length)
-  const scale = mobPower(level, overrides.short ? 1 : overrides.tier ?? overrides.floor) * (mutation === 'hasty' ? 0.9 : 1) * (overrides.run ? CONFIG.runHp * (overrides.boss || overrides.elite ? 1 : runLate(level, CONFIG.runLateHp)) : 1) * (long ? runLate(level, CONFIG.length.hp) : 1);
+  const scale = mobPower(level, !!overrides.short) * (mutation === 'hasty' ? 0.9 : 1) * (overrides.run ? CONFIG.runHp * (overrides.boss || overrides.elite ? 1 : runLate(level, CONFIG.runLateHp)) : 1) * (long ? runLate(level, CONFIG.length.hp) : 1);
 
   // Tougher viruses wear more armor and strike sooner (see THREAT_STEPS).
   const extra = (spec) => (mutation === 'armored' ? 1 : 0) + THREAT_STEPS.armor.filter((x) => threat >= x.threat && (x.part === 'any' || (x.part === 'special') === !!spec.special)).length;
@@ -1649,7 +1664,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // "Viruses"), shared out by role (shareProfile).
   if (rolled2) shareProfile(familyId, family, specs, parts, rolled2, level);
   const step = overrides.run ? (CONFIG.runEarly[level - 1] ?? 1) * (overrides.boss || overrides.elite ? 1 : runLate(level)) : 1;
-  const dmgScale = mobPower(level, overrides.short ? 1 : overrides.tier ?? overrides.floor) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1) * (long ? runLate(level, CONFIG.length.dmg) : 1);
+  const dmgScale = mobPower(level, !!overrides.short) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1) * (long ? runLate(level, CONFIG.length.dmg) : 1);
   // Encryption stacks, so it skips the early-game and late steps (they would compound).
   for (const p of parts) if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * dmgScale / (p.attack.effect === 'encrypt' || p.hash || p.twinrig ? step : 1))); // a Rig's Hash climbs like encryption: it skips them too
   for (const p of parts) if (p.attack?.effect === 'heal') p.attack.amount = Math.max(1, Math.round(p.attack.amount * scale * g.hp));

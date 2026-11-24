@@ -134,6 +134,11 @@ called off, the big key on the beat) something specific.
    designer: a reader in blues wins a quarter of the time at 4, never impossible): `bar` 0.7, `dmg` 1.1. Level-5 boss,
    four classes, the reader in whites / blues / yellows: at 3 0 / 0 / 22%, at 4 22 / 25 / 75%, at 5 72 / 73 / 94% (acts
    16.4 / 17.5 / 16.8 in blues), at 6 69 / 81 / 97%. The blind bot: 0–19% in whites and blues.
+   PAGE NINE (demo Phase 3, November 24): floor 1's floor job at your level from 6 to 8, sized for whites and blues a
+   level behind you (the designer): `long.dmg` 0.3, `bar` 0.9. The reader in whites / blues: at 6 59 / 59%, at 7
+   19 / 38%, at 8 63 / 91%. Level 7 is the hard one: gear steps at item level 7 (Signal 170 to 241), so a 7 in
+   level-6 gear is short. The blind bot wins about as often as the reader at 6 and 8: at these hits the refund only
+   slows you, and only act 2's Claim punishes a misread.
 3. Floor 2: DEADBOLT, BACK ORIFICE, PATCH TUESDAY, SLEEPWALKER, MIRRORSHADE, CENTRIFUGE (built November 14,
    nativeacts.mjs). Their acts for the planner (won fights, level 10, 12 seeds): DEADBOLT 18.1 / 18.8 / 15.1 (`bar`
    1.1), BACK ORIFICE 15.8 / 19.9 / 14.7 (1.0), PATCH TUESDAY 16.1 / 17.7 / 17.9 (0.8), SLEEPWALKER 16.8 / 15.5 / 15.2
