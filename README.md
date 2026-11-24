@@ -65,6 +65,7 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 | `/?playtest=run` | Connected to a fresh server. `&family=worm\|ghostroot`, `&template=mailhub\|mirror\|archive\|lab` (its rooms' kind), `&depth=<floor>`. |
 | `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&card=surge\|escort\|pack` (a run card), `&seed=`, `&puzzle=<board>` (its room, and you in it), `&seen` (every room discovered). |
 | `/?playtest=story&beat=<id>` | A test save at a story beat (the editor's *Play from here*). |
+| `/?playtest=scene&id=<id>` | A transmission on a test save, over the map (the editor's *Transmissions*, *Play from here*). |
 | `/?shell=plain`, `/?tod=night\|dawn\|day\|dusk` | No CRT shell; another time of day outside the window. |
 | Co-op | Two benches in two tabs, then `coop host` and `coop join <code>`: [`docs/coop.md`](docs/coop.md). |
 
@@ -103,7 +104,7 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/combat.mjs` | The engine: pure and deterministic, commands in, events out. Fights, XP and levels, the save and its migrations. |
-| `dist/data.mjs` | Every tunable number: abilities, classes, families, strains, guards, bosses, floors, and `createVirus`; the level curve (`power` compounding for enemies, your slow `own` line, the 4% `line`, the `lift` between, gear's `gearFill`, the floor tiers (`CONFIG.floorStep`: `mobPower`'s step, `gearTier`), the coefficients' `damageRef`, `tickRef` and `dotRef`); fight length (`CONFIG.length`: Integrity up and hits down by level, a solo boss's own `long` size and enrage); boss rounds (`ROUNDS`: combat.mjs `roundOf`); the level gap above you (`CONFIG.gap`, misses, `resist`: combat.mjs `gapDealt`, `gapTaken`, `resistChance`). |
+| `dist/data.mjs` | Every tunable number: abilities, classes, families, strains, guards, bosses, floors, and `createVirus`; the level curve (`power` compounding for enemies, your slow `own` line, the 4% `line`, the `lift` between, gear's `gearFill`, smooth depth (`CONFIG.floorStep`: `mobPower`'s step), the coefficients' `damageRef`, `tickRef` and `dotRef`); fight length (`CONFIG.length`: Integrity up and hits down by level, a solo boss's own `long` size and enrage); boss rounds (`ROUNDS`: combat.mjs `roundOf`); the level gap above you (`CONFIG.gap`, misses, `resist`: combat.mjs `gapDealt`, `gapTaken`, `resistChance`). |
 | `dist/classes/` | Each class's subclasses: `<class>.data.mjs` their skills and talent tiers, `<class>.mjs` what they do in a fight (talents on the shared events: the `event` hook); `kit.mjs` talent helpers. |
 | `dist/talents.mjs` | The talent tiers' save migration (old ranks and picks to tiers) and the bots' picks (`botTiers`). |
 | `dist/parts.mjs` | What a wild virus is made of: its basic, signature and third parts, rolled by named constants (`PARTS`), the strains' spread (`PARTS.spread`), and an elite's clash. |
@@ -117,7 +118,7 @@ comment saying what it does.
 | `dist/order.mjs` | The order levers: parts whose right moment to break depends on the board. |
 | `dist/acts.mjs` | Boss acts: a boss's three acts as act bars (each a fresh board from act 1's board, rules and tells), their pacing (`ACT_BARS`: Integrity, hits, rounds and enrage an act), and its beat (the Backlash, a Mimic, a Decoy; the Resident's Outbreak and Lockdown ride the Backlash). |
 | `dist/actbreak.mjs` | Presentation only: the act break as a boss starts its next act (the strip, the emote, the board's parts coming back). |
-| `dist/floorbosses.mjs` | The floor 2 to 5 bosses' rules (CENTRIFUGE's Bidding, SHAKEDOWN's Ransom Clock, SHOULDER SURFER's Replay, RECURSION's Call, NIGHT DESK's No Timeout, BYZANTINE's Vote, CAMSWARM's Telnet Sweep, GRACE PERIOD's Grace, EXIT NODE's Rollback), their phase verbs, and their uniques' hooks. |
+| `dist/floorbosses.mjs` | The floor 1 to 5 bosses' rules (PAGE NINE's Premium Paid, CENTRIFUGE's Bidding, SHAKEDOWN's Ransom Clock, SHOULDER SURFER's Replay, RECURSION's Call, NIGHT DESK's No Timeout, BYZANTINE's Vote, CAMSWARM's Telnet Sweep, GRACE PERIOD's Grace, EXIT NODE's Rollback), their phase verbs, and their uniques' hooks. |
 | `dist/nativeacts.mjs` | Floor 2's lair bosses' act rules (DEADBOLT's Tumblers, BACK ORIFICE's Round robin, PATCH TUESDAY's Out of band and Hotfix, SLEEPWALKER's REM and Night Terror, MIRRORSHADE's Shatter) and their board numbers. |
 | `dist/mechanics.mjs` | The mechanics list: twenty third parts built lean, each rule's hooks in one place. Eleven strains and the eleven mutated ones are built from them (`STRAINS`). |
 | `dist/situations.mjs` | The moment on the board each situational skill is built for; the tray lights it. |

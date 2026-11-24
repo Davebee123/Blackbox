@@ -210,7 +210,8 @@ function announce(s) {
         const x = landsAt(p, n), col = x - c;
         if (col > 3) break; // not on the board yet
         if (col < lead || !clear(t, x) || heavyAt(s, p, x)) continue;
-        say(s, t, p, x, n);
+        if (BOSSES[e.virus.boss]?.early) p.attack.due--; // PAGE NINE's Filed Early: the charge, and its attack, a cycle sooner (floorbosses.mjs)
+        say(s, t, p, landsAt(p, n), n);
         break;
       }
     } else {

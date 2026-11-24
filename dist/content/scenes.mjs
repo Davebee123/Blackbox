@@ -98,4 +98,58 @@ export default {
       over: { q: 'Over.', end: true },
     },
   },
+  // Phase 5 (docs/demo-plan.md): the hubs, the floor bosses' falls and floor 2, verbatim from story-script.md.
+  'kestrel-hub': {
+    who: 'Kestrel', from: 'Kestrel Underwriting', icon: 'corp',
+    nodes: {
+      start: { lines: ["Kestrel Underwriting. The rack you're connected through belongs to us. So do most of the others.", 'We keep a standing order for Kernel code. Deliver a full lot and we pay half again over market.'], ask: ['else', 'kessler', 'ok'] },
+      else: { q: 'What else do you have?', lines: ["Now and then we bring one of Kessler's old racks out of cold storage and mount it for one cycle.", 'Whatever is in its cage is unclaimed until we pull it back.'], ask: ['kessler', 'ok'] },
+      kessler: { q: 'Kessler?', lines: ['The builders. They went bankrupt and paid us in hardware. We have a great deal of hardware.'], ask: ['else', 'ok'] },
+      ok: { q: 'Good to know.', end: true },
+    },
+  },
+  'glassjaw-hub': {
+    who: 'GLASSJAW', from: 'GLASSJAW', icon: 'corp',
+    nodes: {
+      start: { lines: ['GLASSJAW. Everything on this net has a price, and I keep the list.', "I'll take Exploits off you on a standing order, above market."], ask: ['list', 'who', 'back'] },
+      list: { q: "What's on the list?", lines: ["Gear from other networks, now and then. I'll page you when a piece goes up, and it won't stay up long.", 'Work that stays off Halcyon\'s books, too. It pays better.'], ask: ['who', 'back'] },
+      who: { q: 'Who buys from you?', lines: ["Everyone, mostly from each other. When two factions fight over a server you've traced, I'll tell you who's winning, and you can pick a side."], ask: ['list', 'back'] },
+      back: { q: "I'll be back.", end: true },
+    },
+  },
+  'pagenine-falls': {
+    who: 'wick', from: 'LOWLIGHT',
+    nodes: {
+      start: { lines: ['page nine is switched off. the account is closed.', 'it was running on a schedule, and that schedule came from somewhere deeper. some people on floor 2 listen for it.'], ask: ['who', 'deeper', 'good'] },
+      who: { q: 'Who?', lines: ["lantern. they're old kessler staff and their kids. they listen to the backhaul and sell what they hear, one page at a time.", "i'll tell them you're coming."], ask: ['deeper', 'good'] },
+      deeper: { q: 'Where is deeper?', lines: ["the backhaul, floor 2. it's an older layer, and its strays are older too. keep tracing servers and you'll reach it."], ask: ['who', 'good'] },
+      good: { q: 'Good.', end: true },
+    },
+  },
+  floor2: {
+    who: 'LANTERN', from: 'the Backhaul',
+    nodes: {
+      start: { lines: ['Four. Nine. Nine. This is LANTERN. The strays on the Backhaul come up from below. Something down there is counting them, and so are we.'], ask: ['what', 'wick', 'mail'] },
+      what: { q: 'What are they counting?', lines: ["That's what we sell. You'll get it one page at a time."], ask: ['wick', 'mail'] },
+      wick: { q: 'wick sent me.', lines: ['We know. He used to read the same numbers we do.'], ask: ['what', 'mail'] },
+      mail: { q: 'Open my mail.', end: 'mail' },
+    },
+  },
+  // CENTRIFUGE falls: LANTERN, then wick (queued behind it); wick's goodbye ends on the demo's end card (app.js).
+  centrifuge: {
+    who: 'LANTERN', from: 'the Backhaul',
+    nodes: {
+      start: { lines: ['Four. Nine. Nine. The line is clear.', "Every page of the schedule is signed at the bottom, and it's the same signature on every page."], ask: ['who', 'below', 'over'] },
+      who: { q: 'Who signed it?', lines: ['A pricing model. It chooses which trades are cancelled, and it signs for Halcyon.'], ask: ['below', 'over'] },
+      below: { q: "What's below the Backhaul?", lines: ["The Stacks. It's an older layer with older trades, and the count is louder there."], ask: ['who', 'over'] },
+      over: { q: 'Over.', end: true },
+    },
+  },
+  'centrifuge-wick': {
+    who: 'wick', from: 'LOWLIGHT',
+    nodes: {
+      start: { lines: ['so halcyon\'s model signs the schedule, and halcyon pays us. you can see the shape of it.', "floor 3 is next. i'll be here when you get there."], ask: ['bye'] },
+      bye: { q: 'See you down there.', end: 'demo-end' },
+    },
+  },
 };

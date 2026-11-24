@@ -27,6 +27,7 @@ import { FLOORS, SERVER, CONFIG, TEMPLATES, FAMILIES, bandOf, BOSSES, lastFloor 
 import { seeded } from './gear.mjs';
 import { emit, warn, hackerLevel, addLocation, active } from './combat.mjs';
 import { signature, makeLair, lairBoss, leanOf } from './network.mjs';
+import { onEvent } from './progression.mjs';
 
 export const FLOOR = {
   hubs: { halcyon: 1, kestrel: 1, lantern: 2, glassjaw: 2, nullchoir: 3 }, // which floor each faction's hub stands on
@@ -440,6 +441,7 @@ export function descend(s) {
   const loc = land ? addLocation(s, land.family, f + 1, null, land.id) : null;
   if (loc) (F.land ||= {})[f + 1] = loc.id; // the floor's waypoint: where you start it again
   openEntry(s, f + 1, loc?.id || null);
+  if (f + 1 === 2) onEvent(s, 'floor2'); // LANTERN's arrival (scenes.mjs)
   return loc;
 }
 // floor: the floors you've reached, a line each. floor <n>: the map shows that floor. descend: the way down.

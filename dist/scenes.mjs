@@ -68,13 +68,16 @@ export function choose(s, n) {
 }
 // Close it (Esc, ×): it counts as heard.
 export function skip(s) { if (sceneNow(s)) finish(s); }
+// What fills each scene's blanks on a test save (the editor's Play from here, developer scene): a careful runner.
+const SAMPLE = { handle: 'mothwing', faction: 'TOLLGATE', v: 'careful', v2: 'careful-won', server: 'SPRAWL-00', level: 1, id: 'sprawl', payer: 'Marrow & Vane', payee: 'Kessler Racks', sum: '4,200 cr', era: '1998' };
+export const sampleArgs = (s, id) => (id === 'first-server' ? firstServerArgs(s) : { ...SAMPLE, ...(id === 'first-held' ? { server: firstServerArgs(s).server } : {}) });
 // developer scene <id>: play it again.
 export function replay(s, id) {
   if (!SCENES[id]) return false;
   const t = T(s);
   t.seen = t.seen.filter((x) => x !== id);
   if (t.now?.id === id) t.now = null;
-  return queueScene(s, id, id === 'first-server' ? firstServerArgs(s) : {});
+  return queueScene(s, id, sampleArgs(s, id));
 }
 // The first server you locate: wick tells you what it is (only on a save that heard the welcome).
 export const firstServerArgs = (s) => { const l = (s.locations || []).find((x) => x.starter) || (s.locations || []).find((x) => !x.rogue && !x.zone); return l ? { server: l.name, level: l.level || 1, id: l.id } : { server: 'SPRAWL-00', level: 1, id: 'sprawl' }; };

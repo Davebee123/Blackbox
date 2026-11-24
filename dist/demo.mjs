@@ -8,7 +8,7 @@ export const setDemo = (d) => { DEMO = d || null; }; // tests only: the demo's r
 
 // The designer's links, in one place. Empty until they exist: a button with no link says so in its tooltip.
 export const LINKS = {
-  discord: '', // the Discord server's feedback channel invite (https://discord.gg/…): the Feedback button opens it
+  discord: 'https://discord.gg/KyBUKuDRF', // the Discord server's feedback channel invite (https://discord.gg/…): the Feedback button opens it
   telemetry: '', // the telemetry Worker's URL (https://blackbox-telemetry.<account>.workers.dev): tools/telemetry/
   itch: 'https://matzahboy.itch.io/blackbox', // the itch.io page: the end card's follow
 };

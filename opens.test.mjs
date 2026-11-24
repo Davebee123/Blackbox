@@ -102,3 +102,40 @@ test('a rival speaks by temperament and how the race ended', () => {
   assert.equal(SC.sceneNow(s).said[0].text, 'Clean run. The files are already sold.');
   assert.equal(SC.sceneNow(s).said[0].who, 'VANTA');
 });
+
+// Phase 5 (docs/demo-plan.md): the hubs, the floor bosses' falls and floor 2 play their transmissions through the same
+// path; CENTRIFUGE's two play at once, LANTERN then wick, and wick's goodbye goes to the demo's end card.
+test('the hubs found play Kestrel\'s and GLASSJAW\'s transmissions, on a new character only', async () => {
+  const { hubTrace } = await import('./dist/factions.mjs');
+  const s = newCharacter(at(5)); s.hubFound = {};
+  hubTrace(s, 'kestrel', 100);
+  assert.equal(SC.sceneNow(s)?.id, 'kestrel-hub');
+  assert.ok(isOpen(s, 'rack'));
+  hubTrace(s, 'glassjaw', 100);
+  assert.ok(s.scenes.queue.some((q) => q.id === 'glassjaw-hub'), 'queued behind it');
+  const old = at(5); old.hubFound = {};
+  hubTrace(old, 'glassjaw', 100);
+  assert.equal(SC.sceneNow(old), null, 'no transmission on an older save');
+});
+
+test('reaching floor 2 brings LANTERN\'s arrival', async () => {
+  const F = await import('./dist/floors.mjs');
+  const { addLocation } = await import('./dist/combat.mjs');
+  const s = newCharacter(at(8));
+  const g = F.graphOf(s, 1), host = g.links.filter((l) => l.includes(g.exits[0])).map((l) => (l[0] === g.exits[0] ? l[1] : l[0]))[0];
+  addLocation(s, g.nodes[host].family, 1, null, host);
+  assert.ok(F.descend(s), 'down the exit');
+  assert.equal(SC.sceneNow(s)?.id, 'floor2');
+});
+
+test('a floor job\'s Boss step falling plays its transmissions; CENTRIFUGE\'s two at once, ending on the end card', async () => {
+  const { FALLS } = await import('./dist/progression.mjs');
+  assert.deepEqual(FALLS[1], ['pagenine-falls']);
+  const s = newCharacter(at(14));
+  s.pace = { kills: 0, ms: 60_000 }; s.scenes = { seen: ['welcome'], queue: [], now: null, lastAt: 50_000 }; // a transmission a moment ago
+  for (const id of FALLS[2]) SC.queueScene(s, id);
+  assert.equal(SC.sceneNow(s)?.id, 'centrifuge', 'no gap before it');
+  while (SC.sceneNow(s)?.id === 'centrifuge') { const c = SC.choicesOf(s); SC.choose(s, c.find((x) => x.end).n); }
+  assert.equal(SC.sceneNow(s)?.id, 'centrifuge-wick', 'wick follows at once');
+  assert.deepEqual(SC.choose(s, 1), { go: 'demo-end' });
+});
