@@ -1352,7 +1352,7 @@ function react(events) {
   const hush = !active(campaign) && events.some((e) => e.type === 'invasion-cleared' && e.quiet);
   const fx = canMove();
   if (events.some((e) => e.type === 'engage')) { barsBefore = null; hideSpoils(); fightFrom = events.find((e) => e.type === 'engage').id; }
-  if (won) { const batch = [...campaign.logs.filter((e) => e.id >= fightFrom && e.id < events[0].id && (e.type === 'loot' || e.type === 'xp' || e.type === 'fresh')), ...events.filter((e) => e.id >= won.id || e.type === 'loot')]; dyingUntil = 0; setTimeout(() => whenStill(() => { if (ended) { document.body.classList.add('fight-over'); showSpoils(batch); } }), 900); }
+  if (won) { const batch = [...campaign.logs.filter((e) => e.id >= fightFrom && e.id < events[0].id && (e.type === 'loot' || e.type === 'xp' || e.type === 'fresh')), ...events.filter((e) => e.id >= won.id || e.type === 'loot')]; dyingUntil = 0; wonBatch = batch; }
   // Every damage instance gets its own number, with an icon for its source, one after another in the order
   // they resolved (dmgfx.mjs). Effects minimal or Motion off: all at once, stacked.
   const lvl0 = fxLevel(), stack = !fx || lvl0 === 'minimal', lashing = fx && lvl0 !== 'minimal';
@@ -1366,6 +1366,9 @@ function react(events) {
   const incoming = module === 'combat' && active(campaign) ? attackVoices(events, split.delay, lashing) : { voiced: new Set(), shift: 0, delay: split.delay }, delay = incoming.delay;
   if (split.count && !stack) { cueAt = performance.now() + split.total + incoming.shift; landedBy = Math.min(cueAt, performance.now() + TURN_CAP); }
   if (!stack) stepBars(events, delay); // the bars drop with the numbers, one hit at a time
+  // The fight's end (the board folds away, the spoils card) waits for the batch's last number: a burn tick that wins
+  // lands first.
+  if (won) { const batch = wonBatch; setTimeout(() => whenStill(() => { if (ended) { document.body.classList.add('fight-over'); showSpoils(batch); } }), Math.max(delay(won), split.total) + 900); }
   const artHit = (id, kind) => feel.add(() => art.hit(id, kind)); // the render reacts on the event's beat
   // Crewmates' events (crew.mjs). Their turns play a beat apart, so their hits sound like yours.
   // When the virus hits everyone at once, the hits show on each row, and only one of them sounds.
@@ -1556,11 +1559,11 @@ function react(events) {
       case 'streak': feel.add('win', null); rewardCard('Streak', e, events); break;
       case 'rotation': feel.add(e.rare ? 'prewarn' : 'good', null); break;
       case 'victory':
-        flash(campaign.encounter?.rooms?.as === 'exfil' ? 'ARCHIVE RECOVERED' : 'NEUTRALIZED');
+        { const word = campaign.encounter?.rooms?.as === 'exfil' ? 'ARCHIVE RECOVERED' : 'NEUTRALIZED'; feel.add(() => flash(word)); } // on the win's beat, after the hit that won it
         feel.add(campaign.encounter?.virus?.boss ? 'bosswin' : 'win', '.hud');
         // Let the last break land, then show what the fight gave you.
         ending = true; hideTip(false); ended = e.mode || 'home'; endedAt = performance.now();
-        setTimeout(() => { ending = false; }, 900);
+        setTimeout(() => { ending = false; }, delay(e) + 900);
         break;
       case 'crashed': flash(e.mode === 'run' || e.mode === 'rooms' ? 'DISCONNECTED' : 'HELD AT 1'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); if (e.mode === 'breach') { hideTip(false); setTimeout(() => go('breach'), 1600); } if (e.mode === 'rooms') { hideTip(false); setTimeout(() => { if (!active(campaign) && !lossHold && !document.querySelector('.nocarrier')) go('rooms'); }, 1600); } break;
       case 'cut': feel.add('good', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, f?.text || (e.phase ? 'PHASE' : e.vent ? 'VENTED' : e.delay ? 'DELAYED' : 'INTERRUPTED'), { src }); break;
@@ -1602,6 +1605,7 @@ function react(events) {
 let ended = null; // 'home' | 'run' once a fight is over and you're still looking at it
 let endedAt = 0; // when it ended: an Enter typed in the moment after a win doesn't skip its spoils card
 let ending = false; // the last break is landing
+let wonBatch = []; // a won fight's spoils, shown once its last number lands (react)
 
 // ---------- notices ----------
 // developer levelup preview [<level>|all]: play the level-up now (levelup-ui.mjs). It changes nothing on the save: it is
