@@ -173,6 +173,7 @@ test('a disconnect keeps the visit: XP, rooms, contract steps and the pack banke
   (s.mail.jobs ||= []).push(job);
   const first = visitWins(s);
   job.got = 2; // a contract step on the visit
+  s.rooms.visit.held = 77; // XP the Warm cache held for the jack out
   const files = s.run.pack.length, warm = s.rooms.visit.warm, xp = JSON.stringify(s.hackers);
   assert.ok(files > 0 && warm > 0, 'files in the pack, the Warm cache up');
   loseFight(s);
@@ -185,6 +186,7 @@ test('a disconnect keeps the visit: XP, rooms, contract steps and the pack banke
   assert.equal(s.server.integrity, 1, 'home at 1 Integrity');
   const e = s.logs.findLast((x) => x.type === 'disconnected');
   assert.equal(e.warm, warm, 'the card strikes the Warm cache through');
+  assert.equal(e.held, 77, 'and the XP it held, lost');
   assert.equal(loc.deaths, 1, 'the reconnect wait still grows');
   loc.lockUntil = 0; loc.floorplan.reconnectAt = 0; s.server.integrity = s.server.max;
   play(s, 'connect ' + loc.id);
@@ -277,8 +279,9 @@ test('Warm cache: each room won on a visit adds +10% XP and +5 Scavenge to what 
   enterRoom(s, first.id); play(s, 'engage'); win(s);
   assert.equal(warmOf(s), 1, 'a room won: one stack');
   assert.equal(scavengeOf(s), sc0 + WARM.scavenge, '+5 Scavenge');
-  const xp1 = hackerOf(s).xp; gainXp(s, 100, 'test');
-  assert.equal(hackerOf(s).xp - xp1, Math.round(cold * 1.1), '+10% XP after it');
+  const xp1 = hackerOf(s).xp, held0 = s.rooms.visit.held || 0; gainXp(s, 100, 'test');
+  assert.equal(hackerOf(s).xp - xp1, cold, 'the base XP now');
+  assert.equal(s.rooms.visit.held - held0, Math.round(cold * 1.1) - cold, '+10% held for the jack out');
   s.rooms.visit.warm = 14;
   assert.equal(warmOf(s), WARM.max, 'up to 10');
   s.rooms.visit.warm = 6;
@@ -287,12 +290,16 @@ test('Warm cache: each room won on a visit adds +10% XP and +5 Scavenge to what 
   const html = roomsMarkup(s);
   assert.match(html, /<span class="lbl">Warm<\/span>/);
   assert.equal((html.match(/<i class="on"/g) || []).length, 6, 'six bars of ten lit');
-  assert.match(html, /\+60%<\/b>/); assert.match(html, /\+30<\/b>/);
+  assert.match(html, /\+60%(<small class="fp-held">[^<]*<\/small>)?<\/b>/); assert.match(html, /\+30<\/b>/);
   assert.match(html, /6 rooms: \+60% XP, \+30 Scavenge\./, 'the tooltip\'s answer');
   assert.doesNotMatch(html, /class="pbar"/, 'Rooms: no bar');
   const btnB = html.match(/data-fp-pack[^>]*>(?:<svg[\s\S]*?<\/svg>)<b>(\d+)<\/b>/);
   assert.equal(Number(btnB?.[1]), 2, 'the Pack: credits summed into one row, the code into another');
+  const held = s.rooms.visit.held, xpOut = hackerOf(s).xp, lvOut = hackerOf(s).level;
+  assert.ok(held > 0);
+  assert.match(html, /XP held\./);
   play(s, 'jack out');
+  assert.ok(hackerOf(s).level > lvOut || hackerOf(s).xp === xpOut + held, 'the jack out pays what it held');
   loc.lockUntil = 0; loc.floorplan.reconnectAt = 0; s.server.integrity = s.server.max;
   play(s, 'connect ' + loc.id);
   assert.equal(warmOf(s), 0, 'a new visit starts cold');

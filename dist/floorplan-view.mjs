@@ -39,7 +39,7 @@
 // the markup only changes when the server does and a hovered chip keeps its tooltip.
 import { esc, conClass, deathMark, trackedJobs, contractTipRows, serverTracker } from './view.mjs';
 import { glyph } from './glyphs.mjs';
-import { WARM, warmOf } from './visit.mjs';
+import { WARM, warmOf, heldOf } from './visit.mjs';
 import { groundSvg } from './ground.mjs';
 import { OBJECTIVES, OBJ, objectiveLine } from './objectives.mjs';
 import { recapMarkup } from './recap.mjs';
@@ -688,7 +688,7 @@ function hudMarkup(s) {
   const stake = v ? `<span class="fp-stake">${warmBox(s)}<span class="fp-packwrap">${packButton(s)}${packUi.open ? packPop(s) : ''}</span></span>` : '';
   const acts = stake + (R.at
     ? btn('wait', 'Wait', { small: true, disabled: held(R) || active(s), tip: held(R) ? 'Wait: finish what is in front of you first.' : `Wait: the hunter takes its step${filesHere(s).length ? ', and the file you carry' : ''}. Costs nothing.` })
-      + btn('jackout', 'Jack out', { small: true, hot: true, disabled: active(s), tip: 'Jack out: banks your pack. Integrity rests at home.' })
+      + btn('jackout', 'Jack out', { small: true, hot: true, disabled: active(s), tip: `Jack out: banks your pack${heldOf(s) ? ` and the Warm cache's ${heldOf(s)} XP` : ''}. Integrity rests at home.` })
     : btn('connect', 'Connect', { small: true, primary: true, disabled: !c.can, tip: c.can ? `Connect to ${R.name}.` : c.wait > 0 ? `${R.name} takes you back in ${fmtLeft(c.wait)}.` : `You need ${c.need} Integrity to connect.` }));
   const idTip = net(s, 'idTip') ?? `${R.name}: ${author} ${kindName(R.kind)}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`;
   return `<header class="fp-hud" aria-label="The server">
@@ -702,10 +702,10 @@ function hudMarkup(s) {
 }
 // The Warm cache (visit.mjs WARM): a ladder of its stacks, lit amber as rooms are won, and what they add now.
 function warmBox(s) {
-  const n = warmOf(s), xp = Math.round(WARM.xp * 100 * n), sc = WARM.scavenge * n;
+  const n = warmOf(s), xp = Math.round(WARM.xp * 100 * n), sc = WARM.scavenge * n, held = heldOf(s);
   const bars = Array.from({ length: WARM.max }, (_, i) => `<i class="${i < n ? 'on' : ''}" style="height:${4 + Math.round((i * 9) / (WARM.max - 1))}px"></i>`).join('');
-  const tip = `Warm cache: Each room you win on this visit adds +${WARM.xp * 100}% XP and +${WARM.scavenge} Scavenge to the rooms after it, up to ${WARM.max}. It starts cold on every visit, and a disconnect loses it.\n▸ ${n} room${n === 1 ? '' : 's'}: +${xp}% XP, +${sc} Scavenge.`;
-  return `<span class="fp-stat fp-visit fp-warm${n ? '' : ' empty'}" data-tt-kind="Visit bonus" title="${esc(tip)}"><span class="lbl">Warm</span><span class="fp-ladder" aria-hidden="true">${bars}</span><b>${glyph('xp')}+${xp}%</b><b>${glyph('scavenge')}+${sc}</b></span>`;
+  const tip = `Warm cache: Each room you win on this visit adds +${WARM.xp * 100}% XP and +${WARM.scavenge} Scavenge to the rooms after it, up to ${WARM.max}. Its extra XP is held until you jack out. A disconnect loses the stacks and the XP.\n▸ ${n} room${n === 1 ? '' : 's'}: +${xp}% XP, +${sc} Scavenge. ${held} XP held.`;
+  return `<span class="fp-stat fp-visit fp-warm${n ? '' : ' empty'}" data-tt-kind="Visit bonus" title="${esc(tip)}"><span class="lbl">Warm</span><span class="fp-ladder" aria-hidden="true">${bars}</span><b>${glyph('xp')}+${xp}%${held ? `<small class="fp-held"> · ${held}</small>` : ''}</b><b>${glyph('scavenge')}+${sc}</b></span>`;
 }
 // The Pack: what you carry on this visit, a row per thing (credits summed, each code summed, each item its own).
 export const packUi = { open: false };
@@ -976,7 +976,7 @@ function homeCard(s) {
   const L = R.last;
   // A network disconnect banks the pack and loses the Warm cache (L.banked); the playtest's loses the pack (L.lost).
   const banked = L?.banked != null ? `<li><span class="lbl">banked</span><span>${L.banked} ${L.banked === 1 ? 'item' : 'items'}</span></li>` : '';
-  const lost = L?.result === 'lost' ? `<li class="hot"><span class="lbl">lost</span><span>${esc(L.lost ? `${L.why} ${L.lost.length ? `${L.lost.length} unbanked ${L.lost.length === 1 ? 'item' : 'items'} lost: ${L.lost.join(', ')}.` : 'Nothing unbanked was lost.'}` : `${L.why}${L.warm ? ' Warm cache lost.' : ''}`)}</span></li>` : '';
+  const lost = L?.result === 'lost' ? `<li class="hot"><span class="lbl">lost</span><span>${esc(L.lost ? `${L.why} ${L.lost.length ? `${L.lost.length} unbanked ${L.lost.length === 1 ? 'item' : 'items'} lost: ${L.lost.join(', ')}.` : 'Nothing unbanked was lost.'}` : `${L.why}${L.warm ? ` Warm cache lost${L.held ? `, and its ${L.held} XP` : ''}.` : ''}`)}</span></li>` : '';
   const last = L ? `<ul class="fp-lines">${lost}${banked}<li><span class="lbl">xp</span><span>+${(L.xp || 0).toLocaleString('en-US')}</span></li></ul>` : '';
   const items = R.banked.map((id) => stashItem(s, id)).filter(Boolean);
   const loot = items.length ? `<h3 class="fp-sec">Banked <small>${items.length}</small></h3><ul class="fp-items">${items.slice(-6).map((it) => `<li data-ptip="${esc(it.id)}"><b class="iname r-${shownRarity(it)}">${esc(itemLabel(it))}</b><small class="fp-stats">${Object.keys(it.stats || {}).map((k) => statLine({ [k]: it.stats[k] })).filter(Boolean).map((x) => `<span>${esc(x)}</span>`).join('')}</small></li>`).join('')}</ul>` : '';

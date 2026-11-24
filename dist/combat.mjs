@@ -11,7 +11,7 @@ import INFILTRATOR_FX from './classes/infiltrator.mjs';
 import OPERATOR_FX from './classes/operator.mjs';
 
 import { contractKill, contractTakeover, mailCommand, tickMail, initMail, openContracts, systemLetter, contractDefuse, contractLocated, itemRestore } from './mail.mjs';
-import { snapRestore, warmXp, warmScavenge } from './visit.mjs';
+import { snapRestore, warmXp, warmScavenge, holdWarm } from './visit.mjs';
 import { buy, indemnityRestore, hubsRestore, shopRestore } from './store.mjs';
 import { buyFrom, claimServer, reclaimCheck, clearedFor, strikeServer, setCommission, repRestore } from './factions.mjs';
 import { receiptCommand } from './receipts.mjs';
@@ -1604,7 +1604,7 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
   if (kind === 'breakin' || kind === 'intel') amount = Math.round(amount * intelXpMult(s)); // INIT's table, Clear (table.mjs)
   const bonus = freshBonus(s, amount, kind);
   if (bonus) { emit(s, 'fresh', `Fresh bonus +${bonus} XP (${XP_KINDS[kind]}).`, { amount: bonus, kind }); amount += bonus; }
-  amount = Math.round(amount * warmXp(s)); // Warm cache (visit.mjs)
+  { const extra = Math.round(amount * warmXp(s)) - amount; if (extra > 0 && !holdWarm(s, extra)) amount += extra; } // Warm cache (visit.mjs): held till you jack out
   if (tally) (s.xpMix ||= {})[tally] = (s.xpMix[tally] || 0) + amount;
   const h = hackerOf(s);
   if (h.level >= LOADOUT.maxLevel) return;
@@ -2168,7 +2168,7 @@ export function disconnect(s, reason) {
     return hooks.jackOut(s);
   }
   const loc = run.loc === CONFIG.zone.id ? s.zone : findLocation(s, run.loc);
-  const warm = hooks.visitOf?.(s)?.warm || 0; // the Warm cache's stacks, lost: the card strikes them through
+  const warm = hooks.visitOf?.(s)?.warm || 0, held = hooks.visitOf?.(s)?.held || 0; // the Warm cache's stacks and the XP they held, lost: the card strikes them through
   const by = s.encounter?.mode === 'run' ? s.encounter.virus?.name : null; // what took you out, for the card
   const recap = s.encounter?.mode === 'run' ? deathRecap(s) : null; // how: the last cycles' Integrity and hits (recap.mjs)
   if (loc && hooks.bank) hooks.bank(s, loc, '', true); // the pack banked, as a jack out does
@@ -2179,7 +2179,7 @@ export function disconnect(s, reason) {
   if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
-  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}.${warm ? ` Warm cache lost.` : ''}`, { by, reason: reason || '', warm, out: loc?.id || null, where: loc?.name || '', relockMs: wait, deaths: loc?.deaths || 0, ...(recap ? { recap } : {}) });
+  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}.${warm ? ` Warm cache lost${held ? `, and its ${held} XP` : ''}.` : ''}`, { by, reason: reason || '', warm, held, out: loc?.id || null, where: loc?.name || '', relockMs: wait, deaths: loc?.deaths || 0, ...(recap ? { recap } : {}) });
 }
 
 function newMetrics(s) {
