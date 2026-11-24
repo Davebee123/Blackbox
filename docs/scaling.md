@@ -218,8 +218,7 @@ blue outclasses the last floor's best. Save v56 refills old items on the tiers.
 
 The designer chose the gear-tier sawtooth (November 4). With the same step at a floor's start for mobs, *bottom in the last
 floor's best* can't be easier than *the last floor's top in that same gear*: the mob is one level lower but +15%. So the arc
-is in the floor's own gear: easy on its first drops, 35–45% at its top. On floor 2 a fresh blue's Integrity falls in absolute terms
-too (the bench's breaker about 255 at 7–9, 225 at 12, 320 at 13; curve.test.mjs): the fill falls faster than gear grows. Arriving in old gear costs about what the last
+is in the floor's own gear: easy on its first drops, 35–45% at its top. Arriving in old gear costs about what the last
 floor's top did, and that's the cue to pick up the new drops.
 
 Scratch harness: the four default subclasses (their mean, then each) and the Sysop, 8 wilds each at the level; wins ·
@@ -246,6 +245,25 @@ the full crew wins 72 of 76 farm boss tries at 18 (the farm, on floor 1 at your 
 and at 30 the farm is a real check: over 18 and 30 the Herder carries 69% and the Hijacker 61% (the Demolitionist 92%); the Operator's climb on seed 7
 farms the floor below from 10 (40% grey, no strain or ICE from 12); the rooms bot clears 4–6 of 12 of a Lab. MIRRORSHADE
 (fought at 12, floor 2's top) is refit: Integrity 1.45 → 1.25, hits 0.8 → 0.6, a reader 38% → 72%.
+
+### After step 6 (November 24): smooth depth, no floor steps
+
+The designer: nothing jumps at a floor's edge (WoW's way); the last floor's best carries you into the next floor's
+first content. The tiers' sawtooth is gone. Mobs take the 15% depth step smoothly by level (`mobPower`: none to 6, one
+step by 9.5, then a sixth of a step a level), the same on any floor. Gear's fill is one smooth curve (`CONFIG.gearFill`,
+no `gearTier`) through each floor's middle at the share of a mob it averaged under the tiers. Save v68 refills old
+items on it (`curveRestore`, s.curve 4).
+
+The bench's breaker in its level's blues, max Integrity (and per point of a same-level mob's power), tiers → smooth:
+
+| Lv | 7 | 9 | 12 | 13 | 18 | 19 | 24 | 25 | 30 | 31 | 42 | 43 | 50 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Integrity | 254 → 191 | 255 → 239 | 225 → 277 | 321 → 300 | 440 → 525 | 723 → 594 | 841 → 1005 | 1479 → 1129 | 1598 → 2098 | 2913 → 2379 | 5391 → 7161 | 9905 → 8004 | 10272 → 15162 |
+| per mob | 156 → 129 | 139 → 133 | 103 → 120 | 121 → 120 | 124 → 139 | 167 → 145 | 145 → 163 | 209 → 169 | 169 → 209 | 252 → 218 | 214 → 268 | 322 → 276 | 222 → 295 |
+
+It rises every level (curve.test.mjs). A floor's bottom is harder than it was and its top easier; the late floors'
+tops are easiest of all (per mob, 222 → 295 at 50). Held until the designer has played it: Leak and the Bodyguard
+cost 28.3 and 28.5 points a fight (cap 25), and Smash and Grab takes the Overclocker to 19 of 24 at 50.
 
 ### After step 5 (November 4): boss rounds that grow
 
@@ -293,9 +311,7 @@ three-part solo bosses 21 and 18 times in 48 (24 asked); the campaign bot's Brea
 | A DoT tick or a pet's hit gets its own, smaller coefficient of the same spell power | Gear Damage × the tick's size over 50 (`tickRef`), Payload × it over 28 (`dotRef`) |
 | Heals scale with spell power from gear | Not yet: heals keep step 1's growth with your level |
 
-**The sawtooth, per floor:** you arrive at the band's bottom wearing the last floor's best: strong. The floor's servers
-climb toward its top while its mobs carry the floor's step: it gets harder. Its elites, lair boss and exit are tuned for
-the floor's own blues: you need its gear. New gear on the next floor jumps you ahead again.
+**Depth, smooth** (step 6): no floor jumps; each level's mob and blue a little bigger than the last, as in WoW.
 
 ## 3. Proposed
 
@@ -343,6 +359,7 @@ One session each, one after the other (they share the economy, pacing and combat
    re-measured against the new split.
 3. **Built (November 4): fight length** (section 1 has the numbers): Integrity up, hits down, enrages, the balance targets moved.
 4. **Built (November 4): floors as tiers** (section 1 has the numbers): the mob step, the gear step and its drift.
+   Replaced November 24 by smooth depth (step 6).
 5. **Built (November 4): boss rounds that grow**, the solo bosses (section 1 has the numbers); the lairs' as they're built.
 
 ## 5. Decided

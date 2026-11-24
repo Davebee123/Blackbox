@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, restore, addItem, command, gearFx, effectLine, UNIQUES, addLocation, maxSignal, powerOf, gearStat } from './dist/combat.mjs';
-import { CONFIG, power, line, lift, lifted, filled, gearFill, gearTier, own, mobPower, runLate, floorFor, createVirus, SERVER } from './dist/data.mjs';
+import { CONFIG, power, line, lift, lifted, filled, gearFill, own, mobPower, runLate, floorFor, createVirus, SERVER } from './dist/data.mjs';
 import { rollItem, uniqueItem, seeded, liftFx, curveRestore, STATS } from './dist/gear.mjs';
 import { deal } from './dist/events.mjs';
 import { zoneSpawns, ZONE_BAND, KING_ROOM } from './dist/run.mjs';
@@ -50,13 +50,13 @@ test('a unique\'s flat effect is lifted at its item level, its text with it; a s
 });
 
 test('an older save: every item\'s flat stats lifted and filled once at its level, keyed on s.curve; a fresh save is already on the curve', () => {
-  assert.equal(fresh().curve, 3);
+  assert.equal(fresh().curve, 4);
   const s = fresh(); delete s.curve;
   s.stash.push({ id: 'g1', kind: 'protocol', side: 'hacker', group: 'proxy', rarity: 'tuned', level: 30, stats: { signal: 100, reduction: 3, evasion: 4, ram: 1 }, affixes: [], name: 'Old Proxy', rule: 'stack-canary', ruleValue: 4 });
   const r = restore(structuredClone(s)), it = r.stash.find((x) => x.id === 'g1');
   assert.deepEqual(it.stats, { signal: filled(100, 30), reduction: lifted(3, 30), evasion: 4, ram: 1 }, 'Integrity lifted and filled, Block lifted; chances and RAM as they were');
   assert.equal(it.ruleValue, filled(4, 30), 'Stack Canary\'s shield is a flat number too');
-  assert.equal(r.curve, 3);
+  assert.equal(r.curve, 4);
   const twice = structuredClone(r); curveRestore(twice);
   assert.deepEqual(twice.stash.find((x) => x.id === 'g1').stats, it.stats, 'safe to run twice');
 });
@@ -71,55 +71,56 @@ test('a v54 save (already lifted): its items\' filling stats × the fill once, t
   assert.deepEqual(twice.stash.find((x) => x.id === 'g1').stats, it.stats, 'safe to run twice');
 });
 
-test('a v55 save (filled before the floor tiers): its items\' filling stats × the new fill over the old once, the rest as they were', () => {
+test('a v55 save (filled before the floor tiers): its items\' filling stats × the smooth fill over the old once, the rest as they were', () => {
   const s = fresh(); s.curve = 2;
   s.stash.push({ id: 'g1', kind: 'protocol', side: 'hacker', group: 'proxy', rarity: 'tuned', level: 36, stats: { signal: 400, damage: 50, reduction: 9, evasion: 4 }, affixes: [], name: 'Proxy' });
   const r = restore(structuredClone(s)), it = r.stash.find((x) => x.id === 'g1');
   const f = gearFill(36) / runLate(36, [[6, 1], [10, 1.46], [15, 1.67], [25, 1.77], [30, 1.66], [40, 1.6], [50, 1.52]]);
-  assert.ok(f > 1.5, 'floor 6 gear: its tier on top');
+  assert.ok(f > 1.5, 'deep gear: more fill now');
   assert.deepEqual(it.stats, { signal: Math.round(400 * f), damage: Math.round(50 * f), reduction: 9, evasion: 4 });
-  assert.equal(r.curve, 3);
+  assert.equal(r.curve, 4);
   const twice = structuredClone(r); curveRestore(twice);
   assert.deepEqual(twice.stash.find((x) => x.id === 'g1').stats, it.stats, 'safe to run twice');
 });
 
-test('floors as tiers (step 4): a mob takes its floor\'s step on top of its level; the floor it is on when known', () => {
+test('a v56 save (filled on the floor tiers): its items\' filling stats × the smooth fill over the tiers\' once', () => {
+  const s = fresh(); s.curve = 3;
+  s.stash.push({ id: 'g1', kind: 'protocol', side: 'hacker', group: 'proxy', rarity: 'tuned', level: 12, stats: { signal: 100, damage: 50, reduction: 9, evasion: 4 }, affixes: [], name: 'Proxy' });
+  const r = restore(structuredClone(s)), it = r.stash.find((x) => x.id === 'g1');
+  const tiers = runLate(12, [[6, 1], [7, 2.2], [12, 1.45], [15, 1.75]]) * 1.25 * 0.94 ** 5, f = gearFill(12) / tiers;
+  assert.ok(f > 1.1, "floor 2's top: its gear no longer aged");
+  assert.deepEqual(it.stats, { signal: Math.round(100 * f), damage: Math.round(50 * f), reduction: 9, evasion: 4 });
+  assert.equal(r.curve, 4);
+  const twice = structuredClone(r); curveRestore(twice);
+  assert.deepEqual(twice.stash.find((x) => x.id === 'g1').stats, it.stats, 'safe to run twice');
+});
+
+// No floor steps (WoW's way): mobs and gear grow smoothly by level, so the last floor's best carries you into the next.
+test('depth is smooth: a mob takes the depth step by its level alone, the same on any floor, with nothing at a floor\'s edge', () => {
   const { mob } = CONFIG.floorStep;
-  assert.equal(mob, 0.15);
-  assert.equal(mobPower(5), power(5), 'floor 1: no step');
-  assert.ok(Math.abs(mobPower(31) / power(31) - (1 + mob) ** 5) < 1e-12, 'floor 6: five steps, compounding');
-  assert.equal(floorFor(14), 3);
-  assert.ok(Math.abs(mobPower(14, 2) / power(14) - (1 + mob)) < 1e-12, "floor 2's exit server: floor 2's step, though its level reaches floor 3");
-  assert.ok(Math.abs(mobPower(20, 99) / power(20) - (1 + mob) ** 7) < 1e-12, 'never past the last floor');
+  assert.equal(mobPower(6), power(6), 'floor 1: no step');
+  assert.ok(Math.abs(mobPower(9.5) / power(9.5) - (1 + mob)) < 1e-12, "one step by floor 2's middle");
+  assert.ok(Math.abs(mobPower(33.5) / power(33.5) - (1 + mob) ** 5) < 1e-12, "five by floor 6's middle");
+  for (let L = 2; L <= 50; L++) {
+    const r = mobPower(L) / mobPower(L - 1);
+    assert.ok(r > 1.06 - 1e-9 && r < 1.06 * 1.05, `level ${L}: +${((r - 1) * 100).toFixed(1)}%, no jump`);
+  }
   const v = (floor) => createVirus('random', 5, { threat: SERVER.threat(14), run: true, mutation: null, family: 'ransomware', ...(floor ? { floor } : {}) });
   const hp = (x) => x.parts.reduce((n, p) => n + p.max, 0);
-  assert.ok(Math.abs(hp(v(2)) / hp(v(3)) - 1 / (1 + mob)) < 0.05, 'a level-14 virus on floor 2 is a step under one on floor 3');
+  assert.ok(Math.abs(hp(v(2)) / hp(v(3)) - 1) < 0.01, 'a level-14 virus is the same on floor 2 and floor 3');
 });
 
-test('floors as tiers (step 4): gear takes a bigger step, and drifts down inside its floor, so the next floor\'s first drops outclass the last floor\'s best', () => {
-  const { gear, drift } = CONFIG.floorStep;
-  assert.ok(gear > CONFIG.floorStep.mob, 'gear steps more than mobs');
-  assert.equal(gearTier(1), 1); assert.equal(gearTier(6), 1, 'floor 1: as it was');
-  assert.ok(Math.abs(gearTier(19) - (1 + gear) ** 3) < 1e-12, "floor 4's first level: three steps");
-  assert.ok(Math.abs(gearTier(24) / gearTier(19) - (1 - drift) ** 5) < 1e-12, 'its top: five levels of drift');
-  assert.equal(gearFill(20), runLate(20, CONFIG.gearFill) * gearTier(20));
-  for (const f of [2, 4, 6]) {
-    const first = SERVER.locationLevel(f), best = first - 1;
-    const sig = (L) => rollItem(seeded(7), { level: L, rarity: 'tuned', slot: 'proxy' }).stats.signal;
-    assert.ok(sig(first) > 1.15 * sig(best), `floor ${f}: its first blue (${sig(first)}) outclasses the last floor's best (${sig(best)})`);
+// The bench's character (bench.mjs build, floorplan.mjs outfit) in fresh blues at its level, against a mob of its level.
+test("a bot's max Integrity rises every level, and its share of a same-level mob moves smoothly across floors' edges", () => {
+  const mean = (L) => { let n = 0; for (let g = 0; g < 4; g++) { const s = fresh(); build(s, 'breaker', at(L), { gearSeed: g }); n += maxSignal(s); } return n / 4; };
+  let last = mean(5), lastShare = last / mobPower(5);
+  for (let L = 6; L <= 50; L++) {
+    const m = mean(L), share = m / mobPower(L);
+    assert.ok(m > last, `level ${L}: ${Math.round(m)} over ${Math.round(last)}`);
+    const slot = [15, 30].includes(L); // a protocol slot opens: an earned step (gear.mjs PROTOCOL_SLOTS)
+    assert.ok(share / lastShare < (slot ? 1.2 : 1.1) && share / lastShare > 0.93, `level ${L}: a mob's worth ${lastShare.toFixed(0)} to ${share.toFixed(0)}`);
+    last = m; lastShare = share;
   }
-});
-
-// The bench's character (bench.mjs build, floorplan.mjs outfit) in fresh blues at its level: floor 2's fill falls faster
-// (2.2 at 7, 1.45 at 12) than its gear grows, so its max Integrity falls through 10–12, then floor 3's tier lifts it at
-// 13. That's the floor's sawtooth on purpose (docs/scaling.md step 4), not the subclass's chase stat.
-test("a bot's max Integrity in its level's blues: the floor-2 sawtooth dips to 12, floor 3 starts a step above and rises", () => {
-  const mean = (L, opts = {}) => { let n = 0; for (let g = 0; g < 4; g++) { const s = fresh(); build(s, 'breaker', at(L), { ...opts, gearSeed: g }); n += maxSignal(s); } return n / 4; };
-  const m = Object.fromEntries([7, 8, 9, 10, 11, 12, 13, 14, 15, 16].map((L) => [L, mean(L)]));
-  assert.ok(m[10] < m[9] && m[11] < m[10] && m[12] < m[11], `floor 2 falls to its top: ${[9, 10, 11, 12].map((L) => Math.round(m[L]))}`);
-  assert.ok(m[12] < 0.92 * m[7], "floor 2's top is under its first level");
-  assert.ok(m[13] > 1.25 * Math.max(m[7], m[8], m[9]), `floor 3's first blues (${Math.round(m[13])}) clear floor 2's best`);
-  assert.ok(m[14] > m[13] && m[15] > m[14] && m[16] > m[15], 'floor 3 rises');
   // Not the chase: a subclass's chased affix leaves its gear's Integrity where the class's core alone has it.
   for (const L of [10, 11, 12]) {
     const gear = (opts) => { const s = fresh(); build(s, 'breaker', at(L), opts); return gearStat(s, 'signal'); };
@@ -172,7 +173,7 @@ test('fight length (step 3): a Integrity fight\'s Integrity × CONFIG.length.hp 
   assert.ok(Math.abs(hp(long) / hp(base) / runLate(30, CONFIG.length.hp) - 1) < 0.02, 'Integrity up');
   assert.ok(Math.abs(hit(long) / hit(base) / runLate(30, CONFIG.length.dmg) - 1) < 0.1, 'hits down');
   assert.ok(runLate(45, CONFIG.length.hp) > runLate(10, CONFIG.length.hp), 'steeper late, where your damage outgrows a mob\'s Integrity');
-  assert.ok(Math.abs(hp(short) * (1 + CONFIG.floorStep.mob) ** 4 / hp(base) - 1) < 0.02, 'a breach keeps its own pace: no fight length, no floor step (floor 5 here)');
+  assert.ok(Math.abs(hp(short) * (mobPower(30) / power(30)) / hp(base) - 1) < 0.02, 'a breach keeps its own pace: no fight length, no depth step');
   assert.ok(Math.abs(long.addPower - base.hpPower) < 1e-9, 'its adds (fragments, Packages) keep their size');
   // A solo boss: its own Integrity, hits and enrage on your Integrity; elsewhere its old enrage. A crew boss skips it.
   const b = { ...o, family: 'worm', strain: 'floodgate', boss: 'nb-floodwall' };
