@@ -260,6 +260,8 @@ the workflow.
 
 ### Phase 5 · The story's spine and its end
 
+**Done** (24 November 2026): every line approved and wired, each playable from the editor (the Log).
+
 Only two transmissions exist (the welcome and the first server), and the twist is on floor 5. The demo needs a middle
 and an end.
 
@@ -474,4 +476,4 @@ Side by side, the earlier phase lands first and the later one merges main before
   once, no gap). wick's goodbye opens the end card: the demo ends once *Carrier* is delivered and both are heard. The
   designer approved *Carrier*'s two extra letters (wick after step 1, Halcyon Claims after step 3; built) and the end
   card's line, *Floor 3 and below are in the full game.* The editor lists every transmission with **Play from here**
-  (`?playtest=scene&id=`). Only the bosses' fall is hooked; their content waits on Phase 3.
+  (`?playtest=scene&id=`). Only the bosses' fall is hooked; their content waits on Phase 3. The designer kept the letters' subjects (*lantern*, *Coverage notice*). Done.
