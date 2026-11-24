@@ -2351,7 +2351,12 @@ achievement; on hover, a row's pin pins or unpins it (three pins at most) and an
 of the auto rows and the next goal takes its place (pinning it brings it back). The auto rows pick again only at a calm
 moment (the map opened off a run, a run's end): a goal that moved in the last 30 minutes of play first, then the
 nearest done by share, then the fewest left; never one you can't reach yet, one under 10% done, or a class's climb.
-A click on the header folds it to its count (kept on the save). On a phone, one chip. A recovery points at a server you've found (its name in the contract's, *Show on map* on the offer);
+A click on the header folds it to its count (kept on the save). On a phone, one chip.
+
+**The finish card** (`finish.mjs`): after a big finish (a server mapped or taken over, a boss down, a floor job done, a
+goal on your tracker reached), a card over the map once you're off the run and nothing else is up: what finished, what
+it paid as icons, and **Next**, the goal nearest done (a click opens it). Continue (Enter) closes it; the newest finish
+wins. A recovery points at a server you've found (its name in the contract's, *Show on map* on the offer);
 a takeover at one, or at an **unknown server** one hop past one: you trace it to find it.
 
 **The board** opens with the turf letter (the storyline's fourth), or once you've held the claimjack or turf job for an

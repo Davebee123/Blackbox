@@ -54,6 +54,7 @@ import { runnerFloor, runnerBadge } from './runners-view.mjs';
 import { matesOf } from './crew.mjs';
 import { tickPlay, newCharacter, isOpen } from './progression.mjs';
 import * as GO from './goals.mjs';
+import * as FN from './finish.mjs';
 import * as FP from './floorplan.mjs';
 import { spawnRival } from './rivals.mjs';
 import { RUN_CARDS, dealCard } from './runcards.mjs';
@@ -2400,6 +2401,21 @@ function renderJournal() {
   el.hidden = !want;
   if (want) put('jr-find', journalCardMarkup(campaign)); else if (cache.get('jr-find')) { cache.delete('jr-find'); el.innerHTML = ''; }
 }
+// The finish card (finish.mjs): after a big finish, once you're off the run and nothing else is up.
+function renderFinish() {
+  const el = $('fin-find'), want = !!campaign.finish && !campaign.run && !campaign.journalCard && !SC.sceneNow(campaign) && !introOn && module !== 'combat' && !active(campaign) && !gainOpen() && !campaign.roomsPlay;
+  el.hidden = !want;
+  if (want) put('fin-find', V.finishMarkup(campaign)); else if (cache.get('fin-find')) { cache.delete('fin-find'); el.innerHTML = ''; }
+}
+function finishDone() { FN.finishDone(campaign); feel.key('enter'); save(); markDirty(); }
+$('fin-find').addEventListener('click', (e) => {
+  if (e.target.closest('[data-fin-done]')) { e.stopPropagation(); finishDone(); }
+  else if (e.target.closest('[data-go]')) finishDone(); // its Next row: there, and the card goes
+});
+document.addEventListener('keydown', (e) => {
+  if ($('fin-find').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); finishDone(); }
+}, true);
 function journalDone(ledger = false) {
   const id = campaign.journalCard;
   campaign.journalCard = null; feel.key('enter'); save(); markDirty();
@@ -2473,6 +2489,7 @@ function render(force = false) {
   renderMeters();
   renderScene();
   renderJournal();
+  renderFinish();
   renderOffer();
   renderPreview();
   shell.apply(module);
@@ -3781,6 +3798,7 @@ document.addEventListener('click', (e) => {
 // still takes taps (sheet.mjs).
 const PH_POPS = [
   { id: 'journal', host: () => $('jr-find'), label: 'Journal', shut: () => journalDone() },
+  { id: 'finish', host: () => $('fin-find'), label: 'Finish', shut: () => finishDone() },
   { id: 'offer', host: () => $('th-offer'), label: 'Pick your reward', shut: () => { thOffer.later = offerKey(); } },
   { id: 'quest', page: '#th-panel', label: 'Transmission', shut: () => { thUi.closed = campaign.threads?.said?.n ?? null; } },
   { id: 'comms', host: () => $('comms'), height: 'half', label: 'Pager', shut: () => setComms(false) },

@@ -466,4 +466,5 @@ Side by side, the earlier phase lands first and the later one merges main before
   replace Pinned. Three rows: pins first (an earned piece's or an achievement's), then the nearest done. A goal that
   moved in the last 30 minutes of play leads, picked again only at a calm moment. A class's climb and anything under
   10% are left out. A click on the header folds it; on hover a row's pin pins it and an auto row's × dismisses it
-  (the next takes its place; `goals.mjs`). The finish card is still to come.
+  (the next takes its place; `goals.mjs`). The finish card (`finish.mjs`): a server mapped or taken over, a boss, a
+  floor job or a tracked goal brings a card once you're off the run, with what it paid and the next goal.

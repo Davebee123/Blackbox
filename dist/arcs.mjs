@@ -25,6 +25,7 @@
 // State: s.arcs = { [floor]: { step, at, done, doneAt, titles }, offers: [{ floor, step, items }] }. A chain done before
 // it gained a step opens again at that step (regrown). The jobs themselves
 // are mail jobs (s.mail.jobs) marked chain: <floor>, step: <k>, slot: <the target's slot>.
+import { noteFinish } from './finish.mjs';
 import { openUp } from './progression.mjs';
 import { emit, warn, hackerLevel, hooks, addItem, classOf, subOf } from './combat.mjs';
 import { BOSSES, SUBS, defaultSub, CONFIG } from './data.mjs';
@@ -276,6 +277,7 @@ export function arcDelivered(s, c, at = nowOf()) {
   if (last) {
     st.done = true; st.doneAt = at;
     emit(s, 'arc-done', `${ch?.title || 'Floor job'}, done. ${ch?.lore || ''}`.trim(), { chain: n });
+    noteFinish(s, 'chain', ch?.title || 'Floor job'); // the finish card (finish.mjs)
     return null;
   }
   const l = post(s, n, c.step + 1, at);

@@ -44,6 +44,7 @@ import { fill } from './content.mjs';
 import { FACTIONS, changeRep, rep, rivalServers, hubsOf, hubFound, commissionOf } from './factions.mjs';
 import { addrsOf, sweepRooms } from './address.mjs';
 import { takeReceipt } from './receipts.mjs';
+import { noteFinish } from './finish.mjs';
 import { openUp, isOpen } from './progression.mjs';
 import { arcTick, arcTitle, arcProgress, arcReady, arcDelivered, arcTake } from './arcs.mjs';
 
@@ -647,6 +648,7 @@ export function contractTakeover(s, loc) {
   if (loc.takenOver) return;
   loc.takenOver = true;
   openUp(s, 'invasions', { server: loc.name }); openUp(s, 'settlement'); // progression.mjs
+  noteFinish(s, 'takeover', loc.name); // the finish card (finish.mjs)
   gainXp(s, deedXpFor(s, loc.level || 1, 1.5), `${loc.name} taken over`, 'breakin');
   const receipt = takeReceipt(s, loc); // its vault's receipt, to stamp on the takeover card (receipts.mjs)
   emit(s, 'takeover', `${loc.name} TAKEN OVER. ${CREWS[loc.family] || loc.owner} just lost a server.`, { location: loc.id, receipt: receipt?.id || null });

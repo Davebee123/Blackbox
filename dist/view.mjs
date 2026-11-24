@@ -96,6 +96,7 @@ import { housePageMarkup } from './house-view.mjs';
 import { objectiveText, objectiveTip, backupAims } from './objectives.mjs';
 import { pointsOf } from './achievements.mjs';
 import { goalsOf } from './goals.mjs';
+import { FINISH, finishOf } from './finish.mjs';
 import { flowSvg } from './flowfx.mjs';
 import { ORPHAN_TIP, TABLE, countOf, bandOf as tableBand, tableRows, tableMoves } from './table.mjs';
 export { toolkitMarkup, subPromptDue } from './skills-view.mjs';
@@ -2270,17 +2271,32 @@ export function earnTip(s, id) {
 // name, its cells and its goal with n/N. An achievement: its name, its rule with n/N. A click opens its Ledger entry or
 // its achievement; on hover, its pin pins or unpins it and an auto row's × dismisses it. A click on the header folds the
 // section to its count (s.goals.shut).
+// A goal's tracker row (the map's Goals, the finish card's Next): a click opens its Ledger entry or its achievement.
+function goalButton(s, g) {
+  if (g.kind === 'piece') {
+    const u = UNIQUES[g.id], p = earnedOf(s, g.id), over = setOf(g.id)?.name || (u.sources?.[0]?.floor ? 'Floor feat' : 'Feat');
+    return `<button type="button" class="ct-row pin-row${p.set ? ' set' : ''}" data-go="${esc(logGo(homeOfUnique(g.id)))}" title="${esc(earnTip(s, g.id))}">${glyph(SLOT_GLYPH[BASES[u.base]?.slot] || 'item')}<span class="ct-txt"><small class="ct-for">${esc(over)}</small><b>${esc(u.name)}</b></span><span class="ct-prog">${earnCells(p)}<small class="pin-goal">${esc(p.text)} ${p.n}/${p.of}</small></span></button>`;
+  }
+  return `<button type="button" class="ct-row pin-row" data-go="achieve:${esc(g.id)}" title="${esc(`${g.name}\nAchievement\n${g.what}${g.reward ? `\n${g.reward}` : ''}`)}">${glyph('medal')}<span class="ct-txt"><small class="ct-for">Achievement</small><b>${esc(g.name)}</b></span><span class="ct-prog"><small class="pin-goal">${esc(g.what)} <b>${g.n}/${g.of}</b></small></span></button>`;
+}
+// The finish card (finish.mjs) over the map: what finished, what it paid as icons, and the goal nearest done next.
+export function finishMarkup(s) {
+  const f = finishOf(s);
+  if (!f) return '';
+  const next = goalsOf(s)[0];
+  const pays = f.pays.length ? `<p class="fin-pays">${f.pays.map(([g, n]) => `<span class="fin-pay" title="${esc(STATS[g]?.name || (g === 'credits' ? 'Credits' : g))}">${glyph(g)}+${n.toLocaleString('en-US')}</span>`).join('')}</p>` : '';
+  return `<section class="pz-card fin-card" id="fin-card" role="dialog" aria-label="${esc(`${FINISH[f.kind]}: ${f.name}`)}">
+    <header class="pz-head"><p class="pz-kick">${esc(FINISH[f.kind])}</p><h1>${esc(f.name)}</h1></header>${pays}
+    ${next ? `<div class="fin-next"><p class="pz-kick">Next</p>${goalButton(s, next)}</div>` : ''}
+    <div class="jr-acts"><button type="button" class="btn primary" data-fin-done>Continue <kbd>Enter</kbd></button></div></section>`;
+}
 function goalsTracker(s) {
   const gs = goalsOf(s);
   if (!gs.length) return '';
   const shut = !!s.goals?.shut;
   const row = (g) => {
     const pin = `<span class="goal-acts"><button type="button" class="goal-pin${g.pinned ? ' on' : ''}" data-goal-pin="${esc(g.key)}" title="${esc(g.pinned ? 'Unpin' : 'Pin')}" aria-label="${esc(`${g.pinned ? 'Unpin' : 'Pin'} ${g.name}`)}" aria-pressed="${g.pinned}">${glyph('pin')}</button>${g.pinned ? '' : `<button type="button" class="goal-x" data-goal-x="${esc(g.key)}" title="Dismiss" aria-label="${esc(`Dismiss ${g.name}`)}">×</button>`}</span>`;
-    if (g.kind === 'piece') {
-      const u = UNIQUES[g.id], p = earnedOf(s, g.id), over = setOf(g.id)?.name || (u.sources?.[0]?.floor ? 'Floor feat' : 'Feat');
-      return `<div class="goal-row">${pin}<button type="button" class="ct-row pin-row${p.set ? ' set' : ''}" data-go="${esc(logGo(homeOfUnique(g.id)))}" title="${esc(earnTip(s, g.id))}">${glyph(SLOT_GLYPH[BASES[u.base]?.slot] || 'item')}<span class="ct-txt"><small class="ct-for">${esc(over)}</small><b>${esc(u.name)}</b></span><span class="ct-prog">${earnCells(p)}<small class="pin-goal">${esc(p.text)} ${p.n}/${p.of}</small></span></button></div>`;
-    }
-    return `<div class="goal-row">${pin}<button type="button" class="ct-row pin-row" data-go="achieve:${esc(g.id)}" title="${esc(`${g.name}\nAchievement\n${g.what}${g.reward ? `\n${g.reward}` : ''}`)}">${glyph('medal')}<span class="ct-txt"><small class="ct-for">Achievement</small><b>${esc(g.name)}</b></span><span class="ct-prog"><small class="pin-goal">${esc(g.what)} <b>${g.n}/${g.of}</b></small></span></button></div>`;
+    return `<div class="goal-row">${pin}${goalButton(s, g)}</div>`;
   };
   return `<section class="ctrack pins goals${shut ? ' shut' : ''}" aria-label="Goals"><h3 class="ct-head goals-head" data-goals-fold role="button" tabindex="0" aria-expanded="${!shut}"><span class="goals-caret" aria-hidden="true">${shut ? '▸' : '▾'}</span>${glyph('target')}Goals<small>${gs.length}</small></h3>${shut ? '' : gs.map(row).join('')}</section>`;
 }

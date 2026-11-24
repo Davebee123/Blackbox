@@ -124,6 +124,7 @@ comment saying what it does.
 | `dist/raid.mjs` | Crew bosses: phases and mechanics for KESSLER-FARM-00's three. |
 | `dist/planner.mjs` | The scripted fight player for every class, used by the simulations and bot crewmates. |
 | `dist/research.mjs` | Part research: what you know of a part grows with what you do to it. |
+| `dist/finish.mjs` | The finish card after a big finish: what finished, what it paid, the next goal. |
 | `dist/goals.mjs` | The map's Goals: pins, then the earned pieces and achievements nearest done; picked at calm moments, folded or pinned from the tracker. |
 | `dist/progression.mjs` | What each level brings on every track, what opens when (`OPENS`: a new character's event triggers; `opens.test.mjs`), the play clock, and old saves' progression migrations. |
 | `dist/mastery.mjs` | Ability mastery: use evolves an ability's effect through three tiers. Cosmetic only. |

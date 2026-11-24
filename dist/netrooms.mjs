@@ -47,6 +47,7 @@ import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
 import { traceNear, openNext, HIDDEN } from './hidden.mjs';
 import { vaultItem, zoneSpawns, kingOpen, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn } from './run.mjs';
+import { noteFinish } from './finish.mjs';
 import { isOpen, openUp } from './progression.mjs';
 import { blipStood, blipRooms, runCardRoll, runCardUp, runCardEnd } from './events.mjs';
 import { RUN_CARDS } from './runcards.mjs';
@@ -658,7 +659,7 @@ WORLD_hook('mapped', (s) => {
   if (!s.rooms.mappedRest) earnEvent(s, { kind: 'map-norest', floor: loc.depth || 1 }); // No Rest's count (earned.mjs)
   // Mapped: one ? linked to it is traced the rest of the way (floors.mjs), so a floor opens outward one server at a time.
   if (!loc.zone && !loc.member && HIDDEN.opens) openNext(s, loc, 'Mapped: ');
-  if (s.rooms.type === 'server') { const n = NET.mapped(levelOf(loc)); s.server.credits += n; emit(s, 'info', `Mapped: +${n} credits.`, { credits: n }); }
+  if (s.rooms.type === 'server') { const n = NET.mapped(levelOf(loc)); s.server.credits += n; emit(s, 'info', `Mapped: +${n} credits.`, { credits: n }); noteFinish(s, 'mapped', loc.name, [['credits', n]]); } // the finish card (finish.mjs)
 });
 
 // ---------- reading a server (the network map's card) ----------

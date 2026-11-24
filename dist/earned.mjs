@@ -13,6 +13,7 @@
 //   earnTick(s)        every second: the floor goals, paid once full
 //   pinsOf, pinCommand up to three pins (s.pins), shown on the map under Contracts
 import { hooks, emit, warn, addItem, hackerLevel, rand, UNIQUES } from './combat.mjs';
+import { noteFinish, tracked } from './finish.mjs';
 import { FLOORS } from './data.mjs';
 import { uniqueItem } from './gear.mjs';
 import { setOf, fromHere } from './sets.mjs';
@@ -112,6 +113,7 @@ export const cellsOf = (n, of) => { const k = of > CELLS ? Math.max(2, Math.ceil
 
 function pay(s, u, why) {
   if (s.collection?.[u.id]) return null;
+  if (tracked(s, `p:${u.id}`)) noteFinish(s, 'goal', u.name); // a goal on your tracker: the finish card (finish.mjs)
   const it = addItem(s, uniqueItem(u, Math.max(u.level, hackerLevel(s)), () => rand(s)), `Earned (${why}): `);
   if (s.pins) s.pins = s.pins.filter((x) => x !== u.id);
   return it;
