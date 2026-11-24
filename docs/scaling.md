@@ -218,7 +218,8 @@ blue outclasses the last floor's best. Save v56 refills old items on the tiers.
 
 The designer chose the gear-tier sawtooth (November 4). With the same step at a floor's start for mobs, *bottom in the last
 floor's best* can't be easier than *the last floor's top in that same gear*: the mob is one level lower but +15%. So the arc
-is in the floor's own gear: easy on its first drops, 35–45% at its top. Arriving in old gear costs about what the last
+is in the floor's own gear: easy on its first drops, 35–45% at its top. On floor 2 a fresh blue's Integrity falls in absolute terms
+too (the bench's breaker about 255 at 7–9, 225 at 12, 320 at 13; curve.test.mjs): the fill falls faster than gear grows. Arriving in old gear costs about what the last
 floor's top did, and that's the cue to pick up the new drops.
 
 Scratch harness: the four default subclasses (their mean, then each) and the Sysop, 8 wilds each at the level; wins ·

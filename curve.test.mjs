@@ -3,7 +3,7 @@
 // Gear carries your power (step 2): your own numbers grow on a slow line, and gear's filled stats carry the rest.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, restore, addItem, command, gearFx, effectLine, UNIQUES, addLocation, maxSignal, powerOf } from './dist/combat.mjs';
+import { fresh, restore, addItem, command, gearFx, effectLine, UNIQUES, addLocation, maxSignal, powerOf, gearStat } from './dist/combat.mjs';
 import { CONFIG, power, line, lift, lifted, filled, gearFill, gearTier, own, mobPower, runLate, floorFor, createVirus, SERVER } from './dist/data.mjs';
 import { rollItem, uniqueItem, seeded, liftFx, curveRestore, STATS } from './dist/gear.mjs';
 import { deal } from './dist/events.mjs';
@@ -107,6 +107,23 @@ test('floors as tiers (step 4): gear takes a bigger step, and drifts down inside
     const first = SERVER.locationLevel(f), best = first - 1;
     const sig = (L) => rollItem(seeded(7), { level: L, rarity: 'tuned', slot: 'proxy' }).stats.signal;
     assert.ok(sig(first) > 1.15 * sig(best), `floor ${f}: its first blue (${sig(first)}) outclasses the last floor's best (${sig(best)})`);
+  }
+});
+
+// The bench's character (bench.mjs build, floorplan.mjs outfit) in fresh blues at its level: floor 2's fill falls faster
+// (2.2 at 7, 1.45 at 12) than its gear grows, so its max Integrity falls through 10–12, then floor 3's tier lifts it at
+// 13. That's the floor's sawtooth on purpose (docs/scaling.md step 4), not the subclass's chase stat.
+test("a bot's max Integrity in its level's blues: the floor-2 sawtooth dips to 12, floor 3 starts a step above and rises", () => {
+  const mean = (L, opts = {}) => { let n = 0; for (let g = 0; g < 4; g++) { const s = fresh(); build(s, 'breaker', at(L), { ...opts, gearSeed: g }); n += maxSignal(s); } return n / 4; };
+  const m = Object.fromEntries([7, 8, 9, 10, 11, 12, 13, 14, 15, 16].map((L) => [L, mean(L)]));
+  assert.ok(m[10] < m[9] && m[11] < m[10] && m[12] < m[11], `floor 2 falls to its top: ${[9, 10, 11, 12].map((L) => Math.round(m[L]))}`);
+  assert.ok(m[12] < 0.92 * m[7], "floor 2's top is under its first level");
+  assert.ok(m[13] > 1.25 * Math.max(m[7], m[8], m[9]), `floor 3's first blues (${Math.round(m[13])}) clear floor 2's best`);
+  assert.ok(m[14] > m[13] && m[15] > m[14] && m[16] > m[15], 'floor 3 rises');
+  // Not the chase: a subclass's chased affix leaves its gear's Integrity where the class's core alone has it.
+  for (const L of [10, 11, 12]) {
+    const gear = (opts) => { const s = fresh(); build(s, 'breaker', at(L), opts); return gearStat(s, 'signal'); };
+    assert.ok(Math.abs(gear({}) - gear({ noSub: true })) <= 0.05 * gear({}), `level ${L}: the chase barely moves gear Integrity`);
   }
 });
 
