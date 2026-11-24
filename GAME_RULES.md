@@ -981,8 +981,8 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
   Warm cache, then the amber **Pack** button, which counts its rows (credits summed, each code summed, each item its
   own) and opens the list.
 - **Warm cache** (`visit.mjs` `WARM`): each room you win on a visit adds a stack, up to 10. Each gives **+10% XP** and
-  **+5 Scavenge** to everything after it on that visit (room fights, kills, deeds), paid as you go. A jack out keeps
-  the stacks for your next visit to that server; a disconnect loses them. The strip's dashed **Warm** box beside Jack out: a ladder of ten bars, lit as
+  **+5 Scavenge** to everything after it on that visit (room fights, kills, deeds), paid as you go. Every connect starts
+  cold; a disconnect loses the stacks. The strip's dashed **Warm** box beside Jack out: a ladder of ten bars, lit as
   rooms are won, then the XP and Scavenge it adds.
 - **A disconnect** (Integrity 0 on a run, combat.mjs `disconnect`): home at 1 Integrity with everything the visit paid,
   the pack banked as a jack out banks it (an Install job's item back in your stash). XP, items, credits, code, contract

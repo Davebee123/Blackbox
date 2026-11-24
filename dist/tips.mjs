@@ -43,7 +43,7 @@ const TOUR_STEPS = [
     mark: (s) => s.rooms.at, done: (s, m) => !!s.rooms?.visit?.rested || s.rooms?.at !== m,
     text: 'rest here once a visit for some integrity back. the hunter never comes in.' },
   { id: 'tour-jackout', at: '.fp-acts [data-rooms="jackout"]:not([disabled])', when: (s) => !!visitOf(s) && !s.rooms.screen && (s.rooms.stats?.won || 0) > 0, done: (s) => !s.rooms?.at,
-    text: 'jacking out banks your pack and keeps your warm cache for your next visit here. a disconnect banks the pack too, but loses the warm cache.' },
+    text: 'jacking out banks your pack. a disconnect banks it too.' },
 ];
 export const TOUR = TOUR_STEPS.map((t) => ({ ...t, page: 'rooms', tour: true }));
 export const tourIds = TOUR.map((t) => t.id);
@@ -76,7 +76,7 @@ export const TIPS = [
   { id: 'room-core', page: 'rooms', at: '.fp-room.k-core', text: 'this is the core, where the resident lives. it stays sealed till the vault\'s open. beat it and the server\'s yours.' },
   { id: 'room-elite', page: 'rooms', at: '.fp-room.k-elite', text: `this is an elite room. its virus is tougher and has one more tell, and it enrages from cycle ${ROOM_RULES.enrage.elite}.` },
   { id: 'room-thread', page: 'rooms', at: '.fp-quest.m-start', text: 'someone in here has work for you. walk in and talk. threads you take are tracked in mail.' },
-  { id: 'run-signal', page: 'rooms', at: '.fp-sig.mid, .fp-sig.low', after: ['tour-walk'], text: 'your integrity\'s getting thin. at 0 you disconnect and lose your warm cache.', more: (s) => (Object.values(s.rooms?.graph?.rooms || {}).some((r) => r.kind === 'rest') ? 'find a rest room or jack out.' : 'jack out to keep it.') },
+  { id: 'run-signal', page: 'rooms', at: '.fp-sig.mid, .fp-sig.low', after: ['tour-walk'], text: 'your integrity\'s getting thin. at 0 you disconnect.', more: (s) => (Object.values(s.rooms?.graph?.rooms || {}).some((r) => r.kind === 'rest') ? 'find a rest room or jack out.' : 'jack out.') },
   { id: 'run-rival', page: 'rooms', at: '.fp-rvstat', lead: (s) => (rivalOf(s) ? wickLine(s, rivalOf(s)) : ''), text: 'they\'re racing you to the vault. if they reach you, you fight the lot. beat them and their pack is yours.' },
   { id: 'exfil', page: 'rooms', at: '.fp-exfil', text: 'an exfil\'s uploading a stolen archive off this server, and it runs from you. corner it and break its uplink before the upload finishes.' },
   // A puzzle room's board, the first time you see each one (puzzle-view.mjs). One go a board: played to its end, it refills in two hours.

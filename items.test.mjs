@@ -87,7 +87,7 @@ test("Deadman's Switch: Integrity at 0 jacks you out with your pack and keeps th
     s.run.pack = []; const { jackOut } = await import('./dist/run.mjs'); jackOut(s);
     t += 600000; loc.lockUntil = 0;
     connect(s, loc.id);
-    assert.equal(s.rooms.visit.warm, 4, 'a plain jack out keeps it too');
+    assert.equal(s.rooms.visit.warm, 0, 'once');
   } finally { delete hooks.now; }
 });
 

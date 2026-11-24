@@ -1,9 +1,9 @@
 // A visit (GAME_RULES.md "Visits"): jack out and a disconnect both bring home everything it paid (run.mjs bank). The
-// one thing a disconnect loses is the visit's Warm cache, which a jack out keeps for the next visit to that server.
+// one thing a disconnect loses is the visit's Warm cache, which lives on the visit and starts cold on the next.
 
 // Warm cache (GAME_RULES.md "Warm cache"): each room you win on a visit adds a stack, up to WARM.max; each gives
 // WARM.xp more XP and WARM.scavenge more Scavenge to everything after it on that visit. It lives on the visit
-// (R.visit.warm); a jack out carries it to that server's next visit (floorplan.mjs R.warmCarry), a disconnect loses it. A co-op guest's game
+// (R.visit.warm), so every connect starts cold, and a disconnect loses it. A co-op guest's game
 // gets the host's stacks with each reward (coop.mjs payReward: s._warm while it pays).
 export const WARM = { max: 10, xp: 0.1, scavenge: 5 };
 export const warmOf = (s) => {

@@ -1019,7 +1019,7 @@ export function enter(s, now = nowOf(), { keys = [] } = {}) {
   R.fightFrom = null; // in with the Integrity you connected with, never a fight's from an earlier visit
   R.at = R.graph.entry;
   R.inSince = now;
-  R.visit = { n: R.visits, walked: { [R.graph.entry]: true }, keys: [...keys], rested: false, moves: 0, hunter: newHunter(s), slips: 0, back: null, xp0: xpTotal(s), warm: R.warmCarry || 0 }; // the last visit's Warm cache, kept by a jack out (or Deadman's Switch)
+  R.visit = { n: R.visits, walked: { [R.graph.entry]: true }, keys: [...keys], rested: false, moves: 0, hunter: newHunter(s), slips: 0, back: null, xp0: xpTotal(s), warm: R.warmCarry || 0 }; // Deadman's Switch kept the last visit's Warm cache (combat.mjs disconnect)
   delete R.warmCarry;
   R.screen = null;
   look(s);
@@ -1041,7 +1041,6 @@ export function jackOut(s, why = '') {
   keysBack(s);
   if (R.world) {
     R.last = { result: 'out', xp: xpTotal(s) - R.visit.xp0, banked: s.run.pack.length, visit: R.visit.n };
-    if (R.visit.warm) R.warmCarry = R.visit.warm; // a clean jack out keeps the Warm cache for your next visit here (visit.mjs)
     goHome(s);
     ask('leave', s, 'out', why);
     return out(s, first);

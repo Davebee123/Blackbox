@@ -704,7 +704,7 @@ function hudMarkup(s) {
 function warmBox(s) {
   const n = warmOf(s), xp = Math.round(WARM.xp * 100 * n), sc = WARM.scavenge * n;
   const bars = Array.from({ length: WARM.max }, (_, i) => `<i class="${i < n ? 'on' : ''}" style="height:${4 + Math.round((i * 9) / (WARM.max - 1))}px"></i>`).join('');
-  const tip = `Warm cache: Each room you win on this visit adds +${WARM.xp * 100}% XP and +${WARM.scavenge} Scavenge to the rooms after it, up to ${WARM.max}. Jack out and it waits for your next visit here. A disconnect loses it.\n▸ ${n} room${n === 1 ? '' : 's'}: +${xp}% XP, +${sc} Scavenge.`;
+  const tip = `Warm cache: Each room you win on this visit adds +${WARM.xp * 100}% XP and +${WARM.scavenge} Scavenge to the rooms after it, up to ${WARM.max}. It starts cold on every visit, and a disconnect loses it.\n▸ ${n} room${n === 1 ? '' : 's'}: +${xp}% XP, +${sc} Scavenge.`;
   return `<span class="fp-stat fp-visit fp-warm${n ? '' : ' empty'}" data-tt-kind="Visit bonus" title="${esc(tip)}"><span class="lbl">Warm</span><span class="fp-ladder" aria-hidden="true">${bars}</span><b>${glyph('xp')}+${xp}%</b><b>${glyph('scavenge')}+${sc}</b></span>`;
 }
 // The Pack: what you carry on this visit, a row per thing (credits summed, each code summed, each item its own).
