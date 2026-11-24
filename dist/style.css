@@ -1827,6 +1827,7 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .ltabs { display: flex; gap: 4px; margin: 10px 0 12px; border-bottom: 1px solid var(--line); }
 .ltabs button { font: 600 12px var(--sans); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; margin-bottom: -1px; cursor: pointer; }
 .ltabs button[aria-selected='true'] { color: var(--amber); border-bottom-color: var(--amber); }
+.ltabs button.ltab-new:not([aria-selected='true']) { color: var(--you); }
 .ltabs button:hover { color: var(--text); }
 
 /* The Sync Window: a slice of the cycle bar; it lights while the bar is inside it. */

@@ -224,3 +224,20 @@ test('wick narrates every tip, in his own voice', async () => {
   assert.equal(t.id, 'run-rival');
   assert.ok(t.text.startsWith(RV.wickLine(s, RV.rivalOf(s)) + ' '), t.text);
 });
+
+test('the sync window tip pauses the fight the first time a window shows; the level tip comes right after your first level-up', () => {
+  const sync = TIPS.find((t) => t.id === 'sync'), level = TIPS.find((t) => t.id === 'level');
+  assert.equal(paceOf(sync, 'combat'), 'mid', 'a window can be missing at the opening pause, so it shows when one lands');
+  assert.equal(paceOf(level, 'map'), 'free', 'no wait for a calm screen');
+});
+
+test('the Protocols tab says what is new in your stash, teal, until you open it', async () => {
+  const { sawTab } = await import('./dist/view.mjs');
+  const s = fresh();
+  sawTab(s, 'loadout');
+  s.stash = [...(s.stash || []), { id: 'zz-new', name: 'New thing' }];
+  const tabOf = (html) => html.match(/<button[^>]*data-ltab="protocols"[^>]*>[^<]*<\/button>/)?.[0] || '';
+  assert.match(tabOf(loadoutMarkup(s, 'breaker')), /class="ltab-new"[\s\S]*· 1 new/);
+  sawTab(s, 'loadout');
+  assert.doesNotMatch(tabOf(loadoutMarkup(s, 'breaker')), /ltab-new|new</);
+});

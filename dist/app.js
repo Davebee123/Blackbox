@@ -2259,7 +2259,7 @@ function renderMeters() {
   if (module === 'loadout' && loadoutTab === 'daemons') V.sawTab(campaign, 'daemons'); // daemons are a Loadout tab
   if (module === 'loadout' && loadoutTab !== 'daemons') V.sawTab(campaign, 'skills'); // new skills: seen once you open Loadout
   for (const t of ['loadout']) {
-    if (module === t && !(t === 'loadout' && loadoutTab === 'daemons')) V.sawTab(campaign, t); // you're looking at it
+    if (module === t && loadoutTab === 'protocols') V.sawTab(campaign, t); // new protocols: seen once you open the Protocols tab
     const n = V.newOn(campaign, t) + (t === 'loadout' ? V.newOn(campaign, 'daemons') + V.newOn(campaign, 'skills') : 0), el = $('new-' + t);
     el.hidden = !n;
     el.textContent = n;

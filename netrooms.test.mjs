@@ -266,7 +266,7 @@ test('contracts point at rooms: clear N new rooms on a server, map a server; the
   assert.equal(typeof contractRooms, 'function');
 });
 
-test('Warm cache: each room won on a visit adds +10% XP and +5 Scavenge to what comes after, up to 10; every connect starts cold; the strip shows its ladder and the Pack', async () => {
+test('Warm cache: each room won on a visit adds +10% XP and +5 Scavenge to what comes after, up to 10; a jack out keeps it for the next visit; the strip shows its ladder and the Pack', async () => {
   const { WARM, warmOf } = await import('./dist/visit.mjs'), { gainXp, hackerOf, scavengeOf } = await import('./dist/combat.mjs');
   const { s, loc } = traced();
   play(s, 'connect ' + loc.id);
@@ -293,8 +293,9 @@ test('Warm cache: each room won on a visit adds +10% XP and +5 Scavenge to what 
   const btnB = html.match(/data-fp-pack[^>]*>(?:<svg[\s\S]*?<\/svg>)<b>(\d+)<\/b>/);
   assert.equal(Number(btnB?.[1]), 2, 'the Pack: credits summed into one row, the code into another');
   play(s, 'jack out');
+  loc.lockUntil = 0; loc.floorplan.reconnectAt = 0; s.server.integrity = s.server.max;
   play(s, 'connect ' + loc.id);
-  assert.equal(warmOf(s), 0, 'a new visit starts cold');
+  assert.equal(warmOf(s), 6, 'a jack out keeps the Warm cache for the next visit there');
 });
 
 test('the room page on the network: the strip names the server, its rule and level; no boss-rule switch; nothing undefined', () => {

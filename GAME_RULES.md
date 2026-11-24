@@ -202,8 +202,8 @@ Operator). An Operator runs at most 6 helpers at once.
 
 A win shows a card over the virus: XP (one bar, any level-up), drops, code, components, leads and bounties. Enter on an
 empty line goes back. **Fast kills:** each class keeps your usual pace (cycles per 100 Integrity); from your sixth kill
-with it, a win at least a quarter faster pays **+25% XP** (*Fast kill*). Loadout and Daemons carry a teal count of what's
-arrived since you last opened them.
+with it, a win at least a quarter faster pays **+25% XP** (*Fast kill*). Loadout carries a teal count of what's
+arrived since you last opened its tab (protocols on the Protocols tab), and that tab turns teal with **N new**.
 
 **Disconnect.** At 0 Integrity on a run you go home at 1 with everything the visit paid; the Warm cache is lost
 (Visits). The screen holds on the hit for 0.8 s, drops to static with **NO CARRIER** and the server's name, then clears
@@ -980,8 +980,8 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
   Warm cache, then the amber **Pack** button, which counts its rows (credits summed, each code summed, each item its
   own) and opens the list.
 - **Warm cache** (`visit.mjs` `WARM`): each room you win on a visit adds a stack, up to 10. Each gives **+10% XP** and
-  **+5 Scavenge** to everything after it on that visit (room fights, kills, deeds), paid as you go. Every connect starts
-  cold; a disconnect loses the stacks. The strip's dashed **Warm** box beside Jack out: a ladder of ten bars, lit as
+  **+5 Scavenge** to everything after it on that visit (room fights, kills, deeds), paid as you go. A jack out keeps
+  the stacks for your next visit to that server; a disconnect loses them. The strip's dashed **Warm** box beside Jack out: a ladder of ten bars, lit as
   rooms are won, then the XP and Scavenge it adds.
 - **A disconnect** (Integrity 0 on a run, combat.mjs `disconnect`): home at 1 Integrity with everything the visit paid,
   the pack banked as a jack out banks it (an Install job's item back in your stash). XP, items, credits, code, contract
@@ -2976,8 +2976,8 @@ lists the buttons), nor a phone's tab bar; on a phone it drops wick's face. Your
 **Pacing** (tips.mjs `paceOf`). A map, room or menu tip shows at most once a screen visit, and 2 minutes after the last
 one closed. A fight tip about what the fight opened with shows only while it's paused (a room fight opens paused until
 your first order), one a fight; your first fight's is one tip you step through (the timeline, your skills, the
-interrupt's ticks, armor, the Sync Window). What lands mid-fight (a spent tick from your second fight on, a patch, a
-miss) pauses it. A part's, a virus's, a mutation's or a quirk's own rule gets no tip: its tag's hover teaches it.
+interrupt's ticks, armor, the Sync Window if one is up). What lands mid-fight (the first Sync Window, a spent tick from
+your second fight on, a patch, a miss) pauses it. The level tip skips the pacing: it comes as your first level-up closes. A part's, a virus's, a mutation's or a quirk's own rule gets no tip: its tag's hover teaches it.
 The rooms tour skips the pacing. **Turn tips off** on any tip or the Settings page; **Replay tips** shows
 them again.
 
