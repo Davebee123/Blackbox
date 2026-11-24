@@ -112,7 +112,7 @@ called off, the big key on the beat) something specific.
 | HOLLOW CHOIR (built) | **One voice** | **Second voice**: seat Pulse Node | **Round**, one voice | The big key on the beat |
 | GRACE PERIOD | **Grace** 3, the Rider | **Reinstatement**: a lapsed part +25% until stripped; nothing returns | **Acceleration**: a lapse takes a cycle off every other part | Paying every part |
 | CENTRIFUGE (built) | **Bidding** | **Reserve price** | **Second lot** | Commands at the Gavel |
-| The Residents (built) | **Backlash** | **Watchdog**, this act only | Worm **Outbreak** (a lash hatches); ransomware **Lockdown** (a lash encrypts you) | Hits on the beat |
+| The Residents (built) | **Backlash** | **Watchdog**, this act only | Worm **Outbreak** (a lash hatches); ransomware **Lockdown** (a lash encrypts you); ghostroot **Static** (scrambles you); botnet **Rally** (a Zombie back); cryptominer **Full load** (the Hash +2 steps); logic bomb **Live wire** (−2 fuse) | Hits on the beat |
 | DEADBOLT (built) | **Lock** | **Tumblers**: a Deadbolt that lands re-locks | **Double lock**: a Mutex, seat Pulse Node | Hitting the lock |
 | TRIPMINE | **Tripwire** | **Daisy chain**: a Tripwire, seat Pulse Node (Claymore to the Encryptor) | **Dead man**: the Pulse Node sets off every wire | The Tripwire first |
 | HASHLORD | **Pool Lock** | **Chain Fork**: a Miner, seat Pulse Node | **51%**: the Lock wards the healthiest part | Commands into the ward |

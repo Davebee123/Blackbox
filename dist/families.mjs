@@ -346,6 +346,16 @@ function detonate(s, p) {
   const dealt = takeDamage(s, Math.min(n, Math.max(0, d.integrity - 1)), p.id, 'Detonation');
   emit(s, 'server-hit', `The ${p.name} DETONATES: −${dealt}. It's gone, and its loot with it.`, { source: p.id, amount: dealt, atk: 'Detonation', detonate: true });
 }
+// The Resident's act 3 (acts.mjs LASH_PLUS): a lash burns the fuse (Live wire), or brings a Zombie back (Rally).
+hooks.burnFuse = burnFuse;
+hooks.rally = (s, z) => {
+  if (!z) return;
+  const c = livingParts(s).find((x) => x.cnc);
+  z.integrity = z.max; z.armor = z.maxArmor || 0;
+  volleyLift(s);
+  if (c?.attack && c.attack.due >= 999) c.attack.due = s.encounter.cycle + c.attack.interval;
+  emit(s, 'spawn', `RALLY: the ${c?.name || 'C&C'} brings ${z.name} back.`, { source: c?.id, target: z.id });
+};
 // Every hit on a Payload, before ◆ or Integrity take it (combat.mjs hit): Contact counts your commands' hits, Timed every
 // hit but the server's. 'gone': it detonated.
 hooks.bodyHit = (s, p, base, opts) => {

@@ -4,6 +4,7 @@ const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) =>
 import { selectEncounter, partKey, parse, validate, toIntent, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync, packed } from './combat.mjs';
 import * as V from './view.mjs';
 import { subPrompted, levelUpPreview, barKeys, hackerLevel as heroLevel, virusIntegrity } from './combat.mjs';
+import { skipToAct } from './acts.mjs';
 import { luCalm } from './levelup-view.mjs';
 import { createLevelUpUi } from './levelup-ui.mjs';
 import { SHAPES, render as ascii3d } from './ascii3d.mjs';
@@ -219,7 +220,7 @@ function load() {
     if (home) { const spec = home[1].parts.find((x) => x.id === pid), L = lv >= 1 && lv <= 50 ? lv : Math.max(spec.from || 1, 3); s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; selectEncounter(s, 'random', seed || 1, { level: L, family: home[0], mutation: null, ...(exeOn ? { exe: [pid] } : {}), ...(spec.pool === 'third' ? { genes: partGenesFor(home[0], spec, L), basic: 'pulse' } : { basic: pid }) }); }
     // ?playtest=fx (abilityfx-playtest.mjs): the ability effects playtest, on a three-part fight (&family=, &seed=, &level=).
     else if (playtest === 'fx') { const L = lv >= 1 && lv <= 50 ? lv : 12; s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; if (/^[a-z ]+$/.test(params.get('crew') || '')) play(s, `crew sim ${params.get('crew')}`); selectEncounter(s, 'random', seed || 8, { level: L, family: /^[a-z]+$/.test(fam || '') ? fam : 'ransomware', mutation: null }); } // &crew=<class>: a crewmate in the crew window, to fire theirs
-    // ?playtest=boss:<id> (BOSSES: resident, repoman, choir…): that boss at &level= (10 by default), &family= for the Resident,
+    // ?playtest=boss:<id> (BOSSES: resident, repoman, choir…): that boss at &level= (10 by default), &family= for the Resident, &act= to start at act 2 or 3,
     // geared for it (&cls=, &sub=). The event bosses fight at home, the rest on your Integrity in a Core, as in the game.
     else if (playtest.startsWith('boss:') && BOSSES[playtest.slice(5)]) {
       const id = playtest.slice(5), B = BOSSES[id], L = lv >= 1 && lv <= 50 ? lv : Math.max(10, B.floor || 0), family = /^[a-z]+$/.test(fam || '') ? fam : B.family || 'worm';
@@ -231,6 +232,7 @@ function load() {
     else command(s, `encounter ${/^[a-z]+$/.test(playtest) ? playtest : 'cryptjack'}`); // any fixture or strain
     if (!s.encounter) command(s, 'encounter cryptjack');
     command(s, 'engage');
+    if (playtest.startsWith('boss:') && Number(params.get('act')) > 1) skipToAct(s, Number(params.get('act'))); // &act=2 or 3: start there
     s.encounter.paused = true;
     return s;
   }

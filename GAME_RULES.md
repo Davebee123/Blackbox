@@ -578,10 +578,20 @@ before. A phase change flashes on screen.
 **The Resident.** Opening a server's vault unseals its **Core**, where the Resident waits: the owner's process, a boss of
 the server's family (all three parts) at the server's level, 1.4× Integrity (1.1× on your first server). Its phase
 re-arms every part. Its ♛ runs a **Watchdog**: every 5 cycles it stands above its next tick, every other part patches a
-◆ (up to its full); past its ♛'s last tick there is none. *watchdog n* on its ♛. A worm or ransomware Resident plays in
-acts instead (below), 1.1× Integrity, its ♛ half each act's (taken from its other parts): act 1 the **Backlash**, act 2
-the **Watchdog**, act 3 the worm's **Outbreak** (a lash also hatches a fragment) or the ransomware's **Lockdown** (a lash
-also encrypts you, while the Encryptor stands). *outbreak* or *lockdown* on its ♛. Beat it and the server is **taken over**: yours, teal on the map, its Core
+◆ (up to its full); past its ♛'s last tick there is none. *watchdog n* on its ♛. The Resident of every family a floor
+1–2 server has plays in acts instead (below), 1.1× Integrity, its ♛ half each act's (taken from its other parts): act 1
+the **Backlash**, act 2 the **Watchdog**, act 3 its family's rider on each lash, named on its ♛:
+
+| Family | Act 3 | Each lash also |
+|---|---|---|
+| Worm | **Outbreak** | hatches a fragment |
+| Ransomware | **Lockdown** | encrypts you, while the Encryptor stands |
+| Ghostroot | **Static** | Scrambles you, while the Scrambler stands |
+| Botnet | **Rally** | brings a broken Zombie back at full, while the C&C stands |
+| Cryptominer | **Full load** | steps the Hash up twice (a vent clears it) |
+| Logic bomb | **Live wire** | burns 2 off the Payload's fuse |
+
+Beat it and the server is **taken over**: yours, teal on the map, its Core
 quiet for good. Lose and you're disconnected; it stays as it was.
 
 On a run each solo boss takes its own Integrity and hits on top of the fight length (`BOSSES` long). In acts each
@@ -660,7 +670,7 @@ three solo bosses, the floor 2–5 bosses and the natives. A crew boss keeps its
   acts to come full and dim.
 - **A tell an act.** Act 1 deals the boss's first tell (its charge), act 2 its cast as well, act 3 its third.
 - **The beat** repeats, always on the board. Acts 2 and 3 bring the boss's mechanics (a Resident's: the Watchdog,
-  then the Outbreak or the Lockdown).
+  then its family's rider).
 - **Nothing is farmed twice.** A part broken again in a later act gives no research, components or .exe drop.
 
 | Boss | The beat | Every | What answers it |

@@ -468,3 +468,11 @@ Side by side, the earlier phase lands first and the later one merges main before
   10% are left out. A click on the header folds it; on hover a row's pin pins it and an auto row's × dismisses it
   (the next takes its place; `goals.mjs`). The finish card (`finish.mjs`): a server mapped or taken over, a boss, a
   floor job or a tracked goal brings a card once you're off the run, with what it paid and the next goal.
+- **Phase 4, the Residents** (24 Nov, `claude/demo-phase4`, waits on the designer's play): every floor 1–2 family's
+  Resident in three acts, the Backlash and the Watchdog as before, act 3 its family's rider on each lash (acts.mjs
+  `LASH_PLUS`, named on the ♛ and in the Return chip): ghostroot **Static** (scrambles you), botnet **Rally** (a broken
+  Zombie back), cryptominer **Full load** (the Hash +2 steps), logic bomb **Live wire** (2 off the fuse). `bar` 1 each;
+  the planner's acts at 10 (13 for the logic bomb): 16–20 cycles. The boss playtest takes `&act=2|3`, and `developer
+  location` any server family (the botnet's, cryptominer's and logic bomb's playtest threw before). The botnet borrows
+  the worm's body, the cryptominer and the logic bomb the ransomware's. Step 2 (floor 2 in band) waits on the
+  designer's call: the bots' gear loses Integrity from 9 to 12 (a task of its own), which skews every band at 11–12.

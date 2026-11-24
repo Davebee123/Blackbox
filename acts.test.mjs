@@ -22,13 +22,14 @@ function boss(id, family = BOSSES[id].family, level = 12, seed = 3) {
 const core = (s) => livingParts(s).find((p) => p.core);
 const to = (s, c) => { while (s.encounter.cycle < c) { command(s, 'hold'); resolveCycle(s); } };
 
-test('the worm and ransomware Residents and the three solo bosses are P4 bosses; the ghostroot Resident is not yet', () => {
-  for (const [id, fam] of [['resident', 'worm'], ['resident', 'ransomware'], ['relayking'], ['repoman'], ['choir']]) assert.ok(actsOf(boss(id, fam).encounter.virus), `${id} ${fam || ''}`);
-  assert.equal(actsOf(boss('resident', 'ghostroot').encounter.virus), null);
+const RESIDENTS = ['worm', 'ransomware', 'ghostroot', 'botnet', 'cryptominer', 'logicbomb']; // every family a floor 1–2 server has
+test('the Residents of floors 1–2 and the three solo bosses are P4 bosses; a deeper family\'s Resident is not yet', () => {
+  for (const [id, fam] of [...RESIDENTS.map((f) => ['resident', f]), ['relayking'], ['repoman'], ['choir']]) assert.ok(actsOf(boss(id, fam).encounter.virus), `${id} ${fam || ''}`);
+  assert.equal(actsOf(boss('resident', 'wiper').encounter.virus), null);
 });
 
 test('the Resident names its act 1 as the fight opens (the act break\'s strip); a boss with no act 1 name does not', () => {
-  for (const fam of ['worm', 'ransomware']) {
+  for (const fam of RESIDENTS) {
     const ev = boss('resident', fam).logs.filter((l) => l.type === 'act-open');
     assert.equal(ev.length, 1, fam);
     assert.deepEqual([ev[0].act.n, ev[0].act.of, ev[0].act.name], [1, 3, 'Backlash'], fam);
@@ -149,6 +150,36 @@ test("the Resident's acts: the Watchdog in act 2 only; in act 3 the worm's lash 
   assert.ok(r.encounter.encrypt > 0, 'Lockdown: the lash encrypted you');
 });
 
+test("the Resident's act 3 by family: Static scrambles you, Rally brings a Zombie back, Full load steps the Hash, Live wire burns the fuse", async () => {
+  await import('./dist/families.mjs');
+  const { boardMarkup } = await import('./dist/view.mjs');
+  const act3 = (fam) => { const s = boss('resident', fam); breakAll(s); breakAll(s); return s; };
+  const plus = (s, says) => intents(s).some((i) => i.effect === 'backlash' && i.plus === says);
+  // Static: a lash scrambles you while the Scrambler stands.
+  const g = act3('ghostroot');
+  assert.match(boardMarkup(g), /Static\nBoss rule/);
+  assert.ok(plus(g, 'scrambles you'));
+  lash(g);
+  assert.ok(g.logs.some((l) => l.type === 'blind' && /^Static lands/.test(l.message)), 'Static: the lash scrambled you');
+  // Rally: with a Zombie down, a lash brings it back at full.
+  const b = act3('botnet'), z = b.encounter.virus.parts.find((x) => x.zombie);
+  assert.ok(!plus(b, 'rallies a Zombie'), 'nothing to rally while every Zombie stands');
+  z.integrity = 0;
+  assert.ok(plus(b, 'rallies a Zombie'));
+  lash(b);
+  assert.equal(z.integrity, z.max, 'Rally: the Zombie is back');
+  // Full load: a lash steps the Hash up twice.
+  const c = act3('cryptominer'), rig = part(c, 'rig'), was = rig.attack.step || 0;
+  lash(c);
+  assert.ok((rig.attack.step || 0) >= was + 2, 'Full load: two steps on the Hash');
+  // Live wire: a lash burns 2 off the Payload's fuse.
+  const { fuseLeft } = await import('./dist/families.mjs');
+  const l = act3('logicbomb'), pay = part(l, 'payload'), v = l.encounter.virus, f = fuseLeft(v, pay);
+  assert.ok(plus(l, 'burns the fuse'));
+  lash(l);
+  assert.equal(fuseLeft(v, pay), f - 2, 'Live wire: 2 off the fuse');
+});
+
 test("the solo bosses' beats are their own parts' (docs/solo-bosses.md): the Relay's Broadcast, the Ledger's Collection, the Mimic", () => {
   for (const [id, kind, at] of [['relayking', 'broadcast', 'relay'], ['repoman', 'collect', 'ledger'], ['choir', 'copy', 'mimic']]) {
     const b = beatOf(boss(id));
@@ -170,7 +201,7 @@ test('a fresh save is untouched: no boss state outside a fight', () => {
 // the last.
 test('every solo boss, natives too, plays its acts as bars', async () => {
   const FP = await import('./dist/floorplan.mjs');
-  const solo = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid && BOSSES[k].phases?.length).flatMap((k) => (k === 'resident' ? ['worm', 'ransomware', 'ghostroot'].map((f) => [k, f]) : [[k, BOSSES[k].family]]));
+  const solo = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid && BOSSES[k].phases?.length).flatMap((k) => (k === 'resident' ? [...RESIDENTS, 'wiper'].map((f) => [k, f]) : [[k, BOSSES[k].family]]));
   for (const [id, family] of solo) {
     const s = fresh(), L = Math.max(BOSSES[id].floor || 14, 14), name = `${id} ${family}`;
     FP.outfit(s, { cls: 'breaker', level: L });

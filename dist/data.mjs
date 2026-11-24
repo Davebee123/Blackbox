@@ -1061,6 +1061,9 @@ const STRAIN_BOSS_LATE = [[8, 1], [10, 0.8], [18, 1.1], [30, 1.45]];
 const HASHLORD_LATE = [[8, 1], [10, 0.8], [18, 0.95], [30, 1.1]];
 // The Resident's act 1, named as the fight opens (combat.mjs engage, the act break's strip): name, emote, say (the log).
 const LASH_OPEN = { name: 'Backlash', emote: 'Touch a handler on the beat and it answers.', say: 'Hit a part on the Resident\'s beat and it lashes back.' };
+// Its beat (every 4 cycles, from first) and its bar, by family.
+const LASH = (first, bar) => ({ beat: 'backlash', every: 4, first, hp: 1.1, enrageAt: 24, bar, ...LASH_OPEN });
+const WATCHDOG = { at: 0.5, do: ['watchdog'], name: 'Watchdog', emote: 'Watchdog armed. Every handler reports to me now.', say: 'The Resident arms its Watchdog. While its ♛ stands above its next tick, every other part patches a ◆ every 5 cycles.' };
 export const BOSSES = {
   // The Resident (run.mjs /core): about two wins in three for a geared player at its level.
   // bar: how long its acts run against the rest (acts.mjs ACT_BARS: each act 15 to 20 cycles for the planner); the Resident's
@@ -1070,14 +1073,22 @@ export const BOSSES = {
   // watchdog: every that many cycles the ♛ stands above its next tick, every other part patches a ◆ (combat.mjs): all
   // fight for a Resident not in acts, act 2 only for one in acts.
   // P4 (acts.mjs, docs/puzzle-fights.md 7): a P4 boss plays in three acts, each from a tick on its ♛ part. acts: its beat
-  // (backlash, copy, bend, broadcast or collect), every and first its rhythm; a phase's every quickens it. The Resident's are by family: the
-  // worm's and the ransomware's are built, the ghostroot's keeps the old phase until P4's next batch.
+  // (backlash, copy, bend, broadcast or collect), every and first its rhythm; a phase's every quickens it. The Resident's are by family: every
+  // family a floor 1–2 server has (the rest keep the old phase).
   resident: { long: { hp: 1.6, dmg: 0.54, enrageAt: 36 }, name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, work: { share: 0.5 }, watchdog: { every: 5 }, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }],
-    acts: { worm: { beat: 'backlash', every: 4, first: 3, hp: 1.1, enrageAt: 24, bar: 0.6, ...LASH_OPEN }, ransomware: { beat: 'backlash', every: 4, first: 4, hp: 1.1, enrageAt: 24, bar: 1.2, ...LASH_OPEN } },
-    // Its acts by family (docs/solo-bosses.md "The act-bars redesign"): act 2 the Watchdog, act 3 the worm's Outbreak (a lash
-    // hatches a fragment) or the ransomware's Lockdown (a lash encrypts you).
-    actPhases: { worm: [{ at: 0.5, do: ['watchdog'], name: 'Watchdog', emote: 'Watchdog armed. Every handler reports to me now.', say: 'The Resident arms its Watchdog. While its ♛ stands above its next tick, every other part patches a ◆ every 5 cycles.' }, { at: 0.25, do: ['outbreak'], name: 'Outbreak', emote: 'Every handler spawns now. Hit me and I spread.', say: 'The Resident breaks out. Each Backlash hatches a fragment.' }],
-      ransomware: [{ at: 0.5, do: ['watchdog'], name: 'Watchdog', emote: 'Watchdog armed. Every handler reports to me now.', say: 'The Resident arms its Watchdog. While its ♛ stands above its next tick, every other part patches a ◆ every 5 cycles.' }, { at: 0.25, do: ['lockdown'], name: 'Lockdown', emote: 'Lockdown. Every handler carries a key.', say: 'The Resident locks down. Each Backlash encrypts you while the Encryptor stands.' }] } },
+    acts: { worm: LASH(3, 0.6), ransomware: LASH(4, 1.2), ghostroot: LASH(3, 1), botnet: LASH(4, 1), cryptominer: LASH(3, 1), logicbomb: LASH(3, 1) },
+    // Its acts by family (docs/solo-bosses.md "The act-bars redesign"): act 2 the Watchdog, act 3 the family's nature on
+    // top of each lash (acts.mjs LASH_PLUS): the worm's Outbreak hatches a fragment, the ransomware's Lockdown encrypts
+    // you, the ghostroot's Static scrambles you, the botnet's Rally brings a Zombie back, the cryptominer's Full load
+    // steps the Hash up, the logic bomb's Live wire burns the Payload's fuse.
+    actPhases: {
+      worm: [WATCHDOG, { at: 0.25, do: ['outbreak'], name: 'Outbreak', emote: 'Every handler spawns now. Hit me and I spread.', say: 'The Resident breaks out. Each Backlash hatches a fragment.' }],
+      ransomware: [WATCHDOG, { at: 0.25, do: ['lockdown'], name: 'Lockdown', emote: 'Lockdown. Every handler carries a key.', say: 'The Resident locks down. Each Backlash encrypts you while the Encryptor stands.' }],
+      ghostroot: [WATCHDOG, { at: 0.25, do: ['static'], name: 'Static', emote: 'Static. Every handler carries noise.', say: 'The Resident goes to static. Each Backlash Scrambles you while the Scrambler stands.' }],
+      botnet: [WATCHDOG, { at: 0.25, do: ['rally'], name: 'Rally', emote: 'Rally. Touch a handler and I enlist another.', say: 'The Resident rallies. Each Backlash brings a broken Zombie back while the C&C stands.' }],
+      cryptominer: [WATCHDOG, { at: 0.25, do: ['fullload'], name: 'Full load', emote: 'Full load. Every handler feeds the rig.', say: 'The Resident runs at full load. Each Backlash steps the Hash up twice.' }],
+      logicbomb: [WATCHDOG, { at: 0.25, do: ['livewire'], name: 'Live wire', emote: 'Live wire. Every handler is wired to the charge.', say: 'The Resident goes live. Each Backlash burns 2 off the Payload\'s fuse.' }],
+    } },
   // The three solo bosses (docs/solo-bosses.md) play in acts too: each has a part and a rule of its own, its beat on that
   // part (acts.mjs), and a mechanic an act, from its ♛ part's ticks (combat.mjs bossPhases).
   // RELAY-KING (run.mjs): a worm boss in SPRAWL-00's /net from level 3, back every half hour. Its Relay's Broadcast grows

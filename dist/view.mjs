@@ -4,7 +4,7 @@ import { masteryLine } from './mastery.mjs';
 import { componentsOf } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
-import { actInfo, actBar } from './acts.mjs';
+import { actInfo, actBar, LASH_PLUS, riderOf } from './acts.mjs';
 import { robinOpen, robinIn, dozer } from './nativeacts.mjs';
 import { FB, BUYER, nextBuyer, dumpOf, topFrame, canCall, frames, leakOf, depthOf, pendingOf, tradeOf, voteOf, forkOf, nodesOf, camerasOf, hatchers, parentOf, leverLeft, rollTo } from './floorbosses.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
@@ -695,10 +695,11 @@ function partTags(s, p) {
   // The solo bosses (docs/solo-bosses.md): the ♛ part, RELAY-KING's Broadcast, REPO MAN's Liens, HOLLOW CHOIR's Round.
   const v = e.virus;
   if (p.core && p.integrity > 0) tags.push(`<span class="tag hot crown" title="${esc(`${p.name}\nBoss part\nIt carries the boss's signature. Break every part to end the act.`)}">♛</span>`);
-  // The act rules on the board (combat.mjs bossPhases): RELAY-KING's Crown Hop and Flood, the Resident's Outbreak or Lockdown.
+  // The act rules on the board (combat.mjs bossPhases): RELAY-KING's Crown Hop and Flood, the Resident's act-3 rider.
   if (p.core && p.integrity > 0 && v.hop === true) tags.push(`<span class="tag hot" title="${esc(`Crown Hop\nBoss rule\nWhen the ${p.name} crosses half, the ♛ hops to the healthiest other part, and the two swap how full they are. Once this act.${answerLine('Bring the other parts down first, so the swap gives little back.')}`)}">${glyph('relay')}hop</span>`);
   if (p.broadcast && p.integrity > 0 && v.flood) tags.push(`<span class="tag hot" title="${esc(`Flood\nBoss rule\nEach ${p.attack?.name || 'Broadcast'} that lands hatches a fragment on every part, up to ${CONFIG.fragmentCap} on the board.${answerLine('Cut the Broadcast, or break parts before it lands.')}`)}">flood</span>`);
-  if (p.core && p.integrity > 0 && (v.outbreak || v.lockdown)) tags.push(`<span class="tag hot" title="${esc(v.outbreak ? `Outbreak\nBoss rule\nEach Backlash also hatches a fragment.${answerLine('Stay off the beat.')}` : `Lockdown\nBoss rule\nEach Backlash also encrypts you while the Encryptor stands.${answerLine('Stay off the beat, or break the Encryptor first.')}`)}">${v.outbreak ? 'outbreak' : 'lockdown'}</span>`);
+  const rider = p.core && p.integrity > 0 && LASH_PLUS[riderOf(v)];
+  if (rider) tags.push(`<span class="tag hot" title="${esc(`${rider.name}\nBoss rule\n${rider.rule}${answerLine(rider.answer)}`)}">${rider.name.toLowerCase()}</span>`);
   if (p.broadcast && p.attack && p.integrity > 0) { const n = livingParts(s).filter((x) => x.kind === 'fragment').length, each = Math.round(p.attack.amount * (p.fanin || 0)); tags.push(`<span class="tag hot" title="${esc(`Broadcast\nBoss rule\nThe ${p.name}'s ${p.attack.name} deals ${each} more damage for each fragment on the board.${answerLine('Clear the fragments before it lands, or cut it.')}`)}">${glyph('relay')}×${n}</span>`); }
   if (p.lien && p.integrity > 0) { const n = v.liens || 0, each = Math.round(p.attack ? p.attack.amount * p.lien * (v.interest || 1) : 0); tags.push(`<span class="tag hot liens" title="${esc(`Lien\nBoss rule\nEach of your commands that a ◆ absorbs puts a Lien on the ${p.name}. Each Lien adds ${each} damage to its ${p.attack?.name || 'Collection'}${v.interest > 1 ? ' (Interest: it counts twice)' : ''}. A Collection that lands or is cut clears them.${v.repo ? ' One that lands puts a ◆ back for each Lien.' : ''}${answerLine('Take ◆ off with strips, burns or helpers, and cut the Collection.')}`)}">§${n}</span>`); }
   for (const x of p.integrity > 0 ? floorTags(s, p) : []) tags.push(x); // the floor 2 and 3 bosses (floorbosses.mjs)

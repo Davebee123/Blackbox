@@ -8,7 +8,7 @@
 //                on the beat, and where, is the puzzle.
 //   the acts     act n deals tell n (charge, cast, then the third); a phase's every quickens the beat. An act ends when its last part breaks (act bars, below).
 import { BOSSES, STRAINS, TELLS } from './data.mjs';
-import { emit, alive, part, livingParts, strikeWith, attackAmount, landingsOf, hatch, active } from './combat.mjs';
+import { emit, alive, part, livingParts, strikeWith, attackAmount, landingsOf, hatch, active, hooks, command, resolveCycle } from './combat.mjs';
 import { tellsOf, findSource } from './tells.mjs';
 
 export const ACTS = { lash: 2 }; // the Backlash's multiple
@@ -50,6 +50,11 @@ export const lashOn = (s, p, c = s.encounter?.cycle) => alive(p) && !!p.attack &
 // The next cycle the beat falls on, from this one (null: none on the way).
 export function nextBeat(s, from = s.encounter.cycle) { const b = beatOf(s); if (!b) return null; for (let c = from; c < from + 12; c++) if (b.at(c)) return c; return null; }
 
+// The boss playtest's &act= (app.js): every part broken until act n begins.
+export function skipToAct(s, n) {
+  for (let i = 0; i < 6 && active(s) && actOf(s.encounter.virus) < n; i++) { for (const p of s.encounter.virus.parts) p.integrity = 0; command(s, 'hold'); resolveCycle(s); }
+}
+
 // ---------- the fight ----------
 // As the fight is engaged (after the boss rule set its ♛, before the tells are dealt): the beat on its part.
 export function actsStart(s) {
@@ -89,14 +94,36 @@ export function lashAttack(s, p) {
   const amount = Math.max(1, Math.round(n * ACTS.lash));
   return { name: 'Backlash', effect: 'damage', amount, interval: a.interval, noCrit: true };
 }
-// The Resident's act 3 on top of a lash (BOSSES actPhases): the worm's Outbreak hatches a fragment, the ransomware's
-// Lockdown encrypts you (while an Encryptor stands, on its Encrypt). What the chip says it adds, or null.
-const encryptor = (s) => livingParts(s).find((x) => x.attack?.effect === 'encrypt') || null;
+// The Resident's act 3 on top of a lash (BOSSES actPhases), by family: what the chip says (says), whether it adds
+// anything to this part's lash now (on), what it does as the lash lands (land: true if the fight ended), and its tag on
+// the ♛ (name, rule, answer: view.mjs).
+const standing = (s, f) => livingParts(s).find(f) || null;
+const encryptor = (s) => standing(s, (x) => x.attack?.effect === 'encrypt');
+const scrambler = (s) => standing(s, (x) => x.attack?.effect === 'scramble');
+const cnc = (s) => standing(s, (x) => x.cnc);
+const downZombie = (s) => s.encounter.virus.parts.find((x) => x.zombie && !(x.integrity > 0) && !x.scattered) || null;
+const hashers = (s) => livingParts(s).filter((x) => (x.id === 'rig' || x.twinrig) && x.attack?.ramp);
+const payload = (s) => standing(s, (x) => x.payload && !x.detonated);
+const yours = (s, k, name) => strikeWith(s, k, { ...k.attack, name, hit: 0 }); // its effect on you, without its hit
+export const LASH_PLUS = {
+  outbreak: { name: 'Outbreak', says: 'hatches a fragment', rule: 'Each Backlash also hatches a fragment.', answer: 'Stay off the beat.',
+    on: (s, p) => p.attack?.effect !== 'replicate', land: (s, p) => { hatch(s, p, `the ${p.name}'s lash`); } },
+  lockdown: { name: 'Lockdown', says: 'encrypts you', rule: 'Each Backlash also encrypts you while the Encryptor stands.', answer: 'Stay off the beat, or break the Encryptor first.',
+    on: (s, p) => p.attack?.effect !== 'encrypt' && !!encryptor(s), land: (s) => yours(s, encryptor(s), 'Lockdown') },
+  static: { name: 'Static', says: 'scrambles you', rule: 'Each Backlash also Scrambles you while the Scrambler stands.', answer: 'Stay off the beat, or break the Scrambler first.',
+    on: (s, p) => p.attack?.effect !== 'scramble' && !!scrambler(s), land: (s) => yours(s, scrambler(s), 'Static') },
+  rally: { name: 'Rally', says: 'rallies a Zombie', rule: 'Each Backlash also brings a broken Zombie back at full while the C&C stands.', answer: 'Stay off the beat once Zombies are down.',
+    on: (s) => !!cnc(s) && !!downZombie(s), land: (s) => { hooks.rally?.(s, downZombie(s)); } },
+  fullload: { name: 'Full load', says: 'steps the Hash up', rule: 'Each Backlash also steps the Hash up twice.', answer: 'Stay off the beat, or vent the Rig across a tick.',
+    on: (s) => hashers(s).length > 0, land: (s) => { for (const h of hashers(s)) h.attack.step = (h.attack.step || 0) + 2; emit(s, 'status', 'FULL LOAD: the Hash steps up twice.', { source: hashers(s)[0]?.id }); } },
+  livewire: { name: 'Live wire', says: 'burns the fuse', rule: 'Each Backlash also burns 2 off the Payload\'s fuse.', answer: 'Stay off the beat while the fuse is short.',
+    on: (s) => !!payload(s), land: (s) => { hooks.burnFuse?.(s, payload(s), 2); } },
+};
+// The act-3 rider in play (an older fight's flags count).
+export const riderOf = (v) => LASH_PLUS[v?.rider] ? v.rider : v?.outbreak ? 'outbreak' : v?.lockdown ? 'lockdown' : null;
 export function lashPlus(s, p) {
-  const v = s.encounter.virus;
-  if (v.outbreak && p.attack?.effect !== 'replicate') return 'hatches a fragment';
-  if (v.lockdown && p.attack?.effect !== 'encrypt' && encryptor(s)) return 'encrypts you';
-  return null;
+  const r = LASH_PLUS[riderOf(s.encounter.virus)];
+  return r && r.on(s, p) ? r.says : null;
 }
 // The virus's half (combat.mjs endCycle, before its attacks due): each lash lands. True if the fight ended.
 export function lashLand(s) {
@@ -107,8 +134,7 @@ export function lashLand(s) {
     emit(s, 'telegraph', `BACKLASH: you hit the ${p.name} on the beat. It lashes back${plus ? ` and ${plus}` : ''}.`, { source: p.id, tell: 'backlash', kind: 'backlash', at: e.cycle, name: 'BACKLASH' });
     if (strikeWith(s, p, lashAttack(s, p))) return true;
     if (p.attack.effect !== 'damage' && strikeWith(s, p, { ...p.attack, name: p.attack.name, hit: 0 })) return true;
-    if (plus && e.virus.outbreak) hatch(s, p, `the ${p.name}'s lash`);
-    if (plus && e.virus.lockdown) { const k = encryptor(s); if (strikeWith(s, k, { ...k.attack, name: 'Lockdown', hit: 0 })) return true; }
+    if (plus && LASH_PLUS[riderOf(e.virus)].land(s, p)) return true;
     if (!active(s)) return true;
   }
   return false;

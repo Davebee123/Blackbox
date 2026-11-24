@@ -30,7 +30,7 @@ import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './interrupt.mjs';
-import { actsStart, actsOf, lashHit, lashLand, actIntents, actBegins, actInfo, barsSnap, barsTotal, barsTurn, actEven, barsTells, actTells } from './acts.mjs';
+import { actsStart, actsOf, lashHit, lashLand, actIntents, actBegins, actInfo, barsSnap, barsTotal, barsTurn, actEven, barsTells, actTells, LASH_PLUS } from './acts.mjs';
 import { FB, fbBid, fbStart, fbPower, fbLanded, fbMisses, fbSlowed, fbBroke, fbAim, fbCommand, fbDealt, fbVerb, FB_VERBS, fbCycle, fbIntents, fbLogged, surfShut, fbCmdHit, fbShrugs, fbTaken, fbCap } from './floorbosses.mjs';
 import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
@@ -2666,7 +2666,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (/^developer (codebases|components \d+)$/.test(text)) { // sockets.mjs: every codebase, or components
     if (text.endsWith('codebases')) { for (const id of PROGRAM_IDS) if (!codebasesOf(s).includes(id)) codebasesOf(s).push(id); emit(s, 'info', 'Developer: every codebase learned.'); }
     else { const n = gainComponents(s, Number(text.split(' ')[2])); emit(s, 'info', `Developer: +${n} components.`); }
-  } else if (/^developer location (ransomware|worm|ghostroot)$/.test(text)) {
+  } else if (/^developer location [a-z]+$/.test(text) && FAMILIES[text.split(' ')[2]] && !FAMILIES[text.split(' ')[2]].room) { // any server family (a floor 2 one's ? where it opens, else the nearest)
     const had = new Set(s.locations.map((l) => l.id));
     addLocation(s, text.split(' ')[2], Math.min(reached(s), SERVER.floorFor(hackerLevel(s)))); // the next ? of that family on your floor (floors.mjs pickSlot)
     for (const l of s.locations) if (!had.has(l.id) && l.fresh && joinCost(s, l).fits) memoryCommand(s, 'attach', l.id); // developer finds join your network
@@ -3220,8 +3220,7 @@ function bossPhases(s) {
       if (act.startsWith('seat:')) { const seat = v.parts.find((x) => x.id === act.split(':')[1]), p = v.parts.at(-1); if (seat && p !== seat) { v.parts.pop(); v.parts.splice(v.parts.indexOf(seat), 1, p); } } // the part just spawned takes that part's seat (actEven, below)
       // Each act's own rule rides on the virus, so the next act's refill takes it away (acts.mjs barsTurn).
       if (act === 'watchdog' && BOSSES[v.boss]?.watchdog) v.watchdog = { at: e.cycle + BOSSES[v.boss].watchdog.every, act: v.phases.filter((x) => x.done).length }; // the Resident's act 2: counted from the act's first cycle
-      if (act === 'outbreak') v.outbreak = true; // the worm Resident's act 3: a lash hatches (acts.mjs lashLand)
-      if (act === 'lockdown') v.lockdown = true; // the ransomware Resident's: a lash encrypts you
+      if (LASH_PLUS[act]) v.rider = act; // the Resident's act 3: its family's rider on each lash (acts.mjs LASH_PLUS)
       if (act === 'hop') v.hop = true; // RELAY-KING: the ♛ hops at its 50% tick (crownHop)
       if (act === 'flood') v.flood = true; // RELAY-KING: a Broadcast that lands hatches on every part (liensPaid)
       if (act === 'repossess') v.repo = true; // REPO MAN: a Collection that lands puts a ◆ back a Lien (liensPaid)
