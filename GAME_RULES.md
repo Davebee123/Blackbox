@@ -2347,10 +2347,11 @@ its progress; the map's tracker keeps a row to one line, the rest in its tooltip
 **Goals** (`goals.mjs`) sit under the tracker: three rows, your pins first (an earned piece's, or an achievement's),
 then the goals nearest done, filled in on their own. An earned piece's row is its set's name (or *Feat*) over its name,
 its cells and its goal with n/N; an achievement's, its name and its rule with n/N. A click opens its Ledger entry or
-achievement; the pin on a row (on hover) pins or unpins it, three pins at most. The auto rows pick again only at a calm
+achievement; on hover, a row's pin pins or unpins it (three pins at most) and an auto row's × dismisses it: it stays out
+of the auto rows and the next goal takes its place (pinning it brings it back). The auto rows pick again only at a calm
 moment (the map opened off a run, a run's end): a goal that moved in the last 30 minutes of play first, then the
 nearest done by share, then the fewest left; never one you can't reach yet, one under 10% done, or a class's climb.
-The header folds it to its count (kept on the save). On a phone, one chip. A recovery points at a server you've found (its name in the contract's, *Show on map* on the offer);
+A click on the header folds it to its count (kept on the save). On a phone, one chip. A recovery points at a server you've found (its name in the contract's, *Show on map* on the offer);
 a takeover at one, or at an **unknown server** one hop past one: you trace it to find it.
 
 **The board** opens with the turf letter (the storyline's fourth), or once you've held the claimjack or turf job for an

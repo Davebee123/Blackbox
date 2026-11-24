@@ -465,4 +465,5 @@ Side by side, the earlier phase lands first and the later one merges main before
 - **Phase 8, Goals** (24 Nov, the designer: Rows, collapsible, pinned and auto): the map's **Goals** under Contracts
   replace Pinned. Three rows: pins first (an earned piece's or an achievement's), then the nearest done. A goal that
   moved in the last 30 minutes of play leads, picked again only at a calm moment. A class's climb and anything under
-  10% are left out. The header folds it; the pin on a row pins it (`goals.mjs`). The finish card is still to come.
+  10% are left out. A click on the header folds it; on hover a row's pin pins it and an auto row's × dismisses it
+  (the next takes its place; `goals.mjs`). The finish card is still to come.

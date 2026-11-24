@@ -3016,16 +3016,18 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ct-row.pin-row.set > .glyph { color: var(--r-set); }
 .ct-row.pin-row .ct-prog { flex-wrap: wrap; row-gap: 3px; }
 /* The map's Goals (goals.mjs): the header folds it; a row's pin shows on hover, lit when pinned. */
-.goals-fold { display: inline-flex; align-items: center; gap: var(--s3); padding: 0; background: none; border: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; }
-.goals-fold:hover, .goals-fold:focus-visible { color: var(--amber-soft); }
+.goals-head { cursor: pointer; user-select: none; }
+.goals-head:hover, .goals-head:focus-visible { color: var(--amber-soft); outline: none; }
 .goals-caret { width: 8px; color: var(--muted); }
 .goal-row { position: relative; display: grid; }
-.goal-pin { position: absolute; top: 4px; right: 4px; z-index: 1; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; background: rgba(12, 10, 6, 0.92); border: 1px solid var(--line); color: var(--muted); cursor: pointer; opacity: 0; transition: opacity 0.12s; }
-.goal-pin .glyph { width: 11px; height: 11px; margin: 0; }
-.goal-row:hover .goal-pin, .goal-pin:focus-visible, .goal-pin.on { opacity: 1; }
+.goal-acts { position: absolute; top: 4px; right: 4px; z-index: 1; display: flex; gap: 2px; opacity: 0; transition: opacity 0.12s; }
+.goal-acts button { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; background: rgba(12, 10, 6, 0.92); border: 1px solid var(--line); color: var(--muted); font: 600 13px/1 var(--mono); cursor: pointer; }
+.goal-acts .glyph { width: 11px; height: 11px; margin: 0; }
+.goal-acts button:hover, .goal-acts button:focus-visible { color: var(--amber); border-color: var(--amber); }
+.goal-row:hover .goal-acts, .goal-acts:focus-within, .goal-acts:has(.goal-pin.on) { opacity: 1; }
+.goal-row:not(:hover) .goal-acts:has(.goal-pin.on) .goal-x { display: none; }
 .goal-pin.on { color: var(--amber); border-color: var(--amber-deep); }
-.goal-pin:hover { color: var(--amber); border-color: var(--amber); }
-[data-form='phone'] .goal-pin { opacity: 1; }
+[data-form='phone'] .goal-acts { opacity: 1; }
 .pin-goal { font: 10px var(--mono); color: var(--muted); white-space: normal; line-height: 1.35; font-variant-numeric: tabular-nums; } /* its goal in words: wraps under the cells, never cut */
 .ct-row > .glyph { width: 14px; height: 14px; color: var(--amber-soft); align-self: start; margin-top: 1px; }
 .ct-txt { display: grid; min-width: 0; }

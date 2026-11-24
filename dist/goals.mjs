@@ -1,17 +1,17 @@
 // Goals in sight (docs/demo-plan.md Phase 8): the map's Goals tracker under Contracts, three rows. Your pins come first
 // (an earned piece's pin is earned.mjs s.pins, the one its Ledger line sets; an achievement's is s.goals.pins), the
 // rest fill in on their own. Reads earned.mjs and achievements.mjs, changes neither's state.
-//   s.goals: { pins: ['a:<id>'], auto: [keys], seen: { key: n }, moved: { key: play ms }, shut }
+//   s.goals: { pins: ['a:<id>'], auto: [keys], gone: [keys], seen: { key: n }, moved: { key: play ms }, shut }
 // A key is 'p:<piece id>' or 'a:<achievement id>'. The auto rows are picked again only at a calm moment (refreshGoals:
 // the map opened off a run, a jack out), so they never jump while you watch: a goal that moved since the last pick goes
 // first, then the nearest done by share, then the fewest left. Left out: what you can't reach yet, anything under
-// MIN_SHARE done, and the class climbs (a class to 50).
+// MIN_SHARE done, the class climbs (a class to 50) and what you dismissed (its row's ×; the next one takes its place).
 import { UNIQUES, emit, warn } from './combat.mjs';
 import { EARNED, earnedOf, pinsOf, PIN_MAX } from './earned.mjs';
 import { achievements, achById, earned, progressOf, rewardText } from './achievements.mjs';
 
 export const GOALS = { rows: PIN_MAX, minShare: 0.1, movedMs: 30 * 60_000 };
-const G = (s) => (s.goals ||= { pins: [], auto: null, seen: {}, moved: {}, shut: false });
+const G = (s) => { const t = (s.goals ||= { pins: [], auto: null, seen: {}, moved: {}, shut: false }); t.gone ||= []; return t; };
 const playMs = (s) => s.pace?.ms || 0;
 
 // One goal by key, as the tracker draws it: { key, kind, id, name, n, of, what, reward, pinned }, or null when it's done
@@ -46,7 +46,7 @@ export function refreshGoals(s) {
   }
   const recent = (g) => (t.moved[g.key] != null && now - t.moved[g.key] <= GOALS.movedMs ? t.moved[g.key] : -1);
   all.sort((a, b) => recent(b) - recent(a) || b.n / b.of - a.n / a.of || a.of - a.n - (b.of - b.n));
-  t.auto = all.filter((g) => !pins.has(g.key)).map((g) => g.key);
+  t.auto = all.filter((g) => !pins.has(g.key) && !t.gone.includes(g.key)).map((g) => g.key);
   return t.auto;
 }
 // The tracker's rows: pins, then the auto picks still standing, GOALS.rows in all.
@@ -68,9 +68,18 @@ export function togglePin(s, key) {
     return false;
   }
   if (pinKeys(s).length >= GOALS.rows) { warn(s, `Pins are full (${GOALS.rows}). Unpin one first.`); return false; }
+  t.gone = t.gone.filter((k) => k !== key);
   if (g.kind === 'piece') s.pins = [...pinsOf(s), g.id];
   else t.pins = [...t.pins.filter((k) => goalOf(s, k)), key];
   emit(s, 'info', `Pinned ${g.name} to the map.`);
+  return true;
+}
+// Dismiss an auto row (its ×): it stays out of the auto rows; the next goal takes its place. Pinning it brings it back.
+export function dismissGoal(s, key) {
+  const t = G(s);
+  if (pinKeys(s).includes(key)) return false;
+  if (!t.gone.includes(key)) t.gone.push(key);
+  if (t.auto) t.auto = t.auto.filter((k) => k !== key);
   return true;
 }
 // Fold or open the tracker (its header). Kept on the save.

@@ -2268,20 +2268,21 @@ export function earnTip(s, id) {
 // The map's Goals (goals.mjs, three rows: your pins, then the goals nearest done): a tracker row each, in the Ledger's
 // wording. An earned piece: set green's edge for a set piece, amber's for a unique, its set's name (or Feat) over its
 // name, its cells and its goal with n/N. An achievement: its name, its rule with n/N. A click opens its Ledger entry or
-// its achievement; the pin beside it pins or unpins it. The header folds the section to its count (s.goals.shut).
+// its achievement; on hover, its pin pins or unpins it and an auto row's × dismisses it. A click on the header folds the
+// section to its count (s.goals.shut).
 function goalsTracker(s) {
   const gs = goalsOf(s);
   if (!gs.length) return '';
   const shut = !!s.goals?.shut;
   const row = (g) => {
-    const pin = `<button type="button" class="goal-pin${g.pinned ? ' on' : ''}" data-goal-pin="${esc(g.key)}" title="${esc(g.pinned ? 'Unpin' : 'Pin to the map')}" aria-label="${esc(`${g.pinned ? 'Unpin' : 'Pin'} ${g.name}`)}" aria-pressed="${g.pinned}">${glyph('pin')}</button>`;
+    const pin = `<span class="goal-acts"><button type="button" class="goal-pin${g.pinned ? ' on' : ''}" data-goal-pin="${esc(g.key)}" title="${esc(g.pinned ? 'Unpin' : 'Pin')}" aria-label="${esc(`${g.pinned ? 'Unpin' : 'Pin'} ${g.name}`)}" aria-pressed="${g.pinned}">${glyph('pin')}</button>${g.pinned ? '' : `<button type="button" class="goal-x" data-goal-x="${esc(g.key)}" title="Dismiss" aria-label="${esc(`Dismiss ${g.name}`)}">×</button>`}</span>`;
     if (g.kind === 'piece') {
       const u = UNIQUES[g.id], p = earnedOf(s, g.id), over = setOf(g.id)?.name || (u.sources?.[0]?.floor ? 'Floor feat' : 'Feat');
       return `<div class="goal-row">${pin}<button type="button" class="ct-row pin-row${p.set ? ' set' : ''}" data-go="${esc(logGo(homeOfUnique(g.id)))}" title="${esc(earnTip(s, g.id))}">${glyph(SLOT_GLYPH[BASES[u.base]?.slot] || 'item')}<span class="ct-txt"><small class="ct-for">${esc(over)}</small><b>${esc(u.name)}</b></span><span class="ct-prog">${earnCells(p)}<small class="pin-goal">${esc(p.text)} ${p.n}/${p.of}</small></span></button></div>`;
     }
     return `<div class="goal-row">${pin}<button type="button" class="ct-row pin-row" data-go="achieve:${esc(g.id)}" title="${esc(`${g.name}\nAchievement\n${g.what}${g.reward ? `\n${g.reward}` : ''}`)}">${glyph('medal')}<span class="ct-txt"><small class="ct-for">Achievement</small><b>${esc(g.name)}</b></span><span class="ct-prog"><small class="pin-goal">${esc(g.what)} <b>${g.n}/${g.of}</b></small></span></button></div>`;
   };
-  return `<section class="ctrack pins goals${shut ? ' shut' : ''}" aria-label="Goals"><h3 class="ct-head"><button type="button" class="goals-fold" data-goals-fold aria-expanded="${!shut}" title="${shut ? 'Show goals' : 'Fold goals'}"><span class="goals-caret" aria-hidden="true">${shut ? '▸' : '▾'}</span>${glyph('target')}Goals</button><small>${gs.length}</small></h3>${shut ? '' : gs.map(row).join('')}</section>`;
+  return `<section class="ctrack pins goals${shut ? ' shut' : ''}" aria-label="Goals"><h3 class="ct-head goals-head" data-goals-fold role="button" tabindex="0" aria-expanded="${!shut}"><span class="goals-caret" aria-hidden="true">${shut ? '▸' : '▾'}</span>${glyph('target')}Goals<small>${gs.length}</small></h3>${shut ? '' : gs.map(row).join('')}</section>`;
 }
 const SLOT_GLYPH = { exploit: 'exploit', proxy: 'relay', shell: 'module', script: 'cipher', implant: 'injector' };
 // The map's left column: the threat rail, then the contract tracker under it (the selected server's contract lit), then

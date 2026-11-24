@@ -129,7 +129,7 @@ test('pins: up to three from the Ledger, on the map under Contracts and in a pho
   command(s, 'pin crowbar');
   assert.equal(pinsOf(s).length, 2, 'only an earned piece');
   const map = mapMarkup(s, 'server', 'mine');
-  assert.match(map, /<section class="ctrack pins goals" aria-label="Goals"><h3 class="ct-head">.*Goals<\/button><small>\d<\/small><\/h3>/); // the Goals (goals.mjs), pins first
+  assert.match(map, /<section class="ctrack pins goals" aria-label="Goals"><h3 class="ct-head goals-head"[^>]*>.*Goals<small>\d<\/small><\/h3>/); // the Goals (goals.mjs), pins first
   assert.match(map, /class="ct-row pin-row" data-go="log:floor:3"[^>]*>.*<small class="ct-for">Floor feat<\/small><b>Sweetener<\/b>.*<span class="ecells uniq"[^>]*>(<i class="on"><\/i>){2}(<i><\/i>){4}<\/span><small class="pin-goal">Bait caches on Honeypots 4\/12<\/small>/, 'its goal in words, as the Ledger says it');
   assert.match(map, /<small class="pin-goal">Servers mapped on The Sprawl 0\/10<\/small>/);
   assert.match(mapChips(s), /class="ph-chip pin" data-phone="pins"[^>]*>.*<b>\d<\/b><small>goals?<\/small>/);

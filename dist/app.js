@@ -4137,8 +4137,11 @@ function goTo(target) {
 document.addEventListener('click', (e) => {
   if (e.target.closest('[data-goals-fold]')) { e.stopPropagation(); GO.foldGoals(campaign); feel.key('click'); save(); markDirty(); return; }
   const p = e.target.closest('[data-goal-pin]');
-  if (p) { e.stopPropagation(); GO.togglePin(campaign, p.dataset.goalPin); feel.key('click'); save(); markDirty(); }
+  if (p) { e.stopPropagation(); GO.togglePin(campaign, p.dataset.goalPin); feel.key('click'); save(); markDirty(); return; }
+  const x = e.target.closest('[data-goal-x]');
+  if (x) { e.stopPropagation(); GO.dismissGoal(campaign, x.dataset.goalX); feel.key('click'); save(); markDirty(); }
 }, true);
+document.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('[data-goals-fold]')) { e.preventDefault(); GO.foldGoals(campaign); save(); markDirty(); } });
 document.addEventListener('click', (e) => { const g = !e.target.closest('#comms') && e.target.closest('[data-go]'); if (g) { peopleOpen = false; goTo(g.dataset.go); } });
 document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager, #sheet')) setComms(false); });
 document.addEventListener('click', (e) => {

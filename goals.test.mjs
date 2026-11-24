@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, hackerOf } from './dist/combat.mjs';
-import { goalsOf, refreshGoals, togglePin, foldGoals, pinKeys, GOALS } from './dist/goals.mjs';
+import { goalsOf, refreshGoals, togglePin, foldGoals, dismissGoal, pinKeys, GOALS } from './dist/goals.mjs';
 
 const mk = () => { const s = fresh(); hackerOf(s).level = 6; s.pace = { kills: 0, ms: 0 }; return s; };
 
@@ -50,4 +50,19 @@ test('the header folds it, kept on the save', () => {
   assert.equal(foldGoals(s), true);
   assert.equal(JSON.parse(JSON.stringify(s)).goals.shut, true);
   assert.equal(foldGoals(s), false);
+});
+
+test('a dismissed auto row stays out, the next takes its place; pinning it brings it back', () => {
+  const s = mk();
+  s.dex.kills = { x: 90 };
+  refreshGoals(s);
+  assert.equal(goalsOf(s)[0].key, 'a:c-win-100');
+  assert.ok(dismissGoal(s, 'a:c-win-100'));
+  assert.ok(!goalsOf(s).some((g) => g.key === 'a:c-win-100'), 'gone at once');
+  s.pace.ms += 60_000; s.dex.kills.x = 95;
+  refreshGoals(s);
+  assert.ok(!goalsOf(s).some((g) => g.key === 'a:c-win-100'), 'and stays out, even when it moves');
+  togglePin(s, 'a:c-win-100');
+  assert.equal(goalsOf(s)[0].key, 'a:c-win-100', 'pinned, it leads');
+  assert.equal(dismissGoal(s, 'a:c-win-100'), false, 'a pin has no ×');
 });
