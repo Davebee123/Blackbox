@@ -462,3 +462,7 @@ Side by side, the earlier phase lands first and the later one merges main before
   designer: *Rows*, *Bars* or *Compact*, shown as screenshots. The finish card waits behind it. BALANCE.md regenerated with its
   prose fixed (6% a level, Integrity). kits-crew's crew claim went `todo`: the new odds re-deal the sim's dice
   (Herder 69% to the Demolitionist's 92%). Steps 4, 6 and 7 wait on the designer's notes.
+- **Phase 8, Goals** (24 Nov, the designer: Rows, collapsible, pinned and auto): the map's **Goals** under Contracts
+  replace Pinned. Three rows: pins first (an earned piece's or an achievement's), then the nearest done. A goal that
+  moved in the last 30 minutes of play leads, picked again only at a calm moment. A class's climb and anything under
+  10% are left out. The header folds it; the pin on a row pins it (`goals.mjs`). The finish card is still to come.

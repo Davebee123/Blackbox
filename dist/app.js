@@ -53,6 +53,7 @@ import { online, listed, peopleOn } from './presence.mjs';
 import { runnerFloor, runnerBadge } from './runners-view.mjs';
 import { matesOf } from './crew.mjs';
 import { tickPlay, newCharacter, isOpen } from './progression.mjs';
+import * as GO from './goals.mjs';
 import * as FP from './floorplan.mjs';
 import { spawnRival } from './rivals.mjs';
 import { RUN_CARDS, dealCard } from './runcards.mjs';
@@ -1823,8 +1824,10 @@ function shellCommand(arg) {
   notice(to === 'plain' ? 'Shell: plain.' : 'Shell: immersive. Type shell plain to turn it off.');
 }
 
+let goalsRun = false; // a run under way, last tick (the Goals pick again as it ends)
 function go(name, quiet = false) {
   aimPreview = null;
+  if (name === 'map' && !campaign.run) GO.refreshGoals(campaign); // the map off a run: the Goals pick again (goals.mjs)
   // Halcyon's store is its hub's Shop now: anything that asks for the store opens that.
   if (name === 'store' && boardOpen(campaign)) { hubSel = 'halcyon'; hubOpen = true; hubLines = [...V.hubBanner(campaign, 'halcyon').slice(0, -1), menuLine]; hubWin = 'shop'; V.setOrder(null); name = 'hub'; }
   if (name === 'daemons') { loadoutTab = 'daemons'; name = 'loadout'; } // a Loadout tab now
@@ -2904,6 +2907,8 @@ function services() {
   // host's rooms on the host's game.
   const S = own();
   if (!document.hidden && now - lastInput < 120000 && !playtest) tickPlay(S, dt);
+  if (goalsRun && !campaign.run) { GO.refreshGoals(campaign); markDirty(); } // a run just ended: a calm moment to pick the Goals again (goals.mjs)
+  goalsRun = !!campaign.run;
   const chipped = S.run || S.server, hp = chipped.integrity; // the chip takes the bar where it is (invasion.mjs)
   const events = S.roomsPlay ? [] : [...tickNetwork(S, now), ...tickServices(S, now)]; // the rooms playtest has no network
   if (campaign.rooms && !realSave) { const ev = FP.tick(campaign, now); if (ev.length) react(ev); if (module === 'rooms' || ev.length) markDirty(); } // respawn timers count down on the map
@@ -3854,7 +3859,7 @@ function phListMarkup() {
 function phListOpen(which) {
   phList = which; phListHtml = phListMarkup();
   if (!phListHtml) { phList = null; return; }
-  openSheet(phListHtml, { height: 'peek', label: which === 'threats' ? 'Threats and timers' : which === 'jobs' ? 'Contracts' : which === 'pins' ? 'Pinned' : 'The server', id: 'list', closed: () => { phList = null; markDirty(); } });
+  openSheet(phListHtml, { height: 'peek', label: which === 'threats' ? 'Threats and timers' : which === 'jobs' ? 'Contracts' : which === 'pins' ? 'Goals' : 'The server', id: 'list', closed: () => { phList = null; markDirty(); } });
 }
 function phListDraw() {
   if (!phList || sheetKey() !== 'list') return;
@@ -4128,6 +4133,12 @@ function goTo(target) {
     if (a) setTimeout(() => document.querySelector(`[data-ach="${CSS.escape(a.id)}"]`)?.scrollIntoView({ block: 'center' }), 80);
   }
 }
+// The map's Goals (goals.mjs): its header folds it; a row's pin pins or unpins that goal.
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-goals-fold]')) { e.stopPropagation(); GO.foldGoals(campaign); feel.key('click'); save(); markDirty(); return; }
+  const p = e.target.closest('[data-goal-pin]');
+  if (p) { e.stopPropagation(); GO.togglePin(campaign, p.dataset.goalPin); feel.key('click'); save(); markDirty(); }
+}, true);
 document.addEventListener('click', (e) => { const g = !e.target.closest('#comms') && e.target.closest('[data-go]'); if (g) { peopleOpen = false; goTo(g.dataset.go); } });
 document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager, #sheet')) setComms(false); });
 document.addEventListener('click', (e) => {

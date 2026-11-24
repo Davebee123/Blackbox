@@ -1943,9 +1943,8 @@ find-every-piece achievement, the count being the goal. Every drop set keeps its
 - **Shown from the start:** the Ledger names it under its floor (a cross-floor one under Elsewhere, *Feats*), muted, a
   cell a count (past 8, a cell for two or more, at most 12 cells) and its goal (*Bait caches on Honeypots 4/12*); a set's datasheet keeps each missing piece's line with
   its count. The tooltip: *Sweetener: Unique implant, level 18. ▸ Take 8 more bait caches on Honeypots.*
-- **Pins:** up to 3 (`pin <piece>`, `unpin`; the pin on its Ledger line), kept in `s.pins`. The map lists them under
-  Contracts, **Pinned n/3**: a tracker row each, *Floor feat* over its name, its cells and its goal in the Ledger's
-  words, on its own line when long; a click opens its Ledger entry. On a phone, one chip. An earned piece drops off.
+- **Pins:** up to 3 (`pin <piece>`, `unpin`; the pin on its Ledger line or its Goals row), kept in `s.pins`. They lead
+  the map's **Goals** (Mail and contracts). An earned piece drops off.
 
 ### Faction gear
 
@@ -2343,8 +2342,15 @@ minutes after you take it.
 A contract that points at a room marks it on that server's map (its address amber, the contract's mark), and so does any
 job a room's live virus would count for. The strip shows **Contract** and its progress (its tip has each one, a row each with
 its progress; the map's tracker keeps a row to one line, the rest in its tooltip), the map's card each contract on that server. While you're on a server the tracker sits in its map's top-left corner
-(this server's contracts lit; a done one turns in at a click, the rest stay put). Pinned earned pieces sit under the tracker
-(*Earned pieces*). A recovery points at a server you've found (its name in the contract's, *Show on map* on the offer);
+(this server's contracts lit; a done one turns in at a click, the rest stay put).
+
+**Goals** (`goals.mjs`) sit under the tracker: three rows, your pins first (an earned piece's, or an achievement's),
+then the goals nearest done, filled in on their own. An earned piece's row is its set's name (or *Feat*) over its name,
+its cells and its goal with n/N; an achievement's, its name and its rule with n/N. A click opens its Ledger entry or
+achievement; the pin on a row (on hover) pins or unpins it, three pins at most. The auto rows pick again only at a calm
+moment (the map opened off a run, a run's end): a goal that moved in the last 30 minutes of play first, then the
+nearest done by share, then the fewest left; never one you can't reach yet, one under 10% done, or a class's climb.
+The header folds it to its count (kept on the save). On a phone, one chip. A recovery points at a server you've found (its name in the contract's, *Show on map* on the offer);
 a takeover at one, or at an **unknown server** one hop past one: you trace it to find it.
 
 **The board** opens with the turf letter (the storyline's fourth), or once you've held the claimjack or turf job for an

@@ -95,6 +95,7 @@ import { terminalPageMarkup } from './terminal-view.mjs';
 import { housePageMarkup } from './house-view.mjs';
 import { objectiveText, objectiveTip, backupAims } from './objectives.mjs';
 import { pointsOf } from './achievements.mjs';
+import { goalsOf } from './goals.mjs';
 import { flowSvg } from './flowfx.mjs';
 import { ORPHAN_TIP, TABLE, countOf, bandOf as tableBand, tableRows, tableMoves } from './table.mjs';
 export { toolkitMarkup, subPromptDue } from './skills-view.mjs';
@@ -2264,24 +2265,30 @@ export function earnTip(s, id) {
   const kind = set ? `${slot} from the ${set.name} set` : `Unique ${slot.toLowerCase()}`;
   return `${u.name}: ${kind}, level ${u.level}.${p.got ? '' : `\n▸ ${p.open ? '' : `From level ${p.from}: `}${p.todo}.`}`;
 }
-// The map's Pinned section (earned.mjs pins, up to three): a tracker row a piece, set green's edge for a set piece and
-// amber's for a unique, its set's name (or Floor feat) over its name, then its cells and its goal in words with n/N
-// (the Ledger's wording), on its own line when it doesn't fit beside them. A click opens its Ledger entry.
-function pinnedTracker(s) {
-  const ids = pinsOf(s);
-  if (!ids.length) return '';
-  const rows = ids.map((id) => {
-    const u = UNIQUES[id], p = earnedOf(s, id), over = setOf(id)?.name || (u.sources?.[0]?.floor ? 'Floor feat' : 'Feat');
-    return `<button type="button" class="ct-row pin-row${p.set ? ' set' : ''}" data-go="${esc(logGo(homeOfUnique(id)))}" title="${esc(earnTip(s, id))}">${glyph(SLOT_GLYPH[BASES[u.base]?.slot] || 'item')}<span class="ct-txt"><small class="ct-for">${esc(over)}</small><b>${esc(u.name)}</b></span><span class="ct-prog">${earnCells(p)}<small class="pin-goal">${esc(p.text)} ${p.n}/${p.of}</small></span></button>`;
-  }).join('');
-  return `<section class="ctrack pins" aria-label="Pinned"><h3 class="ct-head">${glyph('pin')}Pinned<small>${ids.length}/${PIN_MAX}</small></h3>${rows}</section>`;
+// The map's Goals (goals.mjs, three rows: your pins, then the goals nearest done): a tracker row each, in the Ledger's
+// wording. An earned piece: set green's edge for a set piece, amber's for a unique, its set's name (or Feat) over its
+// name, its cells and its goal with n/N. An achievement: its name, its rule with n/N. A click opens its Ledger entry or
+// its achievement; the pin beside it pins or unpins it. The header folds the section to its count (s.goals.shut).
+function goalsTracker(s) {
+  const gs = goalsOf(s);
+  if (!gs.length) return '';
+  const shut = !!s.goals?.shut;
+  const row = (g) => {
+    const pin = `<button type="button" class="goal-pin${g.pinned ? ' on' : ''}" data-goal-pin="${esc(g.key)}" title="${esc(g.pinned ? 'Unpin' : 'Pin to the map')}" aria-label="${esc(`${g.pinned ? 'Unpin' : 'Pin'} ${g.name}`)}" aria-pressed="${g.pinned}">${glyph('pin')}</button>`;
+    if (g.kind === 'piece') {
+      const u = UNIQUES[g.id], p = earnedOf(s, g.id), over = setOf(g.id)?.name || (u.sources?.[0]?.floor ? 'Floor feat' : 'Feat');
+      return `<div class="goal-row">${pin}<button type="button" class="ct-row pin-row${p.set ? ' set' : ''}" data-go="${esc(logGo(homeOfUnique(g.id)))}" title="${esc(earnTip(s, g.id))}">${glyph(SLOT_GLYPH[BASES[u.base]?.slot] || 'item')}<span class="ct-txt"><small class="ct-for">${esc(over)}</small><b>${esc(u.name)}</b></span><span class="ct-prog">${earnCells(p)}<small class="pin-goal">${esc(p.text)} ${p.n}/${p.of}</small></span></button></div>`;
+    }
+    return `<div class="goal-row">${pin}<button type="button" class="ct-row pin-row" data-go="achieve:${esc(g.id)}" title="${esc(`${g.name}\nAchievement\n${g.what}${g.reward ? `\n${g.reward}` : ''}`)}">${glyph('medal')}<span class="ct-txt"><small class="ct-for">Achievement</small><b>${esc(g.name)}</b></span><span class="ct-prog"><small class="pin-goal">${esc(g.what)} <b>${g.n}/${g.of}</b></small></span></button></div>`;
+  };
+  return `<section class="ctrack pins goals${shut ? ' shut' : ''}" aria-label="Goals"><h3 class="ct-head"><button type="button" class="goals-fold" data-goals-fold aria-expanded="${!shut}" title="${shut ? 'Show goals' : 'Fold goals'}"><span class="goals-caret" aria-hidden="true">${shut ? '▸' : '▾'}</span>${glyph('target')}Goals</button><small>${gs.length}</small></h3>${shut ? '' : gs.map(row).join('')}</section>`;
 }
 const SLOT_GLYPH = { exploit: 'exploit', proxy: 'relay', shell: 'module', script: 'cipher', implant: 'injector' };
 // The map's left column: the threat rail, then the contract tracker under it (the selected server's contract lit), then
-// the pinned earned pieces, then the ping log (pings.mjs). The Runners are on the map itself (a phone still lists them
+// the Goals (goals.mjs), then the ping log (pings.mjs). The Runners are on the map itself (a phone still lists them
 // in the sheet: mapRail).
 function mapLeft(s, sel) {
-  const col = threatRail(s) + contractTracker(s, sel) + pinnedTracker(s) + pingsMarkup(s);
+  const col = threatRail(s) + contractTracker(s, sel) + goalsTracker(s) + pingsMarkup(s);
   return col ? `<div class="map-lcol">${col}</div>` : '';
 }
 // A server's map (floorplan-view.mjs): the contract tracker in its top-left corner.
@@ -2296,12 +2303,12 @@ export function mapChips(s, pick = null) {
     th.length ? `<button type="button" class="ph-chip hot" data-phone="threats" aria-label="${th.length} threat${th.length > 1 ? 's' : ''} and timers">${glyph('kill')}<b>${th.length}</b>${soon ? `<small data-chip-t>${fmtTime(soon.left)}</small>` : ''}</button>` : '',
     open || (rr && !ready) ? `<button type="button" class="ph-chip job" data-phone="jobs" aria-label="${open} contract${open === 1 ? '' : 's'} under way">${glyph('contract')}${open ? `<b>${open}</b><small>contract${open === 1 ? '' : 's'}</small>` : '<small>Runners</small>'}</button>` : '',
     ready ? `<button type="button" class="ph-chip ok" data-phone="jobs" aria-label="${ready} contract${ready === 1 ? '' : 's'} ready to turn in"><b>✓ ${ready}</b><small>ready</small></button>` : '',
-    pinsOf(s).length ? `<button type="button" class="ph-chip pin" data-phone="pins" aria-label="${pinsOf(s).length} pinned">${glyph('pin')}<b>${pinsOf(s).length}</b><small>pinned</small></button>` : '',
+    goalsOf(s).length ? `<button type="button" class="ph-chip pin" data-phone="pins" aria-label="${goalsOf(s).length} goal${goalsOf(s).length > 1 ? 's' : ''}">${glyph('target')}<b>${goalsOf(s).length}</b><small>goal${goalsOf(s).length > 1 ? 's' : ''}</small></button>` : '',
   ].join('');
   return chips ? `<div class="ph-chips" role="group" aria-label="Threats and contracts">${chips}</div>` : '';
 }
 // A chip's list, for the sheet: the threat rail, or the contract tracker with the Runners under it.
-export const mapRail = (s, which, sel = null, runner = null) => (which === 'threats' ? threatRail(s) : which === 'pins' ? pinnedTracker(s) : contractTracker(s, sel) + runnerRail(s, runner));
+export const mapRail = (s, which, sel = null, runner = null) => (which === 'threats' ? threatRail(s) : which === 'pins' ? goalsTracker(s) : contractTracker(s, sel) + runnerRail(s, runner));
 function threatRail(s) {
   const list = threatsOf(s);
   if (!list.length) return '';
