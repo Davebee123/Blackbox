@@ -262,7 +262,8 @@ The bench's breaker in its level's blues, max Integrity (and per point of a same
 | per mob | 156 → 129 | 139 → 133 | 103 → 120 | 121 → 120 | 124 → 139 | 167 → 145 | 145 → 163 | 209 → 169 | 169 → 209 | 252 → 218 | 214 → 268 | 322 → 276 | 222 → 295 |
 
 It rises every level (curve.test.mjs). A floor's bottom is harder than it was and its top easier; the late floors'
-tops are easiest of all (per mob, 222 → 295 at 50).
+tops are easiest of all (per mob, 222 → 295 at 50). Held until the designer has played it: Leak and the Bodyguard
+cost 28.3 and 28.5 points a fight (cap 25), and Smash and Grab takes the Overclocker to 19 of 24 at 50.
 
 ### After step 5 (November 4): boss rounds that grow
 
