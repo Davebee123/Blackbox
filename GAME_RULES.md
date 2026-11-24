@@ -609,11 +609,12 @@ own 5) RELAY-KING's Replicator wears one ◆ and hatches every 6 cycles (`trim`)
 On the board: ♛ on the crown part (*hop* in RELAY-KING's act 2), ×*n* fragments on the Relay (*flood* in act 3), §*n*
 Liens on the Ledger, *round* on a Mimic.
 
-**Floor bosses** (floorbosses.mjs, docs/boss-guide.md). Floors 2 to 5 have bosses of their own: parts of their own
+**Floor bosses** (floorbosses.mjs, docs/boss-guide.md). Floors 1 to 5 have bosses of their own: parts of their own
 only, every part's ticks at 50% and 25% (its acts are bars, below), the beat on a part of their own, a tell an act from their set (floor 4's and GRACE PERIOD deal none: their rule is the fight), and a verb an act. 0.4× to 0.91× Integrity, with more of it on the ♛; like every boss in acts they enrage 24 cycles into an act. One misread at the wrong cycle makes the rest of its act harder (a sale, a leak, a Dump or a Call grows the next).
 
 | Boss | Where | Lv | Its rule (on its row) | Act 2 | Act 3 |
 |---|---|---|---|---|---|
+| PAGE NINE (a dead firm's account) | Floor 1's floor job: its Boss step's server's Core, at your level from 6 to 8 | 6–8 | **Premium Paid**: one part is Insured each cycle, in board order (Policy ♛, Premium, Claims), never the last one standing. It can't break, and what it took that cycle comes back at the cycle's end. **Filed Early**: its charges land a cycle before the attack they ride, so they show 2 cycles ahead. The Premium's Debit encrypts every 6 | **Claim**: what an Insured part gets back also hits you | **Double indemnity**: two parts Insured a cycle |
 | CENTRIFUGE (GLASSJAW) | Floor 2's floor job: its Boss step's server's Core | 14 | **Bidding**, on the Gavel (no ticks, so never cut): from every 3 cycles, each Surge it lands takes it one sooner, down to 2. Each one-part command you aim at it while the Rotor stands is a bid, one faster too (a delay or a Throttle isn't). A delay or Throttle on it withdraws it to 4, and SIGINT cuts a selling Surge. A Surge at every 2 sells to the buyer it names, whose part joins (TOLLGATE's Lockbox wards the Rotor ♛, SWARMLINE's Mirror twins the Gavel, PALEMASK's Veil hides its timers); the Gavel drops to every 4, each sale makes its Surge 30% harder for the act, and (**Sold**) heals the Rotor ♛ 10% of its max. Nothing sells once the Rotor breaks. The Rotor's Encrypt comes every 7 cycles; no beat holds its ticks | **Reserve price**: a withdraw steps it back one | **Second lot**: two buyers a sale |
 | SHAKEDOWN (TOLLGATE) | The last room of every floor-2 Pit; back an hour after it falls | 12 | **Ransom Clock**, one an act, run by the Collector ♛ (it stops when the Collector breaks): 14 cycles; at 0 it leaks 35% of your max, 15% more each leak after in that act (up to 65%), and restarts at 7. A Demand broken while the Collector stands halves the time left (*missed payment*). A Deadline (the Demand's, a wind-up) that lands adds 3; one called off buys nothing. Its Lockbox wards the Demand. **Leverage**: while a Demand stands, the Collector loses at most 10% of its max a cycle, and the rest of a hit is lost | **Second demand** in the Lockbox's seat, its Deadline on the same cycle | **Final notice**: a leak re-arms the Demand and brings the Lockbox back |
 | SHOULDER SURFER (NULL CHOIR) | Floor 3's floor job: its Boss step's server's Core | 18 | **Replay**, on the Logger ♛ (half the boss): a Sync Window on even cycles only. The Logger takes damage only from commands fired in it; each one outside is logged, and at 2 (or every 6 cycles) its Dump (each one that plays your command back makes the next 50% bigger) plays your last logged command back at its full hit (a flat Dump if it wasn't a hit). The Pulse Node lands on the shut cycles | **Again**: every 4 cycles it plays your last three commands back, each at 40% | **From the top**: the log never clears, and the Dump plays the biggest command logged |
@@ -627,7 +628,7 @@ only, every part's ticks at 50% and 25% (its acts are bars, below), the beat on 
 A floor job's Boss step points at a server on its floor's main road (never the lair); once the chain reaches the step,
 that server's Core holds the boss in the Resident's place for good, and beating it takes nothing over. A step posted at
 the lair before its boss was built moves to that server. On the board: the Gavel's interval and next buyer (red at 2),
-the buyer on a bought part, the clock on the Collector (red at 3 or less), *cap n* beside it (what Leverage still lets through this cycle) and the leak's chip in its column, *open* or
+*insured* and *next* on PAGE NINE's parts, the buyer on a bought part, the clock on the Collector (red at 3 or less), *cap n* beside it (what Leverage still lets through this cycle) and the leak's chip in its column, *open* or
 *shut* and the log on the Logger with *again n*, *call n* (or *top*) on the top frame, *stacked* on the frames under it,
 and *n/5* on main() from act 3; a part's pending trades and their total, *n/4* on the Desk and *books* on its traders, and
 NIGHT DESK's attack chips as trades (dashed, a clock and the trade's size; solid red with all that settles on the one
@@ -640,7 +641,7 @@ vote, the sweep and the leak are chips in their columns, beside their part's own
 
 A solo boss plays in **three acts, each a fresh bar**: every part back at full with that act's rules on top. An act
 ends when its last part breaks; the next begins at the cycle's end. Built: the worm and ransomware Residents, the
-three solo bosses, the floor 2–5 bosses and the natives. A crew boss keeps its own framework (raid.mjs).
+three solo bosses, the floor 1–5 bosses and the natives. A crew boss keeps its own framework (raid.mjs).
 
 - **Act 1's board and rules, every act.** Each act starts from act 1's board and the rules act 1 began with, then
   adds its own: an act's rule leaves with it, and what grew in it (a leak, a full table, Liens, a Round) starts over.
@@ -2236,8 +2237,8 @@ A **transmission** is a conversation over the map with a contact (`scenes.mjs`; 
 the quest window's look: **Incoming**, their portrait beside the conversation, your answers in teal, numbered choices
 under it (click, or press 1–9). A question you've asked is gone from the next choices; an answer can end it somewhere
 (Mail, a server on the map). Esc or × ends it. Each plays once, never mid-fight; one that comes while another plays
-waits its turn. The event ones wait 10 minutes of play after the last closed (`GAP_MS`), and play only for a new
-character (What opens when). A runner's or a rival's speaks by their temperament.
+waits its turn. The event ones wait 10 minutes of play after the last closed (`GAP_MS`; CENTRIFUGE's two play at once),
+and play only for a new character (What opens when). A runner's or a rival's speaks by their temperament.
 
 | Scene | When |
 |---|---|
@@ -2251,6 +2252,11 @@ character (What opens when). A runner's or a rival's speaks by their temperament
 | The rival | Your first rival race over, won or lost. |
 | The runner's trade | Your first runner's trade mounts (**Show me** opens its server). |
 | LANTERN, the schedule | *Carrier*'s schedule page delivered: INIT's table. |
+| Kestrel | Kestrel's hub found: its standing order, the Rack pull. |
+| GLASSJAW | GLASSJAW's hub found: the list, feuds. |
+| wick, PAGE NINE | PAGE NINE falls (floor 1's Boss step): the schedule came from deeper; LANTERN. |
+| LANTERN's arrival | Floor 2 reached: *Four. Nine. Nine.* |
+| LANTERN, then wick | CENTRIFUGE falls (floor 2's Boss step): the schedule's signer, the Stacks below; wick's goodbye opens the demo's end card. |
 
 ### What opens when
 
@@ -2390,7 +2396,7 @@ don't count toward your six. The words are in `dist/content/contracts.mjs` (`flo
 | Floor | Chain | From | Steps | Extra letter (after step) |
 |---|---|---|---|---|
 | 1 The Sprawl | Page nine | wick | named process in SPRAWL-00 · Map · Recover a file · puzzle board · Boss PAGE NINE | — |
-| 2 Backhaul | Carrier | LANTERN | Install · Rooms · Past the Tracker · Map without resting · Boss CENTRIFUGE | — |
+| 2 Backhaul | Carrier | LANTERN | Install · Rooms · Past the Tracker · Map without resting · Boss CENTRIFUGE | wick (1), Halcyon Claims (3) |
 | 3 The Stacks | Underwriting | Halcyon Claims | Map · Recover a file · Takeover · puzzle board · Boss SHOULDER SURFER | NULL CHOIR (2) |
 | 4 Coldline | Cold storage | Kestrel | Rooms · Install · Past the Tracker · Map without resting · Boss NIGHT DESK | wick (2) |
 | 5 Deep Core | Static | NULL CHOIR | puzzle board · Recover a file · Rooms · Install · Boss EXIT NODE | wick (2) |
@@ -2400,8 +2406,9 @@ don't count toward your six. The words are in `dist/content/contracts.mjs` (`flo
 
 - **Steps** are the board's contract types with fixed targets, plus three of their own, each counted after the step
   arrived: **Win a puzzle board** on a named server, **Beat the lair boss**, and **Boss**: a named boss in a Core. Until
-  each named boss is built, the floor's lair boss stands in (on floor 1, SPRAWL-00's RELAY-KING): the letter names the
-  boss, the title the stand-in. Its challenge line shows on the Core's card, its fall line when it's beaten.
+  each named boss is built, the floor's lair boss stands in: the letter names the boss, the title the stand-in. Its
+  challenge line shows on the Core's card, its fall line when it's beaten. Floor 1's (PAGE NINE) waits for level 6 (`lv`);
+  a save that got it while RELAY-KING stood in moves it to PAGE NINE's server from level 6.
 - **Extra letters** come with no job, from someone other than the chain's sender, when their step is delivered.
 - **Saves:** a chain finished before it gained a step (floor 1's Boss) opens again at that step.
 - **Targets** come from the floor's diagram, so a network always gives the same ones: the landing server, a server along
@@ -3194,8 +3201,8 @@ Developer commands work only in tests, playtest pages, a test bench and with `?d
   floor 2's exit card has **The full game** in place of Go down. Contracts, events, sites, runners and members' servers
   are dealt on floor 2 at most (`dealFloor`). Its own save (`blackbox-demo`); `?dev`, `?bench` and `?playtest` do
   nothing, and the bench, the Arena and the effects playtest stay out of its bundle. *demo 0.1* sits in the power-up's
-  corner, on Settings' Save card and in every report. Delivering floor 2's chain (*Carrier*) opens the **end card**
-  (time played, level, bosses down, uniques found, Feedback, the itch follow and the Discord), which ends play.
+  corner, on Settings' Save card and in every report. Delivering floor 2's chain (*Carrier*), with CENTRIFUGE's transmissions heard, opens the **end card**
+  (*Floor 3 and below are in the full game.*, time played, level, bosses down, uniques found, Feedback, the itch follow and the Discord), which ends play.
 - **Telemetry** (the demo only, `telemetry.mjs`; off while `LINKS.telemetry` is empty: no question, no toggle): asked once after your first jack out, off until yes, a toggle on
   Settings' Save card. A random install id, never the handle. Sessions (start, length, the last screen), levels
   reached, bosses fought (won or lost, cycles, Integrity left), disconnects (where, by what) and the demo finished go

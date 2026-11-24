@@ -14,7 +14,7 @@ import { loudWins, blastPays, cashIn } from './order.mjs';
 import { actsOf, lashOn } from './acts.mjs';
 import { copyKind, tellOn } from './tells.mjs';
 import { legend } from './combat.mjs';
-import { topFrame, canCall, callingNow, FB, pendingOf, tradeOf, nodesOf, fragsOf, camerasOf, parentOf, leverLeft } from './floorbosses.mjs';
+import { insured, topFrame, canCall, callingNow, FB, pendingOf, tradeOf, nodesOf, fragsOf, camerasOf, parentOf, leverLeft } from './floorbosses.mjs';
 
 // Against a crew boss only the tank taunts (a taunt pulls its busters onto you): raid.mjs noTaunt.
 // veto: skills the planner may not pick this call (routines.mjs: a program's rotation never fires a long cooldown).
@@ -33,7 +33,7 @@ const dueOf = (s, p) => (seen(s).find((i) => i.source === p.id && !i.hidden)?.co
 // A Cold Store still frozen (combat.mjs frozenNow): nothing reaches it, so a player works on the others meanwhile.
 // Read (answers): NIGHT DESK's traders take no damage while the Desk stands, and CAMSWARM's Hive none under the Lockout
 // while a Camera does (floorbosses.mjs).
-const shut = (s, p) => { const v = s.encounter?.virus; return answers() && ((!!v?.desk && p.role === 'trader') || (!!v?.swarm?.lockout && !!p.core && camerasOf(s).length > 0) || (!!v?.swarm && !!parentOf(s, p))); };
+const shut = (s, p) => { const v = s.encounter?.virus; return answers() && (insured(s, p) || (!!v?.desk && p.role === 'trader') || (!!v?.swarm?.lockout && !!p.core && camerasOf(s).length > 0) || (!!v?.swarm && !!parentOf(s, p))); };
 const reachable = (s, p) => (ignores('coldstore') || !frozenNow(s, p)) && !shut(s, p);
 export const soonest = (s) => attackers(s).sort((a, b) => dueOf(s, a) - dueOf(s, b) || b.max - a.max)[0] || livingParts(s).find((p) => reachable(s, p)) || livingParts(s)[0];
 // How a player who reads the codex picks a target: the most threat per point of Integrity left
@@ -70,7 +70,7 @@ const shunning = (s) => livingParts(s).some((p) => shunned(s, p));
 const HITS = ['zero-day', 'retaliate', 'opening', 'chain-reaction', 'segfault', 'overload', 'flood', 'shatter', 'backdoor', 'reclaim', 'rate-limit', 'reject', 'checksum', 'hot-loop', 'backstab', 'fingerprint', 'side-channel', 'unmask', 'nohup', 'sniff', 'jam', 'echo-cancel', 'revoke', 'throttle', 'hook', 'tag', 'spike']; // the cheap core hits before key 1
 // A command that breaks this part right now, if there is one.
 // Flicker: the Shade is out of phase on odd cycles; a player hits something else then.
-const phasedOut = (s, p) => p.phase && !ignores('phaseshift') && s.encounter.cycle % 2 === 1;
+const phasedOut = (s, p) => (p.phase && !ignores('phaseshift') && s.encounter.cycle % 2 === 1); // PAGE NINE's Insured part: shut (read only)
 function killNow(s, p) {
   if (phasedOut(s, p)) return null;
   for (const id of HITS) {

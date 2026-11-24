@@ -6,6 +6,7 @@ import { BASES, STATS, SLOTS, RARITIES, uniqueItem, statLine, seeded, baseScale 
 import { STRAINS, GUARDS, BOSSES, ABILITIES } from './data.mjs';
 const ROGUE = { kinds: { nest: { name: 'Nest' }, pit: { name: 'Pit' }, gauntlet: { name: 'Gauntlet' } } }; // (rogue.mjs pulls in the whole engine)
 import { zoneRooms } from './zone.mjs';
+import SCENES from './content/scenes.mjs';
 
 const $ = (id) => document.getElementById(id);
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -80,6 +81,7 @@ function renderNav() {
     <h3>Contract templates</h3><ul>${kinds}</ul>
     <h3>Uniques · ${items.uniques.length}</h3><ul>${items.uniques.map((u, i) => [u, i]).sort((a, b) => a[0].level - b[0].level).map(([u, i]) => `<li><button type="button" class="ed-item" data-sel="unique:${i}" aria-current="${cur('unique', i)}"><span class="n">${u.level}</span><span class="t" style="color:var(--r-zeroday)">${esc(u.name || '(unnamed)')}</span><span class="k${badIds.has(u.id) ? ' warn' : ''}">${badIds.has(u.id) ? '!' : esc(SLOTS[BASES[u.base]?.slot]?.name || '')}</span></button></li>`).join('')}</ul>
     <div class="ed-new"><button type="button" class="btn small" id="new-unique" aria-expanded="${uMenu}">+ New unique</button>${uMenu ? `<div class="ed-menu" role="menu">${Object.entries(UNIQUE_TEMPLATES).map(([k, t]) => `<button type="button" role="menuitem" data-new-unique="${k}">${esc(t.label)}<small>${esc(t.hint)}</small></button>`).join('')}</div>` : ''}</div>
+    <h3>Transmissions · ${Object.keys(SCENES).length}</h3><ul>${Object.entries(SCENES).map(([id, d]) => `<li><button type="button" class="ed-item" data-sel="scene:${esc(id)}" aria-current="${cur('scene', id)}"><span class="n"></span><span class="t">${esc(id)}</span><span class="k">${esc(d.who)}</span></button></li>`).join('')}</ul>
     <h3>Lists</h3><ul>${list('contacts', 'Contacts', Object.keys(story.contacts).length)}${list('files', 'Files to recover', contracts.files.length)}${list('bountyNames', 'Bounty names', contracts.bountyNames.length)}</ul>`;
   const n = all.filter((x) => x.bad).length;
   $('issues-btn').textContent = n ? `${n} ${n === 1 ? 'mistake' : 'mistakes'}` : 'No mistakes';
@@ -153,8 +155,15 @@ function listForm(kind) {
     <section class="ed-sec">${field('One per line', `<textarea data-path="contracts.bountyNames" data-lines class="short">${esc(contracts.bountyNames.join('\n'))}</textarea>`)}</section>`;
 }
 
+// A transmission (content/scenes.mjs, written in code): its lines, read only, and Play from here.
+function sceneForm(id) {
+  const d = SCENES[id], line = (l) => (typeof l === 'string' ? l : Object.entries(l).map(([k, v]) => `${k}: ${v}`).join('\n'));
+  const nodes = Object.entries(d.nodes).map(([k, n]) => `<section class="ed-sec"><h2>${esc(n.q || 'Opens')}</h2>${(n.lines || []).map((l) => `<p class="ed-hint" style="white-space:pre-line">${esc(line(l))}</p>`).join('')}${n.end ? `<small class="ed-hint">Ends${n.end === true ? '' : `: ${esc(n.end)}`}</small>` : ''}</section>`).join('');
+  return `<h1>${esc(id)}</h1><p class="lede">${esc(d.who)} · ${esc(d.from)}</p><div class="ed-acts"><button type="button" class="btn primary" data-act="play-scene">Play from here</button></div>${nodes}`;
+}
 function renderForm() {
   const f = $('form');
+  if (sel.kind === 'scene') { f.innerHTML = sceneForm(sel.i); f.scrollTop = 0; return; }
   f.innerHTML = sel.kind === 'unique' ? (items.uniques[sel.i] ? uniqueForm(sel.i) : '<p class="quiet">No uniques yet.</p>') : sel.kind === 'beat' ? (story.beats[sel.i] ? beatForm(sel.i) : '<p class="quiet">No beats yet. Add one from the list.</p>') : sel.kind === 'contract' ? contractForm(sel.i) : listForm(sel.kind);
   f.scrollTop = 0;
 }
@@ -345,6 +354,7 @@ function onInput(e) {
 }
 function act(name, at) {
   const b = story.beats;
+  if (name === 'play-scene') return window.open(`./?playtest=scene&id=${encodeURIComponent(sel.i)}`, 'blackbox-test');
   if (name === 'play') return save().then((ok) => ok && window.open(`./?playtest=story&beat=${encodeURIComponent(b[sel.i].id)}`, 'blackbox-test'));
   if (name === 'up' || name === 'down') { const i = sel.i, k = name === 'up' ? i - 1 : i + 1; [b[i], b[k]] = [b[k], b[i]]; sel.i = k; }
   if (name === 'dup') { const c = clone(b[sel.i]); c.id = newId(c.id); b.splice(sel.i + 1, 0, c); sel.i++; }
@@ -386,7 +396,7 @@ function gotoId(id) {
 // ---------- wiring ----------
 $('nav').addEventListener('click', (e) => {
   const s = e.target.closest('[data-sel]');
-  if (s) { const [kind, i] = s.dataset.sel.split(':'); sel = { kind, i: kind === 'beat' || kind === 'unique' ? +i : kind === 'contract' ? i : 0 }; menuOpen = uMenu = false; return render(); }
+  if (s) { const [kind, i] = s.dataset.sel.split(':'); sel = { kind, i: kind === 'beat' || kind === 'unique' ? +i : kind === 'contract' || kind === 'scene' ? i : 0 }; menuOpen = uMenu = false; return render(); }
   if (e.target.closest('#new-beat')) { menuOpen = !menuOpen; uMenu = false; return renderNav(); }
   if (e.target.closest('#new-unique')) { uMenu = !uMenu; menuOpen = false; return renderNav(); }
   const nu = e.target.closest('[data-new-unique]');
