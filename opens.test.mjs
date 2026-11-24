@@ -83,17 +83,17 @@ test('the director: no blips before the first jack out, no events before the tur
   assert.ok(!(s.director?.events || []).length && !(s.director?.blips || []).length, 'nothing dealt');
 });
 
-test('transmissions wait their turn: 10 minutes of play after the last', () => {
+test('transmissions play on their event, waiting only behind one already playing', () => {
   const s = newCharacter(at(5));
   openUp(s, 'blips');
   assert.equal(SC.sceneNow(s).id, 'first-jackout');
-  SC.skip(s);
   openUp(s, 'rivals');
-  assert.equal(SC.sceneNow(s), null, 'too soon');
-  tickPlay(s, SC.GAP_MS - 1000);
-  assert.equal(SC.sceneNow(s), null);
-  tickPlay(s, 2000);
-  assert.equal(SC.sceneNow(s).id, 'first-vault');
+  assert.equal(SC.sceneNow(s).id, 'first-jackout', 'one at a time');
+  SC.skip(s);
+  assert.equal(SC.sceneNow(s).id, 'first-vault', 'the next plays as the last closes');
+  SC.skip(s);
+  openUp(s, 'events');
+  assert.ok(SC.sceneNow(s), 'no wait after the last');
 });
 
 test('a rival speaks by temperament and how the race ended', () => {

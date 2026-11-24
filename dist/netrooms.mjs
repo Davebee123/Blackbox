@@ -610,6 +610,7 @@ FP.WORLD.view = {
   },
   idTip: (s) => {
     const loc = locOf(s), R = s.rooms, r = ruleOf(loc);
+    if (loc?.zone) return ''; // SPRAWL-00: its name says enough
     if (r) return `${loc.name}: ${r.rule}.\n${r.text}`;
     const by = (AUTHORS[R.author]?.name || R.author).toUpperCase(), sp = specialsOf(loc).map((id) => SPECIALS[id]), q = QUIRKS[loc.quirk];
     return `${loc.name}: a ${by} ${FP.kindName(R.kind)}, level ${levelOf(loc)}, ${R.size}.\n${FP.kindRule(R.kind)}${sp.map((x) => `\n${x.glyph} ${x.name}: ${x.rule}`).join('')}${q ? `\n${q.name}: ${q.rule}` : ''}${loc.takenOver ? '\nYours: its Core is quiet.' : ''}`;

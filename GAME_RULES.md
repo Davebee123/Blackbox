@@ -2236,7 +2236,7 @@ A **transmission** is a conversation over the map with a contact (`scenes.mjs`; 
 the quest window's look: **Incoming**, their portrait beside the conversation, your answers in teal, numbered choices
 under it (click, or press 1–9). A question you've asked is gone from the next choices; an answer can end it somewhere
 (Mail, a server on the map). Esc or × ends it. Each plays once, never mid-fight; one that comes while another plays
-waits its turn. The event ones wait 10 minutes of play after the last closed (`GAP_MS`), and play only for a new
+waits its turn and plays as it closes. The event ones play on their event, and only for a new
 character (What opens when). A runner's or a rival's speaks by their temperament.
 
 | Scene | When |
