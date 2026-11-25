@@ -54,7 +54,7 @@ const TRACE = `${process.env.TMPDIR || '/tmp'}/phone-audit-${process.pid}.json`;
     else if (k === 'touch') { const [x, y] = v.split(',').map(Number); await page.touchscreen.tap(x, y); }
     else if (k === 'fresh') for (let n = 0; n < 200 && !(await page.$('.class-pick')); n++) {
       const inp = await page.$('.intro-field input');
-      if (inp && (await inp.isVisible())) { await inp.type((await inp.evaluate((e) => e.classList.contains('intro-secret'))) ? 'hunter22' : 'tester'); await page.keyboard.press('Enter'); } else await page.keyboard.press('Space');
+      if (inp && (await inp.isVisible())) { await inp.type('tester'); await page.keyboard.press('Enter'); } else await page.keyboard.press('Space');
       await page.waitForTimeout(400);
     }
     else if (k === 'go') await page.evaluate((m) => document.querySelector(`.modules [data-module="${m}"]`).click(), v);

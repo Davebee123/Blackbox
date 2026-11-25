@@ -47,7 +47,7 @@
       <button data-module="rig" data-tt="Rig: Your achievements, casing, terminal and house.">Rig</button>
       <button data-module="system" data-tt="Settings: Sound, display and game options.">Settings</button>
     </nav>
-    <div class="whoami" id="whoami"><b id="who-handle">rookie</b><span class="who-dot" aria-hidden="true">·</span><span id="who-class">Breaker</span><span class="who-dot" aria-hidden="true">·</span><span class="who-lv">Lv <b id="who-lv">1</b></span><span class="who-bar" aria-hidden="true"><span id="who-fill"></span></span></div>
+    <div class="whoami" id="whoami"><b class="who-lv" id="who-lv">1</b><span class="who-id"><b id="who-handle">rookie</b><span id="who-class">Breaker</span><span class="who-bar" aria-hidden="true"><span id="who-fill"></span></span></span></div>
     <button type="button" class="people-btn" id="people" aria-label="People: friends and who's online" aria-expanded="false" aria-controls="people-panel" hidden><svg class="p-ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5" r="2.8"/><path d="M2.8 14c.4-3 2.5-4.6 5.2-4.6s4.8 1.6 5.2 4.6"/></svg><span id="people-count">0</span></button>
     <div class="pager" id="pager" role="group" aria-label="Pager" aria-expanded="false"></div>
     <section class="meters" aria-label="Server">
@@ -65,25 +65,24 @@
         <small id="integrity-note" class="meter-note" hidden></small>
       </div>
       <div class="meter meter-table" id="meter-table">
+        <svg class="bar-ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1"/><path d="M2 6h12M2 9.5h12M6.5 6v7.5"/></svg>
         <span class="meter-label">Process table</span>
         <strong id="table-value">84%</strong>
       </div>
       <div class="meter" title="Credits: for compiling, topping up and hub shops.">
-        <svg class="glyph ph-ico ph-narrow" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M10 5.8A2.6 2.6 0 0 0 8 5c-1.4 0-2.5 1.3-2.5 3S6.6 11 8 11a2.6 2.6 0 0 0 2-.8M8 3.5v1.5M8 11v1.5"/></svg>
+        <svg class="glyph ph-ico ph-narrow bar-ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M10 5.8A2.6 2.6 0 0 0 8 5c-1.4 0-2.5 1.3-2.5 3S6.6 11 8 11a2.6 2.6 0 0 0 2-.8M8 3.5v1.5M8 11v1.5"/></svg>
         <span class="meter-label">Credits</span>
         <strong id="vault-value">0</strong>
       </div>
       <button type="button" class="meter meter-stores" id="meter-stores" aria-expanded="false" aria-controls="stores-panel" title="Materials: your Code and Components">
-        <svg class="glyph ph-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 14 4.8v6.4L8 14.5 2 11.2V4.8z"/><path d="M2 4.8 8 8l6-3.2M8 8v6.5"/></svg>
+        <svg class="glyph ph-ico bar-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 14 4.8v6.4L8 14.5 2 11.2V4.8z"/><path d="M2 4.8 8 8l6-3.2M8 8v6.5"/></svg>
         <span class="meter-label">Materials</span>
         <strong aria-hidden="true">▾</strong>
       </button>
     </section>
     <div class="toggles">
-      <button id="speed" title="Seconds per cycle. Rules count cycles, so speed never changes balance.">Speed</button>
-      <button id="sound" aria-pressed="false">Sound off</button>
-      <button id="motion" aria-pressed="true">Motion on</button>
-      <button id="haptics" aria-pressed="true" hidden title="Vibration on phones that support it">Vibrate</button>
+      <button id="speed" title="Seconds per cycle. Rules count cycles, so speed never changes balance."><svg class="bar-ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8.5" r="5.5"/><path d="M8 5.5v3l2 1.5M6.5 1.5h3"/></svg><span class="tg-v" id="speed-v">8s</span></button>
+      <button id="sound" aria-pressed="false" aria-label="Sound" title="Sound&#10;Music, effects and the room. Click to turn it on or off."><svg class="bar-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 6h2.5L8.5 3v10L5 10H2.5z"/><path class="tg-on" d="M10.8 5.6a3.4 3.4 0 0 1 0 4.8M12.6 3.8a6 6 0 0 1 0 8.4"/><path class="tg-off" d="M10.5 6l4 4M14.5 6l-4 4"/></svg></button>
     </div>
   </header>
   <div class="comms" id="comms" hidden></div>

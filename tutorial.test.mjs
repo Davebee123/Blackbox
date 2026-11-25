@@ -100,7 +100,7 @@ test('the rooms tour on SPRAWL-00, in order: walk in, the virus\'s card, then Ja
   winRoom(s);
   t = tour(s);
   assert.equal(t.id, 'tour-jackout', 'a fight won: Jack out (SPRAWL-00 has no cache, hunter or rest room)');
-  assert.match(t.text, /jacking out saves the visit/);
+  assert.match(t.text, /jacking out banks your pack/);
   play(s, 'jack out');
   assert.equal(t.done(s, t.mark?.(s)), true);
   markSeen(s, t.id);

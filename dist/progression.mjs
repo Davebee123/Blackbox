@@ -87,7 +87,7 @@ export function nextGains(arch, L, top, skillsAt) {
 export function tickPlay(s, dt) {
   if (!(dt > 0)) return;
   (s.pace ||= { kills: 0, ms: 0 }).ms += dt;
-  tickScenes(s); // a transmission waiting its turn (scenes.mjs GAP_MS)
+  tickScenes(s); // a transmission waiting its turn (scenes.mjs)
 }
 
 // ---------- v34: one level, fewer tracks ----------

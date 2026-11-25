@@ -6,6 +6,7 @@
 //   compiled on the main thread at boot; split into chunks, they'd load as more requests.
 // - index.html's stylesheets, in their order → one style-<hash>.css (minified; url()s left as written: every sheet sits
 //   at dist/'s root).
+// - The build's stamp: <meta name="bb-build"> in index.html and version.json beside it (update.mjs).
 // - Every other file but the code and the editor (dev only) is copied as it is: samples, music, ui/, the favicon.
 // - --demo (docs/demo-plan.md Phase 1): the demo build. demo.mjs's BUILD becomes DEMO_BUILD (floors 1–2, level 14), and
 //   the developer pages' modules (the bench, the arena, the effects playtest) stay out of the bundle.
@@ -62,7 +63,12 @@ export async function buildGame(out = join(ROOT, 'build'), { demo = false } = {}
   let first = true;
   html = html.replace(/<link rel="stylesheet" href="[^"]+">\n?/g, () => (first ? ((first = false), `<link rel="stylesheet" href="${style}">\n`) : ''));
   html = html.replace('<script type="module" src="app.js"></script>', `<script type="module" src="${script}"></script>`);
+  // The build's stamp (update.mjs): in the page, and in version.json beside it, which a page left open reads to see a newer one.
+  const stamp = hash(script + style);
+  if (!html.includes('</head>')) throw new Error('index.html: no </head>');
+  html = html.replace('</head>', `<meta name="bb-build" content="${stamp}">\n</head>`);
   await writeFile(join(out, 'index.html'), html);
+  await writeFile(join(out, 'version.json'), JSON.stringify({ build: stamp }) + '\n');
 
   const copy = async (dir) => {
     for (const e of await readdir(dir, { withFileTypes: true })) {
@@ -74,7 +80,7 @@ export async function buildGame(out = join(ROOT, 'build'), { demo = false } = {}
     }
   };
   await copy(SRC);
-  return { out, script, style, sheets: sheets.length, outputs: js.metafile.outputs, inputs: Object.keys(js.metafile.inputs), demo };
+  return { out, script, style, stamp, sheets: sheets.length, outputs: js.metafile.outputs, inputs: Object.keys(js.metafile.inputs), demo };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

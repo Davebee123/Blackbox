@@ -88,6 +88,7 @@ import * as PG from './pager.mjs';
 import { shownCount, tableTip, tableKind } from './table.mjs';
 import * as PGV from './pager-view.mjs';
 import * as PI from './pings.mjs';
+import { watchUpdate } from './update.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
@@ -1369,7 +1370,7 @@ function react(events) {
   const hush = !active(campaign) && events.some((e) => e.type === 'invasion-cleared' && e.quiet);
   const fx = canMove();
   if (events.some((e) => e.type === 'engage')) { barsBefore = null; hideSpoils(); fightFrom = events.find((e) => e.type === 'engage').id; }
-  if (won) { const batch = [...campaign.logs.filter((e) => e.id >= fightFrom && e.id < events[0].id && (e.type === 'loot' || e.type === 'xp' || e.type === 'fresh')), ...events.filter((e) => e.id >= won.id || e.type === 'loot')]; dyingUntil = 0; setTimeout(() => whenStill(() => { if (ended) { document.body.classList.add('fight-over'); showSpoils(batch); } }), 900); }
+  if (won) { const batch = [...campaign.logs.filter((e) => e.id >= fightFrom && e.id < events[0].id && (e.type === 'loot' || e.type === 'xp' || e.type === 'fresh')), ...events.filter((e) => e.id >= won.id || e.type === 'loot')]; dyingUntil = 0; wonBatch = batch; }
   // Every damage instance gets its own number, with an icon for its source, one after another in the order
   // they resolved (dmgfx.mjs). Effects minimal or Motion off: all at once, stacked.
   const lvl0 = fxLevel(), stack = !fx || lvl0 === 'minimal', lashing = fx && lvl0 !== 'minimal';
@@ -1383,6 +1384,9 @@ function react(events) {
   const incoming = module === 'combat' && active(campaign) ? attackVoices(events, split.delay, lashing) : { voiced: new Set(), shift: 0, delay: split.delay }, delay = incoming.delay;
   if (split.count && !stack) { cueAt = performance.now() + split.total + incoming.shift; landedBy = Math.min(cueAt, performance.now() + TURN_CAP); }
   if (!stack) stepBars(events, delay); // the bars drop with the numbers, one hit at a time
+  // The fight's end (the board folds away, the spoils card) waits for the batch's last number: a burn tick that wins
+  // lands first.
+  if (won) { const batch = wonBatch; setTimeout(() => whenStill(() => { if (ended) { document.body.classList.add('fight-over'); showSpoils(batch); } }), Math.max(delay(won), split.total) + 900); }
   const artHit = (id, kind) => feel.add(() => art.hit(id, kind)); // the render reacts on the event's beat
   // Crewmates' events (crew.mjs). Their turns play a beat apart, so their hits sound like yours.
   // When the virus hits everyone at once, the hits show on each row, and only one of them sounds.
@@ -1573,11 +1577,11 @@ function react(events) {
       case 'streak': feel.add('win', null); rewardCard('Streak', e, events); break;
       case 'rotation': feel.add(e.rare ? 'prewarn' : 'good', null); break;
       case 'victory':
-        flash(campaign.encounter?.rooms?.as === 'exfil' ? 'ARCHIVE RECOVERED' : 'NEUTRALIZED');
+        { const word = campaign.encounter?.rooms?.as === 'exfil' ? 'ARCHIVE RECOVERED' : 'NEUTRALIZED'; feel.add(() => flash(word)); } // on the win's beat, after the hit that won it
         feel.add(campaign.encounter?.virus?.boss ? 'bosswin' : 'win', '.hud');
         // Let the last break land, then show what the fight gave you.
         ending = true; hideTip(false); ended = e.mode || 'home'; endedAt = performance.now();
-        setTimeout(() => { ending = false; }, 900);
+        setTimeout(() => { ending = false; }, delay(e) + 900);
         break;
       case 'crashed': flash(e.mode === 'run' || e.mode === 'rooms' ? 'DISCONNECTED' : 'HELD AT 1'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); if (e.mode === 'breach') { hideTip(false); setTimeout(() => go('breach'), 1600); } if (e.mode === 'rooms') { hideTip(false); setTimeout(() => { if (!active(campaign) && !lossHold && !document.querySelector('.nocarrier')) go('rooms'); }, 1600); } break;
       case 'cut': feel.add('good', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, f?.text || (e.phase ? 'PHASE' : e.vent ? 'VENTED' : e.delay ? 'DELAYED' : 'INTERRUPTED'), { src }); break;
@@ -1619,6 +1623,7 @@ function react(events) {
 let ended = null; // 'home' | 'run' once a fight is over and you're still looking at it
 let endedAt = 0; // when it ended: an Enter typed in the moment after a win doesn't skip its spoils card
 let ending = false; // the last break is landing
+let wonBatch = []; // a won fight's spoils, shown once its last number lands (react)
 
 // ---------- notices ----------
 // developer levelup preview [<level>|all]: play the level-up now (levelup-ui.mjs). It changes nothing on the save: it is
@@ -2276,14 +2281,13 @@ function renderMeters() {
   if (module === 'loadout' && loadoutTab === 'daemons') V.sawTab(campaign, 'daemons'); // daemons are a Loadout tab
   if (module === 'loadout' && loadoutTab !== 'daemons') V.sawTab(campaign, 'skills'); // new skills: seen once you open Loadout
   for (const t of ['loadout']) {
-    if (module === t && !(t === 'loadout' && loadoutTab === 'daemons')) V.sawTab(campaign, t); // you're looking at it
+    if (module === t && loadoutTab === 'protocols') V.sawTab(campaign, t); // new protocols: seen once you open the Protocols tab
     const n = V.newOn(campaign, t) + (t === 'loadout' ? V.newOn(campaign, 'daemons') + V.newOn(campaign, 'skills') : 0), el = $('new-' + t);
     el.hidden = !n;
     el.textContent = n;
     el.title = `${n} new`;
   }
   { const up = V.upgradeCount(campaign) > 0; if ($('up-loadout').hidden === up) $('up-loadout').hidden = !up; } // an upgrade in the stash (view.mjs isUpgrade)
-  $('sound').textContent = 'Sound';
   $('sound').setAttribute('aria-pressed', String(campaign.settings.sound));
   feel.ambience(!!campaign.settings.sound && !coldOn);
   const vols = V.volumesOf(campaign);
@@ -2293,18 +2297,14 @@ function renderMeters() {
   feel.soundtrack({ on: !!campaign.settings.sound && !coldOn, music: campaign.settings.music !== false, radio: campaign.settings.radio !== false, mood: fighting ? 'fight' : campaign.run ? 'run' : 'home', family: fighting ? campaign.encounter.virus.family : null, floor: fighting ? stageFloor : null, heat: vi?.max ? Math.round((0.15 + 0.85 * (1 - vi.current / vi.max)) * 10) / 10 : 0 });
   // The place under the music (places.mjs): the hub whose session shows, the run's or fight's floor, the floor on the map.
   feel.places({ on: !!campaign.settings.sound && !coldOn, ...placeOf(campaign, { hub: hubShown() ? hubSel : null, map: module === 'map' && mapView === 'mine' ? V.mapFloorOf(campaign, mapSel, mapFloor) : null }) });
-  $('speed').textContent = `${cycleLength(campaign) / 1000}s cycle`;
+  $('speed-v').textContent = `${cycleLength(campaign) / 1000}s`;
   $('speed').title = `Speed: ${campaign.settings.speed || 'normal'}. Click for relaxed (12s) / normal (8s) / fast (5s). Rules count cycles, so balance never changes.`;
-  $('motion').textContent = 'Motion';
-  $('haptics').hidden = !feel.canBuzz();
   casing();
   pagerUi();
   phoneUi();
   peopleUi();
   channelUi();
   profileUi();
-  $('haptics').setAttribute('aria-pressed', String(!!campaign.settings.haptics));
-  $('motion').setAttribute('aria-pressed', String(campaign.settings.motion));
   document.body.classList.toggle('no-motion', !campaign.settings.motion);
   document.body.classList.toggle('grain-on', campaign.settings.grain === true); // either way by choice; unset, by the layout (style.css)
   document.body.classList.toggle('grain-off', campaign.settings.grain === false);
@@ -3578,8 +3578,6 @@ $('speed').addEventListener('click', () => {
   react(command(campaign, 'speed ' + next));
   save(); markDirty();
 });
-$('haptics').addEventListener('click', () => { campaign.settings.haptics = !campaign.settings.haptics; if (campaign.settings.haptics) navigator.vibrate?.(30); save(); markDirty(); });
-$('motion').addEventListener('click', () => { campaign.settings.motion = !campaign.settings.motion; save(); markDirty(); });
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && active(campaign) && !campaign.encounter.paused && !coop?.live()) { // (a shared fight runs on)
@@ -3650,6 +3648,11 @@ function pingFades() {
   for (const el of document.querySelectorAll('.ping[data-t] > :is(.pi-in, .pi-eye)')) if (!el.style.animationDelay) el.style.animationDelay = `${Number(el.parentElement.dataset.t) - now}ms`;
   for (const el of document.querySelectorAll('.ping[data-at]')) if (!el.style.getPropertyValue('--since')) el.style.setProperty('--since', `${Math.min(0, Number(el.dataset.at) - now)}ms`);
 }
+// A newer build (update.mjs): halcyon-mdm's transmission (it waits out a fight like any other) and the log's line.
+// Restarting saves first (pagehide).
+function restartIntoUpdate() { save(); location.reload(); }
+watchUpdate(() => { SC.replay(campaign, 'update'); markDirty(); });
+document.addEventListener('click', (e) => { if (e.target.closest('[data-update]')) { e.stopPropagation(); restartIntoUpdate(); } }, true);
 // A click on a ping: the page's thing (pagerAct), or where a line of news happened.
 document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-ping]');
@@ -4148,6 +4151,7 @@ document.fonts?.ready.then(() => { fitKey = ''; fitTopbar(); });
 // "where:what" from a pager entry or a button elsewhere: a page, and what to show on it.
 function goTo(target) {
   const [where, what, sub] = target.split(':');
+  if (where === 'restart') return restartIntoUpdate();
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
   else if (where === 'demo-end') demoFinish(); // wick's goodbye as CENTRIFUGE falls
   else if (where === 'store') go('store');

@@ -10,6 +10,7 @@ import { glyphOf } from './pager-view.mjs';
 import { commsOf } from './comms.mjs';
 import { pages, classOf, actOf, tipOf, kindOf, shortOf, whereOf } from './pager.mjs';
 import { glyph } from './glyphs.mjs';
+import { updateReady } from './update.mjs';
 
 export const PINGS = { max: 5, fadeMs: 30000, steps: [1, 0.8, 0.55, 0.35] }; // steps: opacity, newest first
 
@@ -60,13 +61,15 @@ export function lineOf(s, c) {
 
 // The log: a frameless list, oldest at the top. data-at: when a line came in, for its arrival (app.js pingFades). Each line is a button (a click does the page's thing: app.js pingAct) with its tooltip in WoW grammar (pager.mjs tipOf and kindOf). data-t: when it came in (app.js starts its
 // fade from there); a line that stays has none. A page with a place on the map has an eye after it (pager.mjs whereOf).
+// A newer build (update.mjs): one line that stays, newest at the bottom, until you restart. Click: save and restart.
+const updateRow = () => `<li class="ping stays update" style="--o:1"><button type="button" class="pi-in" data-update title="Update\nA new build of the game. Click to save and restart into it." data-tt-kind="System"><span class="pi-ico">${glyph('restart')}</span><span class="pi-t"><b>BLACKBOX/OS</b> update is ready.</span></button></li>`;
 export function pingsMarkup(s, now = Date.now(), opts = {}) {
-  const list = pingsOf(s, now, opts);
-  if (!list.length) return '';
+  const list = pingsOf(s, now, opts), upd = updateReady() && !opts.only ? updateRow() : '';
+  if (!list.length) return upd ? `<ol class="pings" aria-label="Pings">${upd}</ol>` : '';
   const n = list.length;
   const row = (c, i) => {
     const stay = sticks(c), t = threat(c), act = actOf(s, c) || (c.go ? { go: c.go } : null), step = PINGS.steps[Math.min(n - 1 - i, PINGS.steps.length - 1)], at = whereOf(s, c);
     return `<li class="ping${t ? ' threat' : ''}${stay ? ' stays' : ''}${c.seen ? '' : ' unseen'}" style="--o:${step}" data-at="${c.t}"${stay ? '' : ` data-t="${c.t}"`}><button type="button" class="pi-in" data-ping="${c.id}" title="${esc(tipOf(s, c))}" data-tt-kind="${esc(kindOf(c))}"${act ? '' : ' aria-disabled="true"'}><span class="pi-ico">${glyphOf(c)}</span><span class="pi-t">${lineOf(s, c)}</span></button>${at ? `<button type="button" class="pi-eye" data-go="${esc(at)}" title="Show on map" aria-label="Show on map">${glyph('eye')}</button>` : ''}</li>`;
   };
-  return `<ol class="pings" aria-label="Pings">${list.map(row).join('')}</ol>`;
+  return `<ol class="pings" aria-label="Pings">${list.map(row).join('')}${upd}</ol>`;
 }

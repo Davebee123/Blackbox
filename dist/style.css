@@ -73,6 +73,7 @@ code { font-family: var(--mono); color: var(--amber); }
 /* ---------- top bar ---------- */
 .topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 20px; padding: 8px 20px; border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--bright); font-weight: 700; letter-spacing: 3px; }
+.brand-name { transform: translateY(1px); } /* all caps sit high in their line: down to the rail's centre */
 /* The mark: the power-up's Horizon in small, a black box on a line of light, its light round the edges (the favicon is the same). */
 .brand-mark, .bb-logo { --lg: 18px; position: relative; flex: none; width: var(--lg); height: var(--lg); isolation: isolate; }
 .brand-mark { margin: 0 14px; }
@@ -81,8 +82,16 @@ code { font-family: var(--mono); color: var(--amber); }
 .modules { display: flex; gap: 2px; }
 .modules button { color: var(--muted); position: relative; }
 .modules button[aria-current='page'] { color: var(--bright); border-bottom: 2px solid var(--amber); border-radius: 0; }
-/* A faint slash between the tabs that are showing (desktop; the phone's tabs have their own layout). */
-@media (min-width: 901px) { .modules { gap: 9px; } .modules button:not([hidden]) ~ button:not([hidden])::before { content: '/'; position: absolute; left: -8px; top: 50%; transform: translateY(-50%); font: 400 12px var(--mono); color: rgba(241, 185, 47, 0.3); pointer-events: none; } }
+/* The *Rail* (desktop; the phone's tabs have their own layout): the tabs as cells in one frame, split by hairlines, the open one lit. */
+@media (min-width: 901px) {
+  .modules { gap: 0; border: 1px solid var(--line-strong); border-radius: 2px; font: 500 13px var(--mono); }
+  .modules button { border: 0; border-radius: 0; padding: 6px 13px; }
+  .modules button:not([hidden]) ~ button:not([hidden]) { border-left: 1px solid var(--line); }
+  .modules button:hover:not(:disabled) { background: rgba(241, 185, 47, 0.06); color: var(--text); }
+  .modules button[aria-current='page'] { border-bottom: 0; background: rgba(241, 185, 47, 0.14); box-shadow: inset 0 0 0 1px var(--amber); }
+  .modules button.ctx[aria-current='page'] { color: var(--you); background: rgba(127, 209, 199, 0.12); box-shadow: inset 0 0 0 1px var(--you); }
+  .modules button:active { transform: translateY(1px); }
+}
 .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--hot); margin-left: 6px; vertical-align: middle; }
 .meters { display: flex; gap: 22px; margin-left: auto; align-items: center; }
 .meter { display: flex; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums; }
@@ -96,7 +105,17 @@ code { font-family: var(--mono); color: var(--amber); }
 .meter-integrity.critical strong { color: var(--hot); }
 .toggles { display: flex; gap: 4px; color: var(--dim); font-size: 12px; white-space: nowrap; }
 .toggles button[aria-pressed='true'] { color: var(--text); }
-.toggles button[aria-pressed='false'] { color: var(--dim); text-decoration: line-through; }
+.toggles button[aria-pressed='false'] { color: var(--dim); }
+/* The right side in icons (desktop): each meter's glyph stands for its word, the word in its tooltip. Phones keep their own (phone.css). */
+.bar-ico { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.toggles button { display: inline-flex; align-items: center; gap: 5px; padding: 6px 7px; }
+.toggles .tg-off, .toggles [aria-pressed='false'] .tg-on { display: none; }
+.toggles [aria-pressed='false'] .tg-off { display: inline; }
+@media (min-width: 901px) {
+  :root:not([data-form='phone']) .topbar .bar-ico { display: block; margin: 0; align-self: center; }
+  .meters .bar-ico { color: var(--amber); }
+  .meters .meter:has(.bar-ico) .meter-label, .meter-integrity .meter-label { display: none; }
+}
 #speed { color: var(--amber); }
 
 /* ---------- panels ---------- */
@@ -1769,7 +1788,6 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .intro-ask { display: flex; gap: 10px; align-items: baseline; }
 .intro-ask label { color: var(--amber); }
 .intro-field { position: relative; display: inline-flex; align-items: baseline; color: var(--bright); }
-.intro-field input.intro-secret { -webkit-text-security: disc; text-security: disc; letter-spacing: 2px; } /* dots, without being a password field a browser offers to save */
 .intro-field input { width: 22ch; padding: 0; background: transparent; border: 0; outline: none; font: inherit; color: var(--bright); caret-color: var(--amber); text-shadow: inherit; }
 .intro-field input:focus { caret-color: var(--amber); }
 /* The transmission */
@@ -1827,6 +1845,7 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .ltabs { display: flex; gap: 4px; margin: 10px 0 12px; border-bottom: 1px solid var(--line); }
 .ltabs button { font: 600 12px var(--sans); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; margin-bottom: -1px; cursor: pointer; }
 .ltabs button[aria-selected='true'] { color: var(--amber); border-bottom-color: var(--amber); }
+.ltabs button.ltab-new:not([aria-selected='true']) { color: var(--you); }
 .ltabs button:hover { color: var(--text); }
 
 /* The Sync Window: a slice of the cycle bar; it lights while the bar is inside it. */
@@ -2741,12 +2760,13 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .mbars .hb-n { font: 600 9px var(--mono); }
 .mbars .srv .hb-n { fill: var(--amber); } .mbars .you .hb-n { fill: var(--you); }
 /* Top centre: who you are. Handle · class · level, the class's XP as a thin bar under it. */
-.whoami { margin: 0 auto; display: grid; grid-template-columns: auto auto auto auto auto; align-items: baseline; column-gap: 7px; row-gap: 3px; font: 600 12px var(--mono); letter-spacing: 0.06em; color: var(--muted); }
-.whoami #who-handle { color: var(--bright); letter-spacing: 0.08em; }
-.whoami #who-class { color: var(--you); text-transform: uppercase; font-size: 11px; letter-spacing: 0.14em; }
-.whoami .who-lv { color: var(--muted); font-size: 11px; } .whoami .who-lv b { color: var(--bright); font-size: 13px; }
-.whoami .who-dot { color: var(--dim); }
-.whoami .who-bar { grid-column: 1 / -1; height: 3px; background: rgba(127, 209, 199, 0.12); border-radius: 2px; overflow: hidden; }
+/* The *Level chip*: the level in a teal square, the handle over the class beside it, XP as a hairline under them. */
+.whoami { margin: 0 auto; display: flex; align-items: center; gap: 10px; font: 500 12px var(--mono); color: var(--muted); }
+.whoami .who-lv { width: 30px; height: 30px; flex: none; display: grid; place-items: center; background: var(--you); color: var(--bg); font: 700 16px var(--mono); border-radius: 2px; }
+.whoami .who-id { display: grid; row-gap: 2px; }
+.whoami #who-handle { color: var(--bright); font-size: 13px; font-weight: 600; line-height: 1; }
+.whoami #who-class { color: var(--you); text-transform: uppercase; font-size: 10px; letter-spacing: 0.16em; line-height: 1; }
+.whoami .who-bar { height: 2px; margin-top: 2px; background: rgba(127, 209, 199, 0.12); overflow: hidden; }
 .whoami .who-bar span { display: block; height: 100%; background: var(--you); }
 /* The pager sits by the server's meters now, just left of Integrity. */
 .topbar .pager { margin-left: 0; }
@@ -2802,7 +2822,7 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .mk-th span:last-child { text-align: left; }
 .mk-tr .btn.small { white-space: nowrap; }
 /* Tight top bar (a breach's chip, a full pager): the pager's icons and who-you-are give way (pager.css has the pager's steps). */
-.topbar.fit-3 .whoami .who-dot, .topbar.fit-3 .whoami #who-class { display: none; }
+.topbar.fit-3 .whoami #who-class { display: none; }
 /* A listing with several files to pull: one button takes them all. */
 .ls-all { margin: 2px 0 4px; }
 .ls-all .tok.act { font-weight: 600; }
@@ -3034,10 +3054,10 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ct-txt b { font-size: 12px; font-weight: 600; color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ct-for { display: flex; align-items: center; min-width: 0; font: 10px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ct-for .glyph { width: 10px; height: 10px; }
-.ct-prog { grid-column: 2 / span 2; display: flex; align-items: center; gap: var(--s3); min-width: 0; min-height: 10px; }
-.ct-bar { flex: 1 1 30px; min-width: 24px; height: 3px; background: rgba(255, 255, 255, 0.06); border-radius: 2px; overflow: hidden; }
+.ct-prog { grid-column: 2 / span 2; display: flex; align-items: center; gap: var(--s3); min-width: 0; min-height: 10px; margin-top: 2px; }
+.ct-bar { flex: 1 1 30px; min-width: 24px; height: 5px; background: rgba(255, 255, 255, 0.06); border-radius: 2px; overflow: hidden; }
 .ct-bar i { display: block; height: 100%; background: var(--amber); }
-.ct-n { flex: 0 1 auto; min-width: 0; font: 600 10px var(--mono); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ct-n { flex: 0 1 auto; min-width: 0; font: 600 13px var(--mono); color: var(--amber); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ct-n.ct-say { font-weight: 400; color: var(--muted); line-height: 1.35; }
 .ct-prog.ct-side { grid-column: 3; grid-row: 1; }
 .ct-prog.ct-side .ct-bar { width: 40px; flex: none; }

@@ -1040,8 +1040,10 @@ export function jackOut(s, why = '') {
   if (R.screen?.kind === 'rival') { deny(s, `${rivalOf(s).id} has you. No stepping back.`); return out(s, first); }
   keysBack(s);
   if (R.world) {
-    R.last = { result: 'out', xp: xpTotal(s) - R.visit.xp0, banked: s.run.pack.length, visit: R.visit.n };
+    const held = R.visit.held || 0;
     goHome(s);
+    if (held) { R.visit.held = 0; gainXp(s, held, 'Warm cache'); } // the Warm cache's XP, held till now (visit.mjs)
+    R.last = { result: 'out', xp: xpTotal(s) - R.visit.xp0, banked: s.run.pack.length, visit: R.visit.n };
     ask('leave', s, 'out', why);
     return out(s, first);
   }
@@ -1076,7 +1078,7 @@ function disconnected(s, why) {
   const R = s.rooms, lost = [], rc = s.encounter?.metrics ? deathRecap(s) : null, recap = rc ? { recap: rc } : {}; // the fight's last cycles (recap.mjs)
   if (R.world) {
     // The run's end is combat.mjs disconnect (the pack banked, the Warm cache lost; Deadman's Switch jacks you out).
-    R.last = { result: 'lost', why, banked: (s.run?.pack || []).length, xp: xpTotal(s) - (R.visit?.xp0 ?? xpTotal(s)), visit: R.visit?.n, warm: R.visit?.warm || 0, ...recap };
+    R.last = { result: 'lost', why, banked: (s.run?.pack || []).length, xp: xpTotal(s) - (R.visit?.xp0 ?? xpTotal(s)), visit: R.visit?.n, warm: R.visit?.warm || 0, held: R.visit?.held || 0, ...recap };
     if (R.at) keysBack(s);
     ask('leave', s, 'lost', why); // Deadman's Switch jacks you out instead (jackOut, home with the pack)
     if (R.at) goHome(s, R);
@@ -1786,11 +1788,11 @@ function nestPay(s, room) {
 export const xpTotal = (s) => { const h = hackerOf(s); let n = h.xp; for (let l = 1; l < h.level; l++) n += xpToNext(l); return n; };
 export const xpEarned = (s) => xpTotal(s) - (s.rooms?.xpStart ?? xpTotal(s));
 // This network visit (visit.mjs): the rooms you beat or used, the XP since the connect, the files in the pack, the
-// Warm cache's stacks. null off a network visit.
+// Warm cache's stacks and the XP they hold till you jack out. null off a network visit.
 export function visitOf(s) {
   const R = s.rooms;
   if (!R?.world || !R.at || !R.visit || !s.run) return null;
-  return { rooms: Object.keys(R.visit.won || {}).length, xp: Math.max(0, xpTotal(s) - (R.visit.xp0 ?? xpTotal(s))), files: (s.run.pack || []).filter((f) => f.kind !== 'payload').length, warm: warmOf(s) };
+  return { rooms: Object.keys(R.visit.won || {}).length, xp: Math.max(0, xpTotal(s) - (R.visit.xp0 ?? xpTotal(s))), files: (s.run.pack || []).filter((f) => f.kind !== 'payload').length, warm: warmOf(s), held: R.visit.held || 0 };
 }
 const won = (R, room) => { if (R.visit && R.world) (R.visit.won ||= {})[room.id] = true; };
 hooks.visitOf = visitOf; // combat.mjs disconnect: the card strikes the Warm cache through

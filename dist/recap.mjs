@@ -118,8 +118,9 @@ export function warmLostMarkup(e) {
   const n = Math.min(WARM.max, e?.warm || 0);
   if (!n) return '';
   const xp = Math.round(WARM.xp * 100 * n), sc = WARM.scavenge * n;
-  const tip = `Warm cache: Lost with the disconnect. Your next visit starts cold.\n▸ ${n} room${n === 1 ? '' : 's'}: +${xp}% XP, +${sc} Scavenge.`;
-  return `<div class="rs" data-tt-kind="Visit bonus" title="${esc(tip)}"><div class="rs-undone"><s>Warm ×${n}</s><s>${glyph('xp')}+${xp}%</s><s>${glyph('scavenge')}+${sc}</s></div></div>`;
+  const held = e?.held || 0;
+  const tip = `Warm cache: Lost with the disconnect, and the XP it held for your jack out. Your next visit starts cold.\n▸ ${n} room${n === 1 ? '' : 's'}: +${xp}% XP, +${sc} Scavenge${held ? `; ${held} XP held` : ''}.`;
+  return `<div class="rs" data-tt-kind="Visit bonus" title="${esc(tip)}"><div class="rs-undone"><s>Warm ×${n}</s>${held ? `<s>${glyph('xp')}${held}</s>` : `<s>${glyph('xp')}+${xp}%</s>`}<s>${glyph('scavenge')}+${sc}</s></div></div>`;
 }
 // The death recap folded behind one row: what took you out and what you took; open it for the cycles and the hits.
 export function foldMarkup(r, by) {

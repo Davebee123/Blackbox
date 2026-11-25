@@ -13,8 +13,8 @@ leaks round the edges, BLACKBOX settles low on the screen, and **Press any key**
 while it's coming on lands the picture at once; the prompt waits for the outline, never more than 6 s. A new game first plays the cold open (about
 55 s; any key or tap skips it, and Motion off leaves it out): KESSLER's clearing house over fifty years, its process table
 filling until the frame sticks and NETWORK OFFLINE, then a colder machine recovering. Then a bare terminal:
-`blackbox login:` asks for a handle (2–16 letters, numbers, dots, dashes or underscores) and a password (4+
-characters, never stored). An encrypted transmission from Halcyon Mutual's Office of Loss Prevention says the terminal
+`blackbox login:` asks for a handle (2–16 letters, numbers, dots, dashes or underscores); the password, Halcyon's,
+types itself. An encrypted transmission from Halcyon Mutual's Office of Loss Prevention says the terminal
 was set up for you and that wick of LOWLIGHT will write. Then you pick a class (Classes and loadout): its drawer lists
 what level 1 starts with (the basic hit and the first core skill), and on a phone Start stays at the screen's foot. With
 `?practice` a **Practice** offer follows, skippable: a training virus on its own state (tutorial.mjs, four lessons: type
@@ -72,7 +72,7 @@ factor (`length.drawn`). Adds (fragments, Packages, Droppers), breaches and crew
 | Armor | Chits on a part (◆; a part wearing 2 or more wears half again: 2 → 3, 3 → 5). A hit on an armored part does no damage and breaks one chit; a heavy hit from your command (40+ base, `CONFIG.heavyHit`) breaks two, and Kill Process always breaks two. Burn ticks, helper hits and each target of a spread hit break one each. Armor-piercing hits (Backdoor and the like) go straight through. A hit spent on ◆ logs as absorbed and floats *◆ ABSORBED*, never MISS; the tray turns a key's icon steel when armor would absorb its hit. |
 | Patch | A part with no chits left patches one back 5 cycles later (`CONFIG.patchDelay`), unless it breaks first. The timeline shows the patch (◆ patch). |
 | Veiled | Ghostroot and the Sentinel hide a part's timers while it still has armor. Strip it, or Tag it, to see them. |
-| Stakes | Damage is the only threat: your Integrity (0 on a run: a disconnect, home at 1 with the Warm cache lost; at home it stops at 1: Home). Nothing takes your credits or files. Ransomware encrypts (a stack that hits you every cycle until the Encryptor breaks), Worm spawns fragments that gnaw every cycle, Ghostroot's Scrambler hits and scrambles you. |
+| Stakes | Damage is the only threat: your Integrity (0 on a run: a disconnect, home at 1 with the Warm cache and its held XP lost; at home it stops at 1: Home). Nothing takes your credits or files. Ransomware encrypts (a stack that hits you every cycle until the Encryptor breaks), Worm spawns fragments that gnaw every cycle, Ghostroot's Scrambler hits and scrambles you. |
 | Time | One command a cycle; entering it turns the cycle at once. A command is typed, or clicked: a skill (its key or number), then a part fires it, and a part picked first fires the skill picked after. Typed nothing, a cycle lasts 12 s (`speed relaxed`; normal 8 s, fast 5 s; the top bar's button). Enter on an empty line or `now` resolves it now. One entry a turn: until the last turn has played out (the virus's answer, its numbers landed: 0.45–1.5 s), another order or empty Enter is dropped, and the prompt and its key give a short shake. Rules count cycles, so speed never changes balance. No attack lands on cycle 1. |
 | Order | Your command (or your routine's) → your daemons → burns → helpers → heals over time → encryption → attacks due → patches. |
 | Crits | Any hit you land that does damage can crit for +50% (5% base, plus Crit and Crit Damage). Enemy damage attacks crit 10% of the time from enemy level 3. Timeline numbers show the normal hit, after your Block. |
@@ -202,13 +202,13 @@ Operator). An Operator runs at most 6 helpers at once.
 
 A win shows a card over the virus: XP (one bar, any level-up), drops, code, components, leads and bounties. Enter on an
 empty line goes back. **Fast kills:** each class keeps your usual pace (cycles per 100 Integrity); from your sixth kill
-with it, a win at least a quarter faster pays **+25% XP** (*Fast kill*). Loadout and Daemons carry a teal count of what's
-arrived since you last opened them.
+with it, a win at least a quarter faster pays **+25% XP** (*Fast kill*). Loadout carries a teal count of what's
+arrived since you last opened its tab (protocols on the Protocols tab), and that tab turns teal with **N new**.
 
-**Disconnect.** At 0 Integrity on a run you go home at 1 with everything the visit paid; the Warm cache is lost
-(Visits). The screen holds on the hit for 0.8 s, drops to static with **NO CARRIER** and the server's name, then clears
+**Disconnect.** At 0 Integrity on a run you go home at 1 with everything the visit paid; the Warm cache and the XP
+it held are lost (Visits). The screen holds on the hit for 0.8 s, drops to static with **NO CARRIER** and the server's name, then clears
 onto the map: your signal runs home, HOME's outline draws itself round, and HOME lights with its bar at your Integrity
-(bootfx.mjs `playReboot`; a key skips each). Then the **No carrier** card: the Warm cache's stacks and bonus struck
+(bootfx.mjs `playReboot`; a key skips each). Then the **No carrier** card: the Warm cache's stacks and held XP struck
 through (none, nothing struck); **Reconnection possible in** counts down live, rounded up; short of what a connect
 needs, a **Restore** button with its credits fills your Integrity there (`restore`, as the top bar's **+**).
 What took you out is one red row with what you took; open it for the **death recap** of the last 6 cycles (recap.mjs):
@@ -981,13 +981,14 @@ Runners from the cast (docs/runners.md R3) racing you to a traced server's vault
   Warm cache, then the amber **Pack** button, which counts its rows (credits summed, each code summed, each item its
   own) and opens the list.
 - **Warm cache** (`visit.mjs` `WARM`): each room you win on a visit adds a stack, up to 10. Each gives **+10% XP** and
-  **+5 Scavenge** to everything after it on that visit (room fights, kills, deeds), paid as you go. Every connect starts
-  cold; a disconnect loses the stacks. The strip's dashed **Warm** box beside Jack out: a ladder of ten bars, lit as
+  **+5 Scavenge** to everything after it on that visit (room fights, kills, deeds). The Scavenge pays as you go; the
+  extra XP is **held** and paid when you jack out (the box shows it after its %). Every connect starts cold; a
+  disconnect loses the stacks and the held XP. The strip's dashed **Warm** box beside Jack out: a ladder of ten bars, lit as
   rooms are won, then the XP and Scavenge it adds.
 - **A disconnect** (Integrity 0 on a run, combat.mjs `disconnect`): home at 1 Integrity with everything the visit paid,
   the pack banked as a jack out banks it (an Install job's item back in your stash). XP, items, credits, code, contract
-  steps, rooms cleared and rep all stay. The Warm cache is the one thing lost; the **No carrier** card strikes it
-  through.
+  steps, rooms cleared and rep all stay. The Warm cache and the XP it held are the one thing lost; the **No carrier**
+  card strikes them through.
 - **Reconnect wait.** A server you leave takes you back after 30 s (`CONFIG.relockMs`), +15 s for each disconnect on
   its run, 2 min at most (`CONFIG.deathWait`). A jack out mid-fight waits like a disconnect; any other jack out resets
   the count. Connect counts it down, with ☠ and the count. **Deadman's Switch** (a unique, every 90 minutes) turns a
@@ -2236,8 +2237,8 @@ A **transmission** is a conversation over the map with a contact (`scenes.mjs`; 
 the quest window's look: **Incoming**, their portrait beside the conversation, your answers in teal, numbered choices
 under it (click, or press 1–9). A question you've asked is gone from the next choices; an answer can end it somewhere
 (Mail, a server on the map). Esc or × ends it. Each plays once, never mid-fight; one that comes while another plays
-waits its turn. The event ones wait 10 minutes of play after the last closed (`GAP_MS`; CENTRIFUGE's two play at once),
-and play only for a new character (What opens when). A runner's or a rival's speaks by their temperament.
+waits its turn and plays as it closes. The event ones play on their event, and only for a new
+character (What opens when). A runner's or a rival's speaks by their temperament.
 
 | Scene | When |
 |---|---|
@@ -2256,6 +2257,7 @@ and play only for a new character (What opens when). A runner's or a rival's spe
 | wick, PAGE NINE | PAGE NINE falls (floor 1's Boss step): the schedule came from deeper; LANTERN. |
 | LANTERN's arrival | Floor 2 reached: *Four. Nine. Nine.* |
 | LANTERN, then wick | CENTRIFUGE falls (floor 2's Boss step): the schedule's signer, the Stacks below; wick's goodbye opens the demo's end card. |
+| halcyon-mdm, an update | A newer build of the game is out (the hosted game checks when you come back to its tab, and every half hour while it shows). **Restart now** saves and reloads; **Later** leaves a ↻ line in the ping log until you click it. Plays again for each new build, on any save. |
 
 ### What opens when
 
@@ -2963,7 +2965,8 @@ Two players, two saves, no server; developer mode while it's a prototype (docs/c
   their visit paid.
 - **The visit:** the host's jack out ends everyone's; a host who drops counts as a jack out for the guest. Each player
   brings their own Integrity and writes it back to their own server on jack out. **Warm cache:** one count for the
-  crew; each player gets its bonus on their own XP and drop rolls. The Pack is personal.
+  crew; each player gets its bonus on their own XP and drop rolls with its extra XP held for everyone until the host's visit ends: paid on a jack out (a guest leaving counts as one,
+  out of a fight), lost when every player goes down or a guest leaves mid-fight. The Pack is personal.
 
 ## The screen
 
@@ -2982,8 +2985,8 @@ lists the buttons), nor a phone's tab bar; on a phone it drops wick's face. Your
 **Pacing** (tips.mjs `paceOf`). A map, room or menu tip shows at most once a screen visit, and 2 minutes after the last
 one closed. A fight tip about what the fight opened with shows only while it's paused (a room fight opens paused until
 your first order), one a fight; your first fight's is one tip you step through (the timeline, your skills, the
-interrupt's ticks, armor, the Sync Window). What lands mid-fight (a spent tick from your second fight on, a patch, a
-miss) pauses it. A part's, a virus's, a mutation's or a quirk's own rule gets no tip: its tag's hover teaches it.
+interrupt's ticks, armor, the Sync Window if one is up). What lands mid-fight (the first Sync Window, a spent tick from
+your second fight on, a patch, a miss) pauses it. The level tip skips the pacing: it comes as your first level-up closes. A part's, a virus's, a mutation's or a quirk's own rule gets no tip: its tag's hover teaches it.
 The rooms tour skips the pacing. **Turn tips off** on any tip or the Settings page; **Replay tips** shows
 them again.
 
@@ -3248,7 +3251,7 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 - **A paused fight holds no clock.** Timers on invasions wait while you fight them, but only while the fight runs; a
   paused fight, or one left open over a reload (it comes back paused), holds nothing.
-- **A disconnect keeps what you won.** It costs the visit's Warm cache and a longer reconnect wait (Visits).
+- **A disconnect keeps what you won.** It costs the visit's Warm cache, the XP it held, and a longer reconnect wait (Visits).
 - **Nothing happens while you're away** but Rested. Programs make nothing on their own, so nothing raids them.
 - **No shop-to-market loop.** Code, Exploits and components are only market wares; a round trip at one hub never
   profits.

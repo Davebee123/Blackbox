@@ -1,7 +1,7 @@
 // First launch: log in to a terminal somebody set up for you, then a transmission from Halcyon.
 //
-// 1. Login. A bare tty asks for a handle and a password. The handle becomes your name on the
-//    prompt; the password is never kept (only its length, so later boots can echo the stars).
+// 1. Login. A bare tty asks for a handle; the password is halcyon's, enrolled with the box, and types itself. The
+//    handle becomes your name on the prompt.
 // 2. The transmission. The screen drops out, an encrypted channel opens, and Halcyon Mutual's
 //    Office of Loss Prevention tells you why the box exists and that wick will write to you.
 //
@@ -10,6 +10,7 @@
 const $ = (id) => document.getElementById(id);
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const HANDLE = /^[a-z0-9_.-]{2,16}$/;
+const PW_LEN = 8; // later boots echo this many stars (boots.mjs)
 
 export const letter = (handle) => [
   `${handle},`,
@@ -35,13 +36,12 @@ export function createIntro({ key = () => {}, sound = () => {}, reducedMotion = 
   }
   const line = (pre, text, cls = '') => { const d = document.createElement('div'); d.className = cls; d.textContent = text || ' '; pre.appendChild(d); key('char'); return d; };
 
-  // One prompt line with a real input on it. Resolves with what was typed. The password is a text field drawn as dots
-  // (.intro-secret), never a password-type input: a browser's password manager would offer to save the game's login later.
-  function ask(pre, label, { secret = false, check } = {}) {
+  // One prompt line with a real input on it. Resolves with what was typed, trimmed and lowercase.
+  function ask(pre, label, { check } = {}) {
     return new Promise((resolve) => {
       const row = document.createElement('div');
       row.className = 'intro-ask';
-      row.innerHTML = `<label>${esc(label)}</label><span class="intro-field"><input type="text"${secret ? ' class="intro-secret"' : ''} autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="32" data-1p-ignore data-lpignore="true" data-form-type="other"></span>`;
+      row.innerHTML = `<label>${esc(label)}</label><span class="intro-field"><input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="32" data-1p-ignore data-lpignore="true" data-form-type="other"></span>`;
       pre.appendChild(row);
       const input = row.querySelector('input');
       const keep = () => setTimeout(() => input.isConnected && document.activeElement !== input && input.focus(), 0);
@@ -53,11 +53,11 @@ export function createIntro({ key = () => {}, sound = () => {}, reducedMotion = 
         if (e.key !== 'Enter') return;
         e.preventDefault();
         key('enter');
-        const v = secret ? input.value : input.value.trim().toLowerCase();
+        const v = input.value.trim().toLowerCase();
         const why = check?.(v);
-        if (why) { const bad = line(pre, `${label} ${secret ? '•'.repeat(v.length) : v}`, 'dim'); pre.insertBefore(bad, row); pre.insertBefore(line(pre, why, 'h'), row); input.value = ''; input.focus(); return; }
+        if (why) { const bad = line(pre, `${label} ${v}`, 'dim'); pre.insertBefore(bad, row); pre.insertBefore(line(pre, why, 'h'), row); input.value = ''; input.focus(); return; }
         input.removeEventListener('blur', keep);
-        row.querySelector('.intro-field').textContent = secret ? '•'.repeat(v.length) : v;
+        row.querySelector('.intro-field').textContent = v;
         resolve(v);
       });
       input.focus();
@@ -91,7 +91,10 @@ export function createIntro({ key = () => {}, sound = () => {}, reducedMotion = 
     line(pre, '');
     await sleep(300);
     const handle = await ask(pre, 'blackbox login:', { check: (v) => (HANDLE.test(v) ? null : 'login: 2–16 letters, numbers, dots, dashes or underscores.') });
-    const pw = await ask(pre, 'password:', { secret: true, check: (v) => (v.length >= 4 ? null : 'password: at least 4 characters.') });
+    // The password is halcyon's (enrolled with the box): it types itself.
+    await sleep(240);
+    const pw = line(pre, 'password: ');
+    for (let i = 0; i < PW_LEN; i++) { await sleep(reducedMotion() ? 0 : 90); pw.textContent += '•'; key('char'); }
     await sleep(200);
     const v = line(pre, 'verifying');
     for (let i = 0; i < 3; i++) { await sleep(260); v.textContent += ' .'; key('char'); }
@@ -105,7 +108,7 @@ export function createIntro({ key = () => {}, sound = () => {}, reducedMotion = 
     el.classList.add('out');
     await sleep(420);
     el.remove();
-    return { handle, pwLen: pw.length };
+    return { handle, pwLen: PW_LEN };
   }
 
   // The transmission: static, a decode bar, then the letter types out. Click or Enter finishes it.

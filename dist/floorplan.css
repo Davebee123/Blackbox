@@ -106,6 +106,8 @@ html:not([data-sfx-floor]) .fp-ground { display: none; }
 .fp-trace .ms { text-align: right; }
 .fp-trace .ms.hot { color: var(--hot); }
 .fp-map.pz-on .fp-trace { visibility: hidden; }
+/* The ping log sits over the same corner on a desktop (pings.css): the trace steps aside while it has lines. */
+@media (min-width: 901px) { body.rooms-page:has(#pings .ping) .fp-trace { visibility: hidden; } }
 @media (max-width: 700px) { .fp-trace { display: none; } }
 /* traces: a dark bed and a thin line */
 .fp-bed { fill: none; stroke: #050302; stroke-width: 9; stroke-linecap: round; }
