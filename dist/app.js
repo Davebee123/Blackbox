@@ -2287,7 +2287,6 @@ function renderMeters() {
     el.title = `${n} new`;
   }
   { const up = V.upgradeCount(campaign) > 0; if ($('up-loadout').hidden === up) $('up-loadout').hidden = !up; } // an upgrade in the stash (view.mjs isUpgrade)
-  $('sound').textContent = 'Sound';
   $('sound').setAttribute('aria-pressed', String(campaign.settings.sound));
   feel.ambience(!!campaign.settings.sound && !coldOn);
   const vols = V.volumesOf(campaign);
@@ -2297,9 +2296,8 @@ function renderMeters() {
   feel.soundtrack({ on: !!campaign.settings.sound && !coldOn, music: campaign.settings.music !== false, radio: campaign.settings.radio !== false, mood: fighting ? 'fight' : campaign.run ? 'run' : 'home', family: fighting ? campaign.encounter.virus.family : null, floor: fighting ? stageFloor : null, heat: vi?.max ? Math.round((0.15 + 0.85 * (1 - vi.current / vi.max)) * 10) / 10 : 0 });
   // The place under the music (places.mjs): the hub whose session shows, the run's or fight's floor, the floor on the map.
   feel.places({ on: !!campaign.settings.sound && !coldOn, ...placeOf(campaign, { hub: hubShown() ? hubSel : null, map: module === 'map' && mapView === 'mine' ? V.mapFloorOf(campaign, mapSel, mapFloor) : null }) });
-  $('speed').textContent = `${cycleLength(campaign) / 1000}s cycle`;
+  $('speed-v').textContent = `${cycleLength(campaign) / 1000}s`;
   $('speed').title = `Speed: ${campaign.settings.speed || 'normal'}. Click for relaxed (12s) / normal (8s) / fast (5s). Rules count cycles, so balance never changes.`;
-  $('motion').textContent = 'Motion';
   $('haptics').hidden = !feel.canBuzz();
   casing();
   pagerUi();

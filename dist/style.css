@@ -81,8 +81,16 @@ code { font-family: var(--mono); color: var(--amber); }
 .modules { display: flex; gap: 2px; }
 .modules button { color: var(--muted); position: relative; }
 .modules button[aria-current='page'] { color: var(--bright); border-bottom: 2px solid var(--amber); border-radius: 0; }
-/* A faint slash between the tabs that are showing (desktop; the phone's tabs have their own layout). */
-@media (min-width: 901px) { .modules { gap: 9px; } .modules button:not([hidden]) ~ button:not([hidden])::before { content: '/'; position: absolute; left: -8px; top: 50%; transform: translateY(-50%); font: 400 12px var(--mono); color: rgba(241, 185, 47, 0.3); pointer-events: none; } }
+/* The *Rail* (desktop; the phone's tabs have their own layout): the tabs as cells in one frame, split by hairlines, the open one lit. */
+@media (min-width: 901px) {
+  .modules { gap: 0; border: 1px solid var(--line-strong); border-radius: 2px; font: 500 13px var(--mono); }
+  .modules button { border: 0; border-radius: 0; padding: 6px 13px; }
+  .modules button:not([hidden]) ~ button:not([hidden]) { border-left: 1px solid var(--line); }
+  .modules button:hover:not(:disabled) { background: rgba(241, 185, 47, 0.06); color: var(--text); }
+  .modules button[aria-current='page'] { border-bottom: 0; background: rgba(241, 185, 47, 0.14); box-shadow: inset 0 0 0 1px var(--amber); }
+  .modules button.ctx[aria-current='page'] { color: var(--you); background: rgba(127, 209, 199, 0.12); box-shadow: inset 0 0 0 1px var(--you); }
+  .modules button:active { transform: translateY(1px); }
+}
 .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--hot); margin-left: 6px; vertical-align: middle; }
 .meters { display: flex; gap: 22px; margin-left: auto; align-items: center; }
 .meter { display: flex; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums; }
@@ -96,7 +104,17 @@ code { font-family: var(--mono); color: var(--amber); }
 .meter-integrity.critical strong { color: var(--hot); }
 .toggles { display: flex; gap: 4px; color: var(--dim); font-size: 12px; white-space: nowrap; }
 .toggles button[aria-pressed='true'] { color: var(--text); }
-.toggles button[aria-pressed='false'] { color: var(--dim); text-decoration: line-through; }
+.toggles button[aria-pressed='false'] { color: var(--dim); }
+/* The right side in icons (desktop): each meter's glyph stands for its word, the word in its tooltip. Phones keep their own (phone.css). */
+.bar-ico { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.toggles button { display: inline-flex; align-items: center; gap: 5px; padding: 6px 7px; }
+.toggles .tg-off, .toggles [aria-pressed='false'] .tg-on { display: none; }
+.toggles [aria-pressed='false'] .tg-off { display: inline; }
+@media (min-width: 901px) {
+  :root:not([data-form='phone']) .topbar .bar-ico { display: block; margin: 0; align-self: center; }
+  .meters .bar-ico { color: var(--amber); }
+  .meters .meter:has(.bar-ico) .meter-label, .meter-integrity .meter-label { display: none; }
+}
 #speed { color: var(--amber); }
 
 /* ---------- panels ---------- */
@@ -2742,12 +2760,13 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .mbars .hb-n { font: 600 9px var(--mono); }
 .mbars .srv .hb-n { fill: var(--amber); } .mbars .you .hb-n { fill: var(--you); }
 /* Top centre: who you are. Handle · class · level, the class's XP as a thin bar under it. */
-.whoami { margin: 0 auto; display: grid; grid-template-columns: auto auto auto auto auto; align-items: baseline; column-gap: 7px; row-gap: 3px; font: 600 12px var(--mono); letter-spacing: 0.06em; color: var(--muted); }
-.whoami #who-handle { color: var(--bright); letter-spacing: 0.08em; }
-.whoami #who-class { color: var(--you); text-transform: uppercase; font-size: 11px; letter-spacing: 0.14em; }
-.whoami .who-lv { color: var(--muted); font-size: 11px; } .whoami .who-lv b { color: var(--bright); font-size: 13px; }
-.whoami .who-dot { color: var(--dim); }
-.whoami .who-bar { grid-column: 1 / -1; height: 3px; background: rgba(127, 209, 199, 0.12); border-radius: 2px; overflow: hidden; }
+/* The *Level chip*: the level in a teal square, the handle over the class beside it, XP as a hairline under them. */
+.whoami { margin: 0 auto; display: flex; align-items: center; gap: 10px; font: 500 12px var(--mono); color: var(--muted); }
+.whoami .who-lv { width: 30px; height: 30px; flex: none; display: grid; place-items: center; background: var(--you); color: var(--bg); font: 700 16px var(--mono); border-radius: 2px; }
+.whoami .who-id { display: grid; row-gap: 2px; }
+.whoami #who-handle { color: var(--bright); font-size: 13px; font-weight: 600; line-height: 1; }
+.whoami #who-class { color: var(--you); text-transform: uppercase; font-size: 10px; letter-spacing: 0.16em; line-height: 1; }
+.whoami .who-bar { height: 2px; margin-top: 2px; background: rgba(127, 209, 199, 0.12); overflow: hidden; }
 .whoami .who-bar span { display: block; height: 100%; background: var(--you); }
 /* The pager sits by the server's meters now, just left of Integrity. */
 .topbar .pager { margin-left: 0; }
@@ -2803,7 +2822,7 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .mk-th span:last-child { text-align: left; }
 .mk-tr .btn.small { white-space: nowrap; }
 /* Tight top bar (a breach's chip, a full pager): the pager's icons and who-you-are give way (pager.css has the pager's steps). */
-.topbar.fit-3 .whoami .who-dot, .topbar.fit-3 .whoami #who-class { display: none; }
+.topbar.fit-3 .whoami #who-class { display: none; }
 /* A listing with several files to pull: one button takes them all. */
 .ls-all { margin: 2px 0 4px; }
 .ls-all .tok.act { font-weight: 600; }
