@@ -127,10 +127,12 @@ function guestTick(G) {
   if (t - G.pinged >= COOP.pingMs) { G.pinged = t; G.link.send({ t: 'ping', at: t }); }
   G.ticked?.();
 }
+// In a fight on the host's run (the last snapshot): leaving now is a disconnect for the Warm cache.
+const inFight = (G) => G.snap?.party?.find((p) => p.who === G.snap.you)?.enc?.phase === 'active';
 function guestLeave(G, why) {
   if (G.closed) return;
   G.closed = true;
-  if (G.visit) guestVisitEnd(G, 'out'); // the host gone, or you leaving: a jack out, your visit kept
+  if (G.visit) guestVisitEnd(G, why === 'left' && inFight(G) ? 'left-fight' : 'out'); // the host gone, or you leaving: a jack out, your visit kept (leaving mid-fight loses the Warm cache's XP)
   if (why === 'left' && G.link.open) G.link.send({ t: 'leave' });
   if (G.link.open) G.link.close();
   if (G.joined || why !== 'refused') note(G, why === 'left' ? 'left' : 'host-gone', why === 'left' ? 'You leave the party.' : why === 'host-left' ? `${G.host || 'The host'} ended the session. You're home.` : why === 'refused' ? 'Not joined.' : `${G.host || 'The host'} dropped. You're home.`, { why });
@@ -302,7 +304,7 @@ export function guestGame(G) {
     const key = m.run ? `${m.run.loc}:${m.loc?.floorplan?.visits ?? 0}` : null;
     if (key && key !== G.runKey) { G.runKey = key; G.visit = true; }
     Object.assign(G.chars, m.chars || {});
-    const paid = (m.rewards || []).flatMap((r) => payReward(G.save, r));
+    const paid = (m.rewards || []).flatMap((r) => payReward(G.save, r, G));
     const fresh = [...remap(m.logs || [], m.host, m.you), ...paid.map((e) => ({ ...e }))].map((e) => ({ ...e, id: ++G.serial }));
     G.log.push(...fresh);
     if (G.log.length > 600) G.log.splice(0, G.log.length - 600);
@@ -325,14 +327,16 @@ export function guestGame(G) {
 // The host's run over, on the guest's save: either way it keeps what the visit paid. 'out' writes back the Integrity
 // they carry (integrity: the host's count; without it, the last snapshot's); 'lost' comes home at 1, as a disconnect.
 function guestVisitEnd(G, end, integrity) {
-  const s = G.save, on = G.visit;
-  G.visit = null; G.runKey = null;
+  const s = G.save, on = G.visit, held = G.held || 0;
+  G.visit = null; G.runKey = null; G.held = 0;
   if (!on) return;
-  if (end === 'lost') { s.server.integrity = 1; note(G, 'visit-lost', 'Every player went down. You keep what the visit paid.', { end }); }
+  if (end === 'lost') { s.server.integrity = 1; note(G, 'visit-lost', `Every player went down. You keep what the visit paid${held ? `, but the Warm cache's ${held} XP is lost` : ''}.`, { end, held }); }
+  else if (end === 'left-fight') note(G, 'visit-out', `You left mid-fight. You keep what the visit paid${held ? `, but the Warm cache's ${held} XP is lost` : ''}.`, { end, held });
   else {
     const me = G.snap?.party?.find((p) => p.who === G.snap.you), max = maxSignal(s);
     const n = integrity ?? (me ? (me.enc ? me.run.integrity : me.sig) : null);
     s.server.integrity = n == null ? s.server.integrity : Math.max(1, Math.min(max, n > 0 ? n : Math.round(max * CREW.reboot)));
+    if (held) gainXp(s, held, 'Warm cache'); // held since the visit began (payReward)
     note(G, 'visit-out', 'Jacked out. Your visit is saved.', { end });
   }
   G.visitEnded?.(end);
@@ -397,11 +401,13 @@ export function viewOf(G, m) {
 // A reward, paid by the guest's game on the guest's save: a kill at the guest's own level and on their own dice (the
 // party's XP share; code and a drop straight into their bank and stash: they carry no pack on someone else's run), or
 // a cache's share. Returns the lines it logged.
-export function payReward(s, r) {
+export function payReward(s, r, hold = null) {
   const first = s.serial;
-  // The host's Warm cache (visit.mjs): one count of stacks for the crew, paid on this save's own XP and dice.
+  // The host's Warm cache (visit.mjs): one count of stacks for the crew, on this save's own XP and dice. Its extra XP
+  // is held on hold (the guest's session: hold.held) until the host's visit ends (guestVisitEnd).
   Object.defineProperty(s, '_warm', { value: r.warm || 0, enumerable: false, configurable: true, writable: true });
-  try { payOne(s, r); } finally { delete s._warm; }
+  Object.defineProperty(s, '_hold', { value: hold, enumerable: false, configurable: true, writable: true });
+  try { payOne(s, r); } finally { delete s._warm; delete s._hold; }
   return s.logs.filter((e) => e.id > first);
 }
 function payOne(s, r) {

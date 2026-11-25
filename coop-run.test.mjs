@@ -232,3 +232,21 @@ test('co-op: the Warm cache is one count for the crew, paid on the guest\'s own 
   assert.equal(warm, Math.round(cold * 1.4), '+40% on the guest\'s own XP');
   assert.equal(g._warm, undefined, 'nothing left on the save');
 });
+
+test('a guest\'s Warm cache XP is held till the host\'s visit ends: paid on a jack out, lost when everyone goes down', async () => {
+  const { payReward } = await import('./dist/coop.mjs');
+  const mk = () => { const s = fresh(); const G = guestGame({ save: s, notes: [], now: () => 0 }); G.visit = true; return { s, G }; };
+  const base = { kind: 'kill', name: 'x', level: 10, party: 2, base: 1 };
+  { const { s, G } = mk(); const a = hackerOf(s).xp; payReward(s, { ...base, warm: 0 }); const cold = hackerOf(s).xp - a;
+    const b = hackerOf(s).xp; payReward(s, { ...base, warm: 4 }, G);
+    assert.equal(hackerOf(s).xp - b, cold, 'the base XP now');
+    assert.equal(G.held, Math.round(cold * 1.4) - cold, 'the +40% held');
+    const held = G.held, c = hackerOf(s).xp, lv = hackerOf(s).level;
+    G.hears({ t: 'visit', end: 'out' });
+    assert.ok(hackerOf(s).level > lv || hackerOf(s).xp === c + held, 'paid as the host jacks out');
+    assert.equal(G.held, 0); }
+  { const { s, G } = mk(); payReward(s, { ...base, warm: 4 }, G); const c = hackerOf(s).xp;
+    G.hears({ t: 'visit', end: 'lost' });
+    assert.equal(hackerOf(s).xp, c, 'lost when every player goes down');
+    assert.match(G.notes.at(-1).message, /XP is lost/); }
+});

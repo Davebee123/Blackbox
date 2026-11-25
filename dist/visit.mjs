@@ -14,10 +14,12 @@ export const warmOf = (s) => {
 export const warmXp = (s) => 1 + WARM.xp * warmOf(s);
 export const warmScavenge = (s) => WARM.scavenge * warmOf(s);
 // The Warm cache's extra XP is held on the visit (R.visit.held) and paid when you jack out (floorplan.mjs jackOut);
-// a disconnect loses it. True when it was held; false (a co-op guest's, no visit) pays it at once.
+// a disconnect loses it. A co-op guest's is held on their session until the host's visit ends. True when it was held;
+// false (no visit) pays it at once.
 export function holdWarm(s, extra) {
+  if (s?._warm != null) { if (!s._hold) return false; s._hold.held = (s._hold.held || 0) + extra; return true; } // a co-op guest's: held on their session (coop.mjs)
   const R = s?.rooms;
-  if (s?._warm != null || !(R?.world && R.at && R.visit)) return false;
+  if (!(R?.world && R.at && R.visit)) return false;
   R.visit.held = (R.visit.held || 0) + extra;
   return true;
 }

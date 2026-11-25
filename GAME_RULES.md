@@ -2964,7 +2964,8 @@ Two players, two saves, no server; developer mode while it's a prototype (docs/c
   their visit paid.
 - **The visit:** the host's jack out ends everyone's; a host who drops counts as a jack out for the guest. Each player
   brings their own Integrity and writes it back to their own server on jack out. **Warm cache:** one count for the
-  crew; each player gets its bonus on their own XP and drop rolls (the host's XP held till the jack out, a guest's paid as it comes). The Pack is personal.
+  crew; each player gets its bonus on their own XP and drop rolls with its extra XP held for everyone until the host's visit ends: paid on a jack out (a guest leaving counts as one,
+  out of a fight), lost when every player goes down or a guest leaves mid-fight. The Pack is personal.
 
 ## The screen
 
