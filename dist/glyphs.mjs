@@ -28,6 +28,7 @@ const P = {
   fan: '<circle cx="8" cy="8" r="6.3"/><circle cx="8" cy="8" r="1.1"/><path d="M8 6.9c-.5-1.9.1-3.3 1.7-3.9.9 1.5-.1 3.1-1.7 3.9Z"/><path d="M8 6.9c-.5-1.9.1-3.3 1.7-3.9.9 1.5-.1 3.1-1.7 3.9Z" transform="rotate(120 8 8)"/><path d="M8 6.9c-.5-1.9.1-3.3 1.7-3.9.9 1.5-.1 3.1-1.7 3.9Z" transform="rotate(240 8 8)"/>',
   clock: '<circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/>',
   stealth: '<path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><path d="M2.5 13.5 13.5 2.5"/>',
+  restart: '<path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M13 2.5v3h-3"/>', // a newer build: restart into it (update.mjs)
   sync: '<path d="M1.5 8h2.5l2-4.5 3 9 2-4.5h3.5"/>',
   scavenge: '<circle cx="7" cy="7" r="4.5"/><path d="m10.3 10.3 4.2 4.2"/>',
   ram: '<rect x="2" y="4.5" width="12" height="6" rx="1"/><path d="M4.5 10.5v2.5M7 10.5v2.5M9.5 10.5v2.5M12 10.5v2.5M5 7.5h6"/>', // the RAM stat (routines)

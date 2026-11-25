@@ -209,7 +209,8 @@ comment saying what it does.
 | `dist/quest-view.mjs`, `dist/quest.css` | The quest window: a thread as an intercepted transmission. |
 | `dist/portraits.mjs` | Backlit ASCII busts: the quest window's speaker (the cast's own or one from their name) and a runner's on their card (from the handle alone). |
 | `dist/coldopen.mjs` | First launch: the cold open (KESSLER's clearing house crashing), its own sound mix through `feel.scene()`. |
-| `dist/intro.mjs` | First launch: the login, then Halcyon's transmission. |
+| `dist/intro.mjs` | First launch: the login (a handle; the password types itself), then Halcyon's transmission. |
+| `dist/update.mjs` | A newer build: reads the build's `version.json` (scripts/build.mjs stamps it) and starts halcyon-mdm's transmission and the log's ↻ line. |
 | `dist/scenes.mjs`, `dist/scenes-view.mjs`, `dist/scenes.css`, `dist/content/scenes.mjs` | Transmissions: conversations with a contact over the map, their window and their words; the event ones play on their event. |
 | `dist/tips.mjs` | First-time tips, the game's only tutorial text. |
 | `dist/tutorial.mjs` | Guided practice on an isolated training virus, offered after the class pick (app.js `practice`; `?practice` until `PRACTICE.offer`). |

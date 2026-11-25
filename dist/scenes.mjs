@@ -71,7 +71,7 @@ export function skip(s) { if (sceneNow(s)) finish(s); }
 // What fills each scene's blanks on a test save (the editor's Play from here, developer scene): a careful runner.
 const SAMPLE = { handle: 'mothwing', faction: 'TOLLGATE', v: 'careful', v2: 'careful-won', server: 'SPRAWL-00', level: 1, id: 'sprawl', payer: 'Marrow & Vane', payee: 'Kessler Racks', sum: '4,200 cr', era: '1998' };
 export const sampleArgs = (s, id) => (id === 'first-server' ? firstServerArgs(s) : { ...SAMPLE, ...(id === 'first-held' ? { server: firstServerArgs(s).server } : {}) });
-// developer scene <id>: play it again.
+// developer scene <id>, and a newer build's notice (update): play it again.
 export function replay(s, id) {
   if (!SCENES[id]) return false;
   const t = T(s);

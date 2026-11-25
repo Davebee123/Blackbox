@@ -13,8 +13,8 @@ leaks round the edges, BLACKBOX settles low on the screen, and **Press any key**
 while it's coming on lands the picture at once; the prompt waits for the outline, never more than 6 s. A new game first plays the cold open (about
 55 s; any key or tap skips it, and Motion off leaves it out): KESSLER's clearing house over fifty years, its process table
 filling until the frame sticks and NETWORK OFFLINE, then a colder machine recovering. Then a bare terminal:
-`blackbox login:` asks for a handle (2–16 letters, numbers, dots, dashes or underscores) and a password (4+
-characters, never stored). An encrypted transmission from Halcyon Mutual's Office of Loss Prevention says the terminal
+`blackbox login:` asks for a handle (2–16 letters, numbers, dots, dashes or underscores); the password, Halcyon's,
+types itself. An encrypted transmission from Halcyon Mutual's Office of Loss Prevention says the terminal
 was set up for you and that wick of LOWLIGHT will write. Then you pick a class (Classes and loadout): its drawer lists
 what level 1 starts with (the basic hit and the first core skill), and on a phone Start stays at the screen's foot. With
 `?practice` a **Practice** offer follows, skippable: a training virus on its own state (tutorial.mjs, four lessons: type
@@ -2257,6 +2257,7 @@ character (What opens when). A runner's or a rival's speaks by their temperament
 | wick, PAGE NINE | PAGE NINE falls (floor 1's Boss step): the schedule came from deeper; LANTERN. |
 | LANTERN's arrival | Floor 2 reached: *Four. Nine. Nine.* |
 | LANTERN, then wick | CENTRIFUGE falls (floor 2's Boss step): the schedule's signer, the Stacks below; wick's goodbye opens the demo's end card. |
+| halcyon-mdm, an update | A newer build of the game is out (the hosted game checks when you come back to its tab, and every half hour while it shows). **Restart now** saves and reloads; **Later** leaves a ↻ line in the ping log until you click it. Plays again for each new build, on any save. |
 
 ### What opens when
 

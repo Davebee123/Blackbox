@@ -29,5 +29,8 @@ test('the build is one script and one stylesheet, with every asset and nothing o
     const css = readFileSync(join(out, r.style), 'utf8').replace(/url\((["']?)data:.*?\1\)/g, '');
     for (const m of css.matchAll(/url\(["']?([^)"'#][^)"']*)["']?\)/g)) assert.ok(existsSync(join(out, m[1])), `${m[1]} in the stylesheet exists`);
     assert.ok(html.includes('<script type="module"'), 'still a module (top-level await, import.meta.url)');
+    assert.match(r.stamp, /^\w{10}$/);
+    assert.ok(html.includes(`<meta name="bb-build" content="${r.stamp}">`), 'the page carries its build');
+    assert.deepEqual(JSON.parse(readFileSync(join(out, 'version.json'), 'utf8')), { build: r.stamp }, 'version.json beside it');
   } finally { rmSync(out, { recursive: true, force: true }); }
 });

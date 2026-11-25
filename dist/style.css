@@ -1788,7 +1788,6 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .intro-ask { display: flex; gap: 10px; align-items: baseline; }
 .intro-ask label { color: var(--amber); }
 .intro-field { position: relative; display: inline-flex; align-items: baseline; color: var(--bright); }
-.intro-field input.intro-secret { -webkit-text-security: disc; text-security: disc; letter-spacing: 2px; } /* dots, without being a password field a browser offers to save */
 .intro-field input { width: 22ch; padding: 0; background: transparent; border: 0; outline: none; font: inherit; color: var(--bright); caret-color: var(--amber); text-shadow: inherit; }
 .intro-field input:focus { caret-color: var(--amber); }
 /* The transmission */

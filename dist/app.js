@@ -88,6 +88,7 @@ import * as PG from './pager.mjs';
 import { shownCount, tableTip, tableKind } from './table.mjs';
 import * as PGV from './pager-view.mjs';
 import * as PI from './pings.mjs';
+import { watchUpdate } from './update.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
@@ -3647,6 +3648,11 @@ function pingFades() {
   for (const el of document.querySelectorAll('.ping[data-t] > :is(.pi-in, .pi-eye)')) if (!el.style.animationDelay) el.style.animationDelay = `${Number(el.parentElement.dataset.t) - now}ms`;
   for (const el of document.querySelectorAll('.ping[data-at]')) if (!el.style.getPropertyValue('--since')) el.style.setProperty('--since', `${Math.min(0, Number(el.dataset.at) - now)}ms`);
 }
+// A newer build (update.mjs): halcyon-mdm's transmission (it waits out a fight like any other) and the log's line.
+// Restarting saves first (pagehide).
+function restartIntoUpdate() { save(); location.reload(); }
+watchUpdate(() => { SC.replay(campaign, 'update'); markDirty(); });
+document.addEventListener('click', (e) => { if (e.target.closest('[data-update]')) { e.stopPropagation(); restartIntoUpdate(); } }, true);
 // A click on a ping: the page's thing (pagerAct), or where a line of news happened.
 document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-ping]');
@@ -4145,6 +4151,7 @@ document.fonts?.ready.then(() => { fitKey = ''; fitTopbar(); });
 // "where:what" from a pager entry or a button elsewhere: a page, and what to show on it.
 function goTo(target) {
   const [where, what, sub] = target.split(':');
+  if (where === 'restart') return restartIntoUpdate();
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
   else if (where === 'demo-end') demoFinish(); // wick's goodbye as CENTRIFUGE falls
   else if (where === 'store') go('store');

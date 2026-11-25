@@ -14,6 +14,16 @@ export default {
       go: { q: 'On my way.', end: true },
     },
   },
+  // A newer build is out (update.mjs): the box's device manager says so. Restart now saves and reloads; Later leaves
+  // the log's line (pings.mjs). It plays again for the next build.
+  update: {
+    who: 'halcyon-mdm', from: 'Halcyon Mutual', icon: 'log',
+    nodes: {
+      start: { lines: ['A new BLACKBOX/OS build is staged for this terminal.', 'Restart to install. Your session is saved first.'], ask: ['now', 'later'] },
+      now: { q: 'Restart now.', end: 'restart' },
+      later: { q: 'Later.', end: true },
+    },
+  },
   'first-server': {
     who: 'wick', from: 'LOWLIGHT',
     nodes: {

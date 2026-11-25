@@ -23,6 +23,7 @@
 .pi-t b { font-weight: 600; color: var(--amber); }
 .pi-t .you { color: var(--you); }
 .ping.threat .pi-ico, .ping.threat .pi-t b { color: var(--hot); }
+.ping.update .pi-ico { color: var(--amber); } /* a newer build (update.mjs) */
 .pings .pi-in:not([aria-disabled]):hover .pi-t { color: var(--bright); }
 /* The pager's chirp (feel.mjs) and the nag for an unseen threat: a glow on the line's icon. */
 .pings.fx-pager .ping:last-child .pi-ico, .ping.fx-pager .pi-ico { animation: pagerbuzz 0.4s linear; }
