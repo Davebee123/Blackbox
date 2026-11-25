@@ -250,3 +250,13 @@ test('a guest\'s Warm cache XP is held till the host\'s visit ends: paid on a ja
     assert.equal(hackerOf(s).xp, c, 'lost when every player goes down');
     assert.match(G.notes.at(-1).message, /XP is lost/); }
 });
+
+test('a guest\'s Warm box shows their own held XP, not the host\'s', async () => {
+  const { heldOf } = await import('./dist/visit.mjs');
+  const P = pairUp();
+  play(P.host, 'connect ' + traced(P.host).id); P.tick();
+  P.G.held = 123; P.host.rooms.visit.held = 999; P.tick();
+  assert.ok(P.G.view, 'the guest\'s view');
+  assert.equal(heldOf(P.G.view), 123, 'the guest\'s own');
+  assert.equal(heldOf(P.host), 999, 'the host keeps theirs');
+});

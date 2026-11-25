@@ -381,6 +381,7 @@ export function viewOf(G, m) {
   }
   delete V.rooms;
   bindRooms(V);
+  Object.defineProperty(V, '_held', { value: G.held || 0, enumerable: false }); // the Warm box shows the guest's own held XP, not the host's
   // The other players, as crewmates: the host under their handle, then the rest (bots, other guests).
   const others = [{ who: m.host, enc: m.enc && omit(m.enc, 'virus'), run: m.run, sig: m.run.integrity, max: m.run.max }, ...m.party.filter((p) => p.who !== m.you)];
   const mates = others.filter((p) => G.chars[p.who]).map((p) => {

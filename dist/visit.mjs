@@ -23,7 +23,7 @@ export function holdWarm(s, extra) {
   R.visit.held = (R.visit.held || 0) + extra;
   return true;
 }
-export const heldOf = (s) => (s?.rooms?.at && s.rooms.visit?.held) || 0;
+export const heldOf = (s) => s?._held ?? ((s?.rooms?.at && s.rooms.visit?.held) || 0); // _held: a co-op guest's view (coop.mjs viewOf)
 // A room won: one more stack (floorplan.mjs roomEnd, after the room's own pay).
 export const warmUp = (R) => { if (R?.world && R.visit) R.visit.warm = Math.min(WARM.max, (R.visit.warm || 0) + 1); };
 
