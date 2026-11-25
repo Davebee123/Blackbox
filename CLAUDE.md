@@ -84,7 +84,7 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - the power-up: the *Horizon* (a line of light across the screen, the black box standing on it with its light
     leaking round the edges, the name small and low; poweron.mjs), its loading phase the *Trace* (the box's outline
     draws itself round while the game warms up, then the light leaks out); and the same box on a short line as the small mark
-    (the top bar, the class pick, the favicon); the top bar's tabs as the *Rail* (cells in one frame split by hairlines, the open one lit; links with a `/` between them were the old look);
+    (the top bar, the class pick, the favicon); the top bar's tabs as the *Rail* (cells in one frame split by hairlines, the open one lit; links with a `/` between them were the old look); the player tag as the *Level chip* (the level in a teal square, handle over class, XP a hairline under them; *Prompt* and *Badge* were the alternatives); the top bar's right side in icons, each word in its tooltip;
   - quest window: the *Transmission*;
   - a hub's market head: *Squares* (the condition and each ticker card an icon in a 30px square, everything else on
     hover; up green, down pink, a crew's run red, the time left on its bottom edge; a rare card's star top-left, a bulk

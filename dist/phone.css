@@ -28,6 +28,7 @@
 [data-form='phone'] .topbar .meters > .meter:last-child { margin-left: auto; }
 /* All of it in 390 px: Process table on two lines, Materials its crate */
 [data-form='phone'] .topbar .meter-table .meter-label { width: 52px; white-space: normal; line-height: 1.15; }
+[data-form='phone'] .topbar .meter-table .bar-ico { display: none; }
 [data-form='phone'] .topbar .meter-stores .meter-label { display: none; }
 [data-form='phone'] .topbar .ph-ico { width: 18px; height: 18px; margin: 0; color: var(--amber); }
 [data-form='phone'] .topbar .ph-narrow { display: none; }
