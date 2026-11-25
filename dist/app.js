@@ -2298,15 +2298,12 @@ function renderMeters() {
   feel.places({ on: !!campaign.settings.sound && !coldOn, ...placeOf(campaign, { hub: hubShown() ? hubSel : null, map: module === 'map' && mapView === 'mine' ? V.mapFloorOf(campaign, mapSel, mapFloor) : null }) });
   $('speed-v').textContent = `${cycleLength(campaign) / 1000}s`;
   $('speed').title = `Speed: ${campaign.settings.speed || 'normal'}. Click for relaxed (12s) / normal (8s) / fast (5s). Rules count cycles, so balance never changes.`;
-  $('haptics').hidden = !feel.canBuzz();
   casing();
   pagerUi();
   phoneUi();
   peopleUi();
   channelUi();
   profileUi();
-  $('haptics').setAttribute('aria-pressed', String(!!campaign.settings.haptics));
-  $('motion').setAttribute('aria-pressed', String(campaign.settings.motion));
   document.body.classList.toggle('no-motion', !campaign.settings.motion);
   document.body.classList.toggle('grain-on', campaign.settings.grain === true); // either way by choice; unset, by the layout (style.css)
   document.body.classList.toggle('grain-off', campaign.settings.grain === false);
@@ -3580,8 +3577,6 @@ $('speed').addEventListener('click', () => {
   react(command(campaign, 'speed ' + next));
   save(); markDirty();
 });
-$('haptics').addEventListener('click', () => { campaign.settings.haptics = !campaign.settings.haptics; if (campaign.settings.haptics) navigator.vibrate?.(30); save(); markDirty(); });
-$('motion').addEventListener('click', () => { campaign.settings.motion = !campaign.settings.motion; save(); markDirty(); });
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && active(campaign) && !campaign.encounter.paused && !coop?.live()) { // (a shared fight runs on)
