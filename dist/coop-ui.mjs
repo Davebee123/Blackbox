@@ -15,7 +15,7 @@ const kitName = (c) => (c?.loadout?.sub?.[c.cls] && SUBS[c.loadout.sub[c.cls]] ?
 const LOADOUT_WORDS = /^(load|unload|equip|unequip|talent|untalent|respec|subclass|preset|program|daemon)\b/;
 
 export function createCoop(app) {
-  const C = { H: null, G: null, room: null, invite: null, answer: null, notes: [], el: null, busy: '' };
+  const C = { H: null, G: null, room: null, invite: null, answer: null, notes: [], el: null, wait: '' };
 
   // ---------- sessions ----------
   const onNote = (n) => { C.notes.push(n); C.notes = C.notes.slice(-4); app.notice(n.message, ['dropped', 'host-gone', 'refused'].includes(n.type)); draw(); };
@@ -50,29 +50,29 @@ export function createCoop(app) {
   }
   async function joinCode(code) {
     if (C.H || C.G) return app.notice('Leave this session first.', true);
-    C.busy = 'Knocking…'; draw();
-    try { guest(await broadcastJoin(code.trim().toLowerCase())); } catch (err) { app.notice(err.message, true); } finally { C.busy = ''; draw(); }
+    C.wait = 'Knocking…'; draw();
+    try { guest(await broadcastJoin(code.trim().toLowerCase())); } catch (err) { app.notice(err.message, true); } finally { C.wait = ''; draw(); }
   }
   async function makeInvite() {
     host();
-    C.busy = 'Making a code…'; draw();
+    C.wait = 'Making a code…'; draw();
     try {
       C.invite = await rtcInvite();
       C.invite.link.then((link) => { C.H?.add(link); C.invite = null; draw(); });
-    } catch (err) { app.notice(`No WebRTC here: ${err.message}`, true); } finally { C.busy = ''; draw(); }
+    } catch (err) { app.notice(`No WebRTC here: ${err.message}`, true); } finally { C.wait = ''; draw(); }
   }
   async function acceptReply(code) {
     if (!C.invite) return app.notice('Make an invite code first.', true);
-    try { await C.invite.accept(code); C.busy = 'Connecting…'; } catch (err) { app.notice(err.message, true); }
+    try { await C.invite.accept(code); C.wait = 'Connecting…'; } catch (err) { app.notice(err.message, true); }
     draw();
   }
   async function answerInvite(code) {
     if (C.H || C.G) return app.notice('Leave this session first.', true);
-    C.busy = 'Making a reply…'; draw();
+    C.wait = 'Making a reply…'; draw();
     try {
       C.answer = await rtcAnswer(code);
       C.answer.link.then((link) => { C.answer = null; guest(link); });
-    } catch (err) { app.notice(err.message, true); } finally { C.busy = ''; draw(); }
+    } catch (err) { app.notice(err.message, true); } finally { C.wait = ''; draw(); }
   }
   function leave() {
     if (C.H) { C.H.leave(); C.H = null; }
@@ -181,11 +181,11 @@ export function createCoop(app) {
       status = C.G.joined ? `In <span class="coop-you">${esc(C.G.host)}</span>'s party as ${esc(C.G.you)}${C.G.lat != null ? ` · ${C.G.lat} ms` : ''}. ${esc(C.G.host)} leads.` : 'Saying hello…';
       html = '<div class="coop-row"><button type="button" class="btn" data-coop="leave">Leave</button></div>';
     } else {
-      status = C.busy || 'Not in a session. Host one, or join one.';
+      status = C.wait || 'Not in a session. Host one, or join one.';
       html = `<div class="coop-row"><button type="button" class="btn" data-coop="host">Host</button></div>
         <div class="coop-row"><input class="coop-in" data-coop-code-in maxlength="6" placeholder="room code" aria-label="Room code"><button type="button" class="btn" data-coop="join">Join</button></div>`;
     }
-    if (C.busy && (C.H || C.G)) status += ` ${C.busy}`;
+    if (C.wait && (C.H || C.G)) status += ` ${C.wait}`;
     if (st.innerHTML !== status) st.innerHTML = status;
     if (body.dataset.html !== html) { body.innerHTML = html; body.dataset.html = html; }
     const inv = C.el.querySelector('[data-coop-invite]'), rep = C.el.querySelector('[data-coop-reply]');
