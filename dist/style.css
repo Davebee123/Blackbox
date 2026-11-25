@@ -73,6 +73,7 @@ code { font-family: var(--mono); color: var(--amber); }
 /* ---------- top bar ---------- */
 .topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 20px; padding: 8px 20px; border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--bright); font-weight: 700; letter-spacing: 3px; }
+.brand-name { transform: translateY(1px); } /* all caps sit high in their line: down to the rail's centre */
 /* The mark: the power-up's Horizon in small, a black box on a line of light, its light round the edges (the favicon is the same). */
 .brand-mark, .bb-logo { --lg: 18px; position: relative; flex: none; width: var(--lg); height: var(--lg); isolation: isolate; }
 .brand-mark { margin: 0 14px; }
