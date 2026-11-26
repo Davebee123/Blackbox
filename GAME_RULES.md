@@ -683,9 +683,9 @@ Resident drops each of its two once, then makes no unique roll. After a miss the
 
 | Boss | Unique | What it does |
 |---|---|---|
-| RELAY-KING | Crown Packet (exploit, 3) | +30% damage on a part whose attack lands this cycle or next |
-| RELAY-KING | Hop Limit (shell, 3) | When an attack lands on you, restore 3% of your health |
-| A Resident | Squatter's Rights (proxy, 4) | Start every fight with a ◆ |
+| RELAY-KING | Crown Packet (exploit, 3) | +15% damage on a part whose attack lands this cycle or next |
+| RELAY-KING | Hop Limit (shell, 3) | When an attack lands on you, restore 2% of your health |
+| A Resident | Squatter's Rights (proxy, 4) | Start every fight with a ◆ that fades after 4 cycles |
 | A Resident | Eviction Notice (exploit, 4) | When you break a part, all your cooldowns drop by 1 |
 | REPO MAN | Lien (script, 8) | +15% crit chance on an armored part |
 | REPO MAN | Repossessed Key (shell, 8) | +4 Regen behind a shield |
@@ -698,7 +698,7 @@ Resident drops each of its two once, then makes no unique roll. After a miss the
 | SHOULDER SURFER | Privacy Screen (shell, 18) | The first part each fight that plays back or copies your command misses with it |
 | SHOULDER SURFER | Muscle Memory (script, 18) | A command fired exactly 2 cycles after your last deals 10% more |
 | RECURSION | Tail Call (exploit, 19) | When you break a part, your burns on the other parts tick once right away |
-| RECURSION | Stack Guard (proxy, 19) | The next attack on you within 2 cycles of a part breaking deals 20% less |
+| RECURSION | Stack Guard (proxy, 19) | The next attack on you within 2 cycles of a part breaking deals 15% less |
 | NIGHT DESK | Overdraft (proxy, 24) | Once a fight, a hit that would take you under 25% of your max leaves you there, and the rest lands over the next 3 cycles |
 | NIGHT DESK | Pre-Authorization (script, 24) | When you raise a shield, your next command's hits deal 10% more |
 | CAMSWARM | Changed Default (proxy, 24) | A virus can't play your helpers back at you. Your helpers deal 50% more to fragments |
@@ -800,9 +800,9 @@ pack), the ledger vault (`open` once the Foreman and the Heatsink are down) and 
 
 | Boss | Unique | What it does |
 |---|---|---|
-| THE FOREMAN | Foreman's Lanyard (proxy, 7) | 8% less damage taken from a fight's 6th cycle |
+| THE FOREMAN | Foreman's Lanyard (proxy, 7) | 6% less damage taken from a fight's 6th cycle |
 | THE FOREMAN | Time and a Half (script, 7) | +2% damage for every cycle the fight has lasted, up to +30% |
-| HEATSINK | Thermal Paste (exploit, 8) | +20% crit chance on a Tagged part |
+| HEATSINK | Thermal Paste (exploit, 8) | +30% crit chance on a Tagged part |
 | HEATSINK | Fan Curve (shell, 8) | Your burns grow +2 a cycle |
 | COLDWALLET | Cold Wallet (proxy, 9) | A crit against you lands as a normal hit |
 | COLDWALLET | Air Gap (shell, 9) | Encryption on you stacks half as fast |
@@ -1287,7 +1287,7 @@ post)), a **darknet listing** (Events), or merging with its owner and fighting t
 | Split Brain | 14 | Exploit | A twin you break can't reboot |
 | Rootless | 15 | Implant | +25% damage with a skill whose moment is on the board |
 | Write Blocker | 16 | Proxy | A seal that goes through leaves your ◆ and shield, and you stay clean |
-| Policy Engine | 18 | Script | Your blue and yellow rules count 50% more (−3% Crit) |
+| Policy Engine | 18 | Script | Your blue and yellow rules count 35% more (−3% Crit) |
 | Quiet Wire | 20 | Proxy | A Tripwire you break stays quiet |
 | Static Discharge | 21 | Exploit | +35% crit chance on a part gone loud |
 | Hush Money | 22 | Implant | A cast that compiles lasts 2 cycles less |
@@ -1297,10 +1297,10 @@ post)), a **darknet listing** (Events), or merging with its owner and fighting t
 | Hold Music | 28 | Proxy | Evasion counts double while a part winds up a tell |
 | Kill Chain | 30 | Implant | When you break a part, the next part to attack is Open for a cycle |
 | Preempt | 32 | Script | +40% crit chance on a part winding up a tell |
-| Brute Force | 33 | Exploit | +15% damage on a part wearing ◆ |
+| Brute Force | 33 | Exploit | +25% damage on a part wearing ◆ |
 | Takedown Notice | 34 | Implant | When you break a fragment, every cooldown drops by 1 |
 | Sandman | 36 | Shell | A tell that lands leaves nothing behind (−10 Regen) |
-| Rubber Hose | 38 | Exploit | +6 damage for every tell you read this fight, up to +30 (−3% Crit) |
+| Rubber Hose | 38 | Exploit | +8 damage for every tell you read this fight, up to +40 (−3% Crit) |
 | Mirror Maze | 40 | Proxy | On the Decoy's beat your commands go where you aim them, at 50%, and nothing bounces back |
 
 **The Network card** (Server and Consortium pages) shows only what you've learned by playing there: its name always,
@@ -1672,20 +1672,22 @@ on floor 2 and deeper hold one (`.src`), at the server's level.
 ### Uniques
 
 A unique has a fixed name, stats, flavour and usually one **effect** (a few deep ones two or three), sometimes a
-downside. Its primaries are the best base of its slot at its item level ×1.2, or its own grown from its level, whichever
-is higher; its downside never grows. Effects are blocks (when · if · does · limits), written in the editor. No two uniques
+downside. It is about a good yellow in its own situation: its primaries are the best base of its slot at its item level
+×1.2 (a yellow's), or its own grown from its level, whichever is higher; it carries **two secondary stats**, sized by its
+level, where a yellow has its affixes, and its effect where a yellow has its rule; its downside never grows. Its
+tooltip's last line says what it is for (*▸ Finish parts below half.*; docs/unique-roles.md). Effects are blocks (when · if · does · limits), written in the editor. No two uniques
 share an effect (one trigger, condition and payoff each); a faction piece keeps up with your level, so no other unique
 copies its signature. A **class unique** leans to a class or subclass: three times as likely for it, twice for the rest
 of its class.
 
 - **Class uniques:** Tracking Pixel (script 3; SPRAWL-00, layer 1 vaults; Infiltrator): +25% damage on a Tagged part;
-  Slow Drip (exploit 4; SPRAWL-00, rogue servers; Infiltrator): +15% crit on a burning part; Spearphish (exploit 7;
+  Slow Drip (exploit 4; SPRAWL-00, rogue servers; Infiltrator): +25% crit on a burning part; Spearphish (exploit 7;
   layer 2 vaults, rogue servers; Infiltrator): Tag cools a cycle faster; Jackhammer (exploit 5; layer 1 vaults, rogue
   servers; Breaker): Flood cools a cycle faster; Shrapnel (script 8; SPRAWL-00, rogue servers; Breaker): heal 6 when you
-  break a part; Hot Patch (shell 4; SPRAWL-00; Bastion): Patch cools a cycle faster; Uptime SLA (proxy 6; layer 1
+  break a part; Hot Patch (shell 4; SPRAWL-00; Bastion): Patch cools 2 cycles faster; Uptime SLA (proxy 6; layer 1
   vaults, rogue servers; Bastion): +2 Block below half; Worker Pool (script 5; SPRAWL-00, layer 1 vaults; Operator):
   helpers deal 20% more to a burning part; Fork Handle (shell 9; layer 2 vaults,
-  rogue servers; Operator): Botnet cools a cycle faster.
+  rogue servers; Operator): Botnet cools 2 cycles faster.
 - **World uniques, levels 18–40** (layer 3 and 4 vaults and rogue servers unless named): Rowhammer (exploit 18): bare
   parts patch their ◆ 3 cycles later; Ctrl-C (script 20; also Tracer ICE): calling off a tell makes your next damaging
   skill hit again for 30%; Slammer (script 22): burns on a part you break jump to the next; Log4Shell (exploit 24; also the Shredder): a break
@@ -1700,10 +1702,10 @@ of its class.
     Headcount, BIT BUCKET Pumphouse and Seawall, SUMP Anchor Chain and Check Valve, the Sinkhole Resident Backwash and
     Riptide): Seawall (proxy 39): each hit your Block reduces adds 1 Block for the fight, up to 5;
     Backwash (script 40): when a helper expires, your next helper skill cools a cycle faster; Floodgate (exploit 41):
-    breaking a part gives +10% crit for 3 cycles, stacking twice; Riptide (proxy 42): helpers deal 8% more to Jammed
+    breaking a part gives +10% crit for 3 cycles, stacking twice; Riptide (proxy 42): helpers deal 15% more to Jammed
     parts; Anchor Chain (implant 43): when an attack lands on you, your next heal or shield is 10% larger; Outfall
-    (exploit 43): each skill's first use in a fight deals 10% more; Pumphouse (proxy 44): +5% to a skill for each
-    Momentum stack it spends; Spillway (exploit 44): crits deal 20% more to a part below half;
+    (exploit 43): each skill's first use in a fight deals 10% more; Pumphouse (proxy 44): +8% to a skill for each
+    Momentum stack it spends; Spillway (exploit 44): crits deal 30% more to a part below half;
     Headcount (proxy 40): +1 Block for each part standing, up to 4; Check Valve (proxy 44): a part's blast as it breaks
     (a Zip Bomb's) deals you 40% less.
   - **The Sink's rare spawns:** Undertow (exploit 39): +10% to a part that attacked last cycle; Brine (script 40): burns
@@ -1712,14 +1714,14 @@ of its class.
     fight, up to 8; Turbidity
     (proxy 44): after you crit, +5% Stealth for 2 cycles.
   - **The Sink's vaults:** Drain Plug (shell 39): once a fight, the first attack over 20% of your max deals half;
-    Siltstone (implant 40): +1 Block for each ◆ you hold; Pressure Hull (shell 42): Block 25% stronger while you hold a
+    Siltstone (implant 40): +2 Block for each ◆ you hold; Pressure Hull (shell 42): Block 25% stronger while you hold a
     shield; Ballast (implant 42): +10% crit at full Momentum; Cofferdam (shell 44): while a shield holds you take
     5% less; Weir (implant 44): once a fight, a helper takes the first attack on you and expires.
   - **Threads on The Sink:** Low Tide (proxy 40): Stealth counts double; Depth Gauge (shell 41): +4 Regen from a fight's
     6th cycle; Silt Map (script 42): Mapped servers pay 10% more XP; Sounding Line (implant 44): a veiled part shows its
     next attack a cycle out, and crits deal 15% more to a part winding up a tell.
   - **The Sink's puzzle boards:** Brackish (script 41): burns deal 10% more to parts below half; Ebb (script 43): your
-    first helper each fight lasts 2 cycles longer.
+    first helper each fight lasts 3 cycles longer.
   - **Strain kills** (the strain trophy roll, from level 39): Sump Pump (shell 41): heals on you 10% larger below half;
     Bilge (proxy 43): each burn you start lowers its part's damage to you 3%, up to 9%; Siphon Tube (script 44): Leech
     heals 50% more below half; Bitrot Ward (proxy 45): when a break leaves one part, a ◆ for 2 cycles, once a fight;
@@ -1727,7 +1729,7 @@ of its class.
     hits once as it arrives.
   - **Crew bosses** (their 10% world unique): Wake (exploit 43): crits deal 5% more for each crewmate in the fight, up to 15%.
   - **Bedrock's lair boss:** Bootstrap (script 45): +25% crit on a skill's first use in a fight; Init Vector (implant
-    45): +3% crit for each cycle the fight has lasted, up to 15%; Firmware (implant 46): +4% max Integrity, and a break
+    45): +4% crit for each cycle the fight has lasted, up to 20%; Firmware (implant 46): +4% max Integrity, and a break
     gives +8% Clock Speed for 3 cycles, stacking twice; Read-Only (shell 46): once a fight, the first attack that would
     take you below half deals 40% less; Fuse Map (exploit 46): a break gives 1 more Momentum, and crits deal 15% more at
     full Momentum; Golden Image (script
@@ -1740,9 +1742,9 @@ of its class.
   - **Bedrock's rare spawns:** POST Code (exploit 45): every hit of your first damaging skill each fight crits; Burn-In
     (proxy 46): burns you start tick once at once; Ground Plane (implant 49): each hit on you adds 2% crit for the fight, up to 10%; Undervolt (proxy
     49): Momentum no longer raises the damage you take.
-  - **Bedrock's vaults:** Bedframe (shell 45): +10% max Integrity, and each tell that lands on you adds 2 Block for the
+  - **Bedrock's vaults:** Bedframe (shell 45): +6% max Integrity, and each tell that lands on you adds 2 Block for the
     fight, up to 6; Bus Fault (implant 47): Jams
-    also push the part's next attack back a cycle; Cold Iron (shell 48): +3 Block, and Block takes its full amount off
+    also push the part's next attack back a cycle; Cold Iron (shell 48): +2 Block, and Block takes its full amount off
     damage over time; Strata (shell 49): each 10% of Integrity missing cuts damage to you 2%, up to 10%.
   - **Bedrock's puzzle boards:** Watchdog Timer (script 46): every 6 cycles with no helper out, a free one joins for 2
     cycles; Bit Flip (exploit 47): every fourth crit in a fight deals double its bonus; Clock Tree (script 49): your
@@ -1751,7 +1753,7 @@ of its class.
     first hit on each part goes through its ◆.
 - **Batch 2** (docs/item-builds.md *Gaps*): build pieces for the class slots the deep uniques left empty, late enablers
   and the shared events. The Sink: Breakwater (exploit 41, lair boss; Bastion): a shield gained or absorbing a hit gives
-  +5% damage for 2 cycles, stacking 3 times; Riprap (shell 42, vaults; Breaker): a cut gives +8% damage for 2 cycles,
+  +6% damage for 2 cycles, stacking 4 times; Riprap (shell 42, vaults; Breaker): a cut gives +8% damage for 2 cycles,
   stacking twice; Spawning Run (exploit 42, rare spawns; Operator): helpers deal 15% more; Tide Table (implant 42,
   puzzle boards): answering a tell readies the skill that answered it; Banked Fire (shell 43, threads; Infiltrator):
   burns deal 12% more. Bedrock: Rockfall (script 45, lair boss; Breaker): a break pushes the next part to attack back a
@@ -1761,7 +1763,7 @@ of its class.
 - **Floors 5 and 6** (docs/floor-items.md; levels 28–40), each from its floor's lair boss until its planned source is
   built (`planned`: the boss, family or server kind named). Deep Core, GRACE PERIOD's (built): Installment (implant 28): your
   first hit on each part every 3 cycles deals 10% more; Late Fee (exploit 28): +15% to a part whose ◆ came back this
-  fight. EXIT NODE's (built): Hidden Service (implant 30): every 6 cycles the next attack on you deals half; Tail Circuit
+  fight. EXIT NODE's (built): Hidden Service (implant 30): every 8 cycles the next attack on you deals half; Tail Circuit
   (exploit 30): +20% on even cycles. PARASITE's: Antibody (exploit 32): +40% to a part
   that healed since your last turn; Tourniquet (proxy 32): siphons deal you 50% less and heal half as much. ACTUARY's
   (level 40, so the lair boss can't drop them until it is 38): Moral Hazard (exploit): +3% for each tell that landed on
@@ -1848,7 +1850,7 @@ five slot kinds, so a general set's 2-piece can go beside it.
 | **Glass Ceiling** | Fight below half Integrity | 14–26: GLASSJAW's bosses and elites | Rotor (exploit, 14): +8% crit below half [+5% crit] · Quorum (proxy, 17): +4 Block below 25% [+5% Clock Speed] · Ledger (script, 20): +15% Restore below half [+5% damage] · Parachute (implant, 23): +6 Regen below 25% [+2 Block] | +6% damage | +10% damage while below half Integrity | +10% Clock Speed while below half. Once a fight, dropping below 25% heals 10% of max |
 | **On-Call** | Heal through long fights as a Sysop | 18–30: SHOULDER SURFER and floor 4's lair boss (the Pager), NIGHT DESK (the Runbook), BYZANTINE (Failover) | Pager (proxy, 18): a tell landing on you makes your next heal or shield 25% larger [+2 Block] · Runbook (script, 22): your first heal each fight is 15% larger [+6% max Integrity] · Rota (shell, 26, floor 4): heals on you 15% larger from a fight's 6th cycle [+5% Clock Speed] | +10% Restore | Healing past full becomes a shield, up to 10% of max Integrity |  |
 | **Cold Storage** | Stay above 75% Integrity | 19–26: vaults | Freezer (shell, 19): +2 Regen above 75% [+6% max Integrity] · Cold Cache (implant, 22): +8% crit above 75% [+5% damage] · Frost Line (proxy, 25): +1 Block while above 75% Integrity [+5% crit] | +2 Block above 75% Integrity | Above 75% Integrity, you take 8% less damage |  |
-| **Overtime** | Outlast long fights: elites and bosses | 22–30: puzzle boards won, a piece a kind | Punch Card (script, 22, Quarantine): +6% Clock Speed from a fight's 6th cycle [+5% damage] · Time Clock (implant, 24, Cascade): +6% crit from a fight's 6th cycle [+5% Clock Speed] · Late Pass (proxy, 26, Ping sweep): +3 Block from a fight's 6th cycle [+5% crit] · Coffee Run (exploit, 28, Hunter chase): crits deal 15% more from a fight's 6th cycle [+6% max Integrity] | +5% Clock Speed | From a fight's 6th cycle, +10% damage | From the 6th cycle, cooldowns tick an extra cycle every other cycle |
+| **Overtime** | Outlast long fights against elites and bosses | 22–30: puzzle boards won, a piece a kind | Punch Card (script, 22, Quarantine): +6% Clock Speed from a fight's 6th cycle [+5% damage] · Time Clock (implant, 24, Cascade): +6% crit from a fight's 6th cycle [+5% Clock Speed] · Late Pass (proxy, 26, Ping sweep): +3 Block from a fight's 6th cycle [+5% crit] · Coffee Run (exploit, 28, Hunter chase): crits deal 15% more from a fight's 6th cycle [+6% max Integrity] | +5% Clock Speed | From a fight's 6th cycle, +10% damage | From the 6th cycle, cooldowns tick an extra cycle every other cycle |
 | **Fine Print** | Tank the tells you can't answer, as a Bastion | 26–32: the floor 5 lair boss (planned: the Underwriting desk's vaults and Core) | Rider (proxy, 26): +1 Block for each tell that landed, up to 4 [+6% max Integrity] · Copay (shell, 27): the first hit on you each fight deals 20% less [+2 Block] · Exclusion (script, 30): +8% crit behind a shield [+5% damage] · Premium (implant, 32): +2% crit for each tell that landed, up to 8% [+5% Clock Speed] | +8% max Integrity | A tell that lands on you shields you for 5% of your max Integrity | While a shield holds, your hits deal 10% more |
 | **Contiguous** | Focus one part until it breaks, as a Phantom | 27–31: the floor 5 lair boss (planned: Defrag boards) | Sector (exploit, 27): +10% crit on a part that attacked last cycle [+5% crit] · Cluster (implant, 29): +8% Clock Speed while a part winds up a tell [+6% max Integrity] · Allocation Table (script, 31): crits deal 15% more on a part about to attack [+5% damage] | +5% Clock Speed | Each command in a row on the same part deals 6% more than the last, up to 18% |  |
 | **Crypter** | Strip ◆, then crit, as a Phantom | 26–31: the floor 5 lair boss (planned: Polymorph kills) | Stub (exploit, 26): crits deal 15% more on a part wearing ◆ [+5% damage] · Junk Code (script, 28): +5 damage to hits on a part wearing ◆ [+5% crit] · Decryptor (shell, 31): +3% Evasion for each ◆ held, up to 9% [+6% max Integrity] | +5% crit | When you break a part's last ◆, your next hit on another part is a critical strike |  |
@@ -1941,7 +1943,7 @@ find-every-piece achievement, the count being the goal. Every drop set keeps its
 | **No Rest** (shell, 22; across) | 5 servers Mapped in a visit you don't rest | +6% max Integrity and +1 Regen while you haven't rested this visit |
 | **Sapper** (exploit, 28) | 6 Cores beaten on Rich or Hardened servers on Deep Core | +8 damage to hits on an armored part |
 | **Field Guide** (exploit, 28; across) | 20 different strains beaten | +8% damage and +5% crit against a strain |
-| **Culvert** (implant, 40) | 12 ★ rare spawns on The Sink | Up to 40 damage left over from a break carries onto the next part to attack |
+| **Culvert** (implant, 40) | 12 ★ rare spawns on The Sink | Up to 60 damage left over from a break carries onto the next part to attack |
 | **Long Shot** (implant, 40; across) | 10 servers on floors 5–8 located by tracing (not a Mapped server's gift) | +5% crit; +10% damage while above 75% Integrity |
 
 - **Counted:** events from the band on (`s.earned`): kills, boards, fights, Cores, respawned rooms, rare spawns,

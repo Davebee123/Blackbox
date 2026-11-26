@@ -9,7 +9,9 @@ five sets and 20 uniques each: docs/floor-items.md (designed).
 
 Taken from Diablo 2: modest items, general effects with a natural lean, something to find in every stretch.
 
-- **Modest on their own.** A unique or set piece is a sidegrade, about a good blue. A full set is the payoff.
+- **A unique is about a good yellow** (the designer, November 2026, closer to Diablo 2): a yellow's base, two secondary
+  stats in place of its affixes, and its effect in place of its rule, so in its own situation it beats the yellow it
+  replaces (docs/unique-roles.md). **A set piece is about a good blue;** a full set is the payoff (docs/set-roles.md).
   Legends are the one exception: very rare, very strong, endgame (docs/legends.md).
 - **General, with a lean.** Effects work in every fight and never name a virus, gene, guard or boss.
 - **Every band has something**, weighted by how long players spend in it.

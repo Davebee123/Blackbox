@@ -32,7 +32,7 @@ show a set's reason, *Bots* says why, and the designer's play decides.
 | Glass Ceiling | 14–23 | Fight below half Integrity | Everyone | starting at 45% Integrity | -10.0 | -0.8 |  |
 | On-Call | 18–26 | Heal through long fights as a Sysop | Sysop | unrested, starting at 65% Integrity | -11.0 | +3.3 |  |
 | Cold Storage | 19–25 | Stay above 75% Integrity | Everyone | any fight | -7.7 | -7.7 |  |
-| Overtime | 22–28 | Outlast long fights: elites and bosses | Everyone | elites (long fights) | -4.0 | -0.8 |  |
+| Overtime | 22–28 | Outlast long fights against elites and bosses | Everyone | elites (long fights) | -4.0 | -0.8 |  |
 | Burst Buffer | 25–31 | Open every fight with crits | Overclocker, Phantom | any fight | -5.4 | +1.1 |  |
 | Hot Spare | 28–32 | Recover the first time you drop low | Everyone | starting at 45% Integrity | -4.2 | -0.8 |  |
 | Mesh | 31–37 | Play in a crew | Everyone | with two crewmates | -6.4 | +3.7 |  |

@@ -16,10 +16,11 @@ import * as FP from './dist/floorplan.mjs';
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false; CONFIG.baseCrit = 0;
 // A boss fight with its attacks parked and its tells quiet, so nothing lands unless a test says so.
-function boss(id, { level = BOSSES[id].floor, cls = 'breaker', wear = [] } = {}) {
+// bare: the uniques worn without their secondary stats, to measure an effect alone.
+function boss(id, { level = BOSSES[id].floor, cls = 'breaker', wear = [], bare = false } = {}) {
   const s = fresh();
   FP.outfit(s, { cls, level });
-  for (const u of wear) command(s, 'load ' + addItem(s, uniqueItem(UNIQUES[u], level, seeded(1))).id);
+  for (const u of wear) command(s, 'load ' + addItem(s, uniqueItem(bare ? { ...UNIQUES[u], secondary: null } : UNIQUES[u], level, seeded(1))).id);
   selectEncounter(s, 'random', 7, { level, mutation: null, family: BOSSES[id].family, boss: id });
   command(s, 'engage');
   s.server.max = s.server.integrity = 5000;
@@ -517,7 +518,7 @@ test("CAMSWARM's pair comes first in the lair's roll; Changed Default's helpers 
   // Changed Default: a helper's hit on a fragment deals half again; on a part, the same.
   assert.match(fxText(UNIQUES['changed-default'].effect), /playing your helpers back at you.*helpers deal 50% more to fragments/i);
   const dealt = (wear) => {
-    const q = boss('byzantine', { wear }), nb = of(q, 'nodeb');
+    const q = boss('byzantine', { wear, bare: true }), nb = of(q, 'nodeb');
     landNow(q, nb);
     const f = fragsOf(q)[0], n = of(q, 'nodea'); n.armor = 0; f.armor = 0; f.max = f.integrity = 1000;
     const f0 = f.integrity, n0 = n.integrity;

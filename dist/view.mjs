@@ -1290,8 +1290,10 @@ const itemName = (it) => `<b class="iname ${rarityClass(it)}" title="${esc(itemT
 // A unique's effect (or a found Zero-day's), under its stats.
 const itemEffect = (it) => {
   const [head, ...rest] = fxText(it).split(' — ');
-  return head ? `<small class="zd${it.rule ? ' rule' : ''}">${rest.length ? `<b>${esc(head)}</b> — ${esc(rest.join(' — '))}` : esc(head)}</small>` : '';
+  return head ? `<small class="zd${it.rule ? ' rule' : ''}">${rest.length ? `<b>${esc(head)}</b> — ${esc(rest.join(' — '))}` : esc(head)}</small>${uniqueWhy(it, 'small')}` : '';
 };
+// What a unique is for: its answer line (style guide 2.7), muted under its effect. A set piece's is its set's (setLines).
+const uniqueWhy = (it, tag) => { const u = it?.unique && !setOf(it.unique) ? UNIQUES[it.unique] : null; return u?.why ? `<${tag} class="u-why">${esc(ANSWER + u.why)}</${tag}>` : ''; };
 // A faction implicit (gear.mjs IMPLICITS): the faction's mark and its line, in its colour; the faction's name on hover.
 const implicitRow = (it, tag = 'small') => (it?.implicit && FX[it.implicit] ? `<${tag} class="impl" style="--fc:${FX[it.implicit].color}" title="${esc(FX[it.implicit].name)}">${glyph('f-' + it.implicit)}<span><b>${esc(IMPLICITS[it.implicit].name)}</b> — ${esc(implicitText(it))}</span></${tag}>` : '');
 const statsHtml = (it) => `<small>${Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span class="${v < 0 ? 'neg' : ''}">${esc(statLine({ [k]: v }))}</span>`).join('')}</small>`;
@@ -1505,7 +1507,7 @@ function itemSheet(s, it, vs = null, acts = '') {
   }).join('');
   const lost = fxName(out) && fxName(out) !== fxName(it) ? `<p class="silk-lost">▼ ${esc(fxName(out))}</p>` : '';
   const [fxHead, ...fxRest] = fxText(it).split(' — ');
-  const effect = fxHead ? `<h4 class="silk-kicker">Effect</h4><p class="silk-fx">${fxRest.length ? `<b>${esc(fxHead)}</b> — ${esc(fxRest.join(' — '))}` : esc(fxHead)}</p>` : '';
+  const effect = fxHead ? `<h4 class="silk-kicker">Effect</h4><p class="silk-fx">${fxRest.length ? `<b>${esc(fxHead)}</b> — ${esc(fxRest.join(' — '))}` : esc(fxHead)}</p>${uniqueWhy(it, 'p')}` : '';
   return `<div class="silk-head"><div class="silk-headtext"><h3 class="silk-title iname ${rarityClass(it)}">${esc(itemLabel(it))}</h3>
     <p class="silk-sub">${esc(rarityName(it))} · ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}${!meetsReq(s, it, hackerLevel(s)) ? ` · <b class="silk-req">Requires Level ${reqLevel(it)}</b>` : ''}${where && where !== classOf(s) ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}${home ? ` <span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}</p>${acts}</div><div class="silk-plate">${glyphMarkup(it, 'lg')}</div></div>
     <h4 class="silk-kicker">${vs ? (out ? `Stats · vs ${esc(itemLabel(out))}` : 'Stats') : 'Stats'}</h4><dl class="silk-stats${vs ? ' vs' : ''}">${rows}</dl>${implicitRow(it, 'p')}${lost}${effect}${it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em class="silk-flavour">${esc(flavour)}</em>` : ''}`;

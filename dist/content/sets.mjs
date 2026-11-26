@@ -787,7 +787,7 @@ export default {
           ]
         }
       },
-      "why": "Outlast long fights: elites and bosses."
+      "why": "Outlast long fights against elites and bosses."
     },
     {
       "id": "burstbuffer",

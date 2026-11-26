@@ -163,7 +163,7 @@ test('damage% on the new conditions: Late Fee, Antibody, Tail Circuit, Brute For
   assert.equal(against('tail-circuit', (s) => { s.encounter.cycle = 4; }), 1.2, 'Tail Circuit: an even one');
   // Brute Force: more on a part wearing ◆, to a hit that gets through it.
   assert.equal(against('brute-force', (s) => { pulse(s).armor = 0; }), 1, 'Brute Force: not on a bare part');
-  assert.equal(against('brute-force', (s) => { pulse(s).armor = 1; }), 1.15, 'Brute Force: a part wearing ◆');
+  assert.equal(against('brute-force', (s) => { pulse(s).armor = 1; }), 1.25, 'Brute Force: a part wearing ◆');
   assert.equal(against('moral-hazard', (s) => { s.encounter.metrics.tells = { a: { landed: 3 }, b: { landed: 1 } }; }), 1.12, 'Moral Hazard: 3% for each of 4 tells');
   assert.equal(against('moral-hazard', (s) => { s.encounter.metrics.tells = { a: { landed: 20 } }; }), 1.3, 'Moral Hazard: up to 30%');
 });

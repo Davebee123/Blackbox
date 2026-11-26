@@ -166,6 +166,9 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **HOME is lean** (November 2026): it is its Integrity, nothing more. Invasions chip it until you intercept them; the
   firewall, its tiers, filters and the Server page are gone. The designer will decide what makes servers dynamic next.
 - **Rested XP** comes only from time logged off. There is no catch-up XP.
+- **Item power** (November 2026): a unique is about a good yellow in its own situation (two secondary stats and its
+  effect for a yellow's affixes and rule), a set piece about a good blue, a full set the payoff. Every unique and set has
+  one reason to wear it, its tooltip's answer line (docs/unique-roles.md, docs/set-roles.md).
 - **Unlocks:** cosmetic unlocks (districts, boots, prompts, desk props, mastery looks) come from achievements, not
   from server floors.
 - **Phones:** combat on a phone never opens the keyboard.

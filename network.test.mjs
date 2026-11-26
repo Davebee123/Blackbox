@@ -327,12 +327,12 @@ test('native effects: Open, locks and wards, the Tripwire, twins, reads, after-e
     const q = part(e, 'encryptor'); Object.assign(q, { armor: 0 });
     const hp = q.integrity; fxAnswer(e, q);
     assert.equal(hp - q.integrity, filled(10, pod.level));
-    // Rubber Hose: +6 damage a read, up to 30.
-    const f = at(38); wear(f, 'rubber-hose', 38); fight(f, 'cryptjack', 38);
+    // Rubber Hose: +8 damage a read, up to 40.
+    const f = at(38); wear(f, 'rubber-hose', 38).stats.crit = 0; fight(f, 'cryptjack', 38); // no rolled crits: the reads alone
     const fp = part(f, 'encryptor'); Object.assign(fp, { armor: 0, integrity: 9999, max: 9999 });
     const dealt = (reads) => { f.encounter.metrics.reads = reads; const was = fp.integrity; hit(f, fp, 20, { mine: true, pierce: true }); return was - fp.integrity; };
     const full = dealt(7) - dealt(0);
-    assert.ok(full >= filled(25, 38) && full <= filled(40, 38), `+30 before the multipliers, lifted and filled: ${full}`);
+    assert.ok(full >= filled(34, 38) && full <= filled(54, 38), `+40 before the multipliers, lifted and filled: ${full}`);
     assert.equal(dealt(9), dealt(7), 'capped');
     assert.ok(dealt(2) < dealt(4));
     // Sandman: tells that land leave nothing behind (no key offline, no Corrupted, no Hung).
@@ -362,13 +362,13 @@ test('native effects: Open, locks and wards, the Tripwire, twins, reads, after-e
     };
     assert.equal(mz(false), 0, 'bent onto the Decoy');
     assert.ok(mz(true) > 0, 'through');
-    // Policy Engine: rules count half again.
+    // Policy Engine: rules count 35% more.
     const h = at(20);
     const blue = addItem(h, { kind: 'protocol', side: 'hacker', group: 'proxy', base: 'open-proxy', rarity: 'tuned', level: 20, stats: { signal: 1 }, affixes: [], zeroDay: null, unique: null, name: 'Rule', rule: 'stack-canary', ruleValue: 4 });
     command(h, 'load ' + blue.id);
     wear(h, 'policy-engine', 20);
     fight(h, 'cryptjack', 20);
-    assert.equal(h.encounter.shield, 6, 'Stack Canary 4 → 6');
+    assert.equal(h.encounter.shield, 5, 'Stack Canary 4 → 5 (4 × 1.35, rounded)');
     // Lockpick: hits count double against a lock.
     const k = at(30); wear(k, 'lockpick'); fight(k);
     const lk = part(k, 'encryptor');

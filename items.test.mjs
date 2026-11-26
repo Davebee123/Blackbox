@@ -18,6 +18,13 @@ test('the written uniques have no mistakes', () => {
   assert.equal(Object.keys(UNIQUES).length, 347); // the earned pieces (earned.mjs): the eight floor feats' uniques, eight more uniques and seven sets' 22 pieces, two for each of the three floor 4 bosses, 30, the Kestrel Clearance set's three (sets.mjs), the loot plan's 65 more set pieces (docs/loot-plan.md), two for each of the four bosses, nine leaning toward a class, KESSLER-FARM-00's eight, three only invasions carry, ten world uniques for 18–40, the 27 native uniques networks roll (network.mjs), and the loot plan's Batch 1: 30 for The Sink and 30 for Bedrock (deep-uniques.test.mjs), and the five faction pieces feuds give (faction-gear.mjs), and the floor 2 and 3 bosses' eight (floorbosses.mjs), and Batch 2's ten and Catchment's four (docs/item-builds.md), and floors 5 and 6: seven sets' 23 pieces and 19 uniques, and floor 7: three sets' 9 pieces and 2 uniques (docs/floor-items.md)
 });
 
+test('every unique says what it is for: one short answer line under its effect', async () => {
+  const { itemTipMarkup } = await import('./dist/view.mjs');
+  for (const u of ITEMS.uniques.filter((x) => !x.set)) assert.ok(u.why && /\.$/.test(u.why) && u.why.split(/\s+/).length <= 10 && !/\binstead\b|\bnot\b/i.test(u.why), `${u.name}: a reason of 10 words or fewer`);
+  const s = vet(), it = wear(s, 'dead-pool');
+  assert.match(itemTipMarkup(s, it.id), /<small class="u-why">▸ Finish parts below half\.<\/small>/);
+});
+
 test('effect blocks: damage when synced, a chit and a crit at the start, half the first hit', () => {
   const s = vet();
   wear(s, 'logger-spool');

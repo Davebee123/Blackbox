@@ -123,7 +123,7 @@ test('stat+ and stat%: Siltstone\'s Block for each ◆, Depth Gauge\'s Regen lat
   const e = fight(t);
   const block = gearStat(t, 'reduction', 'hacker');
   e.chits = 2;
-  assert.equal(gearStat(t, 'reduction', 'hacker'), block + 2 * lifted(1, silt.level), 'Siltstone: +1 Block a ◆, lifted at its item level');
+  assert.equal(gearStat(t, 'reduction', 'hacker'), block + 2 * lifted(2, silt.level), 'Siltstone: +2 Block a ◆, lifted at its item level');
   e.chits = 0;
   e.shield = 5;
   assert.equal(gearStat(t, 'reduction', 'hacker'), Math.round(block * 1.25), 'Pressure Hull: Block 25% stronger behind a shield');
@@ -143,7 +143,7 @@ test('stat+ and stat%: Siltstone\'s Block for each ◆, Depth Gauge\'s Regen lat
 test('max Integrity% and the plain stat rules: Bedframe, Firmware, Flotsam and Golden Image, in a fight or out of one', () => {
   const s = vet(), base = maxSignal(s);
   const bed = wear(s, 'bedframe');
-  assert.equal(maxSignal(s), Math.round((base + bed.stats.signal) * 1.1), 'Bedframe: 10% more max Integrity, all of it');
+  assert.equal(maxSignal(s), Math.round((base + bed.stats.signal) * 1.06), 'Bedframe: 6% more max Integrity, all of it');
   const t = vet(), was = { signal: maxSignal(t) };
   const fw = wear(t, 'firmware');
   assert.equal(maxSignal(t), Math.round((was.signal + fw.stats.signal) * 1.04), 'Firmware: +4% max Integrity');
@@ -301,7 +301,7 @@ test('burns or helpers alone: Brackish on a part below half, Riptide on a Jammed
   assert.equal(against('brackish', (s) => { pulse(s).integrity = 1; }, { dot: true }), 1.1, 'Brackish: a burn tick on a part below half');
   assert.equal(against('brackish', (s) => { pulse(s).integrity = 1; }, { dot: true, src: 'helper' }), 1, "and not a helper's hit");
   assert.equal(against('brackish', () => {}, { dot: true }), 1, 'nor on a part above half');
-  assert.equal(against('riptide', (s) => { pulse(s).jammedUntil = s.encounter.cycle; }, { dot: true, src: 'helper' }), 1.08, 'Riptide: a helper on a Jammed part');
+  assert.equal(against('riptide', (s) => { pulse(s).jammedUntil = s.encounter.cycle; }, { dot: true, src: 'helper' }), 1.15, 'Riptide: a helper on a Jammed part');
   assert.equal(against('riptide', (s) => { pulse(s).jammedUntil = s.encounter.cycle; }, { dot: true }), 1, 'not a burn');
 });
 
@@ -357,7 +357,7 @@ test('Dead Reckoning goes through ◆ on its first hit on each part; Spillway\'s
   q.integrity = q.max = 100000;
   const high = strike();
   q.integrity = 40000;
-  assert.equal(strike(), Math.floor(high * 1.2), 'Spillway: crits deal 20% more to a part below half');
+  assert.equal(strike(), Math.floor(high * 1.3), 'Spillway: crits deal 30% more to a part below half');
 });
 
 test("timed buffs: Floodgate's crit stacks twice on breaks, Fuse Map adds Momentum, Turbidity's Stealth after a crit", () => {
@@ -414,7 +414,7 @@ const tough = (e) => { for (const x of e.virus.parts) Object.assign(x, { armor: 
 test('helpers: Ebb\'s first runs longer, Load Order\'s hit as they arrive, Backwash\'s cooldown after one expires, Watchdog Timer\'s free one', () => {
   const s = vet('operator'); wear(s, 'ebb'); const e = fight(s); tough(e);
   command(s, 'deploy pulse'); resolveCycle(s);
-  assert.equal(e.helpers[0].left, ABILITIES.deploy.ticks + 2 - 1, 'Ebb: the first helper, 2 cycles longer (one tick spent)');
+  assert.equal(e.helpers[0].left, ABILITIES.deploy.ticks + 3 - 1, 'Ebb: the first helper, 3 cycles longer (one tick spent)');
   e.readyAt = {};
   command(s, 'deploy pulse'); resolveCycle(s);
   assert.equal(e.helpers.at(-1).left, ABILITIES.deploy.ticks - 1, 'only the first each fight');
@@ -487,9 +487,9 @@ test('crit and cooldowns: Bootstrap\'s crit on a first use, Init Vector\'s as th
   const iv = vet(); wear(iv, 'init-vector'); const ie = fight(iv);
   assert.equal(bonus(iv, 'crack'), 0, 'Init Vector: nothing on the first cycle');
   ie.cycle = 4;
-  assert.equal(bonus(iv, 'crack'), 9, '+3% for each cycle the fight has lasted');
+  assert.equal(bonus(iv, 'crack'), 12, '+4% for each cycle the fight has lasted');
   ie.cycle = 20;
-  assert.equal(bonus(iv, 'crack'), 15, 'up to 15%');
+  assert.equal(bonus(iv, 'crack'), 20, 'up to 20%');
   const t = vet(), was = { crack: cooldownOf(t, 'crack'), overload: cooldownOf(t, 'overload') };
   wear(t, 'microcode');
   assert.equal(cooldownOf(t, 'crack'), was.crack - 1, 'Microcode: the shortest cooldown over 1 on your bar');
@@ -531,7 +531,7 @@ test('Momentum: Pumphouse adds to what spends it, Undervolt takes away the cost 
   };
   const plain = vent(false);
   assert.ok(plain > 0);
-  assert.equal(vent(true), Math.round(plain * 1.15), 'Pumphouse: 5% for each of the 3 stacks Vent spends');
+  assert.equal(vent(true), Math.round(plain * 1.24), 'Pumphouse: 8% for each of the 3 stacks Vent spends');
   const s = vet('breaker', { sub: 'overclocker' }); const e = fight(s);
   e.momentum = { stacks: 2, until: e.cycle + 2 };
   assert.equal(ratio(takenMult(s, pulse(s)), 1), 1.1, 'Redline: 10% more taken while you hold Momentum');
@@ -759,15 +759,15 @@ test("Batch 2's multipliers: Spawning Run's helpers, Banked Fire's burns", () =>
 
 test("Batch 2 on the talents' events: Breakwater on a shield, Riprap on a cut, Relief Valve's refund, Tide Table's answer, Rockfall's delay, a shield and a heal", () => {
   const lifted = (id) => liftFx(UNIQUES[id].effect, UNIQUES[id].level).value;
-  // Timed damage: Breakwater stacks 3 on shields, Riprap 2 on cuts, each gone after 2 cycles.
-  for (const [id, when, per, most] of [['breakwater', 'shielded', 0.05, 3], ['riprap', 'cut', 0.08, 2]]) {
+  // Timed damage: Breakwater stacks 4 on shields, Riprap 2 on cuts, each gone after 2 cycles.
+  for (const [id, when, per, most] of [['breakwater', 'shielded', 0.06, 4], ['riprap', 'cut', 0.08, 2]]) {
     const s = vet('bastion'); wear(s, id); const e = fight(s);
     const t = vet('bastion'); fight(t);
     const m = () => ratio(damageMultiplier(s, pulse(s), { mine: true }), damageMultiplier(t, pulse(t), { mine: true }));
     assert.equal(m(), 1, `${id}: nothing yet`);
     fireEvent(s, when, { part: pulse(s), gained: true });
     assert.equal(m(), ratio(1 + per, 1), `${id}: one ${when}`);
-    for (let k = 0; k < 4; k++) fireEvent(s, when, { part: pulse(s), gained: true });
+    for (let k = 0; k < 5; k++) fireEvent(s, when, { part: pulse(s), gained: true });
     assert.equal(m(), ratio(1 + per * most, 1), `${id}: stacks ${most} times, no more`);
     e.cycle += 3; t.encounter.cycle += 3;
     assert.equal(m(), 1, `${id}: gone 2 cycles later`);
