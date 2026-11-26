@@ -120,17 +120,17 @@ test("Smash and Grab (3): breaking a part's shield takes a third of it for 2 cyc
   assert.equal(e.shield || 0, 0, 'then it fades');
 });
 
-test('Payroll (3): every 4th cycle heals 4% of your max Integrity', () => {
+test('Payroll (3): every 3rd cycle heals 6% of your max Integrity', () => {
   const s = vet(); wearSet(s, 'payroll'); const e = fight(s);
   const heals = () => s.logs.filter((x) => /Payroll \(3\)/.test(x.message || '')).length;
   s.run.integrity = 500;
-  while (e.cycle <= 4) { assert.equal(heals(), 0, `nothing before cycle 4's end (${e.cycle})`); hold(s); }
-  assert.equal(heals(), 1, 'cycle 4');
-  hold(s, 4);
-  assert.equal(heals(), 2, 'and cycle 8');
+  while (e.cycle <= 3) { assert.equal(heals(), 0, `nothing before cycle 3's end (${e.cycle})`); hold(s); }
+  assert.equal(heals(), 1, 'cycle 3');
+  hold(s, 3);
+  assert.equal(heals(), 2, 'and cycle 6');
 });
 
-test('Backbone (3): a command that reaches several parts deals 8% more on each part for each past the first, up to 24%', () => {
+test('Backbone (3): a command that reaches several parts deals 12% more on each part for each past the first, up to 36%', () => {
   const s = vet(); wearSet(s, 'backbone'); const e = fight(s);
   const before = () => ({ shield: e.shield || 0, parts: {}, burns: new Set(e.burns), helpers: new Set(e.helpers), allies: [] });
   const used = () => SET_HOOKS.used(s, { id: 'spike', target: pulse(s), before: before() });
@@ -139,18 +139,18 @@ test('Backbone (3): a command that reaches several parts deals 8% more on each p
   const one = hit(s, pulse(s), 2, { mine: true }).dealt, was = pulse(s).integrity;
   used();
   assert.equal(pulse(s).integrity, was, 'one part: nothing more');
-  // Two parts: each takes 8% more of what it took.
+  // Two parts: each takes 12% more of what it took.
   const p0 = pulse(s).integrity, q0 = enc(s).integrity;
   const a = hit(s, pulse(s), 2, { mine: true }).dealt, b = hit(s, enc(s), 2, { mine: true }).dealt;
   used();
-  assert.equal(p0 - pulse(s).integrity, a + Math.round(a * 0.08), 'the Pulse Node: 8% more');
-  assert.equal(q0 - enc(s).integrity, b + Math.round(b * 0.08), 'the Encryptor too');
-  // Six parts reached: 24% at most (the extra parts here stand in for a bigger virus).
+  assert.equal(p0 - pulse(s).integrity, a + Math.round(a * 0.12), 'the Pulse Node: 12% more');
+  assert.equal(q0 - enc(s).integrity, b + Math.round(b * 0.12), 'the Encryptor too');
+  // Six parts reached: 36% at most (the extra parts here stand in for a bigger virus).
   const p1 = pulse(s).integrity;
   const c = hit(s, pulse(s), 2, { mine: true }).dealt;
   Object.assign(e.sx.reach, { x1: 1, x2: 1, x3: 1, x4: 1, x5: 1 });
   used();
-  assert.equal(p1 - pulse(s).integrity, c + Math.round(c * 0.24), 'up to 24%');
+  assert.equal(p1 - pulse(s).integrity, c + Math.round(c * 0.36), 'up to 36%');
   e.commanding = false;
   assert.ok(one > 0);
 });

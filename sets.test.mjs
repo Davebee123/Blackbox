@@ -453,7 +453,7 @@ test('a piece works alone: stats for its slot and level, and its own small bonus
   const he = fightAt(s), block = gearStat(s, 'reduction');
   assert.equal(block, hat.stats.reduction || 0, 'Hard Hat: nothing before your Momentum is full');
   he.momentum = { stacks: 3, until: he.cycle + 2 };
-  assert.equal(gearStat(s, 'reduction'), block + lifted(4, hat.level), 'Hard Hat: +4 Block at full Momentum, lifted at its item level');
+  assert.equal(gearStat(s, 'reduction'), block + lifted(6, hat.level), 'Hard Hat: +6 Block at full Momentum, lifted at its item level');
   // The Tumbler: a heal each time you gain a shield.
   const t = at(32); wear(t, ['tumbler'], 32); guardFight(t);
   t.run.integrity = 100;
@@ -482,8 +482,8 @@ test('a green line is grey with one piece and counts once two of its set are wor
   wear(s, ['hard-hat'], 30);
   const crit = gearStat(s, 'crit');
   assert.equal(greenOf('hard-hat', loaded(s).map((x) => x.unique)).on, false, 'one piece: grey');
-  wear(s, ['crowbar'], 30); // its green line: +5% crit; the Hard Hat's: +5% damage
-  assert.equal(gearStat(s, 'crit'), crit + 5);
+  const [bar] = wear(s, ['crowbar'], 30); // its green line: +5% crit; the Hard Hat's: +5% damage
+  assert.equal(gearStat(s, 'crit'), crit + 5 + (bar.stats.crit || 0), 'the green line, beside the Crowbar\'s own crit');
   assert.deepEqual(greenOf('crowbar', loaded(s).map((x) => x.unique)), { text: '+5% crit', at: 2, on: true });
   assert.equal(greenOf('blast-map', loaded(s).map((x) => x.unique)).on, false, 'a piece not loaded: grey');
   // A piece of another set doesn't light it.
@@ -491,18 +491,19 @@ test('a green line is grey with one piece and counts once two of its set are wor
   wear(t, ['hard-hat', 'rotor'], 30);
   assert.equal(greenOf('hard-hat', loaded(t).map((x) => x.unique)).on, false);
   assert.ok(!setFx(loaded(t)).some((x) => x.id.startsWith('green:')));
-  // Damage with the pair: the Hard Hat's green +5% and Wrecking Crew (2)'s +8%, against the Crowbar alone at full.
+  // Damage with the pair: the Hard Hat's green +5%, against the Crowbar alone at full. Wrecking Crew (2)'s +8% waits
+  // for Momentum.
   const one = at(30); wear(one, ['crowbar'], 30);
-  const m1 = damageMultiplier(one, fightAt(one).virus.parts[0], { mine: true }), m2 = damageMultiplier(s, fightAt(s).virus.parts[0], { mine: true });
-  assert.equal(ratio(m2, m1), ratio(1.05 * 1.08, 1));
+  const m1 = damageMultiplier(one, fightAt(one).virus.parts[0], { mine: true }), e2 = fightAt(s), m2 = damageMultiplier(s, e2.virus.parts[0], { mine: true });
+  assert.equal(ratio(m2, m1), ratio(1.05, 1));
 });
 
 // ---------- set bonuses ----------
-test('Patchwork: +5% damage and Integrity at 2, +5% Clock Speed at 3, +2% for each different skill at 4, up to 12%', () => {
+test('Patchwork: +3% damage and Integrity at 2, +5% Clock Speed at 3, +2% for each different skill at 4, up to 12%', () => {
   const s = at(18);
   wear(s, ['stitch', 'darn'], 18);
   const fx = setFx(loaded(s));
-  assert.ok(fx.some((x) => x.fx.do === 'signal%' && x.fx.value === 5) && fx.some((x) => x.fx.do === 'dmg%' && x.fx.value === 5 && x.at === 2));
+  assert.ok(fx.some((x) => x.fx.do === 'signal%' && x.fx.value === 3) && fx.some((x) => x.fx.do === 'dmg%' && x.fx.value === 3 && x.at === 2));
   assert.equal(gearStat(s, 'clock'), 0);
   wear(s, ['hem'], 18);
   assert.equal(gearStat(s, 'clock'), 5, 'the 3-piece');
@@ -550,14 +551,14 @@ test('Bedrock (3) and (4): +10% Clock Speed and Block below half; once a fight, 
   s.run.max = 1000; s.run.integrity = 50; e.shield = 0;
   takeDamage(s, 900, null, 'Test');
   assert.equal(s.run.integrity, 1);
-  assert.equal(e.shield, 200, 'shielded for 20% of max');
+  assert.equal(e.shield, 300, 'shielded for 30% of max');
   e.shield = 0;
   takeDamage(s, 900, null, 'Test');
   assert.equal(s.run.integrity, 0, 'once a fight');
   const t = at(50); wear(t, ['bedrock-plate', 'core-sample', 'pick'], 50); guardFight(t);
   const b = gearStat(t, 'reduction');
   t.run.integrity = Math.floor(t.run.max / 2) - 1;
-  assert.equal(gearStat(t, 'reduction'), b + lifted(5, 49), '+5 Block below half, lifted at the set\'s level (its highest piece)');
+  assert.equal(gearStat(t, 'reduction'), b + lifted(12, 49), '+12 Block below half, lifted at the set\'s level (its highest piece)');
   assert.equal(SET_HOOKS.cooldown(t, 'flood', 4), 4, 'the first cooldowns as usual: that is Bootloader (3)');
 });
 
@@ -577,10 +578,10 @@ test('Glass Ceiling (3): +10% damage below half Integrity; Cold Storage (3): 8% 
   const block = gearStat(c, 'reduction');
   c.run.integrity = 60;
   assert.equal(SET_HOOKS.taken(c), 1);
-  assert.equal(gearStat(c, 'reduction'), block - lifted(1, 26), 'the Frost Line\'s +1 Block above 75% only, lifted');
+  assert.equal(gearStat(c, 'reduction'), block - lifted(1, 26) - lifted(2, 25), 'the Frost Line\'s +1 Block and Cold Storage (2)\'s +2, above 75% only, lifted');
 });
 
-test('Hot Spare (2): the first time a fight drops you below 30%, a heal of 20% and 10% more damage', () => {
+test('Hot Spare (2): the first time a fight drops you below 30%, a heal of 25% and 15% more damage', () => {
   const s = at(36);
   wear(s, ['standby', 'failback'], 36);
   const e = guardFight(s), p = e.virus.parts[0];
@@ -590,8 +591,8 @@ test('Hot Spare (2): the first time a fight drops you below 30%, a heal of 20% a
   const was = CONFIG.length;
   CONFIG.length = { ...was, heal: null };
   try { SET_HOOKS.struck(s, { name: 'Bite' }, 10, p); } finally { CONFIG.length = was; }
-  assert.equal(s.run.integrity, 450, 'heals 20% of max');
-  assert.equal(ratio(damageMultiplier(s, p, { mine: true }), before), 1.1);
+  assert.equal(s.run.integrity, 500, 'heals 25% of max');
+  assert.equal(ratio(damageMultiplier(s, p, { mine: true }), before), 1.15);
   s.run.integrity = 250;
   SET_HOOKS.struck(s, { name: 'Bite' }, 10, p);
   assert.equal(s.run.integrity, 250, 'the first time only');
@@ -624,17 +625,20 @@ test('Load Balanced: helpers deal 10% more and last a cycle longer, and every th
 });
 
 test('a class set: anyone wears its 2- and 3-piece and the 4-piece\'s base line; each subclass line works for that subclass only', () => {
-  const holds = (s, d) => gearFx(s).filter((x) => x.fx.do === d).some((x) => fxHolds(s, x.fx, {}));
+  const holds = (s, d, at) => gearFx(s).filter((x) => x.fx.do === d && (!at || (x.at === at && x.id.startsWith('set:')))).some((x) => fxHolds(s, x.fx, {})); // at: the set bonus itself, not a green line
   const crew = ['crowbar', 'det-cord', 'hard-hat', 'blast-map'];
   const demo = as('breaker', 'demolitionist', 32), oc = as('breaker', 'overclocker', 32), off = as('bastion', 'warden', 32);
   for (const s of [demo, oc, off]) { wear(s, crew, 32); fightAt(s, 32); }
-  for (const s of [demo, oc, off]) { assert.ok(holds(s, 'break-splash'), 'the base 4-piece line'); assert.ok(holds(s, 'break-rush')); assert.ok(holds(s, 'dmg%')); }
-  assert.deepEqual([demo, oc, off].map((s) => SET_HOOKS.spill(s)), [20, 0, 0], 'Overkill spills 20 more: the Demolitionist');
+  for (const s of [demo, oc, off]) { assert.ok(holds(s, 'break-splash'), 'the base 4-piece line'); assert.ok(!holds(s, 'break-rush', 3) && !holds(s, 'dmg%', 2), '(2) and (3) wait for Momentum'); }
+  demo.encounter.momentum = { stacks: 1, until: demo.encounter.cycle + 2 };
+  assert.ok(holds(demo, 'break-rush', 3) && holds(demo, 'dmg%', 2), 'and hold while a Breaker holds Momentum');
+  demo.encounter.momentum = null;
+  assert.deepEqual([demo, oc, off].map((s) => SET_HOOKS.spill(s)), [40, 0, 0], 'Overkill spills 40 more: the Demolitionist');
   assert.deepEqual([demo, oc, off].map((s) => holds(s, 'break-momentum')), [false, true, false], 'a Momentum: the Overclocker');
-  // The Overclocker's break: two stacks of Momentum, where a plain break gives one.
+  // The Overclocker's break: three stacks of Momentum, where a plain break gives one.
   const plain = as('breaker', 'overclocker', 32); fightAt(plain, 32);
   for (const s of [oc, plain]) { for (const p of s.encounter.virus.parts) p.armor = 0; s.encounter.virus.parts[0].integrity = 1; command(s, 'spike ' + s.encounter.virus.parts[0].id); resolveCycle(s); }
-  assert.equal(momentumStacks(oc), momentumStacks(plain) + 1);
+  assert.equal(momentumStacks(oc), Math.min(3, momentumStacks(plain) + 2));
   // Every class set reads the same way: each subclass's line for it, not the other's, not another class's.
   for (const [cls, [a, b]] of Object.entries(SUBS_OF)) {
     const set = Object.values(SETS).find((x) => x.cls === cls);
@@ -652,9 +656,10 @@ test('a class set: anyone wears its 2- and 3-piece and the 4-piece\'s base line;
   const tip = itemTipMarkup(demo, loaded(demo)[0].id);
   assert.match(tip, /<b class="set-name">Wrecking Crew \(4\/4\)<\/b><small class="set-tier">Breaker tier set, level 50<\/small>/, 'the tooltip calls it the tier set for level 50');
   assert.doesNotMatch(protocolSlotsCard(demo), /set-tier/, 'a row keeps to one line of pieces');
-  assert.match(tip, /<span class="sb sub on"[^>]*>Demolitionist: Overkill spills 20 more\.<\/span>/);
-  assert.match(tip, /<span class="sb sub"[^>]*>Overclocker: You gain 1 Momentum\.<\/span>/);
-  assert.match(protocolStatsCard(demo), /<span class="sb sub on">Demolitionist: Overkill spills 20 more\.<\/span>/);
+  assert.match(tip, /<span class="sb sub on"[^>]*>Demolitionist: Overkill spills 40 more\.<\/span>/);
+  assert.match(tip, /<span class="sb sub"[^>]*>Overclocker: You gain 2 Momentum\.<\/span>/);
+  assert.match(protocolStatsCard(demo), /<span class="sb sub on">Demolitionist: Overkill spills 40 more\.<\/span>/);
+  assert.match(tip, /<small class="set-why">▸ Chain breaks as a Breaker\.<\/small>/, 'what the set is for, as the answer line');
 });
 
 test('Kestrel pieces held from save v45 keep working, as the retuned set', () => {
@@ -834,18 +839,27 @@ test('the renamed uniques you hold take their new names on load, once', () => {
   assert.equal(again.stash.find((x) => x.id === old.id).name, 'Swarm Intelligence', 'safe to run twice');
 });
 
-test("Cold Start (3): every part's first attack a cycle later; Atoll (3): 20% less taken while one part is left", () => {
+test("Cold Start (3): the fight's first attack a cycle later; Atoll (3): 40% less taken while one part is left", () => {
   const s = at(26), plain = at(26);
   wear(s, ['ice-pick', 'rime', 'thaw'], 26);
   const dues = (e) => e.virus.parts.filter((p) => p.attack && p.attack.due < 900).map((p) => p.attack.due);
   const was = dues(fightAt(plain, 26)), now = dues(fightAt(s, 26));
-  assert.ok(was.length > 0);
-  assert.deepEqual(now, was.map((d) => d + 1), 'each part attacks a cycle later');
+  assert.ok(was.length > 1);
+  const first = was.indexOf(Math.min(...was));
+  assert.deepEqual(now, was.map((d, i) => (i === first ? d + 1 : d)), 'the soonest attack comes a cycle later, the others as they were');
   const a = at(50); wear(a, ['lagoon', 'reef', 'causeway'], 50);
   const g = fightAt(a, 50);
   assert.equal(SET_HOOKS.taken(a), 1, 'several parts standing: as usual');
   for (const p of g.virus.parts.slice(1)) p.integrity = 0;
-  assert.equal(SET_HOOKS.taken(a), 0.8, 'one part left: 20% less');
+  assert.equal(SET_HOOKS.taken(a), 0.6, 'one part left: 40% less');
+});
+
+test('every set says what it is for: one short answer line, shown under its bonuses', () => {
+  for (const set of Object.values(SETS)) {
+    assert.ok(set.why && /\.$/.test(set.why) && set.why.split(/\s+/).length <= 10, `${set.name}: a reason of 10 words or fewer`);
+    assert.equal(setCard(set.id).why, set.why);
+  }
+  assert.equal(new Set(Object.values(SETS).map((x) => x.why)).size, Object.keys(SETS).length, 'no two sets give the same reason');
 });
 
 test('the pace: about how many events of each source to a piece you lack, as GAME_RULES.md Sets lists them', () => {

@@ -801,7 +801,7 @@ test("Batch 2 on the talents' events: Breakwater on a shield, Riprap on a cut, R
   assert.equal(g.shield || 0, 0);
 });
 
-test('Catchment: the 3-piece heals on a break, the 4-piece adds 5% a break for the fight, up to 20%', () => {
+test('Catchment: the 3-piece heals on a break, the 4-piece adds 6% a break for the fight, up to 24%', () => {
   const s = vet('bastion');
   for (const id of ['gully', 'storm-drain', 'basin', 'reservoir']) wear(s, id);
   const e = fight(s);
@@ -810,9 +810,9 @@ test('Catchment: the 3-piece heals on a break, the 4-piece adds 5% a break for t
   s.run.integrity = 100;
   spare();
   assert.ok(s.run.integrity > 100, 'a break heals');
-  assert.equal(ratio(damageMultiplier(s, pulse(s), { mine: true }), was), 1.05, 'one break: +5%');
+  assert.equal(ratio(damageMultiplier(s, pulse(s), { mine: true }), was), 1.06, 'one break: +6%');
   for (let k = 0; k < 5; k++) spare();
-  assert.equal(ratio(damageMultiplier(s, pulse(s), { mine: true }), was), 1.2, 'up to 20%');
+  assert.equal(ratio(damageMultiplier(s, pulse(s), { mine: true }), was), 1.24, 'up to 24%');
   e.cycle += 30;
-  assert.equal(ratio(damageMultiplier(s, pulse(s), { mine: true }), was), 1.2, 'for the fight');
+  assert.equal(ratio(damageMultiplier(s, pulse(s), { mine: true }), was), 1.24, 'for the fight');
 });

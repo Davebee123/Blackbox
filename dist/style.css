@@ -3483,6 +3483,7 @@ details.map-pick { pointer-events: auto; }
 .sb.on { color: var(--r-set); }
 .sb.blocked em { font-style: normal; color: var(--dim); }
 .sb.sub { padding-left: 10px; } /* a class set's subclass line, under its 4-piece bonus */
+.set-why { display: block; margin-top: 3px; padding-top: 3px; border-top: 1px solid var(--line); color: var(--dim); font-size: 11px; } /* what the set is for: the tooltip's answer line (style guide 2.7) */
 .sg { color: var(--gray); } /* a piece's green line: set green once it and another piece of its set are loaded */
 .sg.on { color: var(--r-set); }
 .set-lines.compact { margin-top: 2px; font-size: 11px; }

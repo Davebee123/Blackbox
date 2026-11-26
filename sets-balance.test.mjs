@@ -64,15 +64,15 @@ const AT50 = BRACKETS.find((b) => b.level === 50);
 const bracket = (L) => (L <= 10 ? 10 : L <= 18 ? 18 : L <= 32 ? 30 : 50);
 // Held until the designer has played it: Bootloader (an earned set, 31–38, measured at Lv 50) takes the Overclocker to
 // 19 wins of 24 there, Hidden Process (32–36, measured at Lv 50 in place of level-50 blues) both Breakers, and Payroll
-// (39–43) the Overclocker; Smash and Grab the Overclocker since smooth depth (docs/scaling.md step 6).
-const HOLD = { bootloader: { overclocker: 0.79 }, hiddenprocess: { demolitionist: 0.79, overclocker: 0.79 }, payroll: { overclocker: 0.79 }, smashandgrab: { overclocker: 0.79 } };
+// (39–43) the Overclocker; Smash and Grab the Overclocker since smooth depth (docs/scaling.md step 6); Semaphore and
+// Backbone the Overclocker since the set roles (docs/set-roles.md: their pieces carry their own subclasses' stats).
+const HOLD = { bootloader: { overclocker: 0.79 }, hiddenprocess: { demolitionist: 0.79, overclocker: 0.79 }, payroll: { overclocker: 0.79 }, smashandgrab: { overclocker: 0.79 }, semaphore: { overclocker: 0.79 }, backbone: { overclocker: 0.79 } };
 // Crypter (floor 5, 26–31) measured 12.0 easier at Lv 30 (November 2026): its crits, and the 3-piece's crit after each
 // stripped ◆. Held at 12.5 there until the designer has played it.
 const EASIEST = { crypter: -12.5 };
-// Since the unique and set pass (November 2026) each piece's own bonus is an effect on its set's theme, not a bare stat.
-// Mesh's scale with crewmates, so solo (the bots' fights) the set measures 6.5 harder at Lv 50; Bootloader's work in a
-// fight's first 3 cycles, 4.2 harder. Held at 7 and 4.5 until the designer has played them.
-const HARDEST = { mesh: 7, bootloader: 4.5 };
+// Mesh is a crew set (docs/set-roles.md): its pieces and its 2-piece scale with crewmates, so solo (the bots' fights) it
+// measures 6.5 harder at Lv 50. Held at 7 until the designer has played it.
+const HARDEST = { mesh: 7 };
 test('the loot plan\'s general sets, worn whole: every subclass keeps 80% wins, and no set moves the average past its measure', async () => {
   const { SETS } = await import('./dist/sets.mjs');
   const { UNIQUES } = await import('./dist/combat.mjs');

@@ -320,6 +320,7 @@ comment saying what it does.
 | `farmsim.mjs` | Crews against KESSLER-FARM-00's bosses. |
 | `friction.mjs` | Health a same-level fight costs, by gear. |
 | `genesim.mjs` | The genome harness: boss bands, the worst three cycles, per-gene checks. |
+| `setsim.mjs` | What each set is for, measured: every set worn whole, each subclass on the generic fights and its own subclasses in its situation (docs/set-roles.md). |
 | `solved.mjs` | How solved fights are: eight kinds of player by class and tier. |
 | `roomsim.mjs` | A bot playing a server's rooms. |
 | `playtest.mjs` | Kill-order strategies against the fixtures; prints its tables. |
@@ -360,6 +361,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/floor-items.md`](docs/floor-items.md) | Floors 2–8's sets and uniques, boss by boss (designed). |
 | [`docs/builds.md`](docs/builds.md) | Builds: skill affixes on gear and combos (design, not built). |
 | [`docs/item-builds.md`](docs/item-builds.md) | Item builds: combos the uniques and sets already make, what doesn't stack, loops to watch. |
+| [`docs/set-roles.md`](docs/set-roles.md) | What each set is for, its niche measured against the rest, and what the bots can't show. |
 | [`docs/house.md`](docs/house.md) | Your house and its furniture (built: GAME_RULES.md "Your house"). |
 | [`docs/leanings.md`](docs/leanings.md) | Leanings: a server's one positive rule (built: GAME_RULES.md "Server kinds, specials and quirks"). |
 | [`docs/server-specials.md`](docs/server-specials.md) | Server specials: an upside, a cost and the programs for each (picked, not built). |

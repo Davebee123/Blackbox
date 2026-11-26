@@ -168,7 +168,7 @@ export function setCard(id, { worn = [], held = new Set(), found = new Set(), ac
     const on = row ? row.open.includes(b.at) : n >= b.at;
     return { at: b.at, text: liftText(b.text, b.fx, setLevel(id)), on, blocked: row?.blocked?.at === b.at ? row.blocked.by : null, subs: Object.entries(b.subs || {}).map(([k, x]) => ({ id: k, text: liftText(x.text, x.fx, setLevel(id)), mine: k === sub, on: on && k === sub })) };
   });
-  return { id, name: set.name, n, total: pieces.length, pieces, bonuses };
+  return { id, name: set.name, n, total: pieces.length, pieces, bonuses, why: set.why || null }; // why: what the set is for, the tooltip's answer line
 }
 // A piece's green line as its tooltip shows it: its text, and whether it counts now (the piece worn, with one more).
 export function greenOf(uniqueId, worn = []) {

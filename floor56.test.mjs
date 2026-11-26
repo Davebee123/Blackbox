@@ -329,7 +329,7 @@ test('Contiguous (3): each command in a row on one part deals 6% more than the l
   assert.ok(Math.abs(ratio(fired(s, 'spike pulse'), one) - 1) < 0.03, 'so does a cycle without a command');
 });
 
-test('Crypter (3) and Domain Admin (3, 4): a part\'s last ◆ broken crits your next hit elsewhere and eases a cooldown; from the third break, shorter cooldowns', () => {
+test('Crypter (3) and Domain Admin (3, 4): a part\'s last ◆ broken crits your next hit elsewhere and eases a cooldown; from the second break, shorter cooldowns', () => {
   const s = vet(); wearSet(s, 'crypter'); fight(s);
   Object.assign(pulse(s), { armor: 1, maxArmor: 1 });
   hit(s, pulse(s), 50, { mine: true });
@@ -341,25 +341,25 @@ test('Crypter (3) and Domain Admin (3, 4): a part\'s last ◆ broken crits your 
   e.readyAt = { overload: e.cycle + 4, crack: e.cycle + 3 };
   Object.assign(pulse(t), { armor: 1, maxArmor: 1 });
   hit(t, pulse(t), 50, { mine: true });
-  assert.deepEqual(e.readyAt, { overload: e.cycle + 4, crack: e.cycle + 2 }, 'Domain Admin (3)');
+  assert.deepEqual(e.readyAt, { overload: e.cycle + 4, crack: e.cycle + 1 }, 'Domain Admin (3): the nearest cooldown, 2 sooner');
   const id = 'overload', cd = cooldownOf(t, id);
-  e.breaks = 2;
+  e.breaks = 1;
   assert.equal(cooldownOf(t, id), cd);
-  e.breaks = 3;
-  assert.equal(cooldownOf(t, id), Math.max(1, cd - 1), 'Domain Admin (4): from the third break');
+  e.breaks = 2;
+  assert.equal(cooldownOf(t, id), Math.max(1, cd - 1), 'Domain Admin (4): from the second break');
 });
 
-test('Semaphore (3): an attack you delay leaves its part Open for 1 cycle; Watertight (3): a big hit softens the next within 2 cycles', () => {
+test('Semaphore (3): an attack you delay leaves its part Open for 2 cycles; Watertight (3): a big hit softens the next within 2 cycles', () => {
   const s = vet(); wearSet(s, 'semaphore'); const e = fight(s);
   pulse(s).attack.due = e.cycle + 2;
   delayAttack(s, pulse(s), 1);
-  assert.equal(pulse(s).openUntil, e.cycle + 1);
+  assert.equal(pulse(s).openUntil, e.cycle + 2);
   const t = vet(); wearSet(t, 'watertight'); const f = fight(t);
   const full = (n) => { const d = landed(t, n); t.run.integrity = t.run.max; return d; };
   const small = full(100), after = full(100);
   assert.equal(after, small, 'Watertight (3): a hit under 15% of your max sets nothing');
   const a = full(400), b = full(400), c = full(400);
-  assert.equal(a - b, 80, 'Watertight (3): 20% less, after a big hit');
+  assert.equal(a - b, 120, 'Watertight (3): 30% less, after a big hit');
   assert.equal(c, b, 'and again after that one, a big hit too');
   f.cycle += 3;
   assert.equal(full(400), a, 'not 3 cycles later');

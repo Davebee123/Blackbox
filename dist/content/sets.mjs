@@ -22,23 +22,25 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+8% damage.",
+          "text": "+8% damage while you hold Momentum.",
           "fx": [
             {
               "when": "hit",
               "do": "dmg%",
-              "value": 8
+              "value": 8,
+              "if": "momentum"
             }
           ]
         },
         "3": {
-          "text": "Breaking a part gives +10% damage for 2 cycles.",
+          "text": "Breaking a part while you hold Momentum gives +10% damage for 2 cycles.",
           "fx": [
             {
               "when": "custom",
               "do": "break-rush",
               "value": 10,
-              "cycles": 2
+              "cycles": 2,
+              "if": "momentum"
             }
           ]
         },
@@ -53,28 +55,29 @@ export default {
           ],
           "subs": {
             "demolitionist": {
-              "text": "Overkill spills 20 more.",
+              "text": "Overkill spills 40 more.",
               "fx": [
                 {
                   "when": "custom",
                   "do": "spill+",
-                  "value": 20
+                  "value": 40
                 }
               ]
             },
             "overclocker": {
-              "text": "You gain 1 Momentum.",
+              "text": "You gain 2 Momentum.",
               "fx": [
                 {
                   "when": "custom",
                   "do": "break-momentum",
-                  "value": 1
+                  "value": 2
                 }
               ]
             }
           }
         }
-      }
+      },
+      "why": "Chain breaks as a Breaker."
     },
     {
       "id": "strongbox",
@@ -147,7 +150,8 @@ export default {
             }
           }
         }
-      }
+      },
+      "why": "Take the biggest hits as a Bastion."
     },
     {
       "id": "palemask",
@@ -166,23 +170,28 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+5% crit.",
+          "text": "+10% crit. Your burns deal 10% more.",
           "fx": [
             {
               "when": "always",
               "do": "stat",
               "stat": "crit",
-              "value": 5
+              "value": 10
+            },
+            {
+              "when": "custom",
+              "do": "burn+%",
+              "value": 10
             }
           ]
         },
         "3": {
-          "text": "Your first hit on each part deals 15% more.",
+          "text": "Your first hit on each part deals 25% more.",
           "fx": [
             {
               "when": "custom",
               "do": "first-hit%",
-              "value": 15
+              "value": 25
             }
           ]
         },
@@ -205,18 +214,19 @@ export default {
               ]
             },
             "payload": {
-              "text": "Your burns on it tick 20% harder.",
+              "text": "Your burns on it tick 30% harder.",
               "fx": [
                 {
                   "when": "custom",
                   "do": "half-burn",
-                  "value": 20
+                  "value": 30
                 }
               ]
             }
           }
         }
-      }
+      },
+      "why": "Finish off parts below half as an Infiltrator."
     },
     {
       "id": "load-balanced",
@@ -286,7 +296,8 @@ export default {
             }
           }
         }
-      }
+      },
+      "why": "Keep helpers out as an Operator."
     },
     {
       "id": "lowlight",
@@ -314,7 +325,8 @@ export default {
       "levels": [
         1,
         22
-      ]
+      ],
+      "why": "Hold wick's contracts while you level."
     },
     {
       "id": "bootdisk",
@@ -329,22 +341,17 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+10% max Integrity. Regen heals 1 more every 5 cycles.",
+          "text": "+6% max Integrity.",
           "fx": [
             {
               "when": "always",
               "do": "signal%",
-              "value": 10
-            },
-            {
-              "when": "always",
-              "do": "stat",
-              "stat": "regen",
-              "value": 1
+              "value": 6
             }
           ]
         }
-      }
+      },
+      "why": "Wear it on your first servers."
     },
     {
       "id": "hivemind",
@@ -391,7 +398,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Level a burn or helper build."
     },
     {
       "id": "kestrel",
@@ -427,7 +435,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Answer tells, and survive the one big hit."
     },
     {
       "id": "nightshift",
@@ -443,13 +452,14 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+2 Regen.",
+          "text": "+2 Regen while you haven't rested this visit.",
           "fx": [
             {
               "when": "always",
               "do": "stat",
               "stat": "regen",
-              "value": 2
+              "value": 2,
+              "if": "unrested"
             }
           ]
         },
@@ -463,7 +473,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Chain fights without resting."
     },
     {
       "id": "choirbook",
@@ -498,7 +509,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Jam and delay as a Hijacker or Warden."
     },
     {
       "id": "patchwork",
@@ -515,17 +527,17 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+5% damage, +5% max Integrity.",
+          "text": "+3% damage, +3% max Integrity.",
           "fx": [
             {
               "when": "hit",
               "do": "dmg%",
-              "value": 5
+              "value": 3
             },
             {
               "when": "always",
               "do": "signal%",
-              "value": 5
+              "value": 3
             }
           ]
         },
@@ -551,7 +563,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Use every key on your bar."
     },
     {
       "id": "lantern",
@@ -591,7 +604,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Farm caches and vaults for credits."
     },
     {
       "id": "glassceiling",
@@ -646,7 +660,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Fight below half Integrity."
     },
     {
       "id": "oncall",
@@ -682,7 +697,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Heal through long fights as a Sysop."
     },
     {
       "id": "coldstorage",
@@ -698,13 +714,14 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+2 Block.",
+          "text": "+2 Block above 75% Integrity.",
           "fx": [
             {
               "when": "always",
               "do": "stat",
               "stat": "reduction",
-              "value": 2
+              "value": 2,
+              "if": "above-75"
             }
           ]
         },
@@ -719,7 +736,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Stay above 75% Integrity."
     },
     {
       "id": "overtime",
@@ -747,12 +765,12 @@ export default {
           ]
         },
         "3": {
-          "text": "From a fight's 6th cycle, +8% damage.",
+          "text": "From a fight's 6th cycle, +10% damage.",
           "fx": [
             {
               "when": "hit",
               "do": "dmg%",
-              "value": 8,
+              "value": 10,
               "if": "late"
             }
           ]
@@ -768,7 +786,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Outlast long fights: elites and bosses."
     },
     {
       "id": "burstbuffer",
@@ -804,7 +823,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Open every fight with crits."
     },
     {
       "id": "hotspare",
@@ -819,19 +839,20 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "The first time a fight drops you below 30% Integrity, heal 20% of max and deal 10% more for 3 cycles.",
+          "text": "The first time a fight drops you below 30% Integrity, heal 25% of max and deal 15% more for 3 cycles.",
           "fx": [
             {
               "when": "custom",
               "do": "comeback",
-              "value": 20,
+              "value": 25,
               "at": 30,
-              "more": 10,
+              "more": 15,
               "cycles": 3
             }
           ]
         }
-      }
+      },
+      "why": "Recover the first time you drop low."
     },
     {
       "id": "mesh",
@@ -867,7 +888,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Play in a crew."
     },
     {
       "id": "deeparchive",
@@ -914,7 +936,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Save your biggest skill for every 4th cycle."
     },
     {
       "id": "switchback",
@@ -951,7 +974,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Strike on the cycle after a delay lands."
     },
     {
       "id": "coldstart",
@@ -978,7 +1002,7 @@ export default {
           ]
         },
         "3": {
-          "text": "Each part's first attack in a fight comes a cycle later.",
+          "text": "The first attack of each fight comes a cycle later.",
           "fx": [
             {
               "when": "start",
@@ -987,7 +1011,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Win before the parts get going."
     },
     {
       "id": "bootloader",
@@ -1003,27 +1028,28 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+5% Clock Speed.",
+          "text": "+15% Clock Speed.",
           "fx": [
             {
               "when": "always",
               "do": "stat",
               "stat": "clock",
-              "value": 5
+              "value": 15
             }
           ]
         },
         "3": {
-          "text": "Cooldowns start each fight 1 cycle shorter.",
+          "text": "Cooldowns start each fight 2 cycles shorter.",
           "fx": [
             {
               "when": "custom",
               "do": "cd-start",
-              "value": 1
+              "value": 2
             }
           ]
         }
-      }
+      },
+      "why": "Fire your whole bar early in a fight."
     },
     {
       "id": "atoll",
@@ -1049,17 +1075,18 @@ export default {
           ]
         },
         "3": {
-          "text": "While one part is left, you take 20% less damage.",
+          "text": "While one part is left, you take 40% less damage.",
           "fx": [
             {
               "when": "custom",
               "if": "one-left",
               "do": "taken-cut%",
-              "value": 20
+              "value": 40
             }
           ]
         }
-      }
+      },
+      "why": "Close out the last part."
     },
     {
       "id": "fullcoverage",
@@ -1112,7 +1139,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Explore rooms you haven't cleared."
     },
     {
       "id": "longhaul",
@@ -1147,7 +1175,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Level fast on contracts."
     },
     {
       "id": "tenure",
@@ -1183,7 +1212,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Fight on servers you hold."
     },
     {
       "id": "bedrock",
@@ -1215,7 +1245,7 @@ export default {
           ]
         },
         "3": {
-          "text": "+10% Clock Speed. +5 Block while you are below half Integrity.",
+          "text": "+10% Clock Speed. +12 Block while you are below half Integrity.",
           "fx": [
             {
               "when": "always",
@@ -1228,21 +1258,22 @@ export default {
               "if": "below-half",
               "do": "stat",
               "stat": "reduction",
-              "value": 5
+              "value": 12
             }
           ]
         },
         "4": {
-          "text": "Once a fight, a hit that would drop you to 0 leaves you at 1 and shields you for 20% of max.",
+          "text": "Once a fight, a hit that would drop you to 0 leaves you at 1 and shields you for 30% of max.",
           "fx": [
             {
               "when": "custom",
               "do": "last-stand",
-              "value": 20
+              "value": 30
             }
           ]
         }
-      }
+      },
+      "why": "Survive the hit that would end you."
     },
     {
       "id": "catchment",
@@ -1274,28 +1305,29 @@ export default {
           ]
         },
         "3": {
-          "text": "Breaking a part heals you for 3% of your max Integrity.",
+          "text": "Breaking a part heals you for 4% of your max Integrity.",
           "fx": [
             {
               "when": "break",
               "do": "break-heal%",
-              "value": 3
+              "value": 4
             }
           ]
         },
         "4": {
-          "text": "Each part you break adds 5% damage for the fight, up to 20%.",
+          "text": "Each part you break adds 6% damage for the fight, up to 24%.",
           "fx": [
             {
               "when": "break",
               "do": "buff",
-              "value": 5,
+              "value": 6,
               "cycles": 99,
               "stacks": 4
             }
           ]
         }
-      }
+      },
+      "why": "Break part after part in big viruses."
     },
     {
       "id": "fineprint",
@@ -1342,7 +1374,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Tank the tells you can't answer, as a Bastion."
     },
     {
       "id": "contiguous",
@@ -1379,7 +1412,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Focus one part until it breaks, as a Phantom."
     },
     {
       "id": "crypter",
@@ -1414,7 +1448,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Strip ◆, then crit, as a Phantom."
     },
     {
       "id": "domainadmin",
@@ -1431,12 +1466,13 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+5% damage, +5% max Integrity.",
+          "text": "+10% damage to a part with no ◆, +5% max Integrity.",
           "fx": [
             {
               "when": "hit",
+              "if": "target-bare",
               "do": "dmg%",
-              "value": 5
+              "value": 10
             },
             {
               "when": "always",
@@ -1446,27 +1482,28 @@ export default {
           ]
         },
         "3": {
-          "text": "When you strip a part's last ◆, your shortest cooldown drops by 1.",
+          "text": "When you strip a part's last ◆, your shortest cooldown drops by 2.",
           "fx": [
             {
               "when": "custom",
               "do": "strip-cd",
-              "value": 1
+              "value": 2
             }
           ]
         },
         "4": {
-          "text": "From the third part you break in a fight, your cooldowns are 1 cycle shorter.",
+          "text": "From the second part you break in a fight, your cooldowns are 1 cycle shorter.",
           "fx": [
             {
               "when": "custom",
               "do": "late-cd",
               "value": 1,
-              "n": 3
+              "n": 2
             }
           ]
         }
-      }
+      },
+      "why": "Break parts to shorten your cooldowns as an Operator."
     },
     {
       "id": "semaphore",
@@ -1482,27 +1519,28 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+5% Clock Speed.",
+          "text": "+10% Clock Speed.",
           "fx": [
             {
               "when": "always",
               "do": "stat",
               "stat": "clock",
-              "value": 5
+              "value": 10
             }
           ]
         },
         "3": {
-          "text": "An attack you delay leaves its part Open for 1 cycle.",
+          "text": "An attack you delay leaves its part Open for 2 cycles.",
           "fx": [
             {
               "when": "custom",
               "do": "delay-open",
-              "value": 1
+              "value": 2
             }
           ]
         }
-      }
+      },
+      "why": "Delay attacks, then punish the Open part."
     },
     {
       "id": "hiddenprocess",
@@ -1518,12 +1556,12 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+6% damage.",
+          "text": "Your burns deal 20% more.",
           "fx": [
             {
-              "when": "hit",
-              "do": "dmg%",
-              "value": 6
+              "when": "custom",
+              "do": "burn+%",
+              "value": 20
             }
           ]
         },
@@ -1536,7 +1574,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Burn the parts you can't hit, as a Payload."
     },
     {
       "id": "watertight",
@@ -1552,29 +1591,30 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+3 Block.",
+          "text": "+6 Block.",
           "fx": [
             {
               "when": "always",
               "do": "stat",
               "stat": "reduction",
-              "value": 3
+              "value": 6
             }
           ]
         },
         "3": {
-          "text": "When a hit takes more than 15% of your max Integrity, the next hit on you within 2 cycles deals 20% less.",
+          "text": "When a hit takes more than 15% of your max Integrity, the next hit on you within 2 cycles deals 30% less.",
           "fx": [
             {
               "when": "custom",
               "do": "big-guard",
-              "value": 20,
+              "value": 30,
               "over": 15,
               "cycles": 2
             }
           ]
         }
-      }
+      },
+      "why": "Weather the big hits of elites."
     },
     {
       "id": "smashandgrab",
@@ -1610,7 +1650,8 @@ export default {
             }
           ]
         }
-      }
+      },
+      "why": "Steal the shields of Buffers and Bodyguards."
     },
     {
       "id": "payroll",
@@ -1636,17 +1677,18 @@ export default {
           ]
         },
         "3": {
-          "text": "Every 4th cycle, heals you for 4% of your max Integrity.",
+          "text": "Every 3rd cycle, heals you for 6% of your max Integrity.",
           "fx": [
             {
               "when": "custom",
               "do": "heal-every",
-              "value": 4,
-              "every": 4
+              "value": 6,
+              "every": 3
             }
           ]
         }
-      }
+      },
+      "why": "Heal steadily without a healer's skills."
     },
     {
       "id": "backbone",
@@ -1662,28 +1704,30 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+5% Clock Speed.",
+          "text": "+3% damage for each part standing, up to 12%.",
           "fx": [
             {
-              "when": "always",
-              "do": "stat",
-              "stat": "clock",
-              "value": 5
+              "when": "hit",
+              "do": "damage%",
+              "value": 3,
+              "scale": "standing",
+              "cap": 12
             }
           ]
         },
         "3": {
-          "text": "A hit that reaches several parts deals 8% more for each part past the first, up to 24%.",
+          "text": "A hit that reaches several parts deals 12% more for each part past the first, up to 36%.",
           "fx": [
             {
               "when": "custom",
               "do": "reach%",
-              "value": 8,
-              "cap": 24
+              "value": 12,
+              "cap": 36
             }
           ]
         }
-      }
+      },
+      "why": "Hit several parts at once."
     }
   ]
 };

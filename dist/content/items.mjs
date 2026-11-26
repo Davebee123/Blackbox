@@ -701,7 +701,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "breaker"
+      "lean": "breaker",
+      "secondary": {
+        "crit": 10,
+        "critDamage": 24
+      }
     },
     {
       "id": "det-cord",
@@ -736,7 +740,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "breaker"
+      "lean": "breaker",
+      "secondary": {
+        "damage": 12,
+        "crit": 8
+      }
     },
     {
       "id": "hard-hat",
@@ -754,7 +762,7 @@ export default {
         "if": "momentum-full",
         "do": "stat+",
         "stat": "reduction",
-        "value": 4
+        "value": 6
       },
       "green": {
         "when": "hit",
@@ -772,7 +780,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "breaker"
+      "lean": "breaker",
+      "secondary": {
+        "crit": 8,
+        "reduction": 4
+      }
     },
     {
       "id": "blast-map",
@@ -807,7 +819,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "breaker"
+      "lean": "breaker",
+      "secondary": {
+        "damage": 12,
+        "crit": 8
+      }
     },
     {
       "id": "drill",
@@ -842,7 +858,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "bastion"
+      "lean": "bastion",
+      "secondary": {
+        "restore": 24,
+        "reduction": 4
+      }
     },
     {
       "id": "combination",
@@ -878,7 +898,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "bastion"
+      "lean": "bastion",
+      "secondary": {
+        "clock": 8,
+        "restore": 16
+      }
     },
     {
       "id": "vault-door",
@@ -914,7 +938,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "bastion"
+      "lean": "bastion",
+      "secondary": {
+        "signal": 48,
+        "restore": 20
+      }
     },
     {
       "id": "tumbler",
@@ -947,7 +975,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "bastion"
+      "lean": "bastion",
+      "secondary": {
+        "signal": 48,
+        "clock": 6
+      }
     },
     {
       "id": "exit",
@@ -965,7 +997,7 @@ export default {
         "when": "hit",
         "if": "target-below-half",
         "do": "crit%",
-        "value": 10
+        "value": 15
       },
       "green": {
         "when": "hit",
@@ -983,7 +1015,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "infiltrator"
+      "lean": "infiltrator",
+      "secondary": {
+        "crit": 12,
+        "critDamage": 24
+      }
     },
     {
       "id": "veil",
@@ -1019,7 +1055,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "infiltrator"
+      "lean": "infiltrator",
+      "secondary": {
+        "crit": 8,
+        "payload": 8
+      }
     },
     {
       "id": "pillow",
@@ -1054,7 +1094,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "infiltrator"
+      "lean": "infiltrator",
+      "secondary": {
+        "crit": 8,
+        "payload": 6
+      }
     },
     {
       "id": "mask",
@@ -1069,8 +1113,8 @@ export default {
       "effect": {
         "when": "custom",
         "do": "first-hit%",
-        "value": 8,
-        "text": "Your first hit on each part deals 8% more"
+        "value": 12,
+        "text": "Your first hit on each part deals 12% more"
       },
       "green": {
         "when": "always",
@@ -1089,7 +1133,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "infiltrator"
+      "lean": "infiltrator",
+      "secondary": {
+        "damage": 12,
+        "crit": 8
+      }
     },
     {
       "id": "cron",
@@ -1125,7 +1173,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "operator"
+      "lean": "operator",
+      "secondary": {
+        "payload": 12,
+        "clock": 8
+      }
     },
     {
       "id": "relay",
@@ -1160,7 +1212,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "operator"
+      "lean": "operator",
+      "secondary": {
+        "payload": 10,
+        "signal": 48
+      }
     },
     {
       "id": "parasite",
@@ -1196,7 +1252,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "operator"
+      "lean": "operator",
+      "secondary": {
+        "payload": 10,
+        "signal": 40
+      }
     },
     {
       "id": "core",
@@ -1230,7 +1290,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "operator"
+      "lean": "operator",
+      "secondary": {
+        "payload": 8,
+        "clock": 8
+      }
     },
     {
       "id": "floppy",
@@ -1246,8 +1310,8 @@ export default {
       "effect": {
         "when": "start",
         "do": "chit-fade",
-        "value": 3,
-        "text": "You start each fight with a ◆ that fades after 3 cycles."
+        "value": 2,
+        "text": "You start each fight with a ◆ that fades after 2 cycles."
       },
       "green": {
         "when": "always",
@@ -1511,7 +1575,8 @@ export default {
         "stat": "regen",
         "value": 1,
         "scale": "cycles",
-        "cap": 4
+        "cap": 2,
+        "if": "unrested"
       },
       "green": {
         "when": "always",
@@ -1716,7 +1781,7 @@ export default {
         "stat": "regen",
         "value": 1,
         "scale": "missing",
-        "cap": 5
+        "cap": 3
       },
       "green": {
         "when": "hit",
@@ -2092,7 +2157,7 @@ export default {
         "if": "above-75",
         "do": "stat+",
         "stat": "regen",
-        "value": 4
+        "value": 2
       },
       "green": {
         "when": "always",
@@ -2394,7 +2459,7 @@ export default {
         "when": "always",
         "if": "below-25",
         "do": "heal%",
-        "value": 20
+        "value": 30
       },
       "green": {
         "when": "always",
@@ -2424,7 +2489,7 @@ export default {
         "if": "below-half",
         "do": "stat+",
         "stat": "crit",
-        "value": 6
+        "value": 10
       },
       "green": {
         "when": "hit",
@@ -2685,7 +2750,7 @@ export default {
         "if": "any-tell",
         "do": "stat+",
         "stat": "reduction",
-        "value": 4
+        "value": 6
       },
       "green": {
         "when": "always",
@@ -7442,7 +7507,7 @@ export default {
         "if": "early",
         "do": "stat+",
         "stat": "clock",
-        "value": 10
+        "value": 20
       },
       "green": {
         "when": "always",
@@ -7471,7 +7536,7 @@ export default {
         "when": "hit",
         "if": "early",
         "do": "crit-damage%",
-        "value": 15
+        "value": 30
       },
       "green": {
         "when": "always",
@@ -7503,7 +7568,7 @@ export default {
         "if": "early",
         "do": "stat+",
         "stat": "sanitize",
-        "value": 20
+        "value": 40
       },
       "green": {
         "when": "hit",
@@ -7556,7 +7621,7 @@ export default {
         "if": "one-left",
         "do": "stat+",
         "stat": "reduction",
-        "value": 4
+        "value": 12
       },
       "green": {
         "when": "hit",
@@ -7585,7 +7650,7 @@ export default {
         "when": "hit",
         "if": "one-left",
         "do": "crit%",
-        "value": 10
+        "value": 30
       },
       "green": {
         "when": "always",
@@ -7617,7 +7682,7 @@ export default {
         "when": "hit",
         "if": "target-last",
         "do": "crit-damage%",
-        "value": 20
+        "value": 50
       },
       "green": {
         "when": "always",
@@ -7864,7 +7929,7 @@ export default {
         "when": "hit",
         "if": "server-held",
         "do": "crit%",
-        "value": 8
+        "value": 12
       },
       "green": {
         "when": "always",
@@ -7895,7 +7960,7 @@ export default {
         "if": "server-held",
         "do": "stat+",
         "stat": "reduction",
-        "value": 4
+        "value": 6
       },
       "green": {
         "when": "hit",
@@ -7923,7 +7988,7 @@ export default {
         "when": "always",
         "if": "server-held",
         "do": "taken%",
-        "value": 8
+        "value": 12
       },
       "green": {
         "when": "always",
@@ -8821,7 +8886,11 @@ export default {
           "floor": 6,
           "planned": "Domain Controller vaults"
         }
-      ]
+      ],
+      "secondary": {
+        "payload": 5,
+        "clock": 4
+      }
     },
     {
       "id": "group-policy",
@@ -8854,7 +8923,10 @@ export default {
           "floor": 6,
           "planned": "Domain Controller vaults"
         }
-      ]
+      ],
+      "secondary": {
+        "payload": 5
+      }
     },
     {
       "id": "schema",
@@ -8888,7 +8960,10 @@ export default {
           "floor": 6,
           "planned": "Domain Controller vaults"
         }
-      ]
+      ],
+      "secondary": {
+        "signal": 30
+      }
     },
     {
       "id": "admin-rights",
@@ -8906,7 +8981,7 @@ export default {
         "when": "hit",
         "if": "target-bare",
         "do": "crit-damage%",
-        "value": 15
+        "value": 25
       },
       "green": {
         "when": "always",
@@ -8921,7 +8996,11 @@ export default {
           "floor": 6,
           "planned": "Domain Controller vaults"
         }
-      ]
+      ],
+      "secondary": {
+        "payload": 5,
+        "crit": 5
+      }
     },
     {
       "id": "spinlock",
@@ -8938,7 +9017,7 @@ export default {
         "when": "hit",
         "if": "after-delay",
         "do": "crit-damage%",
-        "value": 20
+        "value": 35
       },
       "green": {
         "when": "hit",
@@ -8952,7 +9031,11 @@ export default {
           "id": "deadlock",
           "floor": 6
         }
-      ]
+      ],
+      "secondary": {
+        "clock": 5,
+        "restore": 10
+      }
     },
     {
       "id": "semaphore",
@@ -8969,7 +9052,7 @@ export default {
         "if": "after-delay",
         "do": "stat+",
         "stat": "clock",
-        "value": 10
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -8984,7 +9067,11 @@ export default {
           "id": "deadlock",
           "floor": 6
         }
-      ]
+      ],
+      "secondary": {
+        "payload": 6,
+        "signal": 30
+      }
     },
     {
       "id": "critical-section",
@@ -9001,7 +9088,7 @@ export default {
         "when": "always",
         "if": "after-delay",
         "do": "taken%",
-        "value": 10
+        "value": 25
       },
       "green": {
         "when": "always",
@@ -9015,7 +9102,11 @@ export default {
           "id": "deadlock",
           "floor": 6
         }
-      ]
+      ],
+      "secondary": {
+        "restore": 10,
+        "signal": 30
+      }
     },
     {
       "id": "unlink",
@@ -9033,7 +9124,7 @@ export default {
         "when": "hit",
         "if": "target-burning",
         "do": "crit-damage%",
-        "value": 15
+        "value": 20
       },
       "green": {
         "when": "hit",
@@ -9047,7 +9138,10 @@ export default {
           "floor": 6,
           "planned": "Rootkit kills"
         }
-      ]
+      ],
+      "secondary": {
+        "crit": 6
+      }
     },
     {
       "id": "hollow",
@@ -9079,7 +9173,10 @@ export default {
           "floor": 6,
           "planned": "Rootkit kills"
         }
-      ]
+      ],
+      "secondary": {
+        "payload": 6
+      }
     },
     {
       "id": "driver",
@@ -9110,7 +9207,11 @@ export default {
           "floor": 6,
           "planned": "Rootkit kills"
         }
-      ]
+      ],
+      "secondary": {
+        "payload": 6,
+        "crit": 4
+      }
     },
     {
       "id": "hatch",
@@ -9128,9 +9229,9 @@ export default {
         "do": "stack",
         "over": 15,
         "stat": "evasion",
-        "value": 3,
-        "cap": 9,
-        "text": "Each attack that lands for more than 15% of your max health adds 3% Evasion for the rest of the fight, up to 9%."
+        "value": 4,
+        "cap": 12,
+        "text": "Each attack that lands for more than 15% of your max health adds 4% Evasion for the rest of the fight, up to 12%."
       },
       "green": {
         "when": "always",
@@ -9161,9 +9262,9 @@ export default {
         "when": "always",
         "do": "stat+",
         "stat": "reduction",
-        "value": 1,
+        "value": 2,
         "scale": "missing",
-        "cap": 5
+        "cap": 8
       },
       "green": {
         "when": "always",
@@ -9867,9 +9968,9 @@ export default {
         "when": "always",
         "do": "stat+",
         "stat": "restore",
-        "value": 2,
+        "value": 3,
         "scale": "cycles",
-        "cap": 12
+        "cap": 18
       },
       "green": {
         "when": "always",
@@ -9937,7 +10038,7 @@ export default {
         "when": "hit",
         "if": "late",
         "do": "damage+",
-        "value": 5
+        "value": 8
       },
       "green": {
         "when": "always",
@@ -9987,7 +10088,10 @@ export default {
           "id": "routing",
           "floor": 7
         }
-      ]
+      ],
+      "secondary": {
+        "damage": 8
+      }
     },
     {
       "id": "crc",
@@ -10016,7 +10120,10 @@ export default {
           "id": "routing",
           "floor": 7
         }
-      ]
+      ],
+      "secondary": {
+        "crit": 6
+      }
     },
     {
       "id": "broadcast-storm",
@@ -10033,9 +10140,9 @@ export default {
       "effect": {
         "when": "hit",
         "do": "damage+",
-        "value": 1,
+        "value": 2,
         "scale": "standing",
-        "cap": 4
+        "cap": 8
       },
       "green": {
         "when": "always",
@@ -10050,7 +10157,11 @@ export default {
           "id": "routing",
           "floor": 7
         }
-      ]
+      ],
+      "secondary": {
+        "crit": 6,
+        "critDamage": 16
+      }
     },
     {
       "id": "headcount",

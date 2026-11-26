@@ -2,7 +2,7 @@
 
 An audit of the uniques, sets, five faction pieces, Zero-days and chase protocols as built (November 2026, after the
 unique and set pass: no two uniques share an effect, and every set piece has a small effect of its own): the combos they
-already make, what fails to stack, and loops to watch. Talents named are the tier talents
+already make, what fails to stack, and loops to watch. What each set is for, measured: docs/set-roles.md. Talents named are the tier talents
 (docs/builds.md).
 
 ## How items stack
@@ -34,10 +34,10 @@ Each break takes cooldowns off, and Total Loss turns one break into several.
 | Total Loss (Zero-day) | Halcyon shop | A break hits every other part for 25% of its max; a part it breaks goes off again |
 | Buffer Overflow (Zero-day) + Hot Reload or Race Window | vault · implant 30 · yellow | A break makes the next hit crit; the crit readies that skill |
 | Log4Shell / Daisy Chain | exploit 24 · yellow | A break hits the part winding up a tell |
-| Domain Admin (3, 4) | set 32–37, floor 6 | A last ◆ stripped: −1 on the nearest cooldown; from the third break, every cooldown 1 shorter |
+| Domain Admin (3, 4) | set 32–37, floor 6 (an Operator set) | A last ◆ stripped: −2 on the nearest cooldown; from the second break, every cooldown 1 shorter |
 | Load Path | exploit 36, floor 6 | A hit a ◆ takes still deals 15% to the part |
 
-Talents: Cascade Failure, Flashpoint, Exposed Wiring. At 50: Wrecking Crew 4 (+1 Momentum a break as an Overclocker),
+Talents: Cascade Failure, Flashpoint, Exposed Wiring. At 50: Wrecking Crew 4 (+2 Momentum a break as an Overclocker; (2) and (3) while you hold Momentum),
 Hot Reload or Cold Aisle in the implant, the proxy free. Catch: the refund uniques are low level; the endgame version
 leans on Zero-days, chase pieces and rules.
 
@@ -88,7 +88,7 @@ Sampler, Policy Engine and Interrupt Vector are all scripts; pick one (Tide Tabl
 | Signal Floor, Brownout, Strata | proxy 50, shell 47, shell 49 | +15% Evasion and −15% taken below 25%; up to −10% as you drop |
 | Glass Ceiling's and Hot Spare's pieces | set 14–36 | Crit, Block, Restore and Regen below half or 25% |
 | Umbrella Policy (faction), Last Known Good, Hot Spare (2) | proxy · script 48 · set | The floor under you |
-| Recovery Mode, Reinsurance, Payroll (3) | script 36 · proxy 40 · set 39–43 | Below half a hit capped at 15% every 6 cycles; a big hit's excess back as a shield; 4% healed every 4th cycle |
+| Recovery Mode, Reinsurance, Payroll (3) | script 36 · proxy 40 · set 39–43 | Below half a hit capped at 15% every 6 cycles; a big hit's excess back as a shield; 6% healed every 3rd cycle |
 
 Talents: Kernel Panic (Warden), Critical Path (Sysop). Catch: never with the Glass Jaw implicit, which hurts below 25%.
 
@@ -109,7 +109,7 @@ Fault). Catch: Dead Air counts a blocked hit, so Block doesn't feed it.
 
 ### Plague (Payload; NULL CHOIR's Descant)
 
-Burn damage multiplies: Hollow and Hidden Process (32–36: +15% on a part winding up a tell, and burns tick on a part
+Burn damage multiplies: Hollow and Hidden Process (32–36: +15% on a part winding up a tell, (2) +20%, and burns tick on a part
 out of reach), Banked Fire (shell 43: +12%), Brine (script 40: +15% on armor), Flue (proxy 48: a shield each tick),
 Descant (script, faction, +10% at your level), Swarm Intelligence (script 12: +25% with a helper out, −10 Signal). Then
 Worker Pool (script 5: helpers +20% on a burning part), Flood Ramp (script 6: +3 damage on a burning part), Fan Curve (shell 8: burns grow +2 a tick), Slammer (script 22: burns jump

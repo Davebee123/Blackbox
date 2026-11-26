@@ -175,6 +175,7 @@ export const FX_IF = {
   'below-25': 'you are below 25% health',
   shielded: 'you hold a shield',
   'momentum-full': 'your Momentum is full',
+  momentum: 'you hold Momentum',
   'helper-out': 'you have a helper out',
   'no-helper': 'you have no helper out',
   blocked: 'your Block reduces it',

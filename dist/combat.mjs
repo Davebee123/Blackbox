@@ -1017,6 +1017,7 @@ function fxCond(s, fx, ctx = {}) {
     case 'below-25': return d().integrity < d().max * 0.25;
     case 'shielded': return (e?.shield || 0) > 0;
     case 'momentum-full': return !!e && classOf(s) === 'breaker' && momentumStacks(s) >= momentumCap(s);
+    case 'momentum': return !!e && classOf(s) === 'breaker' && momentumStacks(s) > 0; // Wrecking Crew (2)
     case 'helper-out': return (e?.helpers?.length || 0) > 0;
     case 'no-helper': return !!e && !e.helpers?.length;
     case 'blocked': return blockOf(s) > 0;
@@ -2221,7 +2222,7 @@ function engage(s) {
     if (x.fx.do === 'shield') { e.shield = (e.shield || 0) + x.value; emit(s, 'status', `${x.name || x.it.name}: you start behind a ${x.value} shield.`, { mark: 'shield' }); }
     if (x.fx.do === 'shield%') { const n = Math.max(1, Math.round((defender(s).max * x.value) / 100)); e.shield = (e.shield || 0) + n; emit(s, 'status', `${x.name || x.it.name}: you start behind a ${n} shield.`, { mark: 'shield', ...firedOf([x]) }); } // Cold Boot
     if (x.fx.do === 'first-skill-crit') fxState(e).critSkill = true; // POST Code: spent by your first skill that hits (playerPhase)
-    if (x.fx.do === 'start-late') { const late = attackers(s).filter((p) => delayAttack(s, p, x.value)); if (late.length) emit(s, 'status', `${x.name || x.it.name}: every part's first attack comes ${x.value === 1 ? 'a cycle' : x.value + ' cycles'} later.`, firedOf([x])); } // Cold Start (3)
+    if (x.fx.do === 'start-late') { const t = soonestAttacker(s); if (t?.attack && delayAttack(s, t, x.value)) emit(s, 'status', `${x.name || x.it.name}: the ${t.name}'s first attack comes ${x.value === 1 ? 'a cycle' : x.value + ' cycles'} later.`, { target: t.id, ...firedOf([x]) }); } // Cold Start (3): the fight's first attack
   }
   // A filter of the Scrubber starts every home fight shielded.
   if (e.mode === 'home' && gearStat(s, 'shield', 'server')) e.shield = (e.shield || 0) + gearStat(s, 'shield', 'server');

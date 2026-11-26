@@ -57,7 +57,7 @@ import { situationOf } from './situations.mjs';
 import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine } from './sets.mjs';
 import { earnedOf, cellsOf, pinsOf, PIN_MAX } from './earned.mjs';
 import { logGo, homeOfUnique } from './collection.mjs';
-import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED, answerLine, helperPlan, beatCopy } from './fightread.mjs';
+import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED, answerLine, ANSWER, helperPlan, beatCopy } from './fightread.mjs';
 import { crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { programMarkup, progNow, progTarget, progText, progMove, progOnPart, progExc, progFight, progTag } from './routines-view.mjs';
 import { unlocked as routinesOpen, LOCKED as ROUTINES_LOCKED } from './routines.mjs';
@@ -1368,7 +1368,7 @@ export function setLines(s, uniqueId, compact = false) {
   const pieces = c.pieces.map((p) => { const e = earned(p); return e ? `<span class="sp unknown earned" title="${esc(earnTip(s, p.id))}"><span>${esc(UNIQUES[p.id].name)}</span>${compact ? '' : `<small class="sp-goal">${esc(e.short)} ${e.n}/${e.of}</small>`}</span>` : `<span class="sp ${p.state}" title="${esc(SET_PIECE_TIP[p.state])}">${esc(p.name || '???')}</span>`; }).join('');
   const bonuses = c.bonuses.map((b) => `<span class="sb${b.on ? ' on' : ''}${b.blocked ? ' blocked' : ''}" title="${esc(b.blocked ? `Only one 4-piece bonus at a time: ${b.blocked} reached four first and keeps it.` : b.on ? 'On' : `Wear ${b.at} pieces`)}">(${b.at}) Set: ${esc(b.text)}${b.blocked ? ` <em>${esc(b.blocked)} holds it</em>` : ''}</span>${compact ? '' : subLines(b)}`).join('');
   const tier = tierLine(set.id);
-  return `<span class="set-lines${compact ? ' compact' : ''}">${green}<b class="set-name">${esc(c.name)} (${c.n}/${c.total})</b>${tier && !compact ? `<small class="set-tier">${esc(tier)}</small>` : ''}<span class="set-pieces">${pieces}</span><span class="set-bonuses">${bonuses}</span></span>`;
+  return `<span class="set-lines${compact ? ' compact' : ''}">${green}<b class="set-name">${esc(c.name)} (${c.n}/${c.total})</b>${tier && !compact ? `<small class="set-tier">${esc(tier)}</small>` : ''}<span class="set-pieces">${pieces}</span><span class="set-bonuses">${bonuses}</span>${c.why && !compact ? `<small class="set-why">${esc(ANSWER + c.why)}</small>` : ''}</span>`;
 }
 // The Loadout's set bonuses: each set you wear two or more of, its open bonuses, and the 4-piece rule when it bites.
 function setBonusCard(s) {
