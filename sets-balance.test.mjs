@@ -69,6 +69,10 @@ const HOLD = { bootloader: { overclocker: 0.79 }, hiddenprocess: { demolitionist
 // Crypter (floor 5, 26–31) measured 12.0 easier at Lv 30 (November 2026): its crits, and the 3-piece's crit after each
 // stripped ◆. Held at 12.5 there until the designer has played it.
 const EASIEST = { crypter: -12.5 };
+// Since the unique and set pass (November 2026) each piece's own bonus is an effect on its set's theme, not a bare stat.
+// Mesh's scale with crewmates, so solo (the bots' fights) the set measures 6.5 harder at Lv 50; Bootloader's work in a
+// fight's first 3 cycles, 4.2 harder. Held at 7 and 4.5 until the designer has played them.
+const HARDEST = { mesh: 7, bootloader: 4.5 };
 test('the loot plan\'s general sets, worn whole: every subclass keeps 80% wins, and no set moves the average past its measure', async () => {
   const { SETS } = await import('./dist/sets.mjs');
   const { UNIQUES } = await import('./dist/combat.mjs');
@@ -84,8 +88,8 @@ test('the loot plan\'s general sets, worn whole: every subclass keeps 80% wins, 
       if (r.lost > 52) off.push(`${set.name} ${sub} Lv ${L} ${r.lost.toFixed(0)}%`);
     }
     moved[set.id] = Math.round((d / SUBS.length) * 10) / 10;
-    const lo = EASIEST[set.id] ?? -11;
-    if (d / SUBS.length < lo || d / SUBS.length > 4) off.push(`${set.name} Lv ${L} moves the average ${(d / SUBS.length).toFixed(1)} (bounds ${lo} to 4)`);
+    const lo = EASIEST[set.id] ?? -11, hi = HARDEST[set.id] ?? 4;
+    if (d / SUBS.length < lo || d / SUBS.length > hi) off.push(`${set.name} Lv ${L} moves the average ${(d / SUBS.length).toFixed(1)} (bounds ${lo} to ${hi})`);
   }
   assert.deepEqual(off, [], JSON.stringify(moved));
 });

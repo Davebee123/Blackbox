@@ -27,13 +27,13 @@ test('effect blocks: damage when synced, a chit and a crit at the start, half th
   s.encounter.synced = true;
   assert.ok(damageMultiplier(s, p, { mine: true }) > plain * 1.24, '+25% in a Sync Window');
   const t = vet();
-  wear(t, 'gate-bypass');
+  wear(t, 'squatters-rights');
   wear(t, 'cell-key');
   fight(t);
-  assert.equal(t.encounter.chits, 1, 'Gate Bypass: a chit');
+  assert.equal(t.encounter.chits, 1, "Squatter's Rights: a chit");
   assert.ok(t.encounter.forceCrit, 'Cell Key: the first hit crits');
   const u = vet();
-  wear(u, 'watchdog-whitelist');
+  wear(u, 'vault-door'); // the first hit on you each fight deals half
   fight(u);
   u.server.integrity = u.server.max = 99999; // a level-30 virus against a fresh save's level-1 server: room for both hits
   for (const x of u.encounter.virus.parts) if (x.attack) x.attack.due = 99;
@@ -52,12 +52,12 @@ test('stat-x2 counts a stat double while its condition holds; break refunds; Enc
   assert.equal(gearStat(s, 'regen', 'hacker'), Math.round(high * 2 * 10) / 10, 'Hotfix: Regen doubles below half');
   assert.ok(hot.stats.regen > 0);
   s.run = null;
-  const t = vet(); wear(t, 'cryptominer'); fight(t);
+  const t = vet(); wear(t, 'eviction-notice'); fight(t);
   t.encounter.readyAt = { overload: t.encounter.cycle + 3 };
   for (const x of t.encounter.virus.parts) Object.assign(x, { armor: 0, integrity: 1 });
   command(t, 'spike pulse'); resolveCycle(t);
   assert.ok(t.encounter.readyAt.overload <= t.encounter.cycle + 2, 'a break took a cycle off');
-  const u = vet(); wear(u, 'tollgate-token'); fight(u);
+  const u = vet(); wear(u, 'air-gap'); fight(u);
   const enc = part(u, 'encryptor'); enc.attack.due = u.encounter.cycle;
   const amount = enc.attack.amount; command(u, 'hold'); resolveCycle(u);
   assert.ok(u.encounter.encrypt <= Math.ceil(amount / 2), 'half as fast');

@@ -53,7 +53,7 @@ test("floor 7: three sets, two uniques, each with the plan's name, slot, level a
       const u = UNIQUES[pid];
       assert.equal(u.set, id);
       assert.deepEqual(u.sources, [src], `${pname}: its source`);
-      assert.ok(u.effect?.text && u.green?.text, `${pname}: its own bonus and its green line`);
+      assert.ok(fxText(fxList(u)) && u.green?.text, `${pname}: its own bonus and its green line`);
       all.push([u, pname, slot, level]);
     }
   }

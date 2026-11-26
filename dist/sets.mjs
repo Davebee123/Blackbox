@@ -195,6 +195,19 @@ export function setsRestore(s, was) {
   const m = s.mail;
   if (m && Array.isArray(m.posted) && !m.waiting && !m.posted.includes(BADGE_BEAT)) { m.waiting = 'armed'; m.waitFrom ||= 0; }
 }
+// The unique and set pass (November 2026) renamed eight uniques that shared a name with a set, a Zero-day or a talent: a copy you
+// hold keeps the name it dropped with until this gives it the new one. Keyed on the old name, so safe to run twice.
+export const RENAMED = { overtime: 'Overtime', 'carrier-wave': 'Carrier Wave', 'hive-mind': 'Hive Mind', 'shakedown-escrow': 'Escrow', palemask: 'Palemask', failover: 'Failover', semaphore: 'Semaphore', 'thread-pool': 'Thread Pool' };
+export function renamedRestore(s) {
+  const seen = new Set();
+  const walk = (x) => {
+    if (!x || typeof x !== 'object' || seen.has(x)) return;
+    seen.add(x);
+    if (x.kind === 'protocol' && RENAMED[x.unique] && x.name === RENAMED[x.unique] && UNIQ[x.unique]) x.name = UNIQ[x.unique].name;
+    for (const v of Object.values(x)) walk(v);
+  };
+  walk(s);
+}
 // ---------- the fight engine's side ----------
 // SET_HOOKS is a class-hook module (combat.mjs CLASS_HOOKS; dist/classes/breaker.mjs lists the hooks): it runs for
 // every player in every fight, and does nothing unless a set piece is loaded (e.sx, sxOf). Its state lives

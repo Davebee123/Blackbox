@@ -978,11 +978,11 @@ export default {
           ]
         },
         "3": {
-          "text": "Your first damaging skill each fight is a critical strike.",
+          "text": "Each part's first attack in a fight comes a cycle later.",
           "fx": [
             {
               "when": "start",
-              "do": "first-skill-crit",
+              "do": "start-late",
               "value": 1
             }
           ]
@@ -1049,19 +1049,13 @@ export default {
           ]
         },
         "3": {
-          "text": "While one part is left, it takes 15% more from you, and when it becomes the last its next attack comes a cycle later.",
+          "text": "While one part is left, you take 20% less damage.",
           "fx": [
             {
-              "when": "hit",
-              "do": "dmg%",
-              "value": 15,
-              "if": "target-last"
-            },
-            {
-              "when": "break",
-              "do": "delay-last",
-              "value": 1,
-              "if": "one-left"
+              "when": "custom",
+              "if": "one-left",
+              "do": "taken-cut%",
+              "value": 20
             }
           ]
         }
@@ -1144,12 +1138,8 @@ export default {
           ]
         },
         "3": {
-          "text": "Delivering a contract fills your Integrity, and kills pay 10% more XP.",
+          "text": "Kills pay 10% more XP.",
           "fx": [
-            {
-              "when": "deliver",
-              "do": "fill-signal"
-            },
             {
               "when": "custom",
               "do": "kill-xp%",
@@ -1225,7 +1215,7 @@ export default {
           ]
         },
         "3": {
-          "text": "+10% Clock Speed. Cooldowns start each fight 1 cycle shorter.",
+          "text": "+10% Clock Speed. +5 Block while you are below half Integrity.",
           "fx": [
             {
               "when": "always",
@@ -1234,9 +1224,11 @@ export default {
               "value": 10
             },
             {
-              "when": "custom",
-              "do": "cd-start",
-              "value": 1
+              "when": "always",
+              "if": "below-half",
+              "do": "stat",
+              "stat": "reduction",
+              "value": 5
             }
           ]
         },

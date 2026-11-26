@@ -379,7 +379,8 @@ export function liftFx(fx, level) {
   if (!liftsFx(fx)) return fx;
   const k = FLAT_FX.has(fx.do) ? 'damage' : fx.stat, v = up(k, Number(fx.value), level), out = { ...fx, value: v };
   if (Number.isFinite(fx.cap)) out.cap = up(k, fx.cap, level);
-  if (typeof fx.text === 'string') out.text = fx.text.replace(new RegExp(`(^|[^\\d.])${fx.value}(?![\\d.])`), `$1${v}`);
+  if (typeof fx.text === 'string') out.text = fx.text.replace(new RegExp(`(^|[^\\d.])${fx.value}(?!\\d|\\.\\d)`), `$1${v}`);
+  if (typeof out.text === 'string' && Number.isFinite(fx.cap)) out.text = out.text.replace(new RegExp(`up to ${fx.cap}(?!\\d|\\.\\d)`), `up to ${out.cap}`); // its cap, written in the text too
   return out;
 }
 // An item's flat stats and flat rule value, lifted at its level (rollItem, uniqueItem, curveRestore).

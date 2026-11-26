@@ -19,7 +19,7 @@ const SETS56 = {
   contiguous: ['Contiguous', [27, 31], [['sector', 'Sector', 'exploit', 27], ['cluster', 'Cluster', 'implant', 29], ['allocation-table', 'Allocation Table', 'script', 31]], ['lair', 5, 'Defrag boards']],
   crypter: ['Crypter', [26, 31], [['stub', 'Stub', 'exploit', 26], ['junk-code', 'Junk Code', 'script', 28], ['decryptor', 'Decryptor', 'shell', 31]], ['lair', 5, 'Polymorph kills']],
   domainadmin: ['Domain Admin', [32, 37], [['ticket', 'Ticket', 'implant', 32], ['group-policy', 'Group Policy', 'proxy', 33], ['schema', 'Schema', 'shell', 35], ['admin-rights', 'Admin Rights', 'exploit', 37]], ['lair', 6, 'Domain Controller vaults']],
-  semaphore: ['Semaphore', [33, 37], [['spinlock', 'Spinlock', 'script', 33], ['semaphore', 'Semaphore', 'implant', 35], ['critical-section', 'Critical Section', 'shell', 37]], ['puzzle', 6, null]],
+  semaphore: ['Semaphore', [33, 37], [['spinlock', 'Spinlock', 'script', 33], ['semaphore', 'Wait Queue', 'implant', 35], ['critical-section', 'Critical Section', 'shell', 37]], ['puzzle', 6, null]],
   hiddenprocess: ['Hidden Process', [32, 36], [['unlink', 'Unlink', 'exploit', 32], ['hollow', 'Hollow', 'script', 34], ['driver', 'Driver', 'implant', 36]], ['lair', 6, 'Rootkit kills']],
   watertight: ['Watertight', [34, 38], [['hatch', 'Hatch', 'proxy', 34], ['seal-plate', 'Seal Plate', 'shell', 36], ['pressure-door', 'Pressure Door', 'implant', 38]], ['lair', 6, 'Kestrel ICE on floor 6']],
 };
@@ -96,7 +96,7 @@ test('floors 5 and 6: seven sets and nineteen uniques, each with the plan\'s nam
       assert.equal(u.sources.length, 1);
       assert.deepEqual([src.kind, src.floor, src.planned || null], [kind, floor, planned], `${pname}: its source`);
       if (kind === 'puzzle') assert.equal(src.id, 'deadlock', 'Semaphore: deep Deadlock boards');
-      assert.ok(u.effect?.text && u.green?.text, `${pname}: its own bonus and its green line`);
+      assert.ok(fxText(fxList(u)) && u.green?.text, `${pname}: its own bonus and its green line`);
     }
   }
   for (const [id, name, slot, level, floor, planned] of U56) {
@@ -143,7 +143,7 @@ test('Installment: your first hit on each part every 3 cycles deals 10% more', (
   assert.equal(m(pulse), 1.1, 'again 3 cycles later');
 });
 
-test('damage% on the new conditions: Late Fee, Antibody, Tail Circuit, Junk Code; Moral Hazard by the tells that landed', () => {
+test('damage% on the new conditions: Late Fee, Antibody, Tail Circuit, Brute Force; Moral Hazard by the tells that landed', () => {
   assert.equal(against('late-fee'), 1, 'Late Fee: not on a part that never patched');
   // A ◆ patched back at a cycle's end marks the part.
   { const s = vet(); wear(s, 'late-fee'); fight(s); const p = pulse(s); p.maxArmor = 1; p.armor = 0; p.patchAt = s.encounter.cycle; hold(s); assert.equal(p.armor, 1); assert.ok(p.repatched); }
@@ -157,20 +157,13 @@ test('damage% on the new conditions: Late Fee, Antibody, Tail Circuit, Junk Code
     assert.equal(m(), 1.4, 'Antibody: it healed');
     hold(s); hold(t);
     assert.equal(m(), 1, 'Antibody: only the cycle after the heal');
-    // Tail Circuit: more Integrity than 2 cycles ago.
-    const u = vet(); wear(u, 'tail-circuit'); fight(u); const v = vet(); fight(v);
-    const n = () => ratio(damageMultiplier(u, pulse(u), { mine: true }), damageMultiplier(v, pulse(v), { mine: true }));
-    pulse(u).integrity = 3000; hold(u, 2); hold(v, 2);
-    assert.equal(n(), 1, 'Tail Circuit: the same as 2 cycles ago');
-    pulse(u).integrity = 3100;
-    assert.equal(n(), 1.1, 'Tail Circuit: more than 2 cycles ago');
   }
-  // Junk Code (a set piece's own bonus): more on a part wearing ◆, to a hit that gets through it.
-  { const s = vet(); wear(s, 'junk-code'); fight(s); const t = vet(); fight(t);
-    const m = () => ratio(damageMultiplier(s, pulse(s), { mine: true }), damageMultiplier(t, pulse(t), { mine: true }));
-    assert.equal(m(), 1);
-    pulse(s).armor = pulse(t).armor = 1;
-    assert.equal(m(), 1.06); }
+  // Tail Circuit: an even cycle.
+  assert.equal(against('tail-circuit', (s) => { s.encounter.cycle = 3; }), 1, 'Tail Circuit: not on an odd cycle');
+  assert.equal(against('tail-circuit', (s) => { s.encounter.cycle = 4; }), 1.2, 'Tail Circuit: an even one');
+  // Brute Force: more on a part wearing ◆, to a hit that gets through it.
+  assert.equal(against('brute-force', (s) => { pulse(s).armor = 0; }), 1, 'Brute Force: not on a bare part');
+  assert.equal(against('brute-force', (s) => { pulse(s).armor = 1; }), 1.15, 'Brute Force: a part wearing ◆');
   assert.equal(against('moral-hazard', (s) => { s.encounter.metrics.tells = { a: { landed: 3 }, b: { landed: 1 } }; }), 1.12, 'Moral Hazard: 3% for each of 4 tells');
   assert.equal(against('moral-hazard', (s) => { s.encounter.metrics.tells = { a: { landed: 20 } }; }), 1.3, 'Moral Hazard: up to 30%');
 });

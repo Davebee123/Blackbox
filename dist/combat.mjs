@@ -53,7 +53,7 @@ import { reqLevel, meetsReq, STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, loo
 
 import ITEMS from './content/items.mjs';
 import EARN from './content/earned.mjs';
-import { SETS, setFx, activeSets, isPiece, setPool, SET_LOOT, CLASS_SET, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf, restFast } from './sets.mjs';
+import { SETS, setFx, activeSets, isPiece, setPool, SET_LOOT, CLASS_SET, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, renamedRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf, restFast } from './sets.mjs';
 import { fxText, fxList } from './content.mjs';
 import { deathRecap } from './recap.mjs';
 import { situationOf } from './situations.mjs';
@@ -1252,6 +1252,10 @@ export function fxAnswer(s, p = null) {
     if (x.fx.do === 'heal') heal(s, x.value, who, firedOf([x]));
     if (x.fx.do === 'shield') { e.shield = (e.shield || 0) + x.value; emit(s, 'status', `${who} raises your shield to ${e.shield}.`, { mark: 'shield', ...firedOf([x]) }); }
     if (x.fx.do === 'shield%') { e.shield = (e.shield || 0) + Math.max(1, Math.round((defender(s).max * x.value) / 100)); emit(s, 'status', `${who} raises your shield to ${e.shield}.`, { mark: 'shield', ...firedOf([x]) }); } // Choirbook (2): a share of your max
+    if (x.fx.do === 'buff') addBuff(s, x); // Sampler: more damage for a few cycles
+    if (x.fx.do === 'repeat') { fxState(e).repeat = { share: Number(x.fx.share) || 0, name: who }; emit(s, 'status', `${who}: your next damaging skill hits again for ${Number(x.fx.share) || 0}%.`, { mark: 'buff', ...firedOf([x]) }); } // Ctrl-C
+    if (x.fx.do === 'refund-skill' && e.lastSkill && e.readyAt[e.lastSkill] > e.cycle) { delete e.readyAt[e.lastSkill]; emit(s, 'status', `${who}: ${ABILITIES[e.lastSkill]?.name || e.lastSkill} is ready again.`, firedOf([x])); } // Tide Table
+    if (x.fx.do === 'chit-fade') fadingChit(s, x); // Interrupt Vector
   }
 }
 // ---------- shared events (docs/builds.md 3) ----------
@@ -2208,7 +2212,7 @@ function engage(s) {
   e.hardened = classOf(s) === 'bastion' ? SKILLS.hardened : 0; // Bastion's passive: the first damage hit each fight lands at half
   classEach('start', s);
   coolSwapped(s); // keys a preset or an equip put on the bar since your last fight start it cooling
-  // Uniques that fire as a fight starts (Gate Bypass, Cell Key).
+  // Uniques that fire as a fight starts (Squatter's Rights, Cell Key, Floppy; Cold Start (3)).
   for (const x of fxFire(s, 'start')) {
     if (x.fx.do === 'chit') { e.chits++; emit(s, 'status', `${x.name || x.it.name}: you start with a ◆.`); } // a unique's, or a set bonus's (Full Coverage)
     if (x.fx.do === 'chit-fade') fadingChit(s, x);
@@ -2217,6 +2221,7 @@ function engage(s) {
     if (x.fx.do === 'shield') { e.shield = (e.shield || 0) + x.value; emit(s, 'status', `${x.name || x.it.name}: you start behind a ${x.value} shield.`, { mark: 'shield' }); }
     if (x.fx.do === 'shield%') { const n = Math.max(1, Math.round((defender(s).max * x.value) / 100)); e.shield = (e.shield || 0) + n; emit(s, 'status', `${x.name || x.it.name}: you start behind a ${n} shield.`, { mark: 'shield', ...firedOf([x]) }); } // Cold Boot
     if (x.fx.do === 'first-skill-crit') fxState(e).critSkill = true; // POST Code: spent by your first skill that hits (playerPhase)
+    if (x.fx.do === 'start-late') { const late = attackers(s).filter((p) => delayAttack(s, p, x.value)); if (late.length) emit(s, 'status', `${x.name || x.it.name}: every part's first attack comes ${x.value === 1 ? 'a cycle' : x.value + ' cycles'} later.`, firedOf([x])); } // Cold Start (3)
   }
   // A filter of the Scrubber starts every home fight shielded.
   if (e.mode === 'home' && gearStat(s, 'shield', 'server')) e.shield = (e.shield || 0) + gearStat(s, 'shield', 'server');
@@ -3055,7 +3060,7 @@ export function hit(s, p, base, opts = {}) {
   const forced = raw > 0 && !opts.server && (weak || e.forceCrit || opts.crit || first || passed);
   if (forced && e.forceCrit) e.forceCrit = false;
   // Exposed: every hit on it, from anyone, has a better crit chance.
-  const chance = critChance(s) + (opts.server ? 0 : classSum('crit', s, p, opts)) + (on(s, p, 'exposed') ? SKILLS.exposed : 0) + (opts.mine ? fxFire(s, 'hit', { target: p, do: 'crit%' }).reduce((n, x) => n + x.value, 0) : 0);
+  const chance = critChance(s) + (opts.server ? 0 : classSum('crit', s, p, opts)) + (on(s, p, 'exposed') ? SKILLS.exposed : 0) + (opts.mine ? fxFire(s, 'hit', { target: p, do: 'crit%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null }).reduce((n, x) => n + x.value, 0) : 0); // cmd: Bootstrap's first use
   const crit = forced || (raw > 0 && !opts.flat && !opts.blast && chance > 0 && rand(s) * 100 < chance); // a held cash-in or a blast never crits
   let doubled = false;
   if (crit) {
@@ -3133,7 +3138,7 @@ export function hit(s, p, base, opts = {}) {
   const fired = opts.mine && !opts.server && raw > 0 ? [
     ...fxFire(s, 'hit', { target: p, do: 'damage%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null }, false),
     ...(opts.dot ? [] : fxFire(s, 'hit', { target: p, do: 'damage+' }, false)),
-    ...(crit && !forced ? fxFire(s, 'hit', { target: p, do: 'crit%' }, false) : []),
+    ...(crit && !forced ? fxFire(s, 'hit', { target: p, do: 'crit%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null }, false) : []),
   ].filter((x) => x.fx.if) : [];
   // shield: what the Mutex's lock took of it, from lockWas, with the part at hp after the hit (the board's lock segment
   // drains by it: view.mjs, app.js; dmgfx.mjs's number says it was absorbed).
@@ -3445,10 +3450,11 @@ function breakPart(s, p) {
   fireEvent(s, 'break', { part: p });
   if (p.kind !== 'fragment') daemonsOn(s, 'broke', { part: p.id }); // Domino
   if (bodyRules(e)) hooks.roomBroke?.(s, p); // a room body's rule on a break (families.mjs)
-  // Uniques that fire on a break (Cryptominer, Zero Cool).
+  // Uniques that fire on a break (Eviction Notice, Hashboard, Rockfall, Floodgate).
   for (const x of fxFire(s, 'break', { crit: e.lastCrit, target: p })) {
     const who = x.name || x.it.name;
     if (x.fx.do === 'chit-fade') fadingChit(s, x); // Bitrot Ward: down to the last part
+    if (x.fx.do === 'break-delay') { const t = soonestAttacker(s, p.id); if (alive(t) && t !== p && delayAttack(s, t, x.value)) emit(s, 'status', `${who}: ${t.name}'s next attack comes ${x.value === 1 ? 'a cycle' : x.value + ' cycles'} later.`, { target: t.id, ...firedOf([x]) }); } // Rockfall
     if (x.fx.do === 'delay-last') { const last = livingParts(s)[0]; if (last && delayAttack(s, last, x.value)) emit(s, 'status', `${who}: ${last.name}'s next attack comes a cycle later.`, { target: last.id }); } // Atoll (3)
     // Kill Chain (a native unique): the next part to attack is Open, as if you'd read it.
     if (x.fx.do === 'break-open') { const t = soonestAttacker(s, p.id); if (alive(t) && t !== p && t.kind === 'system') { t.openUntil = Math.max(t.openUntil || 0, e.cycle + x.value); emit(s, 'read', `${who} leaves the ${t.name} Open.`, { target: t.id, open: true }); } }
@@ -3711,13 +3717,14 @@ function useAbility(s, intent, auto = false) {
   const flash = base > 0 && id === 'overload' && !!target && !(target.armor > 0) && legend(s, 'flashover'); // Flashover (a legend): a bare part
   if (flash) legendFire(s, 'flashover');
   const charging = id === 'segfault' && !!target && !!tellOn(s, target, 'charge'); // Red Zone (a legend), read before the hit cuts it
+  const armed = base ? e.fxs?.repeat || null : null; // armed before this skill: one Ctrl-C arms in its hit waits for the next
   const res = base ? hit(s, target, base, { mine: true, crit: crit || flash, chits: a.chits, pierce: ignoresArmor(s, id) || rootkit, unlock: !!a.unlock, by: rootkit && target.armor > 0 ? 'Rootkit' : undefined }) : null;
   if (id === 'overload' && hasTalent(s, 'piercing')) e.once.pierced = true;
   // Echo: the hit may repeat for half (on armor, it breaks another chit).
   if (base && alive(target) && gearStat(s, 'echo') && rand(s) * 100 < gearStat(s, 'echo')) hit(s, target, Math.max(1, Math.round(base * (fxHas(s, 'echo-full') || echoFirst(s, target) ? 1 : ECHO.share))), { mine: true, by: 'Echo' });
-  // Init Vector (repeat): armed every few cycles (cycleClose), your next damaging skill hits again for its share.
-  const rep = base && alive(target) && e.fxs?.repeat;
-  if (rep) { e.fxs.repeat = null; hit(s, target, Math.max(1, Math.round((base * rep.share) / 100)), { mine: true, by: rep.name }); }
+  // A repeat (Ctrl-C): armed by an answer (or on a cycle's beat, cycleFx), your next damaging skill hits again for its share.
+  const rep = armed && alive(target) ? armed : null;
+  if (rep) { if (e.fxs.repeat === rep) e.fxs.repeat = null; hit(s, target, Math.max(1, Math.round((base * rep.share) / 100)), { mine: true, by: rep.name }); }
   // Overload: a crit resets its cooldown.
   if (charging && legend(s, 'red-zone')) { delete e.readyAt.segfault; legendFire(s, 'red-zone'); emit(s, 'proc', 'Red Zone: Segfault is ready again.', { ability: 'segfault' }); }
   if (id === 'backstab' && res?.crit && alive(target) && e.weakHit?.[target.id] && legend(s, 'knife-edge')) { delete e.weakHit[target.id]; legendFire(s, 'knife-edge'); emit(s, 'status', `Knife Edge: Weak Spot is fresh on the ${target.name}.`, { target: target.id }); }
@@ -4764,17 +4771,22 @@ export function strikeWith(s, p, atk) {
 function fadingChit(s, x) {
   const e = s.encounter, n = Number(x.fx.value) || 2;
   e.chits++;
-  fxState(e).chitFade = e.cycle + n - 1;
+  (fxState(e).chitFade ||= []).push({ at: e.cycle + n - 1, by: x.name || x.it.name });
   emit(s, 'status', `${x.name || x.it.name}: you gain a ◆ for ${n} cycles.`, { mark: 'shield', ...firedOf([x]) });
 }
-// Your gear at the end of a cycle, on its beat (value: every that many cycles). Bitrot Ward (chit-fade): its ◆, if you
-// still hold it, fades after its cycles. Init Vector (repeat): your next damaging skill is armed to hit
-// again. Watchdog Timer (free-helper): with no helper of yours out, one joins for a few cycles, a Deploy helper's size.
+// Your gear at the end of a cycle, on its beat (value: every that many cycles). A fading ◆ (chit-fade: Bitrot Ward, Det
+// Cord, Floppy, Interrupt Vector), if you still hold it, fades after its cycles. A repeat on a beat: your next damaging
+// skill is armed to hit again. Watchdog Timer (free-helper): with no helper of yours out, one joins for a few cycles, a Deploy helper's size.
 // Then the Integrity you end it on (Last Known Good, the death recap).
 function cycleFx(s) {
   const e = s.encounter, st = fxState(e), beat = (x) => e.cycle % Math.max(1, Number(x.fx.value) || 1) === 0;
-  if (st.chitFade && !(e.chits > 0)) delete st.chitFade; // the ◆ was spent
-  if (st.chitFade && e.cycle >= st.chitFade) { delete st.chitFade; e.chits--; emit(s, 'status', 'Bitrot Ward: your ◆ fades.'); }
+  if (Number.isFinite(st.chitFade)) st.chitFade = [{ at: st.chitFade, by: 'Bitrot Ward' }]; // a fight saved before the list
+  if (st.chitFade) { // a fading ◆ (chit-fade): spent ones go first, then each fades on its cycle
+    while (st.chitFade.length > Math.max(0, e.chits || 0)) st.chitFade.shift();
+    for (const f of st.chitFade.filter((x) => e.cycle >= x.at)) { e.chits--; emit(s, 'status', `${f.by}: your ◆ fades.`); }
+    st.chitFade = st.chitFade.filter((x) => e.cycle < x.at);
+    if (!st.chitFade.length) delete st.chitFade;
+  }
   for (const x of fxFire(s, 'cycle', { do: 'repeat' })) if (beat(x)) st.repeat = { share: Number(x.fx.share) || 0, name: x.name || x.it.name };
   for (const x of fxFire(s, 'cycle', { do: 'free-helper' })) {
     const t = soonestAttacker(s);
@@ -5394,6 +5406,7 @@ export function restore(raw) {
     statsRestore(s, was); // v44: whole-number stats: Regen five times over 5 cycles, Payload flat at each item's level (gear.mjs)
     curveRestore(s); // the compounding curve: every item's flat stats lifted at its level, once (gear.mjs); keyed on s.curve
     setsRestore(s, was); // v45: sets: loaded protocols stamped in slot order, set pieces you hold found, the Badge beat armed (sets.mjs)
+    renamedRestore(s); // the unique and set pass: eight renamed uniques you hold take their new names (sets.mjs); keyed on the old name
     subRestore(s, was); // v46: no default subclass: a class past 10 that never picked plays its core (its default's keys and talent points back)
     tiersRestore(s); // the talent tiers: old ranks and picks become tier picks where the talent survives (talents.mjs); keyed on the old fields
     repRestore(s); // one rep scale: nothing under 1 (factions.mjs); keyed on the value

@@ -61,8 +61,7 @@ map completion pays. Built as GAME_RULES.md *Earned pieces* (`earned.mjs`, the c
   Switchback, Cold Start, Bootloader and Atoll sets), and cross-floor ones, stronger since they take hours over several
   floors (stats ×1.1, bigger bonuses, two effects a unique: Sampler, Field Guide, No Rest, Long Shot; the Full Coverage,
   Long Haul and Tenure sets). GAME_RULES.md *Earned pieces* and *Sets* list them. Effects and counts are first guesses.
-- **Cold Start** counts Cold storage fights won before cycle 6 (a sleeper hit wakes, so none dies asleep). **Sapper**'s
-  extra ◆ is once a fight, not once a part. **Culvert** carries a break's leftover damage on (the game's spill).
+- **Cold Start** counts Cold storage fights won before cycle 6 (a sleeper hit wakes, so none dies asleep). **Culvert** carries a break's leftover damage on (the game's spill).
 
 ### One unique feat a floor
 
@@ -71,12 +70,12 @@ Each leans on what its floor is known for; no two ask for the same kind of play.
 | Floor | Feat | Unique | Effect |
 |---|---|---|---|
 | 1 The Sprawl | Map every server | Street Atlas (script, 8) | +10% damage in a room you haven't cleared |
-| 2 Backhaul | Bank 3 Router vaults, the Tracker never reaching you | Quiet Hours (shell, 13) | +6% Stealth |
+| 2 Backhaul | Bank 3 Router vaults, the Tracker never reaching you | Quiet Hours (shell, 13) | +6% Stealth; +6% Evasion in a fight's first 3 cycles |
 | 3 The Stacks | Take 12 bait caches on Honeypots | Sweetener (implant, 18) | Taking a cache heals 5% of max Signal |
 | 4 Coldline | Hold 8 servers on the ring | Ring Main (proxy, 24) | +1 Block for every 5 servers you hold, up to 4 |
 | 5 Deep Core | Take over servers with 6 different specials | Mixed Bag (script, 30) | +3% damage for each special on the server |
 | 6 Kernel Space | Root 3 on three servers | Superuser (implant, 36) | +6% damage and max Signal on a server you hold |
-| 7 The Sink | Clear every elite room once | Bottleneck (exploit, 42) | Each tell answered in a fight: +4% damage, up to 3 |
+| 7 The Sink | Clear every elite room once | Bottleneck (exploit, 42) | +20% damage on a Jammed part |
 | 8 Bedrock | Map every server | Last Mile (proxy, 48) | +5% damage for each part in the fight past two |
 
 - **Cleared is Mapped** (the designer): a server cleared is one Mapped, every counted room cleared once.

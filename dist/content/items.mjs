@@ -28,7 +28,13 @@ export default {
         }
       ],
       "flavour": "Comments in three languages. None of them polite.",
-      "keep": true
+      "keep": true,
+      "effect": {
+        "when": "hit",
+        "if": "target-below-half",
+        "do": "damage+",
+        "value": 2
+      }
     },
     {
       "id": "neighbours-wifi",
@@ -47,7 +53,15 @@ export default {
           "kind": "sprawl"
         }
       ],
-      "flavour": "Password was on a sticky note in a photo they posted."
+      "flavour": "Password was on a sticky note in a photo they posted.",
+      "effect": {
+        "when": "struck",
+        "do": "stack",
+        "stat": "evasion",
+        "value": 2,
+        "cap": 8,
+        "text": "Each attack that lands on you adds 2% Evasion for the rest of the fight, up to 8%."
+      }
     },
     {
       "id": "boot-loop",
@@ -67,7 +81,16 @@ export default {
           "layer": 1
         }
       ],
-      "flavour": "Dies, comes back, dies, comes back."
+      "flavour": "Dies, comes back, dies, comes back.",
+      "effect": {
+        "when": "struck",
+        "if": "below-half",
+        "do": "stack",
+        "stat": "regen",
+        "value": 1,
+        "cap": 4,
+        "text": "Each attack that lands on you while you are below half health adds 1 Regen for the rest of the fight, up to 4."
+      }
     },
     {
       "id": "duckyscript",
@@ -87,7 +110,13 @@ export default {
           "id": "watchdog"
         }
       ],
-      "flavour": "Types faster than anyone watching."
+      "flavour": "Types faster than anyone watching.",
+      "effect": {
+        "when": "hit",
+        "if": "early",
+        "do": "damage%",
+        "value": 20
+      }
     },
     {
       "id": "logger-spool",
@@ -133,9 +162,13 @@ export default {
         "accuracy": -5
       },
       "effect": {
-        "when": "break",
-        "do": "refund",
-        "value": 1
+        "when": "always",
+        "do": "stat+",
+        "stat": "clock",
+        "value": 1,
+        "scale": "cycles",
+        "cap": 8,
+        "text": "Adds 1% Clock Speed for each cycle the fight has lasted, up to 8%."
       },
       "sources": [
         {
@@ -181,10 +214,10 @@ export default {
         "payload": 2
       },
       "effect": {
-        "when": "custom",
-        "do": "burn-grow",
-        "value": 1,
-        "cap": 4
+        "when": "hit",
+        "if": "target-burning",
+        "do": "damage+",
+        "value": 3
       },
       "sources": [
         {
@@ -236,9 +269,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "if": "target-winding",
-        "do": "damage%",
-        "value": 40
+        "if": "target-signature",
+        "do": "crit%",
+        "value": 20
       },
       "sources": [
         {
@@ -289,8 +322,13 @@ export default {
       },
       "effect": {
         "when": "struck",
-        "do": "halve",
-        "limit": "fight"
+        "if": "big-hit",
+        "do": "stack",
+        "over": 15,
+        "stat": "reduction",
+        "value": 1,
+        "cap": 3,
+        "text": "Each attack that lands for more than 15% of your max health adds 1 Block for the rest of the fight, up to 3."
       },
       "sources": [
         {
@@ -316,9 +354,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "if": "target-below-half",
+        "if": "target-loud",
         "do": "damage%",
-        "value": 50
+        "value": 30
       },
       "sources": [
         {
@@ -341,8 +379,10 @@ export default {
         "echo": 10
       },
       "effect": {
-        "when": "custom",
-        "do": "echo-full"
+        "when": "always",
+        "if": "any-tell",
+        "do": "stat-x2",
+        "stat": "echo"
       },
       "sources": [
         {
@@ -354,7 +394,7 @@ export default {
     },
     {
       "id": "hive-mind",
-      "name": "Hive Mind",
+      "name": "Swarm Intelligence",
       "base": "dropper",
       "level": 12,
       "primary": {
@@ -368,8 +408,9 @@ export default {
         "signal": -10
       },
       "effect": {
-        "when": "custom",
-        "do": "dot%",
+        "when": "hit",
+        "if": "helper-out",
+        "do": "burn%",
         "value": 25
       },
       "sources": [
@@ -416,8 +457,11 @@ export default {
         "reduction": 3
       },
       "effect": {
-        "when": "start",
-        "do": "chit"
+        "when": "always",
+        "if": "helper-out",
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 3
       },
       "sources": [
         {
@@ -440,11 +484,9 @@ export default {
         "accuracy": 5
       },
       "effect": {
-        "when": "hit",
-        "do": "damage+",
-        "value": 1,
-        "scale": "cycles",
-        "cap": 10
+        "when": "tagged",
+        "do": "heal",
+        "value": 3
       },
       "sources": [
         {
@@ -525,8 +567,9 @@ export default {
         "sanitize": 8
       },
       "effect": {
-        "when": "custom",
-        "do": "encrypt-half"
+        "when": "cut",
+        "do": "heal",
+        "value": 8
       },
       "sources": [
         {
@@ -564,7 +607,7 @@ export default {
     },
     {
       "id": "palemask",
-      "name": "PALEMASK",
+      "name": "Calling Card",
       "base": "restricted-shell-escape",
       "level": 22,
       "primary": {
@@ -575,8 +618,10 @@ export default {
         "evasion": 5
       },
       "effect": {
-        "when": "custom",
-        "do": "blind-short"
+        "when": "always",
+        "if": "below-half",
+        "do": "stat-x2",
+        "stat": "evasion"
       },
       "sources": [
         {
@@ -671,9 +716,9 @@ export default {
       },
       "effect": {
         "when": "break",
-        "do": "break-heal%",
+        "do": "chit-fade",
         "value": 2,
-        "text": "Breaking a part heals 2% of max Integrity"
+        "text": "When you break a part, you gain a ◆ that fades after 2 cycles."
       },
       "green": {
         "when": "always",
@@ -706,10 +751,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "momentum-full",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 4
       },
       "green": {
         "when": "hit",
@@ -740,11 +785,10 @@ export default {
         "signal": 123
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "target-healthiest",
+        "do": "crit-damage%",
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -777,10 +821,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "shielded",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 3
       },
       "green": {
         "when": "always",
@@ -883,10 +927,9 @@ export default {
         "signal": 123
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "shielded",
+        "do": "heal",
+        "value": 2
       },
       "green": {
         "when": "hit",
@@ -919,11 +962,10 @@ export default {
         ]
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "target-below-half",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "hit",
@@ -955,10 +997,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "stealth",
-        "value": 5,
-        "text": "+5% Stealth"
+        "if": "no-helper",
+        "do": "stat+",
+        "stat": "evasion",
+        "value": 6
       },
       "green": {
         "when": "always",
@@ -991,11 +1033,10 @@ export default {
         "restore": 96
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "when": "struck",
+        "if": "below-half",
+        "do": "restore%",
+        "value": 2
       },
       "green": {
         "when": "always",
@@ -1062,10 +1103,10 @@ export default {
         "payload": 21
       },
       "effect": {
-        "when": "custom",
-        "do": "helper+%",
-        "value": 5,
-        "text": "Your helpers deal 5% more"
+        "when": "hit",
+        "if": "helper-out",
+        "do": "crit-damage%",
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -1098,9 +1139,9 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "helper-out",
+        "do": "taken%",
+        "value": 6
       },
       "green": {
         "when": "always",
@@ -1134,10 +1175,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "helper-out",
+        "do": "stat+",
+        "stat": "leech",
+        "value": 2
       },
       "green": {
         "when": "hit",
@@ -1168,11 +1209,10 @@ export default {
         "signal": 123
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "clock",
-        "value": 5,
-        "text": "+5% Clock Speed"
+        "when": "hit",
+        "if": "helper-out",
+        "do": "crit%",
+        "value": 8
       },
       "green": {
         "when": "always",
@@ -1204,10 +1244,10 @@ export default {
         "restore": 10
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "start",
+        "do": "chit-fade",
+        "value": 3,
+        "text": "You start each fight with a ◆ that fades after 3 cycles."
       },
       "green": {
         "when": "always",
@@ -1242,11 +1282,10 @@ export default {
         "payload": 1.6
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "regen",
-        "value": 1,
-        "text": "+1 Regen"
+        "when": "hit",
+        "if": "target-winding",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "hit",
@@ -1343,11 +1382,9 @@ export default {
         "restore": 16
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "when": "burn",
+        "do": "heal",
+        "value": 1
       },
       "green": {
         "when": "always",
@@ -1373,10 +1410,10 @@ export default {
         "signal": 21
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "hit",
+        "if": "helper-out",
+        "do": "damage%",
+        "value": 8
       },
       "green": {
         "when": "hit",
@@ -1404,10 +1441,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "unrested",
+        "do": "stat+",
         "stat": "restore",
-        "value": 5,
-        "text": "+5% Restore"
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -1436,10 +1473,11 @@ export default {
         "reduction": 2
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "struck",
+        "if": "charged",
+        "do": "taken%",
+        "value": 15,
+        "text": "Reduces the damage of a tell that lands on you by 15%."
       },
       "green": {
         "when": "hit",
@@ -1469,10 +1507,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "regen",
         "value": 1,
-        "text": "+1 Regen"
+        "scale": "cycles",
+        "cap": 4
       },
       "green": {
         "when": "always",
@@ -1503,11 +1542,10 @@ export default {
         "payload": 2
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "clock",
-        "value": 5,
-        "text": "+5% Clock Speed"
+        "when": "hit",
+        "if": "target-open",
+        "do": "damage+",
+        "value": 4
       },
       "green": {
         "when": "always",
@@ -1539,10 +1577,9 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "any-tell",
+        "do": "taken%",
+        "value": 8
       },
       "green": {
         "when": "always",
@@ -1576,10 +1613,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 5,
         "if": "target-jammed",
-        "text": "+5% damage to jammed parts"
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -1613,9 +1649,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 4,
-        "text": "+4% damage"
+        "if": "first-use",
+        "do": "damage+",
+        "value": 3
       },
       "green": {
         "when": "always",
@@ -1642,10 +1678,12 @@ export default {
         "reduction": 2
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "struck",
+        "do": "stack",
+        "stat": "sanitize",
+        "value": 4,
+        "cap": 12,
+        "text": "Each attack that lands on you adds 4% Sanitize for the rest of the fight, up to 12%."
       },
       "green": {
         "when": "always",
@@ -1674,10 +1712,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "do": "stat+",
+        "stat": "regen",
+        "value": 1,
+        "scale": "missing",
+        "cap": 5
       },
       "green": {
         "when": "hit",
@@ -1704,10 +1743,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "value": 2,
+        "scale": "reads",
+        "cap": 6
       },
       "green": {
         "when": "always",
@@ -1732,11 +1772,13 @@ export default {
         "reduction": 2
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "scavenge",
-        "value": 5,
-        "text": "+5% Scavenge"
+        "when": "custom",
+        "do": "credits%",
+        "value": 10,
+        "of": [
+          "vault"
+        ],
+        "text": "Vaults you open pay 10% more credits."
       },
       "green": {
         "when": "always",
@@ -1824,9 +1866,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 5,
-        "text": "+5% damage"
+        "if": "below-half",
+        "do": "crit%",
+        "value": 8
       },
       "green": {
         "when": "always",
@@ -1858,9 +1900,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "below-25",
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 4
       },
       "green": {
         "when": "always",
@@ -1889,10 +1932,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "if": "below-half",
+        "do": "stat+",
+        "stat": "restore",
+        "value": 15
       },
       "green": {
         "when": "hit",
@@ -1918,11 +1961,11 @@ export default {
         "signal": 28
       },
       "effect": {
-        "when": "custom",
-        "do": "low-heal",
-        "value": 5,
-        "at": 25,
-        "text": "Once a fight, below 25% Integrity, heal 5% of max"
+        "when": "always",
+        "if": "below-25",
+        "do": "stat+",
+        "stat": "regen",
+        "value": 6
       },
       "green": {
         "when": "always",
@@ -1949,11 +1992,10 @@ export default {
         "reduction": 3
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "restore",
-        "value": 5,
-        "text": "+5% Restore"
+        "when": "struck",
+        "if": "charged",
+        "do": "next-boost",
+        "value": 25
       },
       "green": {
         "when": "always",
@@ -2005,7 +2047,7 @@ export default {
     },
     {
       "id": "failover",
-      "name": "Failover",
+      "name": "Rota",
       "set": "oncall",
       "base": "ghost-shell",
       "level": 26,
@@ -2016,10 +2058,9 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "late",
+        "do": "heal%",
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -2048,10 +2089,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "above-75",
+        "do": "stat+",
+        "stat": "regen",
+        "value": 4
       },
       "green": {
         "when": "always",
@@ -2076,10 +2117,10 @@ export default {
         "signal": 27
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "hit",
+        "if": "above-75",
+        "do": "crit%",
+        "value": 8
       },
       "green": {
         "when": "hit",
@@ -2137,10 +2178,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "late",
+        "do": "stat+",
         "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "value": 6
       },
       "green": {
         "when": "hit",
@@ -2167,9 +2208,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "late",
+        "do": "stat+",
+        "stat": "crit",
+        "value": 6
       },
       "green": {
         "when": "always",
@@ -2197,10 +2239,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "late",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 3
       },
       "green": {
         "when": "always",
@@ -2230,9 +2272,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 4,
-        "text": "+4% damage"
+        "if": "late",
+        "do": "crit-damage%",
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -2260,11 +2302,10 @@ export default {
         ]
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "early",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "hit",
@@ -2320,11 +2361,11 @@ export default {
         "signal": 36
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
+        "when": "crit",
+        "do": "buff",
         "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "value": 6,
+        "cycles": 2
       },
       "green": {
         "when": "always",
@@ -2351,9 +2392,9 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "below-25",
+        "do": "heal%",
+        "value": 20
       },
       "green": {
         "when": "always",
@@ -2380,10 +2421,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "below-half",
+        "do": "stat+",
+        "stat": "crit",
+        "value": 6
       },
       "green": {
         "when": "hit",
@@ -2409,9 +2450,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 1,
+        "scale": "crew",
+        "cap": 3
       },
       "green": {
         "when": "always",
@@ -2466,10 +2509,12 @@ export default {
         "signal": 64
       },
       "effect": {
-        "when": "hit",
-        "do": "dmg%",
-        "value": 4,
-        "text": "+4% damage"
+        "when": "always",
+        "do": "stat+",
+        "stat": "clock",
+        "value": 2,
+        "scale": "crew",
+        "cap": 6
       },
       "green": {
         "when": "always",
@@ -2497,10 +2542,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "do": "stat+",
+        "stat": "crit",
+        "value": 2,
+        "scale": "reads",
+        "cap": 8
       },
       "green": {
         "when": "hit",
@@ -2531,10 +2577,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 1,
+        "scale": "cycles",
+        "cap": 4
       },
       "green": {
         "when": "always",
@@ -2566,9 +2613,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 5,
-        "text": "+5% damage"
+        "if": "target-healthiest",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -2598,10 +2645,12 @@ export default {
         "signal": 85
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "struck",
+        "if": "big-hit",
+        "do": "taken%",
+        "over": 20,
+        "value": 15,
+        "text": "Reduces the damage of an attack that would take more than 20% of your max health by 15%."
       },
       "green": {
         "when": "always",
@@ -2633,10 +2682,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "any-tell",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 4
       },
       "green": {
         "when": "always",
@@ -2663,9 +2712,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "do": "stat+",
+        "stat": "crit",
+        "value": 2,
+        "scale": "missing",
+        "cap": 10
       },
       "green": {
         "when": "always",
@@ -2695,9 +2746,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 5,
-        "text": "+5% damage"
+        "if": "target-wearing",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -2725,10 +2776,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "value": 2,
+        "scale": "standing",
+        "cap": 8
       },
       "green": {
         "when": "hit",
@@ -2754,8 +2806,11 @@ export default {
       },
       "effect": {
         "when": "struck",
-        "do": "crit-normal",
-        "limit": "fight"
+        "if": "big-hit",
+        "do": "next-boost",
+        "over": 25,
+        "value": 50,
+        "text": "Makes your next heal or shield 50% larger when an attack lands for more than 25% of your max health."
       },
       "sources": [
         {
@@ -2785,7 +2840,13 @@ export default {
           "id": "glassjaw"
         }
       ],
-      "flavour": "Hit first. Don't stick around."
+      "flavour": "Hit first. Don't stick around.",
+      "effect": {
+        "when": "hit",
+        "if": "target-unacted",
+        "do": "crit-damage%",
+        "value": 30
+      }
     },
     {
       "id": "black-ledger",
@@ -2851,9 +2912,10 @@ export default {
         "crit": 8
       },
       "effect": {
-        "when": "break",
-        "if": "crit",
-        "do": "refund-skill"
+        "when": "hit",
+        "if": "target-open",
+        "do": "crit%",
+        "value": 30
       },
       "sources": [
         {
@@ -2999,9 +3061,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "if": "target-bare",
-        "do": "damage+",
-        "value": 6
+        "if": "target-armored",
+        "do": "crit%",
+        "value": 15
       },
       "sources": [
         {
@@ -3021,8 +3083,11 @@ export default {
         "regen": 5
       },
       "effect": {
-        "when": "custom",
-        "do": "encrypt-half"
+        "when": "always",
+        "if": "shielded",
+        "do": "stat+",
+        "stat": "regen",
+        "value": 4
       },
       "sources": [
         {
@@ -3233,11 +3298,11 @@ export default {
         "reduction": 1
       },
       "effect": {
-        "when": "struck",
+        "when": "always",
         "if": "below-half",
-        "do": "restore%",
-        "value": 8,
-        "limit": "fight"
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 2
       },
       "sources": [
         {
@@ -3275,7 +3340,7 @@ export default {
     },
     {
       "id": "thread-pool",
-      "name": "Thread Pool",
+      "name": "Worker Pool",
       "base": "cron-job",
       "level": 5,
       "lean": "herder",
@@ -3284,9 +3349,10 @@ export default {
         "signal": 15
       },
       "effect": {
-        "when": "custom",
-        "do": "dot%",
-        "value": 15
+        "when": "hit",
+        "if": "target-burning",
+        "do": "helper%",
+        "value": 20
       },
       "sources": [
         {
@@ -3336,10 +3402,10 @@ export default {
         "reduction": 1
       },
       "effect": {
-        "when": "struck",
-        "if": "below-half",
-        "do": "halve",
-        "limit": "fight"
+        "when": "always",
+        "if": "late",
+        "do": "taken%",
+        "value": 8
       },
       "sources": [
         {
@@ -3351,7 +3417,7 @@ export default {
     },
     {
       "id": "overtime",
-      "name": "Overtime",
+      "name": "Time and a Half",
       "base": "cron-job",
       "level": 7,
       "primary": {
@@ -3454,8 +3520,8 @@ export default {
         "evasion": 4
       },
       "effect": {
-        "when": "start",
-        "do": "chit"
+        "when": "custom",
+        "do": "encrypt-half"
       },
       "sources": [
         {
@@ -3523,8 +3589,12 @@ export default {
       },
       "effect": {
         "when": "struck",
-        "do": "halve",
-        "limit": "fight"
+        "if": "charged",
+        "do": "stack",
+        "stat": "evasion",
+        "value": 4,
+        "cap": 12,
+        "text": "Each tell that lands on you adds 4% Evasion for the rest of the fight, up to 12%."
       },
       "sources": [
         {
@@ -3548,8 +3618,10 @@ export default {
       },
       "effect": {
         "when": "crit",
-        "do": "heal",
-        "value": 6
+        "do": "buff",
+        "stat": "evasion",
+        "value": 6,
+        "cycles": 2
       },
       "sources": [
         {
@@ -3573,9 +3645,10 @@ export default {
         "accuracy": 4
       },
       "effect": {
-        "when": "break",
-        "do": "refund",
-        "value": 2
+        "when": "hit",
+        "if": "any-tell",
+        "do": "damage%",
+        "value": 15
       },
       "sources": [
         {
@@ -3631,8 +3704,10 @@ export default {
       },
       "effect": {
         "when": "answer",
-        "do": "refund",
-        "value": 2
+        "do": "repeat",
+        "value": 1,
+        "share": 30,
+        "text": "When you answer a tell, your next damaging skill hits again for 30% of its damage."
       },
       "sources": [
         {
@@ -3813,8 +3888,9 @@ export default {
       },
       "effect": {
         "when": "answer",
-        "do": "shield",
-        "value": 30
+        "do": "chit-fade",
+        "value": 2,
+        "text": "When you answer a tell, you gain a ◆ that fades after 2 cycles."
       },
       "sources": [
         {
@@ -4445,9 +4521,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "if": "target-locked",
-        "do": "shatter",
-        "text": "Makes each hit on an armored part behind a Mutex lock or a Lockbox ward break 2 ◆."
+        "if": "target-wearing",
+        "do": "damage%",
+        "value": 15
       },
       "sources": [
         {
@@ -4817,8 +4893,9 @@ export default {
         "stealth": 16
       },
       "effect": {
-        "when": "start",
-        "do": "force-crit"
+        "when": "always",
+        "do": "stat-x2",
+        "stat": "stealth"
       },
       "sources": [
         {
@@ -4844,9 +4921,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "if": "target-healthiest",
-        "do": "damage%",
-        "value": 8
+        "if": "target-armored",
+        "do": "burn%",
+        "value": 15
       },
       "sources": [
         {
@@ -4903,10 +4980,10 @@ export default {
       "effect": {
         "when": "break",
         "do": "buff",
-        "value": 6,
+        "stat": "crit",
+        "value": 10,
         "cycles": 3,
-        "stacks": 2,
-        "text": "Increases your damage by 6% for 3 cycles when you break a part. Stacks up to 2 times."
+        "stacks": 2
       },
       "sources": [
         {
@@ -4988,7 +5065,7 @@ export default {
       },
       "effect": {
         "when": "always",
-        "if": "below-half",
+        "if": "late",
         "do": "stat+",
         "stat": "regen",
         "value": 4
@@ -5077,8 +5154,9 @@ export default {
       "effect": {
         "when": "always",
         "if": "momentum-full",
-        "do": "taken%",
-        "value": 6
+        "do": "stat+",
+        "stat": "crit",
+        "value": 10
       },
       "sources": [
         {
@@ -5216,9 +5294,10 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "damage%",
+        "do": "crit-damage%",
         "value": 5,
-        "scale": "crew"
+        "scale": "crew",
+        "cap": 15
       },
       "sources": [
         {
@@ -5271,22 +5350,14 @@ export default {
         "restore": 20,
         "evasion": 6
       },
-      "effect": [
-        {
-          "when": "always",
-          "do": "stat+",
-          "stat": "scavenge",
-          "value": 10,
-          "text": "Adds 10% Scavenge and 2 Regen."
-        },
-        {
-          "when": "always",
-          "do": "stat+",
-          "stat": "regen",
-          "value": 2,
-          "quiet": true
-        }
-      ],
+      "effect": {
+        "when": "always",
+        "do": "stat+",
+        "stat": "regen",
+        "value": 2,
+        "scale": "broken",
+        "cap": 8
+      },
       "sources": [
         {
           "kind": "rare",
@@ -5371,13 +5442,14 @@ export default {
       "effect": [
         {
           "when": "custom",
-          "do": "warn-early",
+          "do": "unveil",
           "value": 1
         },
         {
-          "when": "custom",
-          "do": "unveil",
-          "value": 1
+          "when": "hit",
+          "if": "target-telling",
+          "do": "crit-damage%",
+          "value": 15
         }
       ],
       "sources": [
@@ -5462,9 +5534,10 @@ export default {
         "critDamage": 24
       },
       "effect": {
-        "when": "custom",
-        "do": "spill",
-        "value": 15
+        "when": "hit",
+        "if": "target-below-half",
+        "do": "crit-damage%",
+        "value": 20
       },
       "sources": [
         {
@@ -5576,9 +5649,10 @@ export default {
         "damage": 10
       },
       "effect": {
-        "when": "custom",
-        "do": "first-cd",
-        "value": 1
+        "when": "hit",
+        "if": "first-use",
+        "do": "crit%",
+        "value": 25
       },
       "sources": [
         {
@@ -5608,12 +5682,16 @@ export default {
         {
           "when": "always",
           "do": "max-signal%",
-          "value": 12
+          "value": 10
         },
         {
-          "when": "always",
-          "do": "heal%",
-          "value": 5
+          "when": "struck",
+          "if": "charged",
+          "do": "stack",
+          "stat": "reduction",
+          "value": 2,
+          "cap": 6,
+          "text": "Each tell that lands on you adds 2 Block for the rest of the fight, up to 6."
         }
       ],
       "sources": [
@@ -5638,10 +5716,12 @@ export default {
         "crit": 8
       },
       "effect": {
-        "when": "cycle",
-        "do": "repeat",
-        "value": 5,
-        "share": 30
+        "when": "hit",
+        "do": "crit%",
+        "value": 3,
+        "scale": "cycles",
+        "cap": 15,
+        "text": "Increases your critical strike chance by 3% for each cycle the fight has lasted, up to 15%."
       },
       "sources": [
         {
@@ -5696,20 +5776,17 @@ export default {
       },
       "effect": [
         {
-          "when": "hit",
-          "do": "damage%",
-          "value": 4
-        },
-        {
           "when": "always",
           "do": "max-signal%",
           "value": 4
         },
         {
-          "when": "always",
-          "do": "stat+",
+          "when": "break",
+          "do": "buff",
           "stat": "clock",
-          "value": 4
+          "value": 8,
+          "cycles": 3,
+          "stacks": 2
         }
       ],
       "sources": [
@@ -5801,15 +5878,13 @@ export default {
         {
           "when": "break",
           "do": "momentum",
-          "value": 1,
-          "text": "Gives you 1 more Momentum and increases your damage by 5% for 2 cycles when you break a part."
+          "value": 1
         },
         {
-          "when": "break",
-          "do": "buff",
-          "value": 5,
-          "cycles": 2,
-          "quiet": true
+          "when": "hit",
+          "if": "momentum-full",
+          "do": "crit-damage%",
+          "value": 15
         }
       ],
       "sources": [
@@ -6165,8 +6240,11 @@ export default {
       },
       "effect": {
         "when": "struck",
-        "do": "crit-normal",
-        "text": "Turns every critical strike against you into a normal hit."
+        "do": "stack",
+        "stat": "crit",
+        "value": 2,
+        "cap": 10,
+        "text": "Each attack that lands on you adds 2% crit for the rest of the fight, up to 10%."
       },
       "sources": [
         {
@@ -6359,10 +6437,9 @@ export default {
       "effect": {
         "when": "always",
         "if": "below-25",
-        "do": "stat%",
-        "stat": "regen",
-        "value": 100,
-        "text": "Doubles your Regen while you are below 25% health."
+        "do": "stat+",
+        "stat": "evasion",
+        "value": 15
       },
       "sources": [
         {
@@ -6419,8 +6496,10 @@ export default {
       },
       "effect": {
         "when": "crit",
-        "do": "restore%",
-        "value": 2
+        "do": "buff",
+        "value": 4,
+        "cycles": 2,
+        "stacks": 5
       },
       "sources": [
         {
@@ -6504,7 +6583,7 @@ export default {
     },
     {
       "id": "carrier-wave",
-      "name": "Carrier Wave",
+      "name": "Sideband",
       "faction": "lantern",
       "base": "weaponized-exploit",
       "level": 8,
@@ -6621,7 +6700,7 @@ export default {
     },
     {
       "id": "shakedown-escrow",
-      "name": "Escrow",
+      "name": "Payment Plan",
       "base": "root-shell",
       "level": 12,
       "primary": {
@@ -6908,12 +6987,21 @@ export default {
         "regen": 7.9,
         "restore": 21
       },
-      "effect": {
-        "when": "always",
-        "do": "stat+",
-        "stat": "stealth",
-        "value": 6
-      },
+      "effect": [
+        {
+          "when": "always",
+          "do": "stat+",
+          "stat": "stealth",
+          "value": 6
+        },
+        {
+          "when": "always",
+          "if": "early",
+          "do": "stat+",
+          "stat": "evasion",
+          "value": 6
+        }
+      ],
       "sources": [
         {
           "kind": "feat",
@@ -7037,10 +7125,9 @@ export default {
       },
       "effect": {
         "when": "hit",
+        "if": "target-jammed",
         "do": "damage%",
-        "value": 4,
-        "scale": "reads",
-        "cap": 12
+        "value": 20
       },
       "sources": [
         {
@@ -7115,9 +7202,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "after-delay",
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 3
       },
       "green": {
         "when": "always",
@@ -7145,11 +7233,10 @@ export default {
         "payload": 2.9
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "when": "hit",
+        "if": "after-delay",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -7177,10 +7264,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "after-delay",
+        "do": "stat+",
+        "stat": "evasion",
+        "value": 6
       },
       "green": {
         "when": "hit",
@@ -7235,9 +7322,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 4,
-        "text": "+4% damage"
+        "if": "target-unacted",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -7264,10 +7351,10 @@ export default {
         "signal": 35
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "hit",
+        "if": "early",
+        "do": "damage+",
+        "value": 4
       },
       "green": {
         "when": "always",
@@ -7295,9 +7382,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "early",
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 3
       },
       "green": {
         "when": "always",
@@ -7324,20 +7412,12 @@ export default {
           42
         ]
       },
-      "effect": [
-        {
-          "when": "hit",
-          "do": "shatter",
-          "limit": "fight",
-          "text": "Once a fight, a hit on an armored part breaks 2 ◆."
-        },
-        {
-          "when": "hit",
-          "if": "target-bare",
-          "do": "damage%",
-          "value": 10
-        }
-      ],
+      "effect": {
+        "when": "hit",
+        "if": "target-armored",
+        "do": "damage+",
+        "value": 8
+      },
       "sources": [
         {
           "kind": "feat",
@@ -7359,10 +7439,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "early",
+        "do": "stat+",
         "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -7388,10 +7468,10 @@ export default {
         "signal": 62
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "hit",
+        "if": "early",
+        "do": "crit-damage%",
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -7420,10 +7500,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "early",
+        "do": "stat+",
+        "stat": "sanitize",
+        "value": 20
       },
       "green": {
         "when": "hit",
@@ -7473,10 +7553,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "one-left",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 4
       },
       "green": {
         "when": "hit",
@@ -7502,10 +7582,10 @@ export default {
         "reduction": 11
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "hit",
+        "if": "one-left",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -7535,9 +7615,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 4,
-        "text": "+4% damage"
+        "if": "target-last",
+        "do": "crit-damage%",
+        "value": 20
       },
       "green": {
         "when": "always",
@@ -7567,9 +7647,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 5,
-        "text": "+5% damage"
+        "if": "room-new",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -7598,10 +7678,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "room-new",
+        "do": "stat+",
         "stat": "clock",
-        "value": 5,
-        "text": "+5% Clock Speed"
+        "value": 8
       },
       "green": {
         "when": "always",
@@ -7629,10 +7709,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "room-new",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 3,
-        "text": "+3 Block"
+        "value": 4
       },
       "green": {
         "when": "hit",
@@ -7658,10 +7738,10 @@ export default {
         "signal": 72
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 8,
-        "text": "+8% max Integrity"
+        "when": "hit",
+        "if": "room-new",
+        "do": "crit-damage%",
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -7690,10 +7770,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "clock",
-        "value": 5,
-        "text": "+5% Clock Speed"
+        "do": "stat+",
+        "stat": "crit",
+        "value": 2,
+        "scale": "contracts",
+        "cap": 6
       },
       "green": {
         "when": "always",
@@ -7719,9 +7800,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 8,
-        "text": "+8% max Integrity"
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 1,
+        "scale": "contracts",
+        "cap": 3
       },
       "green": {
         "when": "always",
@@ -7749,10 +7832,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 3,
-        "text": "+3 Block"
+        "do": "stat+",
+        "stat": "regen",
+        "value": 2,
+        "scale": "contracts",
+        "cap": 6
       },
       "green": {
         "when": "hit",
@@ -7777,10 +7861,10 @@ export default {
         "signal": 48
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 8,
-        "text": "+8% max Integrity"
+        "when": "hit",
+        "if": "server-held",
+        "do": "crit%",
+        "value": 8
       },
       "green": {
         "when": "always",
@@ -7808,10 +7892,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "server-held",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 3,
-        "text": "+3 Block"
+        "value": 4
       },
       "green": {
         "when": "hit",
@@ -7837,9 +7921,9 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 8,
-        "text": "+8% max Integrity"
+        "if": "server-held",
+        "do": "taken%",
+        "value": 8
       },
       "green": {
         "when": "always",
@@ -7866,15 +7950,18 @@ export default {
       },
       "effect": [
         {
-          "when": "custom",
-          "do": "warn-early",
-          "value": 1
+          "when": "answer",
+          "do": "buff",
+          "value": 10,
+          "cycles": 2,
+          "stacks": 2
         },
         {
-          "when": "hit",
-          "if": "target-winding",
-          "do": "damage%",
-          "value": 10
+          "when": "always",
+          "if": "any-tell",
+          "do": "stat+",
+          "stat": "crit",
+          "value": 5
         }
       ],
       "sources": [
@@ -8083,9 +8170,7 @@ export default {
       },
       "effect": {
         "when": "answer",
-        "do": "refund",
-        "value": 1,
-        "text": "Reduces all your cooldowns by 1 cycle when you answer a tell."
+        "do": "refund-skill"
       },
       "sources": [
         {
@@ -8139,9 +8224,8 @@ export default {
       },
       "effect": {
         "when": "break",
-        "do": "refund",
-        "value": 1,
-        "text": "Reduces all your cooldowns by 1 cycle when you break a part."
+        "do": "break-delay",
+        "value": 1
       },
       "sources": [
         {
@@ -8221,10 +8305,10 @@ export default {
         "crit": 5
       },
       "effect": {
-        "when": "tagged",
-        "do": "heal",
-        "value": 5,
-        "text": "Heals you for 5 when you hit a Tagged part."
+        "when": "hit",
+        "if": "target-tagged",
+        "do": "crit-damage%",
+        "value": 20
       },
       "sources": [
         {
@@ -8273,10 +8357,11 @@ export default {
         ]
       },
       "effect": {
-        "when": "hit",
-        "do": "dmg%",
-        "value": 5,
-        "text": "+5% damage"
+        "when": "break",
+        "do": "buff",
+        "stat": "reduction",
+        "value": 3,
+        "cycles": 2
       },
       "green": {
         "when": "always",
@@ -8304,10 +8389,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
+        "do": "stat+",
+        "stat": "evasion",
         "value": 2,
-        "text": "+2 Block"
+        "scale": "broken",
+        "cap": 8
       },
       "green": {
         "when": "always",
@@ -8335,9 +8421,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "do": "stat+",
+        "stat": "restore",
+        "value": 4,
+        "scale": "broken",
+        "cap": 16
       },
       "green": {
         "when": "always",
@@ -8365,10 +8453,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "value": 2,
+        "scale": "broken",
+        "cap": 6
       },
       "green": {
         "when": "hit",
@@ -8395,10 +8484,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 1,
+        "scale": "tells",
+        "cap": 4
       },
       "green": {
         "when": "always",
@@ -8459,11 +8549,10 @@ export default {
         "payload": 6
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "shielded",
+        "do": "crit%",
+        "value": 8
       },
       "green": {
         "when": "hit",
@@ -8491,9 +8580,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "do": "stat+",
+        "stat": "crit",
+        "value": 2,
+        "scale": "tells",
+        "cap": 8
       },
       "green": {
         "when": "always",
@@ -8524,9 +8615,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 4,
-        "text": "+4% damage"
+        "if": "target-attacked",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -8555,10 +8646,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "any-tell",
+        "do": "stat+",
         "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "value": 8
       },
       "green": {
         "when": "always",
@@ -8586,11 +8677,10 @@ export default {
         "payload": 6
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "target-winding",
+        "do": "crit-damage%",
+        "value": 15
       },
       "green": {
         "when": "hit",
@@ -8619,11 +8709,10 @@ export default {
         ]
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "target-wearing",
+        "do": "crit-damage%",
+        "value": 15
       },
       "green": {
         "when": "hit",
@@ -8652,10 +8741,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 6,
         "if": "target-wearing",
-        "text": "+6% damage to a part wearing ◆"
+        "do": "damage+",
+        "value": 5
       },
       "green": {
         "when": "always",
@@ -8685,10 +8773,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "do": "stat+",
+        "stat": "evasion",
+        "value": 3,
+        "scale": "chits",
+        "cap": 9
       },
       "green": {
         "when": "always",
@@ -8715,10 +8804,10 @@ export default {
         "signal": 37
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "hit",
+        "if": "target-repatched",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "hit",
@@ -8746,10 +8835,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 1,
+        "scale": "broken",
+        "cap": 3
       },
       "green": {
         "when": "always",
@@ -8779,10 +8869,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "restore",
-        "value": 5,
-        "text": "+5% Restore"
+        "do": "stat+",
+        "stat": "regen",
+        "value": 4,
+        "scale": "chits",
+        "cap": 8
       },
       "green": {
         "when": "always",
@@ -8813,9 +8904,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 5,
-        "text": "+5% damage"
+        "if": "target-bare",
+        "do": "crit-damage%",
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -8844,11 +8935,10 @@ export default {
         "payload": 6
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "when": "hit",
+        "if": "after-delay",
+        "do": "crit-damage%",
+        "value": 20
       },
       "green": {
         "when": "hit",
@@ -8866,7 +8956,7 @@ export default {
     },
     {
       "id": "semaphore",
-      "name": "Semaphore",
+      "name": "Wait Queue",
       "set": "semaphore",
       "base": "bootkit",
       "level": 35,
@@ -8876,9 +8966,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "after-delay",
+        "do": "stat+",
+        "stat": "clock",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -8908,10 +8999,9 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "after-delay",
+        "do": "taken%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -8940,11 +9030,10 @@ export default {
         ]
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "target-burning",
+        "do": "crit-damage%",
+        "value": 15
       },
       "green": {
         "when": "hit",
@@ -8972,10 +9061,10 @@ export default {
         "payload": 10
       },
       "effect": {
-        "when": "custom",
-        "do": "burn+%",
-        "value": 5,
-        "text": "Your burns deal 5% more"
+        "when": "hit",
+        "if": "target-telling",
+        "do": "burn%",
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -9004,10 +9093,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "stealth",
-        "value": 5,
-        "text": "+5% Stealth"
+        "if": "no-helper",
+        "do": "stat+",
+        "stat": "crit",
+        "value": 6
       },
       "green": {
         "when": "always",
@@ -9034,11 +9123,14 @@ export default {
         "reduction": 6
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "when": "struck",
+        "if": "big-hit",
+        "do": "stack",
+        "over": 15,
+        "stat": "evasion",
+        "value": 3,
+        "cap": 9,
+        "text": "Each attack that lands for more than 15% of your max health adds 3% Evasion for the rest of the fight, up to 9%."
       },
       "green": {
         "when": "always",
@@ -9067,9 +9159,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 1,
+        "scale": "missing",
+        "cap": 5
       },
       "green": {
         "when": "always",
@@ -9097,11 +9191,14 @@ export default {
         "signal": 62
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "when": "struck",
+        "if": "big-hit",
+        "do": "stack",
+        "over": 25,
+        "stat": "crit",
+        "value": 4,
+        "cap": 12,
+        "text": "Each attack that lands for more than 25% of your max health adds 4% crit for the rest of the fight, up to 12%."
       },
       "green": {
         "when": "hit",
@@ -9272,10 +9369,9 @@ export default {
       },
       "effect": {
         "when": "hit",
+        "if": "even-cycle",
         "do": "damage%",
-        "value": 10,
-        "if": "target-grew",
-        "text": "Increases your damage by 10% on a part with more Integrity than it had 2 cycles ago."
+        "value": 20
       },
       "sources": [
         {
@@ -9672,11 +9768,10 @@ export default {
         ]
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "target-healed",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "hit",
@@ -9704,11 +9799,11 @@ export default {
         "payload": 13
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "scavenge",
+        "when": "shielded",
+        "do": "buff",
+        "stat": "crit",
         "value": 5,
-        "text": "+5% Scavenge"
+        "cycles": 2
       },
       "green": {
         "when": "always",
@@ -9737,9 +9832,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "shielded",
+        "do": "stat+",
+        "stat": "evasion",
+        "value": 5
       },
       "green": {
         "when": "always",
@@ -9769,10 +9865,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "restore",
-        "value": 5,
-        "text": "+5% Restore"
+        "value": 2,
+        "scale": "cycles",
+        "cap": 12
       },
       "green": {
         "when": "always",
@@ -9802,9 +9899,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 1,
+        "scale": "reads",
+        "cap": 4
       },
       "green": {
         "when": "always",
@@ -9835,11 +9934,10 @@ export default {
         "restore": 66
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "when": "hit",
+        "if": "late",
+        "do": "damage+",
+        "value": 5
       },
       "green": {
         "when": "always",
@@ -9871,10 +9969,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "value": 2,
+        "scale": "standing",
+        "cap": 8
       },
       "green": {
         "when": "hit",
@@ -9901,11 +10000,9 @@ export default {
         "signal": 79
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "crit",
+        "do": "heal",
+        "value": 3
       },
       "green": {
         "when": "always",
@@ -9935,9 +10032,10 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 5,
-        "text": "+5% damage"
+        "do": "damage+",
+        "value": 1,
+        "scale": "standing",
+        "cap": 4
       },
       "green": {
         "when": "always",
@@ -9972,8 +10070,7 @@ export default {
         "stat": "reduction",
         "value": 1,
         "scale": "standing",
-        "cap": 4,
-        "text": "+1 Block for each part standing, up to 4."
+        "cap": 4
       },
       "sources": [
         {
