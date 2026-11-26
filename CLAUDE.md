@@ -168,7 +168,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **Rested XP** comes only from time logged off. There is no catch-up XP.
 - **Item power** (November 2026): a unique is about a good yellow in its own situation (two secondary stats and its
   effect for a yellow's affixes and rule), a set piece about a good blue, a full set the payoff. Every unique and set has
-  one reason to wear it, its tooltip's answer line (docs/unique-roles.md, docs/set-roles.md).
+  one reason to wear it, its tooltip's answer line (docs/unique-roles.md, docs/set-roles.md), and serves one power
+  fantasy or purpose, with Diablo 2 and WoW as the North Star (docs/item-fantasies.md).
 - **Unlocks:** cosmetic unlocks (districts, boots, prompts, desk props, mastery looks) come from achievements, not
   from server floors.
 - **Phones:** combat on a phone never opens the keyboard.

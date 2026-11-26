@@ -127,7 +127,7 @@ not its decimal. Where the bots can't show a unique's situation, *Bots* says why
 | Installment | 28 | implant | Spread your hits across the parts | Everyone | any fight | -0.4 | -0.4 |  |
 | Late Fee | 28 | exploit | Punish parts that patch their ◆ back | Everyone | any fight | +2.1 | +2.1 | the bots don't play its situation |
 | Sapper | 28 | exploit | Hit armored parts harder | Everyone | any fight | 0.0 | 0.0 |  |
-| Hidden Service | 30 | implant | Take a half hit every six cycles | Everyone | any fight | -2.7 | -2.7 |  |
+| Hidden Service | 30 | implant | Take a half hit every eight cycles | Everyone | any fight | -2.7 | -2.7 |  |
 | Hot Reload | 30 | implant | Crit to fire that skill again, as an Overclocker | Overclocker | any fight | +2.4 | -1.0 |  |
 | Kill Chain | 30 | implant | Break a part to open the next one | Everyone | any fight | -1.2 | -1.2 |  |
 | Mixed Bag | 30 | script | Fight on servers with many specials | Everyone | any fight | +0.7 | +0.7 | the bots don't play its situation |

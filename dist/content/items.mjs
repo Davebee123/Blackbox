@@ -9962,7 +9962,7 @@ export default {
         }
       ],
       "flavour": "An address that answers, from a machine nobody has ever found.",
-      "why": "Take a half hit every six cycles."
+      "why": "Take a half hit every eight cycles."
     },
     {
       "id": "tail-circuit",

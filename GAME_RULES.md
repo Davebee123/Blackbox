@@ -707,7 +707,7 @@ Resident drops each of its two once, then makes no unique roll. After a miss the
 | BYZANTINE | Quorum Sensor (proxy, 26) | The second attack to land on you in a cycle deals 30% less |
 | GRACE PERIOD | Installment (implant, 28) | Your first hit on each part every 3 cycles deals 10% more |
 | GRACE PERIOD | Late Fee (exploit, 28) | +15% damage on a part whose ◆ came back this fight |
-| EXIT NODE | Hidden Service (implant, 30) | Every 6 cycles, the next attack on you deals half |
+| EXIT NODE | Hidden Service (implant, 30) | Every 8 cycles, the next attack on you deals half |
 | EXIT NODE | Tail Circuit (exploit, 30) | +20% damage on even cycles |
 
 Their set pieces: CENTRIFUGE drops Glass Ceiling's **Rotor** (as GLASSJAW's bosses and elites still do), SHOULDER SURFER

@@ -2,7 +2,8 @@
 
 An audit of the uniques, sets, five faction pieces, Zero-days and chase protocols as built (November 2026, after the
 unique and set pass: no two uniques share an effect, and every set piece has a small effect of its own): the combos they
-already make, what fails to stack, and loops to watch. What each set is for, measured: docs/set-roles.md. Talents named are the tier talents
+already make, what fails to stack, and loops to watch. What each set is for, measured: docs/set-roles.md; the fantasy
+each item serves: docs/item-fantasies.md. Talents named are the tier talents
 (docs/builds.md).
 
 ## How items stack
@@ -64,13 +65,13 @@ Damage on a part winding up multiplies, and every answer pays.
 | Piece | Slot, level, source | Part in it |
 |---|---|---|
 | Deep Inspection (yellow) × Interrupt Handler (blue) | any two | +30–45% × +15–25% on a part winding up a tell |
-| Policy Engine | script 18, native | Rules count 50% more: Deep Inspection to about +68% (−3% crit) |
+| Policy Engine | script 18, native | Rules count 35% more: Deep Inspection to about +61% (−3% crit) |
 | Preempt, or Sounding Line | script 32, native · implant 44, threads | +40% crit there, or crits 15% harder there |
 | Sampler | script 20, earned | An answer: +10% damage for 2 cycles, twice; +5% crit while a tell winds up |
 | Ctrl-C | script 20, vaults, the Tracer | An answer: your next damaging skill hits again for 30% |
 | Tide Table | implant 42, The Sink's boards | An answer: the skill that answered is ready again |
 | Sideband (faction) | exploit, LANTERN feuds | An answer: −1 on every cooldown, at your level |
-| Rubber Hose | exploit 38, native | +6 a read (to 30) |
+| Rubber Hose | exploit 38, native | +8 a read (to 40) |
 | Kestrel Badge, Choirbook (2), Interrupt Vector | proxy 7 · set · script 32 | An answer shields you, or gives a ◆ for 2 cycles |
 | Notice Period | script 36, floor 6 | A tell starting: −1 on the nearest cooldown, before you answer it |
 | Fine Print (3) or Moral Hazard | set 26–32 · exploit 40, floor 5 | The tells you miss pay: a shield, or +3% each to 30% |
@@ -83,7 +84,7 @@ Sampler, Policy Engine and Interrupt Vector are all scripts; pick one (Tide Tabl
 | Piece | Slot, level, source | Part in it |
 |---|---|---|
 | Glass Ceiling (3–4) | set 14–26, GLASSJAW | +10% damage and +10% Clock Speed below half; one heal at 25% |
-| Ouroboros Loop | shell 32, the gauntlet | Clock Speed ×2 below half (−10 Regen) |
+| Ouroboros Loop | shell 32, the gauntlet | Clock Speed ×2 below half (−5 Regen) |
 | Siphon Tube, Hotfix, Sump Pump | script 44, shell 5, shell 41 | Leech +50%, Regen ×2, heals +10% below half |
 | Signal Floor, Brownout, Strata | proxy 50, shell 47, shell 49 | +15% Evasion and −15% taken below 25%; up to −10% as you drop |
 | Glass Ceiling's and Hot Spare's pieces | set 14–36 | Crit, Block, Restore and Regen below half or 25% |
@@ -111,10 +112,10 @@ Fault). Catch: Dead Air counts a blocked hit, so Block doesn't feed it.
 
 Burn damage multiplies: Hollow and Hidden Process (32–36: +15% on a part winding up a tell, (2) +20%, and burns tick on a part
 out of reach), Banked Fire (shell 43: +12%), Brine (script 40: +15% on armor), Flue (proxy 48: a shield each tick),
-Descant (script, faction, +10% at your level), Swarm Intelligence (script 12: +25% with a helper out, −10 Signal). Then
+Descant (script, faction, +10% at your level), Swarm Intelligence (script 12: +35% with a helper out, −10 Signal). Then
 Worker Pool (script 5: helpers +20% on a burning part), Flood Ramp (script 6: +3 damage on a burning part), Fan Curve (shell 8: burns grow +2 a tick), Slammer (script 22: burns jump
 on a break) or Tail Call (exploit 19: a break ticks the rest), Burn-In (proxy 46: tick at once), Brackish (script 41),
-Bilge (proxy 43: each burn cuts its part's damage to you 3%, to 9%), Slow Drip (exploit 4: +15% crit on a burning part).
+Bilge (proxy 43: each burn cuts its part's damage to you 3%, to 9%), Slow Drip (exploit 4: +25% crit on a burning part).
 The Hive Mind set (4: parts under burns take 8% more from everything) for levels 6–15; Palemask (4) at 50, whose
 Payload line makes burns tick 20% harder below half, with Descant in the free script. Talents: Fever, Heat Sink,
 Contagion, Superspreader, Third-Party Cookie.
@@ -124,16 +125,16 @@ Contagion, Superspreader, Third-Party Cookie.
 Load Balanced (4: every third helper arrives as two), Spawning Run (exploit 42: helpers +15%), Relief Valve (shell 45:
 a cut takes a cycle off every cooldown), Weir (implant 44: a helper takes the first hit), Load Order
 (script 49: a helper hits as it arrives), Watchdog Timer (script 46: a free helper every 6 cycles), Backwash and Ebb
-(scripts), Descant. Hijacker: Riptide (proxy 42: helpers +8% on Jammed parts), Bus Fault (implant 47: Jams push the
+(scripts), Descant. Hijacker: Riptide (proxy 42: helpers +15% on Jammed parts), Bus Fault (implant 47: Jams push the
 attack back), Choirbook (3: Jams a cycle longer), Semaphore (3: a delayed part is Open) and Pressure Relief (shell 36: a
 delayed attack deals 20% less). Catch: nearly every Operator deep unique is a script, as is Cron;
 Load Balanced (3) plus Load Order may beat the 4.
 
 ### Bulwark (Warden)
 
-Siltstone (implant 40: +1 Block for each ◆ you hold) with Harden and Write Protect, Squatter's Rights, Interrupt
+Siltstone (implant 40: +2 Block for each ◆ you hold) with Harden and Write Protect, Squatter's Rights, Interrupt
 Vector, Det Cord, Floppy, Full Coverage (4) and Bitrot Ward for ◆. Seawall (proxy 39: +1 Block a reduced hit, to 5), Headcount (proxy 40: +1 Block a part
-standing, to 4), Cold Iron (shell 48: +3, and Block
+standing, to 4), Cold Iron (shell 48: +2, and Block
 works on burns), Pressure Hull (shell 42: +25% while shielded), Bulletproof Host (proxy 28: ×2 while a tell winds up),
 Honeycomb and Ring Main (earned). Strongbox leaves the implant free for Siltstone.
 
@@ -149,7 +150,7 @@ Handler, On-Call (3), Golden Ticket (implant 36: the first shield doubled), Fine
 ### Opening act (Infiltrator; short fights)
 
 Cell Key (exploit 13) or POST Code (exploit 45) crit the opener; Burst Buffer (3: first two skills +20%), Prefetch,
-Outfall (first use of each skill +10%), Bootstrap (+25% crit on a first use), DuckyScript (+20% in the first 3 cycles),
+Outfall (first use of each skill +10%), Bootstrap (+25% crit on a first use), DuckyScript (+8% in the first 3 cycles),
 Palemask (3) and Mask (first hit on each part), Dead Reckoning (that hit through ◆), Cold Start (2: +8% before a part
 attacks; 3: every first attack a cycle later), Bootloader (3: shorter first cooldowns). Catch: Cell Key and POST Code
 crit the same first hit.
@@ -174,7 +175,7 @@ Survey) fills all six slots with four bonuses.
   climbing Crescendo to +60%.
 - **Total Loss + the break refunds:** each break in the chain fires every refund (Eviction Notice, Fork on Break, Cold
   Aisle), so one break on a four-part virus can clear every cooldown.
-- **Deep Inspection under Policy Engine with Interrupt Handler:** about ×2.3 on a part winding up before Preempt's
+- **Deep Inspection under Policy Engine with Interrupt Handler:** about ×2 on a part winding up before Preempt's
   crits. Earned by reading, so within the rule.
 
 ## Gaps (for the deeper floors' itemization, after the fights and the floor bosses)
