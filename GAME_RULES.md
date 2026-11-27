@@ -1783,6 +1783,11 @@ of its class.
   (Tripwire, Honeynet, Sinkhole: Captures) and **strain trophies** (1 in 10,000 kills of a strain drops its own, Keylogger
   → Logger Spool and so on; a slayer streak's reward rolls for it outright).
 - **Story and contracts** can give a unique (killing claimjack gives wick's Old Toolkit).
+- **Jackpots and head starts** (docs/jackpots.md; `tier` in content, combat.mjs `jackpotDrop`): two rarer tiers, each a
+  pair a floor. A **head start** (floors 1–4, levels 4–24) lands at 1.5 good yellows with one small extra; a **Hall of
+  Fame** jackpot (floors 1–8, levels 8–50, a real worm each) at 1.3 with a big effect any class uses, its kind line
+  *Hall of Fame*, its flavour ending with its year. `floorToYellow` sets them to their multiple, up or down. They roll on
+  their own (see Drops), never from another pool; the sims never roll them. The Ledger lists them under their floor.
 - **Uniques: never more than one an hour** of real play, about one every two on average (the designer's rule). Every
   source counts toward it, set pieces included; a bigger pool makes each drop likelier to be new, never more frequent.
 
@@ -1802,6 +1807,8 @@ yellow, its epic our gold). Targets, at about 150 kills an hour of real play (`L
 | **Crew bosses** | a yellow every kill, its uniques at 30% +10% a miss, 10% a world unique |
 | **Quests** (a contract's bonus, the storyline) | a blue, a yellow one time in ten |
 | **Small rewards** (Mapped) | a white or a blue, half and half |
+| **Head starts** (any kill, its floor and the next) | 1 in 1,500 for one of a floor's pair; elites and bosses ×5 |
+| **Hall of Fame** (any kill, its floor or deeper) | 1 in 40,000 for one of a floor's pair; elites ×10, bosses ×50; a tenth past its floor |
 
 - **One roll each.** A guard rolls once; the story's named target twice, keeping the best. Reading every tell adds a
   roll; a Pit rolls again after the kill. Deeper layers add 25% a layer to blue and yellow odds.

@@ -365,7 +365,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/item-builds.md`](docs/item-builds.md) | Item builds: combos the uniques and sets already make, what doesn't stack, loops to watch. |
 | [`docs/unique-roles.md`](docs/unique-roles.md) | What each unique is for, measured against a yellow, and what the bots can't show. |
 | [`docs/item-fantasies.md`](docs/item-fantasies.md) | The power fantasy or purpose each set and unique serves, with Diablo 2 and WoW touchstones and wearable combos. |
-| [`docs/jackpots.md`](docs/jackpots.md) | Two rarer unique tiers: head starts (early, ×1.5 stats) and the Hall of Fame jackpots (very rare, big effects). |
+| [`docs/jackpots.md`](docs/jackpots.md) | Two rarer unique tiers, built: head starts (early, ×1.5 stats) and the Hall of Fame jackpots (very rare, big effects; `JACKPOT` in gear.mjs, `jackpotDrop` in combat.mjs). |
 | [`docs/set-roles.md`](docs/set-roles.md) | What each set is for, its niche measured against the rest, and what the bots can't show. |
 | [`docs/house.md`](docs/house.md) | Your house and its furniture (built: GAME_RULES.md "Your house"). |
 | [`docs/leanings.md`](docs/leanings.md) | Leanings: a server's one positive rule (built: GAME_RULES.md "Server kinds, specials and quirks"). |

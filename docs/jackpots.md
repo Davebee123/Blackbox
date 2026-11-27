@@ -3,6 +3,19 @@
 Two rarer unique tiers (the designer, November 2026; prototype cards approved). Ordinary uniques stay as they are: a
 little stronger than a yellow (gear.mjs `floorToYellow`), each with a reason to wear it.
 
+**Built** (November 2026): content `tier`, `floor`, `year`; gear.mjs `JACKPOT` (the odds), `TIER_MULT`; combat.mjs
+`jackpotDrop` (on every kill, on dice of its own) and the effects (`jp*`); jackpots.test.mjs. Changed from the spec:
+
+- Elk Cloner counts damaging skills: *Every 5th damaging skill you use hits twice* (its hit repeats at full).
+- ILOVEYOU and Storm Worm never turn a tell. The turned part hits the next part to attack at each cycle's end, and its
+  own plain attacks land on another part; its first attack still lands on you.
+- Mirai: a broken part goes down as usual, and hits the next part to attack for its attack's size at each cycle's end
+  for 3 cycles (counting the cycle it broke).
+- Melissa doubles what the skill itself put on (a refreshed burn keeps its old length). BlueKeep's shields: the ones
+  your skills raise.
+- EternalBlue rolls its crit before the ◆ (on an armored part); a crit there goes through them.
+- Head starts: bosses count as elites (×5).
+
 | Tier | Stats (× a good yellow, `goodYellow`) | Effect | Drops | Odds a kill |
 |---|---|---|---|---|
 | Head start | ×1.5 | one small combat extra | any mob on its floor and the next, at the mob's level | 1 in 1,500 for one of its floor's pair; elites ×5 |

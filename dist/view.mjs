@@ -568,7 +568,7 @@ const collSource = (s, src) => !src ? '' : src.kind === 'sprawl' ? 'SPRAWL-00' :
   : src.kind === 'raid' ? 'Crew bosses' : src.kind === 'strain' && !src.id ? 'Strain trophies'
   : src.kind === 'guard' ? `${GUARDS[src.id]?.name || src.id} guard` : src.kind === 'strain' ? (s.met?.[src.id] ? `${STRAINS[src.id]?.name} trophy` : '???')
   : src.kind === 'rogue' ? `${ROGUE.kinds[src.id]?.name || 'Rogue'} servers` : src.kind === 'story' ? 'Storyline' : src.kind === 'contract' ? 'Contract reward' : src.kind === 'store' ? 'Halcyon store'
-  : src.kind === 'boss' ? (src.id === 'resident' ? 'A Resident' : BOSSES[src.id]?.name || src.id) : src.kind === 'farm' ? 'KESSLER-FARM-00 packs' : src.kind === 'invasion' ? 'Invasion captures' : '';
+  : src.kind === 'boss' ? (src.id === 'resident' ? 'A Resident' : BOSSES[src.id]?.name || src.id) : src.kind === 'farm' ? 'KESSLER-FARM-00 packs' : src.kind === 'invasion' ? 'Invasion captures' : src.kind === 'jackpot' ? `Any kill on ${floorName(src.floor)}` : '';
 // A native unique's source line: the network you know it from, or just native.
 const nativeSource = (s, id) => { const who = homeOf(s, id); return who ? `Native · ${nameOf(s, who)} (${whoLabel(who)})` : 'Native · another network'; };
 export function collectionMarkup(s) {

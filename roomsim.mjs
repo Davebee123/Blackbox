@@ -8,6 +8,8 @@
 //                                                          Signal lost a fight, minutes to Mapped, XP an hour
 import { fresh, command, resolveCycle, active, finish, hooks, hackerLevel, materialsOf } from './dist/combat.mjs';
 import { xpToNext } from './dist/data.mjs';
+import { JACKPOT } from './dist/gear.mjs';
+JACKPOT.on = false; // the bots never roll a jackpot or a head start (docs/jackpots.md)
 import { planner } from './dist/planner.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { buildBlock as programBlock } from './dist/sockets.mjs';

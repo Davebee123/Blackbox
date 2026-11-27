@@ -10748,6 +10748,703 @@ export default {
       ],
       "flavour": "Water goes one way through it, and the flap stays shut on the backwash.",
       "why": "Break parts that blow up."
+    },
+    {
+      "id": "creeper",
+      "name": "Creeper",
+      "base": "weaponized-exploit",
+      "level": 8,
+      "tier": "jackpot",
+      "floor": 1,
+      "year": 1971,
+      "primary": {
+        "damage": [
+          9,
+          12
+        ],
+        "signal": 12
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 1
+        }
+      ],
+      "flavour": "I'M THE CREEPER : CATCH ME IF YOU CAN (1971)",
+      "effect": {
+        "when": "custom",
+        "do": "splash%",
+        "value": 25,
+        "text": "Each of your hits also hits another part for 25%."
+      },
+      "why": "Every hit lands twice."
+    },
+    {
+      "id": "elk-cloner",
+      "name": "Elk Cloner",
+      "base": "tty-upgrade",
+      "level": 8,
+      "tier": "jackpot",
+      "floor": 1,
+      "year": 1982,
+      "primary": {
+        "signal": 22,
+        "regen": 5,
+        "restore": 16
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 1
+        }
+      ],
+      "flavour": "It will get on all your disks. It will infiltrate your chips. (1982)",
+      "effect": {
+        "when": "custom",
+        "do": "nth-skill-twice",
+        "value": 5,
+        "text": "Every 5th damaging skill you use hits twice."
+      },
+      "why": "A free skill every fifth."
+    },
+    {
+      "id": "morris-worm",
+      "name": "Morris Worm",
+      "base": "dropper",
+      "level": 14,
+      "tier": "jackpot",
+      "floor": 2,
+      "year": 1988,
+      "primary": {
+        "damage": 6,
+        "signal": 28,
+        "payload": 2.9
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 2
+        }
+      ],
+      "flavour": "Written to count the machines on the net. It counted each one again and again. (1988)",
+      "effect": {
+        "when": "custom",
+        "do": "hit-mark%",
+        "value": 2,
+        "text": "Each hit on a part makes it take 2% more from you for the rest of the fight."
+      },
+      "why": "Long fights against one part."
+    },
+    {
+      "id": "michelangelo",
+      "name": "Michelangelo",
+      "base": "vpn-cascade",
+      "level": 14,
+      "tier": "jackpot",
+      "floor": 2,
+      "year": 1991,
+      "primary": {
+        "signal": 70,
+        "reduction": 2
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 2
+        }
+      ],
+      "flavour": "It slept on the boot sector until the sixth of March. (1991)",
+      "effect": {
+        "when": "custom",
+        "do": "sixth-cycle",
+        "value": 6,
+        "text": "Every 6th cycle, your hits deal double and attacks on you deal half."
+      },
+      "why": "Plan your fight around the sixth cycle."
+    },
+    {
+      "id": "melissa",
+      "name": "Melissa",
+      "base": "implant",
+      "level": 20,
+      "tier": "jackpot",
+      "floor": 3,
+      "year": 1999,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 3
+        }
+      ],
+      "flavour": "It mailed itself to the first fifty names in the address book. (1999)",
+      "effect": {
+        "when": "custom",
+        "do": "long-status",
+        "text": "Burns, helpers, Jams and Tags you put on a part last twice as long."
+      },
+      "why": "Burns and helpers last twice as long."
+    },
+    {
+      "id": "iloveyou",
+      "name": "ILOVEYOU",
+      "base": "loader",
+      "level": 20,
+      "tier": "jackpot",
+      "floor": 3,
+      "year": 2000,
+      "primary": {
+        "damage": 9,
+        "signal": 40,
+        "payload": 3.8
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 3
+        }
+      ],
+      "flavour": "kindly check the attached LOVELETTER coming from me. (2000)",
+      "effect": {
+        "when": "custom",
+        "do": "turn-first",
+        "value": 3,
+        "text": "The first part to attack you each fight fights for you for 3 cycles."
+      },
+      "why": "Turn the first attacker on its own."
+    },
+    {
+      "id": "code-red",
+      "name": "Code Red",
+      "base": "wormable",
+      "level": 26,
+      "tier": "jackpot",
+      "floor": 4,
+      "year": 2001,
+      "primary": {
+        "damage": [
+          32,
+          40
+        ],
+        "signal": 20
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 4
+        }
+      ],
+      "flavour": "359,000 hosts in fourteen hours. (2001)",
+      "effect": {
+        "when": "custom",
+        "do": "crit-x2",
+        "text": "Doubles your critical strike chance."
+      },
+      "why": "Twice the critical strikes."
+    },
+    {
+      "id": "blaster",
+      "name": "Blaster",
+      "base": "implant",
+      "level": 26,
+      "tier": "jackpot",
+      "floor": 4,
+      "year": 2003,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 4
+        }
+      ],
+      "flavour": "The machine will shut down in 60 seconds. (2003)",
+      "effect": [
+        {
+          "when": "always",
+          "do": "stat+",
+          "stat": "clock",
+          "value": 15,
+          "text": "Adds 15% Clock Speed, and raises the Clock Speed cap from 25% to 40%."
+        },
+        {
+          "when": "always",
+          "do": "cap+",
+          "stat": "clock",
+          "value": 15,
+          "quiet": true
+        }
+      ],
+      "why": "Clock Speed past its cap."
+    },
+    {
+      "id": "mydoom",
+      "name": "Mydoom",
+      "base": "polymorphic-engine",
+      "level": 32,
+      "tier": "jackpot",
+      "floor": 5,
+      "year": 2004,
+      "primary": {
+        "damage": 13,
+        "signal": 55,
+        "payload": 5.4
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 5
+        }
+      ],
+      "flavour": "The fastest mail worm of its year. (2004)",
+      "effect": {
+        "when": "custom",
+        "do": "all-cd",
+        "value": 1,
+        "text": "Reduces all your cooldowns by 1 cycle."
+      },
+      "why": "Every skill comes back sooner."
+    },
+    {
+      "id": "storm-worm",
+      "name": "Storm Worm",
+      "base": "ghost-shell",
+      "level": 32,
+      "tier": "jackpot",
+      "floor": 5,
+      "year": 2007,
+      "primary": {
+        "signal": 70,
+        "regen": 15,
+        "restore": 30
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 5
+        }
+      ],
+      "flavour": "230 dead as storm batters Europe. (2007)",
+      "effect": {
+        "when": "custom",
+        "do": "redirect-nth",
+        "value": 5,
+        "text": "One attack in five on you lands on one of the virus's parts instead."
+      },
+      "why": "Every fifth attack hits the virus."
+    },
+    {
+      "id": "conficker",
+      "name": "Conficker",
+      "base": "domain-front",
+      "level": 38,
+      "tier": "jackpot",
+      "floor": 6,
+      "year": 2008,
+      "primary": {
+        "signal": 227,
+        "reduction": 6
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 6
+        }
+      ],
+      "flavour": "It switched off the updates and the antivirus on every machine it took. (2008)",
+      "effect": {
+        "when": "custom",
+        "do": "no-mend",
+        "value": 2,
+        "text": "Parts you hit can't heal or bring their ◆ back for 2 cycles."
+      },
+      "why": "Stops heals and patching on what you hit."
+    },
+    {
+      "id": "stuxnet",
+      "name": "Stuxnet",
+      "base": "bootkit",
+      "level": 38,
+      "tier": "jackpot",
+      "floor": 6,
+      "year": 2010,
+      "primary": {
+        "damage": 12.5,
+        "signal": 62
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 6
+        }
+      ],
+      "flavour": "It spun the centrifuges out of true while the gauges read normal. (2010)",
+      "effect": {
+        "when": "custom",
+        "do": "hit-sap%",
+        "value": 15,
+        "text": "Parts you hit deal 15% less damage for the rest of the fight."
+      },
+      "why": "What you hit hits back softer."
+    },
+    {
+      "id": "heartbleed",
+      "name": "Heartbleed",
+      "base": "hypervisor-escape",
+      "level": 44,
+      "tier": "jackpot",
+      "floor": 7,
+      "year": 2014,
+      "primary": {
+        "damage": [
+          83,
+          104
+        ],
+        "signal": 60
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 7
+        }
+      ],
+      "flavour": "Ask for one letter. Receive 64 kilobytes. (2014)",
+      "effect": {
+        "when": "custom",
+        "do": "bleed%",
+        "value": 1,
+        "text": "Each hit takes 1% of its part's max Integrity and gives it to you."
+      },
+      "why": "Each hit heals you from the part."
+    },
+    {
+      "id": "mirai",
+      "name": "Mirai",
+      "base": "metamorphic-engine",
+      "level": 44,
+      "tier": "jackpot",
+      "floor": 7,
+      "year": 2016,
+      "primary": {
+        "damage": 34,
+        "signal": 142,
+        "payload": 17
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 7
+        }
+      ],
+      "flavour": "Cameras and routers on their factory passwords. admin, admin. (2016)",
+      "effect": {
+        "when": "custom",
+        "do": "broken-fight",
+        "value": 3,
+        "text": "Each part you break fights for you for 3 cycles before it goes down."
+      },
+      "why": "Broken parts fight on your side."
+    },
+    {
+      "id": "eternalblue",
+      "name": "EternalBlue",
+      "base": "hypervisor-escape",
+      "level": 50,
+      "tier": "jackpot",
+      "floor": 8,
+      "year": 2017,
+      "primary": {
+        "damage": [
+          83,
+          104
+        ],
+        "signal": 60
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 8
+        }
+      ],
+      "flavour": "Leaked in April. Worming through hospitals by May. (2017)",
+      "effect": {
+        "when": "custom",
+        "do": "crit-pierce",
+        "value": 50,
+        "text": "Your critical strikes ignore armor and ◆, and spread to the next part to attack at 50%."
+      },
+      "why": "Critical strikes go through and spread."
+    },
+    {
+      "id": "bluekeep",
+      "name": "BlueKeep",
+      "base": "firmware-shell",
+      "level": 50,
+      "tier": "jackpot",
+      "floor": 8,
+      "year": 2019,
+      "primary": {
+        "signal": 181,
+        "regen": 39,
+        "restore": 78
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 8
+        }
+      ],
+      "flavour": "Wormable, the advisory said. Patch now. (2019)",
+      "effect": [
+        {
+          "when": "always",
+          "do": "max-signal%",
+          "value": 20,
+          "text": "Increases your max Integrity by 20%. Heals and shields on you are 20% larger."
+        },
+        {
+          "when": "always",
+          "do": "heal%",
+          "value": 20,
+          "quiet": true
+        },
+        {
+          "when": "custom",
+          "do": "shield-on%",
+          "value": 20,
+          "quiet": true
+        }
+      ],
+      "why": "More Integrity, bigger heals and shields."
+    },
+    {
+      "id": "2600-hz",
+      "name": "2600 Hz",
+      "base": "proof-of-concept",
+      "level": 4,
+      "tier": "headstart",
+      "floor": 1,
+      "primary": {
+        "damage": [
+          5,
+          7
+        ],
+        "signal": 8
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 1
+        }
+      ],
+      "flavour": "A toy whistle from a cereal box seized the long-distance line.",
+      "effect": {
+        "when": "custom",
+        "do": "opener-hit%",
+        "value": 10,
+        "text": "Your first hit each fight deals 10% more."
+      },
+      "why": "A harder first hit."
+    },
+    {
+      "id": "blue-box",
+      "name": "Blue Box",
+      "base": "cron-job",
+      "level": 6,
+      "tier": "headstart",
+      "floor": 1,
+      "primary": {
+        "damage": 4,
+        "signal": 18,
+        "payload": 2
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 1
+        }
+      ],
+      "flavour": "Multi-frequency tones in a box the size of a paperback.",
+      "effect": {
+        "when": "custom",
+        "do": "first-skill-cd",
+        "value": 1,
+        "text": "Your first skill each fight comes back a cycle sooner."
+      },
+      "why": "Your opener comes back sooner."
+    },
+    {
+      "id": "acoustic-coupler",
+      "name": "Acoustic Coupler",
+      "base": "socks-tunnel",
+      "level": 10,
+      "tier": "headstart",
+      "floor": 2,
+      "primary": {
+        "signal": 45,
+        "reduction": 1
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 2
+        }
+      ],
+      "flavour": "Rubber cups round the handset, 300 baud.",
+      "effect": {
+        "when": "always",
+        "do": "stat+",
+        "stat": "regen",
+        "value": 1,
+        "text": "Adds 1 Regen."
+      },
+      "why": "A little more Regen."
+    },
+    {
+      "id": "war-dialer",
+      "name": "War Dialer",
+      "base": "dropper",
+      "level": 12,
+      "tier": "headstart",
+      "floor": 2,
+      "primary": {
+        "damage": 6,
+        "signal": 28,
+        "payload": 2.9
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 2
+        }
+      ],
+      "flavour": "It dialled every number in the exchange and wrote down which ones whistled back.",
+      "effect": {
+        "when": "custom",
+        "do": "parts-hit%",
+        "value": 2,
+        "cap": 6,
+        "text": "Each different part you hit adds 2% damage for the fight, up to 6%."
+      },
+      "why": "Spread your hits for more damage."
+    },
+    {
+      "id": "handshake",
+      "name": "Handshake",
+      "base": "root-shell",
+      "level": 16,
+      "tier": "headstart",
+      "floor": 3,
+      "primary": {
+        "signal": 35,
+        "regen": 7.5,
+        "restore": 20
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 3
+        }
+      ],
+      "flavour": "Two modems screaming at each other until they agree.",
+      "effect": {
+        "when": "always",
+        "do": "stat+",
+        "stat": "clock",
+        "value": 3,
+        "text": "Adds 3% Clock Speed."
+      },
+      "why": "A little more Clock Speed."
+    },
+    {
+      "id": "red-box",
+      "name": "Red Box",
+      "base": "zero-click",
+      "level": 18,
+      "tier": "headstart",
+      "floor": 3,
+      "primary": {
+        "damage": [
+          22,
+          28
+        ],
+        "signal": 16
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 3
+        }
+      ],
+      "flavour": "The five tones of a quarter dropping into a payphone.",
+      "effect": {
+        "when": "custom",
+        "do": "nth-hit%",
+        "value": 20,
+        "every": 4,
+        "text": "Every 4th hit deals 20% more."
+      },
+      "why": "Every fourth hit lands harder."
+    },
+    {
+      "id": "issue-49",
+      "name": "Issue 49",
+      "base": "implant",
+      "level": 22,
+      "tier": "headstart",
+      "floor": 4,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 4
+        }
+      ],
+      "flavour": "File 14: how to overflow a buffer.",
+      "effect": {
+        "when": "hit",
+        "if": "target-telling",
+        "do": "crit%",
+        "value": 10,
+        "text": "Increases your critical strike chance by 10% when the target is winding up a tell."
+      },
+      "why": "Critical strikes on a part mid-tell."
+    },
+    {
+      "id": "sneakernet",
+      "name": "Sneakernet",
+      "base": "onion-circuit",
+      "level": 24,
+      "tier": "headstart",
+      "floor": 4,
+      "primary": {
+        "signal": 100,
+        "reduction": 3
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 4
+        }
+      ],
+      "flavour": "Never underestimate the bandwidth of a station wagon full of tapes.",
+      "effect": {
+        "when": "always",
+        "if": "early",
+        "do": "stat+",
+        "stat": "evasion",
+        "value": 5,
+        "text": "Adds 5% Evasion in the first 3 cycles of a fight."
+      },
+      "why": "Dodge the opening attacks."
     }
   ]
 };

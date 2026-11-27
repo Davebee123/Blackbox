@@ -49,7 +49,7 @@ import { LEG, legendFired } from './legends.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, traceNear, leadOf, firstRank } from './hidden.mjs';
 import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, floorLairBosses, reached, floorCommand, floorsRestore, floorsLetter } from './floors.mjs';
 import { orphanXpMult, intelXpMult, trashItemMult, clearOddsMult } from './table.mjs';
-import { reqLevel, meetsReq, uniqueFloorRestore, STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, liftFx, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, IMPLICITS, implicitFx, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore, curveRestore } from './gear.mjs';
+import { reqLevel, meetsReq, uniqueFloorRestore, STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, liftFx, JACKPOT, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, IMPLICITS, implicitFx, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore, curveRestore } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
 import EARN from './content/earned.mjs';
@@ -350,6 +350,7 @@ export function damageMultiplier(s, p, opts = {}) {
     m *= fbDealt(s, opts); // Muscle Memory (floorbosses.mjs)
     if (!opts.dot && e.throttledUntil >= e.cycle) m *= TELL.copy.throttled; // a debuff the Mimic copied onto you (tells.mjs): your hits deal half
   }
+  if (!opts.server) m *= jpDealt(s, p, opts); // 2600 Hz, War Dialer, Red Box, Morris Worm, Michelangelo (docs/jackpots.md)
   if (opts.dot) for (const x of fxFire(s, 'custom', { do: 'dot%' })) m *= 1 + x.value / 100;
   // Burns or helpers alone, on a part that meets the condition (Brackish, Riptide). A helper's hit carries src 'helper'.
   if (opts.dot && !opts.server) for (const x of fxFire(s, 'hit', { target: p, do: opts.src === 'helper' ? 'helper%' : 'burn%' })) m *= 1 + x.value / 100;
@@ -510,7 +511,7 @@ export function loadedOn(s, id) {
 // (Survival stats exist on both sides and count where that side is defending.)
 export function gearStat(s, stat, side = null) {
   let n = 0, pieces = false;
-  let pct = 0;
+  let pct = 0, capUp = 0;
   const items = side !== 'server' ? loaded(s) : [], tl = rebaseLevels(items);
   for (let j = 0; j < items.length; j++) {
     const it = items[j], L = tl ? tl[j] : it.level, st = L > it.level ? rebasedStats(it, L) : it.stats; // a set piece rebased onto its set's newest worn piece (sets.mjs)
@@ -525,12 +526,13 @@ export function gearStat(s, stat, side = null) {
       // One that adds to a stat, or raises it by a share, while its condition holds (Siltstone, Depth Gauge, Pressure Hull…).
       if (fx.when === 'always' && fx.do === 'stat+' && fxCond(s, fx)) n += fxScale(s, fx);
       if (fx.when === 'always' && fx.do === 'stat%' && fxCond(s, fx)) pct += Number(fx.value) || 0;
+      if (fx.when === 'always' && fx.do === 'cap+') capUp += Number(fx.value) || 0; // Blaster: Clock Speed past its cap
       n += fightStat(s, u.id, fx, i, stat); // its stacks and timed buffs in this fight (Seawall, Turbidity)
     });
   }
   if (pieces) n += setStat(s, stat); // a set piece's own stat, its green line, a set bonus (sets.mjs)
   if (pct) n = Math.round(n * (1 + pct / 100));
-  return STATS[stat]?.cap ? Math.min(STATS[stat].cap, n) : n;
+  return STATS[stat]?.cap ? Math.min(STATS[stat].cap + capUp, n) : n;
 }
 // Scavenge with a visit's Warm cache on top (visit.mjs).
 export const scavengeOf = (s, side = null) => gearStat(s, 'scavenge', side) + warmScavenge(s);
@@ -648,7 +650,7 @@ const onFloor = (src, ctx) => !src.floor || src.floor === ctx.floor;
 const dropsHere = (u, ctx) => (u.sources || []).some((src) => (src.kind === ctx.kind && (!src.id || src.id === ctx.id) && (!src.layer || (ctx.layer || 1) >= src.layer) && onFloor(src, ctx))
   || (src.kind === 'sprawl' && ctx.kind === 'sprawl') || (src.kind === 'guard' && ctx.kind === 'guard' && src.id === ctx.id) || (src.kind === 'rare' && !!ctx.rare && onFloor(src, ctx)));
 // The uniques a source kind drops on a floor (a lair's, a thread's, a puzzle board's), open at a level: one you lack first.
-export const floorUniques = (kind, floor, level) => Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id) && (u.sources || []).some((src) => src.kind === kind && src.floor === floor));
+export const floorUniques = (kind, floor, level) => Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id) && !u.tier && (u.sources || []).some((src) => src.kind === kind && src.floor === floor));
 export function floorUnique(s, kind, floor, level, pick = () => rand(s)) {
   const pool = floorUniques(kind, floor, level);
   if (!pool.length) return null;
@@ -659,13 +661,13 @@ export function floorUnique(s, kind, floor, level, pick = () => rand(s)) {
 // Sources that give a unique as a reward, never a drop (a feud: the faction pieces, faction-gear.mjs).
 export const REWARD_SOURCES = ['story', 'contract', 'store', 'feud'];
 export function uniqueFrom(s, ctx, level) {
-  const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id) && dropsHere(u, ctx) && !REWARD_SOURCES.includes(ctx.kind)); // a set piece drops off its own table (setDrop)
+  const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id) && !u.tier && dropsHere(u, ctx) && !REWARD_SOURCES.includes(ctx.kind)); // a jackpot or a head start rolls on its own (jackpotDrop) // a set piece drops off its own table (setDrop)
   return pickUnique(s, pool);
 }
 // A Guarded server's vault (specials.mjs): one of its floor's uniques (any source's there), else its layer's vault
 // table's, open at its level.
 export function guardedUnique(s, floor, level) {
-  const open = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id) && !u.earn), on = (f) => f === floor || (Array.isArray(f) && f.includes(floor));
+  const open = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id) && !u.earn && !u.tier), on = (f) => f === floor || (Array.isArray(f) && f.includes(floor));
   const here = open.filter((u) => (u.sources || []).some((src) => on(src.floor)));
   return pickUnique(s, here.length ? here : open.filter((u) => dropsHere(u, { kind: 'vault', layer: layerOf(floor), floor })));
 }
@@ -931,6 +933,39 @@ export function rollDrop(s, ctx, level) {
   if (best && ctx.family) best.from = ctx.family;
   return best;
 }
+// ---------- jackpots and head starts (docs/jackpots.md) ----------
+// Their roll runs on dice of its own (s.jpRng), so the rest of a kill's loot rolls as it did before them.
+export function jpRand(s) {
+  let t = (s.jpRng = (((s.jpRng ?? ((s.rng >>> 0) ^ 0x9e3779b9)) >>> 0) + 0x6d2b79f5) >>> 0);
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+// A floor's pair of a tier.
+export const tierPair = (tier, floor) => Object.values(UNIQUES).filter((u) => u.tier === tier && u.floor === floor);
+// The odds a kill on a floor rolls one of a floor's pair: [{ tier, floor, odds }], the ones it can roll (JACKPOT).
+export function jackpotOdds(floor, { elite = false, boss = false } = {}) {
+  const out = [], H = JACKPOT.headstart, J = JACKPOT.jackpot;
+  for (let f = Math.max(1, floor - H.reach); f <= floor; f++) out.push({ tier: 'headstart', floor: f, odds: H.odds * (boss ? H.boss : elite ? H.elite : 1) });
+  for (let f = 1; f <= floor; f++) out.push({ tier: 'jackpot', floor: f, odds: J.odds * (boss ? J.boss : elite ? J.elite : 1) * (f < floor ? J.deeper : 1) });
+  return out.filter((x) => tierPair(x.tier, x.floor).length);
+}
+// A kill's roll (roomKill): one of a pair at its odds, at the mob's level or the item's own. Returns the item, or null.
+export function jackpotRoll(s, floor, level, how = {}) {
+  if (!JACKPOT.on) return null;
+  for (const x of jackpotOdds(floor, how)) {
+    if (!(jpRand(s) < x.odds)) continue;
+    const pair = tierPair(x.tier, x.floor), u = pair[Math.floor(jpRand(s) * pair.length)];
+    return uniqueItem(u, level, () => jpRand(s));
+  }
+  return null;
+}
+function jackpotDrop(s, v, floor, { elite = false, pack = false, path = '' } = {}) {
+  const it = jackpotRoll(s, floor, v.level, { elite, boss: !!v.boss });
+  if (!it) return;
+  if (pack && s.run) { s.run.pack.push({ path: `${path}/jackpot`, name: 'protocol.bin', kind: 'gear', size: '32k', item: it }); emit(s, 'drop', `${v.name} dropped ${itemLabel(it)}. In your pack until you jack out.`, { item: it, pack: true, rarity: it.rarity, tier: it.tier }); }
+  else addItem(s, it, it.tier === 'jackpot' ? 'Hall of Fame: ' : 'Head start: ');
+}
 export const strainTrophies = (strain, level) => Object.values(UNIQUES).filter((u) => !u.set && (u.sources || []).some((src) => src.kind === 'strain' && (src.id === strain || (!src.id && u.level <= level + 2))));
 // Your pace: kills an hour of active play (the System page shows it; loot targets assume LOOT.killsPerHour; the odds are a kill at a time).
 export const paceOf = (s) => { const p = s.pace || { kills: 0, ms: 0 }; return { kills: p.kills, minutes: p.ms / 60000, perHour: p.ms > 5 * 60000 ? Math.round(p.kills / (p.ms / 3600000)) : null }; };
@@ -1109,7 +1144,9 @@ function fxSpend(s, fx, id) {
 // kept while the rig is the same).
 const DEEP = new Set(['stat+', 'stat%', 'max-signal%', 'heal%', 'stack', 'buff', 'taken%', 'hit-cap', 'helper-soak', 'next-boost', 'shield%', 'shield-absorb', 'block-dot', 'burn%', 'helper%', 'crit-damage%', 'crit-double', 'first-skill-crit', 'first-pierce', 'spill', 'repeat', 'burn-now', 'burn-sap', 'helper-long', 'helper-now', 'helper-cd', 'free-helper', 'jam-delay', 'first-cd', 'shortest-cd', 'chit-fade', 'clock-start', 'momentum', 'spend%', 'momentum-cleave', 'momentum-safe', 'unveil', 'explore-xp%', 'cache%', 'cache-heal%', 'rewind',
   // Floors 5 and 6 (docs/floor-items.md), and Hidden Process (3).
-  'part-first%', 'varied%', 'ready-wait%', 'surfaced%', 'armor-bleed', 'crit-pass', 'reach', 'halve-every', 'cap-every', 'siphon-less', 'delayed-less', 'reinsure', 'tell-cd', 'first-shield-x2', 'burn-through', 'break-less']);
+  'part-first%', 'varied%', 'ready-wait%', 'surfaced%', 'armor-bleed', 'crit-pass', 'reach', 'halve-every', 'cap-every', 'siphon-less', 'delayed-less', 'reinsure', 'tell-cd', 'first-shield-x2', 'burn-through', 'break-less',
+  // Jackpots and head starts (docs/jackpots.md).
+  'cap+', 'opener-hit%', 'first-skill-cd', 'parts-hit%', 'nth-hit%', 'splash%', 'nth-skill-twice', 'hit-mark%', 'sixth-cycle', 'long-status', 'turn-first', 'crit-x2', 'all-cd', 'redirect-nth', 'no-mend', 'hit-sap%', 'bleed%', 'broken-fight', 'crit-pierce', 'shield-on%']);
 const KINDS = new WeakMap();
 function fxKinds(s) {
   const key = hooks.extraFx ? null : `${classOf(s)}|${hackerLevel(s)}|${rigOf(s).join(',')}|${(s.stash || []).length}|${s.equipN || 0}|${Object.keys(SETS).length}`; // what is loaded, and the sets
@@ -1215,6 +1252,106 @@ function reinsure(s, dealt) {
   const over = dealt - line, n = Math.max(1, Number(x.fx.cycles) || 2);
   fxState(e).reins = { left: n, each: Math.ceil(over / n), name: fxWho(x), id: x.id };
   emit(s, 'status', `${fxWho(x)}: ${over} comes back as a shield over the next ${n} cycles.`, firedOf([x]));
+}
+// ---------- jackpots and head starts (docs/jackpots.md) ----------
+const JP_DEALT = ['opener-hit%', 'parts-hit%', 'nth-hit%', 'hit-mark%', 'sixth-cycle'];
+const JP_HIT = ['opener-hit%', 'parts-hit%', 'nth-hit%', 'hit-mark%', 'splash%', 'no-mend', 'hit-sap%', 'bleed%', 'crit-pierce'];
+const jpSkill = (opts) => !!opts.mine && !opts.dot && !opts.by && !opts.server;
+const sixth = (s) => { const x = fxHas(s, 'sixth-cycle'), e = s.encounter; return x && e && e.cycle % (fxVal(x) || 6) === 0 ? x : null; }; // Michelangelo
+// Your hit's multiplier: 2600 Hz (the first skill hit), War Dialer (parts hit), Red Box (every Nth), Morris Worm (the
+// part's marks), Michelangelo (every 6th cycle). Marks and counts move after the hit (jpHit).
+function jpDealt(s, p, opts) {
+  const k = fxKinds(s);
+  if (!JP_DEALT.some((x) => k.has(x))) return 1;
+  const st = s.encounter.fxs || {}, skill = jpSkill(opts);
+  let m = 1;
+  const op = skill && !st.opened && fxHas(s, 'opener-hit%');
+  if (op) m *= 1 + fxVal(op) / 100;
+  const wd = fxHas(s, 'parts-hit%');
+  if (wd && opts.mine) m *= 1 + Math.min(Number(wd.fx.cap) || 6, fxVal(wd) * Object.keys(st.dialed || {}).length) / 100;
+  const rb = skill && fxHas(s, 'nth-hit%');
+  if (rb && ((st.hits || 0) + 1) % (Number(rb.fx.every) || 4) === 0) m *= 1 + fxVal(rb) / 100;
+  const mw = fxHas(s, 'hit-mark%');
+  if (mw && (opts.mine || opts.dot)) m *= 1 + (fxVal(mw) * (st.marks?.[p.id] || 0)) / 100;
+  if ((opts.mine || opts.dot) && sixth(s)) m *= 2;
+  return m;
+}
+// After your skill hit: the counts and marks, Creeper's splash, EternalBlue's spread, Heartbleed's bleed, Stuxnet's
+// sap and Conficker's seal on the part.
+function jpHit(s, p, out, opts, raw) {
+  const k = fxKinds(s);
+  if (!jpSkill(opts) || !JP_HIT.some((x) => k.has(x))) return;
+  const e = s.encounter, st = fxState(e);
+  if (raw > 0) { st.opened = true; st.hits = (st.hits || 0) + 1; (st.dialed ||= {})[p.id] = true; }
+  if (out.dealt > 0) {
+    if (fxHas(s, 'hit-mark%')) (st.marks ||= {})[p.id] = (st.marks[p.id] || 0) + 1;
+    if (fxHas(s, 'hit-sap%')) (st.sapped ||= {})[p.id] = true;
+    const cf = fxHas(s, 'no-mend');
+    if (cf) (st.mend ||= {})[p.id] = e.cycle + (fxVal(cf) || 2);
+  }
+  const hb = out.dealt > 0 && alive(p) ? fxHas(s, 'bleed%') : null;
+  if (hb) { const r = hit(s, p, Math.max(1, Math.round((p.max * fxVal(hb)) / 100)), { by: fxWho(hb), flat: true, pierce: true, noHook: true, overkill: true }); if (r.dealt) heal(s, r.dealt, fxWho(hb), { gear: [{ id: hb.id, name: fxWho(hb) }] }); }
+  const cr = raw > 0 ? fxHas(s, 'splash%') : null, to = cr && livingParts(s).filter((x) => x !== p).sort((a, b) => (a.attack?.due ?? 999) - (b.attack?.due ?? 999))[0];
+  if (to) hit(s, to, Math.max(1, Math.round((raw * fxVal(cr)) / 100)), { by: fxWho(cr), flat: true, noHook: true, overkill: true });
+  const eb = out.crit && raw > 0 ? fxHas(s, 'crit-pierce') : null, next = eb && soonestAttacker(s, p.id);
+  if (next && next !== p && alive(next)) hit(s, next, Math.max(1, Math.round((raw * fxVal(eb)) / 100)), { by: fxWho(eb), flat: true, pierce: true, noHook: true, overkill: true });
+}
+// Conficker: a part you hit can't heal or patch its ◆ back for a while.
+export const mendless = (s, p) => (s.encounter?.fxs?.mend?.[p.id] ?? -1) >= s.encounter.cycle;
+// Stuxnet: a part you hit deals less to you for the fight.
+const jpSap = (s, p) => { const x = s.encounter?.fxs?.sapped?.[p.id] && fxHas(s, 'hit-sap%'); return x ? 1 - fxVal(x) / 100 : 1; };
+// Storm Worm (every Nth attack) and ILOVEYOU (its turned part): an attack on you that lands on another part instead. Never a tell.
+function jpTurned(s, p, atk) {
+  const k = fxKinds(s);
+  if (atk.tell || !(k.has('redirect-nth') || k.has('turn-first'))) return null;
+  const e = s.encounter, st = fxState(e), love = fxHas(s, 'turn-first');
+  if (love && !st.love) { st.love = { id: p.id, at: e.cycle, until: e.cycle + (fxVal(love) || 3), left: fxVal(love) || 3, name: fxWho(love) }; emit(s, 'status', `${fxWho(love)}: the ${p.name} fights for you for ${st.love.left} cycles.`, { target: p.id, mark: 'buff', ...firedOf([love]) }); }
+  const turned = st.love?.id === p.id && st.love.until >= e.cycle && st.love.at !== e.cycle ? love : null;
+  const sw = !turned && fxHas(s, 'redirect-nth'), nth = sw && (st.storm = (st.storm || 0) + 1) % (fxVal(sw) || 5) === 0;
+  const x = turned || (nth ? sw : null), to = x && livingParts(s).filter((q) => q !== p).sort((a, b) => (a.attack?.due ?? 999) - (b.attack?.due ?? 999))[0];
+  return to ? { x, to } : null;
+}
+// The cycle's end: the parts fighting for you (ILOVEYOU's turned part, Mirai's broken ones) hit the next part to attack.
+function jpAllies(s) {
+  const e = s.encounter, st = e.fxs;
+  if (!st?.love && !st?.mirai) return;
+  const strike = (from, amount, who) => { const t = livingParts(s).filter((q) => q.id !== from).sort((a, b) => (a.attack?.due ?? 999) - (b.attack?.due ?? 999))[0]; if (t && amount > 0) hit(s, t, amount, { by: who, noHook: true, overkill: true, src: 'turned' }); };
+  const L = st.love, lp = L && L.left > 0 && part(s, L.id);
+  if (lp && alive(lp)) { L.left--; strike(lp.id, lp.attack ? attackAmount(lp) : 0, `${L.name}: the ${lp.name}`); }
+  for (const m of st.mirai || []) if (m.left > 0) { m.left--; strike(m.id, m.amount, `${m.name}: the ${m.part}`); }
+  if (st.mirai) st.mirai = st.mirai.filter((m) => m.left > 0);
+}
+// Mirai: a part you break fights for you for a few cycles.
+function jpBroke(s, p) {
+  const x = fxHas(s, 'broken-fight');
+  if (!x) return;
+  const n = fxVal(x) || 3, amount = p.attack ? attackAmount(p) : 0;
+  if (!amount) return;
+  (fxState(s.encounter).mirai ||= []).push({ id: p.id, part: p.name, amount, left: n, name: fxWho(x) });
+  emit(s, 'status', `${fxWho(x)}: the ${p.name} fights for you for ${n} cycles before it goes down.`, { target: p.id, mark: 'buff', ...firedOf([x]) });
+}
+// Before and after a skill (useAbility): Melissa doubles the burns, helpers, Jams and Tags it put on, BlueKeep grows the
+// shield it raised.
+function jpBefore(s) {
+  const k = fxKinds(s), e = s.encounter;
+  if (!k.has('long-status') && !k.has('shield-on%')) return null;
+  return { shield: e.shield || 0, burns: new Set(e.burns), helpers: new Set(e.helpers), parts: Object.fromEntries(livingParts(s).map((p) => [p.id, { jam: p.jammedUntil || 0, tag: p.taggedUntil || 0 }])) };
+}
+function jpAfter(s, was) {
+  if (!was) return;
+  const e = s.encounter, mel = fxHas(s, 'long-status');
+  if (mel) {
+    for (const b of e.burns) if (!was.burns.has(b)) b.left *= 2;
+    for (const h of e.helpers) if (!was.helpers.has(h)) h.left *= 2;
+    for (const p of livingParts(s)) {
+      const w = was.parts[p.id];
+      if (!w) continue;
+      if ((p.jammedUntil || 0) > w.jam) { const from = Math.max(w.jam, e.cycle); p.jammedUntil += p.jammedUntil - from; if (p.attack && p.attack.due <= p.jammedUntil) delayAttack(s, p, p.jammedUntil - from, { extend: true }); }
+      if ((p.taggedUntil || 0) > w.tag) { const from = Math.max(w.tag, e.cycle); p.taggedUntil += p.taggedUntil - from; }
+    }
+  }
+  const bk = fxHas(s, 'shield-on%'), grew = (e.shield || 0) - was.shield;
+  if (bk && grew > 0) e.shield = was.shield + Math.round(grew * (1 + fxVal(bk) / 100));
 }
 // One cycle off the cooldown nearest done (Notice Period, Domain Admin (3)): the skill's id, or null with none cooling.
 export function shortestOff(s, n, who, gear = null) {
@@ -2326,6 +2463,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
     const item = rollDrop(s, ctx, lvl);
     if (item) addItem(s, item);
     killSets(s, { v, rare, floor: loc?.depth || 1 }); // set pieces (sets.mjs), straight into your stash
+    jackpotDrop(s, v, loc?.depth || 1, { elite: !!v.elite || guard }); // a jackpot or a head start, on its own dice
     nativeDrop(s, e);
     if (rand(s) < SPARE_EXPLOIT.home) gainCode(s, { exploit: 1 }, 'Exploit recovered: ');
     return { more: () => rollDrop(s, { ...ctx, strain: null }, lvl) };
@@ -2338,6 +2476,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
     if (item) { s.run.pack.push({ path: `${tag}/drop${n || ''}`, name: 'protocol.bin', kind: 'gear', size: '32k', item }); emit(s, 'drop', `${v.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true }); }
   }
   killSets(s, { v, key: e.key, guard, rare, floor: loc?.depth || 1, layer: layerOf(loc?.depth || 1), pack: true, path: tag }); // set pieces (sets.mjs)
+  jackpotDrop(s, v, loc?.depth || 1, { elite: !!v.elite || guard, pack: true, path: tag });
   nativeDrop(s, e, true);
   if (rand(s) < (guard ? SPARE_EXPLOIT.guard : SPARE_EXPLOIT.home)) packExploit(s, `${tag}/xp`, v.name);
   const gains = codeFrom(s, family, lvl, src);
@@ -2929,6 +3068,12 @@ const srcOf = (e, opts) => ({
   ...(opts.src || opts.dot ? { src: opts.src || 'burn' } : {}),
   ...(opts.by ? { via: opts.by } : opts.mine && !opts.dot && e.commanding?.id ? { skill: e.commanding.id } : {}),
 });
+// A hit's crit chance: yours, a class's, Exposed and your conditional rules (cmd: Bootstrap's first use). Code Red doubles it.
+export function hitCritChance(s, p, opts = {}) {
+  const e = s.encounter;
+  const n = critChance(s) + (opts.server ? 0 : classSum('crit', s, p, opts)) + (on(s, p, 'exposed') ? SKILLS.exposed : 0) + (opts.mine ? fxFire(s, 'hit', { target: p, do: 'crit%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null }).reduce((n, x) => n + x.value, 0) : 0);
+  return (opts.mine || opts.dot) && !opts.server && fxHas(s, 'crit-x2') ? n * 2 : n;
+}
 export function hit(s, p, base, opts = {}) {
   const e = s.encounter;
   if (!alive(p)) return { dealt: 0, overflow: 0 };
@@ -3000,6 +3145,11 @@ export function hit(s, p, base, opts = {}) {
     if (!opts.server) noteDealt(s, n); // it still draws aggro
     return { dealt: 0, overflow: 0, absorbed: true };
   }
+  // EternalBlue (crit-pierce): your crit roll comes before the ◆, and a critical strike goes through them.
+  if (p.armor > 0 && !opts.pierce && !opts.rolled && !opts.crit && !opts.flat && !opts.blast && base > 0 && jpSkill(opts) && fxHas(s, 'crit-pierce')) {
+    const c = rand(s) * 100 < hitCritChance(s, p, opts);
+    opts = c ? { ...opts, crit: true, pierce: true, rolled: true } : { ...opts, rolled: true };
+  }
   // Dead Reckoning (first-pierce): your first hit on each part this fight goes through its ◆.
   if (opts.mine && !opts.dot && !opts.server && base > 0 && fxHas(s, 'first-pierce')) {
     const seen = (fxState(e).touched ||= {});
@@ -3065,8 +3215,8 @@ export function hit(s, p, base, opts = {}) {
   const forced = raw > 0 && !opts.server && (weak || e.forceCrit || opts.crit || first || passed);
   if (forced && e.forceCrit) e.forceCrit = false;
   // Exposed: every hit on it, from anyone, has a better crit chance.
-  const chance = critChance(s) + (opts.server ? 0 : classSum('crit', s, p, opts)) + (on(s, p, 'exposed') ? SKILLS.exposed : 0) + (opts.mine ? fxFire(s, 'hit', { target: p, do: 'crit%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null }).reduce((n, x) => n + x.value, 0) : 0); // cmd: Bootstrap's first use
-  const crit = forced || (raw > 0 && !opts.flat && !opts.blast && chance > 0 && rand(s) * 100 < chance); // a held cash-in or a blast never crits
+  const chance = opts.rolled ? 0 : hitCritChance(s, p, opts);
+  const crit = forced || (!opts.rolled && raw > 0 && !opts.flat && !opts.blast && chance > 0 && rand(s) * 100 < chance); // a held cash-in or a blast never crits; rolled: EternalBlue rolled it before the ◆
   let doubled = false;
   if (crit) {
     let mult = critMultiplier(s) * (opts.server ? 1 : classMult('critDealt', s, p, opts)), flat = opts.server ? 0 : gearStat(s, 'critDamage'); // critDealt: Burst Buffer (sets.mjs)
@@ -3185,6 +3335,7 @@ export function hit(s, p, base, opts = {}) {
   }
   const out = { dealt, overflow: Math.max(0, raw - dealt), crit, broke: p.integrity === 0 };
   p.hpSeen = p.integrity; // a heal shows against it at the cycle's end (Antibody)
+  jpHit(s, p, out, opts, raw); // jackpots and head starts (docs/jackpots.md)
   if (opts.mine && !opts.server && dealt > 0) midHit(s, p, crit, opts);
   if (!opts.server) classEach('hit', s, p, out, opts);
   // Shared events (fireEvent): a crit of yours (a burn's and a helper's too), and your hit on a Tagged part.
@@ -3453,6 +3604,7 @@ function breakPart(s, p) {
   // Breaker Cascade Failure talent: the first break resets your cooldowns.
   classEach('broke', s, p);
   fireEvent(s, 'break', { part: p });
+  jpBroke(s, p); // Mirai (docs/jackpots.md)
   if (p.kind !== 'fragment') daemonsOn(s, 'broke', { part: p.id }); // Domino
   if (bodyRules(e)) hooks.roomBroke?.(s, p); // a room body's rule on a break (families.mjs)
   // Uniques that fire on a break (Eviction Notice, Hashboard, Rockfall, Floodgate).
@@ -3620,6 +3772,9 @@ function fxCooldown(s, id, a) {
   const e = s.encounter, cd = cooldownOf(s, id);
   if (!(cd > 1)) return cd;
   let off = (e.metrics?.actions?.[id] || 0) <= 1 ? fxSum(s, 'custom', 'first-cd') : 0;
+  off += fxSum(s, 'custom', 'all-cd'); // Mydoom
+  const bb = fxHas(s, 'first-skill-cd'); // Blue Box: the fight's first skill
+  if (bb && !fxState(e).firstCd) { fxState(e).firstCd = true; off += fxVal(bb) || 1; }
   const st = e.fxs;
   if (a?.helper && st?.helperCd) { off += st.helperCd; st.helperCd = 0; }
   return off ? Math.max(1, cd - off) : cd;
@@ -3723,12 +3878,16 @@ function useAbility(s, intent, auto = false) {
   if (flash) legendFire(s, 'flashover');
   const charging = id === 'segfault' && !!target && !!tellOn(s, target, 'charge'); // Red Zone (a legend), read before the hit cuts it
   const armed = base ? e.fxs?.repeat || null : null; // armed before this skill: one Ctrl-C arms in its hit waits for the next
+  const jpWas = jpBefore(s); // Melissa, BlueKeep (docs/jackpots.md)
   const res = base ? hit(s, target, base, { mine: true, crit: crit || flash, chits: a.chits, pierce: ignoresArmor(s, id) || rootkit, unlock: !!a.unlock, by: rootkit && target.armor > 0 ? 'Rootkit' : undefined }) : null;
   if (id === 'overload' && hasTalent(s, 'piercing')) e.once.pierced = true;
   // Echo: the hit may repeat for half (on armor, it breaks another chit).
   if (base && alive(target) && gearStat(s, 'echo') && rand(s) * 100 < gearStat(s, 'echo')) hit(s, target, Math.max(1, Math.round(base * (fxHas(s, 'echo-full') || echoFirst(s, target) ? 1 : ECHO.share))), { mine: true, by: 'Echo' });
   // A repeat (Ctrl-C): armed by an answer (or on a cycle's beat, cycleFx), your next damaging skill hits again for its share.
   const rep = armed && alive(target) ? armed : null;
+  // Elk Cloner: every Nth damaging skill hits twice.
+  const elk = base && auto !== 'daemon' ? fxHas(s, 'nth-skill-twice') : null;
+  if (elk && (fxState(e).elk = (e.fxs.elk || 0) + 1) % (fxVal(elk) || 5) === 0 && alive(target)) { emit(s, 'status', `${fxWho(elk)}: ${a.name} fires again.`, { target: target.id, mark: 'buff', ...firedOf([elk]) }); hit(s, target, base, { mine: true, chits: a.chits, pierce: ignoresArmor(s, id) }); }
   if (rep) { if (e.fxs.repeat === rep) e.fxs.repeat = null; hit(s, target, Math.max(1, Math.round((base * rep.share) / 100)), { mine: true, by: rep.name }); }
   // Overload: a crit resets its cooldown.
   if (charging && legend(s, 'red-zone')) { delete e.readyAt.segfault; legendFire(s, 'red-zone'); emit(s, 'proc', 'Red Zone: Segfault is ready again.', { ability: 'segfault' }); }
@@ -3882,6 +4041,7 @@ function useAbility(s, intent, auto = false) {
   }
   // A subclass skill's own effect (dist/classes/<class>.mjs). to: the crewmate an ally skill was aimed at.
   classUse(id)?.(s, { a, id, target, to: (intent.ally && allyOf(s, intent.ally)) || s, res, base, intent, auto, e, moved });
+  jpAfter(s, jpWas);
   classEach('used', s, { id, target, res, before }); // set bonuses on what the skill did (sets.mjs)
 }
 // Who's standing beside you in this fight, by name ('you' is the player): for ally skills and class modules.
@@ -4096,7 +4256,7 @@ export const drawingFire = (s) => (s.encounter?.buffs?.sinkhole >= s.encounter?.
 const hitCapped = (s, n) => capEvery(s, hitCap(s, n));
 const hitCap = (s, n) => { const x = fxHas(s, 'hit-cap'); return x ? Math.min(n, Math.max(1, Math.floor((defender(s).max * (Number(x.fx.value) || 100)) / 100))) : n; };
 // Bilge (burn-sap): each burn you started on a part this fight takes a share off its hits on you, up to the cap.
-const sapOf = (s, p) => { const x = fxHas(s, 'burn-sap'), n = s.encounter?.fxs?.burned?.[p.id] || 0; return x && n ? 1 - Math.min(x.fx.cap || 100, n * (Number(x.fx.value) || 0)) / 100 : 1; };
+const sapOf = (s, p) => { const x = fxHas(s, 'burn-sap'), n = s.encounter?.fxs?.burned?.[p.id] || 0; return (x && n ? 1 - Math.min(x.fx.cap || 100, n * (Number(x.fx.value) || 0)) / 100 : 1) * jpSap(s, p); }; // jpSap: Stuxnet
 // After an attack reaches you, hit or soaked: what your gear stacks or banks on it (Seawall's Block, Anchor Chain's next heal).
 function struckFx(s, atk) {
   const st = fxState(s.encounter);
@@ -4148,7 +4308,7 @@ function landAttack(s, p) {
     atk.n = (atk.n || 0) + 1;
     // Revoke (Sysop): its heal lands on you instead.
     if (p.revokedUntil >= e.cycle) { emit(s, 'blocked', `${atk.name} is revoked: it heals ${s.who || 'you'} instead.`, { source: p.id }); return heal(s, Math.max(1, Math.round(atk.amount)), `${p.name}'s revoked ${atk.name}`); }
-    const hurt = livingParts(s).filter((x) => x.integrity < x.max && !implanted(s, x)).sort((a, b) => a.integrity / a.max - b.integrity / b.max)[0];
+    const hurt = livingParts(s).filter((x) => x.integrity < x.max && !implanted(s, x) && !mendless(s, x)).sort((a, b) => a.integrity / a.max - b.integrity / b.max)[0]; // mendless: Conficker
     if (!hurt) return emit(s, 'status', `${atk.name} finds nothing to patch${livingParts(s).some((x) => implanted(s, x)) ? ', because a Rootkit Implant blocks it' : ''}.`, { source: p.id });
     const got = Math.min(Math.round(atk.amount), hurt.max - hurt.integrity);
     hurt.integrity += got;
@@ -4215,6 +4375,13 @@ function landAttack(s, p) {
       e.helpers.splice(e.helpers.indexOf(h), 1);
       return emit(s, 'blocked', `${soak.name || soak.it.name}: a helper takes ${atk.name} for you, and expires.`, { source: p.id, ...firedOf([soak]) });
     }
+    // Storm Worm, ILOVEYOU (docs/jackpots.md): it lands on another part instead.
+    const turn = jpTurned(s, p, atk);
+    if (turn) {
+      emit(s, 'blocked', `${fxWho(turn.x)}: ${atk.name} lands on the ${turn.to.name}.`, { source: p.id, ...firedOf([turn.x]) });
+      hit(s, turn.to, Math.max(1, Math.round(hitPower * (crit ? CRIT.multiplier : 1))), { by: `${p.name}'s ${atk.name}`, flat: true, noHook: true, overkill: true, src: 'turned' });
+      return;
+    }
     // Its size as it reaches you, before any cut (Drain Plug's big hit), and what would get through to your Integrity (Read-Only).
     const sap = sapOf(s, p), took = classMult('taken', s, atk, p);
     const pre = Math.round(hitPower * sap * (crit ? CRIT.multiplier : 1) * took * (e.virus.raid ? raidTaken(s) : 1));
@@ -4225,6 +4392,8 @@ function landAttack(s, p) {
     if (half?.fx.do === 'halve-every') emit(s, 'blocked', `${fxWho(half)}: ${atk.name} deals half damage.`, { source: p.id, ...firedOf([half]) });
     let cut = half ? 0.5 : 1;
     if (!half && e.hardened > 0) { e.hardened--; cut = 1 - SKILLS.hardenedCut; emit(s, 'blocked', `Hardened: ${atk.name} deals ${Math.round(SKILLS.hardenedCut * 100)}% less damage.`, { source: p.id }); }
+    const mich = sixth(s);
+    if (mich) { cut *= 0.5; emit(s, 'blocked', `${fxWho(mich)}: ${atk.name} deals half damage.`, { source: p.id, ...firedOf([mich]) }); } // every 6th cycle
     for (const x of fxFire(s, 'struck', { do: 'taken%', atk, amount: pre, lands })) { cut *= Math.max(0, 1 - x.value / 100); emit(s, 'blocked', `${x.name || x.it.name}: ${atk.name} deals ${x.value}% less damage.`, { source: p.id, ...firedOf([x]) }); } // Read-Only
     // Pressure Relief: an attack you delayed, landing late. Tourniquet: a siphon.
     for (const x of [atk.late?.due === e.cycle && fxHas(s, 'delayed-less'), atk.siphon && fxHas(s, 'siphon-less')].filter(Boolean)) { cut *= Math.max(0, 1 - fxVal(x) / 100); emit(s, 'blocked', `${fxWho(x)}: ${atk.name} deals ${fxVal(x)}% less damage.`, { source: p.id, ...firedOf([x]) }); }
@@ -4253,7 +4422,7 @@ function landAttack(s, p) {
     }
     // Leech: the bite heals its most damaged part and clears a burn from it.
     if (dealt && atk.siphon) {
-      const hurt = livingParts(s).filter((x) => !implanted(s, x)).sort((a, b) => a.integrity / a.max - b.integrity / b.max)[0];
+      const hurt = livingParts(s).filter((x) => !implanted(s, x) && !mendless(s, x)).sort((a, b) => a.integrity / a.max - b.integrity / b.max)[0];
       if (hurt) {
         const got = Math.min(fxHas(s, 'siphon-less') ? Math.round(dealt / 2) : dealt, hurt.max - hurt.integrity); // Tourniquet: half the heal
         hurt.integrity += got;
@@ -4801,6 +4970,7 @@ function cycleFx(s) {
     emit(s, 'status', `${x.name || x.it.name}: a helper joins you on the ${t.name}, dealing ${dmg} every cycle for ${n} cycles.`, { target: t.id, mark: 'helper', ...firedOf([x]) });
   }
   midCycle(s);
+  jpAllies(s); // ILOVEYOU, Mirai (docs/jackpots.md)
   noteSignal(s);
 }
 // The end of a cycle once the attacks are in: patches, cooldown effects, the turn over.
@@ -4812,7 +4982,7 @@ function cycleClose(s, landed) {
   for (const p of livingParts(s)) {
     if (p.maxArmor > 0 && p.armor === 0 && p.patchAt !== null && e.cycle >= p.patchAt && p.revokedUntil >= e.cycle) { p.patchAt = e.cycle + 1; emit(s, 'status', `${p.name}'s patch is revoked. It cannot sign it.`, { target: p.id }); continue; } // Revoke (Sysop)
     if (p.maxArmor > 0 && p.armor === 0 && p.patchAt !== null && e.cycle >= p.patchAt && p.bleachUntil >= e.cycle) { p.patchAt = e.cycle + 1; continue; } // Bleach (a legend)
-    if (p.maxArmor > 0 && p.armor === 0 && p.patchAt !== null && e.cycle >= p.patchAt) {
+    if (p.maxArmor > 0 && p.armor === 0 && p.patchAt !== null && e.cycle >= p.patchAt && !mendless(s, p)) { // mendless: Conficker holds it back
       p.armor = 1;
       p.patchAt = null;
       p.repatched = true; // Late Fee (target-repatched)

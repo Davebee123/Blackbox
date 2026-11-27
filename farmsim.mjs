@@ -5,7 +5,8 @@
 // two damage), and the same without its tank, its healer, its SIGINTs or a damage dealer, and smaller
 // crews. The bosses are crew bosses (raid.mjs): GAME_RULES.md "Bosses" has what each role does in each phase.
 import { fresh, command, resolveCycle, active, addItem, hooks, subOf } from './dist/combat.mjs';
-import { rollItem, seeded, protocolSlots, SLOT_KINDS, chaseStat } from './dist/gear.mjs';
+import { rollItem, seeded, protocolSlots, SLOT_KINDS, chaseStat, JACKPOT } from './dist/gear.mjs';
+JACKPOT.on = false; // the bots never roll a jackpot or a head start (docs/jackpots.md)
 import { SUBS } from './dist/data.mjs';
 import { planner } from './dist/planner.mjs';
 import { play } from './dist/run.mjs';

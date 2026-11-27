@@ -287,7 +287,7 @@ export const ZERO_DAYS = {
 // Each faction's name for its chase line (the rarity's name on the item; Halcyon's is Indemnified).
 export const CHASE_LINE = { halcyon: 'Indemnified', kestrel: 'Bonded', glassjaw: 'Off-book', lantern: 'Broadcast', nullchoir: 'Unsigned' };
 // A set piece names its set where a unique names its rarity (Diablo 2's way: *Catchment · Exploit*, not *Zero-day*).
-export const rarityName = (it) => (it?.unique && SET_NAME[it.unique] ? SET_NAME[it.unique] : it?.rarity === 'indemnified' ? CHASE_LINE[ZERO_DAYS[it.zeroDay]?.faction || 'halcyon'] : RARITIES[it?.rarity]?.name || '');
+export const rarityName = (it) => (it?.unique && SET_NAME[it.unique] ? SET_NAME[it.unique] : it?.tier === 'jackpot' ? 'Hall of Fame' : it?.rarity === 'indemnified' ? CHASE_LINE[ZERO_DAYS[it.zeroDay]?.faction || 'halcyon'] : RARITIES[it?.rarity]?.name || '');
 // The colour an item shows in: a set piece (one listed in a set) in set green, whatever its rarity; the rest by rarity.
 const SET_PIECES = new Set((SET_TEXT.sets || []).flatMap((x) => x.pieces || []));
 const SET_NAME = Object.fromEntries((SET_TEXT.sets || []).flatMap((x) => (x.pieces || []).map((p) => [p, x.name])));
@@ -320,6 +320,14 @@ export const LOOT = {
   minor: 0.5, // a small reward's item (Mapped, a dead drop) is a blue this often, else a white
   rolls: { bounty: 2 }, // a contract's named target rolls twice (the best kept), the rest once (a Pit's folders roll again after: rogue.mjs)
   depthBonus: 0.25, // per old layer past the first (layerOf), on blue and yellow odds
+};
+// The two rarer unique tiers (docs/jackpots.md), a roll of their own on every kill (combat.mjs jackpotDrop): a head start
+// on its floor and the next, a Hall of Fame on its floor and deeper. odds: one of a floor's pair, a kill; elite, boss: ×.
+// deeper: a Hall of Fame's odds past its own floor. on: the sims switch it off (bot.mjs, roomsim.mjs, farmsim.mjs).
+export const JACKPOT = {
+  on: true,
+  headstart: { odds: 1 / 1500, elite: 5, boss: 5, reach: 1 },
+  jackpot: { odds: 1 / 40000, elite: 10, boss: 50, deeper: 0.1 },
 };
 // One roll's odds for a tier (trash, elite, rare).
 export const lootOdds = (tier = 'trash') => LOOT.odds[tier] || LOOT.odds.trash;
@@ -486,7 +494,7 @@ export function uniqueItem(u, level, rand, { raw = false } = {}) {
   for (const [stat, v] of Object.entries(u.secondary || {})) addStats(stats, { [stat]: Math.max(1, round(stat, (Array.isArray(v) ? v[0] + (v[1] - v[0]) * rand() : v) * q)) });
   addStats(stats, u.downside);
   const own = u.faction && IMPLICITS[u.faction] ? { implicit: u.faction, implicitValue: implicitValue(u.faction, L, IMPLICIT.piece) } : {}; // a faction piece: its faction's implicit, stronger
-  const it = liftItem({ kind: 'protocol', side: 'hacker', group: slot, base: best, rarity: 'zeroday', level: L, stats, affixes: [], zeroDay: null, unique: u.id, name: u.name, ...own });
+  const it = liftItem({ kind: 'protocol', side: 'hacker', group: slot, base: best, rarity: 'zeroday', level: L, stats, affixes: [], zeroDay: null, unique: u.id, name: u.name, ...own, ...(u.tier ? { tier: u.tier } : {}) }); // tier: a jackpot or a head start (docs/jackpots.md)
   return raw ? it : floorToYellow(it);
 }
 // A good yellow's stat score at a level, by slot (levels 1–50 in order): the top quarter of 400 seeded yellows (rollItem,
@@ -504,12 +512,24 @@ export const statScore = (st) => Object.entries(st || {}).reduce((n, [k, v]) => 
 export const goodYellow = (L, slot) => { const t = GOOD_YELLOW[slot] || GOOD_YELLOW.script; return t[Math.min(t.length, Math.max(1, Math.round(L || 1))) - 1]; };
 // A unique's stats come to at least a good yellow's at its level and slot, its effect on top, so every unique is a little
 // stronger than a yellow (docs/loot-plan.md). A set piece keeps its own rule (about a good blue). It only ever raises.
+// A jackpot or a head start (its tier, docs/jackpots.md) lands on its multiple of a good yellow, up or down: floored, then
+// its finest stat a point at a time until it is there. Within TIER_MULT.near it is left alone, so it is safe to run twice.
+export const TIER_MULT = { headstart: 1.5, jackpot: 1.3, near: 0.02 };
 export function floorToYellow(it) {
   if (!it?.unique || SET_PIECES.has(it.unique) || !it.stats) return it;
-  const want = goodYellow(it.level, BASES[it.base]?.slot || it.group), have = statScore(it.stats);
-  if (!(have > 0) || have >= want) return it;
-  const f = want / have;
-  for (const k of Object.keys(it.stats)) if (it.stats[k] > 0) it.stats[k] = Math.ceil(it.stats[k] * f); // up, so small numbers clear it
+  const k = TIER_MULT[it.tier] || 1, want = goodYellow(it.level, BASES[it.base]?.slot || it.group) * k, have = statScore(it.stats);
+  if (!(have > 0)) return it;
+  if (k === 1) {
+    if (have >= want) return it;
+    const f = want / have;
+    for (const key of Object.keys(it.stats)) if (it.stats[key] > 0) it.stats[key] = Math.ceil(it.stats[key] * f); // up, so small numbers clear it
+    return it;
+  }
+  if (Math.abs(have / want - 1) <= TIER_MULT.near) return it;
+  const f = want / have, keys = Object.keys(it.stats).filter((key) => it.stats[key] > 0 && STATS[key]?.base && !NON_COMBAT.has(key));
+  for (const key of keys) it.stats[key] = Math.max(1, Math.floor(it.stats[key] * f));
+  const fine = keys.sort((a, b) => STATS[b].base - STATS[a].base)[0];
+  while (fine && statScore(it.stats) < want) it.stats[fine]++;
   return it;
 }
 // The uniques you hold come up to that floor too (it only raises, so it is safe on every load).

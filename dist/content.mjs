@@ -349,6 +349,27 @@ export const FX_DO = {
   'first-shield-x2': { when: ['custom'], label: 'doubles your first shield each fight' },
   // Floor 7 (docs/floor-items.md).
   'break-less': { when: ['custom'], label: 'makes damage from a part breaking deal X% less to you', value: true },
+  // Jackpots and head starts (docs/jackpots.md). Each writes its own text.
+  'cap+': { when: ['always'], label: "raises your stat's cap by X", value: true, stat: true },
+  'opener-hit%': { when: ['custom'], label: 'makes your first hit each fight deal X% more', value: true },
+  'first-skill-cd': { when: ['custom'], label: 'makes your first skill each fight come back X cycles sooner', value: true },
+  'parts-hit%': { when: ['custom'], label: 'adds X% damage for each different part you hit, up to its cap', value: true },
+  'nth-hit%': { when: ['custom'], label: 'makes every Nth hit deal X% more', value: true }, // N: every
+  'splash%': { when: ['custom'], label: 'makes each of your hits also hit another part for X%', value: true },
+  'nth-skill-twice': { when: ['custom'], label: 'makes every Xth damaging skill you use hit twice', value: true },
+  'hit-mark%': { when: ['custom'], label: 'makes each hit on a part make it take X% more from you for the fight', value: true },
+  'sixth-cycle': { when: ['custom'], label: 'doubles your hits and halves attacks on you every Xth cycle', value: true },
+  'long-status': { when: ['custom'], label: 'makes the burns, helpers, Jams and Tags you put on a part last twice as long' },
+  'turn-first': { when: ['custom'], label: 'turns the first part to attack you each fight onto the virus for X cycles', value: true },
+  'crit-x2': { when: ['custom'], label: 'doubles your critical strike chance' },
+  'all-cd': { when: ['custom'], label: 'reduces all your cooldowns by X cycles (never under 1)', value: true },
+  'redirect-nth': { when: ['custom'], label: "lands every Xth attack on you on one of the virus's parts", value: true },
+  'no-mend': { when: ['custom'], label: "stops parts you hit from healing or patching their ◆ for X cycles", value: true },
+  'hit-sap%': { when: ['custom'], label: 'makes parts you hit deal X% less damage for the fight', value: true },
+  'bleed%': { when: ['custom'], label: "makes each hit take X% of its part's max Integrity and give it to you", value: true },
+  'broken-fight': { when: ['custom'], label: 'makes each part you break fight for you for X cycles', value: true },
+  'crit-pierce': { when: ['custom'], label: 'makes your critical strikes ignore ◆ and spread to the next part to attack at X%', value: true },
+  'shield-on%': { when: ['custom'], label: 'makes the shields you raise X% larger', value: true },
 };
 export const FX_SCALE = { '': 'flat', cycles: 'for each cycle the fight has lasted', contracts: 'for each contract you hold', broken: 'for each part broken this fight', reads: 'for each tell you answered this fight',
   chits: 'for each ◆ you hold', crew: 'for each crewmate in the fight', missing: 'for each 10% of your health you are missing', sets: 'for each set bonus you have active',
@@ -366,7 +387,9 @@ export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a str
   // Faction pieces only (faction-gear.mjs): assembled at the faction's hub from three parts, a part a feud won for it.
   feud: 'Feuds won for its faction (its parts, assembled at its hub)',
   // Earned pieces only (earned.mjs): a floor's goal, its count in the Ledger.
-  feat: "A floor's feat (floor: the floor; its goal is the piece's earn)" };
+  feat: "A floor's feat (floor: the floor; its goal is the piece's earn)",
+  // Jackpots and head starts only (docs/jackpots.md): any kill, at long odds, on its floor (combat.mjs jackpotDrop).
+  jackpot: 'Any kill on its floor, at long odds (a head start: and the next; a Hall of Fame: and deeper)' };
 // A source can name the floor it drops on (floor: 7 is The Sink): a vault, a lair, a rare spawn, a thread or a puzzle
 // board there and nowhere else. planned: the source it moves to once that is built (docs/loot-plan.md Decisions).
 
