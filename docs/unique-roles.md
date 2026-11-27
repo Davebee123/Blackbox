@@ -1,7 +1,8 @@
 # What each unique is for
 
-A unique is about a good yellow in its own situation (the designer, November 2026): a yellow's base, two secondary stats
-where a yellow has its affixes, and its effect where a yellow has its rule. Its *why* is its tooltip's answer line
+A unique is a little stronger than a yellow (the designer, November 2026): its stats at least a good yellow's at its
+level and slot, its effect on top (gear.mjs `floorToYellow`). The table below was measured before that floor, when a
+unique was about a good yellow counting its effect; every unique has gained since. Its *why* (kept off its card) is its reason
 (content/items.mjs `why`, view.mjs uniqueWhy). `node unisim.mjs` measures it.
 
 ## How it's measured

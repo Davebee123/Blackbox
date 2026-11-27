@@ -2117,7 +2117,7 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .silk-stats .neg dd { color: var(--hot); } .silk-stats .zero dd { color: var(--dim); font-weight: 500; }
 .silk-stats .silk-d { font: 12px var(--mono); color: var(--dim); } .silk-stats .silk-d.up { color: var(--you); } .silk-stats .silk-d.down { color: var(--hot); }
 .silk-lost { margin: 0; font: 12px var(--mono); color: var(--hot); }
-.silk-fx { margin: 0; font-size: 13px; color: var(--text); max-width: none; }
+.silk-fx { margin: 0; font-size: 13px; color: var(--bright); max-width: none; border-left: 2px solid var(--edge, var(--r-zeroday)); padding: 2px 0 2px 10px; } /* the effect: a rule in the item's colour (the *Rule*) */
 .silk-fx b { color: var(--r-zeroday); font-weight: 600; }
 .silk-flavour { color: var(--muted); font-size: 12px; }
 .pg-detail .set-lines { margin-top: 2px; }
@@ -3206,6 +3206,7 @@ button.path-now:hover .path-t, button.path-now:focus-visible .path-t, .path-now.
 .ptip-card { width: 290px; display: grid; gap: 8px; padding: 12px 14px; background: rgba(10, 8, 5, 0.97); border: 1px solid var(--line-strong); border-top: 2px solid currentColor; border-radius: 4px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); color: var(--r-stock); }
 .ptip-card.r-scrap { color: var(--r-scrap); } .ptip-card.r-tuned { color: var(--r-tuned); } .ptip-card.r-custom { color: var(--r-custom); } .ptip-card.r-zeroday, .ptip-card.r-indemnified { color: var(--r-zeroday); }
 .ptip-card.r-set { color: var(--r-set); }
+.ptip-card.r-scrap { --edge: var(--r-scrap); } .ptip-card.r-tuned { --edge: var(--r-tuned); } .ptip-card.r-custom { --edge: var(--r-custom); } .ptip-card.r-zeroday, .ptip-card.r-indemnified { --edge: var(--r-zeroday); } .ptip-card.r-set { --edge: var(--r-set); }
 .ptip-art { margin: 0; max-height: none; overflow: visible; justify-self: start; font: 11px/1 var(--mono); letter-spacing: 0.05em; color: currentColor; text-shadow: 0 0 6px currentColor; opacity: 0.95; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.04), transparent 70%); padding: 4px 6px; }
 .ptip-body { display: grid; gap: 3px; color: var(--text); }
 .ptip-body .iname { font-size: 15px; }
@@ -3215,7 +3216,7 @@ button.path-now:hover .path-t, button.path-now:focus-visible .path-t, .path-now.
 .ptip-body .impl { display: block; } /* its text wraps back to the left edge, under the icon */
 .ptip-body .impl .glyph { display: inline-block; vertical-align: -2px; margin-right: 6px; }
 .ptip-body em { color: var(--muted); font-size: 11px; margin-top: 4px; }
-.ptip-body > small.zd { color: var(--text); font: 13px var(--sans); margin-top: 2px; } /* the effect reads as rules text; flavour stays muted */
+.ptip-body > small.zd { color: var(--bright); font: 13px var(--sans); margin-top: 2px; border-left: 2px solid var(--edge, var(--r-zeroday)); padding: 1px 0 1px 8px; } /* the effect reads as rules text, on a rule in the item's colour (the *Rule*); flavour stays muted */
 .ptip-body > small.zd b { color: var(--r-zeroday); font-weight: 600; }
 .inv-card .inv-state { display: flex; align-items: center; gap: 8px; margin: 6px 0 4px; }
 .inv-card .inv-state b { font: 600 12px var(--mono); color: var(--text); }
@@ -3508,7 +3509,6 @@ details.map-pick { pointer-events: auto; }
 .sb.on { color: var(--r-set); }
 .sb.blocked em { font-style: normal; color: var(--dim); }
 .sb.sub { padding-left: 10px; } /* a class set's subclass line, under its 4-piece bonus */
-.u-why { display: block; color: var(--dim); font-size: 11px; margin-top: 2px; } /* what a unique is for: its answer line (style guide 2.7) */
 .set-why { display: block; margin-top: 3px; padding-top: 3px; border-top: 1px solid var(--line); color: var(--dim); font-size: 11px; } /* what the set is for: the tooltip's answer line (style guide 2.7) */
 .sg { color: var(--gray); } /* a piece's green line: set green once it and another piece of its set are loaded */
 .sg.on { color: var(--r-set); }

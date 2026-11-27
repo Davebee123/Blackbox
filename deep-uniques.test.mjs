@@ -99,9 +99,9 @@ test('Batches 1 and 2: all 70 uniques, each with the plan\'s name, slot, level, 
     assert.ok(u.flavour && !/break.?in|keyhole|breach|way in|intru/i.test(u.flavour), `${name}: flavour`);
     for (const part of ['primary', 'secondary']) for (const [k, v] of Object.entries(u[part] || {})) for (const x of [].concat(v)) assert.ok(Number.isInteger(x), `${name}: whole numbers (${k})`);
     // A sidegrade: its slot's best base at its level, a little more in Bedrock, never far past it.
-    const it = uniqueItem({ ...u, secondary: {} }, level, seeded(3));
+    const it = uniqueItem({ ...u, secondary: {} }, level, seeded(3), { raw: true });
     const main = slot === 'exploit' ? 'damage' : 'signal';
-    const base = uniqueItem({ ...u, primary: {}, secondary: {}, downside: {} }, level, seeded(3)).stats[main];
+    const base = uniqueItem({ ...u, primary: {}, secondary: {}, downside: {} }, level, seeded(3), { raw: true }).stats[main];
     assert.ok(it.stats[main] >= base * 0.95 && it.stats[main] <= base * (level >= 45 ? 1.25 : 1.1), `${name}: ${it.stats[main]} against a base's ${base}`);
   }
   // No rule names a virus, a gene, a guard or a boss.

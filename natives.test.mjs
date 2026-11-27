@@ -24,10 +24,11 @@ const SLACK = 4;
 const WINS = (b) => (b.level >= 18 ? 0.7 : 0.8);
 // With the talent tiers Brood Tap moves the Lv 30 average 4.5 to 6.6 (with the bots' picks): held at 7.
 const TIER_MOVES = { 'quiet-wire': 5, preempt: 6.5, 'blank-check': 5, 'brood-tap': 7 };
-// A unique is about a good yellow (the designer, November 2026: docs/unique-roles.md), so against the blue it replaces it
-// may make a bracket's average up to 6.5 points easier; harder, still 4.5 at most.
-const EASIER = 6.5;
-test('native uniques keep the bands: about a good yellow, never past the band', () => {
+// A unique is a little stronger than a yellow (the designer, November 2026: its stats at least a good yellow's, its
+// effect on top), so against the blue it replaces it may make a bracket's average up to 9 points easier (6.5 when a
+// unique was about a yellow); harder, 4.5 at most. Faction pieces likewise.
+const EASIER = 9;
+test('native uniques keep the bands: a little stronger than a yellow, never past the band', () => {
   const CLASSES = ['Breaker', 'Bastion', 'Infiltrator', 'Operator'];
   const SUBS = CLASSES.flatMap((c) => Object.keys(ARCHETYPES[c.toLowerCase()].subs).map((sub) => [c, sub]));
   const off = [];
@@ -46,7 +47,7 @@ test('native uniques keep the bands: about a good yellow, never past the band', 
         if (r.wins < WINS(b) * r.total) off.push(`${id} ${sub} ${b.name} ${r.wins}/${r.total}`);
       }
       const m = d / SUBS.length;
-      if (m > (TIER_MOVES[id] ?? 4.5) || -m > (TIER_MOVES[id] ?? EASIER)) off.push(`${id} ${b.name} moves the average ${m.toFixed(1)}`);
+      if (m > (TIER_MOVES[id] ?? 4.5) || -m > Math.max(TIER_MOVES[id] ?? 0, EASIER)) off.push(`${id} ${b.name} moves the average ${m.toFixed(1)}`);
     }
   }
   assert.deepEqual(off, []);
@@ -58,7 +59,7 @@ const HOT = { 'blank-check phantom 10': { lost: 60, wins: 0.75 } };
 const MOVES = { 'umbrella-policy': 6 }; // 5.5 → 6: since step 2 (docs/scaling.md) it measures 5.5
 // The faction pieces (faction-gear.mjs) are held to the same bounds: each one, its implicit and its signature in, in place
 // of the blue in its slot at 10, 18 and 30 (it is assembled, and re-tuned, at your level), on every subclass.
-test('faction pieces keep the bands too: sidegrades, not upgrades', async () => {
+test('faction pieces keep the bands too: a little stronger than a yellow, never past the band', async () => {
   const { PIECES } = await import('./dist/faction-gear.mjs');
   const SUBS = ['Breaker', 'Bastion', 'Infiltrator', 'Operator'].flatMap((c) => Object.keys(ARCHETYPES[c.toLowerCase()].subs).map((sub) => [c, sub]));
   const off = [];
@@ -72,7 +73,8 @@ test('faction pieces keep the bands too: sidegrades, not upgrades', async () => 
         if (r.lost < soloBand(sub, b.level)[0] - SLACK || r.lost > (HOT[`${u.id} ${sub} ${b.level}`]?.lost ?? 52)) off.push(`${u.id} ${sub} ${b.name} ${r.lost.toFixed(0)}%`);
         if (r.wins < (HOT[`${u.id} ${sub} ${b.level}`]?.wins ?? WINS(b)) * r.total) off.push(`${u.id} ${sub} ${b.name} ${r.wins}/${r.total}`);
       }
-      if (Math.abs(d / SUBS.length) > (MOVES[u.id] ?? TIER_MOVES[u.id] ?? 4.5)) off.push(`${u.id} ${b.name} moves the average ${(d / SUBS.length).toFixed(1)}`);
+      const m = d / SUBS.length, cap = MOVES[u.id] ?? TIER_MOVES[u.id] ?? 4.5;
+      if (m > cap || -m > Math.max(cap, EASIER)) off.push(`${u.id} ${b.name} moves the average ${m.toFixed(1)}`);
     }
   }
   assert.deepEqual(off, []);

@@ -49,7 +49,7 @@ import { LEG, legendFired } from './legends.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, traceNear, leadOf, firstRank } from './hidden.mjs';
 import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, floorLairBosses, reached, floorCommand, floorsRestore, floorsLetter } from './floors.mjs';
 import { orphanXpMult, intelXpMult, trashItemMult, clearOddsMult } from './table.mjs';
-import { reqLevel, meetsReq, STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, liftFx, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, IMPLICITS, implicitFx, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore, curveRestore } from './gear.mjs';
+import { reqLevel, meetsReq, uniqueFloorRestore, STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, liftFx, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, IMPLICITS, implicitFx, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore, curveRestore } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
 import EARN from './content/earned.mjs';
@@ -5412,6 +5412,7 @@ export function restore(raw) {
     curveRestore(s); // the compounding curve: every item's flat stats lifted at its level, once (gear.mjs); keyed on s.curve
     setsRestore(s, was); // v45: sets: loaded protocols stamped in slot order, set pieces you hold found, the Badge beat armed (sets.mjs)
     renamedRestore(s); // the unique and set pass: eight renamed uniques you hold take their new names (sets.mjs); keyed on the old name
+    uniqueFloorRestore(s); // uniques you hold come up to a good yellow's stats (gear.mjs floorToYellow); it only raises
     subRestore(s, was); // v46: no default subclass: a class past 10 that never picked plays its core (its default's keys and talent points back)
     tiersRestore(s); // the talent tiers: old ranks and picks become tier picks where the talent survives (talents.mjs); keyed on the old fields
     repRestore(s); // one rep scale: nothing under 1 (factions.mjs); keyed on the value

@@ -1672,10 +1672,11 @@ on floor 2 and deeper hold one (`.src`), at the server's level.
 ### Uniques
 
 A unique has a fixed name, stats, flavour and usually one **effect** (a few deep ones two or three), sometimes a
-downside. It is about a good yellow in its own situation: its primaries are the best base of its slot at its item level
-×1.2 (a yellow's), or its own grown from its level, whichever is higher; it carries **two secondary stats**, sized by its
-level, where a yellow has its affixes, and its effect where a yellow has its rule; its downside never grows. Its
-tooltip's last line says what it is for (*▸ Finish parts below half.*; docs/unique-roles.md). Effects are blocks (when · if · does · limits), written in the editor. No two uniques
+downside. It is **a little stronger than a yellow**: its primaries are the best base of its slot at its item level ×1.2
+(a yellow's), or its own grown from its level, whichever is higher, with **two secondary stats** sized by its level; then
+its whole stat line comes up to at least a good yellow's at its level and slot (the top quarter of yellows, scored as the
+upgrade arrow scores stats; gear.mjs `GOOD_YELLOW`, `floorToYellow`), and its effect comes on top. A unique you hold
+comes up to it on load. A set piece keeps its own (about a good blue). Its downside never grows. On its card its effect sits on a rule in the item's colour (the *Rule*); what it is for stays in the docs (content `why`, docs/unique-roles.md). Effects are blocks (when · if · does · limits), written in the editor. No two uniques
 share an effect (one trigger, condition and payoff each); a faction piece keeps up with your level, so no other unique
 copies its signature. A **class unique** leans to a class or subclass: three times as likely for it, twice for the rest
 of its class.

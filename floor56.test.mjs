@@ -117,7 +117,7 @@ test('floors 5 and 6: seven sets and nineteen uniques, each with the plan\'s nam
     for (const [k, v] of Object.entries({ ...u.primary, ...u.secondary })) for (const x of [].concat(v)) assert.ok(Number.isInteger(x), `${name}: whole numbers (${k})`);
     // A sidegrade: its slot's best base at its level, never far past it.
     const main = slot === 'exploit' ? 'damage' : 'signal';
-    const it = uniqueItem({ ...u, secondary: {} }, level, seeded(3)).stats[main], base = uniqueItem({ ...u, primary: {}, secondary: {}, downside: {} }, level, seeded(3)).stats[main];
+    const it = uniqueItem({ ...u, secondary: {} }, level, seeded(3), { raw: true }).stats[main], base = uniqueItem({ ...u, primary: {}, secondary: {}, downside: {} }, level, seeded(3), { raw: true }).stats[main];
     assert.ok(it >= base * 0.95 && it <= base * 1.1, `${name}: ${it} against a base's ${base}`);
   }
   // Where they drop: floor 5's lair boss rolls its uniques (ACTUARY's level-40 pair once the boss is 38 or more), floor 6's
