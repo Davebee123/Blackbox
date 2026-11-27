@@ -286,9 +286,11 @@ export const ZERO_DAYS = {
 };
 // Each faction's name for its chase line (the rarity's name on the item; Halcyon's is Indemnified).
 export const CHASE_LINE = { halcyon: 'Indemnified', kestrel: 'Bonded', glassjaw: 'Off-book', lantern: 'Broadcast', nullchoir: 'Unsigned' };
-export const rarityName = (it) => (it?.rarity === 'indemnified' ? CHASE_LINE[ZERO_DAYS[it.zeroDay]?.faction || 'halcyon'] : RARITIES[it?.rarity]?.name || '');
+// A set piece names its set where a unique names its rarity (Diablo 2's way: *Catchment · Exploit*, not *Zero-day*).
+export const rarityName = (it) => (it?.unique && SET_NAME[it.unique] ? SET_NAME[it.unique] : it?.rarity === 'indemnified' ? CHASE_LINE[ZERO_DAYS[it.zeroDay]?.faction || 'halcyon'] : RARITIES[it?.rarity]?.name || '');
 // The colour an item shows in: a set piece (one listed in a set) in set green, whatever its rarity; the rest by rarity.
 const SET_PIECES = new Set((SET_TEXT.sets || []).flatMap((x) => x.pieces || []));
+const SET_NAME = Object.fromEntries((SET_TEXT.sets || []).flatMap((x) => (x.pieces || []).map((p) => [p, x.name])));
 export const shownRarity = (it) => (it?.unique && SET_PIECES.has(it.unique) ? 'set' : it?.rarity);
 export const FOUND_ZERO_DAYS = Object.keys(ZERO_DAYS).filter((z) => !ZERO_DAYS[z].chase);
 

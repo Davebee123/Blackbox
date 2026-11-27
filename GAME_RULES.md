@@ -1913,7 +1913,7 @@ five slot kinds, so a general set's 2-piece can go beside it.
 - **The tooltip** reads in WoW's grammar under the piece's effect: its green line (set green once on, grey until then),
   the set's name and count (*Kestrel Clearance (2/3)*), its pieces (??? until found), each bonus as *(2) Set: …*, and
   what the set is for as its muted answer line (*▸ Fight below half Integrity.*; the *For* column above).
-  The Loadout lists **Set bonuses**. **Set green** (`--r-set`) sits beside the rarity colours; a piece shows in set green too (its name, card, tile and glyph), whatever its rarity.
+  The Loadout lists **Set bonuses**. **Set green** (`--r-set`) sits beside the rarity colours; a piece shows in set green too (its name, card, tile and glyph), whatever its rarity, and its kind line and drop line name its set where a unique's say Zero-day (*Catchment · Exploit · Lv 37*).
 
 ### Earned pieces
 

@@ -613,7 +613,7 @@ export function addItem(s, item, why = 'Loot: ') {
   }
   const it = { ...item, id: 'g' + (s.nextItem = (s.nextItem || 0) + 1) };
   s.stash.push(it);
-  emit(s, 'drop', `${why}${itemLabel(it)}${it.unique || it.zeroDay ? ' (Zero-day)' : ''}: ${statLine(it.stats)}.`, { item: it, rarity: it.rarity, ...(it.unique && setOf(it.unique) ? { set: setOf(it.unique).id } : {}) }); // set: a set piece (bot.mjs counts them)
+  emit(s, 'drop', `${why}${itemLabel(it)}${it.unique || it.zeroDay ? ` (${it.unique && setOf(it.unique) ? setOf(it.unique).name : 'Zero-day'})` : ''}: ${statLine(it.stats)}.`, { item: it, rarity: it.rarity, ...(it.unique && setOf(it.unique) ? { set: setOf(it.unique).id } : {}) }); // set: a set piece (bot.mjs counts them)
   return it;
 }
 // Break an item down: components, code (the family it dropped from) and Exploits. Returns a summary.

@@ -896,6 +896,7 @@ test('rebasing: a set piece beside a newer piece of its set runs at that version
   assert.equal(gearStat(s, 'damage'), own - low.stats.damage + rebased.damage + (high.stats.damage || 0), 'the fight counts the rebased stats');
   assert.match(protocolDetailMarkup(s, low.id), /rebased onto v48/, 'its datasheet says so');
   assert.match(protocolDetailMarkup(s, low.id), /Tenure is one codebase/, 'and its tooltip why');
+  assert.match(protocolDetailMarkup(s, low.id), /Tenure · Implant/, 'its kind line names its set, not Zero-day');
   // An effect's flat number lifts with it: Junk Code (28) beside Decryptor (31) adds what a level-31 Junk Code would.
   const c = at(31), [junk] = wear(c, ['junk-code'], 28), alone = protocolDetailMarkup(c, junk.id);
   wear(c, ['decryptor'], 31);
