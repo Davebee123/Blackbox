@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, UNIQUES, gearStat, damageMultiplier, hitCritChance, cooldownOf, maxSignal, heal, hackerOf, usable, jackpotOdds, jackpotRoll, tierPair, floorUniques, uniqueFrom, guardedUnique, bossUniques, strainTrophies, WORLD_SOURCES } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, UNIQUES, gearStat, damageMultiplier, hitCritChance, cooldownOf, maxSignal, heal, hackerOf, usable, jackpotOdds, floorAt, jackpotRoll, tierPair, floorUniques, uniqueFrom, guardedUnique, bossUniques, strainTrophies, WORLD_SOURCES } from './dist/combat.mjs';
 import { uniqueItem, seeded, BASES, STATS, goodYellow, statScore, rarityName, JACKPOT, floorToYellow } from './dist/gear.mjs';
 import { CONFIG } from './dist/data.mjs';
 import { fxText, fxList } from './dist/content.mjs';
@@ -234,6 +234,8 @@ test('drops: a head start on its floor and the next, a Hall of Fame on its floor
   assert.ok(near(j.find((o) => o.floor === 1).odds, 1 / 400000), 'a tenth past its own floor');
   assert.ok(near(jackpotOdds(3, { elite: true }).find((o) => o.tier === 'jackpot' && o.floor === 3).odds, 10 / 40000), 'elites ×10');
   assert.ok(near(jackpotOdds(3, { boss: true }).find((o) => o.tier === 'jackpot' && o.floor === 3).odds, 50 / 40000), 'bosses ×50');
+  assert.ok(near(jackpotOdds(1, { boss: true })[0].odds, 8 / 1500), 'head starts: bosses ×8');
+  assert.deepEqual([1, 8, 9, 14, 15, 20, 26, 32, 38, 44, 50].map(floorAt), [1, 1, 2, 2, 3, 3, 4, 5, 6, 7, 8], 'the floor a mob\'s level sits on');
   // What drops, with the odds turned up: never off its floors, at the mob's level or its own.
   const was = structuredClone(JACKPOT);
   JACKPOT.headstart.odds = 0.2; JACKPOT.jackpot.odds = 0.2;
@@ -268,4 +270,20 @@ test('ordinary pools never hold them; the sims never roll them; the Ledger lists
   assert.deepEqual(tiered(strainTrophies('cryptjack', 60)), []);
   for (const f of ['bot.mjs', 'roomsim.mjs', 'farmsim.mjs']) assert.match(fs.readFileSync(f, 'utf8'), /JACKPOT\.on = false/, `${f} switches them off`);
   assert.deepEqual(homes({ kind: 'jackpot', floor: 3 }), [['floor:3', 'Any kill']]);
+});
+
+test('every won fight rolls: a fight outside the network paths (here a plain encounter) drops one too', async () => {
+  const { finish } = await import('./dist/combat.mjs');
+  const was = structuredClone(JACKPOT);
+  JACKPOT.headstart.odds = 1;
+  try {
+    const s = fresh(); hackerOf(s).level = 10;
+    selectEncounter(s, 'random', 7, { level: 10, mutation: null });
+    command(s, 'engage');
+    const before = (s.stash || []).length;
+    finish(s, 'victory');
+    const got = (s.stash || []).slice(before).find((it) => it.tier === 'headstart');
+    assert.ok(got, 'a head start in the stash');
+    assert.ok([1, 2].includes(UNIQUES[got.unique].floor), `floor ${UNIQUES[got.unique].floor} at level 10 (floor 2)`);
+  } finally { Object.assign(JACKPOT.headstart, was.headstart); Object.assign(JACKPOT.jackpot, was.jackpot); }
 });

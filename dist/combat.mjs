@@ -942,6 +942,8 @@ export function jpRand(s) {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
 // A floor's pair of a tier.
+// The floor a mob's level sits on (the floors' bands: 1–8, 7–14 … 43–50).
+export const floorAt = (level) => Math.min(8, Math.max(1, Math.ceil(((level || 1) - 2) / 6)));
 export const tierPair = (tier, floor) => Object.values(UNIQUES).filter((u) => u.tier === tier && u.floor === floor);
 // The odds a kill on a floor rolls one of a floor's pair: [{ tier, floor, odds }], the ones it can roll (JACKPOT).
 export function jackpotOdds(floor, { elite = false, boss = false } = {}) {
@@ -2463,7 +2465,6 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
     const item = rollDrop(s, ctx, lvl);
     if (item) addItem(s, item);
     killSets(s, { v, rare, floor: loc?.depth || 1 }); // set pieces (sets.mjs), straight into your stash
-    jackpotDrop(s, v, loc?.depth || 1, { elite: !!v.elite || guard }); // a jackpot or a head start, on its own dice
     nativeDrop(s, e);
     if (rand(s) < SPARE_EXPLOIT.home) gainCode(s, { exploit: 1 }, 'Exploit recovered: ');
     return { more: () => rollDrop(s, { ...ctx, strain: null }, lvl) };
@@ -2476,7 +2477,6 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
     if (item) { s.run.pack.push({ path: `${tag}/drop${n || ''}`, name: 'protocol.bin', kind: 'gear', size: '32k', item }); emit(s, 'drop', `${v.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true }); }
   }
   killSets(s, { v, key: e.key, guard, rare, floor: loc?.depth || 1, layer: layerOf(loc?.depth || 1), pack: true, path: tag }); // set pieces (sets.mjs)
-  jackpotDrop(s, v, loc?.depth || 1, { elite: !!v.elite || guard, pack: true, path: tag });
   nativeDrop(s, e, true);
   if (rand(s) < (guard ? SPARE_EXPLOIT.guard : SPARE_EXPLOIT.home)) packExploit(s, `${tag}/xp`, v.name);
   const gains = codeFrom(s, family, lvl, src);
@@ -2501,6 +2501,7 @@ export function finish(s, result) {
   if ((e.mode === 'home' || e.zone) && result === 'victory') lead = Math.round(CONFIG.leadBase * Math.min(1, xpScale(e.virus.level - hackerLevel(s))) * (e.virus.strain && e.virus.strain === hotStrain(s) ? 1 + HOT.bonus : 1));
 
   if (result === 'victory') { (s.pace ||= { kills: 0, ms: 0 }).kills++; e.fast = fastKill(s, e); } // for kills an hour (System page)
+  if (result === 'victory') jackpotDrop(s, e.virus, floorAt(e.virus.level), { elite: !!e.virus.elite || !!e.guard, pack: !!s.run, path: 'drop' }); // every kill: a jackpot or a head start, on its own dice
   // Every tell in the fight read (two or more said, each answered by a command, none landed): a clean read (tells.mjs).
   if (result === 'victory' && e.metrics.tells) { const xs = Object.values(e.metrics.tells), said = xs.reduce((n, x) => n + x.said, 0); e.cleanRead = said >= TELL.read.min && xs.every((x) => x.read >= x.said && !x.landed); }
   if (result === 'victory' && e.virus.boss) bossLoot(s, e.virus.boss, e.virus.level); // its sure item and its uniques' roll

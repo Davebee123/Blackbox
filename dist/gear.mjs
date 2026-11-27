@@ -326,7 +326,7 @@ export const LOOT = {
 // deeper: a Hall of Fame's odds past its own floor. on: the sims switch it off (bot.mjs, roomsim.mjs, farmsim.mjs).
 export const JACKPOT = {
   on: true,
-  headstart: { odds: 1 / 1500, elite: 5, boss: 5, reach: 1 },
+  headstart: { odds: 1 / 1500, elite: 5, boss: 8, reach: 1 },
   jackpot: { odds: 1 / 40000, elite: 10, boss: 50, deeper: 0.1 },
 };
 // One roll's odds for a tier (trash, elite, rare).

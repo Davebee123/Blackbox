@@ -96,7 +96,7 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - player card: the *NET ID badge*;
   - collection log: the *Ledger*;
   - an item's effect on its card and tooltip: the *Rule* (a 2px rule down it in the item's colour, its text a step
-    brighter; *Frame* and *Type* were the alternatives); a unique's reason (`why`) stays off its card;
+    brighter; *Frame* and *Type* were the alternatives); a unique's or set's reason (`why`) stays off the card;
   - journals: one Ledger entry, a timeline over the writers, a document card on the first find (docs/journals.md);
   - runners on the map: the *Diamonds* (one small paper-white diamond under a place you've revealed that has runners,
     how many beside it from two up, a hollow one each on the road; none under a ? or anywhere else you haven't
@@ -170,7 +170,7 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **Rested XP** comes only from time logged off. There is no catch-up XP.
 - **Item power** (November 2026): a unique is a little stronger than a yellow: its stats at least a good yellow's at
   its level and slot (gear.mjs `floorToYellow`), its effect on top. A set piece is about a good blue, a full set the payoff. Every unique and set has
-  one reason to wear it (its `why`: off a unique's card, a set's answer line; docs/unique-roles.md, docs/set-roles.md), and serves one power
+  one reason to wear it (its `why`, kept off the card; docs/unique-roles.md, docs/set-roles.md), and serves one power
   fantasy or purpose, with Diablo 2 and WoW as the North Star (docs/item-fantasies.md).
 - **Unlocks:** cosmetic unlocks (districts, boots, prompts, desk props, mastery looks) come from achievements, not
   from server floors.

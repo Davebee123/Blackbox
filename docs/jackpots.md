@@ -4,7 +4,7 @@ Two rarer unique tiers (the designer, November 2026; prototype cards approved). 
 little stronger than a yellow (gear.mjs `floorToYellow`), each with a reason to wear it.
 
 **Built** (November 2026): content `tier`, `floor`, `year`; gear.mjs `JACKPOT` (the odds), `TIER_MULT`; combat.mjs
-`jackpotDrop` (on every kill, on dice of its own) and the effects (`jp*`); jackpots.test.mjs. Changed from the spec:
+`jackpotDrop` (on every won fight, from `finish`: network, guard, rooms and crew kills alike; the floor from the mob's level band, `floorAt`; on dice of its own) and the effects (`jp*`); jackpots.test.mjs. Changed from the spec:
 
 - Elk Cloner counts damaging skills: *Every 5th damaging skill you use hits twice* (its hit repeats at full).
 - ILOVEYOU and Storm Worm never turn a tell. The turned part hits the next part to attack at each cycle's end, and its
@@ -18,7 +18,7 @@ little stronger than a yellow (gear.mjs `floorToYellow`), each with a reason to 
 
 | Tier | Stats (× a good yellow, `goodYellow`) | Effect | Drops | Odds a kill |
 |---|---|---|---|---|
-| Head start | ×1.5 | one small combat extra | any mob on its floor and the next, at the mob's level | 1 in 1,500 for one of its floor's pair; elites ×5 |
+| Head start | ×1.5 | one small combat extra | any mob on its floor and the next, at the mob's level | 1 in 1,500 for one of its floor's pair; elites ×5, bosses ×8 |
 | Hall of Fame (jackpot) | ×1.3 | a big effect any class uses | any mob on its floor or deeper, at the mob's level | 1 in 40,000 for one of its floor's pair; elites ×10, bosses ×50; a tenth on deeper floors |
 
 - **Level:** each item's own level is listed below; it never arrives under it. Requirement as every item (`reqLevel`).

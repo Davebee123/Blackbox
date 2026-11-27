@@ -659,7 +659,7 @@ test('a class set: anyone wears its 2- and 3-piece and the 4-piece\'s base line;
   assert.match(tip, /<span class="sb sub on"[^>]*>Demolitionist: Overkill spills 40 more\.<\/span>/);
   assert.match(tip, /<span class="sb sub"[^>]*>Overclocker: You gain 2 Momentum\.<\/span>/);
   assert.match(protocolStatsCard(demo), /<span class="sb sub on">Demolitionist: Overkill spills 40 more\.<\/span>/);
-  assert.match(tip, /<small class="set-why">▸ Chain breaks as a Breaker\.<\/small>/, 'what the set is for, as the answer line');
+  assert.doesNotMatch(tip, /set-why|Chain breaks as a Breaker/, 'what the set is for stays off the card');
 });
 
 test('Kestrel pieces held from save v45 keep working, as the retuned set', () => {

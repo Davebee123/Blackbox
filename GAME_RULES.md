@@ -1783,7 +1783,7 @@ of its class.
   (Tripwire, Honeynet, Sinkhole: Captures) and **strain trophies** (1 in 10,000 kills of a strain drops its own, Keylogger
   → Logger Spool and so on; a slayer streak's reward rolls for it outright).
 - **Story and contracts** can give a unique (killing claimjack gives wick's Old Toolkit).
-- **Jackpots and head starts** (docs/jackpots.md; `tier` in content, combat.mjs `jackpotDrop`): two rarer tiers, each a
+- **Jackpots and head starts** (docs/jackpots.md; `tier` in content, combat.mjs `jackpotDrop`, rolled on every won fight, its floor from the mob's level band): two rarer tiers, each a
   pair a floor. A **head start** (floors 1–4, levels 4–24) lands at 1.5 good yellows with one small extra; a **Hall of
   Fame** jackpot (floors 1–8, levels 8–50, a real worm each) at 1.3 with a big effect any class uses, its kind line
   *Hall of Fame*, its flavour ending with its year. `floorToYellow` sets them to their multiple, up or down. They roll on
@@ -1807,7 +1807,7 @@ yellow, its epic our gold). Targets, at about 150 kills an hour of real play (`L
 | **Crew bosses** | a yellow every kill, its uniques at 30% +10% a miss, 10% a world unique |
 | **Quests** (a contract's bonus, the storyline) | a blue, a yellow one time in ten |
 | **Small rewards** (Mapped) | a white or a blue, half and half |
-| **Head starts** (any kill, its floor and the next) | 1 in 1,500 for one of a floor's pair; elites and bosses ×5 |
+| **Head starts** (any kill, its floor and the next) | 1 in 1,500 for one of a floor's pair; elites ×5, bosses ×8 |
 | **Hall of Fame** (any kill, its floor or deeper) | 1 in 40,000 for one of a floor's pair; elites ×10, bosses ×50; a tenth past its floor |
 
 - **One roll each.** A guard rolls once; the story's named target twice, keeping the best. Reading every tell adds a
@@ -1831,7 +1831,7 @@ is its version (*Gully v37*), so a piece loaded beside a newer piece of its set 
 says *rebased onto v44* in set green, its tooltip why, and its ▲ ▼ compare as worn; alone a piece runs at its own version
 (`sets.mjs` `rebaseLevel`). A set's bonuses open at 2, 3 and 4 loaded pieces.
 **Only one 4-piece bonus** is active at a time: the set whose fourth piece went on first keeps it. Set Clock Speed
-counts toward the 25% cap. Each set has one reason to wear it (*For*, its tooltip's answer line), and its numbers pay most
+counts toward the 25% cap. Each set has one reason to wear it (*For*, kept off its card), and its numbers pay most
 there (docs/set-roles.md, `setsim.mjs`).
 
 **Tier sets** (one a class, the end-game gear): every piece is a **level-50** item (its slot's best base ×1.1), and
@@ -1919,8 +1919,8 @@ five slot kinds, so a general set's 2-piece can go beside it.
   planner's clock (docs/floor-items.md).
 - **The LOWLIGHT Badge** comes with wick's last letter at level 22 (Mail), with wick's Old Toolkit rebuilt at your level. The Toolkit can't be deconstructed, and a full stash still takes it.
 - **The tooltip** reads in WoW's grammar under the piece's effect: its green line (set green once on, grey until then),
-  the set's name and count (*Kestrel Clearance (2/3)*), its pieces (??? until found), each bonus as *(2) Set: …*, and
-  what the set is for as its muted answer line (*▸ Fight below half Integrity.*; the *For* column above).
+  the set's name and count (*Kestrel Clearance (2/3)*), its pieces (??? until found) and each bonus as *(2) Set: …*;
+  what the set is for stays off the card (the *For* column above).
   The Loadout lists **Set bonuses**. **Set green** (`--r-set`) sits beside the rarity colours; a piece shows in set green too (its name, card, tile and glyph), whatever its rarity, and its kind line and drop line name its set where a unique's say Zero-day (*Catchment · Exploit · Lv 37*).
 
 ### Earned pieces
