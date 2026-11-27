@@ -36,6 +36,7 @@ import { portraitMarkup } from './portraits.mjs';
 import { journalCardMarkup } from './journals-view.mjs';
 import { JOURNAL_BY } from './journals.mjs';
 import { powerOn } from './poweron.mjs';
+import { aiNote } from './ainote.mjs';
 import { warmGame } from './warm.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
@@ -652,7 +653,7 @@ const outside = (() => {
 })();
 if (params.get('tod')) outside.hour(params.get('tod'));
 let outsideRain = 0, outsideShown = false, lastVols = '';
-// First launch (or after Reset game): the cold open (coldopen.mjs), log in, then Halcyon's transmission.
+// First launch (or after Reset game): the AI note (ainote.mjs, once per browser), the power-up, the cold open (coldopen.mjs), log in, then Halcyon's transmission.
 const intro = createIntro({ key: (k) => feel.key(k), sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() });
 let introOn = false, coldOn = false;
 // The game's own room tone, music and places hold off while the cold open plays its mix.
@@ -671,7 +672,7 @@ function coverUp() {
 function firstLogin() {
   introOn = true;
   const uncover = coverUp();
-  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove(), warm: (progress) => warmGame({ audio: !!campaign.settings.sound, progress }), version: DEMO ? `demo ${DEMO.version}` : '' }).then(playColdOpen).then(() => intro.run()).then(({ handle, pwLen }) => {
+  aiNote({ reducedMotion: () => !canMove() }).then(() => powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove(), warm: (progress) => warmGame({ audio: !!campaign.settings.sound, progress }), version: DEMO ? `demo ${DEMO.version}` : '' })).then(playColdOpen).then(() => intro.run()).then(({ handle, pwLen }) => {
     campaign.profile = { ...campaign.profile, handle, pwLen, since: Date.now() };
     return pickClass();
   }).then(() => (PRACTICE.offer || params.has('practice') ? practice() : null)).then(() => {

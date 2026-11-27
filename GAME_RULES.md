@@ -7,7 +7,7 @@ Design plans live in `docs/`; the code map is README.md.
 
 ### First launch
 
-Every session opens with the power-up (the Horizon): the monitor comes on, a line of light spreads across it, the
+A browser's first new game opens with a card on how the game was made (with Claude); **I understand** goes on, and it never shows again in that browser. Every session opens with the power-up (the Horizon): the monitor comes on, a line of light spreads across it, the
 black box stands on it, its outline draws itself round while the game loads its sounds (the *Trace*), then its light
 leaks round the edges, BLACKBOX settles low on the screen, and **Press any key** waits (a tap on a phone). A key
 while it's coming on lands the picture at once; the prompt waits for the outline, never more than 6 s. A new game first plays the cold open (about

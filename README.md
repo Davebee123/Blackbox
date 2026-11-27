@@ -208,6 +208,7 @@ comment saying what it does.
 | `dist/scanner.mjs`, `dist/scanner-view.mjs`, `dist/scanner.css` | The scanner: the Listening Post (its map node, card and hub terminal), the stations, Tune's pad (search, lock, symbols; pure rules in scanner.mjs, the SVG pad and its sound in scanner-view.mjs), the tape and what each pays. |
 | `dist/quest-view.mjs`, `dist/quest.css` | The quest window: a thread as an intercepted transmission. |
 | `dist/portraits.mjs` | Backlit ASCII busts: the quest window's speaker (the cast's own or one from their name) and a runner's on their card (from the handle alone). |
+| `dist/ainote.mjs` | First launch: the AI note before the power-up, once per browser (`bb-ai-note`). |
 | `dist/coldopen.mjs` | First launch: the cold open (KESSLER's clearing house crashing), its own sound mix through `feel.scene()`. |
 | `dist/intro.mjs` | First launch: the login (a handle; the password types itself), then Halcyon's transmission. |
 | `dist/update.mjs` | A newer build: reads the build's `version.json` (scripts/build.mjs stamps it) and starts halcyon-mdm's transmission and the log's ↻ line. |
