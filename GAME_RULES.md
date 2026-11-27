@@ -2403,7 +2403,8 @@ more server (400 credits, +4 Halcyon rep, the **LOWLIGHT Badge** and wick's Old 
 ### Floor jobs (arcs.mjs)
 
 Each floor has its own fixed chain of contracts (WoW's zone quests), carrying the storyline on: wick read the claims
-ledger, and its trail leads down the floors. A floor's chain opens once you've reached the floor and the board is open.
+ledger, and its trail leads down the floors. A floor's chain opens once you've reached the floor and delivered the ledger
+(the initiate storyline done), so wick's *page nine* follows the ledger he read.
 One step is open at a time; delivering it brings the next as a letter. Floor jobs never expire, can't be dropped and
 don't count toward your six. The words are in `dist/content/contracts.mjs` (`floors`).
 
@@ -2423,6 +2424,12 @@ don't count toward your six. The words are in `dist/content/contracts.mjs` (`flo
   each named boss is built, the floor's lair boss stands in: the letter names the boss, the title the stand-in. Its
   challenge line shows on the Core's card, its fall line when it's beaten. Floor 1's (PAGE NINE) waits for level 6 (`lv`);
   a save that got it while RELAY-KING stood in moves it to PAGE NINE's server from level 6.
+- **The Path** (`arcs.mjs pathOf`), over the map's Contracts: the one thing the story wants next. Its head is the
+  floor's flag and the chain's name (*Initiate* for the initiate storyline); under it the steps done (✓, as
+  objectives) and the one you're on (▸), which clicks like its tracker row. Steps ahead stay hidden. In turn: the
+  initiate's open job, then the first floor whose chain isn't done: its step, *Reach level N* while a step waits for
+  your level, or *Find the way down* (the floor's flag hollow; a click shows its exit once you've found one). Its job
+  leaves Contracts. A phone shows it in the list sheet.
 - **Extra letters** come with no job, from someone other than the chain's sender, when their step is delivered.
 - **Saves:** a chain finished before it gained a step (floor 1's Boss) opens again at that step.
 - **Targets** come from the floor's diagram, so a network always gives the same ones: the landing server, a server along

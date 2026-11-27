@@ -43,11 +43,15 @@ test('only the contracts you hold: not the board, not the delivered ones', () =>
   assert.deepEqual(trackedJobs(s).map((j) => j.id), openContracts(s).map((c) => c.id));
   assert.match(tracker(html), /Contracts<small>3<\/small>/, 'the kicker counts the rows you see');
   assert.match(tracker(html), new RegExp(`title="3 of ${MAIL.take} contract slots in use\\."`), 'the slots it takes on hover');
-  s.mail.jobs.push({ id: 5, type: 'kill', family: 'ransomware', count: 5, got: 0, level: 12, from: 'Halcyon Mutual · Claims', chain: 1, reward: { credits: 10 } });
-  const more = tracker(mapMarkup(s));
+  // Two floor jobs: floor 1's is the Path's (arcs.mjs pathOf), drawn over the tracker and left out of it; floor 2's is a row.
+  s.mail.jobs.push({ id: 5, type: 'kill', family: 'ransomware', count: 5, got: 0, level: 12, from: 'Halcyon Mutual · Claims', chain: 1, reward: { credits: 10 } },
+    { id: 6, type: 'kill', family: 'ransomware', count: 4, got: 0, level: 12, from: 'LANTERN', chain: 2, reward: { credits: 10 } });
+  const map = mapMarkup(s), more = tracker(map);
   assert.match(more, /Contracts<small>4<\/small>/, 'a floor job is a row, so it counts in the kicker');
   assert.match(more, /3 of 6 contract slots in use; story and floor jobs don’t take a slot\./, 'but not toward the slots');
-  s.mail.jobs.pop();
+  assert.equal(rows(map).length, 4, 'the Path’s job isn’t a row too');
+  assert.match(map, /<section class="ctrack path"[\s\S]*?▸<\/span><span class="path-t">Kill 5 Ransomware viruses/, 'floor 1’s job is the Path');
+  s.mail.jobs.splice(-2);
   // Lean: its name and its progress on the row; who it's for in the tooltip.
   const [kill, take, item] = rows(html);
   assert.match(kill, /<b>Kill 5 Ransomware viruses, Lv 8\+<\/b>/);

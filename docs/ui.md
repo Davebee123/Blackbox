@@ -50,7 +50,11 @@ teal, violet or a threat's red.
   poster, a boss frame), a feud's two faction halves over its bar, a price tile, a price tag. Rewards are an icon and a
   number. The card's sentence is the strip's tooltip. Motion is locked to the clock (`--ph`) so a redraw never restarts
   it. The map pop-up widens to 376px while it holds one.
-- **Contract tracker** (`.ctrack`, `view.mjs` `contractTracker`): under the threat rail; its kicker counts the rows (the slots they fill of 6 in its tooltip; story and floor jobs take none). A row is lean:
+- **The Path** (`.ctrack.path`, `view.mjs` `pathTracker`): under the threat rail, over the contract tracker: the
+  story's next step as the quest window's job, small. Its kicker is Mail's floor flag (hollow for a floor not reached)
+  and the chain's name; in a dashed box the steps done (✓, muted) and the one you're on (▸, bright; its n/N, **Turn
+  in** in green, or *Lv N*). No steps ahead. The step clicks like a tracker row; its job isn't in the tracker.
+- **Contract tracker** (`.ctrack`, `view.mjs` `contractTracker`): under the Path; its kicker counts the rows (the slots they fill of 6 in its tooltip; story and floor jobs take none). A row is lean:
   its icon, its name and *n/N* on one line (past 10 a bar too), or else its few words under the name on one line;
   who it's for is in the tooltip; a done one has a green border and **Turn in**. A row is a
   button (`data-locate`, `data-go` to Mail, or a done one's `mail deliver`); its tooltip shows the pay as icon chips. No teal.
@@ -221,7 +225,7 @@ short vibration on phones that have it.
   processes (the two lights run by `pickfx.mjs`, all of it on the compositor). Start is a lit command line, the class
   typed in. A phone stacks rows that open downward. No slogans.
 - **The threat rail** (down the map's left): everything coming for you, hottest first, then soonest; red for what's
-  hitting you, amber for what's on its way. Under it the contract tracker.
+  hitting you, amber for what's on its way. Under it the Path, then the contract tracker.
 - **Map cards** pop up beside the node you click (never over it): the server card (level, Integrity, one line each), a hub, an invasion. `×`, Esc or a click on empty map closes them. **Traffic:** your market orders run as
   teal files between home and the hub, hub trade in the sender's colour; hover any moving file for its card.
 - **The room map** (*Schematic HD*, floorplan-view.mjs, floorplan.css): each room a **chip** (cut corners, a depth

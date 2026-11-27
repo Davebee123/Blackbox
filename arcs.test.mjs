@@ -2,11 +2,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, hooks, addLocation, hackerLevel } from './dist/combat.mjs';
-import { storyAt, tickMail, openContracts, doneContracts, heldCount, title, progress, ready, MAIL } from './dist/mail.mjs';
-import { ARC, CHAINS, chainOf, slotFor, arcOffer, arcsOf, namedBoss, jobBossAt } from './dist/arcs.mjs';
+import { storyAt, tickMail, openContracts, doneContracts, heldCount, title, progress, ready, MAIL, boardOpen } from './dist/mail.mjs';
+import { ARC, CHAINS, chainOf, slotFor, arcOffer, arcsOf, namedBoss, jobBossAt, pathOf } from './dist/arcs.mjs';
 import { graphOf, locAt, slotNode } from './dist/floors.mjs';
 import { FLOORS, CONFIG } from './dist/data.mjs';
-import { mailMarkup } from './dist/view.mjs';
+import { mailMarkup, mapMarkup } from './dist/view.mjs';
 import { arcOfferMarkup } from './dist/arcs-view.mjs';
 import { NETWORK } from './dist/network.mjs';
 import { zoneOf } from './dist/zone.mjs';
@@ -277,4 +277,55 @@ test('a death that rolls the chains back to the connect never posts a held step 
   const c = chainJob(s, 1); s.mail.jobs.push({ ...c, id: c.id + 'x' }); // a save that already posted it twice
   T += 1000; tickMail(s, T);
   assert.equal(openContracts(s).filter((x) => x.chain === 1).length, 1, 'the copy goes');
+});
+
+test('floor 1’s chain waits for the initiate storyline: wick reads the ledger before he sends page nine', () => {
+  for (const beat of ['turf', 'ledger']) {
+    const s = fresh(7); storyAt(s, beat, T); tickMail(s, T); T += 1000; tickMail(s, T);
+    assert.ok(boardOpen(s), `the board is open at ${beat}`);
+    assert.equal(chainJob(s, 1), undefined, `no page nine at ${beat}`);
+  }
+  const s = fresh(7); storyAt(s, 'ledger', T); tickMail(s, T);
+  const j = openContracts(s).find((c) => c.beat === 'ledger');
+  s.cargo.push({ contract: j.id, name: j.file, label: j.label });
+  command(s, `mail deliver ${j.id}`);
+  T += 1000; tickMail(s, T); T += 1000; tickMail(s, T);
+  assert.ok(chainJob(s, 1), 'page nine follows the ledger');
+  // An older save got page nine with the turf letter: it keeps it while the ledger is still out.
+  const old = boarded();
+  old.mail.jobs.push({ ...j, id: 'old-ledger', done: false });
+  T += 1000; tickMail(old, T);
+  assert.ok(chainJob(old, 1), 'a page nine already under way stays');
+});
+
+test('the Path: the initiate’s job, then each floor’s chain in turn, a step waiting on your level, then the way down', () => {
+  const s = fresh(7); storyAt(s, 'claimjack', T); tickMail(s, T);
+  s.mail.jobs.unshift({ id: 'w', type: 'kill', where: 'sprawl', count: 3, got: 3, beat: 'welcome', story: 0, from: 'wick', reward: {}, done: true });
+  let p = pathOf(s);
+  assert.equal(p.title, 'Initiate');
+  assert.equal(p.job.beat, 'claimjack', 'the initiate’s open job');
+  assert.deepEqual(p.done, ['Kill 3 viruses in SPRAWL-00'], 'the jobs delivered, as objectives');
+  const html = mapMarkup(s), contracts = html.match(/<section class="ctrack" aria-label="Contracts">[\s\S]*?<\/section>/)?.[0] || '';
+  assert.match(html, /<section class="ctrack path"[\s\S]*?✓<\/span><span class="path-t">Kill 3 viruses in SPRAWL-00[\s\S]*?▸<\/span><span class="path-t">Kill claimjack/, 'the map draws it, done steps then the one you’re on');
+  assert.ok(!contracts.includes('claimjack'), 'its job leaves Contracts');
+
+  const b = boarded(); atLevel(b, 5);
+  p = pathOf(b);
+  assert.equal(p.title, CHAINS[1].title);
+  assert.equal(p.job.chain, 1);
+  for (let k = 0; k < CHAINS[1].steps.length - 1; k++) { const c = finish(b, 1); c.reward.xp = 0; command(b, `mail deliver ${c.id}`); }
+  p = pathOf(b);
+  assert.equal(p.lv, 6, 'PAGE NINE’s letter waits for level 6');
+  assert.equal(p.done.length, CHAINS[1].steps.length - 1);
+  assert.match(p.done[0], /^Kill pagenine/);
+  assert.match(mapMarkup(b), /Reach level 6/);
+  atLevel(b, 6); T += 1000; tickMail(b, T);
+  const boss = finish(b, 1); command(b, `mail deliver ${boss.id}`);
+  p = pathOf(b);
+  assert.ok(p.down, 'floor 1 done: the way down');
+  assert.equal(p.floor, 2);
+  b.floors.reached = 2; T += 1000; tickMail(b, T);
+  p = pathOf(b);
+  assert.equal(p.title, CHAINS[2].title, 'floor 2’s chain next');
+  assert.deepEqual(p.done, []);
 });

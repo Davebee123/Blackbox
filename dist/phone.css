@@ -260,6 +260,7 @@
 [data-form='phone'] .ph-list { display: grid; gap: 14px; }
 [data-form='phone'] .ph-list :is(.threat-rail, .ctrack, .rrail) { position: static; width: auto; max-height: none; margin: 0; padding: 0; background: none; border: 0; }
 [data-form='phone'] .ph-list :is(.tr-row, .ct-row, .rr-row) { min-height: var(--tap); }
+[data-form='phone'] .ph-list .path-now { min-height: var(--tap); align-items: center; } /* the Path's step you're on: a tap's height */
 [data-form='phone'] .ph-fpinfo .fp-hud { position: static; display: flex; flex-wrap: wrap; gap: 10px 16px; padding: 0; background: none; border: 0; box-shadow: none; }
 [data-form='phone'] .ph-fpinfo .fp-acts { flex: 1 1 100%; display: flex; gap: 8px; }
 [data-form='phone'] .ph-fpinfo .fp-acts .btn { flex: 1; }

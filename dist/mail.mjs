@@ -185,6 +185,19 @@ function beatLetter(s, beat, k) {
   return { ...msg, job: job ? { ...job, reward: { credits: 0, ...(beat.reward || {}) }, beat: beat.id, story: k } : null };
 }
 export const STORY_LENGTH = STORY.length;
+// The initiate storyline: the beats before the first that waits for a level (the badge). Done once they're all posted
+// and none of their jobs is open (the ledger delivered): the floors' chains open from then (arcs.mjs), and the map's
+// Path moves on to them. Its job and the titles of the ones delivered, in order, for the Path (arcs.mjs pathOf).
+const INITIATE = new Set((STORY.findIndex((b) => b.when?.level) < 0 ? STORY : STORY.slice(0, STORY.findIndex((b) => b.when?.level))).map((b) => b.id));
+export function initiateOf(s) {
+  const m = s.mail;
+  if (!m) return { done: false, job: null, titles: [] };
+  const mine = jobs(s).filter((j) => INITIATE.has(j.beat)).sort((a, b) => a.story - b.story), job = mine.find((j) => !j.done) || null;
+  const posted = m.posted || STORY.slice(0, m.story || 0).map((b) => b.id); // a save from before the editor
+  const done = !job && ((m.story || 0) >= STORY.length || [...INITIATE].every((id) => posted.includes(id)));
+  return { done, job, titles: mine.filter((j) => j.done).map((j) => title(s, j)) };
+}
+export const initiateDone = (s) => initiateOf(s).done;
 
 // Post the next beat if its trigger allows; otherwise it waits (tickMail tries again).
 function postStory(s, at = now(), force = false) {
