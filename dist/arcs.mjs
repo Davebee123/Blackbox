@@ -1,6 +1,6 @@
 // Floor jobs: each floor's fixed chain of contracts (WoW's zone storyline), between the board's random offers. A floor's
-// chain opens once you've reached that floor and Halcyon's board is open (the LOWLIGHT storyline's initiate jobs are
-// done), and carries that storyline on: wick's read of the claims ledger, followed down the floors.
+// chain opens once you've reached that floor and the LOWLIGHT storyline's initiate jobs are done (the ledger delivered),
+// and carries that storyline on: wick's read of the claims ledger, followed down the floors. pathOf is the next of it.
 //
 //   chains   content/contracts.mjs `floors`: a chain a floor (its title, who sends it, why, its lore line) of 4–6 steps.
 //            One step is open at a time; delivering it posts the next as a letter. Never on the board, never timed,
@@ -28,13 +28,13 @@
 import { noteFinish } from './finish.mjs';
 import { openUp, onEvent, FALLS } from './progression.mjs';
 import { emit, warn, hackerLevel, hooks, addItem, classOf, subOf } from './combat.mjs';
-import { BOSSES, SUBS, defaultSub, CONFIG } from './data.mjs';
+import { BOSSES, SUBS, defaultSub, CONFIG, lastFloor } from './data.mjs';
 import { seeded, rollItem, itemLabel } from './gear.mjs';
-import { graphOf, locAt, hiddenAt, neighbours, floorName, reached, serverSlot, floorOfSlot } from './floors.mjs';
+import { graphOf, locAt, hiddenAt, neighbours, floorName, reached, serverSlot, floorOfSlot, exitOpen } from './floors.mjs';
 import { lairBoss, NETWORK } from './network.mjs';
 import { addrsOf, sweepRooms } from './address.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
-import { letter, arm, disarm, boardOpen, openContracts, title, CREWS, contractXp } from './mail.mjs';
+import { letter, arm, disarm, boardOpen, openContracts, title, CREWS, contractXp, initiateDone, initiateOf } from './mail.mjs';
 import { FACTIONS } from './factions.mjs';
 import { fill } from './content.mjs';
 import STORY_TEXT from './content/story.mjs';
@@ -174,6 +174,27 @@ function setup(s, c) {
   arm(s, c);
 }
 
+// ---------- the path ----------
+// The critical path (the map's Path, view.mjs pathTracker): the one thing the story wants next, with the steps done
+// before it. The initiate storyline's open job; then the first floor whose chain isn't done: its open step, the step
+// waiting for your level, or, once the chain above is done and its floor isn't reached, the way down (an open exit to
+// locate, if you've found one). Null between letters, and once the last chain is done.
+export function pathOf(s) {
+  const ini = initiateOf(s);
+  if (ini.job) return { floor: 1, title: 'Initiate', done: ini.titles, job: ini.job };
+  if (!ini.done) return null;
+  for (let n = 1; n <= lastFloor(); n++) {
+    const ch = chainOf(n), st = s.arcs?.[n];
+    if (!ch || st?.done) continue;
+    if (n > reached(s)) return { floor: n, title: floorName(n), done: [], down: true, exit: graphOf(s, n - 1).exits.find((x) => exitOpen(s, x)) || null };
+    const done = (st?.titles || []).filter(Boolean), job = openContracts(s).find((c) => c.chain === n);
+    if (job) return { floor: n, title: ch.title, done, job };
+    if (st?.wait != null) return { floor: n, title: ch.title, done, lv: ch.steps[st.wait]?.lv || 0 };
+    return null;
+  }
+  return null;
+}
+
 // ---------- the clock ----------
 // mail.mjs tickMail: open the chains of the floors you've reached, settle targets you've located, and check the steps
 // this module runs.
@@ -199,6 +220,7 @@ export function arcTick(s, at = nowOf()) {
     if (!chainOf(n) || A[n]) continue;
     const c = Object.values(held).find((x) => x.chain === n);
     if (c) { A[n] = { step: c.step, at: c.at, titles: [] }; continue; }
+    if (!initiateDone(s)) continue; // wick's page nine follows the ledger he read: no chain opens before it's delivered
     const l = post(s, n, 0, at);
     emit(s, 'mail', `New mail from ${l.from}: ${l.subject}.`, { letter: l.id, from: l.from, subject: l.subject, chain: n });
   }

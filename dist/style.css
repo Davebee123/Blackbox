@@ -3063,6 +3063,30 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ct-prog.ct-side { grid-column: 3; grid-row: 1; }
 .ct-prog.ct-side .ct-bar { width: 40px; flex: none; }
 .ct-turn { padding: 2px 7px; border: 1px solid var(--ready); border-radius: 3px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--ready); white-space: nowrap; }
+/* The Path (view.mjs pathTracker): the story's next step over Contracts, as the quest window's job (quest.css .qa-job):
+   the floor's flag and the chain, the steps done ✓, the one you're on ▸; the steps ahead stay hidden. */
+.ctrack.path .ct-head { gap: var(--s3); }
+.path-flag { display: grid; place-items: center; width: 14px; height: 14px; border-radius: var(--r-tag); background: var(--amber); color: #120f0a; font: 700 10px/1 var(--mono); letter-spacing: 0; }
+.path-flag.ahead { background: none; color: var(--amber); border: 1px solid var(--amber-deep); }
+.path-name { color: var(--amber); }
+.path-steps { list-style: none; margin: 0; padding: 5px 8px 6px; display: grid; gap: 1px; background: rgba(12, 10, 6, 0.88); border: 1px dashed var(--line-strong); border-radius: var(--r-tag); font: 11px/1.45 var(--mono); }
+.path-steps .done, .path-now { display: grid; grid-template-columns: 1.4ch minmax(0, 1fr) auto; gap: var(--s3); align-items: baseline; }
+.path-steps .done { color: var(--muted); } .path-steps .done .path-mark { color: var(--amber-soft); }
+.path-now { width: 100%; margin: 0; padding: 0; background: none; border: 0; font: inherit; text-align: left; color: var(--bright); cursor: pointer; }
+div.path-now { cursor: default; }
+.path-now .path-mark, .path-n { color: var(--amber); }
+.path-n { font-weight: 600; white-space: nowrap; }
+button.path-now:hover .path-t, button.path-now:focus-visible .path-t, .path-now.path-sel .path-t { color: var(--amber); }
+.path-now.ready, .path-now.ready :is(.path-mark, .path-t, .path-n) { color: var(--ready); }
+.path-now.wait .path-t { color: var(--muted); }
+.path-t { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The Path's flag on the map (view.mjs mapMarkup): its floor's number on the server its step points at, clicks passing
+   through; on the floor lift, a smaller one on the floor its step is on when that isn't the floor shown. */
+.mpath { pointer-events: none; }
+.mpath rect { fill: var(--amber); }
+.mpath path { fill: none; stroke: var(--amber); stroke-width: 1.5; }
+.mpath text { fill: #120f0a; font: 700 10px var(--mono); }
+.fl-btn .path-flag { position: absolute; top: -5px; right: -5px; width: 12px; height: 12px; font-size: 8px; }
 .ct-row.ready { grid-template-columns: 16px minmax(0, 1fr) auto; border-color: var(--ready); background: rgba(20, 32, 12, 0.92); }
 .ct-row.ready .ct-prog { grid-column: 3; grid-row: 1; }
 .ct-row.ready:hover .ct-turn, .ct-row.ready:focus-visible .ct-turn { background: var(--ready); color: var(--bg); }

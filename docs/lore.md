@@ -42,9 +42,10 @@ C+30. The floors mounted deepest first:
 | **LANTERN** | Old Kessler staff and their heirs. Its beacons reach Bedrock. It sells information to fund the settling. |
 | **NULL CHOIR** | *"Let it roll back."* Every server it breaks is a small rollback. |
 | **GLASSJAW** | A broker selling INIT's reports to the highest bidder. Buys what ends up in the Sink. Grey, not evil. |
-| **TOLLGATE, SWARMLINE, PALEMASK** | Crews with no paymaster: ransoms, rented botnets, stolen data. Their attacks lock and interrupt trades mid-settlement, which makes new orphans. |
-| **Strays and Residents** | Orphans running dead crews' code. A crew's attack left a virus in the trade it interrupted, and the virus outlived the crew: it retries the handshake with anything that might be the counterparty, and takes every wrong answer as hostile. You fight the virus; the trade dies with it. "Nobody's" because their parents are dead. Crews still write the viruses (*viruses are written, not grown*). |
-| **You** | Your kills end processes cleanly, which frees space. Killing a stray cancels an uninsured payment, someone's money. That grey is deliberate. |
+| **TOLLGATE, SWARMLINE, PALEMASK** | Crews with no paymaster. They write viruses to do harm: ransom a client's servers, rent out a botnet, steal and sell data, sabotage a rival. An attack that lands mid-settlement interrupts a trade, which makes a new orphan. |
+| **Crews' viruses** | Most of what you fight: written by a crew for a job (*viruses are written, not grown*), signed by its author, a security incident on whatever servers it runs. Killing one ends that attack and cancels nothing. Halcyon pays for it, because every hit on a client is a claim. A **stray** is any virus loose on the net, a crew's or an orphan. |
+| **Orphans** (◌) | Trades still waiting for their other side, each holding a place in INIT's table. Some still run the virus that interrupted them, retrying the handshake and taking every wrong answer as hostile. These are the ones the table needs killed: a clean break frees the place. |
+| **You** | Your kills stop crews' attacks on Halcyon's clients, and your clean breaks of orphans free the table. A frozen payment's fate is its receipt, stamped when you take its server over (docs/receipts.md). You work for the firm whose model picks which trades are cancelled. That grey is deliberate. |
 
 **Now.** The table is filling again.
 
@@ -168,8 +169,9 @@ sentence or two, ??? until found, never timed.
 
 | Contract | The reason in the world |
 |---|---|
-| Kill, Grind | Stray orphans are filling the table; each clean kill frees a slot. |
-| Named process | One orphan has started hitting Halcyon's clients by name. |
+| Kill, Grind | A crew's viruses are hitting Halcyon's clients; each kill is one claim fewer. |
+| Orphans | The table is filling; each clean break frees a place. |
+| Named process | One crew's process has started hitting Halcyon's clients by name. |
 | Strain | A crew's build is making orphans faster than the rest. |
 | Materials | ACTUARY prices policies from live code. |
 | Rooms, Map | Halcyon wants to know what's running where, and how full it is. |
@@ -190,7 +192,7 @@ sentence or two, ??? until found, never timed.
 | SPRAWL-00 | Its strays' names are trade IDs: `TRD-…`, a payer and a sum, ??? until scanned. |
 | Vaults | One file a vault is a frozen trade's receipt: who paid whom, and when. Stamped at the takeover: docs/receipts.md. |
 | Codex | A line a family on who wrote it and why, earned with mastery. |
-| Residents | A Resident is the oldest orphan on its server; its scan card names its counterparty. |
+| Residents | A Resident is the virus that orphaned its vault's trade; its scan card names the counterparty. |
 | Threads | Every chain's ending is one sentence that settles, seals or rolls back something small. |
 | Rivals | Each rival's loss line names who pays its crew, or that nobody does. |
 | Hubs and shops | Each hub's vendor speaks its faction's voice (8.2). |
