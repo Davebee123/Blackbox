@@ -54,6 +54,8 @@ teal, violet or a threat's red.
   story's next step as the quest window's job, small. Its kicker is Mail's floor flag (hollow for a floor not reached)
   and the chain's name; in a dashed box the steps done (✓, muted) and the one you're on (▸, bright; its n/N, **Turn
   in** in green, or *Lv N*). No steps ahead. The step clicks like a tracker row; its job isn't in the tracker.
+  On the map its flag, small, stands on the step's server or exit (`.mpath`, clicks pass through); a step off the
+  floor shown flags its floor's button in the floor list instead (hollow for a floor not reached).
 - **Contract tracker** (`.ctrack`, `view.mjs` `contractTracker`): under the Path; its kicker counts the rows (the slots they fill of 6 in its tooltip; story and floor jobs take none). A row is lean:
   its icon, its name and *n/N* on one line (past 10 a bar too), or else its few words under the name on one line;
   who it's for is in the tooltip; a done one has a green border and **Turn in**. A row is a

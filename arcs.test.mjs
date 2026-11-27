@@ -308,6 +308,7 @@ test('the Path: the initiate’s job, then each floor’s chain in turn, a step 
   const html = mapMarkup(s), contracts = html.match(/<section class="ctrack" aria-label="Contracts">[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(html, /<section class="ctrack path"[\s\S]*?✓<\/span><span class="path-t">Kill 3 viruses in SPRAWL-00[\s\S]*?▸<\/span><span class="path-t">Kill claimjack/, 'the map draws it, done steps then the one you’re on');
   assert.ok(!contracts.includes('claimjack'), 'its job leaves Contracts');
+  assert.match(html, /<g class="mpath" transform="translate\([^)]*\)"[^>]*>[\s\S]*?>1<\/text><\/g>/, 'its flag on the server the step points at (SPRAWL-00)');
 
   const b = boarded(); atLevel(b, 5);
   p = pathOf(b);
@@ -324,8 +325,15 @@ test('the Path: the initiate’s job, then each floor’s chain in turn, a step 
   p = pathOf(b);
   assert.ok(p.down, 'floor 1 done: the way down');
   assert.equal(p.floor, 2);
+  assert.ok(p.exit, 'the exit beside a server you’ve found');
+  assert.match(mapMarkup(b), /<g class="mpath"[^>]*>[\s\S]*?>2<\/text><\/g>/, 'it carries floor 2’s flag');
+  const none = boarded(); // the same, with no exit found yet: floor 2 flagged in the lift, hollow
+  none.mail.jobs = none.mail.jobs.filter((j) => j.chain !== 1); none.arcs[1] = { step: 5, done: true, titles: ['a', 'b', 'c', 'd', 'e'] };
+  assert.equal(pathOf(none).exit, null);
+  assert.match(mapMarkup(none), /<span class="path-flag ahead" aria-hidden="true">2<\/span><\/button>/, 'no exit found: floor 2 flagged in the lift, hollow');
   b.floors.reached = 2; T += 1000; tickMail(b, T);
   p = pathOf(b);
   assert.equal(p.title, CHAINS[2].title, 'floor 2’s chain next');
+  assert.match(mapMarkup(b, 'server', 'mine', { floor: 1 }), /<span class="path-flag" aria-hidden="true">2<\/span><\/button>/, 'floor 1 on the map, floor 2’s step: its flag in the lift');
   assert.deepEqual(p.done, []);
 });

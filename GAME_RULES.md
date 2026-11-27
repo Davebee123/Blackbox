@@ -2429,7 +2429,8 @@ don't count toward your six. The words are in `dist/content/contracts.mjs` (`flo
   objectives) and the one you're on (▸), which clicks like its tracker row. Steps ahead stay hidden. In turn: the
   initiate's open job, then the first floor whose chain isn't done: its step, *Reach level N* while a step waits for
   your level, or *Find the way down* (the floor's flag hollow; a click shows its exit once you've found one). Its job
-  leaves Contracts. A phone shows it in the list sheet.
+  leaves Contracts. A phone shows it in the list sheet. The same flag stands on the server (or exit) its step points at
+  on the map; a step on another floor, or a floor down, flags that floor in the floor list instead.
 - **Extra letters** come with no job, from someone other than the chain's sender, when their step is delivered.
 - **Saves:** a chain finished before it gained a step (floor 1's Boss) opens again at that step.
 - **Targets** come from the floor's diagram, so a network always gives the same ones: the landing server, a server along

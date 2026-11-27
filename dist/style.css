@@ -3080,6 +3080,13 @@ button.path-now:hover .path-t, button.path-now:focus-visible .path-t, .path-now.
 .path-now.ready, .path-now.ready :is(.path-mark, .path-t, .path-n) { color: var(--ready); }
 .path-now.wait .path-t { color: var(--muted); }
 .path-t { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The Path's flag on the map (view.mjs mapMarkup): its floor's number on the server its step points at, clicks passing
+   through; on the floor lift, a smaller one on the floor its step is on when that isn't the floor shown. */
+.mpath { pointer-events: none; }
+.mpath rect { fill: var(--amber); }
+.mpath path { fill: none; stroke: var(--amber); stroke-width: 1.5; }
+.mpath text { fill: #120f0a; font: 700 10px var(--mono); }
+.fl-btn .path-flag { position: absolute; top: -5px; right: -5px; width: 12px; height: 12px; font-size: 8px; }
 .ct-row.ready { grid-template-columns: 16px minmax(0, 1fr) auto; border-color: var(--ready); background: rgba(20, 32, 12, 0.92); }
 .ct-row.ready .ct-prog { grid-column: 3; grid-row: 1; }
 .ct-row.ready:hover .ct-turn, .ct-row.ready:focus-visible .ct-turn { background: var(--ready); color: var(--bg); }
