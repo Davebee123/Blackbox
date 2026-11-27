@@ -6,7 +6,8 @@ most there and stays a sidegrade elsewhere. `node setsim.mjs` measures it.
 
 ## How it's measured
 
-Each set worn whole in place of the blues in its slots, at the top of its level band, on the eight subclasses:
+Each set worn whole in place of the blues in its slots, at the top of its level band (every piece at that level, as set
+tuning wears them), on the eight subclasses:
 
 - **Niche:** the subclasses it is for (*Who*), in its situation (*Where*): the change in Integrity a fight costs, in
   points of your max (negative is easier).

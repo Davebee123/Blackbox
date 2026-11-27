@@ -485,6 +485,15 @@ export function uniqueItem(u, level, rand) {
   const own = u.faction && IMPLICITS[u.faction] ? { implicit: u.faction, implicitValue: implicitValue(u.faction, L, IMPLICIT.piece) } : {}; // a faction piece: its faction's implicit, stronger
   return liftItem({ kind: 'protocol', side: 'hacker', group: slot, base: best, rarity: 'zeroday', level: L, stats, affixes: [], zeroDay: null, unique: u.id, name: u.name, ...own });
 }
+// An owned unique's stats at a higher level, its rolls kept: each stat times what the unique carries at L over what it
+// carries at its own level (sets.mjs tunedStats: a set piece worn with its set). A stat it gains there comes at L's number.
+const mid = () => 0.5;
+export function statsAt(u, it, L) {
+  const at = uniqueItem(u, it.level, mid).stats, up = uniqueItem(u, L, mid).stats, out = { ...it.stats };
+  for (const [k, v] of Object.entries(it.stats || {})) if (v && at[k] && up[k]) out[k] = round(k, v * (up[k] / at[k]));
+  for (const [k, v] of Object.entries(up)) if (!(k in out)) out[k] = v;
+  return out;
+}
 
 // Save v44: whole-number stats. Regen counts over 5 cycles now (STATS.regen.every), so every Regen on a protocol or a
 // filter is five times what it was; Payload is flat, so an old percentage becomes what it added to a typical tick at the

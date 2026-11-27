@@ -1817,7 +1817,10 @@ yellow, its epic our gold). Targets, at about 150 kills an hour of real play (`L
 
 Uniques that add up, D2 style (`sets.mjs`, the sets in `content/sets.mjs`). A **set piece** is a unique carrying a set:
 **every piece works alone** (its slot's best base at its level, plus a small bonus of its own) and has a **green line**,
-a second stat that counts while two or more of its set are loaded. A set's bonuses open at 2, 3 and 4 loaded pieces.
+a second stat that counts while two or more of its set are loaded. **Set tuning:** a piece loaded with another of its
+set counts at the level of that set's highest loaded piece (its stats with its roll kept, its effect and its green line;
+the datasheet says *tuned to 44 by Catchment*, and its ▲ ▼ compare as worn); alone it counts at its own level (`sets.mjs`
+`tunedLevel`). A set's bonuses open at 2, 3 and 4 loaded pieces.
 **Only one 4-piece bonus** is active at a time: the set whose fourth piece went on first keeps it. Set Clock Speed
 counts toward the 25% cap. Each set has one reason to wear it (*For*, its tooltip's answer line), and its numbers pay most
 there (docs/set-roles.md, `setsim.mjs`).

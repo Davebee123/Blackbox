@@ -23,7 +23,7 @@ import ITEMS from './content/items.mjs';
 import { fxHolds, gearFx, active, loaded, emit, hit, heal, alive, parts, livingParts, defender, burnsOn, helpersOn, helperCap, alliesOf, momentumStacks, classOf, delayAttack, shortestOff } from './combat.mjs';
 import { momentumCap } from './classes/breaker.mjs';
 import { ABILITIES, SKILLS, ARCHETYPES } from './data.mjs';
-import { liftFx } from './gear.mjs';
+import { liftFx, statsAt } from './gear.mjs';
 
 export const SETS = Object.fromEntries((SET_TEXT.sets || []).map((x) => [x.id, x]));
 const UNIQ = Object.fromEntries((ITEMS.uniques || []).map((u) => [u.id, u]));
@@ -39,6 +39,44 @@ export const BONUS_AT = [2, 3, 4];
 export const GREEN_AT = 2;
 export const bonusesOf = (id) => BONUS_AT.filter((n) => SETS[id]?.bonuses?.[n]).map((n) => ({ at: n, ...SETS[id].bonuses[n] }));
 export const tierLine = (id) => (SETS[id]?.tier ? `${ARCHETYPES[SETS[id].cls]?.name || SETS[id].cls} tier set, level ${SETS[id].tier}` : null);
+// Set tuning: a piece worn with another piece of its set counts at the highest item level among that set's worn pieces,
+// its stats, its effect and its green line alike. items: the loadout it's in. Alone it counts at its own level.
+export function tunedLevel(items, it) {
+  const id = it?.unique && UNIQ[it.unique]?.set, L = it?.level || 1;
+  if (!id) return L;
+  let top = L, other = false;
+  for (const x of items || []) if (x?.unique && x.unique !== it.unique && UNIQ[x.unique]?.set === id) { other = true; if ((x.level || 1) > top) top = x.level || 1; }
+  return other ? top : L;
+}
+// Every item's tuned level at once (one pass), in items' order: what gearStat and the effect list read in a fight.
+// null when no two pieces of one set are loaded, so each counts at its own level and nothing is built.
+let LAST = null; // the last loadout's answer: a fight asks for the same loadout many times a cycle
+export function tunedLevels(items = []) {
+  if (LAST && LAST.items.length === items.length) {
+    let same = true;
+    for (let i = 0; i < items.length && same; i++) same = items[i] === LAST.items[i] && items[i]?.level === LAST.lv[i];
+    if (same) return LAST.out;
+  }
+  const out = tunedOf(items);
+  LAST = { items: items.slice(), lv: items.map((x) => x?.level), out };
+  return out;
+}
+function tunedOf(items) {
+  let top = null, two = false;
+  for (const x of items) { const id = x?.unique && UNIQ[x.unique]?.set; if (id) { top ||= {}; const t = (top[id] ||= { n: 0, L: 0 }); if (++t.n >= 2) two = true; if ((x.level || 1) > t.L) t.L = x.level || 1; } }
+  return two ? items.map((x) => { const t = x?.unique && top[UNIQ[x.unique]?.set]; return t && t.n >= 2 ? Math.max(x.level || 1, t.L) : x?.level || 1; }) : null;
+}
+// Its stats at that level (gear.mjs statsAt), kept per item until the level or its stats object changes (only a save's
+// restore edits stats in place, before any fight).
+const TUNED = new WeakMap();
+export function tunedStats(it, L) {
+  if (!it?.unique || !UNIQ[it.unique] || !(L > (it.level || 1))) return it?.stats || {};
+  const m = TUNED.get(it);
+  if (m && m.L === L && m.src === it.stats) return m.stats;
+  const stats = statsAt(UNIQ[it.unique], it, L);
+  TUNED.set(it, { L, src: it.stats, stats });
+  return stats;
+}
 
 // ---------- drops ----------
 // Each source's set pieces (a piece's sources, each { kind, ... }): BOSS_LOOT's pattern, one roll an event (a kill, a
@@ -133,9 +171,9 @@ export function activeSets(items = []) {
 // The active bonuses' effect blocks and the worn pieces' green lines: { fx, id, name, set, at } each, the shape
 // combat.mjs uniqueFx lists. A subclass line carries its subclass (fx.sub): combat.mjs fxCond holds it for that
 // subclass only.
-// A flat bonus (+2 Block) is lifted at the set's level (setLevel), a green line at its piece's item level (gear.mjs liftFx).
+// A flat bonus (+2 Block) is lifted at the set's level (setLevel), a green line at its piece's tuned level (tunedLevel).
 export function setFx(items = []) {
-  const out = [];
+  const out = [], tl = tunedLevels(items);
   for (const r of activeSets(items)) {
     const L = setLevel(r.id);
     for (const at of r.open) {
@@ -143,7 +181,7 @@ export function setFx(items = []) {
       for (const [i, fx] of (b.fx || []).entries()) out.push({ fx: liftFx({ text: b.text, ...fx }, L), id: `set:${r.id}:${at}:${i}`, name: `${r.name} (${at})`, set: r.id, at });
       for (const [sub, x] of Object.entries(b.subs || {})) for (const [i, fx] of (x.fx || []).entries()) out.push({ fx: liftFx({ text: x.text, ...fx, sub }, L), id: `set:${r.id}:${at}:${sub}:${i}`, name: `${r.name} (${at})`, set: r.id, at });
     }
-    if (r.n >= GREEN_AT) for (const p of r.worn) if (UNIQ[p]?.green) out.push({ fx: liftFx(UNIQ[p].green, items.find((it) => it?.unique === p)?.level || UNIQ[p].level), id: 'green:' + p, name: `${UNIQ[p].name} (set)`, set: r.id, at: GREEN_AT });
+    if (r.n >= GREEN_AT) for (const p of r.worn) if (UNIQ[p]?.green) out.push({ fx: liftFx(UNIQ[p].green, ((j) => (j < 0 ? UNIQ[p].level : tl ? tl[j] : items[j].level || UNIQ[p].level))(items.findIndex((it) => it?.unique === p))), id: 'green:'+ p, name: `${UNIQ[p].name} (set)`, set: r.id, at: GREEN_AT });
   }
   return out;
 }

@@ -53,7 +53,7 @@ import { reqLevel, meetsReq, STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, loo
 
 import ITEMS from './content/items.mjs';
 import EARN from './content/earned.mjs';
-import { SETS, setFx, activeSets, isPiece, setPool, SET_LOOT, CLASS_SET, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, renamedRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf, restFast } from './sets.mjs';
+import { SETS, setFx, activeSets, tunedLevels, tunedStats, isPiece, setPool, SET_LOOT, CLASS_SET, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, renamedRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf, restFast } from './sets.mjs';
 import { fxText, fxList } from './content.mjs';
 import { deathRecap } from './recap.mjs';
 import { situationOf } from './situations.mjs';
@@ -511,15 +511,17 @@ export function loadedOn(s, id) {
 export function gearStat(s, stat, side = null) {
   let n = 0, pieces = false;
   let pct = 0;
-  if (side !== 'server') for (const it of loaded(s)) {
-    n += it.stats[stat] || 0;
+  const items = side !== 'server' ? loaded(s) : [], tl = tunedLevels(items);
+  for (let j = 0; j < items.length; j++) {
+    const it = items[j], L = tl ? tl[j] : it.level, st = L > it.level ? tunedStats(it, L) : it.stats; // a set piece tuned to its set (sets.mjs)
+    n += st[stat] || 0;
     const u = it.unique && UNIQUES[it.unique];
     if (u?.set) pieces = true;
     if (!u?.effect) continue;
-    fxList(u).map((fx) => liftFx(fx, it.level)).forEach((fx, i) => {
+    fxList(u).map((fx) => liftFx(fx, L)).forEach((fx, i) => {
       if (fx.stat !== stat || ['signal', 'integrity'].includes(stat)) return;
       // A unique whose stat counts double while its condition holds (Hotfix, Shade Filter…).
-      if (fx.when === 'always' && fx.do === 'stat-x2' && fxCond(s, fx)) n += it.stats[stat] || 0;
+      if (fx.when === 'always' && fx.do === 'stat-x2' && fxCond(s, fx)) n += st[stat] || 0;
       // One that adds to a stat, or raises it by a share, while its condition holds (Siltstone, Depth Gauge, Pressure Hull…).
       if (fx.when === 'always' && fx.do === 'stat+' && fxCond(s, fx)) n += fxScale(s, fx);
       if (fx.when === 'always' && fx.do === 'stat%' && fxCond(s, fx)) pct += Number(fx.value) || 0;
@@ -960,13 +962,15 @@ export function setDeliver(s) {
 const fxIdOf = (uid, i) => (i ? `${uid}:${i}` : uid);
 const uniqueFx = (s) => {
   const out = [], rules = {}, imps = {};
-  for (const it of loaded(s)) {
-    if (it.unique) fxList(UNIQUES[it.unique]).forEach((fx, i) => out.push({ it, fx: liftFx(fx, it.level), id: fxIdOf(it.unique, i) })); // a flat number lifted at its item level (gear.mjs liftFx)
+  const items = loaded(s), tl = tunedLevels(items);
+  for (let j = 0; j < items.length; j++) {
+    const it = items[j];
+    if (it.unique) { const L = tl ? tl[j] : it.level; fxList(UNIQUES[it.unique]).forEach((fx, i) => out.push({ it, fx: liftFx(fx, L), id: fxIdOf(it.unique, i) })); } // a flat number lifted at its item level, a set piece's tuned to its set (gear.mjs liftFx, sets.mjs tunedLevel)
     if (IMPLICITS[it.implicit] && !((imps[it.implicit]?.implicitValue || 0) >= (it.implicitValue || 0))) imps[it.implicit] = it; // a faction implicit: once, at its best
     const r = it.rule && RULES[it.rule];
     if (r && !((rules[it.rule]?.fx.value || 0) >= (it.ruleValue || 0) && rules[it.rule])) rules[it.rule] = { it, fx: { ...r.fx, value: it.ruleValue }, id: 'rule:' + it.rule, name: r.name };
   }
-  out.push(...setFx(loaded(s))); // set bonuses (sets.mjs): the bonuses your worn pieces open, as effect blocks
+  out.push(...setFx(items)); // set bonuses (sets.mjs): the bonuses your worn pieces open, as effect blocks
   out.push(...(hooks.extraFx?.(s) || [])); // more effect blocks from outside the engine (none today)
   const amp = out.find((x) => x.fx.do === 'rule-amp');
   if (amp) for (const x of Object.values(rules)) if (Number.isFinite(x.fx.value)) x.fx.value = Math.round(x.fx.value * (1 + amp.fx.value / 100)); // a whole number, as every rule's is
@@ -1238,7 +1242,7 @@ export function fxFire(s, when, ctx = {}, spend = true) {
 }
 const fxHas = (s, what) => (wears(s, what) && uniqueFx(s).find((x) => x.fx.do === what)) || null;
 export const fxOn = fxHas; // tells.mjs: Canary Token, Read Receipt, Reflector, Write Blocker, Hush Money, Sandman
-export const effectLine = (it) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(fxList(UNIQUES[it.unique]).map((fx) => liftFx(fx, it.level || UNIQUES[it.unique].level)), (k) => STATS[k]?.name || ABILITIES[k]?.name || k) : it?.rule && RULES[it.rule] ? `${RULES[it.rule].name} — ${RULES[it.rule].text ? RULES[it.rule].text(it.ruleValue) : fxText({ ...RULES[it.rule].fx, value: it.ruleValue }, (k) => STATS[k]?.name || ABILITIES[k]?.name || k)}` : '');
+export const effectLine = (it, L = null) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(fxList(UNIQUES[it.unique]).map((fx) => liftFx(fx, L || it.level || UNIQUES[it.unique].level)), (k) => STATS[k]?.name || ABILITIES[k]?.name || k) : it?.rule && RULES[it.rule] ? `${RULES[it.rule].name} — ${RULES[it.rule].text ? RULES[it.rule].text(it.ruleValue) : fxText({ ...RULES[it.rule].fx, value: it.ruleValue }, (k) => STATS[k]?.name || ABILITIES[k]?.name || k)}` : '');
 // An item's faction implicit as its tooltip line (gear.mjs IMPLICITS text), '' for none.
 export const implicitText = (it) => IMPLICITS[it?.implicit]?.text(it.implicitValue) || '';
 // What fires when you call off a tell (tells.mjs: a charge or cast hit off in time, a cast stopped by SIGINT).

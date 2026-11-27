@@ -54,7 +54,7 @@ import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, 
 import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend, waypointOf, holderOf } from './floors.mjs';
 import { ROOT, ROOT_RULES, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
 import { situationOf } from './situations.mjs';
-import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine } from './sets.mjs';
+import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine, tunedLevel, tunedStats } from './sets.mjs';
 import { earnedOf, cellsOf, pinsOf, PIN_MAX } from './earned.mjs';
 import { logGo, homeOfUnique } from './collection.mjs';
 import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED, answerLine, ANSWER, helperPlan, beatCopy } from './fightread.mjs';
@@ -1329,13 +1329,22 @@ const shelfOf = (s, ref) => {
 };
 // The name of an item's effect (its Zero-day's, the unique's own, its rule's), or ''.
 const fxName = (x) => x && (x.zeroDay ? ZERO_DAYS[x.zeroDay].name : x.unique ? x.name : x.rule ? RULES[x.rule]?.name || '' : '');
-// Loading a stash protocol: what changes against what's in that slot now (▲ gains, ▼ losses).
+// An item as it counts worn: a set piece with another of its set counts at their highest level (sets.mjs tunedLevel).
+// out: the item it would replace, gone from the loadout. { L, stats, by: the set's name when that lifts it }
+function asWorn(s, it, out = null) {
+  const set = it?.unique && setOf(it.unique);
+  const items = set ? loaded(s).filter((x) => x && x !== out && x.id !== it.id && x.id !== out?.id).concat(it) : [it];
+  const L = tunedLevel(items, it);
+  return { L, stats: tunedStats(it, L), by: L > (it.level || 1) ? set.name : null };
+}
+// Loading a stash protocol: what changes against what's in that slot now (▲ gains, ▼ losses), both as they'd count worn.
 function swapCompare(s, it) {
   const kind = groupOf(it), same = SLOT_KINDS.slice(0, slotCount(s)).indexOf(kind);
   if (same < 0) return '';
   const out = freeSlot(s, kind) < 0 ? stashItem(s, rigOf(s)[same]) : null;
-  const keys = [...new Set([...Object.keys(it.stats || {}), ...Object.keys(out?.stats || {})])].filter((k) => STATS[k]);
-  const rows = keys.map((k) => [k, (it.stats[k] || 0) - (out?.stats?.[k] || 0)]).filter(([, d]) => Math.abs(d) > 1e-9).sort((a, b) => b[1] - a[1])
+  const a = asWorn(s, it, out).stats, b = out ? asWorn(s, out).stats : {};
+  const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])].filter((k) => STATS[k]);
+  const rows = keys.map((k) => [k, (a[k] || 0) - (b[k] || 0)]).filter(([, d]) => Math.abs(d) > 1e-9).sort((a, b) => b[1] - a[1])
     .map(([k, d]) => `<span class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲ +' : '▼ −'}${fmtStat(k, Math.abs(d))} ${esc(STATS[k].name)}</span>`);
   if (fxName(out) && fxName(out) !== fxName(it)) rows.push(`<span class="down">▼ ${esc(fxName(out))}</span>`);
   if (out?.implicit && out.implicit !== it.implicit) rows.push(`<span class="down">▼ ${esc(IMPLICITS[out.implicit]?.name || '')}</span>`); // its faction implicit
@@ -1348,7 +1357,7 @@ export const stashUi = { filter: 'all', sel: null, sort: 'up' };
 // An item's stats, one a line.
 const invStats = (it) => Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span class="${v < 0 ? 'neg' : ''}"><b>${v < 0 ? '−' + fmtStat(k, -v) : '+' + fmtStat(k, v)}</b> ${esc(STATS[k].name)}</span>`).join('');
 // An item's effect as a line: its Zero-day's, the unique's own or its rule's ('' for none).
-const fxText = (it) => (it.zeroDay ? ZERO_DAYS[it.zeroDay].effect : it.unique || it.rule ? effectLine(it) : '');
+const fxText = (it, L = null) => (it.zeroDay ? ZERO_DAYS[it.zeroDay].effect : it.unique || it.rule ? effectLine(it, L) : '');
 
 // ---------- sets (sets.mjs) ----------
 // What you have of each set: the pieces loaded, held in the stash, ever found (the Collection), and the active rows.
@@ -1446,8 +1455,8 @@ export const isUpgrade = (s, it) => loadedOn(s, it.id) !== classOf(s) && !loadBl
 export const upgradeCount = (s) => (s.stash || []).filter((it) => isUpgrade(s, it)).length;
 function upScore(s, it) {
   if (loadSlot(s, it) < 0) return -1e9;
-  const out = loadOut(s, it);
-  return [...new Set([...Object.keys(it.stats || {}), ...Object.keys(out?.stats || {})])].filter((k) => STATS[k]).reduce((n, k) => n + ((it.stats[k] || 0) - (out?.stats?.[k] || 0)) / STATS[k].base, 0);
+  const out = loadOut(s, it), a = asWorn(s, it, out).stats, b = out ? asWorn(s, out).stats : {};
+  return [...new Set([...Object.keys(a), ...Object.keys(b)])].filter((k) => STATS[k]).reduce((n, k) => n + ((a[k] || 0) - (b[k] || 0)) / STATS[k].base, 0);
 }
 // Load (or Swap, when its slot is full). long: the datasheet's, which names the slot.
 function loadButton(s, it, busy, long = false) {
@@ -1499,17 +1508,18 @@ function silkBoard(s, p) {
 function itemSheet(s, it, vs = null, acts = '') {
   const where = loadedOn(s, it.id), home = it.unique && isNative(it.unique) ? nativeHome(s, it) : null, out = vs?.out;
   const flavour = it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour;
-  const keys = [...new Set([...Object.keys(it.stats || {}), ...Object.keys(out?.stats || {})])].filter((k) => STATS[k]);
+  const W = where === classOf(s) || vs ? asWorn(s, it, out) : { L: it.level, stats: it.stats || {}, by: null }, O = out ? asWorn(s, out).stats : {}; // as it counts worn (set tuning)
+  const keys = [...new Set([...Object.keys(W.stats), ...Object.keys(O)])].filter((k) => STATS[k]);
   const signed = (k, v) => (v < 0 ? '−' : '+') + fmtStat(k, Math.abs(v));
   const rows = keys.map((k) => {
-    const v = it.stats[k] || 0, d = v - (out?.stats?.[k] || 0);
+    const v = W.stats[k] || 0, d = v - (O[k] || 0);
     return `<div class="${v < 0 ? 'neg' : v ? '' : 'zero'}"><dt>${glyph(k)}${esc(STATS[k].name)}</dt><dd>${v ? signed(k, v) : '—'}</dd>${vs ? `<dd class="silk-d ${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${Math.abs(d) > 1e-9 ? `${d > 0 ? '▲' : '▼'} ${fmtStat(k, Math.abs(d))}` : ''}</dd>` : ''}</div>`;
   }).join('');
   const lost = fxName(out) && fxName(out) !== fxName(it) ? `<p class="silk-lost">▼ ${esc(fxName(out))}</p>` : '';
-  const [fxHead, ...fxRest] = fxText(it).split(' — ');
+  const [fxHead, ...fxRest] = fxText(it, W.L).split(' — ');
   const effect = fxHead ? `<h4 class="silk-kicker">Effect</h4><p class="silk-fx">${fxRest.length ? `<b>${esc(fxHead)}</b> — ${esc(fxRest.join(' — '))}` : esc(fxHead)}</p>${uniqueWhy(it, 'p')}` : '';
   return `<div class="silk-head"><div class="silk-headtext"><h3 class="silk-title iname ${rarityClass(it)}">${esc(itemLabel(it))}</h3>
-    <p class="silk-sub">${esc(rarityName(it))} · ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}${!meetsReq(s, it, hackerLevel(s)) ? ` · <b class="silk-req">Requires Level ${reqLevel(it)}</b>` : ''}${where && where !== classOf(s) ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}${home ? ` <span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}</p>${acts}</div><div class="silk-plate">${glyphMarkup(it, 'lg')}</div></div>
+    <p class="silk-sub">${esc(rarityName(it))} · ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}${W.by ? ` · <span class="silk-tuned" title="Worn with another ${esc(W.by)} piece, it counts at the level of that set's highest worn piece.">tuned to ${W.L} by ${esc(W.by)}</span>` : ''}${!meetsReq(s, it, hackerLevel(s)) ? ` · <b class="silk-req">Requires Level ${reqLevel(it)}</b>` : ''}${where && where !== classOf(s) ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}${home ? ` <span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}</p>${acts}</div><div class="silk-plate">${glyphMarkup(it, 'lg')}</div></div>
     <h4 class="silk-kicker">${vs ? (out ? `Stats · vs ${esc(itemLabel(out))}` : 'Stats') : 'Stats'}</h4><dl class="silk-stats${vs ? ' vs' : ''}">${rows}</dl>${implicitRow(it, 'p')}${lost}${effect}${it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em class="silk-flavour">${esc(flavour)}</em>` : ''}`;
 }
 
