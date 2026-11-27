@@ -39,42 +39,43 @@ export const BONUS_AT = [2, 3, 4];
 export const GREEN_AT = 2;
 export const bonusesOf = (id) => BONUS_AT.filter((n) => SETS[id]?.bonuses?.[n]).map((n) => ({ at: n, ...SETS[id].bonuses[n] }));
 export const tierLine = (id) => (SETS[id]?.tier ? `${ARCHETYPES[SETS[id].cls]?.name || SETS[id].cls} tier set, level ${SETS[id].tier}` : null);
-// Set tuning: a piece worn with another piece of its set counts at the highest item level among that set's worn pieces,
-// its stats, its effect and its green line alike. items: the loadout it's in. Alone it counts at its own level.
-export function tunedLevel(items, it) {
+// Rebasing: a set is one codebase, and an item's level is its version (gear.mjs itemLabel, v37). A piece loaded beside a
+// newer piece of its set is rebased onto that version: its stats (its own roll kept), its effect and its green line run at
+// the highest version among the set's loaded pieces. items: the loadout it's in. Alone it runs at its own.
+export function rebaseLevel(items, it) {
   const id = it?.unique && UNIQ[it.unique]?.set, L = it?.level || 1;
   if (!id) return L;
   let top = L, other = false;
   for (const x of items || []) if (x?.unique && x.unique !== it.unique && UNIQ[x.unique]?.set === id) { other = true; if ((x.level || 1) > top) top = x.level || 1; }
   return other ? top : L;
 }
-// Every item's tuned level at once (one pass), in items' order: what gearStat and the effect list read in a fight.
+// Every item's rebased level at once (one pass), in items' order: what gearStat and the effect list read in a fight.
 // null when no two pieces of one set are loaded, so each counts at its own level and nothing is built.
 let LAST = null; // the last loadout's answer: a fight asks for the same loadout many times a cycle
-export function tunedLevels(items = []) {
+export function rebaseLevels(items = []) {
   if (LAST && LAST.items.length === items.length) {
     let same = true;
     for (let i = 0; i < items.length && same; i++) same = items[i] === LAST.items[i] && items[i]?.level === LAST.lv[i];
     if (same) return LAST.out;
   }
-  const out = tunedOf(items);
+  const out = rebaseOf(items);
   LAST = { items: items.slice(), lv: items.map((x) => x?.level), out };
   return out;
 }
-function tunedOf(items) {
+function rebaseOf(items) {
   let top = null, two = false;
   for (const x of items) { const id = x?.unique && UNIQ[x.unique]?.set; if (id) { top ||= {}; const t = (top[id] ||= { n: 0, L: 0 }); if (++t.n >= 2) two = true; if ((x.level || 1) > t.L) t.L = x.level || 1; } }
   return two ? items.map((x) => { const t = x?.unique && top[UNIQ[x.unique]?.set]; return t && t.n >= 2 ? Math.max(x.level || 1, t.L) : x?.level || 1; }) : null;
 }
 // Its stats at that level (gear.mjs statsAt), kept per item until the level or its stats object changes (only a save's
 // restore edits stats in place, before any fight).
-const TUNED = new WeakMap();
-export function tunedStats(it, L) {
+const REBASED = new WeakMap();
+export function rebasedStats(it, L) {
   if (!it?.unique || !UNIQ[it.unique] || !(L > (it.level || 1))) return it?.stats || {};
-  const m = TUNED.get(it);
+  const m = REBASED.get(it);
   if (m && m.L === L && m.src === it.stats) return m.stats;
   const stats = statsAt(UNIQ[it.unique], it, L);
-  TUNED.set(it, { L, src: it.stats, stats });
+  REBASED.set(it, { L, src: it.stats, stats });
   return stats;
 }
 
@@ -171,9 +172,9 @@ export function activeSets(items = []) {
 // The active bonuses' effect blocks and the worn pieces' green lines: { fx, id, name, set, at } each, the shape
 // combat.mjs uniqueFx lists. A subclass line carries its subclass (fx.sub): combat.mjs fxCond holds it for that
 // subclass only.
-// A flat bonus (+2 Block) is lifted at the set's level (setLevel), a green line at its piece's tuned level (tunedLevel).
+// A flat bonus (+2 Block) is lifted at the set's level (setLevel), a green line at its piece's rebased level (rebaseLevel).
 export function setFx(items = []) {
-  const out = [], tl = tunedLevels(items);
+  const out = [], tl = rebaseLevels(items);
   for (const r of activeSets(items)) {
     const L = setLevel(r.id);
     for (const at of r.open) {

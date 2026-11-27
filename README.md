@@ -135,7 +135,7 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/gear.mjs` | Protocols: slots, rarities, item levels, stats and rule affixes; flat numbers lifted at their level, and the ones that carry your power filled (`liftItem`, `liftFx`, `FILLS`, `curveRestore`). Pure data and functions. |
-| `dist/sets.mjs` | Sets: piece counts and their bonuses in a fight; set tuning (a worn piece at its set's highest worn level). |
+| `dist/sets.mjs` | Sets: piece counts and their bonuses in a fight; rebasing (a worn piece runs at its set's newest worn version). |
 | `dist/earned.mjs`, `dist/content/earned.mjs` | Earned pieces (a floor feat's unique): their counts in one table, each from its band, the piece once it fills, and the map's pins. |
 | `dist/faction-gear.mjs` | Faction gear: implicit lines on a faction's items, and the five faction uniques assembled from parts (feuds, receipts). |
 | `dist/salvage.mjs` | Components, one currency every broken part drops. |

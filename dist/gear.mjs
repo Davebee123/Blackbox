@@ -486,7 +486,7 @@ export function uniqueItem(u, level, rand) {
   return liftItem({ kind: 'protocol', side: 'hacker', group: slot, base: best, rarity: 'zeroday', level: L, stats, affixes: [], zeroDay: null, unique: u.id, name: u.name, ...own });
 }
 // An owned unique's stats at a higher level, its rolls kept: each stat times what the unique carries at L over what it
-// carries at its own level (sets.mjs tunedStats: a set piece worn with its set). A stat it gains there comes at L's number.
+// carries at its own level (sets.mjs rebasedStats: a set piece rebased onto a newer piece of its set). A stat it gains there comes at L's number.
 const mid = () => 0.5;
 export function statsAt(u, it, L) {
   const at = uniqueItem(u, it.level, mid).stats, up = uniqueItem(u, L, mid).stats, out = { ...it.stats };

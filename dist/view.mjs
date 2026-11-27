@@ -54,7 +54,7 @@ import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, 
 import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend, waypointOf, holderOf } from './floors.mjs';
 import { ROOT, ROOT_RULES, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
 import { situationOf } from './situations.mjs';
-import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine, tunedLevel, tunedStats } from './sets.mjs';
+import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine, rebaseLevel, rebasedStats } from './sets.mjs';
 import { earnedOf, cellsOf, pinsOf, PIN_MAX } from './earned.mjs';
 import { logGo, homeOfUnique } from './collection.mjs';
 import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED, answerLine, ANSWER, helperPlan, beatCopy } from './fightread.mjs';
@@ -1329,13 +1329,13 @@ const shelfOf = (s, ref) => {
 };
 // The name of an item's effect (its Zero-day's, the unique's own, its rule's), or ''.
 const fxName = (x) => x && (x.zeroDay ? ZERO_DAYS[x.zeroDay].name : x.unique ? x.name : x.rule ? RULES[x.rule]?.name || '' : '');
-// An item as it counts worn: a set piece with another of its set counts at their highest level (sets.mjs tunedLevel).
+// An item as it counts worn: a set piece beside a newer piece of its set is rebased onto it (sets.mjs rebaseLevel).
 // out: the item it would replace, gone from the loadout. { L, stats, by: the set's name when that lifts it }
 function asWorn(s, it, out = null) {
   const set = it?.unique && setOf(it.unique);
   const items = set ? loaded(s).filter((x) => x && x !== out && x.id !== it.id && x.id !== out?.id).concat(it) : [it];
-  const L = tunedLevel(items, it);
-  return { L, stats: tunedStats(it, L), by: L > (it.level || 1) ? set.name : null };
+  const L = rebaseLevel(items, it);
+  return { L, stats: rebasedStats(it, L), by: L > (it.level || 1) ? set.name : null };
 }
 // Loading a stash protocol: what changes against what's in that slot now (▲ gains, ▼ losses), both as they'd count worn.
 function swapCompare(s, it) {
@@ -1508,7 +1508,7 @@ function silkBoard(s, p) {
 function itemSheet(s, it, vs = null, acts = '') {
   const where = loadedOn(s, it.id), home = it.unique && isNative(it.unique) ? nativeHome(s, it) : null, out = vs?.out;
   const flavour = it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour;
-  const W = where === classOf(s) || vs ? asWorn(s, it, out) : { L: it.level, stats: it.stats || {}, by: null }, O = out ? asWorn(s, out).stats : {}; // as it counts worn (set tuning)
+  const W = where === classOf(s) || vs ? asWorn(s, it, out) : { L: it.level, stats: it.stats || {}, by: null }, O = out ? asWorn(s, out).stats : {}; // as it counts worn (a rebased set piece)
   const keys = [...new Set([...Object.keys(W.stats), ...Object.keys(O)])].filter((k) => STATS[k]);
   const signed = (k, v) => (v < 0 ? '−' : '+') + fmtStat(k, Math.abs(v));
   const rows = keys.map((k) => {
@@ -1519,7 +1519,7 @@ function itemSheet(s, it, vs = null, acts = '') {
   const [fxHead, ...fxRest] = fxText(it, W.L).split(' — ');
   const effect = fxHead ? `<h4 class="silk-kicker">Effect</h4><p class="silk-fx">${fxRest.length ? `<b>${esc(fxHead)}</b> — ${esc(fxRest.join(' — '))}` : esc(fxHead)}</p>${uniqueWhy(it, 'p')}` : '';
   return `<div class="silk-head"><div class="silk-headtext"><h3 class="silk-title iname ${rarityClass(it)}">${esc(itemLabel(it))}</h3>
-    <p class="silk-sub">${esc(rarityName(it))} · ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}${W.by ? ` · <span class="silk-tuned" title="Worn with another ${esc(W.by)} piece, it counts at the level of that set's highest worn piece.">tuned to ${W.L} by ${esc(W.by)}</span>` : ''}${!meetsReq(s, it, hackerLevel(s)) ? ` · <b class="silk-req">Requires Level ${reqLevel(it)}</b>` : ''}${where && where !== classOf(s) ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}${home ? ` <span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}</p>${acts}</div><div class="silk-plate">${glyphMarkup(it, 'lg')}</div></div>
+    <p class="silk-sub">${esc(rarityName(it))} · ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}${W.by ? ` · <span class="silk-rebased" title="${esc(W.by)} is one codebase. Loaded beside a newer piece of it, this piece is rebased onto v${W.L}: it runs at that version and keeps its own roll.">rebased onto v${W.L}</span>` : ''}${!meetsReq(s, it, hackerLevel(s)) ? ` · <b class="silk-req">Requires Level ${reqLevel(it)}</b>` : ''}${where && where !== classOf(s) ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}${home ? ` <span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}</p>${acts}</div><div class="silk-plate">${glyphMarkup(it, 'lg')}</div></div>
     <h4 class="silk-kicker">${vs ? (out ? `Stats · vs ${esc(itemLabel(out))}` : 'Stats') : 'Stats'}</h4><dl class="silk-stats${vs ? ' vs' : ''}">${rows}</dl>${implicitRow(it, 'p')}${lost}${effect}${it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em class="silk-flavour">${esc(flavour)}</em>` : ''}`;
 }
 

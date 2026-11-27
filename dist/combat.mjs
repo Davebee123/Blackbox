@@ -53,7 +53,7 @@ import { reqLevel, meetsReq, STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, loo
 
 import ITEMS from './content/items.mjs';
 import EARN from './content/earned.mjs';
-import { SETS, setFx, activeSets, tunedLevels, tunedStats, isPiece, setPool, SET_LOOT, CLASS_SET, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, renamedRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf, restFast } from './sets.mjs';
+import { SETS, setFx, activeSets, rebaseLevels, rebasedStats, isPiece, setPool, SET_LOOT, CLASS_SET, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, renamedRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf, restFast } from './sets.mjs';
 import { fxText, fxList } from './content.mjs';
 import { deathRecap } from './recap.mjs';
 import { situationOf } from './situations.mjs';
@@ -511,9 +511,9 @@ export function loadedOn(s, id) {
 export function gearStat(s, stat, side = null) {
   let n = 0, pieces = false;
   let pct = 0;
-  const items = side !== 'server' ? loaded(s) : [], tl = tunedLevels(items);
+  const items = side !== 'server' ? loaded(s) : [], tl = rebaseLevels(items);
   for (let j = 0; j < items.length; j++) {
-    const it = items[j], L = tl ? tl[j] : it.level, st = L > it.level ? tunedStats(it, L) : it.stats; // a set piece tuned to its set (sets.mjs)
+    const it = items[j], L = tl ? tl[j] : it.level, st = L > it.level ? rebasedStats(it, L) : it.stats; // a set piece rebased onto its set's newest worn piece (sets.mjs)
     n += st[stat] || 0;
     const u = it.unique && UNIQUES[it.unique];
     if (u?.set) pieces = true;
@@ -962,10 +962,10 @@ export function setDeliver(s) {
 const fxIdOf = (uid, i) => (i ? `${uid}:${i}` : uid);
 const uniqueFx = (s) => {
   const out = [], rules = {}, imps = {};
-  const items = loaded(s), tl = tunedLevels(items);
+  const items = loaded(s), tl = rebaseLevels(items);
   for (let j = 0; j < items.length; j++) {
     const it = items[j];
-    if (it.unique) { const L = tl ? tl[j] : it.level; fxList(UNIQUES[it.unique]).forEach((fx, i) => out.push({ it, fx: liftFx(fx, L), id: fxIdOf(it.unique, i) })); } // a flat number lifted at its item level, a set piece's tuned to its set (gear.mjs liftFx, sets.mjs tunedLevel)
+    if (it.unique) { const L = tl ? tl[j] : it.level; fxList(UNIQUES[it.unique]).forEach((fx, i) => out.push({ it, fx: liftFx(fx, L), id: fxIdOf(it.unique, i) })); } // a flat number lifted at its item level, a set piece's tuned to its set (gear.mjs liftFx, sets.mjs rebaseLevel)
     if (IMPLICITS[it.implicit] && !((imps[it.implicit]?.implicitValue || 0) >= (it.implicitValue || 0))) imps[it.implicit] = it; // a faction implicit: once, at its best
     const r = it.rule && RULES[it.rule];
     if (r && !((rules[it.rule]?.fx.value || 0) >= (it.ruleValue || 0) && rules[it.rule])) rules[it.rule] = { it, fx: { ...r.fx, value: it.ruleValue }, id: 'rule:' + it.rule, name: r.name };

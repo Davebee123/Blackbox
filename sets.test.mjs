@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { fresh, fireEvent, command, selectEncounter, resolveCycle, finish, addItem, loaded, hackerOf, roomKill, uniqueFrom, guardSetChance, guardSetTable, setDeliver, maxSignal, restore, gearFx, fxHolds, gearStat, damageMultiplier, takeDamage, momentumStacks, setDrop, setDropPool, setChance, bossUniques, hooks, UNIQUES, SAVE_VERSION } from './dist/combat.mjs';
-import { SETS, setOf, isPiece, piecesOf, activeSets, setFx, setCard, greenOf, SET_LOOT, CLASS_SET, SET_HOOKS, setPool, setCredits, BADGE_BEAT, tunedLevel, tunedStats } from './dist/sets.mjs';
+import { SETS, setOf, isPiece, piecesOf, activeSets, setFx, setCard, greenOf, SET_LOOT, CLASS_SET, SET_HOOKS, setPool, setCredits, BADGE_BEAT, rebaseLevel, rebasedStats } from './dist/sets.mjs';
 import { uniqueItem, seeded, BASES, RARITIES, STATS, baseFor, shownRarity } from './dist/gear.mjs';
 import { itemTipMarkup, collectionSets, collectionMarkup, protocolSlotsCard, protocolStashCard, protocolDetailMarkup, protocolStatsCard, stashUi, rareLine } from './dist/view.mjs';
 import { CARDS } from './dist/events.mjs';
@@ -884,22 +884,23 @@ test('a set piece shows in set green, whatever its rarity; other uniques by rari
   assert.match(itemTipMarkup(s, it.id), /iname r-set/);
 });
 
-test('set tuning: a piece worn with another of its set counts at the highest worn piece\'s level, stats, effect and tooltip; alone at its own', () => {
+test('rebasing: a set piece beside a newer piece of its set runs at that version, stats, effect and tooltip; alone at its own', () => {
   const s = at(48);
   const [low] = wear(s, ['freehold'], 33);
-  assert.equal(tunedLevel(loaded(s), low), 33, 'alone: its own level');
+  assert.equal(rebaseLevel(loaded(s), low), 33, 'alone: its own level');
   const own = gearStat(s, 'damage');
   const [high] = wear(s, ['sitting-tenant'], 48);
-  assert.equal(tunedLevel(loaded(s), low), 48, 'with Sitting Tenant: Tenure\'s highest worn piece');
-  const tuned = tunedStats(low, 48), mid = (L) => uniqueItem(UNIQUES.freehold, L, () => 0.5).stats, m33 = mid(33), m48 = mid(48);
-  for (const k of Object.keys(m48)) assert.ok(Math.abs(tuned[k] / m48[k] - low.stats[k] / m33[k]) < 0.03, `${k}: ${tuned[k]} tuned from ${low.stats[k]}, its roll kept against a level-48 Freehold's ${m48[k]}`);
-  assert.equal(gearStat(s, 'damage'), own - low.stats.damage + tuned.damage + (high.stats.damage || 0), 'the fight counts the tuned stats');
-  assert.match(protocolDetailMarkup(s, low.id), /tuned to 48 by Tenure/, 'its datasheet says so');
+  assert.equal(rebaseLevel(loaded(s), low), 48, 'with Sitting Tenant: Tenure\'s highest worn piece');
+  const rebased = rebasedStats(low, 48), mid = (L) => uniqueItem(UNIQUES.freehold, L, () => 0.5).stats, m33 = mid(33), m48 = mid(48);
+  for (const k of Object.keys(m48)) assert.ok(Math.abs(rebased[k] / m48[k] - low.stats[k] / m33[k]) < 0.03, `${k}: ${rebased[k]} rebased from ${low.stats[k]}, its roll kept against a level-48 Freehold's ${m48[k]}`);
+  assert.equal(gearStat(s, 'damage'), own - low.stats.damage + rebased.damage + (high.stats.damage || 0), 'the fight counts the rebased stats');
+  assert.match(protocolDetailMarkup(s, low.id), /rebased onto v48/, 'its datasheet says so');
+  assert.match(protocolDetailMarkup(s, low.id), /Tenure is one codebase/, 'and its tooltip why');
   // An effect's flat number lifts with it: Junk Code (28) beside Decryptor (31) adds what a level-31 Junk Code would.
   const c = at(31), [junk] = wear(c, ['junk-code'], 28), alone = protocolDetailMarkup(c, junk.id);
   wear(c, ['decryptor'], 31);
   const lifted = protocolDetailMarkup(c, junk.id), n = (h) => Number(h.match(/Adds (\d+) damage/)[1]);
-  assert.ok(n(lifted) > n(alone), `${n(alone)} alone, ${n(lifted)} tuned`);
+  assert.ok(n(lifted) > n(alone), `${n(alone)} alone, ${n(lifted)} rebased`);
   command(s, 'unload ' + high.id);
   assert.equal(gearStat(s, 'damage'), own, 'alone again: back to its own level');
 });
