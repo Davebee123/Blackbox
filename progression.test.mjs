@@ -250,11 +250,11 @@ test('the new world uniques: Rowhammer, Slammer, Log4Shell, Shellshock, Blue Pil
   wear(f, uniqueItem(UNIQUES['interrupt-vector'], 32, seeded(1)));
   wear(g, uniqueItem(UNIQUES['ctrl-c'], 32, seeded(1)));
   fight(f, 32); fight(g, 32);
+  const chits = f.encounter.chits || 0;
   fxAnswer(f);
-  assert.equal(f.encounter.shield, filled(30, 32), 'a 30 shield, lifted and filled at its item level');
-  g.encounter.readyAt = { firewall: g.encounter.cycle + 3 };
+  assert.equal(f.encounter.chits, chits + 1, 'Interrupt Vector: a ◆ that fades');
   fxAnswer(g);
-  assert.equal(g.encounter.readyAt.firewall, g.encounter.cycle + 1, 'every cooldown 2 sooner');
+  assert.equal(g.encounter.fxs?.repeat?.share, 30, 'Ctrl-C: your next damaging skill hits again for 30%');
 });
 
 test('v34: server XP, ports, the specialty, eight services and grey protocols fold away, refunded in kind (and v40 the last four)', () => {

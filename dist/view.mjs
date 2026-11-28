@@ -54,7 +54,7 @@ import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, 
 import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend, waypointOf, holderOf } from './floors.mjs';
 import { ROOT, ROOT_RULES, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
 import { situationOf } from './situations.mjs';
-import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine } from './sets.mjs';
+import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine, rebaseLevel, rebasedStats } from './sets.mjs';
 import { earnedOf, cellsOf, pinsOf, PIN_MAX } from './earned.mjs';
 import { logGo, homeOfUnique } from './collection.mjs';
 import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED, answerLine, helperPlan, beatCopy } from './fightread.mjs';
@@ -85,6 +85,7 @@ import { rivalP } from './rivals.mjs';
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
 import { siteNodes, siteNodeSvg, siteCard, siteRows } from './sites-view.mjs';
 import { arcRows, arcReader } from './arcs-view.mjs';
+import { pathOf } from './arcs.mjs';
 import { threadById, serverMarks } from './threads.mjs';
 import { tipOf, postFound } from './scanner.mjs';
 import { POST, postNodeSvg, postNodeSub, postCard } from './scanner-view.mjs';
@@ -567,7 +568,7 @@ const collSource = (s, src) => !src ? '' : src.kind === 'sprawl' ? 'SPRAWL-00' :
   : src.kind === 'raid' ? 'Crew bosses' : src.kind === 'strain' && !src.id ? 'Strain trophies'
   : src.kind === 'guard' ? `${GUARDS[src.id]?.name || src.id} guard` : src.kind === 'strain' ? (s.met?.[src.id] ? `${STRAINS[src.id]?.name} trophy` : '???')
   : src.kind === 'rogue' ? `${ROGUE.kinds[src.id]?.name || 'Rogue'} servers` : src.kind === 'story' ? 'Storyline' : src.kind === 'contract' ? 'Contract reward' : src.kind === 'store' ? 'Halcyon store'
-  : src.kind === 'boss' ? (src.id === 'resident' ? 'A Resident' : BOSSES[src.id]?.name || src.id) : src.kind === 'farm' ? 'KESSLER-FARM-00 packs' : src.kind === 'invasion' ? 'Invasion captures' : '';
+  : src.kind === 'boss' ? (src.id === 'resident' ? 'A Resident' : BOSSES[src.id]?.name || src.id) : src.kind === 'farm' ? 'KESSLER-FARM-00 packs' : src.kind === 'invasion' ? 'Invasion captures' : src.kind === 'jackpot' ? `Any kill on ${floorName(src.floor)}` : '';
 // A native unique's source line: the network you know it from, or just native.
 const nativeSource = (s, id) => { const who = homeOf(s, id); return who ? `Native · ${nameOf(s, who)} (${whoLabel(who)})` : 'Native · another network'; };
 export function collectionMarkup(s) {
@@ -1327,13 +1328,22 @@ const shelfOf = (s, ref) => {
 };
 // The name of an item's effect (its Zero-day's, the unique's own, its rule's), or ''.
 const fxName = (x) => x && (x.zeroDay ? ZERO_DAYS[x.zeroDay].name : x.unique ? x.name : x.rule ? RULES[x.rule]?.name || '' : '');
-// Loading a stash protocol: what changes against what's in that slot now (▲ gains, ▼ losses).
+// An item as it counts worn: a set piece beside a newer piece of its set is rebased onto it (sets.mjs rebaseLevel).
+// out: the item it would replace, gone from the loadout. { L, stats, by: the set's name when that lifts it }
+function asWorn(s, it, out = null) {
+  const set = it?.unique && setOf(it.unique);
+  const items = set ? loaded(s).filter((x) => x && x !== out && x.id !== it.id && x.id !== out?.id).concat(it) : [it];
+  const L = rebaseLevel(items, it);
+  return { L, stats: rebasedStats(it, L), by: L > (it.level || 1) ? set.name : null };
+}
+// Loading a stash protocol: what changes against what's in that slot now (▲ gains, ▼ losses), both as they'd count worn.
 function swapCompare(s, it) {
   const kind = groupOf(it), same = SLOT_KINDS.slice(0, slotCount(s)).indexOf(kind);
   if (same < 0) return '';
   const out = freeSlot(s, kind) < 0 ? stashItem(s, rigOf(s)[same]) : null;
-  const keys = [...new Set([...Object.keys(it.stats || {}), ...Object.keys(out?.stats || {})])].filter((k) => STATS[k]);
-  const rows = keys.map((k) => [k, (it.stats[k] || 0) - (out?.stats?.[k] || 0)]).filter(([, d]) => Math.abs(d) > 1e-9).sort((a, b) => b[1] - a[1])
+  const a = asWorn(s, it, out).stats, b = out ? asWorn(s, out).stats : {};
+  const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])].filter((k) => STATS[k]);
+  const rows = keys.map((k) => [k, (a[k] || 0) - (b[k] || 0)]).filter(([, d]) => Math.abs(d) > 1e-9).sort((a, b) => b[1] - a[1])
     .map(([k, d]) => `<span class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲ +' : '▼ −'}${fmtStat(k, Math.abs(d))} ${esc(STATS[k].name)}</span>`);
   if (fxName(out) && fxName(out) !== fxName(it)) rows.push(`<span class="down">▼ ${esc(fxName(out))}</span>`);
   if (out?.implicit && out.implicit !== it.implicit) rows.push(`<span class="down">▼ ${esc(IMPLICITS[out.implicit]?.name || '')}</span>`); // its faction implicit
@@ -1346,7 +1356,7 @@ export const stashUi = { filter: 'all', sel: null, sort: 'up' };
 // An item's stats, one a line.
 const invStats = (it) => Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span class="${v < 0 ? 'neg' : ''}"><b>${v < 0 ? '−' + fmtStat(k, -v) : '+' + fmtStat(k, v)}</b> ${esc(STATS[k].name)}</span>`).join('');
 // An item's effect as a line: its Zero-day's, the unique's own or its rule's ('' for none).
-const fxText = (it) => (it.zeroDay ? ZERO_DAYS[it.zeroDay].effect : it.unique || it.rule ? effectLine(it) : '');
+const fxText = (it, L = null) => (it.zeroDay ? ZERO_DAYS[it.zeroDay].effect : it.unique || it.rule ? effectLine(it, L) : '');
 
 // ---------- sets (sets.mjs) ----------
 // What you have of each set: the pieces loaded, held in the stash, ever found (the Collection), and the active rows.
@@ -1444,8 +1454,8 @@ export const isUpgrade = (s, it) => loadedOn(s, it.id) !== classOf(s) && !loadBl
 export const upgradeCount = (s) => (s.stash || []).filter((it) => isUpgrade(s, it)).length;
 function upScore(s, it) {
   if (loadSlot(s, it) < 0) return -1e9;
-  const out = loadOut(s, it);
-  return [...new Set([...Object.keys(it.stats || {}), ...Object.keys(out?.stats || {})])].filter((k) => STATS[k]).reduce((n, k) => n + ((it.stats[k] || 0) - (out?.stats?.[k] || 0)) / STATS[k].base, 0);
+  const out = loadOut(s, it), a = asWorn(s, it, out).stats, b = out ? asWorn(s, out).stats : {};
+  return [...new Set([...Object.keys(a), ...Object.keys(b)])].filter((k) => STATS[k]).reduce((n, k) => n + ((a[k] || 0) - (b[k] || 0)) / STATS[k].base, 0);
 }
 // Load (or Swap, when its slot is full). long: the datasheet's, which names the slot.
 function loadButton(s, it, busy, long = false) {
@@ -1497,17 +1507,18 @@ function silkBoard(s, p) {
 function itemSheet(s, it, vs = null, acts = '') {
   const where = loadedOn(s, it.id), home = it.unique && isNative(it.unique) ? nativeHome(s, it) : null, out = vs?.out;
   const flavour = it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour;
-  const keys = [...new Set([...Object.keys(it.stats || {}), ...Object.keys(out?.stats || {})])].filter((k) => STATS[k]);
+  const W = where === classOf(s) || vs ? asWorn(s, it, out) : { L: it.level, stats: it.stats || {}, by: null }, O = out ? asWorn(s, out).stats : {}; // as it counts worn (a rebased set piece)
+  const keys = [...new Set([...Object.keys(W.stats), ...Object.keys(O)])].filter((k) => STATS[k]);
   const signed = (k, v) => (v < 0 ? '−' : '+') + fmtStat(k, Math.abs(v));
   const rows = keys.map((k) => {
-    const v = it.stats[k] || 0, d = v - (out?.stats?.[k] || 0);
+    const v = W.stats[k] || 0, d = v - (O[k] || 0);
     return `<div class="${v < 0 ? 'neg' : v ? '' : 'zero'}"><dt>${glyph(k)}${esc(STATS[k].name)}</dt><dd>${v ? signed(k, v) : '—'}</dd>${vs ? `<dd class="silk-d ${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${Math.abs(d) > 1e-9 ? `${d > 0 ? '▲' : '▼'} ${fmtStat(k, Math.abs(d))}` : ''}</dd>` : ''}</div>`;
   }).join('');
   const lost = fxName(out) && fxName(out) !== fxName(it) ? `<p class="silk-lost">▼ ${esc(fxName(out))}</p>` : '';
-  const [fxHead, ...fxRest] = fxText(it).split(' — ');
+  const [fxHead, ...fxRest] = fxText(it, W.L).split(' — ');
   const effect = fxHead ? `<h4 class="silk-kicker">Effect</h4><p class="silk-fx">${fxRest.length ? `<b>${esc(fxHead)}</b> — ${esc(fxRest.join(' — '))}` : esc(fxHead)}</p>` : '';
   return `<div class="silk-head"><div class="silk-headtext"><h3 class="silk-title iname ${rarityClass(it)}">${esc(itemLabel(it))}</h3>
-    <p class="silk-sub">${esc(rarityName(it))} · ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}${!meetsReq(s, it, hackerLevel(s)) ? ` · <b class="silk-req">Requires Level ${reqLevel(it)}</b>` : ''}${where && where !== classOf(s) ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}${home ? ` <span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}</p>${acts}</div><div class="silk-plate">${glyphMarkup(it, 'lg')}</div></div>
+    <p class="silk-sub">${esc(rarityName(it))} · ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}${W.by ? ` · <span class="silk-rebased" title="${esc(W.by)} is one codebase. Loaded beside a newer piece of it, this piece is rebased onto v${W.L}: it runs at that version and keeps its own roll.">rebased onto v${W.L}</span>` : ''}${!meetsReq(s, it, hackerLevel(s)) ? ` · <b class="silk-req">Requires Level ${reqLevel(it)}</b>` : ''}${where && where !== classOf(s) ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}${home ? ` <span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}</p>${acts}</div><div class="silk-plate">${glyphMarkup(it, 'lg')}</div></div>
     <h4 class="silk-kicker">${vs ? (out ? `Stats · vs ${esc(itemLabel(out))}` : 'Stats') : 'Stats'}</h4><dl class="silk-stats${vs ? ' vs' : ''}">${rows}</dl>${implicitRow(it, 'p')}${lost}${effect}${it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em class="silk-flavour">${esc(flavour)}</em>` : ''}`;
 }
 
@@ -2307,11 +2318,11 @@ function goalsTracker(s) {
   return `<section class="ctrack pins goals${shut ? ' shut' : ''}" aria-label="Goals"><h3 class="ct-head goals-head" data-goals-fold role="button" tabindex="0" aria-expanded="${!shut}"><span class="goals-caret" aria-hidden="true">${shut ? '▸' : '▾'}</span>${glyph('target')}Goals<small>${gs.length}</small></h3>${shut ? '' : gs.map(row).join('')}</section>`;
 }
 const SLOT_GLYPH = { exploit: 'exploit', proxy: 'relay', shell: 'module', script: 'cipher', implant: 'injector' };
-// The map's left column: the threat rail, then the contract tracker under it (the selected server's contract lit), then
-// the Goals (goals.mjs), then the ping log (pings.mjs). The Runners are on the map itself (a phone still lists them
+// The map's left column: the threat rail, then the Path and the contract tracker under it (the selected server's contract
+// lit), then the Goals (goals.mjs), then the ping log (pings.mjs). The Runners are on the map itself (a phone still lists them
 // in the sheet: mapRail).
 function mapLeft(s, sel) {
-  const col = threatRail(s) + contractTracker(s, sel) + goalsTracker(s) + pingsMarkup(s);
+  const col = threatRail(s) + pathTracker(s, sel) + contractTracker(s, sel, null, pathJobId(s)) + goalsTracker(s) + pingsMarkup(s);
   return col ? `<div class="map-lcol">${col}</div>` : '';
 }
 // A server's map (floorplan-view.mjs): the contract tracker in its top-left corner.
@@ -2331,7 +2342,7 @@ export function mapChips(s, pick = null) {
   return chips ? `<div class="ph-chips" role="group" aria-label="Threats and contracts">${chips}</div>` : '';
 }
 // A chip's list, for the sheet: the threat rail, or the contract tracker with the Runners under it.
-export const mapRail = (s, which, sel = null, runner = null) => (which === 'threats' ? threatRail(s) : which === 'pins' ? goalsTracker(s) : contractTracker(s, sel) + runnerRail(s, runner));
+export const mapRail = (s, which, sel = null, runner = null) => (which === 'threats' ? threatRail(s) : which === 'pins' ? goalsTracker(s) : pathTracker(s, sel) + contractTracker(s, sel, null, pathJobId(s)) + runnerRail(s, runner));
 function threatRail(s) {
   const list = threatsOf(s);
   if (!list.length) return '';
@@ -2364,8 +2375,8 @@ const ctInner = (j, words = false) => { const p = ctProg(j), say = p.includes('c
 // The rows for a tooltip (floorplan-view.mjs: the strip's Contracts), one per contract, as the tracker draws them.
 export const contractTipRows = (list) => list.map((j) => `<span class="ct-row tt-ct${j.ready ? ' ready' : ''}">${ctInner(j, true)}</span>`).join('');
 // On a server (floorplan-view.mjs, `here` its contracts' ids): the same rows, its own lit; only a done one clicks (to turn in).
-function contractTracker(s, sel = null, here = null) {
-  const list = trackedJobs(s);
+function contractTracker(s, sel = null, here = null, skip = null) {
+  const list = trackedJobs(s).filter((j) => j.id !== skip); // skip: the Path's job, drawn over it on the map
   if (!list.length) return '';
   const rows = list.map((j) => {
     const on = here ? here.includes(j.id) : j.locate && j.locate === sel, act = j.command ? `data-command="${esc(j.command)}"` : here ? '' : j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`;
@@ -2375,6 +2386,31 @@ function contractTracker(s, sel = null, here = null) {
   // The kicker counts the rows you see; how many of the board's slots they fill (story and floor jobs take none) is its tip.
   const h = heldCount(s), slots = `${h} of ${MAIL.take} contract slots in use${list.length > h ? `; story and floor jobs don’t take a slot` : ''}.`;
   return `<section class="ctrack" aria-label="Contracts"><h3 class="ct-head" title="${esc(slots)}">${glyph('contract')}Contracts<small>${list.length}</small></h3>${rows}</section>`;
+}
+
+// The Path (arcs.mjs pathOf): the one thing the story wants next, over Contracts. Its head is the floor's flag (Mail's
+// floor-job mark; hollow for a floor not reached) and the chain's name; under it the steps done (✓, as objectives) and
+// the one you're on (▸), which clicks like its tracker row (locate, turn in, or Mail). Steps ahead stay hidden.
+const pathJobId = (s) => pathOf(s)?.job?.id ?? null;
+function pathTracker(s, sel = null) {
+  const p = pathOf(s);
+  if (!p) return '';
+  const j = p.job ? trackedJobs(s).find((x) => x.id === p.job.id) : null;
+  const flag = `<span class="path-flag${p.down ? ' ahead' : ''}" title="${esc(`Floor ${p.floor}, ${floorName(p.floor)}.`)}">${p.floor}</span>`;
+  const line = (inner) => `<span class="path-mark">▸</span><span class="path-t">${inner[0]}</span>${inner[1] ? `<span class="path-n">${inner[1]}</span>` : ''}`;
+  let now;
+  if (j) {
+    const act = j.command ? `data-command="${esc(j.command)}"` : j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`;
+    const n = j.ready ? 'Turn in' : j.of ? `${j.n}/${j.of}` : ctCount(j);
+    now = `<button type="button" class="path-now${j.ready ? ' ready' : ''}${j.locate && j.locate === sel ? ' path-sel' : ''}" ${act} title="${esc(j.tip)}">${j.pay ? `<template class="tt-more">${j.pay}</template>` : ''}${line([esc(j.name), n])}</button>`;
+  } else if (p.lv) {
+    now = `<div class="path-now wait" title="${esc(`Reach level ${p.lv}: ${p.title}. Its next letter comes at level ${p.lv}.`)}">${line([`Reach level ${p.lv}`, `Lv ${p.lv}`])}</div>`;
+  } else {
+    const tip = p.exit ? `Find the way down: ${p.title}. Its exit ▼ hangs off a server you've found.\n▸ Show it on the map.` : `Find the way down: ${p.title}. Its exit ▼ hangs off a server on this floor.\n▸ Trace servers to find it.`;
+    now = `<${p.exit ? `button type="button" data-locate="${esc(p.exit)}"` : 'div'} class="path-now${p.exit && p.exit === sel ? ' path-sel' : ''}" title="${esc(tip)}">${line(['Find the way down'])}</${p.exit ? 'button' : 'div'}>`;
+  }
+  const done = p.done.map((t) => `<li class="done"><span class="path-mark">✓</span><span class="path-t">${esc(t)}</span></li>`).join('');
+  return `<section class="ctrack path" aria-label="Path"><h3 class="ct-head">${flag}<span class="path-name">${esc(p.title)}</span></h3><ol class="path-steps">${done}<li>${now}</li></ol></section>`;
 }
 
 // Traffic on the net: files moving between servers, as dots along the links. Your market orders
@@ -2508,6 +2544,10 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     return `<g class="mhunt"><title>${esc(`${ev.name} hops to ${b.loc?.name || 'its next server'} in ${fmtLeft(hopLeft(ev))}`)}</title>${flowSvg([{ x: a.x + ux * 14, y: a.y + uy * 14 }, { x: tx, y: ty }], 'mhunt-line', 8, { id: 'm' })}<path d="M${r(tx)} ${r(ty)} L${r(tx - ux * 7 - uy * 4)} ${r(ty - uy * 7 + ux * 4)} L${r(tx - ux * 7 + uy * 4)} ${r(ty - uy * 7 - ux * 4)} Z"/></g>`;
   }).join('');
   const thMarks = serverMarks(s); // the servers a thread marks (threads.mjs)
+  // The Path's flag (arcs.mjs pathOf): its floor's number on the server its step points at, over the nodes; clicks pass
+  // through to the server. A step on another floor, or a floor down, flags that floor in the lift instead (floorLift).
+  const path = con ? null : pathOf(s), pathAt = path && find(path.job ? trackedJobs(s).find((j) => j.id === path.job.id)?.locate : path.exit);
+  const flagged = pathAt ? `<g class="mpath" transform="translate(${pathAt.x} ${pathAt.y})" aria-hidden="true"><path d="M8 -7V-25"/><rect x="8" y="-25" width="15" height="12" rx="1"/><text x="15.5" y="-16" text-anchor="middle">${path.floor}</text></g>` : '';
   const draw = nodes.map((n) => {
     const on = !none && n.id === sel ? ' selected' : '';
     const pick = on ? reticle(n.kind === 'server' ? 13 : n.kind === 'location' && !n.loc.rogue ? SV_R : 9) : '';
@@ -2575,7 +2615,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   // twice the size, so they stay about 40px on screen.
   const W = maxX - minX, Hh = maxY - minY, C = CHART * ((mapScale || 1) < 0.5 ? 2 : 1), c2 = C / 2;
   const chart = `<defs><pattern id="mchart" width="${C}" height="${C}" patternUnits="userSpaceOnUse"><path class="mchart-line" d="M0 ${c2}H${C}M${c2} 0V${C}"/><path class="mchart-tick" d="M${c2 - 4} ${c2}H${c2 + 4}M${c2} ${c2 - 4}V${c2 + 4}"/></pattern></defs><rect class="mchart" x="${minX - 2 * W}" y="${minY - 2 * Hh}" width="${5 * W}" height="${5 * Hh}" fill="url(#mchart)"/>`;
-  const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter.length ? ' mf' + filter.map((k) => ' mf-' + k).join('') : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${con ? 'Map of your consortium' : `Floor ${fl}, ${esc(floorName(fl))}`}">${chart}${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${con ? '' : trails}${draw}${con ? '' : runnersMap(s, fl, runner, mapPortrait, runnersAt, avoid) + runnerMark(s, runner, fl, mapPortrait, avoid, mapScale || 1)}</svg>`;
+  const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter.length ? ' mf' + filter.map((k) => ' mf-' + k).join('') : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${con ? 'Map of your consortium' : `Floor ${fl}, ${esc(floorName(fl))}`}">${chart}${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${con ? '' : trails}${draw}${flagged}${con ? '' : runnersMap(s, fl, runner, mapPortrait, runnersAt, avoid) + runnerMark(s, runner, fl, mapPortrait, avoid, mapScale || 1)}</svg>`;
   // Top corner: which map, and the map's own controls (names on hover, zoom back out).
   const tabs = `<div class="map-tools"><div class="map-left">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters map-mode" role="group" aria-label="View"><button type="button" data-maplist="0" aria-pressed="${!list}">Map</button><button type="button" data-maplist="1" aria-pressed="${list}">List</button></div><details class="map-pick${filter.length ? ' on' : ''}"${pickOpen ? ' open' : ''}><summary data-mapfilter-toggle aria-label="Show">${filter.length ? filter.map((k) => MAP_FILTERS.find(([x]) => x === k)[1]).join(' + ') : 'All'}</summary><div class="map-pick-menu">${MAP_FILTERS.map(([k, l]) => `<label><input type="checkbox" data-mapfilter-check="${k}"${filter.includes(k) ? ' checked' : ''}><span>${l}</span></label>`).join('')}${filter.length ? '<button type="button" data-mapfilter-clear>Show all</button>' : ''}</div></details></div><div class="map-right"><div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover. Click to always show them.' : 'Show names only on hover'}">Aa</button><button type="button" data-locate="__sel" title="Zoom to the selected one">${glyph('trace')}</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div></div>`;
   // pop: the selected node's card, popped up beside the node (app.js places it once the map is drawn).
@@ -2585,18 +2625,19 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   // A phone (docs/phone-plan.md P3): the floors as a segmented row, the rail and the tracker as chips under it; the
   // selected one's card is the sheet's (app.js lifts #map-pop into it), in List mode too.
   if (list && !con) return `<div class="map-page map-list-page"><section class="panel map-canvas map-list">${tabs}${serverList(s, sel, filter, sort)}${phone ? card : ''}</section>${phone ? '' : `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>`}</div>`;
-  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : phone ? floorLift(s, fl) + mapChips(s, runner) : mapLeft(s, none ? null : sel, runner, railShut)}${con || phone ? '' : floorLift(s, fl)}${svg}${card}${runner && !con ? runnerCard(s, runner, { mode: runnerMode, preset: runnerPreset }) : ''}${runnersAt && !runner && !con ? runnersList(s, fl, runnersAt) : ''}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
+  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : phone ? floorLift(s, fl, path, !!pathAt) + mapChips(s, runner) : mapLeft(s, none ? null : sel, runner, railShut)}${con || phone ? '' : floorLift(s, fl, path, !!pathAt)}${svg}${card}${runner && !con ? runnerCard(s, runner, { mode: runnerMode, preset: runnerPreset }) : ''}${runnersAt && !runner && !con ? runnersList(s, fl, runnersAt) : ''}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
 }
 // The floor panel, a lift's buttons down the side of the map: the floors you've reached lit (the one on the map marked),
 // the next one dim with its band, the rest dark. A teal pip on the floor you're connected to.
-function floorLift(s, n) {
+function floorLift(s, n, path = null, onMap = false) {
   const F = floorsOf(s), L = hackerLevel(s), here = s.run ? (s.run.loc === CONFIG.zone.id ? 1 : s.locations.find((l) => l.id === s.run.loc)?.depth || null) : null;
   const rows = FLOORS.map((f, i) => {
     const k = i + 1, [lo, hi] = f.band, open = k <= F.reached, next = k === F.reached + 1;
     const band = open || next ? `<small><b class="${conClass(lo - L)}">${lo}</b>–<b class="${conClass(hi - L)}">${hi}</b></small>` : '';
     const A = open ? AUTHORS[holderOf(s, k)] : null; // its holder (floors.mjs): a stripe in its colour
     const held = A ? `\nHeld by ${A.name}: it writes most of the servers here, with ${AUTHOR_FAMILIES[A.id].map(familyName).join(', ').replace(/, ([^,]*)$/, ' and $1')}.\n${A.style}` : '';
-    return `<button type="button" class="fl-btn ${open ? 'open' : next ? 'next' : 'dark'}${k === n ? ' on' : ''}${A ? ' held' : ''}"${A ? ` style="--hc:${A.colour}"` : ''} ${open ? `data-floor="${k}" title="${esc(`${f.name}\nFloor ${k}, levels ${lo}–${hi}.${held}${waypointOf(s, k) ? `\nWaypoint: ${waypointOf(s, k).name}.` : ''}`)}"` : 'disabled'} aria-label="Floor ${k}"><b class="fl-n">${k}</b><span class="fl-name">${open ? esc(f.name) : next ? '???' : ''}</span>${band}${here === k ? '<i class="fl-you" title="You are here"></i>' : ''}</button>`;
+    const pf = path && !onMap && path.floor === k && (path.down || k !== n) ? `<span class="path-flag${path.down ? ' ahead' : ''}" aria-hidden="true">${k}</span>` : ''; // the Path's step is here
+    return `<button type="button" class="fl-btn ${open ? 'open' : next ? 'next' : 'dark'}${k === n ? ' on' : ''}${A ? ' held' : ''}"${A ? ` style="--hc:${A.colour}"` : ''} ${open ? `data-floor="${k}" title="${esc(`${f.name}\nFloor ${k}, levels ${lo}–${hi}.${held}${waypointOf(s, k) ? `\nWaypoint: ${waypointOf(s, k).name}.` : ''}`)}"` : 'disabled'} aria-label="Floor ${k}"><b class="fl-n">${k}</b><span class="fl-name">${open ? esc(f.name) : next ? '???' : ''}</span>${band}${here === k ? '<i class="fl-you" title="You are here"></i>' : ''}${pf}</button>`;
   });
   return `<nav class="floor-lift" aria-label="Floors">${rows.join('')}</nav>`;
 }

@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { gearStat, fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, hooks, UNIQUES, rollDrop, giveUnique, paceOf, damageMultiplier, finish } from './dist/combat.mjs';
-import { uniqueItem, seeded, LOOT, BASES, STATS } from './dist/gear.mjs';
+import { uniqueItem, seeded, LOOT, BASES, STATS, rollItem, GOOD_YELLOW, goodYellow, statScore, uniqueFloorRestore } from './dist/gear.mjs';
 import { CONFIG } from './dist/data.mjs';
 import { checkItems } from './dist/content.mjs';
 import ITEMS from './dist/content/items.mjs';
@@ -15,7 +15,16 @@ const vet = () => { const s = fresh(); s.hackers = { breaker: { level: 30, xp: 0
 
 test('the written uniques have no mistakes', () => {
   assert.deepEqual(checkItems(ITEMS, BASES, STATS).filter((x) => x.bad).map((x) => x.msg), []);
-  assert.equal(Object.keys(UNIQUES).length, 347); // the earned pieces (earned.mjs): the eight floor feats' uniques, eight more uniques and seven sets' 22 pieces, two for each of the three floor 4 bosses, 30, the Kestrel Clearance set's three (sets.mjs), the loot plan's 65 more set pieces (docs/loot-plan.md), two for each of the four bosses, nine leaning toward a class, KESSLER-FARM-00's eight, three only invasions carry, ten world uniques for 18–40, the 27 native uniques networks roll (network.mjs), and the loot plan's Batch 1: 30 for The Sink and 30 for Bedrock (deep-uniques.test.mjs), and the five faction pieces feuds give (faction-gear.mjs), and the floor 2 and 3 bosses' eight (floorbosses.mjs), and Batch 2's ten and Catchment's four (docs/item-builds.md), and floors 5 and 6: seven sets' 23 pieces and 19 uniques, and floor 7: three sets' 9 pieces and 2 uniques (docs/floor-items.md)
+  assert.equal(Object.keys(UNIQUES).length, 371); // docs/jackpots.md's 16 Hall of Fame and 8 head starts (jackpots.test.mjs), the earned pieces (earned.mjs): the eight floor feats' uniques, eight more uniques and seven sets' 22 pieces, two for each of the three floor 4 bosses, 30, the Kestrel Clearance set's three (sets.mjs), the loot plan's 65 more set pieces (docs/loot-plan.md), two for each of the four bosses, nine leaning toward a class, KESSLER-FARM-00's eight, three only invasions carry, ten world uniques for 18–40, the 27 native uniques networks roll (network.mjs), and the loot plan's Batch 1: 30 for The Sink and 30 for Bedrock (deep-uniques.test.mjs), and the five faction pieces feuds give (faction-gear.mjs), and the floor 2 and 3 bosses' eight (floorbosses.mjs), and Batch 2's ten and Catchment's four (docs/item-builds.md), and floors 5 and 6: seven sets' 23 pieces and 19 uniques, and floor 7: three sets' 9 pieces and 2 uniques (docs/floor-items.md)
+});
+
+test('every unique has a reason to wear it (the docs\' answer line), kept off its card; its effect sits on a rule in its colour', async () => {
+  const { itemTipMarkup } = await import('./dist/view.mjs');
+  for (const u of ITEMS.uniques.filter((x) => !x.set)) assert.ok(u.why && /\.$/.test(u.why) && u.why.split(/\s+/).length <= 10 && !/\binstead\b|\bnot\b/i.test(u.why), `${u.name}: a reason of 10 words or fewer`);
+  const s = vet(), it = wear(s, 'dead-pool');
+  const tip = itemTipMarkup(s, it.id);
+  assert.doesNotMatch(tip, /Finish parts below half|u-why/, 'no reason line on the card');
+  assert.match(tip, /<small class="zd">[^<]*damage/, 'its effect, on its rule (style.css .ptip-body > small.zd)');
 });
 
 test('effect blocks: damage when synced, a chit and a crit at the start, half the first hit', () => {
@@ -27,13 +36,13 @@ test('effect blocks: damage when synced, a chit and a crit at the start, half th
   s.encounter.synced = true;
   assert.ok(damageMultiplier(s, p, { mine: true }) > plain * 1.24, '+25% in a Sync Window');
   const t = vet();
-  wear(t, 'gate-bypass');
+  wear(t, 'squatters-rights');
   wear(t, 'cell-key');
   fight(t);
-  assert.equal(t.encounter.chits, 1, 'Gate Bypass: a chit');
+  assert.equal(t.encounter.chits, 1, "Squatter's Rights: a chit");
   assert.ok(t.encounter.forceCrit, 'Cell Key: the first hit crits');
   const u = vet();
-  wear(u, 'watchdog-whitelist');
+  wear(u, 'vault-door'); // the first hit on you each fight deals half
   fight(u);
   u.server.integrity = u.server.max = 99999; // a level-30 virus against a fresh save's level-1 server: room for both hits
   for (const x of u.encounter.virus.parts) if (x.attack) x.attack.due = 99;
@@ -52,12 +61,12 @@ test('stat-x2 counts a stat double while its condition holds; break refunds; Enc
   assert.equal(gearStat(s, 'regen', 'hacker'), Math.round(high * 2 * 10) / 10, 'Hotfix: Regen doubles below half');
   assert.ok(hot.stats.regen > 0);
   s.run = null;
-  const t = vet(); wear(t, 'cryptominer'); fight(t);
+  const t = vet(); wear(t, 'eviction-notice'); fight(t);
   t.encounter.readyAt = { overload: t.encounter.cycle + 3 };
   for (const x of t.encounter.virus.parts) Object.assign(x, { armor: 0, integrity: 1 });
   command(t, 'spike pulse'); resolveCycle(t);
   assert.ok(t.encounter.readyAt.overload <= t.encounter.cycle + 2, 'a break took a cycle off');
-  const u = vet(); wear(u, 'tollgate-token'); fight(u);
+  const u = vet(); wear(u, 'air-gap'); fight(u);
   const enc = part(u, 'encryptor'); enc.attack.due = u.encounter.cycle;
   const amount = enc.attack.amount; command(u, 'hold'); resolveCycle(u);
   assert.ok(u.encounter.encrypt <= Math.ceil(amount / 2), 'half as fast');
@@ -139,4 +148,27 @@ test("wick's Old Toolkit can't be deconstructed, and a full stash still takes it
   assert.ok(s.stash.some((x) => x.id === it.id));
   s.stash.push(...Array.from({ length: 200 }, (_, i) => ({ ...s.stash[0], id: 'pad' + i, unique: null })));
   assert.ok(giveUnique(s, 'wicks-old-toolkit'));
+});
+
+test('a unique is a little stronger than a yellow: its stats at least a good yellow\'s at its level and slot, its effect on top; a set piece keeps its own', () => {
+  // The table is the top quarter of 400 seeded yellows; rolled again, they land on it (a sample of levels).
+  for (const slot of Object.keys(GOOD_YELLOW)) for (const L of [1, 5, 10, 15, 20, 30, 40, 50]) {
+    const xs = Array.from({ length: 400 }, (_, i) => statScore(rollItem(seeded(i * 7 + 1), { level: L, rarity: 'custom', slot }).stats)).sort((a, b) => a - b);
+    const now = xs[Math.floor(xs.length * 0.75)];
+    assert.ok(Math.abs(now / goodYellow(L, slot) - 1) < 0.01, `${slot} ${L}: yellows roll ${now.toFixed(2)}, the table says ${goodYellow(L, slot)} (regenerate GOOD_YELLOW in gear.mjs)`);
+  }
+  for (const u of ITEMS.uniques.filter((x) => !x.set)) {
+    const it = uniqueItem(UNIQUES[u.id], u.level, () => 0.5), g = goodYellow(it.level, BASES[it.base].slot);
+    assert.ok(statScore(it.stats) >= g * 0.999, `${u.name}: ${statScore(it.stats).toFixed(2)} against a good yellow's ${g}`);
+  }
+  const piece = ITEMS.uniques.find((x) => x.set), raw = uniqueItem(UNIQUES[piece.id], piece.level, () => 0.5);
+  assert.ok(statScore(raw.stats) < goodYellow(raw.level, BASES[raw.base].slot), `${piece.name}, a set piece, keeps its own stats`);
+  // One held from before comes up to the floor on load, and loading again changes nothing.
+  const s = fresh(), held = addItem(s, uniqueItem(UNIQUES['dead-pool'], 8, () => 0.5));
+  for (const k of Object.keys(held.stats)) held.stats[k] = Math.max(1, Math.round(held.stats[k] * 0.6));
+  uniqueFloorRestore(s);
+  const once = { ...held.stats };
+  assert.ok(statScore(held.stats) >= goodYellow(8, 'exploit') * 0.999);
+  uniqueFloorRestore(s);
+  assert.deepEqual(held.stats, once, 'safe to run twice');
 });

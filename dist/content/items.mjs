@@ -28,7 +28,13 @@ export default {
         }
       ],
       "flavour": "Comments in three languages. None of them polite.",
-      "keep": true
+      "keep": true,
+      "effect": {
+        "when": "hit",
+        "if": "target-below-half",
+        "do": "damage+",
+        "value": 2
+      }
     },
     {
       "id": "neighbours-wifi",
@@ -47,7 +53,16 @@ export default {
           "kind": "sprawl"
         }
       ],
-      "flavour": "Password was on a sticky note in a photo they posted."
+      "flavour": "Password was on a sticky note in a photo they posted.",
+      "effect": {
+        "when": "struck",
+        "do": "stack",
+        "stat": "evasion",
+        "value": 2,
+        "cap": 8,
+        "text": "Each attack that lands on you adds 2% Evasion for the rest of the fight, up to 8%."
+      },
+      "why": "Dodge more the more you're hit."
     },
     {
       "id": "boot-loop",
@@ -67,7 +82,17 @@ export default {
           "layer": 1
         }
       ],
-      "flavour": "Dies, comes back, dies, comes back."
+      "flavour": "Dies, comes back, dies, comes back.",
+      "effect": {
+        "when": "struck",
+        "if": "below-half",
+        "do": "stack",
+        "stat": "regen",
+        "value": 1,
+        "cap": 4,
+        "text": "Each attack that lands on you while you are below half health adds 1 Regen for the rest of the fight, up to 4."
+      },
+      "why": "Keep fighting once you drop below half."
     },
     {
       "id": "duckyscript",
@@ -87,7 +112,14 @@ export default {
           "id": "watchdog"
         }
       ],
-      "flavour": "Types faster than anyone watching."
+      "flavour": "Types faster than anyone watching.",
+      "effect": {
+        "when": "hit",
+        "if": "early",
+        "do": "damage%",
+        "value": 8
+      },
+      "why": "Win short fights in the first three cycles."
     },
     {
       "id": "logger-spool",
@@ -115,7 +147,8 @@ export default {
           "id": "keylogger"
         }
       ],
-      "flavour": "Every keystroke, played back at the worst moment."
+      "flavour": "Every keystroke, played back at the worst moment.",
+      "why": "Fire on the beat inside Sync Windows."
     },
     {
       "id": "cryptominer",
@@ -133,9 +166,13 @@ export default {
         "accuracy": -5
       },
       "effect": {
-        "when": "break",
-        "do": "refund",
-        "value": 1
+        "when": "always",
+        "do": "stat+",
+        "stat": "clock",
+        "value": 1,
+        "scale": "cycles",
+        "cap": 8,
+        "text": "Adds 1% Clock Speed for each cycle the fight has lasted, up to 8%."
       },
       "sources": [
         {
@@ -143,7 +180,8 @@ export default {
           "id": "hashrat"
         }
       ],
-      "flavour": "Someone else's cycles, your coin."
+      "flavour": "Someone else's cycles, your coin.",
+      "why": "Speed up the longer a fight runs."
     },
     {
       "id": "hotfix",
@@ -166,7 +204,12 @@ export default {
           "id": "patchwork"
         }
       ],
-      "flavour": "Pushed to production. Prayed over."
+      "flavour": "Pushed to production. Prayed over.",
+      "secondary": {
+        "reduction": 1,
+        "evasion": 3
+      },
+      "why": "Regen your way back from below half."
     },
     {
       "id": "flood-ramp",
@@ -181,10 +224,10 @@ export default {
         "payload": 2
       },
       "effect": {
-        "when": "custom",
-        "do": "burn-grow",
-        "value": 1,
-        "cap": 4
+        "when": "hit",
+        "if": "target-burning",
+        "do": "damage+",
+        "value": 3
       },
       "sources": [
         {
@@ -192,7 +235,8 @@ export default {
           "id": "floodgate"
         }
       ],
-      "flavour": "Starts as a trickle."
+      "flavour": "Starts as a trickle.",
+      "why": "Hit the parts your burns are on."
     },
     {
       "id": "shade-filter",
@@ -204,7 +248,7 @@ export default {
         "regen": 4
       },
       "secondary": {
-        "evasion": 4
+        "evasion": 8
       },
       "effect": {
         "when": "always",
@@ -218,7 +262,8 @@ export default {
           "id": "flicker"
         }
       ],
-      "flavour": "Now you see me."
+      "flavour": "Now you see me.",
+      "why": "Dodge more on even cycles."
     },
     {
       "id": "ransom-note",
@@ -236,9 +281,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "if": "target-winding",
-        "do": "damage%",
-        "value": 40
+        "if": "target-signature",
+        "do": "crit%",
+        "value": 20
       },
       "sources": [
         {
@@ -246,7 +291,8 @@ export default {
           "id": "extortion"
         }
       ],
-      "flavour": "Pay up, or I hit first."
+      "flavour": "Pay up, or I hit first.",
+      "why": "Crit the virus's signature part."
     },
     {
       "id": "leech-hook",
@@ -268,7 +314,7 @@ export default {
       "effect": {
         "when": "crit",
         "do": "leech-x",
-        "value": 3
+        "value": 5
       },
       "sources": [
         {
@@ -276,7 +322,8 @@ export default {
           "id": "leech"
         }
       ],
-      "flavour": "Bites, holds, drinks."
+      "flavour": "Bites, holds, drinks.",
+      "why": "Crit to heal through Leech."
     },
     {
       "id": "watchdog-whitelist",
@@ -289,8 +336,13 @@ export default {
       },
       "effect": {
         "when": "struck",
-        "do": "halve",
-        "limit": "fight"
+        "if": "big-hit",
+        "do": "stack",
+        "over": 15,
+        "stat": "reduction",
+        "value": 1,
+        "cap": 2,
+        "text": "Each attack that lands for more than 15% of your max health adds 1 Block for the rest of the fight, up to 2."
       },
       "sources": [
         {
@@ -298,7 +350,12 @@ export default {
           "id": "watchdog"
         }
       ],
-      "flavour": "Your hash, on the allow list. Don't ask how."
+      "flavour": "Your hash, on the allow list. Don't ask how.",
+      "secondary": {
+        "regen": 3,
+        "evasion": 3
+      },
+      "why": "Harden against hits that take a big bite."
     },
     {
       "id": "brick-key",
@@ -316,9 +373,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "if": "target-below-half",
+        "if": "target-loud",
         "do": "damage%",
-        "value": 50
+        "value": 30
       },
       "sources": [
         {
@@ -326,7 +383,8 @@ export default {
           "id": "bricker"
         }
       ],
-      "flavour": "Finishes what it starts."
+      "flavour": "Finishes what it starts.",
+      "why": "Hit parts that have gone loud."
     },
     {
       "id": "echo-chamber",
@@ -341,8 +399,10 @@ export default {
         "echo": 10
       },
       "effect": {
-        "when": "custom",
-        "do": "echo-full"
+        "when": "always",
+        "if": "any-tell",
+        "do": "stat-x2",
+        "stat": "echo"
       },
       "sources": [
         {
@@ -350,11 +410,12 @@ export default {
           "id": "echo"
         }
       ],
-      "flavour": "Everything you say, said again."
+      "flavour": "Everything you say, said again.",
+      "why": "Echo more while a part winds up a tell."
     },
     {
       "id": "hive-mind",
-      "name": "Hive Mind",
+      "name": "Swarm Intelligence",
       "base": "dropper",
       "level": 12,
       "primary": {
@@ -368,9 +429,10 @@ export default {
         "signal": -10
       },
       "effect": {
-        "when": "custom",
-        "do": "dot%",
-        "value": 25
+        "when": "hit",
+        "if": "helper-out",
+        "do": "burn%",
+        "value": 35
       },
       "sources": [
         {
@@ -378,7 +440,8 @@ export default {
           "id": "overrun"
         }
       ],
-      "flavour": "Many hands. One thought."
+      "flavour": "Many hands. One thought.",
+      "why": "Burn while your helpers work."
     },
     {
       "id": "cell-key",
@@ -404,7 +467,8 @@ export default {
           "id": "sleeper"
         }
       ],
-      "flavour": "Wakes it up the hard way."
+      "flavour": "Wakes it up the hard way.",
+      "why": "Open every fight with a crit."
     },
     {
       "id": "gate-bypass",
@@ -416,8 +480,11 @@ export default {
         "reduction": 3
       },
       "effect": {
-        "when": "start",
-        "do": "chit"
+        "when": "always",
+        "if": "helper-out",
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 3
       },
       "sources": [
         {
@@ -425,7 +492,12 @@ export default {
           "id": "bouncer"
         }
       ],
-      "flavour": "The bouncer never saw you."
+      "flavour": "The bouncer never saw you.",
+      "secondary": {
+        "payload": 4,
+        "clock": 4
+      },
+      "why": "Hold a helper out to harden yourself."
     },
     {
       "id": "trace-loop",
@@ -440,11 +512,9 @@ export default {
         "accuracy": 5
       },
       "effect": {
-        "when": "hit",
-        "do": "damage+",
-        "value": 1,
-        "scale": "cycles",
-        "cap": 10
+        "when": "tagged",
+        "do": "heal",
+        "value": 3
       },
       "sources": [
         {
@@ -452,7 +522,8 @@ export default {
           "id": "tracer"
         }
       ],
-      "flavour": "The longer it watches, the more it learns."
+      "flavour": "The longer it watches, the more it learns.",
+      "why": "Heal by hitting Tagged parts."
     },
     {
       "id": "cold-boot",
@@ -479,7 +550,8 @@ export default {
           "layer": 2
         }
       ],
-      "flavour": "Pull the plug. Start clean."
+      "flavour": "Pull the plug. Start clean.",
+      "why": "Come back once a run from the brink."
     },
     {
       "id": "shredder-routine",
@@ -510,7 +582,8 @@ export default {
           "id": "shredder"
         }
       ],
-      "flavour": "Nothing left to recover."
+      "flavour": "Nothing left to recover.",
+      "why": "Hit parts once their armor is gone."
     },
     {
       "id": "tollgate-token",
@@ -525,8 +598,9 @@ export default {
         "sanitize": 8
       },
       "effect": {
-        "when": "custom",
-        "do": "encrypt-half"
+        "when": "cut",
+        "do": "heal",
+        "value": 8
       },
       "sources": [
         {
@@ -535,7 +609,8 @@ export default {
           "crew": "ransomware"
         }
       ],
-      "flavour": "Every toll paid, every lock opened."
+      "flavour": "Every toll paid, every lock opened.",
+      "why": "Heal by cutting parts' moves."
     },
     {
       "id": "swarmline-swarm-key",
@@ -560,11 +635,12 @@ export default {
           "crew": "worm"
         }
       ],
-      "flavour": "A thousand nodes keeping time."
+      "flavour": "A thousand nodes keeping time.",
+      "why": "Catch more Sync Windows."
     },
     {
       "id": "palemask",
-      "name": "PALEMASK",
+      "name": "Calling Card",
       "base": "restricted-shell-escape",
       "level": 22,
       "primary": {
@@ -575,8 +651,10 @@ export default {
         "evasion": 5
       },
       "effect": {
-        "when": "custom",
-        "do": "blind-short"
+        "when": "always",
+        "if": "below-half",
+        "do": "stat-x2",
+        "stat": "evasion"
       },
       "sources": [
         {
@@ -585,7 +663,8 @@ export default {
           "crew": "ghostroot"
         }
       ],
-      "flavour": "Wear the face. See what they see."
+      "flavour": "Wear the face. See what they see.",
+      "why": "Dodge more while you're below half."
     },
     {
       "id": "lowlight-badge",
@@ -656,7 +735,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "breaker"
+      "lean": "breaker",
+      "secondary": {
+        "crit": 10,
+        "critDamage": 24
+      }
     },
     {
       "id": "det-cord",
@@ -671,9 +754,9 @@ export default {
       },
       "effect": {
         "when": "break",
-        "do": "break-heal%",
+        "do": "chit-fade",
         "value": 2,
-        "text": "Breaking a part heals 2% of max Integrity"
+        "text": "When you break a part, you gain a ◆ that fades after 2 cycles."
       },
       "green": {
         "when": "always",
@@ -691,7 +774,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "breaker"
+      "lean": "breaker",
+      "secondary": {
+        "damage": 12,
+        "crit": 8
+      }
     },
     {
       "id": "hard-hat",
@@ -706,10 +793,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "momentum-full",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 6
       },
       "green": {
         "when": "hit",
@@ -727,7 +814,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "breaker"
+      "lean": "breaker",
+      "secondary": {
+        "crit": 8,
+        "reduction": 4
+      }
     },
     {
       "id": "blast-map",
@@ -740,11 +831,10 @@ export default {
         "signal": 123
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "target-healthiest",
+        "do": "crit-damage%",
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -763,7 +853,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "breaker"
+      "lean": "breaker",
+      "secondary": {
+        "damage": 12,
+        "crit": 8
+      }
     },
     {
       "id": "drill",
@@ -777,10 +871,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "shielded",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 3
       },
       "green": {
         "when": "always",
@@ -798,7 +892,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "bastion"
+      "lean": "bastion",
+      "secondary": {
+        "restore": 24,
+        "reduction": 4
+      }
     },
     {
       "id": "combination",
@@ -834,7 +932,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "bastion"
+      "lean": "bastion",
+      "secondary": {
+        "clock": 8,
+        "restore": 16
+      }
     },
     {
       "id": "vault-door",
@@ -870,7 +972,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "bastion"
+      "lean": "bastion",
+      "secondary": {
+        "signal": 48,
+        "restore": 20
+      }
     },
     {
       "id": "tumbler",
@@ -883,10 +989,9 @@ export default {
         "signal": 123
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "shielded",
+        "do": "heal",
+        "value": 2
       },
       "green": {
         "when": "hit",
@@ -904,7 +1009,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "bastion"
+      "lean": "bastion",
+      "secondary": {
+        "signal": 48,
+        "clock": 6
+      }
     },
     {
       "id": "exit",
@@ -919,11 +1028,10 @@ export default {
         ]
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "target-below-half",
+        "do": "crit%",
+        "value": 15
       },
       "green": {
         "when": "hit",
@@ -941,7 +1049,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "infiltrator"
+      "lean": "infiltrator",
+      "secondary": {
+        "crit": 12,
+        "critDamage": 24
+      }
     },
     {
       "id": "veil",
@@ -955,10 +1067,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "stealth",
-        "value": 5,
-        "text": "+5% Stealth"
+        "if": "no-helper",
+        "do": "stat+",
+        "stat": "evasion",
+        "value": 6
       },
       "green": {
         "when": "always",
@@ -977,7 +1089,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "infiltrator"
+      "lean": "infiltrator",
+      "secondary": {
+        "crit": 8,
+        "payload": 8
+      }
     },
     {
       "id": "pillow",
@@ -991,11 +1107,10 @@ export default {
         "restore": 96
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "when": "struck",
+        "if": "below-half",
+        "do": "restore%",
+        "value": 2
       },
       "green": {
         "when": "always",
@@ -1013,7 +1128,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "infiltrator"
+      "lean": "infiltrator",
+      "secondary": {
+        "crit": 8,
+        "payload": 6
+      }
     },
     {
       "id": "mask",
@@ -1028,8 +1147,8 @@ export default {
       "effect": {
         "when": "custom",
         "do": "first-hit%",
-        "value": 8,
-        "text": "Your first hit on each part deals 8% more"
+        "value": 12,
+        "text": "Your first hit on each part deals 12% more"
       },
       "green": {
         "when": "always",
@@ -1048,7 +1167,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "infiltrator"
+      "lean": "infiltrator",
+      "secondary": {
+        "damage": 12,
+        "crit": 8
+      }
     },
     {
       "id": "cron",
@@ -1062,10 +1185,10 @@ export default {
         "payload": 21
       },
       "effect": {
-        "when": "custom",
-        "do": "helper+%",
-        "value": 5,
-        "text": "Your helpers deal 5% more"
+        "when": "hit",
+        "if": "helper-out",
+        "do": "crit-damage%",
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -1084,7 +1207,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "operator"
+      "lean": "operator",
+      "secondary": {
+        "payload": 12,
+        "clock": 8
+      }
     },
     {
       "id": "relay",
@@ -1098,9 +1225,9 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "helper-out",
+        "do": "taken%",
+        "value": 6
       },
       "green": {
         "when": "always",
@@ -1119,7 +1246,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "operator"
+      "lean": "operator",
+      "secondary": {
+        "payload": 10,
+        "signal": 48
+      }
     },
     {
       "id": "parasite",
@@ -1134,10 +1265,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "helper-out",
+        "do": "stat+",
+        "stat": "leech",
+        "value": 2
       },
       "green": {
         "when": "hit",
@@ -1155,7 +1286,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "operator"
+      "lean": "operator",
+      "secondary": {
+        "payload": 10,
+        "signal": 40
+      }
     },
     {
       "id": "core",
@@ -1168,11 +1303,10 @@ export default {
         "signal": 123
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "clock",
-        "value": 5,
-        "text": "+5% Clock Speed"
+        "when": "hit",
+        "if": "helper-out",
+        "do": "crit%",
+        "value": 8
       },
       "green": {
         "when": "always",
@@ -1190,7 +1324,11 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "lean": "operator"
+      "lean": "operator",
+      "secondary": {
+        "payload": 8,
+        "clock": 8
+      }
     },
     {
       "id": "floppy",
@@ -1204,10 +1342,10 @@ export default {
         "restore": 10
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "start",
+        "do": "chit-fade",
+        "value": 2,
+        "text": "You start each fight with a ◆ that fades after 2 cycles."
       },
       "green": {
         "when": "always",
@@ -1242,11 +1380,10 @@ export default {
         "payload": 1.6
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "regen",
-        "value": 1,
-        "text": "+1 Regen"
+        "when": "hit",
+        "if": "target-winding",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "hit",
@@ -1343,11 +1480,9 @@ export default {
         "restore": 16
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "when": "burn",
+        "do": "heal",
+        "value": 1
       },
       "green": {
         "when": "always",
@@ -1373,10 +1508,10 @@ export default {
         "signal": 21
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "hit",
+        "if": "helper-out",
+        "do": "damage%",
+        "value": 8
       },
       "green": {
         "when": "hit",
@@ -1404,10 +1539,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "unrested",
+        "do": "stat+",
         "stat": "restore",
-        "value": 5,
-        "text": "+5% Restore"
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -1436,10 +1571,11 @@ export default {
         "reduction": 2
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "struck",
+        "if": "charged",
+        "do": "taken%",
+        "value": 15,
+        "text": "Reduces the damage of a tell that lands on you by 15%."
       },
       "green": {
         "when": "hit",
@@ -1469,10 +1605,12 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "regen",
         "value": 1,
-        "text": "+1 Regen"
+        "scale": "cycles",
+        "cap": 2,
+        "if": "unrested"
       },
       "green": {
         "when": "always",
@@ -1503,11 +1641,10 @@ export default {
         "payload": 2
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "clock",
-        "value": 5,
-        "text": "+5% Clock Speed"
+        "when": "hit",
+        "if": "target-open",
+        "do": "damage+",
+        "value": 4
       },
       "green": {
         "when": "always",
@@ -1539,10 +1676,9 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "any-tell",
+        "do": "taken%",
+        "value": 8
       },
       "green": {
         "when": "always",
@@ -1576,10 +1712,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 5,
         "if": "target-jammed",
-        "text": "+5% damage to jammed parts"
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -1613,9 +1748,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 4,
-        "text": "+4% damage"
+        "if": "first-use",
+        "do": "damage+",
+        "value": 3
       },
       "green": {
         "when": "always",
@@ -1642,10 +1777,12 @@ export default {
         "reduction": 2
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "struck",
+        "do": "stack",
+        "stat": "sanitize",
+        "value": 4,
+        "cap": 12,
+        "text": "Each attack that lands on you adds 4% Sanitize for the rest of the fight, up to 12%."
       },
       "green": {
         "when": "always",
@@ -1674,10 +1811,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "do": "stat+",
+        "stat": "regen",
+        "value": 1,
+        "scale": "missing",
+        "cap": 3
       },
       "green": {
         "when": "hit",
@@ -1704,10 +1842,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "value": 2,
+        "scale": "reads",
+        "cap": 6
       },
       "green": {
         "when": "always",
@@ -1732,11 +1871,13 @@ export default {
         "reduction": 2
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "scavenge",
-        "value": 5,
-        "text": "+5% Scavenge"
+        "when": "custom",
+        "do": "credits%",
+        "value": 10,
+        "of": [
+          "vault"
+        ],
+        "text": "Vaults you open pay 10% more credits."
       },
       "green": {
         "when": "always",
@@ -1824,9 +1965,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 5,
-        "text": "+5% damage"
+        "if": "below-half",
+        "do": "crit%",
+        "value": 8
       },
       "green": {
         "when": "always",
@@ -1858,9 +1999,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "below-25",
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 4
       },
       "green": {
         "when": "always",
@@ -1889,10 +2031,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "if": "below-half",
+        "do": "stat+",
+        "stat": "restore",
+        "value": 15
       },
       "green": {
         "when": "hit",
@@ -1918,11 +2060,11 @@ export default {
         "signal": 28
       },
       "effect": {
-        "when": "custom",
-        "do": "low-heal",
-        "value": 5,
-        "at": 25,
-        "text": "Once a fight, below 25% Integrity, heal 5% of max"
+        "when": "always",
+        "if": "below-25",
+        "do": "stat+",
+        "stat": "regen",
+        "value": 6
       },
       "green": {
         "when": "always",
@@ -1949,11 +2091,10 @@ export default {
         "reduction": 3
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "restore",
-        "value": 5,
-        "text": "+5% Restore"
+        "when": "struck",
+        "if": "charged",
+        "do": "next-boost",
+        "value": 25
       },
       "green": {
         "when": "always",
@@ -2005,7 +2146,7 @@ export default {
     },
     {
       "id": "failover",
-      "name": "Failover",
+      "name": "Rota",
       "set": "oncall",
       "base": "ghost-shell",
       "level": 26,
@@ -2016,10 +2157,9 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "late",
+        "do": "heal%",
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -2048,10 +2188,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "above-75",
+        "do": "stat+",
+        "stat": "regen",
+        "value": 2
       },
       "green": {
         "when": "always",
@@ -2076,10 +2216,10 @@ export default {
         "signal": 27
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "hit",
+        "if": "above-75",
+        "do": "crit%",
+        "value": 8
       },
       "green": {
         "when": "hit",
@@ -2137,10 +2277,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "late",
+        "do": "stat+",
         "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "value": 6
       },
       "green": {
         "when": "hit",
@@ -2167,9 +2307,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "late",
+        "do": "stat+",
+        "stat": "crit",
+        "value": 6
       },
       "green": {
         "when": "always",
@@ -2197,10 +2338,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "late",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 3
       },
       "green": {
         "when": "always",
@@ -2230,9 +2371,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 4,
-        "text": "+4% damage"
+        "if": "late",
+        "do": "crit-damage%",
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -2260,11 +2401,10 @@ export default {
         ]
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "early",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "hit",
@@ -2320,11 +2460,11 @@ export default {
         "signal": 36
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
+        "when": "crit",
+        "do": "buff",
         "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "value": 6,
+        "cycles": 2
       },
       "green": {
         "when": "always",
@@ -2351,9 +2491,9 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "below-25",
+        "do": "heal%",
+        "value": 30
       },
       "green": {
         "when": "always",
@@ -2380,10 +2520,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "below-half",
+        "do": "stat+",
+        "stat": "crit",
+        "value": 10
       },
       "green": {
         "when": "hit",
@@ -2409,9 +2549,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 1,
+        "scale": "crew",
+        "cap": 3
       },
       "green": {
         "when": "always",
@@ -2466,10 +2608,12 @@ export default {
         "signal": 64
       },
       "effect": {
-        "when": "hit",
-        "do": "dmg%",
-        "value": 4,
-        "text": "+4% damage"
+        "when": "always",
+        "do": "stat+",
+        "stat": "clock",
+        "value": 2,
+        "scale": "crew",
+        "cap": 6
       },
       "green": {
         "when": "always",
@@ -2497,10 +2641,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "do": "stat+",
+        "stat": "crit",
+        "value": 2,
+        "scale": "reads",
+        "cap": 8
       },
       "green": {
         "when": "hit",
@@ -2531,10 +2676,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 1,
+        "scale": "cycles",
+        "cap": 4
       },
       "green": {
         "when": "always",
@@ -2566,9 +2712,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 5,
-        "text": "+5% damage"
+        "if": "target-healthiest",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -2598,10 +2744,12 @@ export default {
         "signal": 85
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "struck",
+        "if": "big-hit",
+        "do": "taken%",
+        "over": 20,
+        "value": 15,
+        "text": "Reduces the damage of an attack that would take more than 20% of your max health by 15%."
       },
       "green": {
         "when": "always",
@@ -2633,10 +2781,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "any-tell",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 6
       },
       "green": {
         "when": "always",
@@ -2663,9 +2811,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "do": "stat+",
+        "stat": "crit",
+        "value": 2,
+        "scale": "missing",
+        "cap": 10
       },
       "green": {
         "when": "always",
@@ -2695,9 +2845,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 5,
-        "text": "+5% damage"
+        "if": "target-wearing",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -2725,10 +2875,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "value": 2,
+        "scale": "standing",
+        "cap": 8
       },
       "green": {
         "when": "hit",
@@ -2754,15 +2905,23 @@ export default {
       },
       "effect": {
         "when": "struck",
-        "do": "crit-normal",
-        "limit": "fight"
+        "if": "big-hit",
+        "do": "next-boost",
+        "over": 25,
+        "value": 30,
+        "text": "Makes your next heal or shield 30% larger when an attack lands for more than 25% of your max health."
       },
       "sources": [
         {
           "kind": "store"
         }
       ],
-      "flavour": "Coverage confirmed. Terms apply."
+      "flavour": "Coverage confirmed. Terms apply.",
+      "secondary": {
+        "regen": 5,
+        "evasion": 5
+      },
+      "why": "Answer a big hit with a bigger heal or shield."
     },
     {
       "id": "glassjaw-sucker-punch",
@@ -2785,7 +2944,18 @@ export default {
           "id": "glassjaw"
         }
       ],
-      "flavour": "Hit first. Don't stick around."
+      "flavour": "Hit first. Don't stick around.",
+      "effect": {
+        "when": "hit",
+        "if": "target-unacted",
+        "do": "crit-damage%",
+        "value": 30
+      },
+      "secondary": {
+        "crit": 7,
+        "critDamage": 14
+      },
+      "why": "Crit parts before they attack."
     },
     {
       "id": "black-ledger",
@@ -2802,7 +2972,7 @@ export default {
       "effect": {
         "when": "hit",
         "do": "crit%",
-        "value": 3,
+        "value": 5,
         "scale": "broken"
       },
       "sources": [
@@ -2811,7 +2981,8 @@ export default {
           "id": "ledger"
         }
       ],
-      "flavour": "Fourteen months of payouts. You read it."
+      "flavour": "Fourteen months of payouts. You read it.",
+      "why": "Crit more with every part you break."
     },
     {
       "id": "deadmans-switch",
@@ -2834,7 +3005,12 @@ export default {
           "layer": 3
         }
       ],
-      "flavour": "If I go down, I go down warm."
+      "flavour": "If I go down, I go down warm.",
+      "secondary": {
+        "regen": 6,
+        "evasion": 5
+      },
+      "why": "Jack out when your Integrity hits 0."
     },
     {
       "id": "zero-cool",
@@ -2851,9 +3027,10 @@ export default {
         "crit": 8
       },
       "effect": {
-        "when": "break",
-        "if": "crit",
-        "do": "refund-skill"
+        "when": "hit",
+        "if": "target-open",
+        "do": "crit%",
+        "value": 30
       },
       "sources": [
         {
@@ -2861,7 +3038,8 @@ export default {
           "layer": 3
         }
       ],
-      "flavour": "Hack the planet."
+      "flavour": "Hack the planet.",
+      "why": "Answer a tell, then crit the Open part."
     },
     {
       "id": "ouroboros-loop",
@@ -2876,7 +3054,7 @@ export default {
         "clock": 12
       },
       "downside": {
-        "regen": -10
+        "regen": -5
       },
       "effect": {
         "when": "always",
@@ -2891,7 +3069,8 @@ export default {
           "layer": 3
         }
       ],
-      "flavour": "The end feeds the beginning."
+      "flavour": "The end feeds the beginning.",
+      "why": "Speed up below half."
     },
     {
       "id": "crown-packet",
@@ -2908,7 +3087,7 @@ export default {
         "when": "hit",
         "if": "target-winding",
         "do": "damage%",
-        "value": 30
+        "value": 15
       },
       "sources": [
         {
@@ -2916,7 +3095,12 @@ export default {
           "id": "relayking"
         }
       ],
-      "flavour": "It still thinks it decides where everything goes."
+      "flavour": "It still thinks it decides where everything goes.",
+      "secondary": {
+        "crit": 4,
+        "critDamage": 5
+      },
+      "why": "Hit each part on the cycle it attacks."
     },
     {
       "id": "hop-limit",
@@ -2930,7 +3114,7 @@ export default {
       "effect": {
         "when": "struck",
         "do": "restore%",
-        "value": 3
+        "value": 2
       },
       "sources": [
         {
@@ -2938,7 +3122,12 @@ export default {
           "id": "relayking"
         }
       ],
-      "flavour": "Every hop costs it something. Not you."
+      "flavour": "Every hop costs it something. Not you.",
+      "secondary": {
+        "reduction": 1,
+        "evasion": 2
+      },
+      "why": "Heal a little from every hit you take."
     },
     {
       "id": "squatters-rights",
@@ -2951,7 +3140,9 @@ export default {
       },
       "effect": {
         "when": "start",
-        "do": "chit"
+        "do": "chit-fade",
+        "value": 4,
+        "text": "You start each fight with a ◆ that fades after 4 cycles."
       },
       "sources": [
         {
@@ -2959,7 +3150,12 @@ export default {
           "id": "resident"
         }
       ],
-      "flavour": "It lived here first. Now you do."
+      "flavour": "It lived here first. Now you do.",
+      "secondary": {
+        "regen": 2,
+        "evasion": 2
+      },
+      "why": "Start every fight behind a ◆."
     },
     {
       "id": "eviction-notice",
@@ -2986,7 +3182,8 @@ export default {
           "id": "resident"
         }
       ],
-      "flavour": "Thirty days. Or thirty cycles."
+      "flavour": "Thirty days. Or thirty cycles.",
+      "why": "Break parts to bring your skills back sooner."
     },
     {
       "id": "lien",
@@ -2999,9 +3196,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "if": "target-bare",
-        "do": "damage+",
-        "value": 6
+        "if": "target-armored",
+        "do": "crit%",
+        "value": 15
       },
       "sources": [
         {
@@ -3009,7 +3206,12 @@ export default {
           "id": "repoman"
         }
       ],
-      "flavour": "Everything it touches already belongs to someone."
+      "flavour": "Everything it touches already belongs to someone.",
+      "secondary": {
+        "crit": 4,
+        "critDamage": 7
+      },
+      "why": "Crit armored parts."
     },
     {
       "id": "repossessed-key",
@@ -3021,8 +3223,11 @@ export default {
         "regen": 5
       },
       "effect": {
-        "when": "custom",
-        "do": "encrypt-half"
+        "when": "always",
+        "if": "shielded",
+        "do": "stat+",
+        "stat": "regen",
+        "value": 4
       },
       "sources": [
         {
@@ -3030,7 +3235,12 @@ export default {
           "id": "repoman"
         }
       ],
-      "flavour": "He took it back. You took it back again."
+      "flavour": "He took it back. You took it back again.",
+      "secondary": {
+        "reduction": 1,
+        "evasion": 3
+      },
+      "why": "Regen behind your shield."
     },
     {
       "id": "choirboy",
@@ -3051,7 +3261,12 @@ export default {
           "id": "choir"
         }
       ],
-      "flavour": "Sings on key. Never on cue."
+      "flavour": "Sings on key. Never on cue.",
+      "secondary": {
+        "regen": 3,
+        "evasion": 3
+      },
+      "why": "Shake off Scrambles faster."
     },
     {
       "id": "hollow-note",
@@ -3076,7 +3291,12 @@ export default {
           "id": "choir"
         }
       ],
-      "flavour": "Hit on the off-beat, where the echo isn't."
+      "flavour": "Hit on the off-beat, where the echo isn't.",
+      "secondary": {
+        "crit": 5,
+        "critDamage": 8
+      },
+      "why": "Save big hits for odd cycles."
     },
     {
       "id": "tracking-pixel",
@@ -3106,7 +3326,8 @@ export default {
           "layer": 1
         }
       ],
-      "flavour": "One transparent pixel. It sees everything."
+      "flavour": "One transparent pixel. It sees everything.",
+      "why": "Tag a part, then hit it, as a Phantom."
     },
     {
       "id": "slow-drip",
@@ -3124,7 +3345,7 @@ export default {
         "when": "hit",
         "if": "target-burning",
         "do": "crit%",
-        "value": 15
+        "value": 25
       },
       "sources": [
         {
@@ -3134,7 +3355,12 @@ export default {
           "kind": "rogue"
         }
       ],
-      "flavour": "Nobody notices a leak until the floor gives."
+      "flavour": "Nobody notices a leak until the floor gives.",
+      "secondary": {
+        "crit": 4,
+        "critDamage": 6
+      },
+      "why": "Burn a part, then crit it, as a Payload."
     },
     {
       "id": "spearphish",
@@ -3166,7 +3392,8 @@ export default {
           "kind": "rogue"
         }
       ],
-      "flavour": "Addressed to them by name. They always open it."
+      "flavour": "Addressed to them by name. They always open it.",
+      "why": "Tag more often as a Phantom."
     },
     {
       "id": "jackhammer",
@@ -3195,7 +3422,12 @@ export default {
           "kind": "rogue"
         }
       ],
-      "flavour": "Subtlety is a setting. It's turned off."
+      "flavour": "Subtlety is a setting. It's turned off.",
+      "secondary": {
+        "clock": 4,
+        "crit": 4
+      },
+      "why": "Flood more often as a Demolitionist."
     },
     {
       "id": "shrapnel",
@@ -3220,7 +3452,12 @@ export default {
           "kind": "rogue"
         }
       ],
-      "flavour": "What's left of them patches what's left of you."
+      "flavour": "What's left of them patches what's left of you.",
+      "secondary": {
+        "crit": 4,
+        "payload": 3
+      },
+      "why": "Heal on every break as an Overclocker."
     },
     {
       "id": "uptime-sla",
@@ -3233,11 +3470,11 @@ export default {
         "reduction": 1
       },
       "effect": {
-        "when": "struck",
+        "when": "always",
         "if": "below-half",
-        "do": "restore%",
-        "value": 8,
-        "limit": "fight"
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 2
       },
       "sources": [
         {
@@ -3248,7 +3485,12 @@ export default {
           "kind": "rogue"
         }
       ],
-      "flavour": "Five nines. You are the nines."
+      "flavour": "Five nines. You are the nines.",
+      "secondary": {
+        "regen": 2,
+        "evasion": 3
+      },
+      "why": "Hold the line below half as a Warden."
     },
     {
       "id": "hot-patch",
@@ -3264,18 +3506,23 @@ export default {
         "when": "always",
         "do": "skill-cd",
         "skill": "patch",
-        "value": 1
+        "value": 2
       },
       "sources": [
         {
           "kind": "sprawl"
         }
       ],
-      "flavour": "Applied live. Reboot is for cowards."
+      "flavour": "Applied live. Reboot is for cowards.",
+      "secondary": {
+        "clock": 3,
+        "crit": 4
+      },
+      "why": "Patch more often as a Sysop."
     },
     {
       "id": "thread-pool",
-      "name": "Thread Pool",
+      "name": "Worker Pool",
       "base": "cron-job",
       "level": 5,
       "lean": "herder",
@@ -3284,9 +3531,10 @@ export default {
         "signal": 15
       },
       "effect": {
-        "when": "custom",
-        "do": "dot%",
-        "value": 15
+        "when": "hit",
+        "if": "target-burning",
+        "do": "helper%",
+        "value": 20
       },
       "sources": [
         {
@@ -3297,7 +3545,12 @@ export default {
           "layer": 1
         }
       ],
-      "flavour": "Workers waiting. Always one more."
+      "flavour": "Workers waiting. Always one more.",
+      "secondary": {
+        "payload": 2,
+        "crit": 4
+      },
+      "why": "Send helpers at the parts you've burned, as a Herder."
     },
     {
       "id": "fork-handle",
@@ -3313,7 +3566,7 @@ export default {
         "when": "always",
         "do": "skill-cd",
         "skill": "botnet",
-        "value": 1
+        "value": 2
       },
       "sources": [
         {
@@ -3324,7 +3577,12 @@ export default {
           "kind": "rogue"
         }
       ],
-      "flavour": "Four candles. Four thousand processes."
+      "flavour": "Four candles. Four thousand processes.",
+      "secondary": {
+        "clock": 4,
+        "crit": 5
+      },
+      "why": "Botnet more often as a Hijacker."
     },
     {
       "id": "foremans-lanyard",
@@ -3336,10 +3594,10 @@ export default {
         "reduction": 1
       },
       "effect": {
-        "when": "struck",
-        "if": "below-half",
-        "do": "halve",
-        "limit": "fight"
+        "when": "always",
+        "if": "late",
+        "do": "taken%",
+        "value": 6
       },
       "sources": [
         {
@@ -3347,11 +3605,16 @@ export default {
           "id": "foreman"
         }
       ],
-      "flavour": "Badge in. Nobody checks the photo."
+      "flavour": "Badge in. Nobody checks the photo.",
+      "secondary": {
+        "regen": 2,
+        "evasion": 3
+      },
+      "why": "Take less from long fights' later cycles."
     },
     {
       "id": "overtime",
-      "name": "Overtime",
+      "name": "Time and a Half",
       "base": "cron-job",
       "level": 7,
       "primary": {
@@ -3371,7 +3634,12 @@ export default {
           "id": "foreman"
         }
       ],
-      "flavour": "The longer the shift, the worse it gets for them."
+      "flavour": "The longer the shift, the worse it gets for them.",
+      "secondary": {
+        "crit": 4,
+        "payload": 2
+      },
+      "why": "Grow stronger the longer a fight runs."
     },
     {
       "id": "thermal-paste",
@@ -3388,7 +3656,7 @@ export default {
         "when": "hit",
         "if": "target-tagged",
         "do": "crit%",
-        "value": 20
+        "value": 30
       },
       "sources": [
         {
@@ -3396,7 +3664,12 @@ export default {
           "id": "heatsink"
         }
       ],
-      "flavour": "A thin layer, exactly where the heat goes."
+      "flavour": "A thin layer, exactly where the heat goes.",
+      "secondary": {
+        "crit": 4,
+        "critDamage": 7
+      },
+      "why": "Tag a part, then crit it."
     },
     {
       "id": "fan-curve",
@@ -3418,7 +3691,12 @@ export default {
           "id": "heatsink"
         }
       ],
-      "flavour": "Spins up when it gets hot. It always gets hot."
+      "flavour": "Spins up when it gets hot. It always gets hot.",
+      "secondary": {
+        "payload": 3,
+        "crit": 4
+      },
+      "why": "Let your burns grow over a long fight."
     },
     {
       "id": "cold-wallet",
@@ -3439,7 +3717,12 @@ export default {
           "id": "coldwallet"
         }
       ],
-      "flavour": "Offline. Unhackable. Until now."
+      "flavour": "Offline. Unhackable. Until now.",
+      "secondary": {
+        "crit": 5,
+        "critDamage": 8
+      },
+      "why": "Take no crits from the virus."
     },
     {
       "id": "air-gap",
@@ -3454,8 +3737,8 @@ export default {
         "evasion": 4
       },
       "effect": {
-        "when": "start",
-        "do": "chit"
+        "when": "custom",
+        "do": "encrypt-half"
       },
       "sources": [
         {
@@ -3463,7 +3746,8 @@ export default {
           "id": "coldwallet"
         }
       ],
-      "flavour": "Nothing touches it. Nothing touches you."
+      "flavour": "Nothing touches it. Nothing touches you.",
+      "why": "Fight viruses that encrypt you."
     },
     {
       "id": "hashboard",
@@ -3483,7 +3767,12 @@ export default {
           "kind": "farm"
         }
       ],
-      "flavour": "Pulled warm out of a dead rig. Still hashing."
+      "flavour": "Pulled warm out of a dead rig. Still hashing.",
+      "secondary": {
+        "clock": 4,
+        "crit": 4
+      },
+      "why": "Break a part to fire that skill again."
     },
     {
       "id": "dead-pool",
@@ -3507,7 +3796,12 @@ export default {
           "kind": "farm"
         }
       ],
-      "flavour": "The mining pool paid out to nobody for a year. It pays you now."
+      "flavour": "The mining pool paid out to nobody for a year. It pays you now.",
+      "secondary": {
+        "crit": 4,
+        "critDamage": 7
+      },
+      "why": "Finish parts below half."
     },
     {
       "id": "tripwire",
@@ -3523,15 +3817,20 @@ export default {
       },
       "effect": {
         "when": "struck",
-        "do": "halve",
-        "limit": "fight"
+        "if": "charged",
+        "do": "stack",
+        "stat": "evasion",
+        "value": 5,
+        "cap": 15,
+        "text": "Each tell that lands on you adds 5% Evasion for the rest of the fight, up to 15%."
       },
       "sources": [
         {
           "kind": "invasion"
         }
       ],
-      "flavour": "It goes off before they know it is there."
+      "flavour": "It goes off before they know it is there.",
+      "why": "Let tells land and dodge what follows."
     },
     {
       "id": "honeynet",
@@ -3548,15 +3847,18 @@ export default {
       },
       "effect": {
         "when": "crit",
-        "do": "heal",
-        "value": 6
+        "do": "buff",
+        "stat": "evasion",
+        "value": 6,
+        "cycles": 2
       },
       "sources": [
         {
           "kind": "invasion"
         }
       ],
-      "flavour": "Every box on it is bait, and every one of them is listening."
+      "flavour": "Every box on it is bait, and every one of them is listening.",
+      "why": "Crit, then dodge for two cycles."
     },
     {
       "id": "sinkhole",
@@ -3573,16 +3875,18 @@ export default {
         "accuracy": 4
       },
       "effect": {
-        "when": "break",
-        "do": "refund",
-        "value": 2
+        "when": "hit",
+        "if": "any-tell",
+        "do": "damage%",
+        "value": 15
       },
       "sources": [
         {
           "kind": "invasion"
         }
       ],
-      "flavour": "Point their traffic at nothing and watch it fall in."
+      "flavour": "Point their traffic at nothing and watch it fall in.",
+      "why": "Hit hard while any part winds up a tell."
     },
     {
       "id": "rowhammer",
@@ -3614,7 +3918,8 @@ export default {
           "layer": 3
         }
       ],
-      "flavour": "Hammer one row hard enough and the next one gives."
+      "flavour": "Hammer one row hard enough and the next one gives.",
+      "why": "Keep parts bare after you strip them, as a Breaker."
     },
     {
       "id": "ctrl-c",
@@ -3631,8 +3936,10 @@ export default {
       },
       "effect": {
         "when": "answer",
-        "do": "refund",
-        "value": 2
+        "do": "repeat",
+        "value": 1,
+        "share": 30,
+        "text": "When you answer a tell, your next damaging skill hits again for 30% of its damage."
       },
       "sources": [
         {
@@ -3644,7 +3951,8 @@ export default {
           "id": "tracer"
         }
       ],
-      "flavour": "The oldest interrupt there is."
+      "flavour": "The oldest interrupt there is.",
+      "why": "Answer a tell, then fire your big skill."
     },
     {
       "id": "slammer",
@@ -3671,7 +3979,12 @@ export default {
           "layer": 3
         }
       ],
-      "flavour": "376 bytes. Ten minutes. Everyone."
+      "flavour": "376 bytes. Ten minutes. Everyone.",
+      "secondary": {
+        "crit": 7,
+        "reduction": 2
+      },
+      "why": "Carry burns over to the next part, as a Payload."
     },
     {
       "id": "log4shell",
@@ -3703,7 +4016,8 @@ export default {
           "id": "shredder"
         }
       ],
-      "flavour": "It was only ever meant to write a log line."
+      "flavour": "It was only ever meant to write a log line.",
+      "why": "Break a part to hit a tell, as a Demolitionist."
     },
     {
       "id": "spectre",
@@ -3735,7 +4049,8 @@ export default {
           "layer": 3
         }
       ],
-      "flavour": "It read what it was never meant to, before anything checked."
+      "flavour": "It read what it was never meant to, before anything checked.",
+      "why": "Cut a part's move, then hit it Open."
     },
     {
       "id": "bulletproof-host",
@@ -3763,7 +4078,12 @@ export default {
           "layer": 3
         }
       ],
-      "flavour": "Abuse reports go to a fax machine in a basement."
+      "flavour": "Abuse reports go to a fax machine in a basement.",
+      "secondary": {
+        "regen": 6,
+        "evasion": 5
+      },
+      "why": "Block hard while a tell winds up, as a Bastion."
     },
     {
       "id": "hot-reload",
@@ -3795,7 +4115,8 @@ export default {
           "layer": 4
         }
       ],
-      "flavour": "Swap the code while it runs. Nobody restarts anything."
+      "flavour": "Swap the code while it runs. Nobody restarts anything.",
+      "why": "Crit to fire that skill again, as an Overclocker."
     },
     {
       "id": "interrupt-vector",
@@ -3813,8 +4134,9 @@ export default {
       },
       "effect": {
         "when": "answer",
-        "do": "shield",
-        "value": 30
+        "do": "chit-fade",
+        "value": 2,
+        "text": "When you answer a tell, you gain a ◆ that fades after 2 cycles."
       },
       "sources": [
         {
@@ -3826,7 +4148,8 @@ export default {
           "id": "bouncer"
         }
       ],
-      "flavour": "Every handler you ever wrote, pointed at one address."
+      "flavour": "Every handler you ever wrote, pointed at one address.",
+      "why": "Answer tells to take ◆, as a Warden."
     },
     {
       "id": "blue-pill",
@@ -3856,7 +4179,8 @@ export default {
           "layer": 4
         }
       ],
-      "flavour": "The machine runs inside something it cannot see."
+      "flavour": "The machine runs inside something it cannot see.",
+      "why": "Take tells at half."
     },
     {
       "id": "shellshock",
@@ -3887,7 +4211,12 @@ export default {
           "layer": 4
         }
       ],
-      "flavour": "Bash would run anything you put after the function."
+      "flavour": "Bash would run anything you put after the function.",
+      "secondary": {
+        "crit": 10,
+        "critDamage": 19
+      },
+      "why": "Strip ◆ twice as fast, as a Breaker."
     },
     {
       "id": "null-byte",
@@ -3915,7 +4244,8 @@ export default {
           "tag": "tells"
         }
       ],
-      "flavour": "One zero in the right place, and the string ends."
+      "flavour": "One zero in the right place, and the string ends.",
+      "why": "Answer a tell, then hit the Open part hard."
     },
     {
       "id": "canary-token",
@@ -3940,7 +4270,8 @@ export default {
           "tag": "tells"
         }
       ],
-      "flavour": "Somebody touched it. You heard."
+      "flavour": "Somebody touched it. You heard.",
+      "why": "See every tell a cycle sooner."
     },
     {
       "id": "ping-of-death",
@@ -3962,7 +4293,12 @@ export default {
           "tag": "tells"
         }
       ],
-      "flavour": "One packet, far too large to be polite."
+      "flavour": "One packet, far too large to be polite.",
+      "secondary": {
+        "crit": 4,
+        "payload": 2
+      },
+      "why": "Answer tells to damage the part."
     },
     {
       "id": "lockpick",
@@ -3987,7 +4323,8 @@ export default {
           "tag": "ransomware"
         }
       ],
-      "flavour": "Tension wrench, rake, patience."
+      "flavour": "Tension wrench, rake, patience.",
+      "why": "Crack Mutex locks and Lockbox wards."
     },
     {
       "id": "reflector",
@@ -4009,7 +4346,12 @@ export default {
           "tag": "ghostroot"
         }
       ],
-      "flavour": "It wanted to copy you. It got a copy of itself."
+      "flavour": "It wanted to copy you. It got a copy of itself.",
+      "secondary": {
+        "reduction": 1,
+        "evasion": 3
+      },
+      "why": "Turn a Mimic's playback against it."
     },
     {
       "id": "fork-reaper",
@@ -4034,7 +4376,12 @@ export default {
           "tag": "worm"
         }
       ],
-      "flavour": "kill -9 on everything with the same parent."
+      "flavour": "kill -9 on everything with the same parent.",
+      "secondary": {
+        "crit": 5,
+        "critDamage": 8
+      },
+      "why": "Cut down a virus's fragments."
     },
     {
       "id": "watchlist",
@@ -4058,7 +4405,12 @@ export default {
           "tag": "tells"
         }
       ],
-      "flavour": "You knew it was coming. You wrote it down."
+      "flavour": "You knew it was coming. You wrote it down.",
+      "secondary": {
+        "regen": 3,
+        "evasion": 3
+      },
+      "why": "Heal from the tells you take."
     },
     {
       "id": "irq-line",
@@ -4076,7 +4428,7 @@ export default {
         "when": "always",
         "do": "skill-cd",
         "skill": "sigint",
-        "value": 2
+        "value": 3
       },
       "sources": [
         {
@@ -4084,7 +4436,8 @@ export default {
           "tag": "tells"
         }
       ],
-      "flavour": "Your interrupt, at the front of the queue."
+      "flavour": "Your interrupt, at the front of the queue.",
+      "why": "Interrupt more often with SIGINT."
     },
     {
       "id": "read-receipt",
@@ -4106,7 +4459,12 @@ export default {
           "tag": "tells"
         }
       ],
-      "flavour": "Seen 02:14. It knows you know."
+      "flavour": "Seen 02:14. It knows you know.",
+      "secondary": {
+        "clock": 4,
+        "crit": 5
+      },
+      "why": "Keep answered parts Open a cycle longer."
     },
     {
       "id": "split-brain",
@@ -4132,7 +4490,8 @@ export default {
           "tag": "worm"
         }
       ],
-      "flavour": "Two nodes, each sure the other one died."
+      "flavour": "Two nodes, each sure the other one died.",
+      "why": "Keep a broken twin down."
     },
     {
       "id": "rootless",
@@ -4155,7 +4514,12 @@ export default {
           "tag": "skills"
         }
       ],
-      "flavour": "No uid, no gid, no hesitation."
+      "flavour": "No uid, no gid, no hesitation.",
+      "secondary": {
+        "crit": 6,
+        "reduction": 1
+      },
+      "why": "Fire each skill in its moment."
     },
     {
       "id": "write-blocker",
@@ -4179,7 +4543,8 @@ export default {
           "tag": "tells"
         }
       ],
-      "flavour": "Read all you want. Nothing gets written back."
+      "flavour": "Read all you want. Nothing gets written back.",
+      "why": "Keep your ◆ and shield through a seal."
     },
     {
       "id": "policy-engine",
@@ -4197,7 +4562,7 @@ export default {
       "effect": {
         "when": "custom",
         "do": "rule-amp",
-        "value": 50
+        "value": 35
       },
       "sources": [
         {
@@ -4205,7 +4570,12 @@ export default {
           "tag": "rules"
         }
       ],
-      "flavour": "Every rule you carry, enforced harder."
+      "flavour": "Every rule you carry, enforced harder.",
+      "secondary": {
+        "crit": 6,
+        "reduction": 1
+      },
+      "why": "Lean on your blue and yellow rules."
     },
     {
       "id": "quiet-wire",
@@ -4229,7 +4599,8 @@ export default {
           "tag": "ransomware"
         }
       ],
-      "flavour": "Cut the red one. Nobody hears it go."
+      "flavour": "Cut the red one. Nobody hears it go.",
+      "why": "Break Tripwires without the alarm."
     },
     {
       "id": "static-discharge",
@@ -4254,7 +4625,12 @@ export default {
           "tag": "ransomware"
         }
       ],
-      "flavour": "The louder it gets, the easier it arcs."
+      "flavour": "The louder it gets, the easier it arcs.",
+      "secondary": {
+        "crit": 7,
+        "critDamage": 12
+      },
+      "why": "Crit parts that have gone loud."
     },
     {
       "id": "hush-money",
@@ -4276,7 +4652,12 @@ export default {
           "tag": "tells"
         }
       ],
-      "flavour": "Paid to finish early and say nothing."
+      "flavour": "Paid to finish early and say nothing.",
+      "secondary": {
+        "clock": 5,
+        "crit": 7
+      },
+      "why": "Cut a compiled cast short."
     },
     {
       "id": "brood-tap",
@@ -4301,7 +4682,12 @@ export default {
           "tag": "worm"
         }
       ],
-      "flavour": "Every little one carries a little of what you lost."
+      "flavour": "Every little one carries a little of what you lost.",
+      "secondary": {
+        "crit": 7,
+        "reduction": 2
+      },
+      "why": "Heal by breaking fragments."
     },
     {
       "id": "keyjam",
@@ -4329,7 +4715,8 @@ export default {
           "tag": "ransomware"
         }
       ],
-      "flavour": "Jam the key in and twist until something gives."
+      "flavour": "Jam the key in and twist until something gives.",
+      "why": "Hit parts behind a lock or a ward."
     },
     {
       "id": "metronome",
@@ -4355,7 +4742,8 @@ export default {
           "tag": "sync"
         }
       ],
-      "flavour": "Tick. Tick. Now."
+      "flavour": "Tick. Tick. Now.",
+      "why": "Crit inside Sync Windows."
     },
     {
       "id": "hold-music",
@@ -4381,7 +4769,8 @@ export default {
           "tag": "tells"
         }
       ],
-      "flavour": "Your call is important to us."
+      "flavour": "Your call is important to us.",
+      "why": "Dodge while a tell winds up."
     },
     {
       "id": "kill-chain",
@@ -4403,7 +4792,12 @@ export default {
           "tag": "tells"
         }
       ],
-      "flavour": "Recon, weaponize, deliver. Then the next one."
+      "flavour": "Recon, weaponize, deliver. Then the next one.",
+      "secondary": {
+        "crit": 8,
+        "reduction": 2
+      },
+      "why": "Break a part to open the next one."
     },
     {
       "id": "preempt",
@@ -4427,7 +4821,12 @@ export default {
           "tag": "tells"
         }
       ],
-      "flavour": "The scheduler hands you its turn."
+      "flavour": "The scheduler hands you its turn.",
+      "secondary": {
+        "crit": 9,
+        "critDamage": 17
+      },
+      "why": "Crit parts winding up a tell."
     },
     {
       "id": "brute-force",
@@ -4445,9 +4844,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "if": "target-locked",
-        "do": "shatter",
-        "text": "Makes each hit on an armored part behind a Mutex lock or a Lockbox ward break 2 ◆."
+        "if": "target-wearing",
+        "do": "damage%",
+        "value": 25
       },
       "sources": [
         {
@@ -4455,7 +4854,8 @@ export default {
           "tag": "ransomware"
         }
       ],
-      "flavour": "Every key, in order, as fast as the lock will listen."
+      "flavour": "Every key, in order, as fast as the lock will listen.",
+      "why": "Hit parts that still wear ◆."
     },
     {
       "id": "takedown-notice",
@@ -4479,7 +4879,12 @@ export default {
           "tag": "worm"
         }
       ],
-      "flavour": "Served to every node at once."
+      "flavour": "Served to every node at once.",
+      "secondary": {
+        "clock": 6,
+        "crit": 9
+      },
+      "why": "Break fragments to bring skills back sooner."
     },
     {
       "id": "sandman",
@@ -4503,7 +4908,12 @@ export default {
           "tag": "tells"
         }
       ],
-      "flavour": "It lands, and you sleep straight through it."
+      "flavour": "It lands, and you sleep straight through it.",
+      "secondary": {
+        "reduction": 2,
+        "evasion": 6
+      },
+      "why": "Shrug off what a landed tell leaves behind."
     },
     {
       "id": "rubber-hose",
@@ -4522,9 +4932,9 @@ export default {
       "effect": {
         "when": "hit",
         "do": "damage+",
-        "value": 6,
+        "value": 8,
         "scale": "reads",
-        "cap": 30
+        "cap": 40
       },
       "sources": [
         {
@@ -4532,7 +4942,12 @@ export default {
           "tag": "tells"
         }
       ],
-      "flavour": "Every secret it gave up makes the next one cheaper."
+      "flavour": "Every secret it gave up makes the next one cheaper.",
+      "secondary": {
+        "crit": 10,
+        "critDamage": 19
+      },
+      "why": "Answer every tell in a long fight."
     },
     {
       "id": "mirror-maze",
@@ -4554,7 +4969,12 @@ export default {
           "tag": "ghostroot"
         }
       ],
-      "flavour": "Every mirror in here faces your way."
+      "flavour": "Every mirror in here faces your way.",
+      "secondary": {
+        "evasion": 7,
+        "regen": 8
+      },
+      "why": "Hit through a Decoy's bend."
     },
     {
       "id": "kestrel-badge",
@@ -4683,7 +5103,8 @@ export default {
           "planned": "BIT BUCKET"
         }
       ],
-      "flavour": "Every wave that breaks on it leaves it a little higher."
+      "flavour": "Every wave that breaks on it leaves it a little higher.",
+      "why": "Stack Block as hits meet it, as a Bastion."
     },
     {
       "id": "undertow",
@@ -4712,7 +5133,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "It pulls hardest just after the wave goes out."
+      "flavour": "It pulls hardest just after the wave goes out.",
+      "why": "Hit back at the part that just attacked."
     },
     {
       "id": "drain-plug",
@@ -4743,7 +5165,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Pull it and the worst of it goes down the drain."
+      "flavour": "Pull it and the worst of it goes down the drain.",
+      "why": "Halve the first big hit, as a Bastion."
     },
     {
       "id": "backwash",
@@ -4772,7 +5195,8 @@ export default {
           "planned": "Sinkhole Residents"
         }
       ],
-      "flavour": "What flows out comes back in."
+      "flavour": "What flows out comes back in.",
+      "why": "Keep helpers coming, as an Operator."
     },
     {
       "id": "siltstone",
@@ -4791,7 +5215,7 @@ export default {
         "when": "always",
         "do": "stat+",
         "stat": "reduction",
-        "value": 1,
+        "value": 2,
         "scale": "chits"
       },
       "sources": [
@@ -4800,7 +5224,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Layer on layer, pressed hard."
+      "flavour": "Layer on layer, pressed hard.",
+      "why": "Turn your ◆ into Block."
     },
     {
       "id": "low-tide",
@@ -4817,8 +5242,9 @@ export default {
         "stealth": 16
       },
       "effect": {
-        "when": "start",
-        "do": "force-crit"
+        "when": "always",
+        "do": "stat-x2",
+        "stat": "stealth"
       },
       "sources": [
         {
@@ -4826,7 +5252,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Everything it hid is showing now."
+      "flavour": "Everything it hid is showing now.",
+      "why": "Build Stealth, as an Infiltrator."
     },
     {
       "id": "brine",
@@ -4844,9 +5271,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "if": "target-healthiest",
-        "do": "damage%",
-        "value": 8
+        "if": "target-armored",
+        "do": "burn%",
+        "value": 15
       },
       "sources": [
         {
@@ -4854,7 +5281,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Salt works on whatever is still whole."
+      "flavour": "Salt works on whatever is still whole.",
+      "why": "Burn armored parts."
     },
     {
       "id": "sump-pump",
@@ -4882,7 +5310,8 @@ export default {
           "kind": "strain"
         }
       ],
-      "flavour": "It only runs when the water is rising."
+      "flavour": "It only runs when the water is rising.",
+      "why": "Heal more while you're below half, as a Bastion."
     },
     {
       "id": "floodgate",
@@ -4903,10 +5332,10 @@ export default {
       "effect": {
         "when": "break",
         "do": "buff",
-        "value": 6,
+        "stat": "crit",
+        "value": 10,
         "cycles": 3,
-        "stacks": 2,
-        "text": "Increases your damage by 6% for 3 cycles when you break a part. Stacks up to 2 times."
+        "stacks": 2
       },
       "sources": [
         {
@@ -4915,7 +5344,8 @@ export default {
           "planned": "GOLDEN PARACHUTE"
         }
       ],
-      "flavour": "Open one and the rest follow."
+      "flavour": "Open one and the rest follow.",
+      "why": "Break parts to crit, as a Breaker."
     },
     {
       "id": "brackish",
@@ -4944,7 +5374,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Half salt, half fresh, all of it corrosive."
+      "flavour": "Half salt, half fresh, all of it corrosive.",
+      "why": "Burn parts below half, as an Infiltrator."
     },
     {
       "id": "mooring",
@@ -4970,7 +5401,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Whatever the current does, it holds."
+      "flavour": "Whatever the current does, it holds.",
+      "why": "Never lose more than a third to one hit."
     },
     {
       "id": "depth-gauge",
@@ -4988,7 +5420,7 @@ export default {
       },
       "effect": {
         "when": "always",
-        "if": "below-half",
+        "if": "late",
         "do": "stat+",
         "stat": "regen",
         "value": 4
@@ -4999,7 +5431,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "The needle only moves one way down here."
+      "flavour": "The needle only moves one way down here.",
+      "why": "Regen through long fights."
     },
     {
       "id": "riptide",
@@ -5019,7 +5452,7 @@ export default {
         "when": "hit",
         "if": "target-jammed",
         "do": "helper%",
-        "value": 8
+        "value": 15
       },
       "sources": [
         {
@@ -5028,7 +5461,8 @@ export default {
           "planned": "Sinkhole Residents"
         }
       ],
-      "flavour": "It drags anything that stops moving."
+      "flavour": "It drags anything that stops moving.",
+      "why": "Jam a part, then send helpers, as an Operator."
     },
     {
       "id": "pressure-hull",
@@ -5058,7 +5492,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Built for the weight of everything above it."
+      "flavour": "Built for the weight of everything above it.",
+      "why": "Block more behind a shield, as a Bastion."
     },
     {
       "id": "ballast",
@@ -5077,8 +5512,9 @@ export default {
       "effect": {
         "when": "always",
         "if": "momentum-full",
-        "do": "taken%",
-        "value": 6
+        "do": "stat+",
+        "stat": "crit",
+        "value": 10
       },
       "sources": [
         {
@@ -5086,7 +5522,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Heavy enough to keep you steady at speed."
+      "flavour": "Heavy enough to keep you steady at speed.",
+      "why": "Crit at full Momentum, as a Breaker."
     },
     {
       "id": "deepwater",
@@ -5115,7 +5552,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Pressure finds every seam in the armor."
+      "flavour": "Pressure finds every seam in the armor.",
+      "why": "Crit armored parts harder."
     },
     {
       "id": "silt-map",
@@ -5142,7 +5580,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Every channel sounded and marked."
+      "flavour": "Every channel sounded and marked.",
+      "why": "Level by mapping servers."
     },
     {
       "id": "bilge",
@@ -5169,7 +5608,8 @@ export default {
           "kind": "strain"
         }
       ],
-      "flavour": "What collects at the bottom eats through slowly."
+      "flavour": "What collects at the bottom eats through slowly.",
+      "why": "Burn parts to weaken their attacks, as an Infiltrator."
     },
     {
       "id": "anchor-chain",
@@ -5197,7 +5637,8 @@ export default {
           "planned": "SUMP"
         }
       ],
-      "flavour": "Every pull on it sets it deeper."
+      "flavour": "Every pull on it sets it deeper.",
+      "why": "Heal or shield bigger after each hit, as a Bastion."
     },
     {
       "id": "wake",
@@ -5216,16 +5657,18 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "damage%",
+        "do": "crit-damage%",
         "value": 5,
-        "scale": "crew"
+        "scale": "crew",
+        "cap": 15
       },
       "sources": [
         {
           "kind": "raid"
         }
       ],
-      "flavour": "Every hull behind you makes it bigger."
+      "flavour": "Every hull behind you makes it bigger.",
+      "why": "Crit harder in a crew."
     },
     {
       "id": "ebb",
@@ -5245,7 +5688,7 @@ export default {
       "effect": {
         "when": "helper",
         "do": "helper-long",
-        "value": 2,
+        "value": 3,
         "limit": "fight",
         "text": "Makes your first helper each fight last 2 cycles longer."
       },
@@ -5255,7 +5698,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "It goes out slowly, and it takes its time."
+      "flavour": "It goes out slowly, and it takes its time.",
+      "why": "Open each fight with a longer helper, as an Operator."
     },
     {
       "id": "flotsam",
@@ -5271,29 +5715,22 @@ export default {
         "restore": 20,
         "evasion": 6
       },
-      "effect": [
-        {
-          "when": "always",
-          "do": "stat+",
-          "stat": "scavenge",
-          "value": 10,
-          "text": "Adds 10% Scavenge and 2 Regen."
-        },
-        {
-          "when": "always",
-          "do": "stat+",
-          "stat": "regen",
-          "value": 2,
-          "quiet": true
-        }
-      ],
+      "effect": {
+        "when": "always",
+        "do": "stat+",
+        "stat": "regen",
+        "value": 2,
+        "scale": "broken",
+        "cap": 8
+      },
       "sources": [
         {
           "kind": "rare",
           "floor": 7
         }
       ],
-      "flavour": "Everything washes up somewhere."
+      "flavour": "Everything washes up somewhere.",
+      "why": "Regen more with every part you break."
     },
     {
       "id": "outfall",
@@ -5324,7 +5761,8 @@ export default {
           "planned": "PAY RUN"
         }
       ],
-      "flavour": "The first rush out is the strongest."
+      "flavour": "The first rush out is the strongest.",
+      "why": "Use every skill once each fight."
     },
     {
       "id": "pumphouse",
@@ -5343,7 +5781,7 @@ export default {
       "effect": {
         "when": "custom",
         "do": "spend%",
-        "value": 5
+        "value": 8
       },
       "sources": [
         {
@@ -5352,7 +5790,8 @@ export default {
           "planned": "BIT BUCKET"
         }
       ],
-      "flavour": "It runs on what you have built up."
+      "flavour": "It runs on what you have built up.",
+      "why": "Spend Momentum on big skills, as a Breaker."
     },
     {
       "id": "sounding-line",
@@ -5371,13 +5810,14 @@ export default {
       "effect": [
         {
           "when": "custom",
-          "do": "warn-early",
+          "do": "unveil",
           "value": 1
         },
         {
-          "when": "custom",
-          "do": "unveil",
-          "value": 1
+          "when": "hit",
+          "if": "target-telling",
+          "do": "crit-damage%",
+          "value": 15
         }
       ],
       "sources": [
@@ -5386,7 +5826,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Drop it, count the knots, and know what is coming."
+      "flavour": "Drop it, count the knots, and know what is coming.",
+      "why": "Read Veiled parts and crit their tells, as an Infiltrator."
     },
     {
       "id": "cofferdam",
@@ -5415,7 +5856,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "It keeps the water out while the work goes on."
+      "flavour": "It keeps the water out while the work goes on.",
+      "why": "Take less behind a shield, as a Bastion."
     },
     {
       "id": "siphon-tube",
@@ -5443,7 +5885,8 @@ export default {
           "kind": "strain"
         }
       ],
-      "flavour": "Start the flow and it keeps itself going."
+      "flavour": "Start the flow and it keeps itself going.",
+      "why": "Leech your way back from below half."
     },
     {
       "id": "spillway",
@@ -5462,9 +5905,10 @@ export default {
         "critDamage": 24
       },
       "effect": {
-        "when": "custom",
-        "do": "spill",
-        "value": 15
+        "when": "hit",
+        "if": "target-below-half",
+        "do": "crit-damage%",
+        "value": 30
       },
       "sources": [
         {
@@ -5473,7 +5917,8 @@ export default {
           "planned": "GOLDEN PARACHUTE"
         }
       ],
-      "flavour": "When it overflows, it goes somewhere."
+      "flavour": "When it overflows, it goes somewhere.",
+      "why": "Crit parts below half, as a Breaker."
     },
     {
       "id": "turbidity",
@@ -5503,7 +5948,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Stir it up and nothing sees through."
+      "flavour": "Stir it up and nothing sees through.",
+      "why": "Crit to make attacks come late, as an Infiltrator."
     },
     {
       "id": "weir",
@@ -5532,7 +5978,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "It holds the flow back, once."
+      "flavour": "It holds the flow back, once.",
+      "why": "Let a helper take the first hit, as an Operator."
     },
     {
       "id": "post-code",
@@ -5559,7 +6006,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "Every check passed. Go."
+      "flavour": "Every check passed. Go.",
+      "why": "Open each fight with a crit storm."
     },
     {
       "id": "bootstrap",
@@ -5576,9 +6024,10 @@ export default {
         "damage": 10
       },
       "effect": {
-        "when": "custom",
-        "do": "first-cd",
-        "value": 1
+        "when": "hit",
+        "if": "first-use",
+        "do": "crit%",
+        "value": 25
       },
       "sources": [
         {
@@ -5587,7 +6036,8 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "flavour": "It pulls itself up before anything else loads."
+      "flavour": "It pulls itself up before anything else loads.",
+      "why": "Crit with each skill's first use."
     },
     {
       "id": "bedframe",
@@ -5608,12 +6058,16 @@ export default {
         {
           "when": "always",
           "do": "max-signal%",
-          "value": 12
+          "value": 6
         },
         {
-          "when": "always",
-          "do": "heal%",
-          "value": 5
+          "when": "struck",
+          "if": "charged",
+          "do": "stack",
+          "stat": "reduction",
+          "value": 2,
+          "cap": 6,
+          "text": "Each tell that lands on you adds 2 Block for the rest of the fight, up to 6."
         }
       ],
       "sources": [
@@ -5622,7 +6076,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "Everything else rests on it."
+      "flavour": "Everything else rests on it.",
+      "why": "Harden against tells that land, as a Bastion."
     },
     {
       "id": "init-vector",
@@ -5638,10 +6093,12 @@ export default {
         "crit": 8
       },
       "effect": {
-        "when": "cycle",
-        "do": "repeat",
-        "value": 5,
-        "share": 30
+        "when": "hit",
+        "do": "crit%",
+        "value": 4,
+        "scale": "cycles",
+        "cap": 20,
+        "text": "Increases your critical strike chance by 4% for each cycle the fight has lasted, up to 20%."
       },
       "sources": [
         {
@@ -5650,7 +6107,8 @@ export default {
           "planned": "INIT"
         }
       ],
-      "flavour": "The same seed, the same start, every time."
+      "flavour": "The same seed, the same start, every time.",
+      "why": "Crit more as a fight runs long."
     },
     {
       "id": "bitrot-ward",
@@ -5679,7 +6137,8 @@ export default {
           "kind": "strain"
         }
       ],
-      "flavour": "Old bits that refuse to flip."
+      "flavour": "Old bits that refuse to flip.",
+      "why": "Take a ◆ against the last part, as a Bastion."
     },
     {
       "id": "firmware",
@@ -5696,20 +6155,17 @@ export default {
       },
       "effect": [
         {
-          "when": "hit",
-          "do": "damage%",
-          "value": 4
-        },
-        {
           "when": "always",
           "do": "max-signal%",
           "value": 4
         },
         {
-          "when": "always",
-          "do": "stat+",
+          "when": "break",
+          "do": "buff",
           "stat": "clock",
-          "value": 4
+          "value": 8,
+          "cycles": 3,
+          "stacks": 2
         }
       ],
       "sources": [
@@ -5719,7 +6175,8 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "flavour": "Under the operating system, over the metal."
+      "flavour": "Under the operating system, over the metal.",
+      "why": "Break parts to speed up."
     },
     {
       "id": "read-only",
@@ -5750,7 +6207,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "Nothing gets written here."
+      "flavour": "Nothing gets written here.",
+      "why": "Blunt the hit that drops you below half."
     },
     {
       "id": "watchdog-timer",
@@ -5779,7 +6237,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "If nothing answers, it sends something."
+      "flavour": "If nothing answers, it sends something.",
+      "why": "Keep a free helper coming, as an Operator."
     },
     {
       "id": "fuse-map",
@@ -5801,15 +6260,13 @@ export default {
         {
           "when": "break",
           "do": "momentum",
-          "value": 1,
-          "text": "Gives you 1 more Momentum and increases your damage by 5% for 2 cycles when you break a part."
+          "value": 1
         },
         {
-          "when": "break",
-          "do": "buff",
-          "value": 5,
-          "cycles": 2,
-          "quiet": true
+          "when": "hit",
+          "if": "momentum-full",
+          "do": "crit-damage%",
+          "value": 15
         }
       ],
       "sources": [
@@ -5819,7 +6276,8 @@ export default {
           "planned": "Bedrock bosses"
         }
       ],
-      "flavour": "Every fuse on the board, and which one to pull."
+      "flavour": "Every fuse on the board, and which one to pull.",
+      "why": "Build Momentum fast, as a Breaker."
     },
     {
       "id": "burn-in",
@@ -5845,7 +6303,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "Run it hot from the first second."
+      "flavour": "Run it hot from the first second.",
+      "why": "Make burns tick at once, as an Infiltrator."
     },
     {
       "id": "bit-flip",
@@ -5874,7 +6333,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "One bit, and everything changes."
+      "flavour": "One bit, and everything changes.",
+      "why": "Crit often, as an Infiltrator."
     },
     {
       "id": "bus-fault",
@@ -5901,7 +6361,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "Hold the line and nothing else can talk."
+      "flavour": "Hold the line and nothing else can talk.",
+      "why": "Jam parts to delay them too, as an Operator."
     },
     {
       "id": "brownout",
@@ -5929,7 +6390,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "Low power, still running."
+      "flavour": "Low power, still running.",
+      "why": "Survive below 25%."
     },
     {
       "id": "golden-image",
@@ -5965,7 +6427,8 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "flavour": "The clean copy everything is restored from."
+      "flavour": "The clean copy everything is restored from.",
+      "why": "Farm credits from caches."
     },
     {
       "id": "bedrock-seal",
@@ -5993,7 +6456,8 @@ export default {
           "planned": "INIT"
         }
       ],
-      "flavour": "Sealed at the factory. Still sealed."
+      "flavour": "Sealed at the factory. Still sealed.",
+      "why": "Make your shields hold more, as a Bastion."
     },
     {
       "id": "microcode",
@@ -6026,7 +6490,8 @@ export default {
           "kind": "strain"
         }
       ],
-      "flavour": "The instructions under the instructions."
+      "flavour": "The instructions under the instructions.",
+      "why": "Speed up your shortest cooldown."
     },
     {
       "id": "last-known-good",
@@ -6058,7 +6523,8 @@ export default {
           "planned": "Bedrock bosses"
         }
       ],
-      "flavour": "Boot from the last version that worked."
+      "flavour": "Boot from the last version that worked.",
+      "why": "Rewind one disaster a fight."
     },
     {
       "id": "cold-iron",
@@ -6080,7 +6546,7 @@ export default {
           "when": "always",
           "do": "stat+",
           "stat": "reduction",
-          "value": 3
+          "value": 2
         },
         {
           "when": "custom",
@@ -6093,7 +6559,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "Nothing that seeps gets past it."
+      "flavour": "Nothing that seeps gets past it.",
+      "why": "Block burns and encryption, as a Bastion."
     },
     {
       "id": "wire-wrap",
@@ -6122,7 +6589,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "Every pin tied to every other pin."
+      "flavour": "Every pin tied to every other pin.",
+      "why": "Fill Momentum to hit every part, as a Breaker."
     },
     {
       "id": "dead-reckoning",
@@ -6148,7 +6616,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "No map, no stars, still on target."
+      "flavour": "No map, no stars, still on target.",
+      "why": "Hit each part through its ◆, as an Infiltrator."
     },
     {
       "id": "ground-plane",
@@ -6165,8 +6634,11 @@ export default {
       },
       "effect": {
         "when": "struck",
-        "do": "crit-normal",
-        "text": "Turns every critical strike against you into a normal hit."
+        "do": "stack",
+        "stat": "crit",
+        "value": 2,
+        "cap": 10,
+        "text": "Each attack that lands on you adds 2% crit for the rest of the fight, up to 10%."
       },
       "sources": [
         {
@@ -6174,7 +6646,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "Everything drains to it, and nothing spikes."
+      "flavour": "Everything drains to it, and nothing spikes.",
+      "why": "Turn hits on you into crits."
     },
     {
       "id": "clock-tree",
@@ -6193,7 +6666,8 @@ export default {
       "effect": {
         "when": "start",
         "do": "clock-start",
-        "value": 50
+        "value": 50,
+        "text": "Starts your Clock Speed meter 50% full each fight."
       },
       "sources": [
         {
@@ -6201,7 +6675,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "One edge, sent everywhere at once."
+      "flavour": "One edge, sent everywhere at once.",
+      "why": "Start every fight with Clock Speed half full."
     },
     {
       "id": "quarry",
@@ -6231,7 +6706,8 @@ export default {
           "planned": "Bedrock bosses"
         }
       ],
-      "flavour": "Dig until there is nothing left."
+      "flavour": "Dig until there is nothing left.",
+      "why": "Finish the last part."
     },
     {
       "id": "strata",
@@ -6261,7 +6737,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "Pressed flat by everything above it."
+      "flavour": "Pressed flat by everything above it.",
+      "why": "Harden as you drop, as a Bastion."
     },
     {
       "id": "load-order",
@@ -6287,7 +6764,8 @@ export default {
           "kind": "strain"
         }
       ],
-      "flavour": "First in line, every time."
+      "flavour": "First in line, every time.",
+      "why": "Make helpers hit as they arrive, as an Operator."
     },
     {
       "id": "undervolt",
@@ -6313,7 +6791,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "Less power, same speed, no heat."
+      "flavour": "Less power, same speed, no heat.",
+      "why": "Hold Momentum safely, as a Breaker."
     },
     {
       "id": "keystone",
@@ -6341,7 +6820,8 @@ export default {
           "planned": "INIT"
         }
       ],
-      "flavour": "Pull it and the arch comes down."
+      "flavour": "Pull it and the arch comes down.",
+      "why": "Wear several sets at once."
     },
     {
       "id": "signal-floor",
@@ -6359,10 +6839,9 @@ export default {
       "effect": {
         "when": "always",
         "if": "below-25",
-        "do": "stat%",
-        "stat": "regen",
-        "value": 100,
-        "text": "Doubles your Regen while you are below 25% health."
+        "do": "stat+",
+        "stat": "evasion",
+        "value": 15
       },
       "sources": [
         {
@@ -6371,7 +6850,8 @@ export default {
           "planned": "flash ranks"
         }
       ],
-      "flavour": "It never drops under this."
+      "flavour": "It never drops under this.",
+      "why": "Dodge while you're below 25%."
     },
     {
       "id": "warm-reset",
@@ -6400,7 +6880,8 @@ export default {
           "planned": "Bedrock bosses"
         }
       ],
-      "flavour": "A restart that keeps the lights on."
+      "flavour": "A restart that keeps the lights on.",
+      "why": "Start every fight shielded, as a Bastion."
     },
     {
       "id": "root-of-trust",
@@ -6419,8 +6900,10 @@ export default {
       },
       "effect": {
         "when": "crit",
-        "do": "restore%",
-        "value": 2
+        "do": "buff",
+        "value": 4,
+        "cycles": 2,
+        "stacks": 5
       },
       "sources": [
         {
@@ -6429,7 +6912,8 @@ export default {
           "planned": "INIT"
         }
       ],
-      "flavour": "Everything above it is only as sound as this."
+      "flavour": "Everything above it is only as sound as this.",
+      "why": "Crit to hit harder for a while."
     },
     {
       "id": "umbrella-policy",
@@ -6452,7 +6936,8 @@ export default {
           "kind": "feud"
         }
       ],
-      "flavour": "Pays out once every other policy has."
+      "flavour": "Pays out once every other policy has.",
+      "why": "Take less damage while you're low."
     },
     {
       "id": "mews",
@@ -6475,7 +6960,8 @@ export default {
           "kind": "feud"
         }
       ],
-      "flavour": "Somewhere quiet to come back to between hunts."
+      "flavour": "Somewhere quiet to come back to between hunts.",
+      "why": "Heal on every crit."
     },
     {
       "id": "blank-check",
@@ -6500,11 +6986,12 @@ export default {
           "kind": "feud"
         }
       ],
-      "flavour": "Nobody asks what it was spent on."
+      "flavour": "Nobody asks what it was spent on.",
+      "why": "Open on the healthiest part."
     },
     {
       "id": "carrier-wave",
-      "name": "Carrier Wave",
+      "name": "Sideband",
       "faction": "lantern",
       "base": "weaponized-exploit",
       "level": 8,
@@ -6524,7 +7011,8 @@ export default {
           "kind": "feud"
         }
       ],
-      "flavour": "Under the static, the count never stops."
+      "flavour": "Under the static, the count never stops.",
+      "why": "Answer tells to bring every skill back sooner."
     },
     {
       "id": "descant",
@@ -6547,7 +7035,8 @@ export default {
           "kind": "feud"
         }
       ],
-      "flavour": "A second voice above the tune, never quite on it."
+      "flavour": "A second voice above the tune, never quite on it.",
+      "why": "Boost your burns and helpers at any level."
     },
     {
       "id": "governor",
@@ -6569,7 +7058,12 @@ export default {
           "id": "centrifuge"
         }
       ],
-      "flavour": "Spin it down, and everything after spins down with it."
+      "flavour": "Spin it down, and everything after spins down with it.",
+      "secondary": {
+        "regen": 4,
+        "evasion": 4
+      },
+      "why": "Blunt parts that attack again and again."
     },
     {
       "id": "cascade-failure",
@@ -6593,7 +7087,12 @@ export default {
           "id": "centrifuge"
         }
       ],
-      "flavour": "Stop one wheel and the next one tears loose."
+      "flavour": "Stop one wheel and the next one tears loose.",
+      "secondary": {
+        "crit": 6,
+        "critDamage": 10
+      },
+      "why": "Delay attacks to damage their parts."
     },
     {
       "id": "paper-trail",
@@ -6617,11 +7116,16 @@ export default {
           "id": "shakedown"
         }
       ],
-      "flavour": "Every demand leaves a receipt somewhere."
+      "flavour": "Every demand leaves a receipt somewhere.",
+      "secondary": {
+        "crit": 5,
+        "critDamage": 9
+      },
+      "why": "Call off a boss's wind-up in time."
     },
     {
       "id": "shakedown-escrow",
-      "name": "Escrow",
+      "name": "Payment Plan",
       "base": "root-shell",
       "level": 12,
       "primary": {
@@ -6639,7 +7143,12 @@ export default {
           "id": "shakedown"
         }
       ],
-      "flavour": "Held by a third party until the deadline. The third party is late."
+      "flavour": "Held by a third party until the deadline. The third party is late.",
+      "secondary": {
+        "reduction": 1,
+        "evasion": 3
+      },
+      "why": "Buy time against a boss's enrage."
     },
     {
       "id": "privacy-screen",
@@ -6660,7 +7169,12 @@ export default {
           "id": "shouldersurfer"
         }
       ],
-      "flavour": "Polarised. From the side it is a black rectangle."
+      "flavour": "Polarised. From the side it is a black rectangle.",
+      "secondary": {
+        "reduction": 1,
+        "evasion": 4
+      },
+      "why": "Beat viruses that copy your commands."
     },
     {
       "id": "muscle-memory",
@@ -6683,7 +7197,12 @@ export default {
           "id": "shouldersurfer"
         }
       ],
-      "flavour": "Two beats, then the key. Your hands knew before you did."
+      "flavour": "Two beats, then the key. Your hands knew before you did.",
+      "secondary": {
+        "clock": 5,
+        "crit": 6
+      },
+      "why": "Fire on a steady two-cycle rhythm."
     },
     {
       "id": "tail-call",
@@ -6706,7 +7225,12 @@ export default {
           "id": "recursion"
         }
       ],
-      "flavour": "The last thing a frame does is hand its work on."
+      "flavour": "The last thing a frame does is hand its work on.",
+      "secondary": {
+        "payload": 5,
+        "crit": 6
+      },
+      "why": "Break parts while your burns run."
     },
     {
       "id": "stack-guard",
@@ -6720,7 +7244,7 @@ export default {
       "effect": {
         "when": "custom",
         "do": "break-guard",
-        "value": 20
+        "value": 15
       },
       "sources": [
         {
@@ -6728,7 +7252,12 @@ export default {
           "id": "recursion"
         }
       ],
-      "flavour": "A canary on every frame. It sings once, then it is gone."
+      "flavour": "A canary on every frame. It sings once, then it is gone.",
+      "secondary": {
+        "regen": 5,
+        "evasion": 4
+      },
+      "why": "Brace for the hit after a break."
     },
     {
       "id": "overdraft",
@@ -6751,7 +7280,12 @@ export default {
           "id": "nightdesk"
         }
       ],
-      "flavour": "The desk covers it tonight. It bills you in the morning."
+      "flavour": "The desk covers it tonight. It bills you in the morning.",
+      "secondary": {
+        "regen": 5,
+        "evasion": 5
+      },
+      "why": "Survive one killing hit a fight."
     },
     {
       "id": "pre-authorization",
@@ -6774,7 +7308,12 @@ export default {
           "id": "nightdesk"
         }
       ],
-      "flavour": "The hold goes on the account before the charge does."
+      "flavour": "The hold goes on the account before the charge does.",
+      "secondary": {
+        "reduction": 2,
+        "evasion": 5
+      },
+      "why": "Raise a shield, then hit."
     },
     {
       "id": "changed-default",
@@ -6802,7 +7341,12 @@ export default {
           "id": "camswarm"
         }
       ],
-      "flavour": "admin, admin. Somebody finally changed it."
+      "flavour": "admin, admin. Somebody finally changed it.",
+      "secondary": {
+        "payload": 6,
+        "clock": 5
+      },
+      "why": "Bring helpers against fragment viruses."
     },
     {
       "id": "mass-reboot",
@@ -6825,7 +7369,12 @@ export default {
           "id": "camswarm"
         }
       ],
-      "flavour": "Forty thousand cameras blink at once."
+      "flavour": "Forty thousand cameras blink at once.",
+      "secondary": {
+        "clock": 5,
+        "reduction": 2
+      },
+      "why": "Break parts to wipe out fragments."
     },
     {
       "id": "majority-attack",
@@ -6850,7 +7399,12 @@ export default {
           "id": "byzantine"
         }
       ],
-      "flavour": "Hold more than half and the ledger says what you say."
+      "flavour": "Hold more than half and the ledger says what you say.",
+      "secondary": {
+        "crit": 8,
+        "critDamage": 14
+      },
+      "why": "Wear several parts down below half."
     },
     {
       "id": "quorum-sensor",
@@ -6872,7 +7426,12 @@ export default {
           "id": "byzantine"
         }
       ],
-      "flavour": "It counts the votes as they come in, and it flinches at the second."
+      "flavour": "It counts the votes as they come in, and it flinches at the second.",
+      "secondary": {
+        "regen": 6,
+        "evasion": 5
+      },
+      "why": "Blunt the second hit in a cycle."
     },
     {
       "id": "street-atlas",
@@ -6896,7 +7455,12 @@ export default {
           "floor": 1
         }
       ],
-      "flavour": "Every alley on the Sprawl, inked in by hand, with the dead ends crossed out."
+      "flavour": "Every alley on the Sprawl, inked in by hand, with the dead ends crossed out.",
+      "secondary": {
+        "crit": 4,
+        "reduction": 1
+      },
+      "why": "Push into rooms you haven't cleared."
     },
     {
       "id": "quiet-hours",
@@ -6908,19 +7472,33 @@ export default {
         "regen": 7.9,
         "restore": 21
       },
-      "effect": {
-        "when": "always",
-        "do": "stat+",
-        "stat": "stealth",
-        "value": 6
-      },
+      "effect": [
+        {
+          "when": "always",
+          "do": "stat+",
+          "stat": "stealth",
+          "value": 6
+        },
+        {
+          "when": "always",
+          "if": "early",
+          "do": "stat+",
+          "stat": "evasion",
+          "value": 6
+        }
+      ],
       "sources": [
         {
           "kind": "feat",
           "floor": 2
         }
       ],
-      "flavour": "The routers on Backhaul log less between two and five."
+      "flavour": "The routers on Backhaul log less between two and five.",
+      "secondary": {
+        "reduction": 1,
+        "evasion": 4
+      },
+      "why": "Slip past the first attacks of a fight."
     },
     {
       "id": "sweetener",
@@ -6942,7 +7520,12 @@ export default {
           "floor": 3
         }
       ],
-      "flavour": "A canary in every block, and a little sugar under each one."
+      "flavour": "A canary in every block, and a little sugar under each one.",
+      "secondary": {
+        "crit": 6,
+        "reduction": 1
+      },
+      "why": "Heal from the caches you take."
     },
     {
       "id": "ring-main",
@@ -6967,7 +7550,12 @@ export default {
           "floor": 4
         }
       ],
-      "flavour": "One cable round Coldline, fed from both ends."
+      "flavour": "One cable round Coldline, fed from both ends.",
+      "secondary": {
+        "regen": 5,
+        "evasion": 5
+      },
+      "why": "Hold servers on the ring to harden."
     },
     {
       "id": "mixed-bag",
@@ -6991,7 +7579,12 @@ export default {
           "floor": 5
         }
       ],
-      "flavour": "Seven kinds of trouble on Deep Core. It kept a sample of each."
+      "flavour": "Seven kinds of trouble on Deep Core. It kept a sample of each.",
+      "secondary": {
+        "crit": 8,
+        "reduction": 2
+      },
+      "why": "Fight on servers with many specials."
     },
     {
       "id": "superuser",
@@ -7022,7 +7615,12 @@ export default {
           "floor": 6
         }
       ],
-      "flavour": "Ring zero answers to whoever holds it longest."
+      "flavour": "Ring zero answers to whoever holds it longest.",
+      "secondary": {
+        "crit": 9,
+        "reduction": 2
+      },
+      "why": "Fight on servers you hold."
     },
     {
       "id": "bottleneck",
@@ -7037,10 +7635,9 @@ export default {
       },
       "effect": {
         "when": "hit",
+        "if": "target-jammed",
         "do": "damage%",
-        "value": 4,
-        "scale": "reads",
-        "cap": 12
+        "value": 20
       },
       "sources": [
         {
@@ -7048,7 +7645,12 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Everything on the Sink drains toward one narrow pipe."
+      "flavour": "Everything on the Sink drains toward one narrow pipe.",
+      "secondary": {
+        "crit": 11,
+        "critDamage": 21
+      },
+      "why": "Jam a part, then hit it."
     },
     {
       "id": "last-mile",
@@ -7071,7 +7673,12 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "The last stretch of cable before the bedrock, and the slowest."
+      "flavour": "The last stretch of cable before the bedrock, and the slowest.",
+      "secondary": {
+        "evasion": 8,
+        "regen": 10
+      },
+      "why": "Fight viruses with many parts."
     },
     {
       "id": "regular",
@@ -7101,7 +7708,12 @@ export default {
           "floor": 1
         }
       ],
-      "flavour": "Same corner of SPRAWL-00 every night. The street hits back with you."
+      "flavour": "Same corner of SPRAWL-00 every night. The street hits back with you.",
+      "secondary": {
+        "crit": 4,
+        "reduction": 1
+      },
+      "why": "Build around Echo early."
     },
     {
       "id": "dead-end",
@@ -7115,9 +7727,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "after-delay",
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 3
       },
       "green": {
         "when": "always",
@@ -7145,11 +7758,10 @@ export default {
         "payload": 2.9
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "when": "hit",
+        "if": "after-delay",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -7177,10 +7789,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "after-delay",
+        "do": "stat+",
+        "stat": "evasion",
+        "value": 6
       },
       "green": {
         "when": "hit",
@@ -7219,7 +7831,12 @@ export default {
           "floor": 3
         }
       ],
-      "flavour": "Six walls to a cell, and every cell holds."
+      "flavour": "Six walls to a cell, and every cell holds.",
+      "secondary": {
+        "reduction": 1,
+        "evasion": 4
+      },
+      "why": "Block hard in the first three cycles."
     },
     {
       "id": "ice-pick",
@@ -7235,9 +7852,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 4,
-        "text": "+4% damage"
+        "if": "target-unacted",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -7264,10 +7881,10 @@ export default {
         "signal": 35
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "hit",
+        "if": "early",
+        "do": "damage+",
+        "value": 4
       },
       "green": {
         "when": "always",
@@ -7295,9 +7912,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "early",
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 3
       },
       "green": {
         "when": "always",
@@ -7324,27 +7942,24 @@ export default {
           42
         ]
       },
-      "effect": [
-        {
-          "when": "hit",
-          "do": "shatter",
-          "limit": "fight",
-          "text": "Once a fight, a hit on an armored part breaks 2 ◆."
-        },
-        {
-          "when": "hit",
-          "if": "target-bare",
-          "do": "damage%",
-          "value": 10
-        }
-      ],
+      "effect": {
+        "when": "hit",
+        "if": "target-armored",
+        "do": "damage+",
+        "value": 8
+      },
       "sources": [
         {
           "kind": "feat",
           "floor": 5
         }
       ],
-      "flavour": "Two specials to every server on Deep Core, and a charge for each."
+      "flavour": "Two specials to every server on Deep Core, and a charge for each.",
+      "secondary": {
+        "crit": 8,
+        "critDamage": 15
+      },
+      "why": "Hit armored parts harder."
     },
     {
       "id": "grub",
@@ -7359,10 +7974,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "early",
+        "do": "stat+",
         "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "value": 20
       },
       "green": {
         "when": "always",
@@ -7388,10 +8003,10 @@ export default {
         "signal": 62
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "hit",
+        "if": "early",
+        "do": "crit-damage%",
+        "value": 30
       },
       "green": {
         "when": "always",
@@ -7420,10 +8035,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "early",
+        "do": "stat+",
+        "stat": "sanitize",
+        "value": 40
       },
       "green": {
         "when": "hit",
@@ -7450,7 +8065,7 @@ export default {
       "effect": {
         "when": "custom",
         "do": "spill",
-        "value": 40
+        "value": 60
       },
       "sources": [
         {
@@ -7458,7 +8073,12 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Everything on the Sink runs downhill, and it takes the next thing with it."
+      "flavour": "Everything on the Sink runs downhill, and it takes the next thing with it.",
+      "secondary": {
+        "crit": 10,
+        "reduction": 2
+      },
+      "why": "Carry a break's leftover damage on."
     },
     {
       "id": "lagoon",
@@ -7473,10 +8093,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "one-left",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 12
       },
       "green": {
         "when": "hit",
@@ -7502,10 +8122,10 @@ export default {
         "reduction": 11
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "hit",
+        "if": "one-left",
+        "do": "crit%",
+        "value": 30
       },
       "green": {
         "when": "always",
@@ -7535,9 +8155,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 4,
-        "text": "+4% damage"
+        "if": "target-last",
+        "do": "crit-damage%",
+        "value": 50
       },
       "green": {
         "when": "always",
@@ -7567,9 +8187,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 5,
-        "text": "+5% damage"
+        "if": "room-new",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -7598,10 +8218,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "room-new",
+        "do": "stat+",
         "stat": "clock",
-        "value": 5,
-        "text": "+5% Clock Speed"
+        "value": 8
       },
       "green": {
         "when": "always",
@@ -7629,10 +8249,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "room-new",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 3,
-        "text": "+3 Block"
+        "value": 4
       },
       "green": {
         "when": "hit",
@@ -7658,10 +8278,10 @@ export default {
         "signal": 72
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 8,
-        "text": "+8% max Integrity"
+        "when": "hit",
+        "if": "room-new",
+        "do": "crit-damage%",
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -7690,10 +8310,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "clock",
-        "value": 5,
-        "text": "+5% Clock Speed"
+        "do": "stat+",
+        "stat": "crit",
+        "value": 2,
+        "scale": "contracts",
+        "cap": 6
       },
       "green": {
         "when": "always",
@@ -7719,9 +8340,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 8,
-        "text": "+8% max Integrity"
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 1,
+        "scale": "contracts",
+        "cap": 3
       },
       "green": {
         "when": "always",
@@ -7749,10 +8372,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 3,
-        "text": "+3 Block"
+        "do": "stat+",
+        "stat": "regen",
+        "value": 2,
+        "scale": "contracts",
+        "cap": 6
       },
       "green": {
         "when": "hit",
@@ -7777,10 +8401,10 @@ export default {
         "signal": 48
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 8,
-        "text": "+8% max Integrity"
+        "when": "hit",
+        "if": "server-held",
+        "do": "crit%",
+        "value": 12
       },
       "green": {
         "when": "always",
@@ -7808,10 +8432,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "server-held",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 3,
-        "text": "+3 Block"
+        "value": 6
       },
       "green": {
         "when": "hit",
@@ -7837,9 +8461,9 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 8,
-        "text": "+8% max Integrity"
+        "if": "server-held",
+        "do": "taken%",
+        "value": 12
       },
       "green": {
         "when": "always",
@@ -7866,15 +8490,18 @@ export default {
       },
       "effect": [
         {
-          "when": "custom",
-          "do": "warn-early",
-          "value": 1
+          "when": "answer",
+          "do": "buff",
+          "value": 10,
+          "cycles": 2,
+          "stacks": 2
         },
         {
-          "when": "hit",
-          "if": "target-winding",
-          "do": "damage%",
-          "value": 10
+          "when": "always",
+          "if": "any-tell",
+          "do": "stat+",
+          "stat": "crit",
+          "value": 5
         }
       ],
       "sources": [
@@ -7882,7 +8509,12 @@ export default {
           "kind": "feat"
         }
       ],
-      "flavour": "One of everything on the board, and the knack of each."
+      "flavour": "One of everything on the board, and the knack of each.",
+      "secondary": {
+        "crit": 7,
+        "critDamage": 12
+      },
+      "why": "Answer tells to hit harder for two cycles."
     },
     {
       "id": "field-guide",
@@ -7914,7 +8546,12 @@ export default {
           "kind": "feat"
         }
       ],
-      "flavour": "Twenty strains drawn from life, each with a note on where it bites."
+      "flavour": "Twenty strains drawn from life, each with a note on where it bites.",
+      "secondary": {
+        "crit": 8,
+        "critDamage": 15
+      },
+      "why": "Hunt strains."
     },
     {
       "id": "no-rest",
@@ -7946,7 +8583,12 @@ export default {
           "kind": "feat"
         }
       ],
-      "flavour": "Five servers in one sitting each, and no chair."
+      "flavour": "Five servers in one sitting each, and no chair.",
+      "secondary": {
+        "reduction": 2,
+        "evasion": 5
+      },
+      "why": "Run a whole visit without resting."
     },
     {
       "id": "long-shot",
@@ -7976,7 +8618,12 @@ export default {
           "kind": "feat"
         }
       ],
-      "flavour": "Found them all from a distance, before anyone stood next to them."
+      "flavour": "Found them all from a distance, before anyone stood next to them.",
+      "secondary": {
+        "crit": 10,
+        "critDamage": 20
+      },
+      "why": "Stay above 75% and hit harder."
     },
     {
       "id": "breakwater",
@@ -7997,9 +8644,9 @@ export default {
       "effect": {
         "when": "shielded",
         "do": "buff",
-        "value": 5,
+        "value": 6,
         "cycles": 2,
-        "stacks": 3,
+        "stacks": 4,
         "text": "Increases your damage by 5% for 2 cycles when you gain a shield or your shield absorbs a hit. Stacks up to 3 times."
       },
       "sources": [
@@ -8008,7 +8655,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "The sea hits it all night and builds it a little higher."
+      "flavour": "The sea hits it all night and builds it a little higher.",
+      "why": "Hit harder from behind your shield, as a Bastion."
     },
     {
       "id": "riprap",
@@ -8038,7 +8686,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Broken stone, dumped where the current cuts deepest."
+      "flavour": "Broken stone, dumped where the current cuts deepest.",
+      "why": "Cut moves to hit harder, as a Breaker."
     },
     {
       "id": "spawning-run",
@@ -8067,7 +8716,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Thousands go upstream. Enough of them arrive."
+      "flavour": "Thousands go upstream. Enough of them arrive.",
+      "why": "Hit harder with helpers, as an Operator."
     },
     {
       "id": "tide-table",
@@ -8083,9 +8733,7 @@ export default {
       },
       "effect": {
         "when": "answer",
-        "do": "refund",
-        "value": 1,
-        "text": "Reduces all your cooldowns by 1 cycle when you answer a tell."
+        "do": "refund-skill"
       },
       "sources": [
         {
@@ -8093,7 +8741,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "High water at 03:12. It is never wrong."
+      "flavour": "High water at 03:12. It is never wrong.",
+      "why": "Answer a tell to fire that skill again."
     },
     {
       "id": "banked-fire",
@@ -8121,7 +8770,8 @@ export default {
           "floor": 7
         }
       ],
-      "flavour": "Ash on top. Red underneath until morning."
+      "flavour": "Ash on top. Red underneath until morning.",
+      "why": "Burn harder, as an Infiltrator."
     },
     {
       "id": "rockfall",
@@ -8139,9 +8789,8 @@ export default {
       },
       "effect": {
         "when": "break",
-        "do": "refund",
-        "value": 1,
-        "text": "Reduces all your cooldowns by 1 cycle when you break a part."
+        "do": "break-delay",
+        "value": 1
       },
       "sources": [
         {
@@ -8149,7 +8798,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "One stone lets go, and the slope follows it."
+      "flavour": "One stone lets go, and the slope follows it.",
+      "why": "Break parts to push attacks back, as a Breaker."
     },
     {
       "id": "relief-valve",
@@ -8177,7 +8827,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "Set to lift at nine bar. It has lifted every night this week."
+      "flavour": "Set to lift at nine bar. It has lifted every night this week.",
+      "why": "Cut moves to bring skills back, as an Operator."
     },
     {
       "id": "cutoff-wall",
@@ -8205,7 +8856,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "Grout pumped down to the bedrock, so nothing seeps under the dam."
+      "flavour": "Grout pumped down to the bedrock, so nothing seeps under the dam.",
+      "why": "Cut moves to shield up, as a Bastion."
     },
     {
       "id": "bench-mark",
@@ -8221,10 +8873,10 @@ export default {
         "crit": 5
       },
       "effect": {
-        "when": "tagged",
-        "do": "heal",
-        "value": 5,
-        "text": "Heals you for 5 when you hit a Tagged part."
+        "when": "hit",
+        "if": "target-tagged",
+        "do": "crit-damage%",
+        "value": 20
       },
       "sources": [
         {
@@ -8232,7 +8884,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "A brass disc in the rock. Every survey starts from it."
+      "flavour": "A brass disc in the rock. Every survey starts from it.",
+      "why": "Tag parts and crit them, as an Infiltrator."
     },
     {
       "id": "flue",
@@ -8258,7 +8911,8 @@ export default {
           "floor": 8
         }
       ],
-      "flavour": "The heat goes up the stack and keeps the room warm on the way."
+      "flavour": "The heat goes up the stack and keeps the room warm on the way.",
+      "why": "Shield up as your burns tick."
     },
     {
       "id": "gully",
@@ -8273,10 +8927,11 @@ export default {
         ]
       },
       "effect": {
-        "when": "hit",
-        "do": "dmg%",
-        "value": 5,
-        "text": "+5% damage"
+        "when": "break",
+        "do": "buff",
+        "stat": "reduction",
+        "value": 3,
+        "cycles": 2
       },
       "green": {
         "when": "always",
@@ -8304,10 +8959,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
+        "do": "stat+",
+        "stat": "evasion",
         "value": 2,
-        "text": "+2 Block"
+        "scale": "broken",
+        "cap": 8
       },
       "green": {
         "when": "always",
@@ -8335,9 +8991,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "do": "stat+",
+        "stat": "restore",
+        "value": 4,
+        "scale": "broken",
+        "cap": 16
       },
       "green": {
         "when": "always",
@@ -8365,10 +9023,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "value": 2,
+        "scale": "broken",
+        "cap": 6
       },
       "green": {
         "when": "hit",
@@ -8395,10 +9054,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 1,
+        "scale": "tells",
+        "cap": 4
       },
       "green": {
         "when": "always",
@@ -8459,11 +9119,10 @@ export default {
         "payload": 6
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "shielded",
+        "do": "crit%",
+        "value": 8
       },
       "green": {
         "when": "hit",
@@ -8491,9 +9150,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "do": "stat+",
+        "stat": "crit",
+        "value": 2,
+        "scale": "tells",
+        "cap": 8
       },
       "green": {
         "when": "always",
@@ -8524,9 +9185,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 4,
-        "text": "+4% damage"
+        "if": "target-attacked",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "always",
@@ -8555,10 +9216,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "if": "any-tell",
+        "do": "stat+",
         "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "value": 8
       },
       "green": {
         "when": "always",
@@ -8586,11 +9247,10 @@ export default {
         "payload": 6
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "target-winding",
+        "do": "crit-damage%",
+        "value": 15
       },
       "green": {
         "when": "hit",
@@ -8619,11 +9279,10 @@ export default {
         ]
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "target-wearing",
+        "do": "crit-damage%",
+        "value": 15
       },
       "green": {
         "when": "hit",
@@ -8652,10 +9311,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 6,
         "if": "target-wearing",
-        "text": "+6% damage to a part wearing ◆"
+        "do": "damage+",
+        "value": 5
       },
       "green": {
         "when": "always",
@@ -8685,10 +9343,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "do": "stat+",
+        "stat": "evasion",
+        "value": 3,
+        "scale": "chits",
+        "cap": 9
       },
       "green": {
         "when": "always",
@@ -8715,10 +9374,10 @@ export default {
         "signal": 37
       },
       "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "when": "hit",
+        "if": "target-repatched",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "hit",
@@ -8732,7 +9391,11 @@ export default {
           "floor": 6,
           "planned": "Domain Controller vaults"
         }
-      ]
+      ],
+      "secondary": {
+        "payload": 5,
+        "clock": 4
+      }
     },
     {
       "id": "group-policy",
@@ -8746,10 +9409,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "value": 1,
+        "scale": "broken",
+        "cap": 3
       },
       "green": {
         "when": "always",
@@ -8764,7 +9428,10 @@ export default {
           "floor": 6,
           "planned": "Domain Controller vaults"
         }
-      ]
+      ],
+      "secondary": {
+        "payload": 5
+      }
     },
     {
       "id": "schema",
@@ -8779,10 +9446,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "restore",
-        "value": 5,
-        "text": "+5% Restore"
+        "do": "stat+",
+        "stat": "regen",
+        "value": 4,
+        "scale": "chits",
+        "cap": 8
       },
       "green": {
         "when": "always",
@@ -8797,7 +9465,10 @@ export default {
           "floor": 6,
           "planned": "Domain Controller vaults"
         }
-      ]
+      ],
+      "secondary": {
+        "signal": 30
+      }
     },
     {
       "id": "admin-rights",
@@ -8813,9 +9484,9 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 5,
-        "text": "+5% damage"
+        "if": "target-bare",
+        "do": "crit-damage%",
+        "value": 25
       },
       "green": {
         "when": "always",
@@ -8830,7 +9501,11 @@ export default {
           "floor": 6,
           "planned": "Domain Controller vaults"
         }
-      ]
+      ],
+      "secondary": {
+        "payload": 5,
+        "crit": 5
+      }
     },
     {
       "id": "spinlock",
@@ -8844,11 +9519,10 @@ export default {
         "payload": 6
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "when": "hit",
+        "if": "after-delay",
+        "do": "crit-damage%",
+        "value": 35
       },
       "green": {
         "when": "hit",
@@ -8862,11 +9536,15 @@ export default {
           "id": "deadlock",
           "floor": 6
         }
-      ]
+      ],
+      "secondary": {
+        "clock": 5,
+        "restore": 10
+      }
     },
     {
       "id": "semaphore",
-      "name": "Semaphore",
+      "name": "Wait Queue",
       "set": "semaphore",
       "base": "bootkit",
       "level": 35,
@@ -8876,9 +9554,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "after-delay",
+        "do": "stat+",
+        "stat": "clock",
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -8893,7 +9572,11 @@ export default {
           "id": "deadlock",
           "floor": 6
         }
-      ]
+      ],
+      "secondary": {
+        "payload": 6,
+        "signal": 30
+      }
     },
     {
       "id": "critical-section",
@@ -8908,10 +9591,9 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "if": "after-delay",
+        "do": "taken%",
+        "value": 25
       },
       "green": {
         "when": "always",
@@ -8925,7 +9607,11 @@ export default {
           "id": "deadlock",
           "floor": 6
         }
-      ]
+      ],
+      "secondary": {
+        "restore": 10,
+        "signal": 30
+      }
     },
     {
       "id": "unlink",
@@ -8940,11 +9626,10 @@ export default {
         ]
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "target-burning",
+        "do": "crit-damage%",
+        "value": 20
       },
       "green": {
         "when": "hit",
@@ -8958,7 +9643,10 @@ export default {
           "floor": 6,
           "planned": "Rootkit kills"
         }
-      ]
+      ],
+      "secondary": {
+        "crit": 6
+      }
     },
     {
       "id": "hollow",
@@ -8972,10 +9660,10 @@ export default {
         "payload": 10
       },
       "effect": {
-        "when": "custom",
-        "do": "burn+%",
-        "value": 5,
-        "text": "Your burns deal 5% more"
+        "when": "hit",
+        "if": "target-telling",
+        "do": "burn%",
+        "value": 15
       },
       "green": {
         "when": "always",
@@ -8990,7 +9678,10 @@ export default {
           "floor": 6,
           "planned": "Rootkit kills"
         }
-      ]
+      ],
+      "secondary": {
+        "payload": 6
+      }
     },
     {
       "id": "driver",
@@ -9004,10 +9695,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
-        "stat": "stealth",
-        "value": 5,
-        "text": "+5% Stealth"
+        "if": "no-helper",
+        "do": "stat+",
+        "stat": "crit",
+        "value": 6
       },
       "green": {
         "when": "always",
@@ -9021,7 +9712,11 @@ export default {
           "floor": 6,
           "planned": "Rootkit kills"
         }
-      ]
+      ],
+      "secondary": {
+        "payload": 6,
+        "crit": 4
+      }
     },
     {
       "id": "hatch",
@@ -9034,11 +9729,14 @@ export default {
         "reduction": 6
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "when": "struck",
+        "if": "big-hit",
+        "do": "stack",
+        "over": 15,
+        "stat": "evasion",
+        "value": 4,
+        "cap": 12,
+        "text": "Each attack that lands for more than 15% of your max health adds 4% Evasion for the rest of the fight, up to 12%."
       },
       "green": {
         "when": "always",
@@ -9067,9 +9765,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 2,
+        "scale": "missing",
+        "cap": 8
       },
       "green": {
         "when": "always",
@@ -9097,11 +9797,14 @@ export default {
         "signal": 62
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "when": "struck",
+        "if": "big-hit",
+        "do": "stack",
+        "over": 25,
+        "stat": "crit",
+        "value": 4,
+        "cap": 12,
+        "text": "Each attack that lands for more than 25% of your max health adds 4% crit for the rest of the fight, up to 12%."
       },
       "green": {
         "when": "hit",
@@ -9142,7 +9845,8 @@ export default {
           "id": "graceperiod"
         }
       ],
-      "flavour": "Small amounts, on time, for as long as it takes."
+      "flavour": "Small amounts, on time, for as long as it takes.",
+      "why": "Spread your hits across the parts."
     },
     {
       "id": "late-fee",
@@ -9171,7 +9875,8 @@ export default {
           "id": "graceperiod"
         }
       ],
-      "flavour": "Charged on the first of the month to anything still standing."
+      "flavour": "Charged on the first of the month to anything still standing.",
+      "why": "Punish parts that patch their ◆ back."
     },
     {
       "id": "antibody",
@@ -9201,7 +9906,8 @@ export default {
           "planned": "PARASITE"
         }
       ],
-      "flavour": "It learns the shape of whatever is feeding and waits there."
+      "flavour": "It learns the shape of whatever is feeding and waits there.",
+      "why": "Hit parts that heal."
     },
     {
       "id": "tourniquet",
@@ -9228,7 +9934,8 @@ export default {
           "planned": "PARASITE"
         }
       ],
-      "flavour": "Tight enough to hurt. Tight enough to stop it."
+      "flavour": "Tight enough to hurt. Tight enough to stop it.",
+      "why": "Fight viruses that siphon you."
     },
     {
       "id": "hidden-service",
@@ -9245,8 +9952,8 @@ export default {
       "effect": {
         "when": "custom",
         "do": "halve-every",
-        "value": 6,
-        "text": "Every 6 cycles, the next attack on you deals half."
+        "value": 8,
+        "text": "Every 8 cycles, the next attack on you deals half."
       },
       "sources": [
         {
@@ -9254,7 +9961,8 @@ export default {
           "id": "exitnode"
         }
       ],
-      "flavour": "An address that answers, from a machine nobody has ever found."
+      "flavour": "An address that answers, from a machine nobody has ever found.",
+      "why": "Take a half hit every eight cycles."
     },
     {
       "id": "tail-circuit",
@@ -9272,10 +9980,9 @@ export default {
       },
       "effect": {
         "when": "hit",
+        "if": "even-cycle",
         "do": "damage%",
-        "value": 10,
-        "if": "target-grew",
-        "text": "Increases your damage by 10% on a part with more Integrity than it had 2 cycles ago."
+        "value": 20
       },
       "sources": [
         {
@@ -9283,7 +9990,8 @@ export default {
           "id": "exitnode"
         }
       ],
-      "flavour": "Three hops out, and the last one remembers everything."
+      "flavour": "Three hops out, and the last one remembers everything.",
+      "why": "Save big hits for even cycles."
     },
     {
       "id": "moral-hazard",
@@ -9314,7 +10022,8 @@ export default {
           "planned": "ACTUARY"
         }
       ],
-      "flavour": "Covered for every loss, so it stopped counting them."
+      "flavour": "Covered for every loss, so it stopped counting them.",
+      "why": "Hit harder for every tell you take."
     },
     {
       "id": "reinsurance",
@@ -9343,7 +10052,8 @@ export default {
           "planned": "ACTUARY"
         }
       ],
-      "flavour": "The insurer's insurer pays last, and pays in full."
+      "flavour": "The insurer's insurer pays last, and pays in full.",
+      "why": "Turn a huge hit into a shield."
     },
     {
       "id": "syscall-table",
@@ -9372,7 +10082,8 @@ export default {
           "planned": "RING ZERO"
         }
       ],
-      "flavour": "Three hundred numbered entries, and every call goes through one of them."
+      "flavour": "Three hundred numbered entries, and every call goes through one of them.",
+      "why": "Fire a different skill every cycle."
     },
     {
       "id": "ring-minus-one",
@@ -9400,7 +10111,8 @@ export default {
           "planned": "RING ZERO"
         }
       ],
-      "flavour": "Below the kernel, the hypervisor watches the clock and waits."
+      "flavour": "Below the kernel, the hypervisor watches the clock and waits.",
+      "why": "Hold a skill back, then fire it."
     },
     {
       "id": "load-path",
@@ -9429,7 +10141,8 @@ export default {
           "planned": "BRICKWALL"
         }
       ],
-      "flavour": "Every wall carries its weight down to something."
+      "flavour": "Every wall carries its weight down to something.",
+      "why": "Hit through ◆ as you strip it."
     },
     {
       "id": "recovery-mode",
@@ -9458,7 +10171,8 @@ export default {
           "planned": "BRICKWALL"
         }
       ],
-      "flavour": "Hold the button down for ten seconds and it comes back plain."
+      "flavour": "Hold the button down for ten seconds and it comes back plain.",
+      "why": "Stay alive below half against big hits."
     },
     {
       "id": "notice-period",
@@ -9486,7 +10200,8 @@ export default {
           "planned": "BULKHEAD"
         }
       ],
-      "flavour": "They always say when it is coming. Most people just stop listening."
+      "flavour": "They always say when it is coming. Most people just stop listening.",
+      "why": "See a tell coming and fire sooner."
     },
     {
       "id": "pressure-relief",
@@ -9514,7 +10229,8 @@ export default {
           "planned": "BULKHEAD"
         }
       ],
-      "flavour": "A spring, a seat and a little hiss before the bang."
+      "flavour": "A spring, a seat and a little hiss before the bang.",
+      "why": "Delay attacks to soften them."
     },
     {
       "id": "generator",
@@ -9540,7 +10256,8 @@ export default {
           "planned": "BLACKOUT"
         }
       ],
-      "flavour": "Diesel in the basement, enough for one floor at a time."
+      "flavour": "Diesel in the basement, enough for one floor at a time.",
+      "why": "Keep hitting when your target slips out of reach."
     },
     {
       "id": "ups",
@@ -9569,7 +10286,8 @@ export default {
           "planned": "BLACKOUT"
         }
       ],
-      "flavour": "Eleven minutes of battery and a beep nobody can find."
+      "flavour": "Eleven minutes of battery and a beep nobody can find.",
+      "why": "Take less in the first three cycles."
     },
     {
       "id": "dkom",
@@ -9597,7 +10315,8 @@ export default {
           "planned": "Rootkit kills"
         }
       ],
-      "flavour": "It unlinks itself from the list and keeps running."
+      "flavour": "It unlinks itself from the list and keeps running.",
+      "why": "Hit parts as they come back into reach."
     },
     {
       "id": "golden-ticket",
@@ -9628,7 +10347,12 @@ export default {
           "planned": "Domain Controller Core vault"
         }
       ],
-      "flavour": "Signed with a key nobody changed in ten years."
+      "flavour": "Signed with a key nobody changed in ten years.",
+      "secondary": {
+        "reduction": 2,
+        "evasion": 6
+      },
+      "why": "Open each fight with a double shield."
     },
     {
       "id": "pass-the-hash",
@@ -9657,7 +10381,8 @@ export default {
           "planned": "Domain Controller vaults"
         }
       ],
-      "flavour": "Nobody asked for the password. The hash was enough."
+      "flavour": "Nobody asked for the password. The hash was enough.",
+      "why": "Chain crits from part to part."
     },
     {
       "id": "grabber",
@@ -9672,11 +10397,10 @@ export default {
         ]
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "hit",
+        "if": "target-healed",
+        "do": "crit%",
+        "value": 10
       },
       "green": {
         "when": "hit",
@@ -9704,11 +10428,11 @@ export default {
         "payload": 13
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "scavenge",
+        "when": "shielded",
+        "do": "buff",
+        "stat": "crit",
         "value": 5,
-        "text": "+5% Scavenge"
+        "cycles": 2
       },
       "green": {
         "when": "always",
@@ -9737,9 +10461,10 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "if": "shielded",
+        "do": "stat+",
+        "stat": "evasion",
+        "value": 5
       },
       "green": {
         "when": "always",
@@ -9769,10 +10494,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "restore",
-        "value": 5,
-        "text": "+5% Restore"
+        "value": 3,
+        "scale": "cycles",
+        "cap": 18
       },
       "green": {
         "when": "always",
@@ -9802,9 +10528,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Integrity"
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 1,
+        "scale": "reads",
+        "cap": 4
       },
       "green": {
         "when": "always",
@@ -9835,11 +10563,10 @@ export default {
         "restore": 66
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
+        "when": "hit",
+        "if": "late",
+        "do": "damage+",
+        "value": 8
       },
       "green": {
         "when": "always",
@@ -9871,10 +10598,11 @@ export default {
       },
       "effect": {
         "when": "always",
-        "do": "stat",
+        "do": "stat+",
         "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
+        "value": 2,
+        "scale": "standing",
+        "cap": 8
       },
       "green": {
         "when": "hit",
@@ -9888,7 +10616,10 @@ export default {
           "id": "routing",
           "floor": 7
         }
-      ]
+      ],
+      "secondary": {
+        "damage": 8
+      }
     },
     {
       "id": "crc",
@@ -9901,11 +10632,9 @@ export default {
         "signal": 79
       },
       "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
+        "when": "crit",
+        "do": "heal",
+        "value": 3
       },
       "green": {
         "when": "always",
@@ -9919,7 +10648,10 @@ export default {
           "id": "routing",
           "floor": 7
         }
-      ]
+      ],
+      "secondary": {
+        "crit": 6
+      }
     },
     {
       "id": "broadcast-storm",
@@ -9935,9 +10667,10 @@ export default {
       },
       "effect": {
         "when": "hit",
-        "do": "dmg%",
-        "value": 5,
-        "text": "+5% damage"
+        "do": "damage+",
+        "value": 2,
+        "scale": "standing",
+        "cap": 8
       },
       "green": {
         "when": "always",
@@ -9952,7 +10685,11 @@ export default {
           "id": "routing",
           "floor": 7
         }
-      ]
+      ],
+      "secondary": {
+        "crit": 6,
+        "critDamage": 16
+      }
     },
     {
       "id": "headcount",
@@ -9972,8 +10709,7 @@ export default {
         "stat": "reduction",
         "value": 1,
         "scale": "standing",
-        "cap": 4,
-        "text": "+1 Block for each part standing, up to 4."
+        "cap": 4
       },
       "sources": [
         {
@@ -9982,7 +10718,8 @@ export default {
           "planned": "PAY RUN"
         }
       ],
-      "flavour": "Everyone on the floor at nine, and everyone paid at five."
+      "flavour": "Everyone on the floor at nine, and everyone paid at five.",
+      "why": "Block more against many-part viruses."
     },
     {
       "id": "check-valve",
@@ -10009,7 +10746,705 @@ export default {
           "planned": "SUMP"
         }
       ],
-      "flavour": "Water goes one way through it, and the flap stays shut on the backwash."
+      "flavour": "Water goes one way through it, and the flap stays shut on the backwash.",
+      "why": "Break parts that blow up."
+    },
+    {
+      "id": "creeper",
+      "name": "Creeper",
+      "base": "weaponized-exploit",
+      "level": 8,
+      "tier": "jackpot",
+      "floor": 1,
+      "year": 1971,
+      "primary": {
+        "damage": [
+          9,
+          12
+        ],
+        "signal": 12
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 1
+        }
+      ],
+      "flavour": "I'M THE CREEPER : CATCH ME IF YOU CAN (1971)",
+      "effect": {
+        "when": "custom",
+        "do": "splash%",
+        "value": 25,
+        "text": "Each of your hits also hits another part for 25%."
+      },
+      "why": "Every hit lands twice."
+    },
+    {
+      "id": "elk-cloner",
+      "name": "Elk Cloner",
+      "base": "tty-upgrade",
+      "level": 8,
+      "tier": "jackpot",
+      "floor": 1,
+      "year": 1982,
+      "primary": {
+        "signal": 22,
+        "regen": 5,
+        "restore": 16
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 1
+        }
+      ],
+      "flavour": "It will get on all your disks. It will infiltrate your chips. (1982)",
+      "effect": {
+        "when": "custom",
+        "do": "nth-skill-twice",
+        "value": 5,
+        "text": "Every 5th damaging skill you use hits twice."
+      },
+      "why": "A free skill every fifth."
+    },
+    {
+      "id": "morris-worm",
+      "name": "Morris Worm",
+      "base": "dropper",
+      "level": 14,
+      "tier": "jackpot",
+      "floor": 2,
+      "year": 1988,
+      "primary": {
+        "damage": 6,
+        "signal": 28,
+        "payload": 2.9
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 2
+        }
+      ],
+      "flavour": "Written to count the machines on the net. It counted each one again and again. (1988)",
+      "effect": {
+        "when": "custom",
+        "do": "hit-mark%",
+        "value": 2,
+        "text": "Each hit on a part makes it take 2% more from you for the rest of the fight."
+      },
+      "why": "Long fights against one part."
+    },
+    {
+      "id": "michelangelo",
+      "name": "Michelangelo",
+      "base": "vpn-cascade",
+      "level": 14,
+      "tier": "jackpot",
+      "floor": 2,
+      "year": 1991,
+      "primary": {
+        "signal": 70,
+        "reduction": 2
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 2
+        }
+      ],
+      "flavour": "It slept on the boot sector until the sixth of March. (1991)",
+      "effect": {
+        "when": "custom",
+        "do": "sixth-cycle",
+        "value": 6,
+        "text": "Every 6th cycle, your hits deal double and attacks on you deal half."
+      },
+      "why": "Plan your fight around the sixth cycle."
+    },
+    {
+      "id": "melissa",
+      "name": "Melissa",
+      "base": "implant",
+      "level": 20,
+      "tier": "jackpot",
+      "floor": 3,
+      "year": 1999,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 3
+        }
+      ],
+      "flavour": "It mailed itself to the first fifty names in the address book. (1999)",
+      "effect": {
+        "when": "custom",
+        "do": "long-status",
+        "text": "Burns, helpers, Jams and Tags you put on a part last twice as long."
+      },
+      "why": "Burns and helpers last twice as long."
+    },
+    {
+      "id": "iloveyou",
+      "name": "ILOVEYOU",
+      "base": "loader",
+      "level": 20,
+      "tier": "jackpot",
+      "floor": 3,
+      "year": 2000,
+      "primary": {
+        "damage": 9,
+        "signal": 40,
+        "payload": 3.8
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 3
+        }
+      ],
+      "flavour": "kindly check the attached LOVELETTER coming from me. (2000)",
+      "effect": {
+        "when": "custom",
+        "do": "turn-first",
+        "value": 3,
+        "text": "The first part to attack you each fight fights for you for 3 cycles."
+      },
+      "why": "Turn the first attacker on its own."
+    },
+    {
+      "id": "code-red",
+      "name": "Code Red",
+      "base": "wormable",
+      "level": 26,
+      "tier": "jackpot",
+      "floor": 4,
+      "year": 2001,
+      "primary": {
+        "damage": [
+          32,
+          40
+        ],
+        "signal": 20
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 4
+        }
+      ],
+      "flavour": "359,000 hosts in fourteen hours. (2001)",
+      "effect": {
+        "when": "custom",
+        "do": "crit-x2",
+        "text": "Doubles your critical strike chance."
+      },
+      "why": "Twice the critical strikes."
+    },
+    {
+      "id": "blaster",
+      "name": "Blaster",
+      "base": "implant",
+      "level": 26,
+      "tier": "jackpot",
+      "floor": 4,
+      "year": 2003,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 4
+        }
+      ],
+      "flavour": "The machine will shut down in 60 seconds. (2003)",
+      "effect": [
+        {
+          "when": "always",
+          "do": "stat+",
+          "stat": "clock",
+          "value": 15,
+          "text": "Adds 15% Clock Speed, and raises the Clock Speed cap from 25% to 40%."
+        },
+        {
+          "when": "always",
+          "do": "cap+",
+          "stat": "clock",
+          "value": 15,
+          "quiet": true
+        }
+      ],
+      "why": "Clock Speed past its cap."
+    },
+    {
+      "id": "mydoom",
+      "name": "Mydoom",
+      "base": "polymorphic-engine",
+      "level": 32,
+      "tier": "jackpot",
+      "floor": 5,
+      "year": 2004,
+      "primary": {
+        "damage": 13,
+        "signal": 55,
+        "payload": 5.4
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 5
+        }
+      ],
+      "flavour": "The fastest mail worm of its year. (2004)",
+      "effect": {
+        "when": "custom",
+        "do": "all-cd",
+        "value": 1,
+        "text": "Reduces all your cooldowns by 1 cycle."
+      },
+      "why": "Every skill comes back sooner."
+    },
+    {
+      "id": "storm-worm",
+      "name": "Storm Worm",
+      "base": "ghost-shell",
+      "level": 32,
+      "tier": "jackpot",
+      "floor": 5,
+      "year": 2007,
+      "primary": {
+        "signal": 70,
+        "regen": 15,
+        "restore": 30
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 5
+        }
+      ],
+      "flavour": "230 dead as storm batters Europe. (2007)",
+      "effect": {
+        "when": "custom",
+        "do": "redirect-nth",
+        "value": 5,
+        "text": "One attack in five on you lands on one of the virus's parts instead."
+      },
+      "why": "Every fifth attack hits the virus."
+    },
+    {
+      "id": "conficker",
+      "name": "Conficker",
+      "base": "domain-front",
+      "level": 38,
+      "tier": "jackpot",
+      "floor": 6,
+      "year": 2008,
+      "primary": {
+        "signal": 227,
+        "reduction": 6
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 6
+        }
+      ],
+      "flavour": "It switched off the updates and the antivirus on every machine it took. (2008)",
+      "effect": {
+        "when": "custom",
+        "do": "no-mend",
+        "value": 2,
+        "text": "Parts you hit can't heal or bring their ◆ back for 2 cycles."
+      },
+      "why": "Stops heals and patching on what you hit."
+    },
+    {
+      "id": "stuxnet",
+      "name": "Stuxnet",
+      "base": "bootkit",
+      "level": 38,
+      "tier": "jackpot",
+      "floor": 6,
+      "year": 2010,
+      "primary": {
+        "damage": 12.5,
+        "signal": 62
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 6
+        }
+      ],
+      "flavour": "It spun the centrifuges out of true while the gauges read normal. (2010)",
+      "effect": {
+        "when": "custom",
+        "do": "hit-sap%",
+        "value": 15,
+        "text": "Parts you hit deal 15% less damage for the rest of the fight."
+      },
+      "why": "What you hit hits back softer."
+    },
+    {
+      "id": "heartbleed",
+      "name": "Heartbleed",
+      "base": "hypervisor-escape",
+      "level": 44,
+      "tier": "jackpot",
+      "floor": 7,
+      "year": 2014,
+      "primary": {
+        "damage": [
+          83,
+          104
+        ],
+        "signal": 60
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 7
+        }
+      ],
+      "flavour": "Ask for one letter. Receive 64 kilobytes. (2014)",
+      "effect": {
+        "when": "custom",
+        "do": "bleed%",
+        "value": 1,
+        "text": "Each hit takes 1% of its part's max Integrity and gives it to you."
+      },
+      "why": "Each hit heals you from the part."
+    },
+    {
+      "id": "mirai",
+      "name": "Mirai",
+      "base": "metamorphic-engine",
+      "level": 44,
+      "tier": "jackpot",
+      "floor": 7,
+      "year": 2016,
+      "primary": {
+        "damage": 34,
+        "signal": 142,
+        "payload": 17
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 7
+        }
+      ],
+      "flavour": "Cameras and routers on their factory passwords. admin, admin. (2016)",
+      "effect": {
+        "when": "custom",
+        "do": "broken-fight",
+        "value": 3,
+        "text": "Each part you break fights for you for 3 cycles before it goes down."
+      },
+      "why": "Broken parts fight on your side."
+    },
+    {
+      "id": "eternalblue",
+      "name": "EternalBlue",
+      "base": "hypervisor-escape",
+      "level": 50,
+      "tier": "jackpot",
+      "floor": 8,
+      "year": 2017,
+      "primary": {
+        "damage": [
+          83,
+          104
+        ],
+        "signal": 60
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 8
+        }
+      ],
+      "flavour": "Leaked in April. Worming through hospitals by May. (2017)",
+      "effect": {
+        "when": "custom",
+        "do": "crit-pierce",
+        "value": 50,
+        "text": "Your critical strikes ignore armor and ◆, and spread to the next part to attack at 50%."
+      },
+      "why": "Critical strikes go through and spread."
+    },
+    {
+      "id": "bluekeep",
+      "name": "BlueKeep",
+      "base": "firmware-shell",
+      "level": 50,
+      "tier": "jackpot",
+      "floor": 8,
+      "year": 2019,
+      "primary": {
+        "signal": 181,
+        "regen": 39,
+        "restore": 78
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 8
+        }
+      ],
+      "flavour": "Wormable, the advisory said. Patch now. (2019)",
+      "effect": [
+        {
+          "when": "always",
+          "do": "max-signal%",
+          "value": 20,
+          "text": "Increases your max Integrity by 20%. Heals and shields on you are 20% larger."
+        },
+        {
+          "when": "always",
+          "do": "heal%",
+          "value": 20,
+          "quiet": true
+        },
+        {
+          "when": "custom",
+          "do": "shield-on%",
+          "value": 20,
+          "quiet": true
+        }
+      ],
+      "why": "More Integrity, bigger heals and shields."
+    },
+    {
+      "id": "2600-hz",
+      "name": "2600 Hz",
+      "base": "proof-of-concept",
+      "level": 4,
+      "tier": "headstart",
+      "floor": 1,
+      "primary": {
+        "damage": [
+          5,
+          7
+        ],
+        "signal": 8
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 1
+        }
+      ],
+      "flavour": "A toy whistle from a cereal box seized the long-distance line.",
+      "effect": {
+        "when": "custom",
+        "do": "opener-hit%",
+        "value": 10,
+        "text": "Your first hit each fight deals 10% more."
+      },
+      "why": "A harder first hit."
+    },
+    {
+      "id": "blue-box",
+      "name": "Blue Box",
+      "base": "cron-job",
+      "level": 6,
+      "tier": "headstart",
+      "floor": 1,
+      "primary": {
+        "damage": 4,
+        "signal": 18,
+        "payload": 2
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 1
+        }
+      ],
+      "flavour": "Multi-frequency tones in a box the size of a paperback.",
+      "effect": {
+        "when": "custom",
+        "do": "first-skill-cd",
+        "value": 1,
+        "text": "Your first skill each fight comes back a cycle sooner."
+      },
+      "why": "Your opener comes back sooner."
+    },
+    {
+      "id": "acoustic-coupler",
+      "name": "Acoustic Coupler",
+      "base": "socks-tunnel",
+      "level": 10,
+      "tier": "headstart",
+      "floor": 2,
+      "primary": {
+        "signal": 45,
+        "reduction": 1
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 2
+        }
+      ],
+      "flavour": "Rubber cups round the handset, 300 baud.",
+      "effect": {
+        "when": "always",
+        "do": "stat+",
+        "stat": "regen",
+        "value": 1,
+        "text": "Adds 1 Regen."
+      },
+      "why": "A little more Regen."
+    },
+    {
+      "id": "war-dialer",
+      "name": "War Dialer",
+      "base": "dropper",
+      "level": 12,
+      "tier": "headstart",
+      "floor": 2,
+      "primary": {
+        "damage": 6,
+        "signal": 28,
+        "payload": 2.9
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 2
+        }
+      ],
+      "flavour": "It dialled every number in the exchange and wrote down which ones whistled back.",
+      "effect": {
+        "when": "custom",
+        "do": "parts-hit%",
+        "value": 2,
+        "cap": 6,
+        "text": "Each different part you hit adds 2% damage for the fight, up to 6%."
+      },
+      "why": "Spread your hits for more damage."
+    },
+    {
+      "id": "handshake",
+      "name": "Handshake",
+      "base": "root-shell",
+      "level": 16,
+      "tier": "headstart",
+      "floor": 3,
+      "primary": {
+        "signal": 35,
+        "regen": 7.5,
+        "restore": 20
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 3
+        }
+      ],
+      "flavour": "Two modems screaming at each other until they agree.",
+      "effect": {
+        "when": "always",
+        "do": "stat+",
+        "stat": "clock",
+        "value": 3,
+        "text": "Adds 3% Clock Speed."
+      },
+      "why": "A little more Clock Speed."
+    },
+    {
+      "id": "red-box",
+      "name": "Red Box",
+      "base": "zero-click",
+      "level": 18,
+      "tier": "headstart",
+      "floor": 3,
+      "primary": {
+        "damage": [
+          22,
+          28
+        ],
+        "signal": 16
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 3
+        }
+      ],
+      "flavour": "The five tones of a quarter dropping into a payphone.",
+      "effect": {
+        "when": "custom",
+        "do": "nth-hit%",
+        "value": 20,
+        "every": 4,
+        "text": "Every 4th hit deals 20% more."
+      },
+      "why": "Every fourth hit lands harder."
+    },
+    {
+      "id": "issue-49",
+      "name": "Issue 49",
+      "base": "implant",
+      "level": 22,
+      "tier": "headstart",
+      "floor": 4,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 4
+        }
+      ],
+      "flavour": "File 14: how to overflow a buffer.",
+      "effect": {
+        "when": "hit",
+        "if": "target-telling",
+        "do": "crit%",
+        "value": 10,
+        "text": "Increases your critical strike chance by 10% when the target is winding up a tell."
+      },
+      "why": "Critical strikes on a part mid-tell."
+    },
+    {
+      "id": "sneakernet",
+      "name": "Sneakernet",
+      "base": "onion-circuit",
+      "level": 24,
+      "tier": "headstart",
+      "floor": 4,
+      "primary": {
+        "signal": 100,
+        "reduction": 3
+      },
+      "sources": [
+        {
+          "kind": "jackpot",
+          "floor": 4
+        }
+      ],
+      "flavour": "Never underestimate the bandwidth of a station wagon full of tapes.",
+      "effect": {
+        "when": "always",
+        "if": "early",
+        "do": "stat+",
+        "stat": "evasion",
+        "value": 5,
+        "text": "Adds 5% Evasion in the first 3 cycles of a fight."
+      },
+      "why": "Dodge the opening attacks."
     }
   ]
 };

@@ -37,13 +37,13 @@ test('gear keeps its share of you at every level and every rate: flat stats grow
 });
 
 test('a unique\'s flat effect is lifted at its item level, its text with it; a share is not', () => {
-  const lien = UNIQUES.lien;
-  assert.deepEqual([lien.level, lien.effect.do, lien.effect.value], [8, 'damage+', 6]);
+  const shrapnel = UNIQUES.shrapnel;
+  assert.deepEqual([shrapnel.level, shrapnel.effect.do, shrapnel.effect.value], [8, 'heal', 6]);
   const s = fresh(); s.hackers = { breaker: { level: 30, xp: 0 } };
-  const it = addItem(s, uniqueItem(lien, 30, seeded(1))); command(s, 'load ' + it.id);
-  const fx = gearFx(s).find((x) => x.it?.unique === 'lien').fx;
-  assert.equal(fx.value, filled(6, 30), 'Lien: +6 damage, lifted and filled at its item level');
-  assert.match(effectLine(it), new RegExp(`Adds ${filled(6, 30)} damage`), 'the tooltip says the number it deals');
+  const it = addItem(s, uniqueItem(shrapnel, 30, seeded(1))); command(s, 'load ' + it.id);
+  const fx = gearFx(s).find((x) => x.it?.unique === 'shrapnel').fx;
+  assert.equal(fx.value, filled(6, 30), 'Shrapnel: a heal of 6, lifted and filled at its item level');
+  assert.match(effectLine(it), new RegExp(`Heals you for ${filled(6, 30)}`), 'the tooltip says the number it heals');
   assert.deepEqual(liftFx({ when: 'hit', do: 'damage%', value: 20 }, 50), { when: 'hit', do: 'damage%', value: 20 }, 'a share stays');
   assert.equal(liftFx({ do: 'stat', stat: 'reduction', value: 2, text: '+2 Block' }, 50).text, `+${lifted(2, 50)} Block`);
   assert.equal(liftFx({ do: 'stat', stat: 'crit', value: 5, text: '+5% crit' }, 50).value, 5, 'Crit is a chance');

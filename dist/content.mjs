@@ -175,6 +175,7 @@ export const FX_IF = {
   'below-25': 'you are below 25% health',
   shielded: 'you hold a shield',
   'momentum-full': 'your Momentum is full',
+  momentum: 'you hold Momentum',
   'helper-out': 'you have a helper out',
   'no-helper': 'you have no helper out',
   blocked: 'your Block reduces it',
@@ -189,12 +190,12 @@ export const FX_IF = {
   'server-held': 'you fight on a server you hold',
   'after-delay': 'one of your delays landed last cycle',
   early: 'the fight is in its first 3 cycles',
-  'target-unacted': "it hasn't attacked yet this fight",
+  'target-unacted': "the target hasn't attacked yet this fight",
   'strain-fight': 'you fight a strain',
   unrested: "you haven't rested this visit",
   // Floors 5 and 6 (docs/floor-items.md).
   'target-wearing': 'the target wears ◆',
-  'target-repatched': 'its ◆ came back this fight',
+  'target-repatched': "the target's ◆ came back this fight",
   'target-healed': 'the target healed this cycle', // since your last turn: you act first in a cycle, the virus heals after
   'target-grew': 'the target has more Integrity than it had 2 cycles ago',
 };
@@ -207,7 +208,7 @@ export const FX_DO = {
   'force-crit': { when: ['start'], label: 'makes your first hit in each fight a critical strike', own: true },
   chit: { when: ['start'], label: 'grants you 1 ◆' },
   refund: { when: ['break', 'answer', 'cut'], label: 'reduces all your cooldowns by X cycles', value: true },
-  'refund-skill': { when: ['break', 'crit'], label: 'resets the cooldown of the skill you used' },
+  'refund-skill': { when: ['break', 'crit', 'answer'], label: 'resets the cooldown of the skill you used' },
   heal: { when: ['break', 'crit', 'answer', 'burn', 'shielded', 'tagged', 'cut'], label: 'heals you for X', value: true },
   shield: { when: ['start', 'answer', 'cut', 'burn'], label: 'shields you for X', value: true },
   'break-hit': { when: ['break'], label: 'deals X damage to the part winding up a tell, or else to the next part to attack,', value: true },
@@ -231,6 +232,7 @@ export const FX_DO = {
   // Native uniques (network.mjs): the tells and the part rules.
   'read-hit': { when: ['answer'], label: 'deals X damage to a part when you answer its tell', value: true, own: true },
   'break-open': { when: ['break'], label: 'leaves the next part to attack Open for X cycles', value: true },
+  'break-delay': { when: ['break'], label: "pushes the next part to attack's attack back X cycles", value: true },
   'warn-early': { when: ['custom'], label: 'announces tells X cycles earlier', value: true },
   'open-long': { when: ['custom'], label: 'keeps a part Open X cycles longer after you answer its tell', value: true },
   'lock-crush': { when: ['custom'], label: 'makes your hits count X% more against a Mutex lock or a Lockbox ward', value: true },
@@ -265,7 +267,7 @@ export const FX_DO = {
   'max-signal%': { when: ['always'], label: 'increases your max Integrity by X%', value: true },
   'heal%': { when: ['always'], label: 'increases the healing you receive by X%', value: true },
   stack: { when: ['struck'], label: 'adds X to your stat for the rest of the fight', value: true, stat: true },
-  buff: { when: ['break', 'crit', 'shielded', 'cut'], label: 'increases your damage by X% for N cycles', value: true },
+  buff: { when: ['break', 'crit', 'shielded', 'cut', 'answer'], label: 'increases your damage by X% for N cycles', value: true },
   // The hits you take.
   'taken%': { when: ['always', 'struck'], label: 'reduces the damage you take by X%', value: true },
   rewind: { when: ['struck'], label: 'resets your Integrity to what it was X cycles earlier', value: true },
@@ -273,7 +275,7 @@ export const FX_DO = {
   'helper-soak': { when: ['struck'], label: 'turns an attack on you onto one of your helpers, which takes it and expires', own: true },
   'next-boost': { when: ['struck'], label: 'makes your next heal or shield X% larger', value: true },
   'shield%': { when: ['start'], label: 'shields you for X% of your max health', value: true },
-  'chit-fade': { when: ['start', 'break'], label: 'gives you a ◆ that fades after X cycles if you still hold it', value: true },
+  'chit-fade': { when: ['start', 'break', 'answer'], label: 'gives you a ◆ that fades after X cycles if you still hold it', value: true },
   'shield-absorb': { when: ['custom'], label: 'makes each point of your shields absorb X% more damage', value: true },
   'block-dot': { when: ['custom'], label: 'lets your Block take its full amount off damage over time on you (encryption, Corrupted and echoes), not just down to half' },
   // The hits you land.
@@ -284,7 +286,7 @@ export const FX_DO = {
   'first-skill-crit': { when: ['start'], label: 'makes every hit of your first damaging skill in each fight a critical strike', own: true },
   'first-pierce': { when: ['custom'], label: 'makes your first hit on each part go through its ◆' },
   spill: { when: ['custom'], label: 'carries up to X leftover damage from a hit that breaks a part onto the next part to attack', value: true },
-  repeat: { when: ['cycle'], label: 'makes your next damaging skill hit again for N% of its damage after every Xth cycle', value: true, own: true },
+  repeat: { when: ['cycle', 'answer'], label: 'makes your next damaging skill hit again for N% of its damage after every Xth cycle', value: true, own: true },
   // Burns and helpers.
   'burn-now': { when: ['custom'], label: 'makes each burn you start tick once immediately, without using up a tick' },
   'burn-sap': { when: ['custom'], label: "makes each burn you start lower its part's damage to you by X%", value: true },
@@ -347,6 +349,27 @@ export const FX_DO = {
   'first-shield-x2': { when: ['custom'], label: 'doubles your first shield each fight' },
   // Floor 7 (docs/floor-items.md).
   'break-less': { when: ['custom'], label: 'makes damage from a part breaking deal X% less to you', value: true },
+  // Jackpots and head starts (docs/jackpots.md). Each writes its own text.
+  'cap+': { when: ['always'], label: "raises your stat's cap by X", value: true, stat: true },
+  'opener-hit%': { when: ['custom'], label: 'makes your first hit each fight deal X% more', value: true },
+  'first-skill-cd': { when: ['custom'], label: 'makes your first skill each fight come back X cycles sooner', value: true },
+  'parts-hit%': { when: ['custom'], label: 'adds X% damage for each different part you hit, up to its cap', value: true },
+  'nth-hit%': { when: ['custom'], label: 'makes every Nth hit deal X% more', value: true }, // N: every
+  'splash%': { when: ['custom'], label: 'makes each of your hits also hit another part for X%', value: true },
+  'nth-skill-twice': { when: ['custom'], label: 'makes every Xth damaging skill you use hit twice', value: true },
+  'hit-mark%': { when: ['custom'], label: 'makes each hit on a part make it take X% more from you for the fight', value: true },
+  'sixth-cycle': { when: ['custom'], label: 'doubles your hits and halves attacks on you every Xth cycle', value: true },
+  'long-status': { when: ['custom'], label: 'makes the burns, helpers, Jams and Tags you put on a part last twice as long' },
+  'turn-first': { when: ['custom'], label: 'turns the first part to attack you each fight onto the virus for X cycles', value: true },
+  'crit-x2': { when: ['custom'], label: 'doubles your critical strike chance' },
+  'all-cd': { when: ['custom'], label: 'reduces all your cooldowns by X cycles (never under 1)', value: true },
+  'redirect-nth': { when: ['custom'], label: "lands every Xth attack on you on one of the virus's parts", value: true },
+  'no-mend': { when: ['custom'], label: "stops parts you hit from healing or patching their ◆ for X cycles", value: true },
+  'hit-sap%': { when: ['custom'], label: 'makes parts you hit deal X% less damage for the fight', value: true },
+  'bleed%': { when: ['custom'], label: "makes each hit take X% of its part's max Integrity and give it to you", value: true },
+  'broken-fight': { when: ['custom'], label: 'makes each part you break fight for you for X cycles', value: true },
+  'crit-pierce': { when: ['custom'], label: 'makes your critical strikes ignore ◆ and spread to the next part to attack at X%', value: true },
+  'shield-on%': { when: ['custom'], label: 'makes the shields you raise X% larger', value: true },
 };
 export const FX_SCALE = { '': 'flat', cycles: 'for each cycle the fight has lasted', contracts: 'for each contract you hold', broken: 'for each part broken this fight', reads: 'for each tell you answered this fight',
   chits: 'for each ◆ you hold', crew: 'for each crewmate in the fight', missing: 'for each 10% of your health you are missing', sets: 'for each set bonus you have active',
@@ -364,7 +387,9 @@ export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a str
   // Faction pieces only (faction-gear.mjs): assembled at the faction's hub from three parts, a part a feud won for it.
   feud: 'Feuds won for its faction (its parts, assembled at its hub)',
   // Earned pieces only (earned.mjs): a floor's goal, its count in the Ledger.
-  feat: "A floor's feat (floor: the floor; its goal is the piece's earn)" };
+  feat: "A floor's feat (floor: the floor; its goal is the piece's earn)",
+  // Jackpots and head starts only (docs/jackpots.md): any kill, at long odds, on its floor (combat.mjs jackpotDrop).
+  jackpot: 'Any kill on its floor, at long odds (a head start: and the next; a Hall of Fame: and deeper)' };
 // A source can name the floor it drops on (floor: 7 is The Sink): a vault, a lair, a rare spawn, a thread or a puzzle
 // board there and nowhere else. planned: the source it moves to once that is built (docs/loot-plan.md Decisions).
 
@@ -372,11 +397,15 @@ export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a str
 // "Increases your damage by 25% when you fire in a Sync Window." "Heals you for 6 when you land a critical strike."
 // A unique with several effects (effect: [...]) reads as one sentence each, unless one is quiet (its line is part of
 // the text the one before it carries).
-const FX_TRIGGER = { crit: 'when you land a critical strike', break: 'when you break a part', start: 'at the start of each fight', struck: 'when an attack lands on you', disconnect: 'when your Integrity hits 0 on a run', answer: 'when you answer a tell', helper: 'when you call a helper', expire: 'when one of your helpers expires' };
+const FX_TRIGGER = { crit: 'when you land a critical strike', break: 'when you break a part', start: 'at the start of each fight', struck: 'when an attack lands on you', disconnect: 'when your Integrity hits 0 on a run', answer: 'when you answer a tell', helper: 'when you call a helper', expire: 'when one of your helpers expires',
+  tagged: 'when you hit a Tagged part', cut: "when you cut a part's move", burn: 'when one of your burns ticks', shielded: 'when you gain a shield or your shield absorbs a hit' };
+// Conditions that read better as a phrase of their own than after "when" or "while".
+const COND_TAIL = { late: 'from the 6th cycle of a fight', early: 'in the first 3 cycles of a fight', 'after-delay': 'on the cycle after one of your delays lands' };
 // The effect blocks a unique carries: its effect, or each of its effects.
 export const fxList = (u) => (Array.isArray(u?.effect) ? u.effect : u?.effect ? [u.effect] : []);
 const STAT_NAME = (k) => STATS[k]?.name || k;
-const PCT = ['damage%', 'crit%', 'taken%', 'burn-sap', 'stat%', 'heal%', 'low-parts%'];
+const PCT = ['damage%', 'crit%', 'taken%', 'burn-sap', 'stat%', 'heal%', 'low-parts%', 'crit-damage%', 'burn%', 'helper%'];
+const STAT_FX_PCT = ['stat+', 'stack', 'buff']; // a cap in the stat's own unit
 export function fxText(fx, statName = STAT_NAME) {
   if (Array.isArray(fx)) return fx.filter((x) => !x.quiet).map((x) => fxText(x, statName)).filter(Boolean).join(' '); // quiet: the one before it says it too
   if (!fx?.do) return '';
@@ -389,20 +418,22 @@ export function fxText(fx, statName = STAT_NAME) {
   if (fx.do === 'stat+') what = `adds ${fx.value}${unit} ${name}`;
   if (fx.do === 'stat%') what = `increases your ${name} by ${fx.value}%`;
   if (fx.do === 'stack') what = `adds ${fx.value}${unit} ${name} for the rest of the fight`;
-  if (fx.do === 'buff') what = `${fx.stat ? `adds ${fx.value}${unit} ${name}` : `increases your damage by ${fx.value}%`} for ${fx.cycles || 1} cycles${fx.stacks > 1 ? `, stacking up to ${fx.stacks} times` : ''}`;
+  if (fx.do === 'buff') what = `${fx.stat ? `adds ${fx.value}${unit} ${name}` : `increases your damage by ${fx.value}%`} for ${fx.cycles || 1} cycles`;
+  const stacks = fx.do === 'buff' && fx.stacks > 1 ? `, stacking up to ${fx.stacks} times` : ''; // after its trigger
   what = what.replace(/\b1 cycles\b/g, '1 cycle');
   const scale = fx.scale ? ` ${FX_SCALE[fx.scale]}` : '';
-  const cap = fx.cap ? `, up to ${PCT.includes(fx.do) ? fx.cap + '%' : fx.cap}` : '';
+  const cap = fx.cap ? `, up to ${PCT.includes(fx.do) || (STAT_FX_PCT.includes(fx.do) && unit === '%') ? fx.cap + '%' : fx.cap}` : '';
   // The trigger, and its condition after it. A few pairs read better as one clause.
   let when = d?.own ? '' : FX_TRIGGER[fx.when] || '';
   let cond = fx.if ? (FX_IF[fx.if] || '').replace(/\bX\b/, fx.over ?? 'X') : '';
   if (fx.when === 'break' && fx.if === 'crit') { when = 'when you break a part with a critical strike'; cond = ''; }
   if (fx.when === 'break' && fx.if === 'target-fragment') { when = 'when you break a fragment'; cond = ''; }
   if (fx.when === 'struck' && fx.if === 'charged') { if (d?.own) what = what.replace('an attack', 'a tell'); else when = 'when a tell lands on you'; cond = ''; }
-  const tail = [when, cond && (when || d?.own || fx.when === 'always' ? `while ${cond}` : `when ${cond}`)].filter(Boolean).join(' '); // a stat bonus holds while its condition does
+  if (COND_TAIL[fx.if]) cond = '';
+  const tail = [when, cond && (when || d?.own || fx.when === 'always' ? `while ${cond}` : `when ${cond}`), COND_TAIL[fx.if]].filter(Boolean).join(' '); // a stat bonus holds while its condition does
   if (!tail) what = what.replace(/,$/, '');
   const limit = fx.limit === 'cooldown' ? ` Works again ${fx.cooldown || 60} minutes later.` : fx.limit === 'fight' ? ' Works once per fight.' : fx.limit === 'run' ? ' Works once per run.' : '';
-  const t = `${what}${scale}${cap}${tail ? ' ' + tail : ''}.${limit}`;
+  const t = `${what}${scale}${cap}${tail ? ' ' + tail : ''}${stacks}.${limit}`;
   return t[0].toUpperCase() + t.slice(1);
 }
 

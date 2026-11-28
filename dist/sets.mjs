@@ -23,7 +23,7 @@ import ITEMS from './content/items.mjs';
 import { fxHolds, gearFx, active, loaded, emit, hit, heal, alive, parts, livingParts, defender, burnsOn, helpersOn, helperCap, alliesOf, momentumStacks, classOf, delayAttack, shortestOff } from './combat.mjs';
 import { momentumCap } from './classes/breaker.mjs';
 import { ABILITIES, SKILLS, ARCHETYPES } from './data.mjs';
-import { liftFx } from './gear.mjs';
+import { liftFx, statsAt } from './gear.mjs';
 
 export const SETS = Object.fromEntries((SET_TEXT.sets || []).map((x) => [x.id, x]));
 const UNIQ = Object.fromEntries((ITEMS.uniques || []).map((u) => [u.id, u]));
@@ -39,6 +39,45 @@ export const BONUS_AT = [2, 3, 4];
 export const GREEN_AT = 2;
 export const bonusesOf = (id) => BONUS_AT.filter((n) => SETS[id]?.bonuses?.[n]).map((n) => ({ at: n, ...SETS[id].bonuses[n] }));
 export const tierLine = (id) => (SETS[id]?.tier ? `${ARCHETYPES[SETS[id].cls]?.name || SETS[id].cls} tier set, level ${SETS[id].tier}` : null);
+// Rebasing: a set is one codebase, and an item's level is its version (gear.mjs itemLabel, v37). A piece loaded beside a
+// newer piece of its set is rebased onto that version: its stats (its own roll kept), its effect and its green line run at
+// the highest version among the set's loaded pieces. items: the loadout it's in. Alone it runs at its own.
+export function rebaseLevel(items, it) {
+  const id = it?.unique && UNIQ[it.unique]?.set, L = it?.level || 1;
+  if (!id) return L;
+  let top = L, other = false;
+  for (const x of items || []) if (x?.unique && x.unique !== it.unique && UNIQ[x.unique]?.set === id) { other = true; if ((x.level || 1) > top) top = x.level || 1; }
+  return other ? top : L;
+}
+// Every item's rebased level at once (one pass), in items' order: what gearStat and the effect list read in a fight.
+// null when no two pieces of one set are loaded, so each counts at its own level and nothing is built.
+let LAST = null; // the last loadout's answer: a fight asks for the same loadout many times a cycle
+export function rebaseLevels(items = []) {
+  if (LAST && LAST.items.length === items.length) {
+    let same = true;
+    for (let i = 0; i < items.length && same; i++) same = items[i] === LAST.items[i] && items[i]?.level === LAST.lv[i];
+    if (same) return LAST.out;
+  }
+  const out = rebaseOf(items);
+  LAST = { items: items.slice(), lv: items.map((x) => x?.level), out };
+  return out;
+}
+function rebaseOf(items) {
+  let top = null, two = false;
+  for (const x of items) { const id = x?.unique && UNIQ[x.unique]?.set; if (id) { top ||= {}; const t = (top[id] ||= { n: 0, L: 0 }); if (++t.n >= 2) two = true; if ((x.level || 1) > t.L) t.L = x.level || 1; } }
+  return two ? items.map((x) => { const t = x?.unique && top[UNIQ[x.unique]?.set]; return t && t.n >= 2 ? Math.max(x.level || 1, t.L) : x?.level || 1; }) : null;
+}
+// Its stats at that level (gear.mjs statsAt), kept per item until the level or its stats object changes (only a save's
+// restore edits stats in place, before any fight).
+const REBASED = new WeakMap();
+export function rebasedStats(it, L) {
+  if (!it?.unique || !UNIQ[it.unique] || !(L > (it.level || 1))) return it?.stats || {};
+  const m = REBASED.get(it);
+  if (m && m.L === L && m.src === it.stats) return m.stats;
+  const stats = statsAt(UNIQ[it.unique], it, L);
+  REBASED.set(it, { L, src: it.stats, stats });
+  return stats;
+}
 
 // ---------- drops ----------
 // Each source's set pieces (a piece's sources, each { kind, ... }): BOSS_LOOT's pattern, one roll an event (a kill, a
@@ -133,9 +172,9 @@ export function activeSets(items = []) {
 // The active bonuses' effect blocks and the worn pieces' green lines: { fx, id, name, set, at } each, the shape
 // combat.mjs uniqueFx lists. A subclass line carries its subclass (fx.sub): combat.mjs fxCond holds it for that
 // subclass only.
-// A flat bonus (+2 Block) is lifted at the set's level (setLevel), a green line at its piece's item level (gear.mjs liftFx).
+// A flat bonus (+2 Block) is lifted at the set's level (setLevel), a green line at its piece's rebased level (rebaseLevel).
 export function setFx(items = []) {
-  const out = [];
+  const out = [], tl = rebaseLevels(items);
   for (const r of activeSets(items)) {
     const L = setLevel(r.id);
     for (const at of r.open) {
@@ -143,7 +182,7 @@ export function setFx(items = []) {
       for (const [i, fx] of (b.fx || []).entries()) out.push({ fx: liftFx({ text: b.text, ...fx }, L), id: `set:${r.id}:${at}:${i}`, name: `${r.name} (${at})`, set: r.id, at });
       for (const [sub, x] of Object.entries(b.subs || {})) for (const [i, fx] of (x.fx || []).entries()) out.push({ fx: liftFx({ text: x.text, ...fx, sub }, L), id: `set:${r.id}:${at}:${sub}:${i}`, name: `${r.name} (${at})`, set: r.id, at });
     }
-    if (r.n >= GREEN_AT) for (const p of r.worn) if (UNIQ[p]?.green) out.push({ fx: liftFx(UNIQ[p].green, items.find((it) => it?.unique === p)?.level || UNIQ[p].level), id: 'green:' + p, name: `${UNIQ[p].name} (set)`, set: r.id, at: GREEN_AT });
+    if (r.n >= GREEN_AT) for (const p of r.worn) if (UNIQ[p]?.green) out.push({ fx: liftFx(UNIQ[p].green, ((j) => (j < 0 ? UNIQ[p].level : tl ? tl[j] : items[j].level || UNIQ[p].level))(items.findIndex((it) => it?.unique === p))), id: 'green:'+ p, name: `${UNIQ[p].name} (set)`, set: r.id, at: GREEN_AT });
   }
   return out;
 }
@@ -168,7 +207,7 @@ export function setCard(id, { worn = [], held = new Set(), found = new Set(), ac
     const on = row ? row.open.includes(b.at) : n >= b.at;
     return { at: b.at, text: liftText(b.text, b.fx, setLevel(id)), on, blocked: row?.blocked?.at === b.at ? row.blocked.by : null, subs: Object.entries(b.subs || {}).map(([k, x]) => ({ id: k, text: liftText(x.text, x.fx, setLevel(id)), mine: k === sub, on: on && k === sub })) };
   });
-  return { id, name: set.name, n, total: pieces.length, pieces, bonuses };
+  return { id, name: set.name, n, total: pieces.length, pieces, bonuses, why: set.why || null }; // why: what the set is for, the tooltip's answer line
 }
 // A piece's green line as its tooltip shows it: its text, and whether it counts now (the piece worn, with one more).
 export function greenOf(uniqueId, worn = []) {
@@ -194,6 +233,19 @@ export function setsRestore(s, was) {
   for (const it of s.stash || []) if (it.unique && isPiece(it.unique)) s.collection[it.unique] ||= 1;
   const m = s.mail;
   if (m && Array.isArray(m.posted) && !m.waiting && !m.posted.includes(BADGE_BEAT)) { m.waiting = 'armed'; m.waitFrom ||= 0; }
+}
+// The unique and set pass (November 2026) renamed eight uniques that shared a name with a set, a Zero-day or a talent: a copy you
+// hold keeps the name it dropped with until this gives it the new one. Keyed on the old name, so safe to run twice.
+export const RENAMED = { overtime: 'Overtime', 'carrier-wave': 'Carrier Wave', 'hive-mind': 'Hive Mind', 'shakedown-escrow': 'Escrow', palemask: 'Palemask', failover: 'Failover', semaphore: 'Semaphore', 'thread-pool': 'Thread Pool' };
+export function renamedRestore(s) {
+  const seen = new Set();
+  const walk = (x) => {
+    if (!x || typeof x !== 'object' || seen.has(x)) return;
+    seen.add(x);
+    if (x.kind === 'protocol' && RENAMED[x.unique] && x.name === RENAMED[x.unique] && UNIQ[x.unique]) x.name = UNIQ[x.unique].name;
+    for (const v of Object.values(x)) walk(v);
+  };
+  walk(s);
 }
 // ---------- the fight engine's side ----------
 // SET_HOOKS is a class-hook module (combat.mjs CLASS_HOOKS; dist/classes/breaker.mjs lists the hooks): it runs for

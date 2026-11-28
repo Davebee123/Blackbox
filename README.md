@@ -135,7 +135,7 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/gear.mjs` | Protocols: slots, rarities, item levels, stats and rule affixes; flat numbers lifted at their level, and the ones that carry your power filled (`liftItem`, `liftFx`, `FILLS`, `curveRestore`). Pure data and functions. |
-| `dist/sets.mjs` | Sets: piece counts and their bonuses in a fight. |
+| `dist/sets.mjs` | Sets: piece counts and their bonuses in a fight; rebasing (a worn piece runs at its set's newest worn version). |
 | `dist/earned.mjs`, `dist/content/earned.mjs` | Earned pieces (a floor feat's unique): their counts in one table, each from its band, the piece once it fills, and the map's pins. |
 | `dist/faction-gear.mjs` | Faction gear: implicit lines on a faction's items, and the five faction uniques assembled from parts (feuds, receipts). |
 | `dist/salvage.mjs` | Components, one currency every broken part drops. |
@@ -203,11 +203,12 @@ comment saying what it does.
 | `dist/mail.mjs` | Letters, contracts (one engine, five givers; a recovery only on a server you've found, `itemRestore` for older saves) and your commission's retainer. |
 | `dist/content.mjs` | Fills and checks the written content's blanks. |
 | `dist/content/story.mjs`, `dist/content/contracts.mjs` | The story beats and contract templates (a letter set per giver), written in the editor. |
-| `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts (its Boss step, its built boss in a road server's Core, and extra letters), and its page in Mail. |
+| `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts (its Boss step, its built boss in a road server's Core, and extra letters), its page in Mail, and the Path (`pathOf`: the story's next step, drawn over the map's Contracts by view.mjs `pathTracker`). |
 | `dist/threads.mjs`, `dist/threads-view.mjs`, `dist/content/threads.mjs` | Threads: quests found in rooms, their marks and dialogue, and their data. |
 | `dist/scanner.mjs`, `dist/scanner-view.mjs`, `dist/scanner.css` | The scanner: the Listening Post (its map node, card and hub terminal), the stations, Tune's pad (search, lock, symbols; pure rules in scanner.mjs, the SVG pad and its sound in scanner-view.mjs), the tape and what each pays. |
 | `dist/quest-view.mjs`, `dist/quest.css` | The quest window: a thread as an intercepted transmission. |
 | `dist/portraits.mjs` | Backlit ASCII busts: the quest window's speaker (the cast's own or one from their name) and a runner's on their card (from the handle alone). |
+| `dist/ainote.mjs` | First launch: the AI note before the power-up, once per browser (`bb-ai-note`). |
 | `dist/coldopen.mjs` | First launch: the cold open (KESSLER's clearing house crashing), its own sound mix through `feel.scene()`. |
 | `dist/intro.mjs` | First launch: the login (a handle; the password types itself), then Halcyon's transmission. |
 | `dist/update.mjs` | A newer build: reads the build's `version.json` (scripts/build.mjs stamps it) and starts halcyon-mdm's transmission and the log's ↻ line. |
@@ -320,6 +321,8 @@ comment saying what it does.
 | `farmsim.mjs` | Crews against KESSLER-FARM-00's bosses. |
 | `friction.mjs` | Health a same-level fight costs, by gear. |
 | `genesim.mjs` | The genome harness: boss bands, the worst three cycles, per-gene checks. |
+| `unisim.mjs` | What each unique is for, measured: each one against a yellow in its slot, every subclass on the generic fights and its own in its situation (docs/unique-roles.md). |
+| `setsim.mjs` | What each set is for, measured: every set worn whole, each subclass on the generic fights and its own subclasses in its situation (docs/set-roles.md). |
 | `solved.mjs` | How solved fights are: eight kinds of player by class and tier. |
 | `roomsim.mjs` | A bot playing a server's rooms. |
 | `playtest.mjs` | Kill-order strategies against the fixtures; prints its tables. |
@@ -360,6 +363,10 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/floor-items.md`](docs/floor-items.md) | Floors 2–8's sets and uniques, boss by boss (designed). |
 | [`docs/builds.md`](docs/builds.md) | Builds: skill affixes on gear and combos (design, not built). |
 | [`docs/item-builds.md`](docs/item-builds.md) | Item builds: combos the uniques and sets already make, what doesn't stack, loops to watch. |
+| [`docs/unique-roles.md`](docs/unique-roles.md) | What each unique is for, measured against a yellow, and what the bots can't show. |
+| [`docs/item-fantasies.md`](docs/item-fantasies.md) | The power fantasy or purpose each set and unique serves, with Diablo 2 and WoW touchstones and wearable combos. |
+| [`docs/jackpots.md`](docs/jackpots.md) | Two rarer unique tiers, built: head starts (early, ×1.5 stats) and the Hall of Fame jackpots (very rare, big effects; `JACKPOT` in gear.mjs, `jackpotDrop` in combat.mjs). |
+| [`docs/set-roles.md`](docs/set-roles.md) | What each set is for, its niche measured against the rest, and what the bots can't show. |
 | [`docs/house.md`](docs/house.md) | Your house and its furniture (built: GAME_RULES.md "Your house"). |
 | [`docs/leanings.md`](docs/leanings.md) | Leanings: a server's one positive rule (built: GAME_RULES.md "Server kinds, specials and quirks"). |
 | [`docs/server-specials.md`](docs/server-specials.md) | Server specials: an upside, a cost and the programs for each (picked, not built). |

@@ -14,7 +14,8 @@
 // Fresh, kills an hour) on real play. pacing.mjs prints both.
 // node bot.mjs [class] [targetLevel] [seed]
 import { UNIQUES, topUpCost, tickServices, fresh, command, resolveCycle, active, hooks, hackerLevel, subWaiting, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
-import { meetsReq, RARITY_ORDER, SLOT_KINDS, groupOf, LOOT } from './dist/gear.mjs';
+import { meetsReq, RARITY_ORDER, SLOT_KINDS, groupOf, LOOT, JACKPOT } from './dist/gear.mjs';
+JACKPOT.on = false; // the bots never roll a jackpot or a head start (docs/jackpots.md)
 import { play, layoutOf, currentLocation, signalNow, takeable, CORE } from './dist/run.mjs';
 import { relockLeft, relocks } from './dist/rogue.mjs';
 import { joinCost, memoryCost, isLive } from './dist/memory.mjs';

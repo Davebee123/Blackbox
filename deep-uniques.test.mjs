@@ -4,7 +4,7 @@
 // more drops: each source keeps its own odds.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fireEvent, fxAnswer, fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, hooks, UNIQUES, gearStat, maxSignal, damageMultiplier, hit, heal, takeDamage, takenMult, cooldownOf, timersHidden, fxOn, fxPct, rollDrop, setBonusCount, puzzleUnique, floorUniques, strainTrophies, WORLD_SOURCES, addLocation, finish, hackerLevel, critChance } from './dist/combat.mjs';
+import { fireEvent, fxAnswer, fxFire, fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, hooks, UNIQUES, gearStat, maxSignal, damageMultiplier, hit, heal, takeDamage, takenMult, cooldownOf, timersHidden, fxOn, fxPct, rollDrop, setBonusCount, puzzleUnique, floorUniques, strainTrophies, WORLD_SOURCES, addLocation, finish, hackerLevel, critChance } from './dist/combat.mjs';
 import { uniqueItem, seeded, BASES, STATS, LOOT, liftFx } from './dist/gear.mjs';
 import { CONFIG, BOSS_LOOT, ABILITIES, defaultSub, lifted, filled, own } from './dist/data.mjs';
 // These test each heal's and shield's own numbers: sustain potency (CONFIG.length.heal, docs/scaling.md step 3) off.
@@ -99,9 +99,9 @@ test('Batches 1 and 2: all 70 uniques, each with the plan\'s name, slot, level, 
     assert.ok(u.flavour && !/break.?in|keyhole|breach|way in|intru/i.test(u.flavour), `${name}: flavour`);
     for (const part of ['primary', 'secondary']) for (const [k, v] of Object.entries(u[part] || {})) for (const x of [].concat(v)) assert.ok(Number.isInteger(x), `${name}: whole numbers (${k})`);
     // A sidegrade: its slot's best base at its level, a little more in Bedrock, never far past it.
-    const it = uniqueItem({ ...u, secondary: {} }, level, seeded(3));
+    const it = uniqueItem({ ...u, secondary: {} }, level, seeded(3), { raw: true });
     const main = slot === 'exploit' ? 'damage' : 'signal';
-    const base = uniqueItem({ ...u, primary: {}, secondary: {}, downside: {} }, level, seeded(3)).stats[main];
+    const base = uniqueItem({ ...u, primary: {}, secondary: {}, downside: {} }, level, seeded(3), { raw: true }).stats[main];
     assert.ok(it.stats[main] >= base * 0.95 && it.stats[main] <= base * (level >= 45 ? 1.25 : 1.1), `${name}: ${it.stats[main]} against a base's ${base}`);
   }
   // No rule names a virus, a gene, a guard or a boss.
@@ -117,70 +117,77 @@ test('Batches 1 and 2: all 70 uniques, each with the plan\'s name, slot, level, 
 });
 
 // ---------- stats while a condition holds ----------
-test('stat+ and stat%: Siltstone\'s Block for each ◆, Depth Gauge\'s Regen below half, Pressure Hull\'s Block behind a shield, Siphon Tube\'s Leech, Signal Floor\'s Regen', () => {
+test('stat+ and stat%: Siltstone\'s Block for each ◆, Depth Gauge\'s Regen late in a fight, Pressure Hull\'s Block behind a shield, Siphon Tube\'s Leech, Signal Floor\'s Evasion', () => {
   const t = vet();
   const [silt] = ['siltstone', 'pressure-hull'].map((id) => wear(t, id));
   const e = fight(t);
   const block = gearStat(t, 'reduction', 'hacker');
   e.chits = 2;
-  assert.equal(gearStat(t, 'reduction', 'hacker'), block + 2 * lifted(1, silt.level), 'Siltstone: +1 Block a ◆, lifted at its item level');
+  assert.equal(gearStat(t, 'reduction', 'hacker'), block + 2 * lifted(2, silt.level), 'Siltstone: +2 Block a ◆, lifted at its item level');
   e.chits = 0;
   e.shield = 5;
   assert.equal(gearStat(t, 'reduction', 'hacker'), Math.round(block * 1.25), 'Pressure Hull: Block 25% stronger behind a shield');
   const s = vet();
   const [gauge] = ['depth-gauge', 'siphon-tube', 'signal-floor'].map((id) => wear(s, id)), four = filled(4, gauge.level);
-  fight(s);
-  const regen = gearStat(s, 'regen', 'hacker'), leech = gearStat(s, 'leech', 'hacker');
+  const f = fight(s);
+  const regen = gearStat(s, 'regen', 'hacker'), leech = gearStat(s, 'leech', 'hacker'), ev = gearStat(s, 'evasion', 'hacker');
+  f.cycle = 6;
+  assert.equal(gearStat(s, 'regen', 'hacker'), regen + four, 'Depth Gauge: +4 Regen from the 6th cycle, lifted and filled');
   s.run.integrity = Math.floor(s.run.max * 0.4); // below half
-  assert.equal(gearStat(s, 'regen', 'hacker'), regen + four, 'Depth Gauge: +4 Regen below half, lifted and filled');
   assert.equal(gearStat(s, 'leech', 'hacker'), Math.round(leech * 1.5), 'Siphon Tube: Leech half again below half');
+  assert.equal(gearStat(s, 'evasion', 'hacker'), ev, 'Signal Floor: nothing above 25%');
   s.run.integrity = Math.floor(s.run.max * 0.2); // below 25%
-  assert.equal(gearStat(s, 'regen', 'hacker'), (regen + four) * 2, 'Signal Floor: Regen doubles below 25%');
+  assert.equal(gearStat(s, 'evasion', 'hacker'), Math.min(STATS.evasion.cap, ev + 15), 'Signal Floor: +15% Evasion below 25%');
 });
 
 test('max Integrity% and the plain stat rules: Bedframe, Firmware, Flotsam and Golden Image, in a fight or out of one', () => {
   const s = vet(), base = maxSignal(s);
   const bed = wear(s, 'bedframe');
-  assert.equal(maxSignal(s), Math.round((base + bed.stats.signal) * 1.12), 'Bedframe: 12% more max Integrity, all of it');
-  const t = vet(), was = { clock: gearStat(t, 'clock'), signal: maxSignal(t) };
+  assert.equal(maxSignal(s), Math.round((base + bed.stats.signal) * 1.06), 'Bedframe: 6% more max Integrity, all of it');
+  const t = vet(), was = { signal: maxSignal(t) };
   const fw = wear(t, 'firmware');
-  assert.equal(gearStat(t, 'clock'), was.clock + 4, 'Firmware: +4% Clock Speed');
   assert.equal(maxSignal(t), Math.round((was.signal + fw.stats.signal) * 1.04), 'Firmware: +4% max Integrity');
-  fight(t);
-  const plain = vet(); fight(plain);
-  assert.equal(ratio(damageMultiplier(t, pulse(t), { mine: true }), damageMultiplier(plain, pulse(plain), { mine: true })), 1.04, 'Firmware: +4% damage');
+  const clock = gearStat(t, 'clock'), e = fight(t);
+  const spare = () => { const x = { ...pulse(t), id: 'x' + t.serial, name: 'Spare', integrity: 1, max: 1, armor: 0, attack: null }; e.virus.parts.push(x); hit(t, x, 100, { mine: true }); };
+  spare();
+  assert.equal(gearStat(t, 'clock'), clock + 8, 'Firmware: a break adds 8% Clock Speed');
+  spare(); spare();
+  assert.equal(gearStat(t, 'clock'), clock + 16, 'stacking twice, no more');
+  e.cycle += 4;
+  assert.equal(gearStat(t, 'clock'), clock, 'gone 3 cycles later');
   const u = vet(), sc = gearStat(u, 'scavenge');
-  wear(u, 'flotsam'); wear(u, 'golden-image');
-  assert.equal(gearStat(u, 'scavenge'), sc + 20, 'Flotsam and Golden Image: +10% Scavenge each, at home too');
+  const fl = wear(u, 'flotsam'); wear(u, 'golden-image');
+  assert.equal(gearStat(u, 'scavenge'), sc + 10, 'Golden Image: +10% Scavenge, at home too');
   assert.equal(fxPct(u, 'cache%'), 10, 'Golden Image: caches pay 10% more credits');
-  assert.equal(fxText(fxList(UNIQUES.flotsam)), 'Adds 10% Scavenge and 2 Regen.');
+  const g = fight(u), regen = gearStat(u, 'regen', 'hacker');
+  g.breaks = 2;
+  assert.equal(gearStat(u, 'regen', 'hacker'), regen + 2 * filled(2, fl.level), 'Flotsam: Regen for each part broken this fight');
+  g.breaks = 9;
+  assert.equal(gearStat(u, 'regen', 'hacker'), regen + filled(8, fl.level), 'up to its cap');
 });
 
 // ---------- heals and the hits you take ----------
-test('heal%: Sump Pump\'s 10% below half and Bedframe\'s 5%, on heals and on Regen', () => {
+test('heal%: Sump Pump\'s 10% below half, on heals and on Regen', () => {
   const s = vet(); wear(s, 'sump-pump');
   fight(s);
   s.run.integrity = 900; heal(s, 50, 'test');
   assert.equal(s.run.integrity, 950, 'above half: as cast');
   s.run.integrity = 100; heal(s, 50, 'test');
   assert.equal(s.run.integrity, 155, 'below half: 10% larger');
-  const t = vet(); wear(t, 'bedframe'); fight(t);
-  t.run.integrity = 100; heal(t, 100, 'test');
-  assert.equal(t.run.integrity, 205, 'Bedframe: 5% larger');
 });
 
-test('taken%: Brownout below 25%, Ballast at full Momentum, Cofferdam behind a shield, Strata by what you are missing', () => {
+test('taken%: Brownout below 25%, Cofferdam behind a shield, Strata by what you are missing; Ballast\'s crit at full Momentum', () => {
   const s = vet(); wear(s, 'brownout'); fight(s);
   const b = gearStat(s, 'reduction', 'hacker');
   s.run.integrity = 900;
   assert.equal(takeDamage(s, 200, null, 'test'), 200 - b, 'Brownout: nothing above 25%');
   s.run.integrity = 240;
   assert.equal(takeDamage(s, 200, null, 'test'), 170 - b, 'Brownout: 15% less below 25%');
-  const t = vet(); wear(t, 'ballast'); const e = fight(t), bt = gearStat(t, 'reduction', 'hacker');
+  const t = vet(); wear(t, 'ballast'); const e = fight(t), ct = gearStat(t, 'crit', 'hacker');
   e.momentum = { stacks: 2, until: e.cycle + 2 };
-  assert.equal(takeDamage(t, 200, null, 'test'), 200 - bt, 'Ballast: not before Momentum is full');
+  assert.equal(gearStat(t, 'crit', 'hacker'), ct, 'Ballast: not before Momentum is full');
   e.momentum = { stacks: 3, until: e.cycle + 2 };
-  assert.equal(takeDamage(t, 200, null, 'test'), 188 - bt, 'Ballast: 6% less at full Momentum (3 stacks, 5 under Redline)');
+  assert.equal(gearStat(t, 'crit', 'hacker'), ct + 10, 'Ballast: +10% crit at full Momentum (3 stacks, 5 under Redline)');
   const u = vet(); wear(u, 'cofferdam'); const f = fight(u), bu = gearStat(u, 'reduction', 'hacker');
   f.shield = 1;
   assert.equal(takeDamage(u, 200, null, 'test'), 190 - bu - 1, 'Cofferdam: 5% less while a shield holds');
@@ -193,7 +200,7 @@ test('taken%: Brownout below 25%, Ballast at full Momentum, Cofferdam behind a s
   assert.equal(takeDamage(v, 200, null, 'test'), 180 - bv, 'Strata: up to 10%');
 });
 
-test('one hit at a time: Drain Plug halves the first big one, Read-Only cuts the one that takes you below half, Mooring caps every one, Ground Plane stops crits', () => {
+test('one hit at a time: Drain Plug halves the first big one, Read-Only cuts the one that takes you below half, Mooring caps every one, Ground Plane gains crit from each', () => {
   const s = vet(); wear(s, 'drain-plug'); fight(s);
   const b = gearStat(s, 'reduction', 'hacker');
   assert.equal(landed(s, 100), 100 - b, 'a small hit (10%): untouched, and it is not spent');
@@ -207,11 +214,9 @@ test('one hit at a time: Drain Plug halves the first big one, Read-Only cuts the
   assert.equal(landed(t, 600), 600 - bt, 'once a fight');
   const u = vet(); wear(u, 'mooring'); fight(u);
   assert.equal(landed(u, 600), 350 - gearStat(u, 'reduction', 'hacker'), 'Mooring: no hit takes more than 35% of your max');
-  const v = vet(); wear(v, 'ground-plane'); const e = fight(v);
-  e.virus.crit = 1;
-  const plain = vet(); const f = fight(plain); f.virus.crit = 1;
-  assert.equal(landed(v, 100), 100 - gearStat(v, 'reduction', 'hacker'), 'Ground Plane: no critical strikes on you');
-  assert.equal(landed(plain, 100), 150 - gearStat(plain, 'reduction', 'hacker'), 'without it, a crit lands at ×1.5');
+  const v = vet(); wear(v, 'ground-plane'); fight(v);
+  const c0 = gearStat(v, 'crit', 'hacker');
+  for (let k = 1; k <= 7; k++) { landed(v, 50); assert.equal(gearStat(v, 'crit', 'hacker'), c0 + Math.min(10, 2 * k), 'Ground Plane: +2% crit for each hit on you, up to 10%'); }
 });
 
 test('Seawall stacks Block for the fight as your Block meets hits; Weir\'s helper takes the first hit; Last Known Good rewinds you once', () => {
@@ -276,20 +281,16 @@ function against(id, set = () => {}, opts = { mine: true }, cls = 'breaker') {
   set(s); set(t);
   return ratio(damageMultiplier(s, pulse(s), opts), damageMultiplier(t, pulse(t), opts));
 }
-test('damage% on a condition: Undertow, Brine, Quarry, Outfall, Wake (each crewmate) and Keystone (each set bonus)', () => {
+test('damage% on a condition: Undertow, Brine (burns on armor), Quarry, Outfall and Keystone (each set bonus)', () => {
   assert.equal(against('undertow'), 1, 'Undertow: not on a part that did not attack last cycle');
   assert.equal(against('undertow', (s) => { pulse(s).lastLanded = s.encounter.cycle - 1; }), 1.1);
-  assert.equal(against('brine', (s) => { pulse(s).integrity = 1; }), 1, 'Brine: not on a part with less left than another');
-  assert.equal(against('brine', (s) => { part(s, 'encryptor').integrity = 1; }), 1.08);
+  assert.equal(against('brine', () => {}, { dot: true }), 1.15, 'Brine: burns on an armored part');
+  assert.equal(against('brine', (s) => { pulse(s).maxArmor = 0; }, { dot: true }), 1, 'not on a bare one');
+  assert.equal(against('brine'), 1, 'nor your hits');
   assert.equal(against('quarry'), 1, 'Quarry: not while another part stands');
   assert.equal(against('quarry', (s) => { part(s, 'encryptor').integrity = 0; }), 1.15);
   assert.equal(against('outfall', (s) => { s.encounter.commanding = { id: 'crack' }; s.encounter.metrics.actions.crack = 1; }), 1.1, "Outfall: a skill's first use");
   assert.equal(against('outfall', (s) => { s.encounter.commanding = { id: 'crack' }; s.encounter.metrics.actions.crack = 2; }), 1, 'and not its second');
-  const was = hooks.crewAllies;
-  try {
-    hooks.crewAllies = () => [{ who: 'a', st: {} }, { who: 'b', st: {} }];
-    assert.equal(against('wake'), 1.1, 'Wake: 5% for each crewmate');
-  } finally { hooks.crewAllies = was; }
   const s = vet(); wear(s, 'keystone'); wear(s, 'kestrel-badge'); wear(s, 'kestrel-token'); fight(s);
   const t = vet(); wear(t, 'kestrel-badge'); wear(t, 'kestrel-token'); fight(t);
   assert.ok(setBonusCount(s) >= 1, 'a set bonus is open');
@@ -300,11 +301,11 @@ test('burns or helpers alone: Brackish on a part below half, Riptide on a Jammed
   assert.equal(against('brackish', (s) => { pulse(s).integrity = 1; }, { dot: true }), 1.1, 'Brackish: a burn tick on a part below half');
   assert.equal(against('brackish', (s) => { pulse(s).integrity = 1; }, { dot: true, src: 'helper' }), 1, "and not a helper's hit");
   assert.equal(against('brackish', () => {}, { dot: true }), 1, 'nor on a part above half');
-  assert.equal(against('riptide', (s) => { pulse(s).jammedUntil = s.encounter.cycle; }, { dot: true, src: 'helper' }), 1.08, 'Riptide: a helper on a Jammed part');
+  assert.equal(against('riptide', (s) => { pulse(s).jammedUntil = s.encounter.cycle; }, { dot: true, src: 'helper' }), 1.15, 'Riptide: a helper on a Jammed part');
   assert.equal(against('riptide', (s) => { pulse(s).jammedUntil = s.encounter.cycle; }, { dot: true }), 1, 'not a burn');
 });
 
-test("critical strikes: Deepwater on armored parts, Bit Flip's every fourth, POST Code's first skill, Root of Trust heals", () => {
+test("critical strikes: Deepwater on armored parts, Bit Flip's every fourth, POST Code's first skill, Wake for each crewmate, Root of Trust's damage", () => {
   const s = vet(); wear(s, 'deepwater'); fight(s);
   const p = pulse(s);
   const strike = (q) => { q.armor = 0; q.integrity = q.max = 100000; return hit(s, q, 100, { mine: true, crit: true }).dealt; };
@@ -322,15 +323,26 @@ test("critical strikes: Deepwater on armored parts, Bit Flip's every fourth, POS
   const crits = () => { const mark = u.serial; command(u, 'spike pulse'); resolveCycle(u); return u.logs.filter((x) => x.id > mark && x.type === 'damage' && x.target === 'pulse' && !x.src).map((x) => x.crit); };
   assert.deepEqual(crits(), [true], 'POST Code: your first damaging skill crits');
   assert.deepEqual(crits(), [false], 'only the first');
-  const v = vet(); wear(v, 'root-of-trust'); fight(v);
-  v.run.integrity = 500;
+  const x = vet(); wear(x, 'wake'); fight(x);
+  const big = () => { const q2 = pulse(x); q2.armor = 0; q2.integrity = q2.max = 100000; return hit(x, q2, 100, { mine: true, crit: true }).dealt; };
+  const alone = big(), was = hooks.crewAllies;
+  try {
+    hooks.crewAllies = () => [{ who: 'a', st: {} }, { who: 'b', st: {} }];
+    assert.equal(big(), Math.floor(alone * 1.1), 'Wake: crits deal 5% more for each crewmate');
+  } finally { hooks.crewAllies = was; }
+  const v = vet(); wear(v, 'root-of-trust'); const g = fight(v);
+  const w = vet(); fight(w);
   const r = pulse(v); r.armor = 0; r.integrity = r.max = 100000;
+  const m = () => ratio(damageMultiplier(v, pulse(v), { mine: true }), damageMultiplier(w, pulse(w), { mine: true }));
   hit(v, r, 100, { mine: true, crit: true });
-  assert.equal(v.run.integrity, 500 + Math.round(v.run.max * 0.02), 'Root of Trust: 2% of your max on a crit');
+  assert.equal(m(), 1.04, 'Root of Trust: a crit adds 4% damage');
+  for (let k = 0; k < 6; k++) hit(v, r, 100, { mine: true, crit: true });
+  assert.equal(m(), 1.2, 'stacking 5 times, no more');
+  g.cycle += 3; w.encounter.cycle += 3;
+  assert.equal(m(), 1, 'gone 2 cycles later');
 });
 
-const power50 = () => own(L); // your own line at 50
-test('Dead Reckoning goes through ◆ on its first hit on each part; Spillway carries the leftover of a breaking hit', () => {
+test('Dead Reckoning goes through ◆ on its first hit on each part; Spillway\'s crits on a part below half', () => {
   const s = vet(); wear(s, 'dead-reckoning'); fight(s);
   const p = pulse(s);
   p.integrity = p.max = 100000;
@@ -339,29 +351,25 @@ test('Dead Reckoning goes through ◆ on its first hit on each part; Spillway ca
   assert.ok(r1.dealt > 0 && p.armor === a0, 'the first hit: through its ◆');
   const r2 = hit(s, p, 20, { mine: true }); // not a heavy hit (CONFIG.heavyHit)
   assert.ok(!r2.dealt && p.armor === a0 - 1, 'the next breaks a ◆ as usual');
-  const t = vet('operator'); wear(t, 'spillway').stats.crit = 0; fight(t);
-  const q = pulse(t), next = part(t, 'encryptor');
-  q.armor = 0; q.integrity = 1;
-  next.integrity = next.max = 100000;
-  const mark = t.serial;
-  hit(t, q, 500, { mine: true });
-  const carried = t.logs.filter((x) => x.id > mark && x.type === 'damage' && x.target === 'encryptor').reduce((n, x) => n + x.amount, 0);
-  assert.equal(carried, Math.round(15 * power50()), "up to 15 (a skill's number, grown with your level) goes on to the next part, through its ◆");
+  const t = vet(); wear(t, 'spillway'); fight(t);
+  const q = pulse(t);
+  const strike = () => { q.armor = 0; q.maxArmor = 0; return hit(t, q, 100, { mine: true, crit: true }).dealt; };
+  q.integrity = q.max = 100000;
+  const high = strike();
+  q.integrity = 40000;
+  assert.equal(strike(), Math.floor(high * 1.3), 'Spillway: crits deal 30% more to a part below half');
 });
 
-test("timed buffs: Floodgate stacks twice on breaks, Fuse Map adds Momentum, Turbidity's Stealth after a crit", () => {
+test("timed buffs: Floodgate's crit stacks twice on breaks, Fuse Map adds Momentum, Turbidity's Stealth after a crit", () => {
   const s = vet(); wear(s, 'floodgate'); const e = fight(s);
-  const t = vet(); fight(t);
-  const base = () => ratio(damageMultiplier(s, pulse(s), { mine: true }), damageMultiplier(t, pulse(t), { mine: true }));
-  const smash = (st, id) => { const q = part(st, id); q.armor = 0; q.integrity = 1; hit(st, q, 100, { mine: true }); };
-  // A breaker's own Momentum moves both the same; break the same spare part in both.
-  const extra = () => { const x = { ...pulse(s), id: 'x' + s.serial, name: 'Spare', integrity: 1, max: 1, armor: 0, attack: null }; s.encounter.virus.parts.push(x); t.encounter.virus.parts.push({ ...x }); smash(s, x.id); smash(t, x.id); };
+  const crit = gearStat(s, 'crit', 'hacker');
+  const extra = () => { const x = { ...pulse(s), id: 'x' + s.serial, name: 'Spare', integrity: 1, max: 1, armor: 0, attack: null }; e.virus.parts.push(x); hit(s, x, 100, { mine: true }); };
   extra();
-  assert.equal(base(), 1.06, 'one break: +6%');
+  assert.equal(gearStat(s, 'crit', 'hacker'), crit + 10, 'one break: +10% crit');
   extra(); extra();
-  assert.equal(base(), 1.12, 'stacking twice, no more');
-  e.cycle += 4; t.encounter.cycle += 4;
-  assert.equal(base(), 1, 'gone 3 cycles later');
+  assert.equal(gearStat(s, 'crit', 'hacker'), crit + 20, 'stacking twice, no more');
+  e.cycle += 4;
+  assert.equal(gearStat(s, 'crit', 'hacker'), crit, 'gone 3 cycles later');
   const u = vet(); wear(u, 'fuse-map'); const f = fight(u);
   const q = pulse(u); q.armor = 0; q.integrity = 1;
   hit(u, q, 100, { mine: true });
@@ -406,7 +414,7 @@ const tough = (e) => { for (const x of e.virus.parts) Object.assign(x, { armor: 
 test('helpers: Ebb\'s first runs longer, Load Order\'s hit as they arrive, Backwash\'s cooldown after one expires, Watchdog Timer\'s free one', () => {
   const s = vet('operator'); wear(s, 'ebb'); const e = fight(s); tough(e);
   command(s, 'deploy pulse'); resolveCycle(s);
-  assert.equal(e.helpers[0].left, ABILITIES.deploy.ticks + 2 - 1, 'Ebb: the first helper, 2 cycles longer (one tick spent)');
+  assert.equal(e.helpers[0].left, ABILITIES.deploy.ticks + 3 - 1, 'Ebb: the first helper, 3 cycles longer (one tick spent)');
   e.readyAt = {};
   command(s, 'deploy pulse'); resolveCycle(s);
   assert.equal(e.helpers.at(-1).left, ABILITIES.deploy.ticks - 1, 'only the first each fight');
@@ -468,14 +476,20 @@ test('burns: Burn-In ticks a new burn once at once; Bilge weakens the part each 
 });
 
 // ---------- cooldowns ----------
-test('cooldowns: Bootstrap\'s first one shorter, Microcode\'s shortest skill, Clock Tree\'s meter starts half full', () => {
-  const s = vet(); wear(s, 'bootstrap'); const e = fight(s); tough(e);
-  command(s, 'overload pulse'); resolveCycle(s);
-  assert.equal(e.readyAt.overload, 1 + cooldownOf(s, 'overload') - 1, 'Bootstrap: its first cooldown a cycle shorter');
-  e.readyAt = {};
-  const c = e.cycle;
-  command(s, 'overload pulse'); resolveCycle(s);
-  assert.equal(e.readyAt.overload, c + cooldownOf(s, 'overload'), 'then as usual');
+test('crit and cooldowns: Bootstrap\'s crit on a first use, Init Vector\'s as the fight runs, Microcode\'s shortest skill, Clock Tree\'s meter starts half full', () => {
+  const s = vet(); wear(s, 'bootstrap'); const e = fight(s);
+  const bonus = (st, cmd) => fxFire(st, 'hit', { target: pulse(st), do: 'crit%', cmd }, false).reduce((n, x) => n + x.value, 0);
+  e.metrics.actions.crack = 1;
+  assert.equal(bonus(s, 'crack'), 25, "Bootstrap: +25% crit on a skill's first use");
+  e.metrics.actions.crack = 2;
+  assert.equal(bonus(s, 'crack'), 0, 'not its second');
+  assert.equal(bonus(s, null), 0, 'nor a hit that is no skill of yours');
+  const iv = vet(); wear(iv, 'init-vector'); const ie = fight(iv);
+  assert.equal(bonus(iv, 'crack'), 0, 'Init Vector: nothing on the first cycle');
+  ie.cycle = 4;
+  assert.equal(bonus(iv, 'crack'), 12, '+4% for each cycle the fight has lasted');
+  ie.cycle = 20;
+  assert.equal(bonus(iv, 'crack'), 20, 'up to 20%');
   const t = vet(), was = { crack: cooldownOf(t, 'crack'), overload: cooldownOf(t, 'overload') };
   wear(t, 'microcode');
   assert.equal(cooldownOf(t, 'crack'), was.crack - 1, 'Microcode: the shortest cooldown over 1 on your bar');
@@ -517,7 +531,7 @@ test('Momentum: Pumphouse adds to what spends it, Undervolt takes away the cost 
   };
   const plain = vent(false);
   assert.ok(plain > 0);
-  assert.equal(vent(true), Math.round(plain * 1.15), 'Pumphouse: 5% for each of the 3 stacks Vent spends');
+  assert.equal(vent(true), Math.round(plain * 1.24), 'Pumphouse: 8% for each of the 3 stacks Vent spends');
   const s = vet('breaker', { sub: 'overclocker' }); const e = fight(s);
   e.momentum = { stacks: 2, until: e.cycle + 2 };
   assert.equal(ratio(takenMult(s, pulse(s)), 1), 1.1, 'Redline: 10% more taken while you hold Momentum');
@@ -527,9 +541,9 @@ test('Momentum: Pumphouse adds to what spends it, Undervolt takes away the cost 
 });
 
 // ---------- what you see, and what you earn ----------
-test('Sounding Line: tells a cycle earlier, and a Veiled part shows its next attack once it is a cycle away; Silt Map\'s exploring XP', () => {
+test('Sounding Line: a Veiled part shows its next attack once it is a cycle away; Silt Map\'s exploring XP', () => {
   const s = vet(); wear(s, 'sounding-line'); const e = fight(s);
-  assert.equal(fxOn(s, 'warn-early')?.fx.value, 1);
+  assert.equal(fxOn(s, 'warn-early'), null, 'no early warning: that is the Canary Token\'s');
   const p = pulse(s); p.veiled = true; p.armor = 2;
   p.attack.due = e.cycle + 3;
   assert.ok(timersHidden(s, p), 'further off: hidden');
@@ -673,15 +687,36 @@ test('couriers carry the deep world uniques you lack, never a lair\'s or a strai
   assert.equal(DIRECTOR.named, 20, 'one courier in twenty, as before');
 });
 
-test('Init Vector: after every 5th cycle, your next damaging skill hits again for 30%', () => {
-  const s = vet(); wear(s, 'init-vector').stats.crit = 0; const e = fight(s); tough(e);
+test('Ctrl-C: an answer arms your next damaging skill to hit again for 30%', () => {
+  const s = vet(); wear(s, 'ctrl-c').stats.crit = 0; const e = fight(s); tough(e);
   const spike = () => { const mark = s.serial; command(s, 'spike pulse'); resolveCycle(s); return s.logs.filter((x) => x.id > mark && x.type === 'damage' && x.target === 'pulse' && !x.src); };
-  while (e.cycle <= 5) assert.equal(spike().length, 1, `one hit before it is armed (cycle ${e.cycle})`);
+  assert.equal(spike().length, 1, 'one hit before an answer');
+  fxAnswer(s, pulse(s));
   const hits = spike();
-  assert.equal(hits.length, 2, 'the skill after the 5th cycle hits again');
-  assert.equal(hits[1].via, 'Init Vector');
+  assert.equal(hits.length, 2, 'the next skill hits again');
+  assert.equal(hits[1].via, 'Ctrl-C');
   assert.ok(Math.abs(hits[1].amount - Math.round(hits[0].amount * 0.3)) <= gearStat(s, 'damage'), `for about 30% of it (${hits[1].amount} of ${hits[0].amount}, Damage on each)`);
-  assert.equal(spike().length, 1, 'once each time it is armed');
+  assert.equal(spike().length, 1, 'once for each answer');
+});
+
+test('Sampler: an answer adds 10% damage for 2 cycles, twice; Interrupt Vector: an answer gives a ◆ that fades', () => {
+  const s = vet(); wear(s, 'sampler'); const e = fight(s); const t = vet(); fight(t);
+  const m = () => ratio(damageMultiplier(s, pulse(s), { mine: true }), damageMultiplier(t, pulse(t), { mine: true }));
+  assert.equal(m(), 1, 'nothing yet');
+  fxAnswer(s, pulse(s));
+  assert.equal(m(), 1.1, 'an answer: +10%');
+  fxAnswer(s, pulse(s)); fxAnswer(s, pulse(s));
+  assert.equal(m(), 1.2, 'twice, no more');
+  e.cycle += 3; t.encounter.cycle += 3;
+  assert.equal(m(), 1, 'gone 2 cycles later');
+  const u = vet(); wear(u, 'interrupt-vector'); const f = fight(u);
+  fxAnswer(u, pulse(u));
+  assert.equal(f.chits, 1, 'Interrupt Vector: a ◆');
+  command(u, 'hold'); resolveCycle(u);
+  assert.equal(f.chits, 1, 'held through its first cycle');
+  command(u, 'hold'); resolveCycle(u);
+  assert.equal(f.chits, 0, 'gone after 2 cycles');
+  assert.ok(u.logs.some((l) => /Interrupt Vector: your ◆ fades/.test(l.message || '')));
 });
 
 test('out of a fight: Silt Map pays 10% more for a Mapped server, Golden Image\'s caches 10% more credits', async () => {
@@ -722,44 +757,51 @@ test("Batch 2's multipliers: Spawning Run's helpers, Banked Fire's burns", () =>
   assert.equal(against('banked-fire', () => {}, { dot: true, src: 'helper' }), 1, 'not helpers');
 });
 
-test("Batch 2 on the talents' events: Breakwater on a shield, Riprap on a cut, refunds, a shield and a heal", () => {
+test("Batch 2 on the talents' events: Breakwater on a shield, Riprap on a cut, Relief Valve's refund, Tide Table's answer, Rockfall's delay, a shield and a heal", () => {
   const lifted = (id) => liftFx(UNIQUES[id].effect, UNIQUES[id].level).value;
-  // Timed damage: Breakwater stacks 3 on shields, Riprap 2 on cuts, each gone after 2 cycles.
-  for (const [id, when, per, most] of [['breakwater', 'shielded', 0.05, 3], ['riprap', 'cut', 0.08, 2]]) {
+  // Timed damage: Breakwater stacks 4 on shields, Riprap 2 on cuts, each gone after 2 cycles.
+  for (const [id, when, per, most] of [['breakwater', 'shielded', 0.06, 4], ['riprap', 'cut', 0.08, 2]]) {
     const s = vet('bastion'); wear(s, id); const e = fight(s);
     const t = vet('bastion'); fight(t);
     const m = () => ratio(damageMultiplier(s, pulse(s), { mine: true }), damageMultiplier(t, pulse(t), { mine: true }));
     assert.equal(m(), 1, `${id}: nothing yet`);
     fireEvent(s, when, { part: pulse(s), gained: true });
     assert.equal(m(), ratio(1 + per, 1), `${id}: one ${when}`);
-    for (let k = 0; k < 4; k++) fireEvent(s, when, { part: pulse(s), gained: true });
+    for (let k = 0; k < 5; k++) fireEvent(s, when, { part: pulse(s), gained: true });
     assert.equal(m(), ratio(1 + per * most, 1), `${id}: stacks ${most} times, no more`);
     e.cycle += 3; t.encounter.cycle += 3;
     assert.equal(m(), 1, `${id}: gone 2 cycles later`);
   }
-  // Refunds: Rockfall on a break, Relief Valve on a cut, Tide Table on an answer; 1 cycle off every cooldown.
-  for (const [id, go] of [['rockfall', (s) => { const q = part(s, 'encryptor'); q.armor = 0; q.integrity = 1; hit(s, q, 100, { mine: true }); }],
-    ['relief-valve', (s) => fireEvent(s, 'cut', { part: pulse(s) })], ['tide-table', (s) => fxAnswer(s, pulse(s))]]) {
-    const s = vet('bastion'); wear(s, id); const e = fight(s);
+  // Relief Valve: a cut takes 1 cycle off every cooldown.
+  { const s = vet('bastion'); wear(s, 'relief-valve'); const e = fight(s);
     e.readyAt = { firewall: e.cycle + 4, checksum: e.cycle + 2 };
-    go(s);
-    assert.deepEqual(e.readyAt, { firewall: e.cycle + 3, checksum: e.cycle + 1 }, `${id}: every cooldown a cycle shorter`);
-  }
-  // Cutoff Wall shields you on a cut; Flue on a burn tick; Bench Mark heals on a hit on a Tagged part.
+    fireEvent(s, 'cut', { part: pulse(s) });
+    assert.deepEqual(e.readyAt, { firewall: e.cycle + 3, checksum: e.cycle + 1 }, 'Relief Valve: every cooldown a cycle shorter'); }
+  // Tide Table: an answer readies the skill that answered.
+  { const s = vet('bastion'); wear(s, 'tide-table'); const e = fight(s);
+    e.readyAt = { firewall: e.cycle + 4, checksum: e.cycle + 2 }; e.lastSkill = 'firewall';
+    fxAnswer(s, pulse(s));
+    assert.deepEqual(e.readyAt, { checksum: e.cycle + 2 }, 'Tide Table: the skill that answered is ready again, no other'); }
+  // Rockfall: a break pushes the next part to attack back a cycle.
+  { const s = vet(); wear(s, 'rockfall'); const e = fight(s);
+    const p = pulse(s); p.attack.due = e.cycle + 2;
+    const q = part(s, 'encryptor'); q.armor = 0; q.integrity = 1; hit(s, q, 100, { mine: true });
+    assert.equal(p.attack.due, e.cycle + 3, 'Rockfall: the next attack comes a cycle later'); }
+  // Cutoff Wall shields you on a cut; Flue on a burn tick; Trace Loop heals on a hit on a Tagged part.
   const s = vet('bastion'); wear(s, 'cutoff-wall'); const e = fight(s);
   fireEvent(s, 'cut', { part: pulse(s) });
   assert.equal(e.shield, lifted('cutoff-wall'), 'Cutoff Wall: its shield, grown with its level');
   const t = vet('infiltrator'); wear(t, 'flue'); const f = fight(t);
   fireEvent(t, 'burn', { part: pulse(t) });
   assert.equal(f.shield, lifted('flue'), 'Flue: a shield a burn tick');
-  const u = vet('infiltrator'); wear(u, 'bench-mark'); const g = fight(u);
+  const u = vet('infiltrator'); wear(u, 'trace-loop'); const g = fight(u);
   u.run.integrity = 100;
   fireEvent(u, 'tagged', { part: pulse(u) });
-  assert.ok(u.run.integrity > 100 && u.logs.some((l) => /Bench Mark/.test(l.message || '')), 'Bench Mark: a heal on a Tagged part');
+  assert.ok(u.run.integrity > 100 && u.logs.some((l) => /Trace Loop/.test(l.message || '')), 'Trace Loop: a heal on a Tagged part');
   assert.equal(g.shield || 0, 0);
 });
 
-test('Catchment: the 3-piece heals on a break, the 4-piece adds 5% a break for the fight, up to 20%', () => {
+test('Catchment: the 3-piece heals on a break, the 4-piece adds 6% a break for the fight, up to 24%', () => {
   const s = vet('bastion');
   for (const id of ['gully', 'storm-drain', 'basin', 'reservoir']) wear(s, id);
   const e = fight(s);
@@ -768,9 +810,9 @@ test('Catchment: the 3-piece heals on a break, the 4-piece adds 5% a break for t
   s.run.integrity = 100;
   spare();
   assert.ok(s.run.integrity > 100, 'a break heals');
-  assert.equal(ratio(damageMultiplier(s, pulse(s), { mine: true }), was), 1.05, 'one break: +5%');
+  assert.equal(ratio(damageMultiplier(s, pulse(s), { mine: true }), was), 1.06, 'one break: +6%');
   for (let k = 0; k < 5; k++) spare();
-  assert.equal(ratio(damageMultiplier(s, pulse(s), { mine: true }), was), 1.2, 'up to 20%');
+  assert.equal(ratio(damageMultiplier(s, pulse(s), { mine: true }), was), 1.24, 'up to 24%');
   e.cycle += 30;
-  assert.equal(ratio(damageMultiplier(s, pulse(s), { mine: true }), was), 1.2, 'for the fight');
+  assert.equal(ratio(damageMultiplier(s, pulse(s), { mine: true }), was), 1.24, 'for the fight');
 });

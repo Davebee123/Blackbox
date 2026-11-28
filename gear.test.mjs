@@ -112,7 +112,7 @@ test('Scavenge is magic find, and it costs stats: the Scavenger suffix rolls low
   assert.ok(blue.stats.signal < filled(raw.signal, 50));
   // Uniques and set pieces keep theirs: Neighbour's Wifi and the Silt Map carry Scavenge at full stats.
   for (const id of ['neighbours-wifi', 'silt-map']) {
-    const u = UNIQUES[id], it = uniqueItem(u, u.level, seeded(3)), bare = uniqueItem({ ...u, secondary: {} }, u.level, seeded(3));
+    const u = UNIQUES[id], it = uniqueItem(u, u.level, seeded(3), { raw: true }), bare = uniqueItem({ ...u, secondary: {} }, u.level, seeded(3), { raw: true });
     assert.ok(it.stats.scavenge > 0, id);
     for (const st of Object.keys(bare.stats)) if (!(st in (u.secondary || {}))) assert.equal(it.stats[st], bare.stats[st], `${id}: ${st}`);
   }
