@@ -9,6 +9,7 @@ import { play } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { floorsOf } from './dist/floors.mjs';
 import { rep } from './dist/factions.mjs';
+import { TABLE } from './dist/table.mjs';
 import { mapMarkup, threatsOf } from './dist/view.mjs';
 import { RIVAL } from './dist/rivals.mjs';
 import { SITE, CREWS, dealRig, dealRack, dealRunner, dealSite, tickSites, siteServers } from './dist/sites.mjs';
@@ -78,7 +79,7 @@ test('the director deals one after its logged-on time, from level 5; nothing whi
 
 test('the clock runs out: the lock lands, the table +1, the rig unmounts; nothing else is lost', () => {
   const s = setup(6);
-  const loc = dealRig(s), t0 = s.table ?? 84, c0 = s.server.credits, h0 = rep(s, 'halcyon');
+  const loc = dealRig(s), t0 = s.table ?? TABLE.start, c0 = s.server.credits, h0 = rep(s, 'halcyon');
   tickSites(s, loc.site.left - 1000);
   assert.equal(loc.site.state, 'up');
   tickSites(s, 2000);
@@ -178,10 +179,10 @@ test('open the cage: a NULL CHOIR order’s worth of components, three receipts 
 
 test('a rack’s clock runs out: back to cold storage, nothing lost, nothing on the table', () => {
   const s = setup(6);
-  const loc = dealRack(s), t0 = s.table ?? 84;
+  const loc = dealRack(s), t0 = s.table ?? TABLE.start;
   tickSites(s, loc.site.left + 1000);
   assert.equal(loc.site.state, 'closed');
-  assert.equal(s.table ?? 84, t0);
+  assert.equal(s.table ?? TABLE.start, t0);
   assert.match(s.logs.findLast((e) => e.type === 'site' && e.phase === 'closed').message, /Kestrel pulls KESSLER-RACK-\d\d back to cold storage\./);
   assert.ok(!siteServers(s).includes(loc), 'gone');
 });

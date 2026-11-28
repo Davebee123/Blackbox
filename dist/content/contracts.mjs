@@ -141,6 +141,7 @@ export default {
         },
         {
           "kind": "rooms",
+          "lv": 8,
           "at": "road",
           "k": 1,
           "count": 4,
@@ -159,6 +160,7 @@ export default {
         },
         {
           "kind": "heist",
+          "lv": 10,
           "at": "track",
           "k": 2,
           "file": "sched.0412",
@@ -187,6 +189,7 @@ export default {
         },
         {
           "kind": "sweep",
+          "lv": 12,
           "at": "road",
           "k": 3,
           "subject": "Who’s counting",
@@ -204,6 +207,7 @@ export default {
         },
         {
           "kind": "boss",
+          "lv": 13,
           "at": "road",
           "k": 4,
           "subject": "It heard us",

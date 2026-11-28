@@ -46,9 +46,10 @@ export const TRAITS = {
   mapper: 'Mapper', reader: 'Reader', archivist: 'Archivist', mentor: 'Mentor', coordinator: 'Coordinator', counterintel: 'Counter-intel',
   fixer: 'Fixer', haggler: 'Haggler', knownface: 'Known face', moonlighter: 'Moonlighter', gift: 'Gift', wildcard: 'Wildcard',
 };
-// The handles a cast is drawn from (the first twenty are presence.mjs's old pool).
+// The handles a cast is drawn from (the first twenty are presence.mjs's old pool). moth is the story's (lore.md):
+// tallow holds its place, so no save's slots shift (combat.mjs's restore renames a held moth).
 export const HANDLES = ['nyx', 'kilo', 'vanta', 'sable', 'wisp', 'quill', 'rook', 'byte', 'ash', 'lumen', 'cipher_', 'zer0', 'echo9', 'grim', 'static', 'wren', 'halt', 'fen', 'oxide', 'marrow',
-  'tamsin', 'ojo', 'kettle', 'mire', 'brask', 'pell', 'juno_k', 'saltpan', 'dov', 'harrow', 'ninefold', 'cobalt', 'lark', 'ferro', 'sixgun', 'tilde', 'moth', 'orin', 'vex', 'bodhi',
+  'tamsin', 'ojo', 'kettle', 'mire', 'brask', 'pell', 'juno_k', 'saltpan', 'dov', 'harrow', 'ninefold', 'cobalt', 'lark', 'ferro', 'sixgun', 'tilde', 'tallow', 'orin', 'vex', 'bodhi',
   'carrow', 'lint', 'nadir', 'pique', 'roan', 'sorrel', 'teff', 'umber', 'vell', 'yarrow', 'zinc', 'aster', 'brine', 'coil', 'dross', 'ember_', 'flint', 'gauze', 'hob', 'isk'];
 // What each one is after: a payment frozen in the table.
 const TRADES = ['a pension', "a florist's last week of takings", "a dead shop's payroll", "a mother's house sale", 'an insurance payout for a fire', 'back pay from a closed plant',

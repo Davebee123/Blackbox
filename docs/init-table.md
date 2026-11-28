@@ -5,7 +5,7 @@ here: the count changes what you fight, what drops and what the director deals.
 
 ## 1. The rule
 
-- **One number a save:** *process table at N%*, 70% to 95%. It starts at 84%.
+- **One number a save:** *process table at N%*, 70% to 95%. It starts at 81%, the count the cold open and the schedule page show.
 - **Logged-on time fills it:** +2 an hour (orphans piling up). Nothing moves while you're logged off.
 - **Your play empties it.** Orphans are strays tagged ◌ that turn up on every floor at your level; each one broken
   frees 0.08. A Mapped server frees 1, a clean Orphans contract 2.
@@ -66,7 +66,7 @@ one costs nothing.
 
 ## 5. On screen
 
-- *Plain* in the header (picked, replacing the map's *Readout*, too small to notice): *PROCESS TABLE 84%* between
+- *Plain* in the header (picked, replacing the map's *Readout*, too small to notice): *PROCESS TABLE 81%* between
   Signal and Credits. Its tooltip: the band as its kind, a bar from 70% to 95% with both bands and the count's tick, the band's effects as rows (icon chips), what fills and empties it.
 - ◌ on an orphan's name, its tooltip: *Orphan. A trade still waiting for its other side. Breaking it frees a slot.*
 - LANTERN's census lines and INIT's warnings on the Log.

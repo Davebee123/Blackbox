@@ -11,13 +11,9 @@ export default {
       "from": "wick",
       "subject": "you're in. mostly.",
       "body": [
-        "Welcome to LOWLIGHT, initiate.",
-        "Halcyon Mutual insures a large share of servers on this net. Rival crews keep hitting its clients, and every hit is a claim Halcyon has to pay.",
-        "So Halcyon pays crews like us to hit back. It calls that \"risk reduction.\" I call it money for my weekly ramen down the street.",
-        "Keep Halcyon happy and you get paid. It's really that simple.",
-        "Speaking of simple, your first job shouldn't take long:",
-        "SPRAWL-00 is a rogue server crawling with stray processes. Delete three of them.",
-        "Don't mind the other runners, but sometimes sharing is caring."
+        "the job, in writing, so halcyon has it on file.",
+        "SPRAWL-00 is a rogue server crawling with stray processes. delete three of them.",
+        "other runners work it too. help one now and then. they remember who did."
       ],
       "job": {
         "type": "kill",
@@ -56,8 +52,8 @@ export default {
       "from": "wick",
       "subject": "a name on the list",
       "body": [
-        "Halcyon flagged one process by name: {name}. It hops from the Sprawl into their clients’ mail servers.",
-        "It is sitting in {room}, and it is tougher than the strays. Take it out."
+        "halcyon flagged one process by name: {name}. it hops from the sprawl into their clients’ mail servers.",
+        "it's sitting in {room}, and it's tougher than the strays. take it out."
       ],
       "job": {
         "type": "bounty",
@@ -103,9 +99,9 @@ export default {
       "from": "wick",
       "subject": "the ledger",
       "body": [
-        "Somebody lifted Halcyon’s claims ledger, {file}. Its signal was last seen close to a server you control.",
-        "Put your relay up on it and listen. When the relay flags the signal, hunt the server down. Kill what it sends, and read the relay’s logs.",
-        "Then pull the ledger out of its vault, bank it, and send it back through Mail. Do not read it. (Read it.)"
+        "somebody lifted halcyon’s claims ledger, {file}. its signal was last seen close to a server you control.",
+        "put your relay up on it and listen. when the relay flags the signal, hunt the server down. kill what it sends, and read the relay’s logs.",
+        "then pull the ledger out of its vault, bank it, and send it back through mail. don't read it. (read it.)"
       ],
       "job": {
         "type": "item",

@@ -101,7 +101,7 @@ export const TIPS = [
   { id: 'hub-shop', page: 'hub', at: '.hub-win .shop-shelf .ptile', text: 'every hub has a shop with its faction\'s own goods. better rep opens more of the shelf and trims the price.' },
   { id: 'store-codebases', page: 'hub', at: '.hub-win .shop-cbs', text: 'these are codebases. buy one once and you can build its program in any socket you\'ve cleared.' },
   // ---------- hub sessions ----------
-  { id: 'hub-menu', page: 'hub', at: '.hub-row', text: 'you\'re on a faction hub. click a line or type its number to open that window: its market, its work, its payloads and more.' },
+  { id: 'hub-menu', page: 'hub', at: '.hub-row', text: 'you\'re on a faction hub. click a line or type its number to open that window: its market, its work, its payloads and more.', touch: 'you\'re on a faction hub. tap a line to open that window: its market, its work, its payloads and more.' },
   // The market, one step per tip in the order you meet it: rows, ▲/▼, the news, then the ticket.
   { id: 'hub-market', page: 'hub', at: '.mk-wares .mk-row', text: 'each row shows how many of a ware you hold, what this hub pays for one (sell) and what it charges (buy). click a ware to trade it.' },
   { id: 'hub-compare', page: 'hub', at: '.mk-wares .mk-d', text: '▲ means this hub pays more than the average hub, ▼ less. prices differ hub to hub, so sell where a ware\'s ▲ and buy where it\'s cheap.' },
@@ -122,13 +122,13 @@ export const TIPS = [
   // clicked through as steps of one tip, each pointing at its own thing; each still shows alone
   // if it turns up later.
   { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-ticks', 'fight-armor', 'sync'], text: 'this is the combat console halcyon installed to fight viruses. it shows their structure and attacks. the "now" column shows what happens during this cycle. each column to the right is a cycle in the future. you move first, and then the virus attacks back.' },
-  { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', text: 'to attack, pick a skill (its number or a click), then click a part. or type it: the skill, then the part. if the timer runs out, you hit the last part you targeted again.' },
+  { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', text: 'to attack, pick a skill (its number or a click), then click a part. or type it: the skill, then the part. if the timer runs out, you hit the last part you targeted again.', touch: 'to attack, tap a skill, then tap a part. if the timer runs out, you hit the last part you targeted again.' },
   // The interrupt (interrupt.mjs): the ticks, and a tick spent for nothing.
   { id: 'fight-ticks', page: 'combat', pause: true, at: '.board .ptick', under: '#board', when: (s) => s.encounter?.phase === 'active', text: 'notice these ticks on the virus parts? push a part past one during the current cycle and the part\'s attack is canceled. each mark works once.' },
   // From your second fight: Overload on the bare part is the first fight's obvious play.
   { id: 'fight-wasted', page: 'combat', pause: true, at: '.board .ptick.spent', under: '#board', when: (s) => s.encounter?.phase === 'active' && (s.encounter.metrics?.wasted || 0) > 0 && (s.pace?.kills || 0) > 0, text: 'you crossed that tick with no attack due, so it\'s spent for nothing. save the big hits for the cycle an attack lands.' },
   { id: 'fight-armor', page: 'combat', pause: true, at: '.board .chits', under: '#board', text: 'see the ◆? that\'s armor. each hit knocks one off and does nothing else. chip it bare with the small stuff, then hit it hard.' },
-  { id: 'sync', page: 'combat', at: '#sync-win', pause: true, text: 'the bar under now fills as the cycle runs. hit enter inside the bright window and you deal 10% more.', more: (s) => `as ${/^[AEIOU]/.test(ARCHETYPES[classOf(s)].name) ? 'an' : 'a'} ${ARCHETYPES[classOf(s)].name.toLowerCase()}, it also ${SYNC[classOf(s)].rule.replace(/^./, (c) => c.toLowerCase())}` },
+  { id: 'sync', page: 'combat', at: '#sync-win', pause: true, text: 'the bar under now fills as the cycle runs. hit enter inside the bright window and you deal 10% more.', touch: 'the bar under now fills as the cycle runs. tap your part while it\'s inside the bright window and you deal 10% more.', more: (s) => `as ${/^[AEIOU]/.test(ARCHETYPES[classOf(s)].name) ? 'an' : 'a'} ${ARCHETYPES[classOf(s)].name.toLowerCase()}, it also ${SYNC[classOf(s)].rule.replace(/^./, (c) => c.toLowerCase())}` },
   { id: 'fight-patch', page: 'combat', pause: true, at: '.board .intent.patch', under: '#board', text: 'a part with no ◆ left grows one back five cycles later, unless you break it first.' },
   // Bosses: the ♛ part's ticks start acts (interrupt.mjs rule a).
   { id: 'fight-crown', page: 'combat', pause: true, at: '.board .tag.crown', under: '#board', text: 'the ♛ part is the boss. push it past a mark and it starts its next act, and the fight changes.' },
@@ -147,7 +147,7 @@ export const TIPS = [
 
   // ---------- loadout ----------
   { id: 'loadout-status', page: 'loadout', at: '.sk-status', text: 'your skills put this status on parts. hover it to see what it does.' },
-  { id: 'loadout-bar', page: 'loadout', at: '.cls-toolkit', text: 'your keys live in the toolkit (t). drag an ability onto a key, or tap it and then a key. key 1 is your basic attack.' },
+  { id: 'loadout-bar', page: 'loadout', at: '.cls-toolkit', text: 'your keys live in the toolkit (t). drag an ability onto a key, or tap it and then a key. key 1 is your basic attack.', touch: 'your keys live in the toolkit. drag an ability onto a key, or tap it and then a key. key 1 is your basic attack.' },
   { id: 'loadout-classes', page: 'loadout', at: '.arch-tabs', text: 'there are four classes, and each one levels up on its own. you can switch between them at home.' },
   { id: 'loadout-talents', page: 'loadout', at: '.cls-tree', when: (s) => hackerLevel(s) >= 10, text: 'from level 10 a talent tier opens every six levels in your subclass\'s tree. pick one of its three. changing picks at home is free.' },
   // Your program (routines.mjs): the handler editor on Loadout → Program.
@@ -189,7 +189,7 @@ export function nextTip(s, page, visible, pace = {}) {
     if (t.when && !t.when(s, page)) continue;
     if (!visible(t.at)) continue;
     // lead and more: a sentence before or after that depends on you (your class, the rival on you).
-    const own = (x) => (x.more || x.lead ? { ...x, text: [x.lead?.(s), x.text, x.more?.(s)].filter(Boolean).join(' ') } : x);
+    const own = (x) => { const text = touchy() ? x.touch || tapped(x.text) : x.text; return { ...x, text: [x.lead?.(s), text, x.more?.(s)].filter(Boolean).join(' ') }; };
     if (!t.joins) return own(t);
     const more = t.joins.map((id) => TIPS.find((x) => x.id === id))
       .filter((x) => x && !seen[x.id] && (!x.when || x.when(s, page)) && visible(x.at)).map(own);
@@ -197,6 +197,9 @@ export function nextTip(s, page, visible, pace = {}) {
   }
   return null;
 }
+// A phone has no mouse or keyboard: a tip's touch line where it names keys, else its clicks read as taps.
+const touchy = () => typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+export const tapped = (t) => t.replace(/\bclick(ed|s|ing)?\b/g, (_, e) => ({ ed: 'tapped', s: 'taps', ing: 'tapping' })[e] || 'tap');
 // Seen: a tip with your settings (a new game keeps them), a tour step on the save itself (s.tour: once a save).
 const isTour = (id) => tourIds.includes(id);
 export const seenOf = (s, id) => !!(isTour(id) ? s.tour?.[id] : s.settings?.seen?.[id]);

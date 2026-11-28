@@ -6,7 +6,7 @@
 // Intel XP (gainXp), trash, elite and rare loot odds (rollOnce), vaults (netrooms.mjs takeVault), ★ rare spawns and
 // the elites' orphan add (floorplan.mjs). It never moves a price.
 export const TABLE = {
-  start: 84, min: 70, max: 95,
+  start: 81, min: 70, max: 95, // 81: the cold open's count and the schedule page's last line
   perHour: 2, // logged-on time fills it (orphans pile up); nothing moves while you're logged off
   orphan: 0.08, mapped: 1, contract: 2, // what your play frees: an orphan broken, a server Mapped, an Orphans contract delivered
   cancel: 8, // a cancel round at 95%: LANTERN cancels the oldest accounts (a Log line; the crisis comes later)

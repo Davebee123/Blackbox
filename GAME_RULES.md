@@ -2432,6 +2432,8 @@ don't count toward your six. The words are in `dist/content/contracts.mjs` (`flo
   each named boss is built, the floor's lair boss stands in: the letter names the boss, the title the stand-in. Its
   challenge line shows on the Core's card, its fall line when it's beaten. Floor 1's (PAGE NINE) waits for level 6 (`lv`);
   a save that got it while RELAY-KING stood in moves it to PAGE NINE's server from level 6.
+  Floor 2's (*Carrier*) paces itself the same way: its steps after the Install wait for levels 8, 10, 12 and 13, so
+  CENTRIFUGE (14) comes near the cap and the chain has a step every hour or so.
 - **The Path** (`arcs.mjs pathOf`), over the map's Contracts: the one thing the story wants next. Its head is the
   floor's flag and the chain's name (*Initiate* for the initiate storyline); under it the steps done (✓, as
   objectives) and the one you're on (▸), which clicks like its tracker row. Steps ahead stay hidden. In turn: the
@@ -2609,7 +2611,7 @@ The director's last 20 (events, follow-ups and blips) and how each ended (*up*, 
 
 ## INIT's table (table.mjs)
 
-One count a save, *process table at N%*, 70 to 95, starting at 84 (docs/init-table.md). Time logged on fills it, 2 an
+One count a save, *process table at N%*, 70 to 95, starting at 81, the schedule page's count (docs/init-table.md). Time logged on fills it, 2 an
 hour; nothing moves while you're logged off. Your play empties it: an orphan broken 0.08, a server Mapped 1, an Orphans
 contract delivered 2. At 95 LANTERN runs a cancel round: 8 off, a Log line. It never moves a price. A new character's
 table, its header count and its orphans wait for *Carrier*'s schedule page (What opens when).
@@ -3009,7 +3011,7 @@ is on screen, a small tip points at it and says how it works, once, one at a tim
 own lowercase, in a small Transmission: his face, *INCOMING · LOWLIGHT*, his line. The
 opening map has one tip: click SPRAWL-00, then Connect. Connecting reads it, shown or not. A tip never covers what it
 points at or the button it names (app.js `placeTip`: under or over its thing, beside it, then a corner; a tip's `clear`
-lists the buttons), nor a phone's tab bar; on a phone it drops wick's face. Your server's tip waits for the first intrusion, a ?'s for the first trace on one.
+lists the buttons), nor a phone's tab bar; on a phone it drops wick's face, says tap for click, and swaps a line that names keys for its `touch` line (tips.mjs). A transmission there drops its key hints, and a tapped card on the board (a part, a tell) shuts on the next tap or when the spoils, a tip or the level-up come up. Your server's tip waits for the first intrusion, a ?'s for the first trace on one.
 
 **Pacing** (tips.mjs `paceOf`). A map, room or menu tip shows at most once a screen visit, and 2 minutes after the last
 one closed. A fight tip about what the fight opened with shows only while it's paused (a room fight opens paused until

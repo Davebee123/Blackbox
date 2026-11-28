@@ -8,14 +8,14 @@ import { TABLE, countOf, moveTable, tickTable, full, clear, bandOf, orphanShare,
 const HOUR = 3600000;
 const close = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} ≈ ${b}`);
 
-test('the count is made on first use at 84%, and logged-on time fills it at 2 an hour', () => {
+test('the count is made on first use at 81%, and logged-on time fills it at 2 an hour', () => {
   const s = fresh();
   assert.equal(s.table, undefined);
   assert.equal(countOf(s), TABLE.start);
   tickTable(s, HOUR);
-  close(s.table, 86);
+  close(s.table, 83);
   tickTable(s, 0);
-  close(s.table, 86);
+  close(s.table, 83);
 });
 
 test('only logged-on time counts: a gap while logged off moves nothing', () => {
@@ -31,11 +31,11 @@ test('only logged-on time counts: a gap while logged off moves nothing', () => {
 test('your play empties it: an orphan 0.08, a Mapped server 1, an Orphans contract 2; it clamps at 70', () => {
   const s = fresh();
   moveTable(s, -TABLE.orphan);
-  close(s.table, 83.92);
-  moveTable(s, -TABLE.mapped);
-  close(s.table, 82.92);
-  moveTable(s, -TABLE.contract);
   close(s.table, 80.92);
+  moveTable(s, -TABLE.mapped);
+  close(s.table, 79.92);
+  moveTable(s, -TABLE.contract);
+  close(s.table, 77.92);
   moveTable(s, -100);
   assert.equal(s.table, TABLE.min);
 });

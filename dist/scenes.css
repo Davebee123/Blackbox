@@ -12,3 +12,5 @@
 .sc-card.sc-first .qf-r { animation: q-in 0.12s steps(2) both; animation-delay: calc(var(--r) * 0.035s); }
 .no-motion .sc-card * { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { .sc-card * { animation: none !important; } }
+/* A phone has no keys: the answers' numbers and the footer's key hints go (tap the answer, or × for later). */
+@media (pointer: coarse) { .sc-foot, .sc-card .th-choice kbd { display: none; } .sc-card .th-choice { grid-template-columns: minmax(0, 1fr); } }

@@ -95,6 +95,9 @@ import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
 import { playRoomFx } from './roomfx.mjs';
 import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, whenConnected, playHangup, stopHangup, whenHome, playReboot, REBOOT } from './bootfx.mjs';
+// The hover tip's state (ttHide and the tips below). Declared up here: the first render, at boot, reads it
+// (holdPopTip on a save that reloads inside a run), and a const below that is still uninitialised then.
+const tt = { el: null, at: null, timer: 0, text: null, out: 0 };
 let bootFor = null; // the fight the screen last booted into (go)
 import { startTraffic } from './traffic.mjs';
 import { watchPackets, shipOf } from './mapmotion.mjs';
@@ -4564,7 +4567,6 @@ document.addEventListener('keydown', (e) => {
 // Themed hover tips: every title="" in the game shows in the game's own card instead of the browser's.
 // The title moves to data-tt on first hover (so the browser's tip never shows) and the card follows the element.
 // "Name: the rest" leads with the name in bold, like the item cards. Touch has no hover, so it is left alone.
-const tt = { el: null, at: null, timer: 0, text: null, out: 0 };
 function ttHide() { clearTimeout(tt.timer); clearTimeout(tt.out); tt.at = null; if (tt.el) tt.el.hidden = true; }
 // A redraw replaces the element under a still pointer with a copy: the pointer leaves the old one and enters the new
 // one. Leaving waits a beat, and the same tip on the copy carries on, so a live page never blinks its tip.
@@ -4620,7 +4622,7 @@ for (const ev of ['pointerdown', 'keydown', 'scroll', 'blur']) addEventListener(
 // Touch has no hover: a tap on a fight's reading (a part's name cell, a tell chip, a gear chip) shows its card for a
 // few seconds. The board redraws on the tap (it targets the part), so the card finds its element again by a selector.
 let ttTap = null, ttTouch = false;
-document.addEventListener('pointerdown', (e) => { ttTouch = e.pointerType === 'touch'; }, true);
+document.addEventListener('pointerdown', (e) => { ttTouch = e.pointerType === 'touch'; ttTap = null; }, true); // the next tap ends the last card
 document.addEventListener('click', (e) => {
   if (!ttTouch) return;
   const a = e.target.closest?.('#board .bname[title], #board .bname[data-tt], #board .intent.tell, #hud .gfx, #levelup .lu-row');
@@ -4630,7 +4632,8 @@ document.addEventListener('click', (e) => {
 });
 function ttTapTick() {
   if (!ttTap) return;
-  if (performance.now() > ttTap.until) { ttTap = null; return ttHide(); }
+  // It never sits over a card that takes the screen (the spoils, a tip, the level-up): those end it.
+  if (performance.now() > ttTap.until || !$('spoils').hidden || !$('tip').hidden || ($('levelup')?.hidden === false && !ttTap.sel.startsWith('#levelup'))) { ttTap = null; return ttHide(); }
   const a = document.querySelector(ttTap.sel);
   if (!a || ttTap.at === a) return;
   if (a.hasAttribute('title')) { const t = a.getAttribute('title'); a.removeAttribute('title'); if (t) a.dataset.tt = t; }
