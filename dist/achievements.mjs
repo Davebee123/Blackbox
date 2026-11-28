@@ -18,7 +18,7 @@ import { noteFinish, tracked } from './finish.mjs';
 import { openUp } from './progression.mjs';
 import { emit, warn, hooks, defender, classOf, UNIQUES } from './combat.mjs';
 import { ARCHETYPES, BOSSES, SUBS, DAEMONS, FLOORS } from './data.mjs';
-import { FACTIONS, FACTION_IDS, REP_TIERS, hubFound } from './factions.mjs';
+import { FACTIONS, FACTION_IDS, REP_TIERS, hubFound, hubsOpen } from './factions.mjs';
 import { PIECES } from './faction-gear.mjs';
 import { SETS, piecesOf } from './sets.mjs';
 import EARN from './content/earned.mjs';
@@ -121,7 +121,7 @@ const listed = () => (LIST ||= [ // the list as written; achievements() (below, 
   A('x-mapper', 'explore', 'Mapper', 'Map 20 servers.', 25, { progress: (s) => of(mappedN(s), 20), has: (s) => titleHas(s, 'mapper'), reward: { title: 'mapper' } }),
   A('x-taken', 'explore', 'Change of Hands', 'Take over a server.', 10, { has: (s) => takenN(s) >= 1 }),
   A('x-taken-10', 'explore', 'Landlord', 'Take over 10 servers.', 25, { progress: (s) => of(takenN(s), 10) }),
-  A('x-hubs', 'explore', 'Five Points', 'Find every faction hub.', 10, { progress: (s) => of(FACTION_IDS.filter((f) => hubFound(s, f)).length, FACTION_IDS.length) }),
+  A('x-hubs', 'explore', 'Five Points', 'Find every faction hub.', 10, { progress: (s) => of(hubsOpen(s) ? FACTION_IDS.filter((f) => hubFound(s, f)).length : 0, FACTION_IDS.length) }),
   A('x-traced', 'explore', 'Bloodhound', 'Trace 100 servers.', 25, { progress: (s) => of(tracedN(s), 100) }),
   A('x-hours', 'explore', "Squatter's Rights", 'Play for 100 hours.', 25, { progress: (s) => of(hours(s), 100) }),
   A('x-cascade', 'explore', 'Rack Down', 'Win Cascade 25 times.', 10, { group: 'Boards', progress: (s) => of(count('cascade')(s), 25) }),

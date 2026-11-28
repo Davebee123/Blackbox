@@ -120,8 +120,9 @@ export function hubTrace(s, f, amount, why = '') {
   if (f === 'glassjaw') onEvent(s, 'glassjaw-hub'); // the broker's terms (scenes.mjs)
   emit(s, 'located', `HUB LOCATED: ${FACTIONS[f].hub.name}. ${FACTIONS[f].short} is on your map.`, { faction: f, hub: true });
 }
+export const hubsOpen = (s) => !!(s.mail?.boardOpen || (s.mail?.story || 0) >= 99); // the hubs come on the map with the board, after Claimjack
 export function hubsOf(s) {
-  if (!(s.mail?.boardOpen || (s.mail?.story || 0) >= 99)) return [];
+  if (!hubsOpen(s)) return [];
   s.hubs ||= {};
   for (const f of FACTION_IDS) s.hubs[f] ||= { id: 'hub-' + f, faction: f };
   return FACTION_IDS.filter((f) => hubFound(s, f)).map((f) => ({ ...s.hubs[f], ...FACTIONS[f].hub, faction: f }));

@@ -19,6 +19,7 @@ test('the auto rows: goals under way and in reach, the nearest done first, three
 
 test('the rows hold still until a calm moment; then a goal that moved goes first', () => {
   const s = mk();
+  (s.mail ||= {}).boardOpen = true; // the hubs are on the map
   s.dex.kills = { x: 90 };
   refreshGoals(s);
   const before = goalsOf(s).map((g) => g.key);
